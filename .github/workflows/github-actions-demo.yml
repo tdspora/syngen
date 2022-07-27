@@ -10,7 +10,7 @@ jobs:
           python-version: '3.8'
       - name: Install dependencies
         run: |
-          apt install python3.8-venv -y
+          sudo apt install python3.8-venv -y
           python -m pip install --upgrade pip
           pip install build
       - name: Build Package
