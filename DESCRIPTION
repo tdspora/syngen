@@ -1,0 +1,5 @@
+The tool uncovers patterns, trends, and correlations hidden within your production datasets.
+It replicates them in less protected environments while eliminating the need for labor-intensive
+data classification and obfuscation procedures.\n
+We leverage state-of-the-art machine learning models to deliver highly accurate,
+referentially intact datasets in volumes suitable for the environments in use.
