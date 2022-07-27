@@ -11,5 +11,6 @@ jobs:
           password: ${{ secrets.PYPI_TEST_TOKEN }}
           repository_url: https://test.pypi.org/legacy/
           print_hash: true
+          verbose: true
       - shell: bash
         run: ls -laih
