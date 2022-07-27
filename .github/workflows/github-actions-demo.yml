@@ -1,7 +1,7 @@
-name: TEST-PIPY-PUBLISH
+name: TEST-PyPI-PUBLISH
 on: [push]
 jobs:
-  PIPy-uploading:
+  PyPI-uploading:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
