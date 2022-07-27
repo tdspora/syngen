@@ -1,0 +1,5 @@
+include *.txt
+include DESCRIPTION
+include src/syngen/VERSION
+recursive-include src
+
