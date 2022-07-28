@@ -26,7 +26,7 @@ def set_handler(
         metadata: dict,
         paths: dict,
         wrapper_name: str,
-        keys_mode: Optional[str]):
+        keys_mode: bool):
     """
     Set up the handler which used in training process
     Parameters
