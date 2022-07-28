@@ -3,20 +3,17 @@ on: [push]
 jobs:
   PyPI-syngen-workflow:
     runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        python-version: ["3.8"]
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.8
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
       - name: Install dependencies
         run: |
-          sudo apt install python${{ matrix.python-version }}-venv -y
+          sudo apt install python3.8-venv -y
           python -m pip install --upgrade pip
           pip install flake8 pytest build
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
@@ -29,5 +26,8 @@ jobs:
 #      - name: Test with pytest
 #        run: |
 #          pytest
-  Upload:
-    uses: ./.github/workflows/action-pypi-upload.yml
+      - name: Trigger next workflow
+        if: success()
+        uses: ./.github/workflows/action-pypi-upload.yml
+        with:
+          event-type: trigger-upload
