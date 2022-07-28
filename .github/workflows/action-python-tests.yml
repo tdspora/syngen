@@ -30,4 +30,4 @@ jobs:
 #        run: |
 #          pytest
   Upload:
-    uses: ./.github/workflows/action-pipy-upload.yml
+    uses: ./.github/workflows/action-pypi-upload.yml
