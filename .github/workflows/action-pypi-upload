@@ -1,8 +1,12 @@
-name: TEST-PyPI-PUBLISH
+name: TEST-PyPI-PUBLISH #NOTE Rename to 'PyPI Publish' before PR
 on:
   push:
     paths:
       - '/src/syngen/VERSION'
+  workflow_run:
+    workflows: ["TEST-BUILD"]
+    types:
+      - completed
 jobs:
   PyPI-syngen-workflow:
     runs-on: ubuntu-20.04
