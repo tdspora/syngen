@@ -16,7 +16,7 @@ jobs:
         run: python -c "import sys; print(sys.version)"
       - name: Install dependencies
         run: |
-          sudo apt install python"${{ matrix.python-version }}"-venv -y
+          sudo apt install python${{ matrix.python-version }}-venv -y
           python -m pip install --upgrade pip
           pip install flake8 pytest build
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
