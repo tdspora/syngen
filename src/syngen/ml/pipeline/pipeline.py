@@ -48,9 +48,9 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
             except (TypeError, ValueError):
                 str_values.append(val)
         if (
-            (float_val is not None)
-            and (not np.isnan(float_val))
-            and len(str_values) == 1
+                (float_val is not None)
+                and (not np.isnan(float_val))
+                and len(str_values) == 1
         ):
             nan_label = str_values[0]
             columns_nan_labels[column] = nan_label
@@ -108,16 +108,13 @@ def data_pipeline(df: pd.DataFrame, check_object_on_float: bool = False) -> Tupl
     date_columns = get_date_columns(tmp_df, list(str_columns))
     str_columns -= date_columns
 
-    assert (
-        len(str_columns)
-        + len(float_columns)
-        + len(int_columns)
-        + len(date_columns)
-        + len(categ_columns)
-        + len(binary_columns)
-        == len(df.columns),
-        "According to number of columns with defined types, column types are not identified correctly.",
-    )
+    assert len(str_columns) + \
+           len(float_columns) + \
+           len(int_columns) + \
+           len(date_columns) + \
+           len(categ_columns) + \
+           len(binary_columns) == len(df.columns), "According to number of columns with defined types, " \
+                                                   "column types are not identified correctly."
 
     logger.debug(
         f"Count of string columns: {len(str_columns)}; "
