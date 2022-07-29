@@ -1,4 +1,4 @@
-![Build Status](https://github.com/tdspora/syngen/workflows/MAIN-ACTION/badge.svg)
+![Build Status](https://github.com/tdspora/syngen/workflows/TESTING/badge.svg)
 # Syngen
 
 Syngen is an unsupervised tabular data generation tool. It is useful for generation of test data with a given table as a template. Most datatypes including floats, integers, datetime, text, categorical, binary are supported. The linked tables i.e., tables sharing a key can also be generated using the simple statistical approach.
