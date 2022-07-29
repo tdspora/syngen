@@ -1,0 +1,39 @@
+name: TESTING
+on: [push]
+jobs:
+  PyPI-syngen-workflow:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Install dependencies
+        run: |
+          sudo apt install python3.8-venv -y
+          python -m pip install --upgrade pip
+          pip install flake8 pytest build
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Lint with flake8
+        run: |
+         # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+#      - name: Test with pytest
+#        run: |
+#          pytest
+      - name: Build Package
+        run: |
+          python3 -m build .
+      - name: Publish package
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+#          repository_url: https://test.pypi.org/legacy/ # For testing purposes
+          print_hash: true
+          verbose: true
