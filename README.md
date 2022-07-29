@@ -1,8 +1,9 @@
+![Build Status](https://github.com/tdspora/syngen/workflows/TESTING/badge.svg)
 # Syngen
 
-Syngen is an unsupervised tabular data generation tool. It is useful for generation of test data with a given table as a template. Most datatypes including floats, integers, datetime, text, categorical, binary are supported. The linked tables i.e., tables sharing a key can also be generated using the simple statistical approach. 
+Syngen is an unsupervised tabular data generation tool. It is useful for generation of test data with a given table as a template. Most datatypes including floats, integers, datetime, text, categorical, binary are supported. The linked tables i.e., tables sharing a key can also be generated using the simple statistical approach.
 
-The tool is based on the variational autoencoder model (VAE). The Bayesian Gaussian Mixture model is used to further detangle the latent space. 
+The tool is based on the variational autoencoder model (VAE). The Bayesian Gaussian Mixture model is used to further detangle the latent space.
 
 ## Getting started
 
@@ -14,7 +15,7 @@ The training and inference processes are separated with two cli entry points. Th
 
 `train PATH_TO_ORIGINAL_CSV –table_name TABLE_NAME`
 
-This will train a model and save the model artifacts to disk. 
+This will train a model and save the model artifacts to disk.
 
 To generate data simply call
 
