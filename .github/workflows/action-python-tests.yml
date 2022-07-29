@@ -1,4 +1,4 @@
-name: TEST-BUILD
+name: MAIN-ACTION
 on: [push]
 jobs:
   PyPI-syngen-workflow:
@@ -34,6 +34,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_TEST_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/ #NOTE Change the URL before PR
+#          repository_url: https://test.pypi.org/legacy/ # For testing purposes
           print_hash: true
           verbose: true
