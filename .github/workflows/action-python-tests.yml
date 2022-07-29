@@ -1,4 +1,4 @@
-name: MAIN-ACTION
+name: TESTING
 on: [push]
 jobs:
   PyPI-syngen-workflow:
