@@ -8,13 +8,13 @@ class TrainConfig:
     The configuration class to set up the work of train process
     """
     path: str
-    keys_mode: Optional[bool]
-    epochs: int
-    dropna: bool
-    row_limit: Optional[int]
-    table_name: Optional[str]
-    metadata_path: Optional[str]
-    batch_size: int
+    keys_mode: Optional[bool] = False
+    epochs: int = 10
+    dropna: bool = False
+    row_limit: Optional[int] = None
+    table_name: Optional[str] = None
+    metadata_path: Optional[str] = None
+    batch_size: int = 32
 
     def set_paths(self):
         """
@@ -37,13 +37,13 @@ class InferConfig:
     The configuration class to set up the work of infer process
     """
     size: int
-    run_parallel: bool
     table_name: str
-    batch_size: Optional[int]
-    keys_mode: Optional[bool]
-    metadata_path: Optional[str]
-    random_seed: Optional[int]
-    print_report: bool
+    run_parallel: bool = True
+    batch_size: Optional[int] = None
+    keys_mode: Optional[bool] = None
+    metadata_path: Optional[str] = None
+    random_seed: Optional[int] = None
+    print_report: bool = False
 
     def set_paths(self):
         """
