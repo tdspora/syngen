@@ -14,7 +14,6 @@ class TrainStrategy:
             handler: RootHandler,
             keys_mode: bool = False
     ):
-        logger.info(f"Generator: {'vae'}, mode: {'train'}")
         self.tmp_store_path = paths['tmp_store_path']
         self.keys_mode = keys_mode
         self.handler = handler
@@ -53,11 +52,11 @@ class InferStrategy:
             self,
             size: int,
             run_parallel: bool,
-            keys_mode: bool,
             metadata_path: Optional[str],
             print_report: bool,
             batch_size: Optional[int],
-            handler: VaeInferHandler
+            handler: VaeInferHandler,
+            keys_mode: Optional[bool] = None
     ):
         self.handler = handler
         self.size = size
