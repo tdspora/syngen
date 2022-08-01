@@ -1,5 +1,5 @@
 import click
-from typing import Optional
+from loguru import logger
 
 from syngen.ml.config import TrainConfig
 from syngen.ml.data_loaders import DataLoader, MetadataLoader
@@ -74,6 +74,8 @@ def train(config: TrainConfig):
         paths=paths,
         handler=handler
     )
+
+    logger.info(f"Generator: {'vae'}, mode: {'train'}")
 
     strategy.run(
         data,

@@ -100,8 +100,9 @@ def infer_model(
     print_report
     """
     infer_config = InferConfig(
-        size, run_parallel, table_name, batch_size,
-        keys_mode, metadata_path, random_seed, print_report
+        size, table_name, run_parallel,
+        batch_size, keys_mode, metadata_path,
+        random_seed, print_report
     )
 
     infer(infer_config)
