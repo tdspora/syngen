@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+import attr
 from typing import Optional
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class TrainConfig:
     """
     The configuration class to set up the work of train process
@@ -31,7 +31,7 @@ class TrainConfig:
         }
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class InferConfig:
     """
     The configuration class to set up the work of infer process
