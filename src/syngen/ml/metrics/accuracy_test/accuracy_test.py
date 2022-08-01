@@ -43,4 +43,3 @@ class AccuracyTest(BaseTest):
         acc.calculate_heatmap_median(acc.heatmap)
 
         # sns.heatmap(acc.heatmap, xticklabels=self.original.columns, yticklabels=self.original.columns, annot=True)
-
