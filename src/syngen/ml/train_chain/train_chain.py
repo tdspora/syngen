@@ -57,7 +57,7 @@ class RootHandler(BaseHandler):
     def __init__(self, metadata: dict, paths: dict):
         super().__init__(metadata, paths)
 
-    def __prepare_dirs(self):
+    def _prepare_dirs(self):
         os.makedirs(self.paths["model_artifacts_path"], exist_ok=True)
         tmp_store_path = self.paths["tmp_store_path"]
         os.makedirs(tmp_store_path, exist_ok=True)
@@ -82,7 +82,7 @@ class RootHandler(BaseHandler):
         return data
 
     def handle(self, data: pd.DataFrame, **kwargs):
-        self.__prepare_dirs()
+        self._prepare_dirs()
         data = self.prepare_data(data, kwargs)
 
         data.to_csv(self.paths["input_data_path"], index=False)
@@ -152,7 +152,7 @@ class VaeInferHandler(BaseHandler):
         self.vae_state_path = self.paths["state_path"]
         self.path_to_merged_infer = self.paths["path_to_merged_infer"]
 
-    def __prepare_dir(self):
+    def _prepare_dir(self):
         tmp_store_path = self.paths["tmp_store_path"]
         os.makedirs(tmp_store_path, exist_ok=True)
 
@@ -225,7 +225,7 @@ class VaeInferHandler(BaseHandler):
         keys_mode: bool = False,
         metadata_path: str = None,
     ):
-        self.__prepare_dir()
+        self._prepare_dir()
         try:
             if not batch_size:
                 batch_size = size
