@@ -7,7 +7,7 @@ class TrainConfig:
     """
     The configuration class to set up the work of train process
     """
-    path: str
+    path: str = attr.ib(kw_only=True)
     keys_mode: Optional[bool] = False
     epochs: int = 10
     dropna: bool = False
@@ -36,8 +36,8 @@ class InferConfig:
     """
     The configuration class to set up the work of infer process
     """
-    size: int
-    table_name: str
+    size: int = attr.ib(kw_only=True)
+    table_name: str = attr.ib(kw_only=True)
     run_parallel: bool = True
     batch_size: Optional[int] = None
     keys_mode: Optional[bool] = None
@@ -60,4 +60,3 @@ class InferConfig:
             "dataset_pickle_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/model_dataset.pkl",
             "pk_path": f"model_artifacts/resources/{self.table_name}/pk/"
         }
-
