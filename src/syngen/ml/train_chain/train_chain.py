@@ -10,7 +10,6 @@ from typing import Tuple
 
 from syngen.ml.vae import *
 from syngen.ml.reporters import Report
-from syngen.ml.data_loaders import MetadataLoader
 
 
 class AbstractHandler(ABC):

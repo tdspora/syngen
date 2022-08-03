@@ -75,4 +75,3 @@ class InferStrategy:
             keys_mode=self.keys_mode,
             metadata_path=self.metadata_path,
         )
-
