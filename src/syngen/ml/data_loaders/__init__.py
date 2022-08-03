@@ -3,4 +3,3 @@ from syngen.ml.data_loaders.data_loaders import AvroLoader
 from syngen.ml.data_loaders.data_loaders import JSONLoader
 from syngen.ml.data_loaders.data_loaders import DataLoader
 from syngen.ml.data_loaders.data_loaders import MetadataLoader
-

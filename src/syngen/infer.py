@@ -100,9 +100,14 @@ def infer_model(
     print_report
     """
     infer_config = InferConfig(
-        size, table_name, run_parallel,
-        batch_size, keys_mode, metadata_path,
-        random_seed, print_report
+        size=size,
+        table_name=table_name,
+        run_parallel=run_parallel,
+        batch_size=batch_size,
+        keys_mode=keys_mode,
+        metadata_path=metadata_path,
+        random_seed=random_seed,
+        print_report=print_report
     )
 
     infer(infer_config)
@@ -110,4 +115,3 @@ def infer_model(
 
 if __name__ == "__main__":
     infer_model()
-

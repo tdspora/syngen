@@ -122,9 +122,14 @@ def train_model(
 
     """
     cli_config = TrainConfig(
-        path, keys_mode, epochs,
-        dropna, row_limit, table_name,
-        metadata_path, batch_size
+        path=path,
+        keys_mode=keys_mode,
+        epochs=epochs,
+        dropna=dropna,
+        row_limit=row_limit,
+        table_name=table_name,
+        metadata_path=metadata_path,
+        batch_size=batch_size
     )
 
     train(cli_config)
@@ -132,4 +137,3 @@ def train_model(
 
 if __name__ == "__main__":
     train_model()
-
