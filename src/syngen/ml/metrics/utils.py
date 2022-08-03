@@ -24,4 +24,3 @@ def text_to_continuous(df, text_columns: List[str]):
         df[col + "_char_len"] = df[col].fillna("").apply(len)
         df[col + "_word_count"] = df[col].fillna("").apply(series_count_words)
     return df
-

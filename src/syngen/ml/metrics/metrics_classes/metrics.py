@@ -607,4 +607,3 @@ class Correlations(BaseMetric):
 
     def __calculate_correlations(self, data):
         return abs(data.corr())
-
