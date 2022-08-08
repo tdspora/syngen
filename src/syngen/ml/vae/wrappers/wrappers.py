@@ -98,9 +98,10 @@ class VAEWrapper(BaseWrapper):
         self.keys_mode = keys_mode
         self.vae_resources_path = paths["state_path"]
         self.dataset_pickle_path = paths["dataset_pickle_path"]
+        self.fk_kde_path = paths["fk_kde_path"]
 
     def _pipeline(self, df, keys_mode):
-        self.dataset = Dataset(df, self.metadata, keys_mode)
+        self.dataset = Dataset(df, self.metadata, keys_mode, self.fk_kde_path)
         self.df = self.dataset.pipeline()
 
         with open(self.dataset_pickle_path, "wb") as f:
