@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import math
 import os
 import traceback
@@ -7,6 +8,7 @@ from loguru import logger
 from numpy.random import seed, choice
 from pathos.multiprocessing import ProcessingPool
 from typing import Tuple
+import dill
 
 from syngen.ml.vae import *
 from syngen.ml.reporters import Report
@@ -150,6 +152,7 @@ class VaeInferHandler(BaseHandler):
         self.wrapper_name = wrapper_name
         self.vae_state_path = self.paths["state_path"]
         self.path_to_merged_infer = self.paths["path_to_merged_infer"]
+        self.fk_kde_path = self.paths["fk_kde_path"]
 
     def _prepare_dir(self):
         tmp_store_path = self.paths["tmp_store_path"]
@@ -196,6 +199,20 @@ class VaeInferHandler(BaseHandler):
             generated = self.run_separate((0, size))
         return generated
 
+    def kde_gen(self, pk_table, pk_column_label, size):
+        pk = pk_table[pk_column_label]
+        with open(self.fk_kde_path, "rb") as file:
+            kde = dill.load(file)
+
+        if pk.dtype == "object":
+            synth_fk = pk.sample(size, replace=size>len(pk)).reset_index(drop=True)
+        else:
+            pk = pk.dropna()
+            fk_pdf = kde.evaluate(pk)
+            synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
+            synth_fk = pd.DataFrame({pk_column_label: synth_fk}).reset_index(drop=True)
+        return synth_fk
+
     def generate_keys(self, generated, size, metadata):
         if metadata.get("fk", None):
             pk_table = [v["pk_table"] for k, v in metadata["fk"].items()][0]
@@ -207,12 +224,12 @@ class VaeInferHandler(BaseHandler):
                     "name of the table with a primary key in the foreign key declaration section "
                     "following pattern 'fk': {'fk_column_name': {'pk_table': 'pk_table_name', 'pk_column': 'pk_column_name'}}}'"
                 )
-            pk_table = pd.read_csv(pk_path)
+            pk_table = pd.read_csv(pk_path, engine="python")
             pk_column_label = [v["pk_column"] for k, v in metadata["fk"].items()][0]
             logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
-            synth_pk = pk_table[pk_column_label].sample(size, replace=size > len(pk_table[pk_column_label])).reset_index(drop=True)
 
-            generated = pd.concat([generated, synth_pk], axis=1)
+            synth_fk = self.kde_gen(pk_table, pk_column_label, size)
+            generated = pd.concat([generated.reset_index(drop=True), synth_fk], axis=1)
         return generated
 
     def handle(

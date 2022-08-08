@@ -1,7 +1,9 @@
 from loguru import logger
 from typing import List
 import numpy as np
+import dill
 import pandas as pd
+from scipy.stats import gaussian_kde
 
 # from itertools import chain
 from syngen.ml.vae.models.features import InverseTransformer
@@ -20,7 +22,7 @@ from syngen.ml.pipeline.pipeline import (
 
 
 class Dataset:
-    def __init__(self, df: pd.DataFrame, metadata: dict, keys_mode: bool):
+    def __init__(self, df: pd.DataFrame, metadata: dict, keys_mode: bool, kde_path: str):
         self.df = df
         self.__set_metadata(metadata)
         self.features = dict()
@@ -31,6 +33,7 @@ class Dataset:
         self.nan_labels_dict = {}
         self.keys_mode = keys_mode
         self.primary_key_type = None
+        self.fk_kde_path = kde_path
 
     def __set_metadata(self, metadata: dict):
         self.table_name = metadata["table_name"]
@@ -160,6 +163,13 @@ class Dataset:
         self.df[feature] = self.df[feature].fillna("?").astype(str)
         return feature
 
+    def _preprocess_fk_params(self):
+        fk = self.df[self.foreign_key_name]
+        if fk.dtype != "object":
+            kde = gaussian_kde(fk)
+            with open(self.fk_kde_path, "wb") as file:
+                dill.dump(kde, file)
+            logger.info(f"KDE artifacts saved to {self.fk_kde_path}")
 
     def pipeline(self) -> pd.DataFrame:
         columns_nan_labels = get_nan_labels(self.df)
@@ -180,6 +190,7 @@ class Dataset:
         )
 
         if self.foreign_key_name and self.keys_mode:
+            self._preprocess_fk_params()
             self.df = self.df.drop(self.foreign_key_name, axis=1)
             float_columns.discard(self.foreign_key_name)
             int_columns.discard(self.foreign_key_name)
