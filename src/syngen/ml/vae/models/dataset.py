@@ -5,7 +5,6 @@ import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
 
-# from itertools import chain
 from syngen.ml.vae.models.features import InverseTransformer
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
