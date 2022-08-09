@@ -11,13 +11,15 @@ import tensorflow.keras.backend as K
 from lazy import lazy
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import losses
-from tensorflow.keras.layers import Bidirectional
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Input
-from tensorflow.keras.layers import LSTM
-from tensorflow.keras.layers import Layer
-from tensorflow.keras.layers import RepeatVector
-from tensorflow.keras.layers import TimeDistributed
+from tensorflow.keras.layers import (
+    Bidirectional,
+    Dense,
+    Input,
+    LSTM,
+    Layer,
+    RepeatVector,
+    TimeDistributed
+)
 from syngen.ml.vae.models.model import check_name
 
 
