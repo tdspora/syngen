@@ -9,7 +9,14 @@ from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.vae import VanillaVAEWrapper
 
 
-def get_metadata(config):
+def get_metadata(config: InferConfig):
+    """
+    Get metadata for infer process
+
+    Parameters
+    ----------
+    config
+    """
     if config.metadata_path:
         metadata = MetadataLoader().load_data(config.metadata_path)
         return metadata
@@ -20,7 +27,14 @@ def get_metadata(config):
         raise AttributeError("Either table name or path to metadata MUST be provided")
 
 
-def set_handler(config):
+def set_handler(config: InferConfig):
+    """
+    Set up handler which used during infer process
+
+    Parameters
+    ----------
+    config
+    """
     return VaeInferHandler(
         metadata=get_metadata(config),
         paths=config.set_paths(),
@@ -30,9 +44,13 @@ def set_handler(config):
     )
 
 
-def set_reporters(config):
+def set_reporters(config: InferConfig):
     """
     Set up reporter which used in order to create the report during infer process
+
+    Parameters
+    ----------
+    config
     """
     accuracy_reporter = AccuracyReporter(
         metadata={"table_name": config.table_name},
@@ -44,6 +62,10 @@ def set_reporters(config):
 def infer(config: InferConfig):
     """
     Launch the infer strategy
+
+    Parameters
+    ----------
+    config
     """
     set_handler(config)
 

@@ -10,7 +10,12 @@ from syngen.ml.vae import VanillaVAEWrapper
 
 def get_metadata(metadata_path, table_name):
     """
-    Return metadata
+    Get metadata for training model
+
+    Parameters
+    ----------
+    metadata_path
+    table_name
     """
     if metadata_path:
         metadata = MetadataLoader().load_data(metadata_path)
@@ -29,6 +34,7 @@ def set_handler(
         keys_mode: bool):
     """
     Set up the handler which used in training process
+
     Parameters
     ----------
     metadata
@@ -55,6 +61,10 @@ def set_handler(
 def train(config: TrainConfig):
     """
     Launch the train strategy
+
+    Parameters
+    ----------
+    config
     """
     data = DataLoader().load_data(config.path)
 
@@ -108,6 +118,7 @@ def train_model(
 ):
     """
     Launch the work of training process
+
     Parameters
     ----------
     path
