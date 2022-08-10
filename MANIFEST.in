@@ -1,5 +1,5 @@
 include *.txt
 include DESCRIPTION
-include src/syngen/VERSION
+include src/VERSION
 recursive-include src
 
