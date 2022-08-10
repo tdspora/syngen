@@ -205,7 +205,7 @@ class VaeInferHandler(BaseHandler):
             kde = dill.load(file)
 
         if pk.dtype == "object":
-            synth_fk = pk.sample(size, replace=size>len(pk)).reset_index(drop=True)
+            synth_fk = pk.sample(size, replace=size > len(pk)).reset_index(drop=True)
         else:
             pk = pk.dropna()
             fk_pdf = kde.evaluate(pk)
@@ -222,7 +222,8 @@ class VaeInferHandler(BaseHandler):
                     "The table with a primary key specified in the metadata file does not "
                     "exist or is not trained. Ensure that the metadata contains the "
                     "name of the table with a primary key in the foreign key declaration section "
-                    "following pattern 'fk': {'fk_column_name': {'pk_table': 'pk_table_name', 'pk_column': 'pk_column_name'}}}'"
+                    "following pattern 'fk': "
+                    "{'fk_column_name': {'pk_table': 'pk_table_name', 'pk_column': 'pk_column_name'}}}'"
                 )
             pk_table = pd.read_csv(pk_path, engine="python")
             pk_column_label = [v["pk_column"] for k, v in metadata["fk"].items()][0]

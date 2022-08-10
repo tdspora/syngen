@@ -90,7 +90,7 @@ def infer(config: InferConfig):
 @click.option("--run_parallel", default=True, type=bool)
 @click.option("--batch_size", default=None, type=int)
 @click.option("--keys_mode", default=None, type=str,
-              help ="When generating data for multiple tables use keys_mode = multable.")
+              help="When generating data for multiple tables use keys_mode = multable.")
 @click.option("--metadata_path", default=None, type=str)
 @click.option("--random_seed", default=None, type=int,
               help="Set any int in case you want reproducible results. To reproduce generated data again, "

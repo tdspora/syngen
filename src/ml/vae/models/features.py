@@ -28,8 +28,8 @@ def dict_inverse(dictionary):
 
 
 """
-Each feature class implements feature preprocessing, transformation and inverse transformation. 
-What is more, each feature class contains modules for the neural network (NN), including 
+Each feature class implements feature preprocessing, transformation and inverse transformation.
+What is more, each feature class contains modules for the neural network (NN), including
 corresponding input, encoder, decoder, and loss.
 
 Methods
@@ -48,13 +48,13 @@ input()
 
 encoder()
     define a feature-specific encoder for the NN
-    
+
 create_decoder(encoder_output)
     create a feature-specific decoder combining given decoder layers and encoder outputs
-    
+ 
 loss()
     define a feature-specific loss taking into account the data types
-    
+
 __decoder_layer()
     define an elementary layer for decoder to use in create_decoder() method
 """
@@ -468,10 +468,8 @@ class CharBasedTextFeature:
 
     def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
         top_p = 0.9
-        top_k = 0.0
         if len(kwargs) > 0:
             top_p = kwargs["top_p"]
-            top_k = kwargs["top_k"]
 
         out = []
         for batch in data:

@@ -24,14 +24,14 @@ class CSVLoader(BaseDataLoader):
     """
     Class for loading and saving data in csv format
     """
-    
+
     def load_data(self, path: str, **kwargs) -> pd.DataFrame:
         return pd.read_csv(path, engine="python", **kwargs).iloc[:, :]
 
     def save_data(self, path: Optional[str], df: pd.DataFrame, **kwargs):
         if df is not None:
             df.to_csv(path, **kwargs)
-        
+
 
 class AvroLoader(BaseDataLoader):
     """
@@ -92,7 +92,7 @@ class DataLoader(BaseDataLoader):
 
         elif path.suffix == '.csv':
             self.csv_loader.save_data(str(path), df, **kwargs)
-        
+
         else:
             raise NotImplementedError("File format not supported")
 

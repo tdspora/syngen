@@ -122,7 +122,7 @@ class CVAE:
         for i, (name, feature) in enumerate(self.dataset.features.items()):
             feature_decoder = feature.create_decoder(self.global_decoder)
 
-            feature_layer = FeatureLossLayer(feature, name=check_name(name))
+            FeatureLossLayer(feature, name=check_name(name))
             feature_tensor = feature_decoder
             feature_losses.append(feature.loss)
 
