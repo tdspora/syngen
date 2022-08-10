@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from typing import List
 
-from syngen.ml.metrics import (
+from ml.metrics import (
     UnivariateMetric,
     JensenShannonDistance
 )

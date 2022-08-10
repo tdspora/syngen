@@ -3,8 +3,8 @@ from typing import Optional, Dict
 import pandas as pd
 from loguru import logger
 
-from syngen.ml.train_chain import RootHandler
-from syngen.ml.train_chain import VaeInferHandler
+from ml.train_chain import RootHandler
+from ml.train_chain import VaeInferHandler
 
 
 class TrainStrategy:

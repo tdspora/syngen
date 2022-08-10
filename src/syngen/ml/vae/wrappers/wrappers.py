@@ -10,9 +10,9 @@ from loguru import logger
 from collections import defaultdict
 from pathlib import Path
 
-from syngen.ml.vae.models.features import *
-from syngen.ml.vae.models.model import CVAE
-from syngen.ml.vae.models import Dataset
+from ml.vae.models.features import *
+from ml.vae.models.model import CVAE
+from ml.vae.models import Dataset
 
 warnings.filterwarnings("ignore")
 

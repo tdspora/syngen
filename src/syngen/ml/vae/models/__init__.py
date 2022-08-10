@@ -1,1 +1,1 @@
-from syngen.ml.vae.models.dataset import Dataset
+from ml.vae.models.dataset import Dataset

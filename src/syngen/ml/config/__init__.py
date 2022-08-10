@@ -1,2 +1,2 @@
-from syngen.ml.config.configurations import TrainConfig
-from syngen.ml.config.configurations import InferConfig
+from ml.config.configurations import TrainConfig
+from ml.config.configurations import InferConfig

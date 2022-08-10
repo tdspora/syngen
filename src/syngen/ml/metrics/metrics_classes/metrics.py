@@ -10,8 +10,8 @@ from typing import List
 import pickle as pl
 import seaborn as sns
 
-from syngen.ml.pipeline import get_nan_labels, nan_labels_to_float
-from syngen.ml.metrics.utils import text_to_continuous
+from ml.pipeline import get_nan_labels, nan_labels_to_float
+from ml.metrics.utils import text_to_continuous
 
 
 class BaseMetric(ABC):

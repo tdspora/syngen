@@ -10,8 +10,8 @@ from pathos.multiprocessing import ProcessingPool
 from typing import Tuple
 import dill
 
-from syngen.ml.vae import *
-from syngen.ml.reporters import Report
+from ml.vae import *
+from ml.reporters import Report
 
 
 class AbstractHandler(ABC):

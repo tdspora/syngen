@@ -19,7 +19,7 @@ from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
 
-from syngen.ml.vae.models.custom_layers import FeatureLossLayer
+from ml.vae.models.custom_layers import FeatureLossLayer
 
 
 def check_name(name):
