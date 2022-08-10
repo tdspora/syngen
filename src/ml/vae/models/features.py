@@ -51,7 +51,7 @@ encoder()
 
 create_decoder(encoder_output)
     create a feature-specific decoder combining given decoder layers and encoder outputs
- 
+
 loss()
     define a feature-specific loss taking into account the data types
 
