@@ -1,11 +1,11 @@
 import click
 from loguru import logger
 
-from syngen.ml.config import TrainConfig
-from syngen.ml.data_loaders import DataLoader, MetadataLoader
-from syngen.ml.strategies import TrainStrategy
-from syngen.ml.train_chain import RootHandler, VaeTrainHandler
-from syngen.ml.vae import VanillaVAEWrapper
+from ml.config import TrainConfig
+from ml.data_loaders import DataLoader, MetadataLoader
+from ml.strategies import TrainStrategy
+from ml.train_chain import RootHandler, VaeTrainHandler
+from ml.vae import VanillaVAEWrapper
 
 
 def get_metadata(metadata_path, table_name):

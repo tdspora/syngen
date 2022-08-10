@@ -1,12 +1,12 @@
 import click
 from typing import Optional
 
-from syngen.ml.config import InferConfig
-from syngen.ml.reporters import Report, AccuracyReporter
-from syngen.ml.strategies import InferStrategy
-from syngen.ml.train_chain import VaeInferHandler
-from syngen.ml.data_loaders import MetadataLoader
-from syngen.ml.vae import VanillaVAEWrapper
+from ml.config import InferConfig
+from ml.reporters import Report, AccuracyReporter
+from ml.strategies import InferStrategy
+from ml.train_chain import VaeInferHandler
+from ml.data_loaders import MetadataLoader
+from ml.vae import VanillaVAEWrapper
 
 
 def get_metadata(config: InferConfig):

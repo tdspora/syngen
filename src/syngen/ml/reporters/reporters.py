@@ -3,13 +3,13 @@ from typing import List
 import pandas as pd
 from loguru import logger
 
-from syngen.ml.pipeline import (
+from ml.pipeline import (
     data_pipeline,
     get_nan_labels,
     nan_labels_to_float
 )
-from syngen.ml.metrics import AccuracyTest
-from syngen.ml.metrics.utils import text_to_continuous
+from ml.metrics import AccuracyTest
+from ml.metrics.utils import text_to_continuous
 
 
 class Reporter:

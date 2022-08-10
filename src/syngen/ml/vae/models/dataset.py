@@ -5,15 +5,15 @@ import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
 
-from syngen.ml.vae.models.features import InverseTransformer
-from syngen.ml.vae.models.features import (
+from ml.vae.models.features import InverseTransformer
+from ml.vae.models.features import (
     CategoricalFeature,
     CharBasedTextFeature,
     ContinuousFeature,
     DateFeature,
     BinaryFeature,
 )
-from syngen.ml.pipeline.pipeline import (
+from ml.pipeline.pipeline import (
     data_pipeline,
     get_nan_labels,
     nan_labels_to_float

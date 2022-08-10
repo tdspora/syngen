@@ -20,7 +20,7 @@ from tensorflow.keras.layers import (
     RepeatVector,
     TimeDistributed
 )
-from syngen.ml.vae.models.model import check_name
+from ml.vae.models.model import check_name
 
 
 def dict_inverse(dictionary):
