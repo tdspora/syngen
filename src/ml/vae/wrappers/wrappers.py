@@ -1,7 +1,8 @@
-from typing import Tuple
+from typing import Tuple, List
 from abc import ABC, abstractmethod
 import warnings
 import pickle
+import tensorflow as tf
 from tensorflow.python.data.experimental import AutoShardPolicy
 import matplotlib.pyplot as plt
 import time
@@ -9,8 +10,9 @@ import tqdm
 from loguru import logger
 from collections import defaultdict
 from pathlib import Path
+import pandas as pd
+import numpy as np
 
-from ml.vae.models.features import *
 from ml.vae.models.model import CVAE
 from ml.vae.models import Dataset
 
@@ -232,7 +234,7 @@ class VAEWrapper(BaseWrapper):
 
     def _train_step(self, batch: Tuple[tf.Tensor]) -> tf.Tensor:
         with tf.GradientTape() as tape:
-            reconstructed = self.vae(batch)
+            self.vae(batch)
 
             # Compute reconstruction loss
             loss = sum(self.vae.losses)
