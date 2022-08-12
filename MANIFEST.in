@@ -1,5 +1,3 @@
-include *.txt
-include DESCRIPTION
-include src/VERSION
+include src/syngen/VERSION
+include src/syngen/*.py
 recursive-include src
-
