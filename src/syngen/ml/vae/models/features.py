@@ -9,7 +9,8 @@ from pandas._libs.tslibs.parsing import guess_datetime_format
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from lazy import lazy
-from sklearn.preprocessing import StandardScaler
+from scipy.stats import shapiro
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from tensorflow.keras import losses
 from tensorflow.keras.layers import (
     Bidirectional,
@@ -142,7 +143,8 @@ class ContinuousFeature:
         self.column_type = column_type
 
     def fit(self, data: pd.DataFrame):
-        self.scaler = StandardScaler()
+        normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
+        self.scaler = StandardScaler() if normality >= 0.05 else MinMaxScaler()
         self.scaler.fit(data)
         self.input_dimension = data.shape[1]
 
@@ -586,9 +588,10 @@ class DateFeature:
         self.date_format = self.__validate_format(data)
         data = chain.from_iterable(data.values)
         data = list(map(lambda d: pd.Timestamp(d).value, data))
+        normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
         data = np.array(data).reshape(-1, 1)
 
-        self.scaler = StandardScaler()
+        self.scaler = StandardScaler() if normality >= 0.05 else MinMaxScaler()
         self.scaler.fit(data)
         self.input_dimension = data.shape[1]
 
