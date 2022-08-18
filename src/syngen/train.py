@@ -1,5 +1,7 @@
 import click
 from loguru import logger
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from syngen.ml.config import TrainConfig
 from syngen.ml.data_loaders import DataLoader, MetadataLoader

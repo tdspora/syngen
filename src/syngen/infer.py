@@ -1,5 +1,7 @@
 import click
 from typing import Optional
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from syngen.ml.config import InferConfig
 from syngen.ml.reporters import Report, AccuracyReporter
