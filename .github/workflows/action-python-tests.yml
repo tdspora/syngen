@@ -1,4 +1,4 @@
-name: TESTING
+name: Build & Deploy
 on: [push]
 jobs:
   PyPI-syngen-workflow:
@@ -37,3 +37,23 @@ jobs:
 #          repository_url: https://test.pypi.org/legacy/ # For testing purposes
           print_hash: true
           verbose: true
+      - name: Login to Docker Hub
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}        
+      - name: Set up Docker Buildx
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        uses: docker/setup-buildx-action@v1
+      - name: Build and push
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/syngen:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/simplewhale:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/simplewhale:buildcache,mode=max
+          
