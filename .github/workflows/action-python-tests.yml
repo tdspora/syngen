@@ -47,13 +47,22 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/setup-buildx-action@v1
       - name: Build and push
+        id: gen_tags
+        run: |
+          if [[ $GITHUB_REF == 'refs/tags/'* ]]; then
+            TAGS='["user/image:latest","${{ secrets.DOCKER_HUB_USERNAME }}/syngen:'${GITHUB_REF/refs\/tags\//}'"]'
+          else
+            TAGS='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen:latest"]'
+          fi
+          echo '::set-output name=tags::'$TAGS
+      - name: Build and push (Training)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/build-push-action@v2
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/syngen:latest
+          tags: ${{ fromJson(steps.gen_tags.outputs.tags) }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen:buildcache,mode=max
           
