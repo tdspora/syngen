@@ -57,8 +57,8 @@ jobs:
             TAGS_TRAIN='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:latest"]'
             TAGS_INFER='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen-infer:latest"]'
           fi
-          echo '::set-output name=tags-train::'$TAGS_TRAIN
-          echo '::set-output name=tags-infer::'$TAGS_INFER
+          echo '::set-output name=tags_train::'$TAGS_TRAIN
+          echo '::set-output name=tags_infer::'$TAGS_INFER
       - name: Build and push (Training)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/build-push-action@v2
@@ -66,7 +66,7 @@ jobs:
           context: .
           file: ./Dockerfile.ml-training
           push: true
-          tags: ${{ fromJson(steps.gen_tags.outputs.tags-train) }}
+          tags: ${{ fromJson(steps.gen_tags.outputs.tags_train) }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:buildcache,mode=max
       - name: Build and push (Inference)
@@ -76,6 +76,6 @@ jobs:
           context: .
           file: ./Dockerfile.ml-inference
           push: true
-          tags: ${{ fromJson(steps.gen_tags.outputs.tags-infer) }}
+          tags: ${{ fromJson(steps.gen_tags.outputs.tags_infer) }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen-infer:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen-infer:buildcache,mode=max
