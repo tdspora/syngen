@@ -25,8 +25,8 @@ jobs:
             TAGS_TRAIN='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:latest"]'
             TAGS_INFER='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen-infer:latest"]'
           fi
-          echo -e '::set-output name=tags_train::'$TAGS_TRAIN \n
-          echo '::set-output name=tags_infer::'$TAGS_INFER
+          echo '::set-output name=tags_train::'$TAGS_TRAIN
+#          echo '::set-output name=tags_infer::'$TAGS_INFER
       - name: Build and push (Training)
         # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/build-push-action@v2
