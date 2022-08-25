@@ -1,4 +1,4 @@
-on: issue_comment
+on: [push]
 name: Docker
 jobs:
   Docker-build:
