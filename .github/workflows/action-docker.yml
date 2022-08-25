@@ -19,17 +19,18 @@ jobs:
         # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         run: |
           if [[ $GITHUB_REF == 'refs/tags/'* ]]; then
-            TAGS_TRAIN='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:latest","${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:'${GITHUB_REF/refs\/tags\//}'"]'
-            TAGS_INFER='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen-infer:latest","${{ secrets.DOCKER_HUB_USERNAME }}/syngen-infer:'${GITHUB_REF/refs\/tags\//}'"]'
+            TAGS_TRAIN='["tdspora/syngen-train:latest","tdspora/syngen-train:'${GITHUB_REF/refs\/tags\//}'"]'
+            TAGS_INFER='["tdspora/syngen-infer:latest","tdspora/syngen-infer:'${GITHUB_REF/refs\/tags\//}'"]'
           else
-            TAGS_TRAIN='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:latest"]'
-            TAGS_INFER='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen-infer:latest"]'
+            TAGS_TRAIN='["tdspora/syngen-train:latest"]'
+            TAGS_INFER='["tdspora/syngen-infer:latest"]'
           fi
           echo '::set-output name=tags_train::'$TAGS_TRAIN
           echo '::set-output name=tags_infer::'$TAGS_INFER
       - name: Print tag
         run: |
           echo ${{ steps.gen_tags.outputs.tags_train }}
+          echo ${{ steps.gen_tags.outputs.tags_infer }}
       - name: Build and push (Training)
         # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/build-push-action@v2
