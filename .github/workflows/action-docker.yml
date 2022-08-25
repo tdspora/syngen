@@ -27,6 +27,9 @@ jobs:
           fi
           echo '::set-output name=tags_train::'$TAGS_TRAIN
 #          echo '::set-output name=tags_infer::'$TAGS_INFER
+      - name: Print tag
+        run: |
+          echo ${{ steps.gen_tags.outputs.tags_train }}
       - name: Build and push (Training)
         # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/build-push-action@v2
@@ -34,7 +37,7 @@ jobs:
           context: .
           file: ./Dockerfile.ml-training
           push: true
-          tags: ${{ fromJson(docker.steps.gen_tags.outputs.tags_train) }}
+          tags: ${{ fromJson(steps.gen_tags.outputs.tags_train) }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:buildcache,mode=max
       - name: Build and push (Inference)
