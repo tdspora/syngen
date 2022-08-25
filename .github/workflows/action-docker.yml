@@ -30,7 +30,7 @@ jobs:
           context: .
           file: ./Dockerfile.ml-training
           push: false
-          tags: ${{ steps.docker_meta.outputs.labels }}
+          tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=registry,ref=tdspora/syngen-train:buildcache
           cache-to: type=registry,ref=tdspora/syngen-train:buildcache,mode=max
@@ -41,7 +41,7 @@ jobs:
           context: .
           file: ./Dockerfile.ml-inference
           push: false
-          tags: ${{ steps.docker_meta.outputs.labels }}
+          tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=registry,ref=tdspora/syngen-infer:buildcache
           cache-to: type=registry,ref=tdspora/syngen-infer:buildcache,mode=max
