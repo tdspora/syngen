@@ -34,7 +34,7 @@ jobs:
           context: .
           file: ./Dockerfile.ml-training
           push: true
-          tags: ${{ fromJson(steps.gen_tags.outputs.tags_train) }}
+          tags: ${{ fromJson(Docker-build.steps.gen_tags.outputs.tags_train) }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/syngen-train:buildcache,mode=max
       - name: Build and push (Inference)
