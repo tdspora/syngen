@@ -26,7 +26,7 @@ jobs:
             TAGS_INFER='["${{ secrets.DOCKER_HUB_USERNAME }}/syngen-infer:latest"]'
           fi
           echo '::set-output name=tags_train::'$TAGS_TRAIN
-#          echo '::set-output name=tags_infer::'$TAGS_INFER
+          echo '::set-output name=tags_infer::'$TAGS_INFER
       - name: Print tag
         run: |
           echo ${{ steps.gen_tags.outputs.tags_train }}
