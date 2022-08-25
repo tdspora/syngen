@@ -1,3 +1,4 @@
+on: issue_comment
 name: Docker
 jobs:
   Docker-build:
