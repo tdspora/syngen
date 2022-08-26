@@ -10,19 +10,24 @@ from syngen.ml.train_chain import RootHandler, VaeTrainHandler
 from syngen.ml.vae import VanillaVAEWrapper
 
 
-def get_metadata(metadata_path, table_name):
+def get_metadata(config: TrainConfig):
     """
     Get metadata for training model
 
     Parameters
     ----------
-    metadata_path
-    table_name
+    config
     """
+    metadata_path = config.metadata_path
+    table_name = config.table_name
+    if metadata_path.endswith('.yaml'):
+        metadata = MetadataLoader().load_data(metadata_path)
+        metadata_of_table = metadata["configuration"]["tables"][table_name]
+        return metadata_of_table
     if metadata_path:
         metadata = MetadataLoader().load_data(metadata_path)
         return metadata
-    elif table_name:
+    if table_name:
         metadata = {"table_name": table_name}
         return metadata
     else:
@@ -70,7 +75,7 @@ def train(config: TrainConfig):
     """
     data = DataLoader().load_data(config.path)
 
-    metadata = get_metadata(config.metadata_path, config.table_name)
+    metadata = get_metadata(config)
 
     paths = config.set_paths()
 
@@ -134,7 +139,7 @@ def train_model(
     -------
 
     """
-    cli_config = TrainConfig(
+    train_config = TrainConfig(
         path=path,
         keys_mode=keys_mode,
         epochs=epochs,
@@ -145,7 +150,7 @@ def train_model(
         batch_size=batch_size
     )
 
-    train(cli_config)
+    train(train_config)
 
 
 if __name__ == "__main__":

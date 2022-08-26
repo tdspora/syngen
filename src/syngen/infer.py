@@ -17,13 +17,20 @@ def get_metadata(config: InferConfig):
 
     Parameters
     ----------
-    config
+    metadata_path
+    table_name
     """
-    if config.metadata_path:
-        metadata = MetadataLoader().load_data(config.metadata_path)
+    metadata_path = config.metadata_path
+    table_name = config.table_name
+    if metadata_path.endswith('.yaml'):
+        metadata = MetadataLoader().load_data(metadata_path)
+        metadata_of_table = metadata["configuration"]["tables"][table_name]
+        return metadata_of_table
+    if metadata_path:
+        metadata = MetadataLoader().load_data(metadata_path)
         return metadata
-    elif config.table_name:
-        metadata = {"table_name": config.table_name}
+    if table_name:
+        metadata = {"table_name": table_name}
         return metadata
     else:
         raise AttributeError("Either table name or path to metadata MUST be provided")
