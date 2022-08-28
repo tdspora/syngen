@@ -8,7 +8,6 @@ class TrainConfig:
     The configuration class to set up the work of train process
     """
     path: str = attr.ib(kw_only=True)
-    keys_mode: Optional[bool] = False
     epochs: int = 10
     dropna: bool = False
     row_limit: Optional[int] = None
@@ -41,7 +40,6 @@ class InferConfig:
     table_name: str = attr.ib(kw_only=True)
     run_parallel: bool = True
     batch_size: Optional[int] = None
-    keys_mode: Optional[bool] = None
     metadata_path: Optional[str] = None
     random_seed: Optional[int] = None
     print_report: bool = False
