@@ -50,7 +50,7 @@ class BaseHandler(AbstractHandler):
     @staticmethod
     def create_wrapper(cls_name, **kwargs):
         return globals()[cls_name](
-            kwargs["metadata"], kwargs["paths"], kwargs["keys_mode"]
+            kwargs["metadata"], kwargs["paths"]
         )
 
 
@@ -92,20 +92,18 @@ class RootHandler(BaseHandler):
 
 class VaeTrainHandler(BaseHandler):
     def __init__(
-        self, metadata: dict, paths: dict, wrapper_name, keys_mode: bool = False
+        self, metadata: dict, paths: dict, wrapper_name
     ):
         super().__init__(metadata, paths)
-        self.keys_mode = keys_mode
         self.model = self.create_wrapper(
             wrapper_name,
             metadata=self.metadata,
             paths=self.paths,
-            keys_mode=self.keys_mode,
         )
         self.state_path = self.paths["state_path"]
 
     def __fit_model(
-        self, data: pd.DataFrame, epochs: int, batch_size: int, keys_mode: bool
+        self, data: pd.DataFrame, epochs: int, batch_size: int
     ):
         os.makedirs(self.state_path, exist_ok=True)
         logger.info("Start VAE training")
@@ -117,7 +115,6 @@ class VaeTrainHandler(BaseHandler):
         self.model.fit_on_df(
             data,
             epochs=epochs,
-            keys_mode=keys_mode,
         )
 
         self.model.save_state(self.state_path)
@@ -127,8 +124,7 @@ class VaeTrainHandler(BaseHandler):
         self.__fit_model(
             data,
             kwargs["epochs"],
-            kwargs["batch_size"],
-            keys_mode=kwargs["keys_mode"],
+            kwargs["batch_size"]
         )
         return super().handle(data, **kwargs)
 
@@ -140,14 +136,12 @@ class VaeInferHandler(BaseHandler):
         paths: dict,
         wrapper_name: str,
         random_seed: int = None,
-        keys_mode: bool = False
     ):
         super().__init__(metadata, paths)
         self.random_seed = random_seed
         self.random_seeds_list = []
         if random_seed:
             seed(random_seed)
-        self.keys_mode = keys_mode
         self.vae = None
         self.wrapper_name = wrapper_name
         self.vae_state_path = self.paths["state_path"]
@@ -168,7 +162,6 @@ class VaeInferHandler(BaseHandler):
             self.wrapper_name,
             metadata={"table_name": self.table_name},
             paths=self.paths,
-            keys_mode=self.keys_mode,
         )
         self.vae.load_state(self.vae_state_path)
         synthetic_infer = self.vae.predict_sampled_df(size)
@@ -201,12 +194,12 @@ class VaeInferHandler(BaseHandler):
 
     def kde_gen(self, pk_table, pk_column_label, size):
         pk = pk_table[pk_column_label]
-        with open(self.fk_kde_path, "rb") as file:
-            kde = dill.load(file)
 
         if pk.dtype == "object":
-            synth_fk = pk.sample(size, replace=size > len(pk)).reset_index(drop=True)
+            synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
         else:
+            with open(self.fk_kde_path, "rb") as file:
+                kde = dill.load(file)
             pk = pk.dropna()
             fk_pdf = kde.evaluate(pk)
             synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
@@ -214,7 +207,7 @@ class VaeInferHandler(BaseHandler):
         return synth_fk
 
     def generate_keys(self, generated, size, metadata):
-        if metadata.get("fk", None):
+        if metadata.get("fk", False):
             pk_table = [v["pk_table"] for k, v in metadata["fk"].items()][0]
             pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer.csv"
             if not os.path.exists(pk_path):
@@ -239,7 +232,6 @@ class VaeInferHandler(BaseHandler):
         run_parallel: bool = True,
         batch_size: int = None,
         print_report: bool = False,
-        keys_mode: bool = False,
         metadata_path: str = None,
     ):
         self._prepare_dir()
@@ -253,7 +245,7 @@ class VaeInferHandler(BaseHandler):
             for batch in batches:
                 generated_batch = self.run(batch, run_parallel)
                 generated = pd.concat([generated, generated_batch])
-            if keys_mode:
+            if metadata_path is not None:
                 generated = self.generate_keys(generated, size, self.metadata)
 
             generated.to_csv(self.path_to_merged_infer, index=False)
