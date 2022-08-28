@@ -21,7 +21,7 @@ from syngen.ml.pipeline.pipeline import (
 
 
 class Dataset:
-    def __init__(self, df: pd.DataFrame, metadata: dict, keys_mode: bool, kde_path: str):
+    def __init__(self, df: pd.DataFrame, metadata: dict, kde_path: str):
         self.df = df
         self.__set_metadata(metadata)
         self.features = dict()
@@ -30,14 +30,10 @@ class Dataset:
         self.all_columns = []
         self.null_column_names = []
         self.nan_labels_dict = {}
-        self.keys_mode = keys_mode
-        self.primary_key_type = None
         self.fk_kde_path = kde_path
 
     def __set_metadata(self, metadata: dict):
         self.table_name = metadata["table_name"]
-        pk = metadata.get("pk", None)
-        self.primary_key_name = pk["pk_column"] if pk else None
         fk = metadata.get("fk", None)
         self.foreign_key_name = list(fk.keys())[0] if fk else None
 
@@ -88,7 +84,7 @@ class Dataset:
         column_names = list()
         if not isinstance(data, list):
             data = [data]
-        assert len(data) == len(self.features)
+        assert (len(data) == len(self.features)) or (len(data) + 1 == len(self.features))
 
         self.inverse_transformers = {}
 
@@ -182,13 +178,13 @@ class Dataset:
             binary_columns,
         ) = data_pipeline(self.df)
 
-        self.primary_key_type = (
-            str
-            if self.primary_key_name in (str_columns | categ_columns | date_columns | binary_columns)
-            else float
-        )
+        # self.primary_key_type = (
+        #     str
+        #     if self.primary_key_name in (str_columns | categ_columns | date_columns | binary_columns)
+        #     else float
+        # )
 
-        if self.foreign_key_name and self.keys_mode:
+        if self.foreign_key_name:
             self._preprocess_fk_params()
             self.df = self.df.drop(self.foreign_key_name, axis=1)
             float_columns.discard(self.foreign_key_name)
