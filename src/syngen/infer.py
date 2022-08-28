@@ -42,7 +42,6 @@ def set_handler(config: InferConfig):
         paths=config.set_paths(),
         wrapper_name=VanillaVAEWrapper.__name__,
         random_seed=config.random_seed,
-        keys_mode=config.keys_mode
     )
 
 
@@ -76,7 +75,6 @@ def infer(config: InferConfig):
     infer_strategy = InferStrategy(
         size=config.size,
         run_parallel=config.run_parallel,
-        keys_mode=config.keys_mode,
         metadata_path=config.metadata_path,
         print_report=config.print_report,
         batch_size=config.batch_size,
@@ -91,8 +89,6 @@ def infer(config: InferConfig):
 @click.argument("table_name", type=str)
 @click.option("--run_parallel", default=True, type=bool)
 @click.option("--batch_size", default=None, type=int)
-@click.option("--keys_mode", default=None, type=str,
-              help="When generating data for multiple tables use keys_mode = multable.")
 @click.option("--metadata_path", default=None, type=str)
 @click.option("--random_seed", default=None, type=int,
               help="Set any int in case you want reproducible results. To reproduce generated data again, "
@@ -105,7 +101,6 @@ def infer_model(
         table_name: str,
         run_parallel: bool,
         batch_size: Optional[int],
-        keys_mode: Optional[bool],
         metadata_path: Optional[str],
         random_seed: Optional[int],
         print_report: bool):
@@ -118,7 +113,6 @@ def infer_model(
     table_name
     run_parallel
     batch_size
-    keys_mode
     metadata_path
     random_seed
     print_report
@@ -128,7 +122,6 @@ def infer_model(
         table_name=table_name,
         run_parallel=run_parallel,
         batch_size=batch_size,
-        keys_mode=keys_mode,
         metadata_path=metadata_path,
         random_seed=random_seed,
         print_report=print_report
