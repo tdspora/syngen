@@ -12,10 +12,8 @@ class TrainStrategy:
             self,
             paths: Dict[str, str],
             handler: RootHandler,
-            keys_mode: bool = False
     ):
         self.tmp_store_path = paths['tmp_store_path']
-        self.keys_mode = keys_mode
         self.handler = handler
 
     def run(
@@ -25,7 +23,6 @@ class TrainStrategy:
             row_subset: Optional[int],
             batch_size: int,
             dropna: bool,
-            keys_mode: Optional[bool]
     ):
         logger.debug(f"Train model with parameters: epochs={epochs}, dropna={dropna}")
         try:
@@ -34,7 +31,6 @@ class TrainStrategy:
                 epochs=epochs,
                 batch_size=batch_size,
                 row_subset=row_subset,
-                keys_mode=keys_mode,
                 dropna=dropna
             )
 
@@ -56,13 +52,11 @@ class InferStrategy:
             print_report: bool,
             batch_size: Optional[int],
             handler: VaeInferHandler,
-            keys_mode: Optional[bool] = None
     ):
         self.handler = handler
         self.size = size
         self.run_parallel = run_parallel
         self.print_report = print_report
-        self.keys_mode = keys_mode
         self.metadata_path = metadata_path
         self.batch_size = batch_size
 
@@ -72,6 +66,5 @@ class InferStrategy:
             run_parallel=self.run_parallel,
             batch_size=self.batch_size,
             print_report=self.print_report,
-            keys_mode=self.keys_mode,
             metadata_path=self.metadata_path,
         )
