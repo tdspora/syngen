@@ -37,8 +37,7 @@ def get_metadata(config: TrainConfig):
 def set_handler(
         metadata: dict,
         paths: dict,
-        wrapper_name: str,
-        keys_mode: bool):
+        wrapper_name: str):
     """
     Set up the handler which used in training process
 
@@ -47,7 +46,6 @@ def set_handler(
     metadata
     paths
     wrapper_name
-    keys_mode
     """
 
     root_handler = RootHandler(
@@ -58,7 +56,6 @@ def set_handler(
         metadata=metadata,
         paths=paths,
         wrapper_name=wrapper_name,
-        keys_mode=keys_mode
     )
 
     root_handler.set_next(vae_handler)
@@ -83,11 +80,9 @@ def train(config: TrainConfig):
         metadata=metadata,
         paths=paths,
         wrapper_name=VanillaVAEWrapper.__name__,
-        keys_mode=config.keys_mode
     )
 
     strategy = TrainStrategy(
-        keys_mode=config.keys_mode,
         paths=paths,
         handler=handler
     )
@@ -100,7 +95,6 @@ def train(config: TrainConfig):
         row_subset=config.row_limit,
         batch_size=config.batch_size,
         dropna=config.dropna,
-        keys_mode=config.keys_mode
     )
 
 
@@ -111,11 +105,9 @@ def train(config: TrainConfig):
 @click.option("--row_limit", default=None, type=int)
 @click.option("--table_name", default=None, type=str)
 @click.option("--metadata_path", default=None, type=str)
-@click.option("--keys_mode", default=False, type=bool,
-              help="When generating data for multiple tables use keys_mode = multable.")
+
 def train_model(
     path: str,
-    keys_mode: bool,
     epochs: int,
     dropna: bool,
     row_limit: int,
@@ -129,7 +121,6 @@ def train_model(
     Parameters
     ----------
     path
-    keys_mode
     epochs
     dropna
     row_limit
@@ -141,7 +132,6 @@ def train_model(
     """
     train_config = TrainConfig(
         path=path,
-        keys_mode=keys_mode,
         epochs=epochs,
         dropna=dropna,
         row_limit=row_limit,
