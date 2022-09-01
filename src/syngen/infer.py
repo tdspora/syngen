@@ -1,141 +1,70 @@
-import click
 from typing import Optional
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-from syngen.ml.config import InferConfig
-from syngen.ml.reporters import Report, AccuracyReporter
-from syngen.ml.strategies import InferStrategy
-from syngen.ml.train_chain import VaeInferHandler
-from syngen.ml.data_loaders import MetadataLoader
-from syngen.ml.vae import VanillaVAEWrapper
+import click
+from loguru import logger
 
-
-def get_metadata(config: InferConfig):
-    """
-    Get metadata for infer process
-
-    Parameters
-    ----------
-    metadata_path
-    table_name
-    """
-    metadata_path = config.metadata_path
-    table_name = config.table_name
-    if metadata_path.endswith('.yaml'):
-        metadata = MetadataLoader().load_data(metadata_path)
-        metadata_of_table = metadata["configuration"]["tables"][table_name]
-        return metadata_of_table
-    if metadata_path:
-        metadata = MetadataLoader().load_data(metadata_path)
-        return metadata
-    if table_name:
-        metadata = {"table_name": table_name}
-        return metadata
-    else:
-        raise AttributeError("Either table name or path to metadata MUST be provided")
-
-
-def set_handler(config: InferConfig):
-    """
-    Set up handler which used during infer process
-
-    Parameters
-    ----------
-    config
-    """
-    return VaeInferHandler(
-        metadata=get_metadata(config),
-        paths=config.set_paths(),
-        wrapper_name=VanillaVAEWrapper.__name__,
-        random_seed=config.random_seed,
-    )
-
-
-def set_reporters(config: InferConfig):
-    """
-    Set up reporter which used in order to create the report during infer process
-
-    Parameters
-    ----------
-    config
-    """
-    accuracy_reporter = AccuracyReporter(
-        metadata={"table_name": config.table_name},
-        paths=config.set_paths()
-    )
-    Report().register_reporter(accuracy_reporter)
-
-
-def infer(config: InferConfig):
-    """
-    Launch the infer strategy
-
-    Parameters
-    ----------
-    config
-    """
-    set_handler(config)
-
-    set_reporters(config)
-
-    infer_strategy = InferStrategy(
-        size=config.size,
-        run_parallel=config.run_parallel,
-        metadata_path=config.metadata_path,
-        print_report=config.print_report,
-        batch_size=config.batch_size,
-        handler=set_handler(config)
-    )
-
-    infer_strategy.run()
+from syngen.ml.worker import Worker
 
 
 @click.command()
-@click.argument("size", type=int)
-@click.argument("table_name", type=str)
+@click.option("--metadata_path", type=str, default=None)
+@click.option("--size", default=None, type=int)
+@click.option("--table_name", default=None, type=str)
 @click.option("--run_parallel", default=True, type=bool)
 @click.option("--batch_size", default=None, type=int)
-@click.option("--metadata_path", default=None, type=str)
 @click.option("--random_seed", default=None, type=int,
               help="Set any int in case you want reproducible results. To reproduce generated data again, "
                    "use the same int in this command.")
 @click.option("--print_report", default=False, type=bool,
               help="Whether to print quality report. Might require significant time for big generated tables "
                    "(>1000 rows)")
-def infer_model(
-        size: int,
-        table_name: str,
+def launch_infer(
+        metadata_path: Optional[str],
+        size: Optional[int],
+        table_name: Optional[str],
         run_parallel: bool,
         batch_size: Optional[int],
-        metadata_path: Optional[str],
         random_seed: Optional[int],
-        print_report: bool):
+        print_report: bool,
+):
     """
     Launch the work of infer process
-
     Parameters
     ----------
+    metadata_path
     size
     table_name
     run_parallel
     batch_size
-    metadata_path
     random_seed
     print_report
-    """
-    infer_config = InferConfig(
-        size=size,
-        table_name=table_name,
-        run_parallel=run_parallel,
-        batch_size=batch_size,
-        metadata_path=metadata_path,
-        random_seed=random_seed,
-        print_report=print_report
-    )
+    -------
 
-    infer(infer_config)
+    """
+    if not metadata_path and not table_name:
+        raise AttributeError("It seems that the information of metadata_path or table_name is absent. "
+                             "Please provide either the information of metadata_path or the information of table_name.")
+    if metadata_path:
+        if table_name:
+            logger.warning("The information of metadata_path was provided. "
+                           "In this case the information of table_name will be ignored.")
+        if not metadata_path.endswith('.yaml'):
+            raise NotImplementedError("This format for metadata_path is not supported. "
+                                      "Please provide metadata_path in '.yaml' format")
+    settings = {
+        "size": size,
+        "table_name": table_name,
+        "run_parallel": run_parallel,
+        "batch_size": batch_size,
+        "random_seed": random_seed,
+        "print_report": print_report
+    }
+    Worker(
+        table_name=table_name,
+        metadata_path=metadata_path,
+        settings=settings
+    ).launch_infer()
 
 
 if __name__ == "__main__":
-    infer_model()
+    launch_infer()
