@@ -1,13 +1,13 @@
-import attr
+from dataclasses import dataclass
 from typing import Optional
 
 
-@attr.s(auto_attribs=True)
+@dataclass()
 class TrainConfig:
     """
     The configuration class to set up the work of train process
     """
-    path: str = attr.ib(kw_only=True)
+    path: Optional[str]
     epochs: int = 10
     dropna: bool = False
     row_limit: Optional[int] = None
@@ -31,13 +31,13 @@ class TrainConfig:
         }
 
 
-@attr.s(auto_attribs=True)
+@dataclass()
 class InferConfig:
     """
     The configuration class to set up the work of infer process
     """
-    size: int = attr.ib(kw_only=True)
-    table_name: str = attr.ib(kw_only=True)
+    size: int
+    table_name: Optional[str]
     run_parallel: bool = True
     batch_size: Optional[int] = None
     metadata_path: Optional[str] = None

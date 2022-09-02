@@ -1,113 +1,27 @@
-import click
-from loguru import logger
+from typing import Optional
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-from syngen.ml.config import TrainConfig
-from syngen.ml.data_loaders import DataLoader, MetadataLoader
-from syngen.ml.strategies import TrainStrategy
-from syngen.ml.train_chain import RootHandler, VaeTrainHandler
-from syngen.ml.vae import VanillaVAEWrapper
+import click
+from loguru import logger
 
-
-def get_metadata(metadata_path, table_name):
-    """
-    Get metadata for training model
-
-    Parameters
-    ----------
-    metadata_path
-    table_name
-    """
-    if metadata_path:
-        metadata = MetadataLoader().load_data(metadata_path)
-        return metadata
-    elif table_name:
-        metadata = {"table_name": table_name}
-        return metadata
-    else:
-        raise AttributeError("Either table name or path to metadata MUST be provided")
-
-
-def set_handler(
-        metadata: dict,
-        paths: dict,
-        wrapper_name: str):
-    """
-    Set up the handler which used in training process
-
-    Parameters
-    ----------
-    metadata
-    paths
-    wrapper_name
-    """
-
-    root_handler = RootHandler(
-        metadata=metadata,
-        paths=paths
-    )
-    vae_handler = VaeTrainHandler(
-        metadata=metadata,
-        paths=paths,
-        wrapper_name=wrapper_name,
-    )
-
-    root_handler.set_next(vae_handler)
-    return root_handler
-
-
-def train(config: TrainConfig):
-    """
-    Launch the train strategy
-
-    Parameters
-    ----------
-    config
-    """
-    data = DataLoader().load_data(config.path)
-
-    metadata = get_metadata(config.metadata_path, config.table_name)
-
-    paths = config.set_paths()
-
-    handler = set_handler(
-        metadata=metadata,
-        paths=paths,
-        wrapper_name=VanillaVAEWrapper.__name__,
-    )
-
-    strategy = TrainStrategy(
-        paths=paths,
-        handler=handler
-    )
-
-    logger.info(f"Generator: {'vae'}, mode: {'train'}")
-
-    strategy.run(
-        data,
-        epochs=config.epochs,
-        row_subset=config.row_limit,
-        batch_size=config.batch_size,
-        dropna=config.dropna,
-    )
+from syngen.ml.worker import Worker
 
 
 @click.command()
-@click.argument("path")
+@click.option("--metadata_path", type=str, default=None)
+@click.option("--path", type=str, default=None)
+@click.option("--table_name", type=str, default=None)
 @click.option("--epochs", default=10, help="Epochs.")
 @click.option("--dropna", default=False, type=bool)
 @click.option("--row_limit", default=None, type=int)
-@click.option("--table_name", default=None, type=str)
-@click.option("--metadata_path", default=None, type=str)
-
-def train_model(
-    path: str,
+def launch_train(
+    metadata_path: Optional[str],
+    path: Optional[str],
+    table_name: Optional[str],
     epochs: int,
     dropna: bool,
-    row_limit: int,
-    table_name: str,
-    metadata_path: str,
+    row_limit: Optional[int],
     batch_size: int = 32,
 ):
     """
@@ -115,28 +29,51 @@ def train_model(
 
     Parameters
     ----------
+    metadata_path
     path
+    table_name
     epochs
     dropna
     row_limit
-    table_name
-    metadata_path
     batch_size
     -------
 
     """
-    cli_config = TrainConfig(
-        path=path,
-        epochs=epochs,
-        dropna=dropna,
-        row_limit=row_limit,
+    if not metadata_path and not path:
+        raise AttributeError("It seems that the information of metadata_path or path is absent. "
+                             "Please provide either the information of metadata_path or the information of path.")
+    if metadata_path:
+        if path:
+            logger.warning("The information of metadata_path was provided. "
+                           "In this case the information of path will be ignored.")
+        if table_name:
+            logger.warning("The information of metadata_path was provided. "
+                           "In this case the information of table_name will be ignored.")
+        if not metadata_path.endswith(('.yaml', '.yml')):
+            raise NotImplementedError("This format for metadata_path is not supported. "
+                                      "Please provide metadata_path in '.yaml' or '.yml' format")
+    if not metadata_path:
+        if path and not table_name:
+            raise AttributeError("It seems that the information of table_name is absent. "
+                                 "In the case the information of metadata_path is absent, "
+                                 "the information of path and table_name should be provided.")
+        if table_name and not path:
+            raise AttributeError("It seems that the information of path is absent. "
+                                 "In the case the information of metadata_path is absent, "
+                                 "the information of path and table_name should be provided.")
+    settings = {
+        "path": path,
+        "epochs": epochs,
+        "dropna": dropna,
+        "row_limit": row_limit,
+        "batch_size": batch_size
+    }
+    Worker(
         table_name=table_name,
         metadata_path=metadata_path,
-        batch_size=batch_size
-    )
-
-    train(cli_config)
+        settings=settings
+    ).launch_train()
 
 
 if __name__ == "__main__":
-    train_model()
+    launch_train()
