@@ -33,12 +33,15 @@ class Dataset:
         self.fk_kde_path = kde_path
 
     def __set_metadata(self, metadata: dict, table_name: str):
+        self.foreign_keys_list = []  # For compatibility with the Enterprise version
+        self.token_keys_list = []  # For compatibility with the Enterprise version
         self.table_name = table_name
-        config_of_keys = metadata.get("keys")
+        config_of_keys = metadata.get("configuration", {}).get("tables", {}).get(table_name, {}).get("keys")
         if config_of_keys is not None:
             fk = [key for key in config_of_keys if config_of_keys.get(key).get("type") == "FK"]
             self.foreign_key_name = fk[0] if fk else None
-        self.foreign_key_name = None
+        else:
+            self.foreign_key_name = None
 
     def assign_feature(self, feature, columns):
         name = feature.name
@@ -74,7 +77,7 @@ class Dataset:
     def transform(self, data, excluded_features=set()):
         transformed_features = list()
         for name, feature in self.features.items():
-            if name not in excluded_features:
+            if name not in (excluded_features and self.foreign_keys_list and self.token_keys_list):
                 transformed_features.append(feature.transform(data[self.columns[name]]))
         return transformed_features
 
@@ -193,6 +196,7 @@ class Dataset:
             float_columns.discard(self.foreign_key_name)
             int_columns.discard(self.foreign_key_name)
             str_columns.discard(self.foreign_key_name)
+            categ_columns.discard(self.foreign_key_name)
             logger.debug(f"Foreign key {self.foreign_key_name} dropped from training and will be sampled from the PK table")
 
         null_num_column_names = []

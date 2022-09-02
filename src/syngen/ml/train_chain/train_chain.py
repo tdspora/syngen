@@ -211,12 +211,8 @@ class VaeInferHandler(BaseHandler):
     def generate_keys(self, generated, size, metadata, table_name):
         metadata_of_table = metadata.get("configuration", {}).get("tables", {}).get(table_name)
         config_of_keys = metadata_of_table.get("keys")
-        type_of_keys = [
-            config_of_keys.get(key).get("type")
-            for key in config_of_keys.keys()
-        ]
         for key in config_of_keys.keys():
-            if "FK" in type_of_keys and config_of_keys.get(key).get("type") == "FK":
+            if config_of_keys.get(key).get("type") == "FK":
                 pk_table = config_of_keys.get(key).get("references").get("table")
                 pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer.csv"
                 if not os.path.exists(pk_path):
@@ -260,6 +256,8 @@ class VaeInferHandler(BaseHandler):
                     prepared_data.to_csv(self.path_to_merged_infer, index=False)
                 else:
                     generated_data.to_csv(self.path_to_merged_infer, index=False)
+            if metadata_path is None:
+                prepared_data.to_csv(self.path_to_merged_infer, index=False)
             if print_report:
                 Report().generate_report()
 

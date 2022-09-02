@@ -48,9 +48,9 @@ def launch_infer(
         if table_name:
             logger.warning("The information of metadata_path was provided. "
                            "In this case the information of table_name will be ignored.")
-        if not metadata_path.endswith('.yaml'):
+        if not metadata_path.endswith(('.yaml', '.yml')):
             raise NotImplementedError("This format for metadata_path is not supported. "
-                                      "Please provide metadata_path in '.yaml' format")
+                                      "Please provide metadata_path in '.yaml' or in '.yml' format")
     settings = {
         "size": size,
         "table_name": table_name,

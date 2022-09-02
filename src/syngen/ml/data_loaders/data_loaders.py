@@ -125,7 +125,7 @@ class MetadataLoader(BaseDataLoader):
         path = Path(path)
         if path.suffix == '.json':
             return self.json_loader.load_data(str(path))
-        if path.suffix == '.yaml':
+        if path.suffix in ['.yaml', '.yml']:
             return self.yaml_loader.load_data(str(path))
         else:
             raise NotImplementedError("File format not supported")

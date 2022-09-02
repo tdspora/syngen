@@ -20,7 +20,7 @@ class Worker:
     def _parse_train_settings(self, config: Dict):
         """
         Parse the settings for training process
-        :param config: settings for training process declared in metadata.yaml file
+        :param config: settings for training process declared in metadata.yml file
         """
         try:
             path = self.settings.get("path")
@@ -42,7 +42,7 @@ class Worker:
     def _parse_infer_settings(self, config: Dict):
         """
         Parse the settings for infer process
-        :param config: settings for infer process declared in metadata.yaml file
+        :param config: settings for infer process declared in metadata.yml file
         """
         try:
             size = config.get("infer_settings", {}).get("size", self.settings.get("size"))
@@ -71,7 +71,7 @@ class Worker:
     def _get_tables(config: Dict, key_type: str):
         """
         Return the list of related tables regarding to the type of key - 'primary key', 'foreign key'
-        :param config: configuration of related tables declared in metadata.yaml file
+        :param config: configuration of related tables declared in metadata.yml file
         :param key_type: type of key either 'primary key' ('PK') or 'foreign key' ('FK')
         """
         try:
@@ -89,7 +89,7 @@ class Worker:
     def _parse_tables_config(config: Dict):
         """
         Return the configuration of related tables
-        :param config: configuration of related tables declared in metadata.yaml file
+        :param config: configuration of related tables declared in metadata.yml file
         """
         try:
             return config["configuration"]["tables"]
@@ -116,7 +116,7 @@ class Worker:
         """
         Run training process for the list of related tables
         :param tables: the list of related tables for training process
-        :param config_of_tables: configuration of related tables declared in metadata.yaml file
+        :param config_of_tables: configuration of related tables declared in metadata.yml file
         """
         for table in tables:
             config_of_table = config_of_tables[table]
@@ -142,7 +142,7 @@ class Worker:
         """
         Run infer process for the list of related tables
         :param tables: the list of related tables for infer process
-        :param config_of_tables: configuration of related tables declared in metadata.yaml file
+        :param config_of_tables: configuration of related tables declared in metadata.yml file
         """
         for table in tables:
             config_of_table = config_of_tables[table]
