@@ -49,9 +49,9 @@ def launch_train(
         if table_name:
             logger.warning("The information of metadata_path was provided. "
                            "In this case the information of table_name will be ignored.")
-        if not metadata_path.endswith('.yaml'):
+        if not metadata_path.endswith(('.yaml', '.yml')):
             raise NotImplementedError("This format for metadata_path is not supported. "
-                                      "Please provide metadata_path in '.yaml' format")
+                                      "Please provide metadata_path in '.yaml' or '.yml' format")
     if not metadata_path:
         if path and not table_name:
             raise AttributeError("It seems that the information of table_name is absent. "
