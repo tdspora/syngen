@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-@dataclass()
+@dataclass
 class TrainConfig:
     """
     The configuration class to set up the work of train process
@@ -31,7 +31,7 @@ class TrainConfig:
         }
 
 
-@dataclass()
+@dataclass
 class InferConfig:
     """
     The configuration class to set up the work of infer process
