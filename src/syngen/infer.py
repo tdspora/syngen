@@ -53,7 +53,6 @@ def launch_infer(
                                       "Please provide metadata_path in '.yaml' or in '.yml' format")
     settings = {
         "size": size,
-        "table_name": table_name,
         "run_parallel": run_parallel,
         "batch_size": batch_size,
         "random_seed": random_seed,
