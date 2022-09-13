@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Accuracy Report</title>
+</head>
+<body>
+<h1>Accuracy report</h1>
+<div>
+    <img src="{{accuracy_heatmap}}" width="700">
+    <p>Median accuracy is: {{accuracy_value}}</p>
+</div>
+<div>
+    <h2>Univariate distributions</h2>
+    {% for uni_img in uni_imgs -%}
+    <div>
+        <img src="{{uni_img}}" width="600">
+    </div>
+    {% endfor %}
+</div>
+<div>
+    <h2>Bivariate distributions</h2>
+    {% for bi_img in bi_imgs -%}
+    <div>
+        <img src="{{bi_img}}" width="900">
+    </div>
+    {% endfor %}
+</div>
+</body>
+</html>
