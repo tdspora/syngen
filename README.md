@@ -37,7 +37,7 @@ infer 5000 Churn
 
 You can add flexibility to the training and inference processes using additional hyperparameters.
 
-`train PATH_TO_ORIGINAL_CSV –metadata_path PATH_TO_METADATA_JSON –table_name TABLE_NAME –epochs INT –row_limit INT –dropna BOOL`
+`train PATH_TO_ORIGINAL_CSV --metadata_path PATH_TO_METADATA_JSON --table_name TABLE_NAME --epochs INT --row_limit INT --dropna BOOL`
 
 - PATH_TO_ORIGINAL_CSV – a path to the csv table that you want to use a reference
 - metadata_path – a path to the json file containing the metadata for linked tables generation
@@ -51,7 +51,7 @@ You can add flexibility to the training and inference processes using additional
 
 You can customize the inference processes by calling
 
-`infer SIZE TABLE_NAME –run_parallel BOOL –batch_size INT –metadata_path PATH_TO_METADATA –random_seed INT- --print_report BOOL`
+`infer SIZE TABLE_NAME --run_parallel BOOL --batch_size INT --metadata_path PATH_TO_METADATA --random_seed INT --print_report BOOL`
 
 - SIZE - the desired number of rows to generate
 - TABLE_NAME – the name of the table, same as in training
