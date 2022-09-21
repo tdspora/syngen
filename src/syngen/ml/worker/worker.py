@@ -17,7 +17,7 @@ class Worker:
         self.infer_interface = InferInterface()
         self.metadata_loader = MetadataLoader()
 
-    def _parse_train_settings(self, config: Dict):
+    def __parse_train_settings(self, config: Dict):
         """
         Parse the settings for training process
         :param config: settings for training process declared in metadata.yml file
@@ -36,7 +36,7 @@ class Worker:
             "batch_size": batch_size
         }
 
-    def _parse_infer_settings(self, config: Dict):
+    def __parse_infer_settings(self, config: Dict):
         """
         Parse the settings for infer process
         :param config: settings for infer process declared in metadata.yml file
@@ -106,7 +106,7 @@ class Worker:
         chain_of_tables = [*pk_tables, *fk_tables]
         return chain_of_tables, config_of_tables
 
-    def _train_chain_of_tables(self, tables: List, config_of_tables: Dict):
+    def __train_chain_of_tables(self, tables: List, config_of_tables: Dict):
         """
         Run training process for the list of related tables
         :param tables: the list of related tables for training process
@@ -121,7 +121,7 @@ class Worker:
                     f"It seems that the information of path for training is absent. "
                     f"Please provide the information of path in metadata file."
                 )
-            train_settings = self._parse_train_settings(config_of_table)
+            train_settings = self.__parse_train_settings(config_of_table)
             self.train_interface.run(
                 path=path,
                 epochs=train_settings["epochs"],
@@ -132,7 +132,7 @@ class Worker:
                 batch_size=train_settings["batch_size"]
             )
 
-    def _infer_chain_of_tables(self, tables: List, config_of_tables: Dict):
+    def __infer_chain_of_tables(self, tables: List, config_of_tables: Dict):
         """
         Run infer process for the list of related tables
         :param tables: the list of related tables for infer process
@@ -140,7 +140,7 @@ class Worker:
         """
         for table in tables:
             config_of_table = config_of_tables[table]
-            infer_settings = self._parse_infer_settings(config_of_table)
+            infer_settings = self.__parse_infer_settings(config_of_table)
             self.infer_interface.run(
                 size=infer_settings["size"],
                 table_name=table,
@@ -151,7 +151,7 @@ class Worker:
                 print_report=infer_settings["print_report"]
             )
 
-    def _train_table(self):
+    def __train_table(self):
         """
         Run training process for a single table
         :return:
@@ -166,7 +166,7 @@ class Worker:
             batch_size=self.settings.get("batch_size")
         )
 
-    def _infer_table(self):
+    def __infer_table(self):
         """
         Run infer process for a single table
         """
@@ -192,9 +192,9 @@ class Worker:
         """
         if self.metadata_path is not None:
             chain_of_tables, config_of_tables = self._prepare_metadata_for_process()
-            self._train_chain_of_tables(chain_of_tables, config_of_tables)
+            self.__train_chain_of_tables(chain_of_tables, config_of_tables)
         if self.table_name is not None:
-            self._train_table()
+            self.__train_table()
 
     def launch_infer(self):
         """
@@ -202,6 +202,6 @@ class Worker:
         """
         if self.metadata_path is not None:
             chain_of_tables, config_of_tables = self._prepare_metadata_for_process()
-            self._infer_chain_of_tables(chain_of_tables, config_of_tables)
+            self.__infer_chain_of_tables(chain_of_tables, config_of_tables)
         if self.table_name is not None:
-            self._infer_table()
+            self.__infer_table()

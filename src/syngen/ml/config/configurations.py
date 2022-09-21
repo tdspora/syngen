@@ -51,7 +51,7 @@ class InferConfig:
         return {
             "original_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data.csv",
             "synthetic_data_path": f"model_artifacts/tmp_store/{self.table_name}/merged_infer.csv",
-            "draws_path": f"model_artifacts/tmp_store/{self.table_name}/draws/",
+            "draws_path": f"model_artifacts/tmp_store/{self.table_name}/draws",
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.table_name}/merged_infer.csv",
             "state_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints",
             "tmp_store_path": f"model_artifacts/tmp_store/{self.table_name}",
