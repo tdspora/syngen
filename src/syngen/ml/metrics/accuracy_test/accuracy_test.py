@@ -4,7 +4,7 @@ import base64
 import pandas as pd
 from typing import List
 import os
-from ml.metrics import (
+from syngen.ml.metrics import (
     UnivariateMetric,
     BivariateMetric,
     JensenShannonDistance
@@ -55,7 +55,7 @@ class AccuracyTest(BaseTest):
         bivariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
 
         # Generate html report
-        with open("ml/metrics/accuracy_test/accuracy_report_template.html") as file_:
+        with open("syngen/ml/metrics/accuracy_test/accuracy_report_template.html") as file_:
             template = jinja2.Template(file_.read())
 
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
