@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
-import os
+import jinja2
+import base64
 import pandas as pd
 from typing import List
-
-from syngen.ml.metrics import (
+import os
+from ml.metrics import (
     UnivariateMetric,
+    BivariateMetric,
     JensenShannonDistance
 )
 
@@ -32,14 +34,41 @@ class AccuracyTest(BaseTest):
         """
         draws_path = self.paths["draws_path"]
         os.makedirs(draws_path, exist_ok=True)
-        univariate = UnivariateMetric(self.original, self.synthetic, True, draws_path)
-        acc = JensenShannonDistance(self.original, self.synthetic, True, draws_path)
-        return univariate, acc
+        acc_draws_path = f"{draws_path}/accuracy"
+        os.makedirs(acc_draws_path, exist_ok=True)
+        univariate = UnivariateMetric(self.original, self.synthetic, True, acc_draws_path)
+        bivariate = BivariateMetric(self.original, self.synthetic, True, acc_draws_path)
+        acc = JensenShannonDistance(self.original, self.synthetic, True, acc_draws_path)
+        return univariate, bivariate, acc
+
+    def __transform_to_base64(self, path):
+        with open(path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read())
+        return "data:image/gif;base64," + encoded_string.decode('utf-8')
 
     def report(self, **kwargs):
-        univariate, acc = self.__prepare_before_report()
-        univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
+        univariate, bivariate, acc = self.__prepare_before_report()
         acc.calculate_all(kwargs["categ_columns"])
-        acc.calculate_heatmap_median(acc.heatmap)
+        acc_median = "%.5f" % acc.calculate_heatmap_median(acc.heatmap)
 
-        # sns.heatmap(acc.heatmap, xticklabels=self.original.columns, yticklabels=self.original.columns, annot=True)
+        univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
+        bivariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
+
+        # Generate html report
+        with open("ml/metrics/accuracy_test/accuracy_report_template.html") as file_:
+            template = jinja2.Template(file_.read())
+
+        draws_acc_path = f"{self.paths['draws_path']}/accuracy"
+        uni_images = [self.__transform_to_base64(f"{draws_acc_path}/{f}") for f in os.listdir(draws_acc_path)
+                      if f.startswith("univariate")]
+        bi_images = [self.__transform_to_base64(f"{draws_acc_path}/{f}") for f in os.listdir(draws_acc_path)
+                     if f.startswith("bivariate")]
+        html = template.render(accuracy_value=acc_median,
+                               accuracy_heatmap=self.__transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.png"),
+                               draws_acc_path=draws_acc_path,
+                               uni_imgs=uni_images,
+                               bi_imgs=bi_images
+                               )
+
+        with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w') as f:
+            f.write(html)
