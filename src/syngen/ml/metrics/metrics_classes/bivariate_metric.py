@@ -5,7 +5,7 @@ import pandas as pd
 from typing import List
 import seaborn as sns
 
-from ml.metrics import BaseMetric
+from syngen.ml.metrics import BaseMetric
 
 
 class BivariateMetric(BaseMetric):

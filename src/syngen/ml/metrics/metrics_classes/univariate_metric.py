@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from typing import List
 
-from ml.metrics import BaseMetric
+from syngen.ml.metrics import BaseMetric
 
 
 class UnivariateMetric(BaseMetric):
@@ -120,4 +120,3 @@ class UnivariateMetric(BaseMetric):
         if print_nan:
             print(f"Number of original NaN values in {column}: {original_nan_count}")
             print(f"Number of synthetic NaN values in {column}: {synthetic_nan_count}")
-
