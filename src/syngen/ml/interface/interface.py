@@ -71,7 +71,7 @@ class TrainInterface(Interface, ABC):
         self.config = TrainConfig(**kwargs)
         return self
 
-    def set_handler(self):
+    def set_handler(self, *args):
         """
         Set up the handler which used in training process
         """
