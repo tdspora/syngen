@@ -1,50 +1,51 @@
 from typing import Dict
 
-from schema import Schema, Optional, Or, SchemaError
+from schema import Schema, Optional, And, Or, SchemaError
 from loguru import logger
 
 
-config_schema = Schema({
+configuration_schema = Schema({
     "configuration": {
-        "tables": [
-            {
-                str: {
-                    "table_name": str,
-                    Optional("train_settings"): {
-                        Optional("epochs"): int,
-                        Optional("dropna"): bool,
-                        Optional("row_limit"): int
-                    },
-                    Optional("infer_settings"): {
-                        Optional("size"): int,
-                        Optional("run_parallel"): bool,
-                        Optional("random_seed"): int,
-                        Optional("print_report"): bool
-                    },
-                    "path": str,
-                    "keys": [
-                        {
-                            str: {
-                                "type": Or("FK", "PK"),
-                                "columns": [str],
-                                "references": {
-                                    "table": str,
-                                    "columns": [str]
-                                }
+        "tables": {
+            str: {
+                "table_name": str,
+                Optional("train_settings"): {
+                    Optional("epochs"): And(int, lambda n: n >= 1),
+                    Optional("dropna"): bool,
+                    Optional("row_limit"): And(int, lambda n: n >= 1)
+                },
+                Optional("infer_settings"): {
+                    Optional("size"): And(int, lambda n: n >= 1),
+                    Optional("run_parallel"): bool,
+                    Optional("random_seed"): int,
+                    Optional("print_report"): bool
+                },
+                "path": str,
+                "keys": {
+                    str: {
+                            "type": Or("FK", "PK"),
+                            "columns": [str],
+                            Optional("references"): {
+                                "table": str,
+                                "columns": [str]
                             }
                         }
-                    ]
+                    }
                 }
             }
-        ]
+        }
     }
-}
 )
 
 
-def validate_schema(metadata: Dict):
+def validate_schema(configuration_schema: Schema, metadata: Dict):
+    """
+    Validate the metadata file regarding the configuration_schema
+    :param configuration_schema: Schema
+    :param metadata: Dict
+    """
     try:
-        config_schema.validate(metadata)
+        configuration_schema.validate(metadata)
         logger.info("The schema of metadata file is valid")
     except SchemaError as err:
         logger.error(
