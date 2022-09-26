@@ -22,13 +22,11 @@ class Worker:
         Parse the settings for training process
         :param config: settings for training process declared in metadata.yml file
         """
-        path = self.settings.get("path")
         epochs = config.get("train_settings", {}).get("epochs", self.settings.get("epochs"))
         dropna = config.get("train_settings", {}).get("dropna", self.settings.get("dropna"))
         row_limit = config.get("train_settings", {}).get("row_limit", self.settings.get("row_limit"))
         batch_size = config.get("train_settings", {}).setdefault("batch_size", 32)
         return {
-            "path": path,
             "table_name": self.table_name,
             "epochs": epochs,
             "dropna": dropna,

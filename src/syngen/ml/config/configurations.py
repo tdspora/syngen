@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from attr import define
 from typing import Optional
 
 
-@dataclass
+@define(kw_only=True)
 class TrainConfig:
     """
     The configuration class to set up the work of train process
@@ -31,7 +31,7 @@ class TrainConfig:
         }
 
 
-@dataclass
+@define(kw_only=True)
 class InferConfig:
     """
     The configuration class to set up the work of infer process

@@ -41,7 +41,8 @@ def launch_train(
     """
     if not metadata_path and not path:
         raise AttributeError("It seems that the information of metadata_path or path is absent. "
-                             "Please provide either the information of metadata_path or the information of path.")
+                             "Please provide either the information of metadata_path or "
+                             "the information of path and table_name.")
     if metadata_path:
         if path:
             logger.warning("The information of metadata_path was provided. "

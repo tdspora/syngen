@@ -19,3 +19,4 @@ tqdm==4.64.*
 protobuf==3.19.*
 PyYAML==6.*
 Jinja2
+schema
