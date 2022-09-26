@@ -33,14 +33,16 @@ class Dataset:
         self.primary_key_type = None
         self.fk_kde_path = kde_path
 
-    def __set_metadata(self, metadata: dict):
-        self.table_name = metadata["table_name"]
-        pk = metadata.get("pk", None)
-        self.primary_key_name = pk["pk_column"] if pk else None
-        fk = metadata.get("fk", None)
-        self.foreign_key_name = list(fk.keys())[0] if fk else None
-        self.foreign_keys_list = [] # For compatibility with Enterprise
-        self.token_keys_list = []   # For compatibility with Enterprise
+    def __set_metadata(self, metadata: dict, table_name: str):
+        self.foreign_keys_list = []  # For compatibility with the Enterprise version
+        self.token_keys_list = []  # For compatibility with the Enterprise version
+        self.table_name = table_name
+        config_of_keys = metadata.get("configuration", {}).get("tables", {}).get(table_name, {}).get("keys")
+        if config_of_keys is not None:
+            fk = [key for key in config_of_keys if config_of_keys.get(key).get("type") == "FK"]
+            self.foreign_key_name = fk[0] if fk else None
+        else:
+            self.foreign_key_name = None
 
     def assign_feature(self, feature, columns):
         name = feature.name
