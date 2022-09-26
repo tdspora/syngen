@@ -176,7 +176,7 @@ class Worker:
             )
         self.infer_interface.run(
             size=self.settings.get("size"),
-            table_name=self.settings.get("table_name"),
+            table_name=self.table_name,
             metadata_path=self.metadata_path,
             run_parallel=self.settings.get("run_parallel"),
             batch_size=self.settings.get("batch_size"),
