@@ -30,12 +30,17 @@ class Dataset:
         self.all_columns = []
         self.null_column_names = []
         self.nan_labels_dict = {}
+        self.primary_key_type = None
         self.fk_kde_path = kde_path
 
     def __set_metadata(self, metadata: dict):
         self.table_name = metadata["table_name"]
+        pk = metadata.get("pk", None)
+        self.primary_key_name = pk["pk_column"] if pk else None
         fk = metadata.get("fk", None)
         self.foreign_key_name = list(fk.keys())[0] if fk else None
+        self.foreign_keys_list = [] # For compatibility with Enterprise
+        self.token_keys_list = []   # For compatibility with Enterprise
 
     def assign_feature(self, feature, columns):
         name = feature.name
@@ -84,12 +89,12 @@ class Dataset:
         column_names = list()
         if not isinstance(data, list):
             data = [data]
-        assert (len(data) == len(self.features)) or (len(data) + 1 == len(self.features))
+        assert (len(data) == len(self.features)) or (len(data) + len(self.foreign_keys_list) == len(self.features))
 
         self.inverse_transformers = {}
 
         for transformed_data, (name, feature) in zip(data, self.features.items()):
-            if name not in excluded_features:
+            if name not in excluded_features and name not in self.foreign_keys_list and name not in self.token_keys_list:
                 column_names.extend(self.columns[name])
                 inverse_transformed_data.append(
                     feature.inverse_transform(transformed_data)
@@ -178,11 +183,11 @@ class Dataset:
             binary_columns,
         ) = data_pipeline(self.df)
 
-        # self.primary_key_type = (
-        #     str
-        #     if self.primary_key_name in (str_columns | categ_columns | date_columns | binary_columns)
-        #     else float
-        # )
+        self.primary_key_type = (
+            str
+            if self.primary_key_name in (str_columns | categ_columns | date_columns | binary_columns)
+            else float
+        )
 
         if self.foreign_key_name:
             self._preprocess_fk_params()
