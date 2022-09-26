@@ -30,9 +30,7 @@ class Dataset:
         self.all_columns = []
         self.null_column_names = []
         self.nan_labels_dict = {}
-        self.primary_key_type = None
         self.fk_kde_path = kde_path
-
     def __set_metadata(self, metadata: dict, table_name: str):
         self.foreign_keys_list = []  # For compatibility with the Enterprise version
         self.token_keys_list = []  # For compatibility with the Enterprise version
@@ -184,12 +182,6 @@ class Dataset:
             int_columns,
             binary_columns,
         ) = data_pipeline(self.df)
-
-        self.primary_key_type = (
-            str
-            if self.primary_key_name in (str_columns | categ_columns | date_columns | binary_columns)
-            else float
-        )
 
         if self.foreign_key_name:
             self._preprocess_fk_params()
