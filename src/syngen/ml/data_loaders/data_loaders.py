@@ -7,6 +7,8 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from syngen.ml.validation_schema import validate_schema, configuration_schema
+
 
 class BaseDataLoader(ABC):
     """
@@ -69,6 +71,7 @@ class YAMLLoader(BaseDataLoader):
     def load_data(self, path: str) -> dict:
         with open(path, "r") as metadata_file:
             metadata = yaml.load(metadata_file, Loader=Loader)
+            validate_schema(configuration_schema, metadata)
         return metadata
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
