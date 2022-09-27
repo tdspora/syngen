@@ -31,6 +31,7 @@ class Dataset:
         self.null_column_names = []
         self.nan_labels_dict = {}
         self.fk_kde_path = kde_path
+
     def __set_metadata(self, metadata: dict, table_name: str):
         self.foreign_keys_list = []  # For compatibility with the Enterprise version
         self.token_keys_list = []  # For compatibility with the Enterprise version
