@@ -31,11 +31,12 @@ class Dataset:
         self.null_column_names = []
         self.nan_labels_dict = {}
         self.fk_kde_path = kde_path
+
     def __set_metadata(self, metadata: dict, table_name: str):
         self.foreign_keys_list = []  # For compatibility with the Enterprise version
         self.token_keys_list = []  # For compatibility with the Enterprise version
         self.table_name = table_name
-        config_of_keys = metadata.get("configuration", {}).get("tables", {}).get(table_name, {}).get("keys")
+        config_of_keys = metadata.get(table_name, {}).get("keys")
         if config_of_keys is not None:
             fk = [key for key in config_of_keys if config_of_keys.get(key).get("type") == "FK"]
             self.foreign_key_name = fk[0] if fk else None

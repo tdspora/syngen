@@ -209,7 +209,7 @@ class VaeInferHandler(BaseHandler):
         return synth_fk
 
     def generate_keys(self, generated, size, metadata, table_name):
-        metadata_of_table = metadata.get("configuration", {}).get("tables", {}).get(table_name)
+        metadata_of_table = metadata.get(table_name)
         config_of_keys = metadata_of_table.get("keys")
         for key in config_of_keys.keys():
             if config_of_keys.get(key).get("type") == "FK":
