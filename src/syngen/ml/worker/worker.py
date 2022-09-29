@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+
 from loguru import logger
 
 from syngen.ml.data_loaders import MetadataLoader
@@ -67,7 +68,7 @@ class Worker:
         :param key_type: type of key either 'primary key' ('PK') or 'foreign key' ('FK')
         """
         try:
-            return [table_name for table_name, config in config["configuration"]["tables"].items()
+            return [table_name for table_name, config in config.items()
                     for key in config["keys"]
                     if config["keys"][key]["type"] == key_type]
         except KeyError:
@@ -77,29 +78,14 @@ class Worker:
                 "'keys', 'type' fields in metadata file"
             )
 
-    @staticmethod
-    def _parse_tables_config(config: Dict):
-        """
-        Return the configuration of related tables
-        :param config: configuration of related tables declared in metadata.yml file
-        """
-        try:
-            return config["configuration"]["tables"]
-        except KeyError:
-            raise KeyError(
-                "The information of tables seems to be absent in metadata file. "
-                "Please provide the information of tables."
-            )
-
     def _prepare_metadata_for_process(self):
         """
         Return the list of related tables for training or infer process,
         configuration of related tables
         """
-        metadata = self.metadata_loader.load_data(self.metadata_path)
-        config_of_tables = self._parse_tables_config(metadata)
-        pk_tables = self._get_tables(metadata, "PK")
-        fk_tables = self._get_tables(metadata, "FK")
+        config_of_tables = self.metadata_loader.load_data(self.metadata_path)
+        pk_tables = self._get_tables(config_of_tables, "PK")
+        fk_tables = self._get_tables(config_of_tables, "FK")
         # chain_of_tables = [*pk_tables, *list(set(fk_tables).difference(set(pk_tables)))]
         chain_of_tables = [*pk_tables, *fk_tables]
         return chain_of_tables, config_of_tables
@@ -120,6 +106,7 @@ class Worker:
                     f"Please provide the information of path in metadata file."
                 )
             train_settings = self.__parse_train_settings(config_of_table)
+            logger.info(f"Training process of the table - {table} has started.")
             self.train_interface.run(
                 path=path,
                 epochs=train_settings["epochs"],
@@ -139,6 +126,7 @@ class Worker:
         for table in tables:
             config_of_table = config_of_tables[table]
             infer_settings = self.__parse_infer_settings(config_of_table)
+            logger.info(f"Infer process of the table - {table} has started.")
             self.infer_interface.run(
                 size=infer_settings["size"],
                 table_name=table,
@@ -154,6 +142,7 @@ class Worker:
         Run training process for a single table
         :return:
         """
+        logger.info(f"Training process of the table - {self.table_name} has started.")
         self.train_interface.run(
             path=self.settings.get("path"),
             epochs=self.settings.get("epochs"),
@@ -174,6 +163,7 @@ class Worker:
                 "It seems that the information of size for infer process is absent. "
                 "Please provide the information of size through parameter in CLI command."
             )
+        logger.info(f"Infer process of the table - {self.table_name} has started.")
         self.infer_interface.run(
             size=self.settings.get("size"),
             table_name=self.table_name,
