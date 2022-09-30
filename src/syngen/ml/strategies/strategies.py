@@ -22,16 +22,16 @@ class TrainStrategy:
             epochs: int,
             row_subset: Optional[int],
             batch_size: int,
-            dropna: bool,
+            drop_null: bool,
     ):
-        logger.debug(f"Train model with parameters: epochs={epochs}, dropna={dropna}")
+        logger.debug(f"Train model with parameters: epochs={epochs}, drop_null={drop_null}")
         try:
             self.handler.handle(
                 data,
                 epochs=epochs,
                 batch_size=batch_size,
                 row_subset=row_subset,
-                dropna=dropna
+                drop_null=drop_null
             )
 
         except Exception as e:

@@ -64,7 +64,7 @@ class RootHandler(BaseHandler):
 
     @staticmethod
     def prepare_data(data, options):
-        if options["dropna"]:
+        if options["drop_null"]:
             data = data.dropna()
 
         if options["row_subset"]:
