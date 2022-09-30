@@ -106,9 +106,9 @@ class TrainInterface(Interface, ABC):
 
     def run(
             self,
-            path: str,
+            source: str,
             epochs: int = 10,
-            dropna: bool = False,
+            drop_null: bool = False,
             row_limit: int = None,
             table_name: str = None,
             metadata_path: str = None,
@@ -118,16 +118,16 @@ class TrainInterface(Interface, ABC):
         Launch the training process
         """
         self.set_config(
-            path=path,
+            source=source,
             epochs=epochs,
-            dropna=dropna,
+            drop_null=drop_null,
             row_limit=row_limit,
             table_name=table_name,
             metadata_path=metadata_path,
             batch_size=batch_size
         )
 
-        data = DataLoader().load_data(path)
+        data = DataLoader().load_data(source)
 
         self.set_metadata().\
             set_handler().\
@@ -143,7 +143,7 @@ class TrainInterface(Interface, ABC):
             epochs=self.config.epochs,
             row_subset=self.config.row_limit,
             batch_size=self.config.batch_size,
-            dropna=self.config.dropna
+            drop_null=self.config.drop_null
         )
 
 

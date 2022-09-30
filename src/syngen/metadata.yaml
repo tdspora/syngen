@@ -1,7 +1,7 @@
 pk_test:                                  # Use table name here
   train_settings:                         # Settings for training process
     epochs: 8                             # Number of epochs
-    dropna: true                          # Drop rows with NULL values
+    drop_null: true                       # Drop rows with NULL values
     row_limit: 100                        # Limit of rows for training process
 
   infer_settings:                         # Settings for infer process
@@ -20,7 +20,7 @@ pk_test:                                  # Use table name here
 fk_test:
   train_settings:
     epochs: 5
-    dropna: true
+    drop_null: true
     row_limit: 100
 
   infer_settings:
@@ -29,7 +29,7 @@ fk_test:
     random_seed: 10
     print_report: true
 
-  path: "../data/fk_test.csv"
+  source: "../data/fk_test.csv"
   keys:
     id:
       type: "FK"
