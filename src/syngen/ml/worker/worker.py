@@ -24,13 +24,13 @@ class Worker:
         :param config: settings for training process declared in metadata.yml file
         """
         epochs = config.get("train_settings", {}).get("epochs", self.settings.get("epochs"))
-        dropna = config.get("train_settings", {}).get("dropna", self.settings.get("dropna"))
+        drop_null = config.get("train_settings", {}).get("drop_null", self.settings.get("drop_null"))
         row_limit = config.get("train_settings", {}).get("row_limit", self.settings.get("row_limit"))
         batch_size = config.get("train_settings", {}).setdefault("batch_size", 32)
         return {
             "table_name": self.table_name,
             "epochs": epochs,
-            "dropna": dropna,
+            "drop_null": drop_null,
             "row_limit": row_limit,
             "batch_size": batch_size
         }
@@ -98,19 +98,19 @@ class Worker:
         """
         for table in tables:
             config_of_table = config_of_tables[table]
-            path = config_of_table.get("path", None)
-            if path is None:
+            source = config_of_table.get("source", None)
+            if source is None:
                 raise AttributeError(
-                    f"The path of table - {table} is mandatory parameter. "
-                    f"It seems that the information of path for training is absent. "
-                    f"Please provide the information of path in metadata file."
+                    f"The source of table - {table} is mandatory parameter. "
+                    f"It seems that the information of source for training is absent. "
+                    f"Please provide the information of source in metadata file."
                 )
             train_settings = self.__parse_train_settings(config_of_table)
             logger.info(f"Training process of the table - {table} has started.")
             self.train_interface.run(
-                path=path,
+                source=source,
                 epochs=train_settings["epochs"],
-                dropna=train_settings["dropna"],
+                drop_null=train_settings["drop_null"],
                 row_limit=train_settings["row_limit"],
                 table_name=table,
                 metadata_path=self.metadata_path,
@@ -144,9 +144,9 @@ class Worker:
         """
         logger.info(f"Training process of the table - {self.table_name} has started.")
         self.train_interface.run(
-            path=self.settings.get("path"),
+            source=self.settings.get("source"),
             epochs=self.settings.get("epochs"),
-            dropna=self.settings.get("dropna"),
+            drop_null=self.settings.get("drop_null"),
             row_limit=self.settings.get("row_limit"),
             table_name=self.table_name,
             metadata_path=self.metadata_path,
