@@ -7,9 +7,9 @@ class TrainConfig:
     """
     The configuration class to set up the work of train process
     """
-    path: Optional[str]
+    source: Optional[str]
     epochs: int = 10
-    dropna: bool = False
+    drop_null: bool = False
     row_limit: Optional[int] = None
     table_name: Optional[str] = None
     metadata_path: Optional[str] = None

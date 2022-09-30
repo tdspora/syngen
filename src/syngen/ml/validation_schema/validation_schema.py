@@ -8,7 +8,7 @@ configuration_schema = Schema({
     str: {
         Optional("train_settings"): {
             Optional("epochs"): And(int, lambda n: n >= 1),
-            Optional("dropna"): bool,
+            Optional("drop_null"): bool,
             Optional("row_limit"): And(int, lambda n: n >= 1)
         },
         Optional("infer_settings"): {
@@ -17,7 +17,7 @@ configuration_schema = Schema({
             Optional("random_seed"): int,
             Optional("print_report"): bool
         },
-        "path": str,
+        "source": str,
         "keys": {
             str: {
                 "type": Or("FK", "PK"),

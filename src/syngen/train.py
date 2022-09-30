@@ -10,17 +10,17 @@ from syngen.ml.worker import Worker
 
 @click.command()
 @click.option("--metadata_path", type=str, default=None)
-@click.option("--path", type=str, default=None)
+@click.option("--source", type=str, default=None)
 @click.option("--table_name", type=str, default=None)
 @click.option("--epochs", default=10, help="Epochs.")
-@click.option("--dropna", default=False, type=bool)
+@click.option("--drop_null", default=False, type=bool)
 @click.option("--row_limit", default=None, type=int)
 def launch_train(
     metadata_path: Optional[str],
-    path: Optional[str],
+    source: Optional[str],
     table_name: Optional[str],
     epochs: int,
-    dropna: bool,
+    drop_null: bool,
     row_limit: Optional[int],
     batch_size: int = 32,
 ):
@@ -30,23 +30,23 @@ def launch_train(
     Parameters
     ----------
     metadata_path
-    path
+    source
     table_name
     epochs
-    dropna
+    drop_null
     row_limit
     batch_size
     -------
 
     """
-    if not metadata_path and not path:
-        raise AttributeError("It seems that the information of metadata_path or path is absent. "
+    if not metadata_path and not source:
+        raise AttributeError("It seems that the information of metadata_path or source is absent. "
                              "Please provide either the information of metadata_path or "
-                             "the information of path and table_name.")
+                             "the information of source and table_name.")
     if metadata_path:
-        if path:
+        if source:
             logger.warning("The information of metadata_path was provided. "
-                           "In this case the information of path will be ignored.")
+                           "In this case the information of source will be ignored.")
         if table_name:
             logger.warning("The information of metadata_path was provided. "
                            "In this case the information of table_name will be ignored.")
@@ -54,18 +54,18 @@ def launch_train(
             raise NotImplementedError("This format for metadata_path is not supported. "
                                       "Please provide metadata_path in '.yaml' or '.yml' format")
     if not metadata_path:
-        if path and not table_name:
+        if source and not table_name:
             raise AttributeError("It seems that the information of table_name is absent. "
                                  "In the case the information of metadata_path is absent, "
-                                 "the information of path and table_name should be provided.")
-        if table_name and not path:
-            raise AttributeError("It seems that the information of path is absent. "
+                                 "the information of source and table_name should be provided.")
+        if table_name and not source:
+            raise AttributeError("It seems that the information of source is absent. "
                                  "In the case the information of metadata_path is absent, "
-                                 "the information of path and table_name should be provided.")
+                                 "the information of source and table_name should be provided.")
     settings = {
-        "path": path,
+        "source": source,
         "epochs": epochs,
-        "dropna": dropna,
+        "drop_null": drop_null,
         "row_limit": row_limit,
         "batch_size": batch_size
     }
