@@ -3,6 +3,8 @@ from abc import ABC
 from itertools import combinations
 from collections import Counter
 
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
