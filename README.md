@@ -34,37 +34,52 @@ infer 5000 Churn
 
 ### Training
 
-You can add flexibility to the training and inference processes using additional hyperparameters.
+You can add flexibility to the training and inference processes using additional hyperparameters. For training single table call:
 
-`train --path PATH_TO_ORIGINAL_CSV --metadata_path PATH_TO_METADATA_JSON --table_name TABLE_NAME --epochs INT --row_limit INT --drop_null BOOL`
+`train --source PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME --epochs INT --row_limit INT --drop_null BOOL`
 
 - PATH_TO_ORIGINAL_CSV – a path to the csv table that you want to use a reference
-- metadata_path – a path to the json file containing the metadata for linked tables generation
 - table_name – an arbitrary string to name the directories 
 - epochs – the number of training epochs. Since the early stopping mechanism is implemented the bigger is the better
 - row_limit – the number of rows to train over. A number less then the original table length will randomly subset the specified rows number
 - drop_null – whether to drop rows with at least one missing value
 
+For training the multiple linked tables (see below) call:
+
+`train --metadata_path PATH_TO_METADATA_YAML`
+
+- metadata_path – a path to the json file containing the metadata for linked tables generation
+
 
 ### Inference
 
-You can customize the inference processes by calling
+You can customize the inference processes by calling for one table
 
-`infer SIZE TABLE_NAME --run_parallel BOOL --batch_size INT --metadata_path PATH_TO_METADATA --random_seed INT --print_report BOOL`
-
+`infer SIZE TABLE_NAME --run_parallel BOOL --batch_size INT --random_seed INT --print_report BOOL`
+ 
 - SIZE - the desired number of rows to generate
 - TABLE_NAME – the name of the table, same as in training
 - run_parallel – whether to use multiprocessing (feasible for tables > 5000 rows)
 - batch_size – if specified, the generation is split into batches. This can save the RAM
-- metadata_path – a path to metadata json file to generate linked tables
 - random_seed – if specified, generates a reproducible result
 - print_report – whether to generate plots of pairwise distributions, accuracy matrix and print the median accuracy
+ 
+For linked tables you can simply call:
+
+`infer --metadata_path PATH_TO_METADATA`
+ 
+- metadata_path – a path to metadata yaml file to generate linked tables
+
+The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI 
+will be ignored.
+
 
 
 ### Linked tables generation
 
 To generate linked tables, you should provide metadata in yaml format. It is used to handle complex 
-relations for any number of tables.
+relations for any number of tables. You can also specify additional parameters needed for training and inference. In 
+this case they will be ignored in the CLI call.
 
 The yaml metadata file should match the following template:
 
@@ -136,12 +151,14 @@ The yaml metadata file should match the following template:
                     table: "CUSTOMER"
                     columns:
                         - customer_id
-For related tables training you can use the command:
+For related tables training you can use the commands:
 
-`train --metadata_path=PATH_TO_YAML_METADATA_FILE`
+```
+train --metadata_path=PATH_TO_YAML_METADATA_FILE
+infer --metadata_path=PATH_TO_YAML_METADATA_FILE
+```
 
-If `--metadata_path` is present, parameters `--source` and `--table_name` will be ignored, so it is not necessary to 
-specify these parameters in the CLI.
+If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.
 
 ### Docker images using
 
