@@ -136,8 +136,9 @@ The yaml metadata file should match the following template:
                     table: "CUSTOMER"
                     columns:
                         - customer_id
-For training in related tables it work as the next command:
-train --metadata_path=PATH_TO_YAML_METADATA_FILE
+For related tables training you can use the command:
+
+`train --metadata_path=PATH_TO_YAML_METADATA_FILE`
 
 If `--metadata_path` is present, parameters `--source` and `--table_name` will be ignored, so it is not necessary to 
 specify these parameters in the CLI.
