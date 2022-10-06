@@ -1,4 +1,3 @@
-![Build Status](https://github.com/tdspora/syngen/workflows/TESTING/badge.svg)
 # Syngen
 
 Syngen is an unsupervised tabular data generation tool. It is useful for generation of test data with a given table as a template. Most datatypes including floats, integers, datetime, text, categorical, binary are supported. The linked tables i.e., tables sharing a key can also be generated using the simple statistical approach.
@@ -13,7 +12,7 @@ Use pip to install the library:
 
 The training and inference processes are separated with two cli entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters. To start training with the sensible defaults run
 
-`train PATH_TO_ORIGINAL_CSV –table_name TABLE_NAME`
+`train PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME`
 
 This will train a model and save the model artifacts to disk.
 
@@ -27,7 +26,7 @@ Here is a quick example:
 
 ```
 pip install syngen
-train ./data/Churn_modelling.csv –table_name Churn
+train ./data/Churn_modelling.csv –-table_name Churn
 infer 5000 Churn
 ```
 
@@ -37,21 +36,21 @@ infer 5000 Churn
 
 You can add flexibility to the training and inference processes using additional hyperparameters.
 
-`train PATH_TO_ORIGINAL_CSV –metadata_path PATH_TO_METADATA_JSON –table_name TABLE_NAME –epochs INT –row_limit INT –dropna BOOL`
+`train --path PATH_TO_ORIGINAL_CSV --metadata_path PATH_TO_METADATA_JSON --table_name TABLE_NAME --epochs INT --row_limit INT --drop_null BOOL`
 
 - PATH_TO_ORIGINAL_CSV – a path to the csv table that you want to use a reference
 - metadata_path – a path to the json file containing the metadata for linked tables generation
 - table_name – an arbitrary string to name the directories 
 - epochs – the number of training epochs. Since the early stopping mechanism is implemented the bigger is the better
 - row_limit – the number of rows to train over. A number less then the original table length will randomly subset the specified rows number
-- dropna – whether to drop rows with at least one missing value
+- drop_null – whether to drop rows with at least one missing value
 
 
 ### Inference
 
 You can customize the inference processes by calling
 
-`infer SIZE TABLE_NAME –run_parallel BOOL –batch_size INT –metadata_path PATH_TO_METADATA –random_seed INT- --print_report BOOL`
+`infer SIZE TABLE_NAME --run_parallel BOOL --batch_size INT --metadata_path PATH_TO_METADATA --random_seed INT --print_report BOOL`
 
 - SIZE - the desired number of rows to generate
 - TABLE_NAME – the name of the table, same as in training
@@ -64,10 +63,99 @@ You can customize the inference processes by calling
 
 ### Linked tables generation
 
-To generate linked tables, you need to train tables in the special order:
+To generate linked tables, you should provide metadata in yaml format. It is used to handle complex 
+relations for any number of tables.
 
-A table with the Primary key (training) -> a table with the Primary key (inference) -> a table with the foreign key (training) -> a table with the foreign key (inference)
+The yaml metadata file should match the following template:
 
-You can train and infer the PK table as is. For the FK table training and inference you have to provide the metadata as a .json file with the following structure:
+    CUSTOMER:                                       # Table name
+        source: "s3://syn-gen/files/customer.csv"   # Supported formats include cloud storage locations, local files
+                 
+        train_settings:                             # Settings for training process
+            epochs: 10                              # Number of epochs if different from the default in the command line options
+            drop_null: true                         # Drop rows with NULL values
+                 
+        infer_settings:                             # Settings for infer process
+            size: 500                               # Size for generated data
+            run_parallel: True                      # Turn on or turn off parallel training process
+            print_report: True                      # Turn on or turn off generation of the report
+        keys:
+            PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
+                type: "PK"                          # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
+                columns:                            # Array of column names
+                    - customer_id
+     
+            UQ1:                                    # Name of a key
+                type: "UQ"                          # One or many unique keys
+                columns:
+                    - e_mail
+     
+            FK1:                                    # One or many foreign keys
+                type: "FK"
+                columns:                            # Array of columns in the source table
+                    - e_mail
+                    - alias
+                references:
+                    table: "PROFILE"                # Name of the target table
+                    columns:                        # Array of columns in the target table
+                        - e_mail
+                        - alias
+       
+            FK2:
+                type: "FK"
+                columns:
+                    - address_id
+                references:
+                    table: "ADDRESS"
+                    columns:
+                        - address_id
 
-`{"table_name": "NAME_OF_FK_TABLE", "fk": {"NAME_OF_FK_COLUMN": {"pk_table": "NAME_OF_PK_TABLE", "pk_column": "NAME_OF_PK_COLUMN (in PK table)"}}}`
+     
+    ORDER:
+        source: "./files/order.csv"
+     
+        train_settings:
+            epochs: 10                              # Number of epochs if different from the default in the command line options
+            drop_null: true                         # Drop rows with NULL values
+     
+        infer_settings:                             # Settings for infer process
+            size: 500                               # Size for generated data
+            run_parallel: True                      # Turn on or turn off parallel training process
+            print_report: True                      # Turn on or turn off generation of the report
+        keys:
+            pk_order_id:
+                type: "PK"
+                columns:
+                    - order_id
+     
+            FK1:
+                type: "FK"
+                columns:
+                    - customer_id
+                references:
+                    table: "CUSTOMER"
+                    columns:
+                        - customer_id
+
+
+### Docker images using
+
+The train and inference components of Syngen is available as public docker images:
+
+<https://hub.docker.com/r/tdspora/syngen-train>
+
+<https://hub.docker.com/r/tdspora/syngen-infer>
+
+To run dockerized code run (see parameters description in *Training* and *Inference* sections):
+
+```
+docker pull tdspora/syngen-train:latest
+docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train --table_name=TABLE_NAME --source=./model_artifacts/YOUR_CSV_FILE.csv
+
+docker pull tdspora/syngen-infer:latest
+docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer --size=NUMBER_OF_ROWS --table_name=TABLE_NAME
+```
+
+PATH_TO_LOCAL_FOLDER is an absolute path to the folder where your original csv is stored.
+
+You can add any arguments listed in the corresponding sections for infer and training processes.
