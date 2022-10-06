@@ -26,7 +26,7 @@ Here is a quick example:
 
 ```
 pip install syngen
-train ./data/Churn_modelling.csv –-table_name Churn
+train --source ./data/Churn_modelling.csv –-table_name Churn
 infer 5000 Churn
 ```
 
@@ -38,7 +38,7 @@ You can add flexibility to the training and inference processes using additional
 
 `train --source PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME --epochs INT --row_limit INT --drop_null BOOL`
 
-- PATH_TO_ORIGINAL_CSV – a path to the csv table that you want to use a reference
+- source – a path to the csv table that you want to use a reference
 - table_name – an arbitrary string to name the directories 
 - epochs – the number of training epochs. Since the early stopping mechanism is implemented the bigger is the better
 - row_limit – the number of rows to train over. A number less then the original table length will randomly subset the specified rows number
@@ -51,14 +51,14 @@ For training the multiple linked tables (see below) call:
 - metadata_path – a path to the json file containing the metadata for linked tables generation
 
 
-### Inference
+### Inference (generation)
 
-You can customize the inference processes by calling for one table
+You can customize the inference processes by calling for one table:
 
-`infer SIZE TABLE_NAME --run_parallel BOOL --batch_size INT --random_seed INT --print_report BOOL`
+`infer --size INT --table_name STR --run_parallel BOOL --batch_size INT --random_seed INT --print_report BOOL`
  
-- SIZE - the desired number of rows to generate
-- TABLE_NAME – the name of the table, same as in training
+- size - the desired number of rows to generate
+- table_name – the name of the table, same as in training
 - run_parallel – whether to use multiprocessing (feasible for tables > 5000 rows)
 - batch_size – if specified, the generation is split into batches. This can save the RAM
 - random_seed – if specified, generates a reproducible result
@@ -168,7 +168,7 @@ The train and inference components of Syngen is available as public docker image
 
 <https://hub.docker.com/r/tdspora/syngen-infer>
 
-To run dockerized code run (see parameters description in *Training* and *Inference* sections):
+To run dockerized code (see parameters description in *Training* and *Inference* sections) for one table call:
 
 ```
 docker pull tdspora/syngen-train:latest
@@ -181,3 +181,16 @@ docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infe
 PATH_TO_LOCAL_FOLDER is an absolute path to the folder where your original csv is stored.
 
 You can add any arguments listed in the corresponding sections for infer and training processes.
+
+To run dockerized code for linked tables simply call:
+
+```
+docker pull tdspora/syngen-train:latest
+docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+
+docker pull tdspora/syngen-infer:latest
+docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+```
+
+You can add any arguments listed in the corresponding sections for infer and training processes, however, they will be 
+overwrited by corresponding arguments in the metadata file.
