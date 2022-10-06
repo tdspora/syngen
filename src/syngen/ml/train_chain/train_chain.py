@@ -222,14 +222,12 @@ class VaeInferHandler(BaseHandler):
                         "name of referenced table with a primary key in the foreign key declaration section."
                     )
                 pk_table_data = pd.read_csv(pk_path, engine="python")
-                pk_column_label = [v["columns"][0] for k, v in config_of_keys.items()][0]
+                pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
                 synth_fk = self.kde_gen(pk_table_data, pk_column_label, size)
                 generated = pd.concat([generated.reset_index(drop=True), synth_fk], axis=1)
-                return generated
-            else:
-                continue
+        return generated
 
     def handle(
             self,

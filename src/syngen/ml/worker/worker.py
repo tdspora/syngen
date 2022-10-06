@@ -87,7 +87,7 @@ class Worker:
         pk_tables = self._get_tables(config_of_tables, "PK")
         fk_tables = self._get_tables(config_of_tables, "FK")
         # chain_of_tables = [*pk_tables, *list(set(fk_tables).difference(set(pk_tables)))]
-        chain_of_tables = [*pk_tables, *fk_tables]
+        chain_of_tables = [*set(pk_tables), *set(fk_tables)]
         return chain_of_tables, config_of_tables
 
     def __train_chain_of_tables(self, tables: List, config_of_tables: Dict):
