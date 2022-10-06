@@ -12,7 +12,7 @@ Use pip to install the library:
 
 The training and inference processes are separated with two cli entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters. To start training with the sensible defaults run
 
-`train PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME`
+`train --source PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME`
 
 This will train a model and save the model artifacts to disk.
 
@@ -136,7 +136,11 @@ The yaml metadata file should match the following template:
                     table: "CUSTOMER"
                     columns:
                         - customer_id
+For training in related tables it work as the next command:
+train --metadata_path=PATH_TO_YAML_METADATA_FILE
 
+If `--metadata_path` is present, parameters `--source` and `--table_name` will be ignored, so it is not necessary to 
+specify these parameters in the CLI.
 
 ### Docker images using
 
