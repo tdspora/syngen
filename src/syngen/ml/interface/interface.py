@@ -1,3 +1,4 @@
+import pandas as pd
 from loguru import logger
 from abc import ABC, abstractmethod
 import os
