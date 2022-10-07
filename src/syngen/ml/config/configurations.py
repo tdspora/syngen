@@ -1,15 +1,15 @@
-import attr
+from attr import define
 from typing import Optional
 
 
-@attr.s(auto_attribs=True)
+@define(kw_only=True)
 class TrainConfig:
     """
     The configuration class to set up the work of train process
     """
-    path: str = attr.ib(kw_only=True)
+    source: Optional[str]
     epochs: int = 10
-    dropna: bool = False
+    drop_null: bool = False
     row_limit: Optional[int] = None
     table_name: Optional[str] = None
     metadata_path: Optional[str] = None
@@ -31,13 +31,13 @@ class TrainConfig:
         }
 
 
-@attr.s(auto_attribs=True)
+@define(kw_only=True)
 class InferConfig:
     """
     The configuration class to set up the work of infer process
     """
-    size: int = attr.ib(kw_only=True)
-    table_name: str = attr.ib(kw_only=True)
+    size: int
+    table_name: Optional[str]
     run_parallel: bool = True
     batch_size: Optional[int] = None
     metadata_path: Optional[str] = None
@@ -51,7 +51,7 @@ class InferConfig:
         return {
             "original_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data.csv",
             "synthetic_data_path": f"model_artifacts/tmp_store/{self.table_name}/merged_infer.csv",
-            "draws_path": f"model_artifacts/tmp_store/{self.table_name}/draws/",
+            "draws_path": f"model_artifacts/tmp_store/{self.table_name}/draws",
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.table_name}/merged_infer.csv",
             "state_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints",
             "tmp_store_path": f"model_artifacts/tmp_store/{self.table_name}",

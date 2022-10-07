@@ -21,23 +21,22 @@ from syngen.ml.pipeline.pipeline import (
 
 
 class Dataset:
-    def __init__(self, df: pd.DataFrame, metadata: dict, kde_path: str):
+    def __init__(self, df: pd.DataFrame, metadata: dict, table_name: str, kde_path: str):
         self.df = df
-        self.__set_metadata(metadata)
+        self.__set_metadata(metadata, table_name)
         self.features = dict()
         self.columns = dict()
         self.is_fitted = False
         self.all_columns = []
         self.null_column_names = []
         self.nan_labels_dict = {}
-        self.primary_key_type = None
         self.fk_kde_path = kde_path
 
     def __set_metadata(self, metadata: dict, table_name: str):
         self.foreign_keys_list = []  # For compatibility with the Enterprise version
         self.token_keys_list = []  # For compatibility with the Enterprise version
         self.table_name = table_name
-        config_of_keys = metadata.get("configuration", {}).get("tables", {}).get(table_name, {}).get("keys")
+        config_of_keys = metadata.get(table_name, {}).get("keys")
         if config_of_keys is not None:
             fk = [key for key in config_of_keys if config_of_keys.get(key).get("type") == "FK"]
             self.foreign_key_name = fk[0] if fk else None
@@ -78,7 +77,7 @@ class Dataset:
     def transform(self, data, excluded_features=set()):
         transformed_features = list()
         for name, feature in self.features.items():
-            if name not in excluded_features:
+            if name not in (excluded_features and self.foreign_keys_list and self.token_keys_list):
                 transformed_features.append(feature.transform(data[self.columns[name]]))
         return transformed_features
 
@@ -185,18 +184,13 @@ class Dataset:
             binary_columns,
         ) = data_pipeline(self.df)
 
-        self.primary_key_type = (
-            str
-            if self.primary_key_name in (str_columns | categ_columns | date_columns | binary_columns)
-            else float
-        )
-
         if self.foreign_key_name:
             self._preprocess_fk_params()
             self.df = self.df.drop(self.foreign_key_name, axis=1)
             float_columns.discard(self.foreign_key_name)
             int_columns.discard(self.foreign_key_name)
             str_columns.discard(self.foreign_key_name)
+            categ_columns.discard(self.foreign_key_name)
             logger.debug(f"Foreign key {self.foreign_key_name} dropped from training and will be sampled from the PK table")
 
         null_num_column_names = []

@@ -1,9 +1,13 @@
 import pandas as pd
 import pandavro as pdx
 import json
+import yaml
+from yaml import Loader
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional
+
+from syngen.ml.validation_schema import validate_schema, configuration_schema
 
 
 class BaseDataLoader(ABC):
@@ -60,6 +64,20 @@ class JSONLoader(BaseDataLoader):
         raise NotImplementedError("Saving JSON files is not supported")
 
 
+class YAMLLoader(BaseDataLoader):
+    """
+    Class for loading and saving data in yaml format
+    """
+    def load_data(self, path: str) -> dict:
+        with open(path, "r") as metadata_file:
+            metadata = yaml.load(metadata_file, Loader=Loader)
+            validate_schema(configuration_schema, metadata)
+        return metadata
+
+    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
+        raise NotImplementedError("Saving YAML files is not supported")
+
+
 class DataLoader(BaseDataLoader):
     """
     Base class for loading and saving data either in csv or in avro format
@@ -104,11 +122,14 @@ class MetadataLoader(BaseDataLoader):
 
     def __init__(self):
         self.json_loader = JSONLoader()
+        self.yaml_loader = YAMLLoader()
 
     def load_data(self, path: str) -> dict:
         path = Path(path)
         if path.suffix == '.json':
             return self.json_loader.load_data(str(path))
+        if path.suffix in ['.yaml', '.yml']:
+            return self.yaml_loader.load_data(str(path))
         else:
             raise NotImplementedError("File format not supported")
 

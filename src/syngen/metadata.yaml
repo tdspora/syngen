@@ -1,0 +1,41 @@
+pk_test:                                  # Use table name here
+  train_settings:                         # Settings for training process
+    epochs: 8                             # Number of epochs
+    drop_null: true                       # Drop rows with NULL values
+    row_limit: 100                        # Limit of rows for training process
+
+  infer_settings:                         # Settings for infer process
+    size: 90                              # Size for generated data
+    run_parallel: false                   # Turn on or turn off parallel training process
+    random_seed: 10                       # Ensure reproducible tables generation
+    print_report: true                    # Turn on or turn off generation of the report
+
+  path: "../data/pk_test.csv"             # Supported formats include cloud storage locations, local files
+  keys:                                   # Keys of the table
+    id:                                   # Name of a key
+      type: "PK"                          # Type of key
+      columns:                            # Columns related to key
+        - id
+
+fk_test:
+  train_settings:
+    epochs: 5
+    drop_null: true
+    row_limit: 100
+
+  infer_settings:
+    size: 90
+    run_parallel: false
+    random_seed: 10
+    print_report: true
+
+  source: "../data/fk_test.csv"
+  keys:
+    id:
+      type: "FK"
+      columns:
+        - id
+      references:
+        table: pk_test
+        columns:
+          - id
