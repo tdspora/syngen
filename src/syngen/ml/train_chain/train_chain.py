@@ -25,12 +25,11 @@ class AbstractHandler(ABC):
 
 
 class BaseHandler(AbstractHandler):
-    def __init__(self, metadata: dict, paths: dict):
+    def __init__(self, metadata: dict, paths: dict, table_name: str):
         self.metadata = metadata
         self.paths = paths
-        try:
-            self.table_name = metadata["table_name"]
-        except KeyError:
+        self.table_name = table_name
+        if self.table_name is None:
             raise KeyError("No table name was provided.")
 
     _next_handler: AbstractHandler = None
@@ -50,13 +49,13 @@ class BaseHandler(AbstractHandler):
     @staticmethod
     def create_wrapper(cls_name, **kwargs):
         return globals()[cls_name](
-            kwargs["metadata"], kwargs["paths"]
+            kwargs["metadata"], kwargs["table_name"], kwargs["paths"]
         )
 
 
 class RootHandler(BaseHandler):
-    def __init__(self, metadata: dict, paths: dict):
-        super().__init__(metadata, paths)
+    def __init__(self, metadata: dict, paths: dict, table_name: str):
+        super().__init__(metadata, paths, table_name)
 
     def _prepare_dirs(self):
         os.makedirs(self.paths["model_artifacts_path"], exist_ok=True)
@@ -65,7 +64,7 @@ class RootHandler(BaseHandler):
 
     @staticmethod
     def prepare_data(data, options):
-        if options["dropna"]:
+        if options["drop_null"]:
             data = data.dropna()
 
         if options["row_subset"]:
@@ -92,18 +91,19 @@ class RootHandler(BaseHandler):
 
 class VaeTrainHandler(BaseHandler):
     def __init__(
-        self, metadata: dict, paths: dict, wrapper_name
+            self, metadata: dict, paths: dict, table_name: str, wrapper_name
     ):
-        super().__init__(metadata, paths)
+        super().__init__(metadata, paths, table_name)
         self.model = self.create_wrapper(
             wrapper_name,
             metadata=self.metadata,
+            table_name=self.table_name,
             paths=self.paths,
         )
         self.state_path = self.paths["state_path"]
 
     def __fit_model(
-        self, data: pd.DataFrame, epochs: int, batch_size: int
+            self, data: pd.DataFrame, epochs: int, batch_size: int
     ):
         os.makedirs(self.state_path, exist_ok=True)
         logger.info("Start VAE training")
@@ -131,13 +131,14 @@ class VaeTrainHandler(BaseHandler):
 
 class VaeInferHandler(BaseHandler):
     def __init__(
-        self,
-        metadata: dict,
-        paths: dict,
-        wrapper_name: str,
-        random_seed: int = None,
+            self,
+            metadata: dict,
+            paths: dict,
+            table_name: str,
+            wrapper_name: str,
+            random_seed: int = None,
     ):
-        super().__init__(metadata, paths)
+        super().__init__(metadata, paths, table_name)
         self.random_seed = random_seed
         self.random_seeds_list = []
         if random_seed:
@@ -161,6 +162,7 @@ class VaeInferHandler(BaseHandler):
         self.vae = self.create_wrapper(
             self.wrapper_name,
             metadata={"table_name": self.table_name},
+            table_name=self.table_name,
             paths=self.paths,
         )
         self.vae.load_state(self.vae_state_path)
@@ -206,33 +208,34 @@ class VaeInferHandler(BaseHandler):
             synth_fk = pd.DataFrame({pk_column_label: synth_fk}).reset_index(drop=True)
         return synth_fk
 
-    def generate_keys(self, generated, size, metadata):
-        if metadata.get("fk", False):
-            pk_table = [v["pk_table"] for k, v in metadata["fk"].items()][0]
-            pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer.csv"
-            if not os.path.exists(pk_path):
-                raise FileNotFoundError(
-                    "The table with a primary key specified in the metadata file does not "
-                    "exist or is not trained. Ensure that the metadata contains the "
-                    "name of the table with a primary key in the foreign key declaration section "
-                    "following pattern 'fk': "
-                    "{'fk_column_name': {'pk_table': 'pk_table_name', 'pk_column': 'pk_column_name'}}}'"
-                )
-            pk_table = pd.read_csv(pk_path, engine="python")
-            pk_column_label = [v["pk_column"] for k, v in metadata["fk"].items()][0]
-            logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
+    def generate_keys(self, generated, size, metadata, table_name):
+        metadata_of_table = metadata.get(table_name)
+        config_of_keys = metadata_of_table.get("keys")
+        for key in config_of_keys.keys():
+            if config_of_keys.get(key).get("type") == "FK":
+                pk_table = config_of_keys.get(key).get("references").get("table")
+                pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer.csv"
+                if not os.path.exists(pk_path):
+                    raise FileNotFoundError(
+                        "The table with a primary key specified in the metadata file does not "
+                        "exist or is not trained. Ensure that the metadata contains the "
+                        "name of referenced table with a primary key in the foreign key declaration section."
+                    )
+                pk_table_data = pd.read_csv(pk_path, engine="python")
+                pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
+                logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
-            synth_fk = self.kde_gen(pk_table, pk_column_label, size)
-            generated = pd.concat([generated.reset_index(drop=True), synth_fk], axis=1)
+                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size)
+                generated = pd.concat([generated.reset_index(drop=True), synth_fk], axis=1)
         return generated
 
     def handle(
-        self,
-        size: int,
-        run_parallel: bool = True,
-        batch_size: int = None,
-        print_report: bool = False,
-        metadata_path: str = None,
+            self,
+            size: int,
+            run_parallel: bool = True,
+            batch_size: int = None,
+            print_report: bool = False,
+            metadata_path: str = None,
     ):
         self._prepare_dir()
         try:
@@ -241,14 +244,18 @@ class VaeInferHandler(BaseHandler):
             batch_num = math.ceil(size / batch_size)
             logger.info(f"Total of {batch_num} batch(es)")
             batches = self.split_by_batches(size, batch_num)
-            generated = pd.DataFrame()
+            prepared_data = pd.DataFrame()
             for batch in batches:
                 generated_batch = self.run(batch, run_parallel)
-                generated = pd.concat([generated, generated_batch])
+                prepared_data = pd.concat([prepared_data, generated_batch])
             if metadata_path is not None:
-                generated = self.generate_keys(generated, size, self.metadata)
-
-            generated.to_csv(self.path_to_merged_infer, index=False)
+                generated_data = self.generate_keys(prepared_data, size, self.metadata, self.table_name)
+                if generated_data is None:
+                    prepared_data.to_csv(self.path_to_merged_infer, index=False)
+                else:
+                    generated_data.to_csv(self.path_to_merged_infer, index=False)
+            if metadata_path is None:
+                prepared_data.to_csv(self.path_to_merged_infer, index=False)
             if print_report:
                 Report().generate_report()
 

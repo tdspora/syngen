@@ -587,7 +587,7 @@ class DateFeature:
     def fit(self, data):
         self.date_format = self.__validate_format(data)
         data = chain.from_iterable(data.values)
-        data = list(map(lambda d: pd.Timestamp(d).value, data))
+        data = pd.DataFrame(list(map(lambda d: pd.Timestamp(d).value, data)))
         normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
         data = np.array(data).reshape(-1, 1)
 
