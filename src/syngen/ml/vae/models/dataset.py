@@ -85,12 +85,15 @@ class Dataset:
         self.fit(data)
         return self.transform(data)
 
+    def _check_count_features(self, data):
+        return (len(data) == len(self.features)) or (len(data) + len(self.foreign_keys_list) == len(self.features))
+
     def inverse_transform(self, data, excluded_features=set()):
         inverse_transformed_data = list()
         column_names = list()
         if not isinstance(data, list):
             data = [data]
-        assert (len(data) == len(self.features)) or (len(data) + len(self.foreign_keys_list) == len(self.features))
+        assert self._check_count_features(data)
 
         self.inverse_transformers = {}
 
