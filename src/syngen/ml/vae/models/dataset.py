@@ -28,7 +28,7 @@ class Dataset:
         self.columns = dict()
         self.is_fitted = False
         self.all_columns = []
-        self.null_column_names = []
+        self.null_num_column_names = []
         self.nan_labels_dict = {}
         self.fk_kde_path = kde_path
 
@@ -59,17 +59,14 @@ class Dataset:
         self.features[name] = feature
         self.columns[name] = columns
 
-    def set_nan_params(self, nan_labels: dict, null_column_names: List):
+    def set_nan_params(self, nan_labels: dict):
         """Save params that are used to keep and replicate nan and empty values
 
         Args:
             nan_labels (dict): dictionary that matches column name to the label of missing value
                                (e.g. {'Score': 'Not available'})
-            null_column_names (List): list of column names that represent if the value of main numeric column is a NaN
-                                      (e.g. main - 'Score', null - 'Score_null')
         """
         self.nan_labels_dict = nan_labels
-        self.null_column_names = null_column_names
 
     def fit(self, data):
         for name, feature in self.features.items():
@@ -254,20 +251,6 @@ class Dataset:
             self.assign_feature(BinaryFeature(feature), feature)
             logger.debug(f"Feature {feature} assigned as binary feature")
 
-    def __assign_fk_feature(self, fk_columns):
-        """
-        Assign Foreign Key feature to columns with type - "FK"
-        """
-        for feature in fk_columns:
-            self.assign_feature(
-                ForeignKeyFeature(
-                    feature,
-                    foreign_keys_mapping=self.foreign_keys_mapping
-                ),
-                feature,
-            )
-            logger.debug(f"Feature {feature} assigned as Foreign Key feature")
-
     def pipeline(self) -> pd.DataFrame:
         columns_nan_labels = get_nan_labels(self.df)
         self.df = nan_labels_to_float(self.df, columns_nan_labels)
@@ -291,8 +274,6 @@ class Dataset:
                     logger.debug(f"The column - {fk_column} of foreign key {fk} dropped from training "
                                  f"and will be sampled from the PK table")
 
-        null_num_column_names = []
-
         if len(str_columns) > 0:
             self.__assign_char_feature(str_columns)
 
@@ -311,7 +292,7 @@ class Dataset:
         if len(binary_columns) > 0:
             self.__assign_binary_feature(binary_columns)
 
-        self.set_nan_params(columns_nan_labels, null_num_column_names)
+        self.set_nan_params(columns_nan_labels)
 
         self.fit(self.df)
 
