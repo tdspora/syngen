@@ -10,9 +10,9 @@ pk_test:                                  # Use table name here
     random_seed: 10                       # Ensure reproducible tables generation
     print_report: true                    # Turn on or turn off generation of the report
 
-  path: "../data/pk_test.csv"             # Supported formats include cloud storage locations, local files
+  source: "../data/pk_test.csv"           # Supported formats include cloud storage locations, local files
   keys:                                   # Keys of the table
-    id:                                   # Name of a key
+    pk_tst:                               # Name of a key
       type: "PK"                          # Type of key
       columns:                            # Columns related to key
         - id
@@ -31,7 +31,7 @@ fk_test:
 
   source: "../data/fk_test.csv"
   keys:
-    id:
+    fk_tst:
       type: "FK"
       columns:
         - id
