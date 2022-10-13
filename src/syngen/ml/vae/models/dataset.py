@@ -1,5 +1,4 @@
 from loguru import logger
-from typing import List
 import numpy as np
 import dill
 import pandas as pd
@@ -273,7 +272,6 @@ class Dataset:
                     categ_columns.discard(fk_column)
                     logger.debug(f"The column - {fk_column} of foreign key {fk} dropped from training "
                                  f"and will be sampled from the PK table")
-
         if len(str_columns) > 0:
             self.__assign_char_feature(str_columns)
 
@@ -281,7 +279,7 @@ class Dataset:
             self.__assign_float_feature(str_columns)
 
         if len(int_columns) > 0:
-            self.__assign_char_feature(int_columns)
+            self.__assign_int_feature(int_columns)
 
         if len(categ_columns) > 0:
             self.__assign_categ_feature(categ_columns)
