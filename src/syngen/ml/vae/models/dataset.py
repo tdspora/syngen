@@ -289,7 +289,7 @@ class Dataset:
             self.__assign_char_feature(str_columns)
 
         if len(float_columns) > 0:
-            self.__assign_float_feature(str_columns)
+            self.__assign_float_feature(float_columns)
 
         if len(int_columns) > 0:
             self.__assign_int_feature(int_columns)
