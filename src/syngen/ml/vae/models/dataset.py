@@ -38,10 +38,14 @@ class Dataset:
         self.table_name = table_name
         config_of_keys = metadata.get(table_name, {}).get("keys")
         if config_of_keys is not None:
-            fk = [key for key in config_of_keys if config_of_keys.get(key).get("type") == "FK"]
-            self.foreign_key_name = fk[0] if fk else None
+            self.foreign_keys_mapping = {
+                key: value for (key, value) in config_of_keys.items()
+                if config_of_keys.get(key).get("type") == "FK"
+            }
+            self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
+            self.foreign_key_names = self.foreign_keys_list if self.foreign_keys_list else None
         else:
-            self.foreign_key_name = None
+            self.foreign_key_names = None
 
     def assign_feature(self, feature, columns):
         name = feature.name
@@ -168,12 +172,16 @@ class Dataset:
         return feature
 
     def _preprocess_fk_params(self):
-        fk = self.df[self.foreign_key_name]
-        if fk.dtype != "object":
-            kde = gaussian_kde(fk)
-            with open(self.fk_kde_path, "wb") as file:
-                dill.dump(kde, file)
-            logger.info(f"KDE artifacts saved to {self.fk_kde_path}")
+        for fk in self.foreign_key_names:
+            fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
+            for fk_column in fk_columns:
+                fk_column = self.df[fk_column]
+                if fk_column.dtype != "object":
+                    kde = gaussian_kde(fk_column)
+                    with open(self.fk_kde_path, "wb") as file:
+                        dill.dump(kde, file)
+                    logger.info(f"KDE artifacts saved to {self.fk_kde_path}")
+            yield fk, fk_columns
 
     def pipeline(self) -> pd.DataFrame:
         columns_nan_labels = get_nan_labels(self.df)
@@ -187,14 +195,16 @@ class Dataset:
             binary_columns,
         ) = data_pipeline(self.df)
 
-        if self.foreign_key_name:
-            self._preprocess_fk_params()
-            self.df = self.df.drop(self.foreign_key_name, axis=1)
-            float_columns.discard(self.foreign_key_name)
-            int_columns.discard(self.foreign_key_name)
-            str_columns.discard(self.foreign_key_name)
-            categ_columns.discard(self.foreign_key_name)
-            logger.debug(f"Foreign key {self.foreign_key_name} dropped from training and will be sampled from the PK table")
+        if self.foreign_key_names:
+            for fk, fk_columns in self._preprocess_fk_params():
+                for fk_column in fk_columns:
+                    self.df = self.df.drop(fk_column, axis=1)
+                    float_columns.discard(fk_column)
+                    int_columns.discard(fk_column)
+                    str_columns.discard(fk_column)
+                    categ_columns.discard(fk_column)
+                    logger.debug(f"The column - {fk_column} of foreign key {fk} dropped from training "
+                                 f"and will be sampled from the PK table")
 
         null_num_column_names = []
 
