@@ -183,6 +183,91 @@ class Dataset:
                     logger.info(f"KDE artifacts saved to {self.fk_kde_path}")
             yield fk, fk_columns
 
+    def __assign_char_feature(self, str_columns):
+        """
+        Assign text based feature to text columns
+        """
+        for feature in str_columns:
+            max_len, rnn_units = self._preprocess_str_params(feature)
+            self.assign_feature(
+                CharBasedTextFeature(
+                    feature, text_max_len=max_len, rnn_units=rnn_units
+                ),
+                feature,
+            )
+            logger.debug(f"Feature {feature} assigned as text based feature")
+
+    def __assign_float_feature(self, float_columns):
+        """
+        Assign float based feature to float columns
+        """
+        # num_bins = self.find_clusters(df, float_columns)
+        for feature in float_columns:
+            features = self._preprocess_float_params(
+                feature, fillna_strategy="mean"
+            )
+            if len(features) == 2:
+                self.null_num_column_names.append(features[1])
+            for feature in features:
+                self.assign_feature(
+                    ContinuousFeature(feature, column_type=float), feature
+                )
+                logger.debug(f"Feature {feature} assigned as float based feature")
+
+    def __assign_int_feature(self, int_columns):
+        """
+        Assign int based feature to int columns
+        """
+        # num_bins = self.find_clusters(df, int_columns)
+        for feature in int_columns:
+            features = self._preprocess_float_params(feature, fillna_strategy="mean")
+            if len(features) == 2:
+                self.null_num_column_names.append(features[1])
+            for feature in features:
+                self.assign_feature(
+                    ContinuousFeature(feature, column_type=int), feature
+                )
+                logger.debug(f"Feature {feature} assigned as int based feature")
+
+    def __assign_categ_feature(self, categ_columns):
+        """
+        Assign categorical based feature to categorical columns
+        """
+        for feature in categ_columns:
+            feature = self._preprocess_categ_params(feature)
+            self.assign_feature(CategoricalFeature(feature), feature)
+            logger.debug(f"Feature {feature} assigned as categorical based feature")
+
+    def __assign_date_feature(self, date_columns):
+        """
+        Assign date feature to date columns
+        """
+        for feature in date_columns:
+            self.assign_feature(DateFeature(feature), feature)
+            logger.debug(f"Feature {feature} assigned as date feature")
+
+    def __assign_binary_feature(self, binary_columns):
+        """
+        Assign binary feature to binary columns
+        """
+        for feature in binary_columns:
+            self.assign_feature(BinaryFeature(feature), feature)
+            logger.debug(f"Feature {feature} assigned as binary feature")
+
+    def __assign_fk_feature(self, fk_columns):
+        """
+        Assign Foreign Key feature to columns with type - "FK"
+        """
+        for feature in fk_columns:
+            self.assign_feature(
+                ForeignKeyFeature(
+                    feature,
+                    foreign_keys_mapping=self.foreign_keys_mapping
+                ),
+                feature,
+            )
+            logger.debug(f"Feature {feature} assigned as Foreign Key feature")
+
     def pipeline(self) -> pd.DataFrame:
         columns_nan_labels = get_nan_labels(self.df)
         self.df = nan_labels_to_float(self.df, columns_nan_labels)
@@ -209,57 +294,22 @@ class Dataset:
         null_num_column_names = []
 
         if len(str_columns) > 0:
-            for feature in str_columns:
-                max_len, rnn_units = self._preprocess_str_params(feature)
-                self.assign_feature(
-                    CharBasedTextFeature(
-                        feature, text_max_len=max_len, rnn_units=rnn_units
-                    ),
-                    feature,
-                )
-                logger.debug(f"Feature {feature} assigned as text based feature")
+            self.__assign_char_feature(str_columns)
 
         if len(float_columns) > 0:
-            for feature in float_columns:
-                features = self._preprocess_float_params(
-                    feature, fillna_strategy="mean"
-                )
-                if len(features) == 2:
-                    null_num_column_names.append(features[1])
-                for feature in features:
-                    self.assign_feature(
-                        ContinuousFeature(feature, column_type=float), feature
-                    )
-                    logger.debug(f"Feature {feature} assigned as float based feature")
+            self.__assign_float_feature(str_columns)
 
         if len(int_columns) > 0:
-            for feature in int_columns:
-                features = self._preprocess_float_params(
-                    feature, fillna_strategy="mean"
-                )
-                if len(features) == 2:
-                    null_num_column_names.append(features[1])
-                for feature in features:
-                    self.assign_feature(
-                        ContinuousFeature(feature, column_type=int), feature
-                    )
-                    logger.debug(f"Feature {feature} assigned as int based feature")
+            self.__assign_char_feature(int_columns)
 
         if len(categ_columns) > 0:
-            for feature in categ_columns:
-                feature = self._preprocess_categ_params(feature)
-                self.assign_feature(CategoricalFeature(feature), feature)
-                logger.debug(f"Feature {feature} assigned as categorical based feature")
+            self.__assign_categ_feature(categ_columns)
 
         if len(date_columns) > 0:
-            for feature in date_columns:
-                self.assign_feature(DateFeature(feature), feature)
-                logger.debug(f"Feature {feature} assigned as date feature")
+            self.__assign_date_feature(date_columns)
 
         if len(binary_columns) > 0:
-            for feature in binary_columns:
-                self.assign_feature(BinaryFeature(feature), feature)
-                logger.debug(f"Feature {feature} assigned as binary feature")
+            self.__assign_binary_feature(binary_columns)
 
         self.set_nan_params(columns_nan_labels, null_num_column_names)
 
