@@ -1,3 +1,5 @@
+from typing import Set
+
 from loguru import logger
 import numpy as np
 import dill
@@ -179,6 +181,22 @@ class Dataset:
                     logger.info(f"KDE artifacts saved to {self.fk_kde_path}")
             yield fk, fk_columns
 
+    def __drop_fk_columns(self, *args: Set[str]) -> object:
+        """
+        Drop columns which defined as foreign key
+        """
+        float_columns, int_columns, str_columns, categ_columns = args
+        for fk, fk_columns in self._preprocess_fk_params():
+            for fk_column in fk_columns:
+                self.df = self.df.drop(fk_column, axis=1)
+                float_columns.discard(fk_column)
+                int_columns.discard(fk_column)
+                str_columns.discard(fk_column)
+                categ_columns.discard(fk_column)
+                logger.debug(f"The column - {fk_column} of foreign key {fk} dropped from training "
+                             f"and will be sampled from the PK table")
+        return float_columns, int_columns, str_columns, categ_columns
+
     def __assign_char_feature(self, str_columns):
         """
         Assign text based feature to text columns
@@ -263,15 +281,10 @@ class Dataset:
         ) = data_pipeline(self.df)
 
         if self.foreign_key_names:
-            for fk, fk_columns in self._preprocess_fk_params():
-                for fk_column in fk_columns:
-                    self.df = self.df.drop(fk_column, axis=1)
-                    float_columns.discard(fk_column)
-                    int_columns.discard(fk_column)
-                    str_columns.discard(fk_column)
-                    categ_columns.discard(fk_column)
-                    logger.debug(f"The column - {fk_column} of foreign key {fk} dropped from training "
-                                 f"and will be sampled from the PK table")
+            float_columns, int_columns, str_columns, categ_columns = self.__drop_fk_columns(float_columns,
+                                                                                            int_columns,
+                                                                                            str_columns,
+                                                                                            categ_columns)
         if len(str_columns) > 0:
             self.__assign_char_feature(str_columns)
 
