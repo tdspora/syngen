@@ -35,12 +35,12 @@ class TrainStrategy:
             )
 
         except Exception as e:
-            logger.info("Training failed on running stage.")
+            logger.info(f"Training of the table - {self.handler.table_name} failed on running stage.")
             logger.error(e)
             logger.error(traceback.format_exc())
             raise
 
-        logger.info("Training was completed")
+        logger.info(f"Training of the table - {self.handler.table_name} was completed")
 
 
 class InferStrategy:
