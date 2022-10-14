@@ -197,7 +197,7 @@ class Dataset:
                              f"and will be sampled from the PK table")
         return float_columns, int_columns, str_columns, categ_columns
 
-    def __assign_char_feature(self, str_columns):
+    def _assign_char_feature(self, str_columns):
         """
         Assign text based feature to text columns
         """
@@ -211,7 +211,7 @@ class Dataset:
             )
             logger.debug(f"Feature {feature} assigned as text based feature")
 
-    def __assign_float_feature(self, float_columns):
+    def _assign_float_feature(self, float_columns):
         """
         Assign float based feature to float columns
         """
@@ -228,7 +228,7 @@ class Dataset:
                 )
                 logger.debug(f"Feature {feature} assigned as float based feature")
 
-    def __assign_int_feature(self, int_columns):
+    def _assign_int_feature(self, int_columns):
         """
         Assign int based feature to int columns
         """
@@ -243,7 +243,7 @@ class Dataset:
                 )
                 logger.debug(f"Feature {feature} assigned as int based feature")
 
-    def __assign_categ_feature(self, categ_columns):
+    def _assign_categ_feature(self, categ_columns):
         """
         Assign categorical based feature to categorical columns
         """
@@ -252,7 +252,7 @@ class Dataset:
             self.assign_feature(CategoricalFeature(feature), feature)
             logger.debug(f"Feature {feature} assigned as categorical based feature")
 
-    def __assign_date_feature(self, date_columns):
+    def _assign_date_feature(self, date_columns):
         """
         Assign date feature to date columns
         """
@@ -260,7 +260,7 @@ class Dataset:
             self.assign_feature(DateFeature(feature), feature)
             logger.debug(f"Feature {feature} assigned as date feature")
 
-    def __assign_binary_feature(self, binary_columns):
+    def _assign_binary_feature(self, binary_columns):
         """
         Assign binary feature to binary columns
         """
@@ -286,22 +286,22 @@ class Dataset:
                                                                                             str_columns,
                                                                                             categ_columns)
         if len(str_columns) > 0:
-            self.__assign_char_feature(str_columns)
+            self._assign_char_feature(str_columns)
 
         if len(float_columns) > 0:
-            self.__assign_float_feature(float_columns)
+            self._assign_float_feature(float_columns)
 
         if len(int_columns) > 0:
-            self.__assign_int_feature(int_columns)
+            self._assign_int_feature(int_columns)
 
         if len(categ_columns) > 0:
-            self.__assign_categ_feature(categ_columns)
+            self._assign_categ_feature(categ_columns)
 
         if len(date_columns) > 0:
-            self.__assign_date_feature(date_columns)
+            self._assign_date_feature(date_columns)
 
         if len(binary_columns) > 0:
-            self.__assign_binary_feature(binary_columns)
+            self._assign_binary_feature(binary_columns)
 
         self.set_nan_params(columns_nan_labels)
 
