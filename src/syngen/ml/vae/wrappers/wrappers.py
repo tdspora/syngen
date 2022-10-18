@@ -111,7 +111,7 @@ class VAEWrapper(BaseWrapper):
             f.write(pickle.dumps(self.dataset))
 
     def _restore_nan_values(self, df):
-        for column in self.dataset.null_column_names:
+        for column in self.dataset.null_num_column_names:
             if column.endswith("_null"):
                 # remove _null to get original column name
                 num_column_name = column[:-5]
