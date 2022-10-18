@@ -1,6 +1,5 @@
 import pandas as pd
 import pandavro as pdx
-import json
 import yaml
 from yaml import Loader
 from pathlib import Path
@@ -48,20 +47,6 @@ class AvroLoader(BaseDataLoader):
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         if df is not None:
             pdx.to_avro(path, df, **kwargs)
-
-
-class JSONLoader(BaseDataLoader):
-    """
-    Class for loading and saving data in json format
-    """
-
-    def load_data(self, path: str) -> dict:
-        with open(path) as metadata_file:
-            metadata = json.load(metadata_file)
-        return metadata
-
-    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
-        raise NotImplementedError("Saving JSON files is not supported")
 
 
 class YAMLLoader(BaseDataLoader):
@@ -117,17 +102,14 @@ class DataLoader(BaseDataLoader):
 
 class MetadataLoader(BaseDataLoader):
     """
-    Metadata class for loading and saving metadata in json format
+    Metadata class for loading and saving metadata in yaml format
     """
 
     def __init__(self):
-        self.json_loader = JSONLoader()
         self.yaml_loader = YAMLLoader()
 
     def load_data(self, path: str) -> dict:
         path = Path(path)
-        if path.suffix == '.json':
-            return self.json_loader.load_data(str(path))
         if path.suffix in ['.yaml', '.yml']:
             return self.yaml_loader.load_data(str(path))
         else:
@@ -135,7 +117,7 @@ class MetadataLoader(BaseDataLoader):
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         path = Path(path)
-        if path.suffix == '.json':
-            self.json_loader.save_data(str(path), df, **kwargs)
+        if path.suffix in ['.yaml', '.yml']:
+            self.yaml_loader.save_data(str(path), df, **kwargs)
         else:
             raise NotImplementedError("File format not supported")
