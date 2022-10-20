@@ -47,4 +47,3 @@ def validate_schema(configuration_schema: Schema, metadata: Dict):
             f"It seems that the schema of metadata file isn't valid. "
             f"The details of validation error - {err}")
         raise err
-
