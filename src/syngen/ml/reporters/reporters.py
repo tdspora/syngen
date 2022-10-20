@@ -46,13 +46,17 @@ class Reporter:
         synthetic = text_to_continuous(synthetic, str_columns).drop(str_columns, axis=1)
 
         for col in [i + "_word_count" for i in str_columns]:
-            if original[col].nunique() < 50:
+            if original[col].nunique() < 50:  # ToDo check if we need this
                 categ_columns = categ_columns | {col}
             else:
                 int_columns = int_columns | {col}
         int_columns = int_columns | {i + "_char_len" for i in str_columns}
         categ_columns = categ_columns | binary_columns
-
+        
+        for categ_col in categ_columns:
+            original[categ_col] = original[categ_col].astype(str)
+            synthetic[categ_col] = synthetic[categ_col].astype(str)
+            
         return original, synthetic, float_columns, int_columns, categ_columns
 
     @abstractmethod
