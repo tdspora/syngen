@@ -12,6 +12,7 @@ import dill
 
 from syngen.ml.vae import *
 from syngen.ml.reporters import Report
+from syngen.ml.data_loaders import DataLoader
 
 
 class AbstractHandler(ABC):
@@ -47,9 +48,9 @@ class BaseHandler(AbstractHandler):
         return None
 
     @staticmethod
-    def create_wrapper(cls_name, **kwargs):
+    def create_wrapper(cls_name, data, **kwargs):
         return globals()[cls_name](
-            kwargs["metadata"], kwargs["table_name"], kwargs["paths"]
+            data, kwargs["metadata"], kwargs["table_name"], kwargs["paths"]
         )
 
 
@@ -91,15 +92,10 @@ class RootHandler(BaseHandler):
 
 class VaeTrainHandler(BaseHandler):
     def __init__(
-            self, metadata: dict, paths: dict, table_name: str, wrapper_name
+            self, metadata: dict, paths: dict, table_name: str, wrapper_name: str
     ):
         super().__init__(metadata, paths, table_name)
-        self.model = self.create_wrapper(
-            wrapper_name,
-            metadata=self.metadata,
-            table_name=self.table_name,
-            paths=self.paths,
-        )
+        self.wrapper_name = wrapper_name
         self.state_path = self.paths["state_path"]
 
     def __fit_model(
@@ -110,6 +106,14 @@ class VaeTrainHandler(BaseHandler):
         if data is None:
             logger.error("For mode = 'train' path must be provided")
             raise ValueError("Can't read data from path or path is None")
+
+        self.model = self.create_wrapper(
+            self.wrapper_name,
+            data,
+            metadata=self.metadata,
+            table_name=self.table_name,
+            paths=self.paths,
+        )
 
         self.model.batch_size = min(batch_size, len(data))
         self.model.fit_on_df(
@@ -159,8 +163,10 @@ class VaeInferHandler(BaseHandler):
         if self.random_seed:
             seed(self.random_seeds_list[i])
 
+        data = DataLoader().load_data(self.paths["input_data_path"])
         self.vae = self.create_wrapper(
             self.wrapper_name,
+            data,
             metadata={"table_name": self.table_name},
             table_name=self.table_name,
             paths=self.paths,
@@ -260,10 +266,11 @@ class VaeInferHandler(BaseHandler):
                 Report().generate_report()
 
             logger.info(
-                f"Synthesis was completed. Synthetic data saved in {self.path_to_merged_infer}"
+                f"Synthesis of the table - {self.table_name} was completed. "
+                f"Synthetic data saved in {self.path_to_merged_infer}"
             )
         except Exception as e:
-            logger.info("Generation failed on running stage.")
+            logger.info(f"Generation of the table - {self.table_name} failed on running stage.")
             logger.error(e)
             logger.error(traceback.format_exc())
             raise

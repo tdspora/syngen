@@ -57,6 +57,7 @@ class VAEWrapper(BaseWrapper):
 
     Attributes
     ----------
+    df
     metadata
     paths
     batch_size
@@ -84,6 +85,7 @@ class VAEWrapper(BaseWrapper):
 
     def __init__(
         self,
+        df: pd.DataFrame,
         metadata: dict,
         table_name: str,
         paths: dict,
@@ -100,16 +102,16 @@ class VAEWrapper(BaseWrapper):
         self.vae_resources_path = paths["state_path"]
         self.dataset_pickle_path = paths["dataset_pickle_path"]
         self.fk_kde_path = paths["fk_kde_path"]
-
-    def _pipeline(self, df):
         self.dataset = Dataset(df, self.metadata, self.table_name, self.fk_kde_path)
+
+    def _pipeline(self):
         self.df = self.dataset.pipeline()
 
         with open(self.dataset_pickle_path, "wb") as f:
             f.write(pickle.dumps(self.dataset))
 
     def _restore_nan_values(self, df):
-        for column in self.dataset.null_column_names:
+        for column in self.dataset.null_num_column_names:
             if column.endswith("_null"):
                 # remove _null to get original column name
                 num_column_name = column[:-5]
@@ -140,7 +142,7 @@ class VAEWrapper(BaseWrapper):
     ):
         row_subset = row_subset or len(df)
 
-        self._pipeline(df)
+        self._pipeline()
         self._init_model()
 
         # feature_names = ['mmd'] + [name.name for name in self.dataset.features.values()]
