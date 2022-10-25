@@ -68,9 +68,10 @@ class Worker:
         :param key_type: type of key either 'primary key' ('PK') or 'foreign key' ('FK')
         """
         try:
-            return [table_name for table_name, config in config.items()
+            tbls = [table_name for table_name, config in config.items()
                     for key in config["keys"]
                     if config["keys"][key]["type"] == key_type]
+            return list(dict.fromkeys(tbls))
         except KeyError:
             raise KeyError(
                 "The structure of metadata file seems to be invalid. "

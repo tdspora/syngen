@@ -116,7 +116,7 @@ class VAEWrapper(BaseWrapper):
                 # remove _null to get original column name
                 num_column_name = column[:-5]
                 num_column = df[num_column_name].copy()
-                not_null_column_mask = df[column] <= 0.5
+                not_null_column_mask = df[column].astype("float64") <= 0.5
                 num_column = num_column.where(not_null_column_mask, np.nan)
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
