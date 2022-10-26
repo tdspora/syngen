@@ -100,7 +100,7 @@ def data_pipeline(df: pd.DataFrame, check_object_on_float: bool = False) -> Tupl
         columns_nan_labels = get_nan_labels(df)
         df = nan_labels_to_float(df, columns_nan_labels)
 
-    binary_columns = set([col for col in df.columns if df[col].dropna().nunique() == 2])
+    binary_columns = set([col for col in df.columns if df[col].fillna("?").nunique() == 2])
     categ_columns = set([col for col in df.columns if df[col].dropna().nunique() <= 50 and col not in binary_columns])
     tmp_df = get_tmp_df(df)
     float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
