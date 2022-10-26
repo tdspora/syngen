@@ -71,7 +71,7 @@ class Worker:
             tbls = [table_name for table_name, config in config.items()
                     for key in config["keys"]
                     if config["keys"][key]["type"] == key_type]
-            return tbls
+            return list(dict.fromkeys(tbls))
         except KeyError:
             raise KeyError(
                 "The structure of metadata file seems to be invalid. "
