@@ -265,6 +265,7 @@ class Dataset:
         Assign binary feature to binary columns
         """
         for feature in binary_columns:
+            feature = self._preprocess_categ_params(feature)
             self.assign_feature(BinaryFeature(feature), feature)
             logger.debug(f"Feature {feature} assigned as binary feature")
 
