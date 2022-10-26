@@ -603,11 +603,11 @@ class DateFeature:
 
     def inverse_transform(self, data):
         max_allowed_time_ns = int(9.2E18)
-        unscaled = self.scaler.inverse_transform(data).astype(np.uint64)
+        unscaled = self.scaler.inverse_transform(data)
         unscaled = chain.from_iterable(unscaled)
         return list(
             map(
-                lambda l: pd.Timestamp(min(max_allowed_time_ns, int(str(l)[:19]))).strftime(self.date_format),
+                lambda l: pd.Timestamp(min(max_allowed_time_ns, int(l))).strftime(self.date_format),
                 unscaled,
             )
         )
