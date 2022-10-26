@@ -72,13 +72,13 @@ class BinaryFeature:
         self.weight = weight
 
     def fit(self, data: pd.DataFrame):
-        self.mapping = {k: n for n, k in enumerate(np.unique(data))}
+        self.mapping = {k: n for n, k in enumerate(np.unique(data.fillna("?")))}
         self.inverse_mapping = dict_inverse(self.mapping)
         self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get)
         self.input_dimension = data.shape[1]
 
     def transform(self, data: pd.DataFrame) -> list:
-        data = data.replace(self.mapping)
+        data = data.fillna("?").replace(self.mapping)
         return data
 
     def inverse_transform(self, data: list) -> np.ndarray:
