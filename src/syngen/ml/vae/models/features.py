@@ -72,14 +72,14 @@ class BinaryFeature:
         self.weight = weight
 
     def fit(self, data: pd.DataFrame):
-        self.mapping = {k: n for n, k in enumerate(np.unique(data.fillna("?")))}
+        self.mapping = {k: n for n, k in enumerate(np.unique(data))}
         self.inverse_mapping = dict_inverse(self.mapping)
         self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get)
         self.input_dimension = data.shape[1]
 
     def transform(self, data: pd.DataFrame) -> list:
-        data = data.fillna("?").replace(self.mapping)
-        return data
+        data = data.replace(self.mapping)
+        return data.astype("float64")
 
     def inverse_transform(self, data: list) -> np.ndarray:
         data = np.round(data)
@@ -603,11 +603,11 @@ class DateFeature:
 
     def inverse_transform(self, data):
         max_allowed_time_ns = int(9.2E18)
-        unscaled = self.scaler.inverse_transform(data).astype(np.uint64)
+        unscaled = self.scaler.inverse_transform(data)
         unscaled = chain.from_iterable(unscaled)
         return list(
             map(
-                lambda l: pd.Timestamp(min(max_allowed_time_ns, int(str(l)[:19]))).strftime(self.date_format),
+                lambda l: pd.Timestamp(min(max_allowed_time_ns, int(l))).strftime(self.date_format),
                 unscaled,
             )
         )
