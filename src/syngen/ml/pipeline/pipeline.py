@@ -1,17 +1,26 @@
+from typing import List, Tuple
+from dateutil.parser import parse
+
 import pandas as pd
 import numpy as np
-from typing import List, Tuple
 from loguru import logger
 
 
 def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     # TODO: extend pattern to more formats
     # pattern = r'\d{2}(\.|/|\-)\d{2}(\.|/|\-)(\d{2}|\d{4})'
-    pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+"
+    # pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+"
 
-    def date_finder(x):
+    def date_finder(x, fuzzy=False):
         x_wo_na = x.dropna()
-        if sum(x_wo_na.str.contains(pattern)) > len(x_wo_na) * 0.8:
+        count = 0
+        for x in x_wo_na.values:
+            try:
+                parse(x, fuzzy=fuzzy)
+                count += 1
+            except ValueError:
+                continue
+        if count > len(x_wo_na) * 0.8:
             return 1
         else:
             return np.nan
