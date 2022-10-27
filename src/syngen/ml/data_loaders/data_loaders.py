@@ -29,7 +29,7 @@ class CSVLoader(BaseDataLoader):
     """
 
     def load_data(self, path: str, **kwargs) -> pd.DataFrame:
-        return pd.read_csv(path, engine="python", **kwargs).iloc[:, :]
+        return pd.read_csv(path, **kwargs).iloc[:, :]
 
     def save_data(self, path: Optional[str], df: pd.DataFrame, **kwargs):
         if df is not None:

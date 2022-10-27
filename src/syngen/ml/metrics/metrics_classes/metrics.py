@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats as st
 import seaborn as sns
+import re
 
 from syngen.ml.pipeline import get_nan_labels, nan_labels_to_float
 from syngen.ml.metrics.utils import text_to_continuous
@@ -555,6 +556,9 @@ class UnivariateMetric(BaseMetric):
             counts = {key: (x / size * 100) for key, x in counts.items()}
             return counts
 
+        def sanitize_labels(label):
+            return re.sub("\$|\^", "", label)
+
         original_column = self.original[column].fillna("?")
         synthetic_column = self.synthetic[column].fillna("?")
         full_values_set = set(original_column.values) | set(synthetic_column.values)
@@ -589,7 +593,7 @@ class UnivariateMetric(BaseMetric):
             ax.set_xticks(x)
             ax.set_xticklabels(
                 [
-                    str(label[:30]) + "..." if len(str(label)) > 33 else str(label)
+                    str(sanitize_labels(label[:30])) + "..." if len(str(label)) > 33 else sanitize_labels(str(label))
                     for label in original_labels
                 ]
             )
