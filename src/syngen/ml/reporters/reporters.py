@@ -26,8 +26,8 @@ class Reporter:
         Preprocess original and synthetic data.
         Return original data, synthetic data, float columns, integer columns, categorical columns
         """
-        original = pd.read_csv(self.paths["original_data_path"], engine="python")
-        synthetic = pd.read_csv(self.paths["synthetic_data_path"], engine="python")
+        original = pd.read_csv(self.paths["original_data_path"])
+        synthetic = pd.read_csv(self.paths["synthetic_data_path"])
         columns_nan_labels = get_nan_labels(original)
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
