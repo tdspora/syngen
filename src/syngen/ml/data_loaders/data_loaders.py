@@ -115,6 +115,10 @@ class MetadataLoader(BaseDataLoader):
         else:
             raise NotImplementedError("File format not supported")
 
+    def set_metadata(self, path):
+        metadata = self.load_data(path)
+        return metadata
+
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         path = Path(path)
         if path.suffix in ['.yaml', '.yml']:

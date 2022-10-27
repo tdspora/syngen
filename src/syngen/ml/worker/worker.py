@@ -17,6 +17,7 @@ class Worker:
         self.train_interface = TrainInterface()
         self.infer_interface = InferInterface()
         self.metadata_loader = MetadataLoader()
+        self.metadata = self.metadata_loader.set_metadata(metadata_path) if metadata_path else None
 
     def __parse_train_settings(self, config: Dict):
         """
@@ -84,7 +85,7 @@ class Worker:
         Return the list of related tables for training or infer process,
         configuration of related tables
         """
-        config_of_tables = self.metadata_loader.load_data(self.metadata_path)
+        config_of_tables = self.metadata
         pk_tables = self._get_tables(config_of_tables, "PK")
         fk_tables = self._get_tables(config_of_tables, "FK")
         # chain_of_tables = [*pk_tables, *list(set(fk_tables).difference(set(pk_tables)))]
@@ -109,6 +110,7 @@ class Worker:
             train_settings = self.__parse_train_settings(config_of_table)
             logger.info(f"Training process of the table - {table} has started.")
             self.train_interface.run(
+                metadata=self.metadata,
                 source=source,
                 epochs=train_settings["epochs"],
                 drop_null=train_settings["drop_null"],
@@ -129,6 +131,7 @@ class Worker:
             infer_settings = self.__parse_infer_settings(config_of_table)
             logger.info(f"Infer process of the table - {table} has started.")
             self.infer_interface.run(
+                metadata=self.metadata,
                 size=infer_settings["size"],
                 table_name=table,
                 run_parallel=infer_settings["run_parallel"],
@@ -145,6 +148,7 @@ class Worker:
         """
         logger.info(f"Training process of the table - {self.table_name} has started.")
         self.train_interface.run(
+            metadata=self.metadata,
             source=self.settings.get("source"),
             epochs=self.settings.get("epochs"),
             drop_null=self.settings.get("drop_null"),
@@ -166,6 +170,7 @@ class Worker:
             )
         logger.info(f"Infer process of the table - {self.table_name} has started.")
         self.infer_interface.run(
+            metadata=self.metadata,
             size=self.settings.get("size"),
             table_name=self.table_name,
             metadata_path=self.metadata_path,
