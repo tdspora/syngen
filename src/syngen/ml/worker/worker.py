@@ -21,7 +21,7 @@ class Worker:
     metadata = None
 
     def __post_init__(self):
-        self.metadata = self.metadata_loader.set_metadata(self.metadata_path) if self.metadata_path else None
+        self.metadata = self.metadata_loader.load_data(self.metadata_path) if self.metadata_path else None
 
     def __parse_train_settings(self, config: Dict):
         """
