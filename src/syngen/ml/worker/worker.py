@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+from dataclasses import dataclass
 
 from loguru import logger
 
@@ -6,18 +7,21 @@ from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.interface import TrainInterface, InferInterface
 
 
+@dataclass
 class Worker:
     """
     Class for preparing training and infer settings, metadata for training and infer process
     """
-    def __init__(self, table_name: Optional[str], metadata_path: str, settings: Dict):
-        self.table_name = table_name
-        self.metadata_path = metadata_path
-        self.settings = settings
-        self.train_interface = TrainInterface()
-        self.infer_interface = InferInterface()
-        self.metadata_loader = MetadataLoader()
-        self.metadata = self.metadata_loader.set_metadata(metadata_path) if metadata_path else None
+    table_name: str
+    metadata_path: Optional[str]
+    settings: Dict
+    train_interface = TrainInterface()
+    infer_interface = InferInterface()
+    metadata_loader = MetadataLoader()
+    metadata = None
+
+    def __post_init__(self):
+        self.metadata = self.metadata_loader.set_metadata(self.metadata_path) if self.metadata_path else None
 
     def __parse_train_settings(self, config: Dict):
         """
