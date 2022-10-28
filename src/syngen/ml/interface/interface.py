@@ -156,12 +156,10 @@ class InferInterface(Interface):
         self.config = InferConfig(**kwargs)
         return self
 
-    def set_handler(self, metadata):
+    def set_handler(self):
         """
         Set up the handler which used in infer process
         """
-        self.set_metadata(metadata)
-
         self.handler = VaeInferHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
@@ -213,7 +211,8 @@ class InferInterface(Interface):
             print_report=print_report
         ).\
             set_reporters().\
-            set_handler(metadata).\
+            set_metadata(metadata).\
+            set_handler().\
             set_strategy(
                 size=self.config.size,
                 run_parallel=self.config.run_parallel,
