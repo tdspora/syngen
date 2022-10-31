@@ -1,12 +1,10 @@
-from loguru import logger
 from abc import ABC, abstractmethod
+from typing import Optional, Dict
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-from syngen.ml.data_loaders import (
-    MetadataLoader,
-    DataLoader
-)
+from loguru import logger
+from syngen.ml.data_loaders import DataLoader
 from syngen.ml.train_chain import RootHandler
 from syngen.ml.reporters import Report, AccuracyReporter
 from syngen.ml.config import TrainConfig, InferConfig
@@ -46,9 +44,8 @@ class Interface(ABC):
     def set_strategy(self):
         pass
 
-    def set_metadata(self):
-        if self.config.metadata_path:
-            metadata = MetadataLoader().load_data(self.config.metadata_path)
+    def set_metadata(self, metadata):
+        if metadata:
             self.metadata = metadata
             return self
         if self.config.table_name:
@@ -106,6 +103,7 @@ class TrainInterface(Interface, ABC):
 
     def run(
             self,
+            metadata,
             source: str,
             epochs: int = 10,
             drop_null: bool = False,
@@ -129,7 +127,7 @@ class TrainInterface(Interface, ABC):
 
         data = DataLoader().load_data(source)
 
-        self.set_metadata().\
+        self.set_metadata(metadata).\
             set_handler().\
             set_strategy(
             paths=self.config.set_paths(),
@@ -162,8 +160,6 @@ class InferInterface(Interface):
         """
         Set up the handler which used in infer process
         """
-        self.set_metadata()
-
         self.handler = VaeInferHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
@@ -193,6 +189,7 @@ class InferInterface(Interface):
 
     def run(
             self,
+            metadata: Optional[Dict],
             size: int,
             table_name: str,
             metadata_path: str,
@@ -214,6 +211,7 @@ class InferInterface(Interface):
             print_report=print_report
         ).\
             set_reporters().\
+            set_metadata(metadata).\
             set_handler().\
             set_strategy(
                 size=self.config.size,
