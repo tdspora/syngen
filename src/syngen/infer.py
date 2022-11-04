@@ -58,11 +58,12 @@ def launch_infer(
         "random_seed": random_seed,
         "print_report": print_report
     }
-    Worker(
+    worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
         settings=settings
-    ).launch_infer()
+    )
+    worker.launch_infer()
 
 
 if __name__ == "__main__":
