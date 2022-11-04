@@ -125,7 +125,7 @@ class TrainInterface(Interface, ABC):
             batch_size=batch_size
         )
 
-        data = DataLoader().load_data(source)
+        data = DataLoader(source).load_data()
 
         self.set_metadata(metadata).\
             set_handler().\

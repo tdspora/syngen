@@ -69,11 +69,12 @@ def launch_train(
         "row_limit": row_limit,
         "batch_size": batch_size
     }
-    Worker(
+    worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
         settings=settings
-    ).launch_train()
+    )
+    worker.launch_train()
 
 
 if __name__ == "__main__":

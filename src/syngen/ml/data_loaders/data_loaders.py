@@ -31,22 +31,20 @@ class DataLoader(BaseDataLoader):
 
     def __init__(self, path: str):
         self.path = path
-
-    def __post__init(self):
         self.file_loader = self.get_file_loader()
 
     def get_file_loader(self):
         path = Path(self.path)
 
         if path.suffix == '.avro':
-            return AvroLoader(self.path)
+            return AvroLoader()
         elif path.suffix == '.csv':
-            return CSVLoader(self.path)
+            return CSVLoader()
         else:
             raise NotImplementedError("File format not supported")
 
     def load_data(self) -> pd.DataFrame:
-        df = self.file_loader.load_data()
+        df = self.file_loader.load_data(self.path)
         if df.shape[0] < 1:
             raise ValueError("Empty file was provided. Unable to train.")
         return df
@@ -55,15 +53,13 @@ class DataLoader(BaseDataLoader):
         self.file_loader.save_data(path, df)
 
 
-class CSVLoader(DataLoader):
+class CSVLoader(BaseDataLoader):
     """
     Class for loading and saving data in csv format
     """
-    def __init__(self, path):
-        super().__init__(path)
 
-    def load_data(self, **kwargs) -> pd.DataFrame:
-        df = pd.read_csv(self.file_loader.path, **kwargs).iloc[:, :]
+    def load_data(self, path, **kwargs) -> pd.DataFrame:
+        df = pd.read_csv(path, **kwargs).iloc[:, :]
         df.columns = df.columns.str.replace(':', '')
         return df
 
@@ -73,15 +69,13 @@ class CSVLoader(DataLoader):
             df.to_csv(path, **kwargs)
 
 
-class AvroLoader(DataLoader):
+class AvroLoader(BaseDataLoader):
     """
     Class for loading and saving data in avro format
     """
-    def __init__(self, path):
-        super().__init__(path)
 
-    def load_data(self, **kwargs) -> pd.DataFrame:
-        return pdx.from_avro(self.file_loader.path, **kwargs)
+    def load_data(self, path, **kwargs) -> pd.DataFrame:
+        return pdx.from_avro(path, **kwargs)
 
     @staticmethod
     def save_data(path: str, df: pd.DataFrame, **kwargs):
@@ -95,33 +89,28 @@ class MetadataLoader(BaseDataLoader):
     """
     def __init__(self, metadata_path: str):
         self.metadata_path = metadata_path
-
-    def __post__init(self):
         self.metadata_loader = self.get_metadata_loader()
 
     def get_metadata_loader(self):
         path = Path(self.metadata_path)
         if path.suffix in ['.yaml', '.yml']:
-            return YAMLLoader(self.metadata_path)
+            return YAMLLoader()
         else:
             raise NotImplementedError("File format not supported")
 
     def load_data(self) -> dict:
-        return self.metadata_loader.load_data()
+        return self.metadata_loader.load_data(self.metadata_path)
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         self.metadata_loader.save_data(path, df, **kwargs)
 
 
-class YAMLLoader(MetadataLoader):
+class YAMLLoader(BaseDataLoader):
     """
     Class for loading and saving data in YAML format
     """
-    def __init__(self, metadata_path):
-        super().__init__(metadata_path)
-
-    def load_data(self) -> dict:
-        with open(self.metadata_path, "r") as metadata_file:
+    def load_data(self, metadata_path: str) -> dict:
+        with open(metadata_path, "r") as metadata_file:
             metadata = yaml.load(metadata_file, Loader=Loader)
             validate_schema(configuration_schema, metadata)
         return metadata
