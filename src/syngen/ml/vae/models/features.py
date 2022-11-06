@@ -20,8 +20,6 @@ from tensorflow.keras.layers import (
     Layer,
     RepeatVector,
     TimeDistributed,
-    Embedding,
-    Flatten
 )
 from syngen.ml.vae.models.model import check_name
 
@@ -217,11 +215,11 @@ class ContinuousFeature:
 class CategoricalFeature:
     # A class to process categorical values, i.e. values with 2 < unique_values < 50
     def __init__(
-            self,
-            name: str,
-            weight: float = 1.0,
-            decoder_layers: Union[None, tuple, int] = (60,),
-            weight_randomizer: Union[None, bool, tuple] = None,
+        self,
+        name: str,
+        weight: float = 1.0,
+        decoder_layers: Union[None, tuple, int] = (60,),
+        weight_randomizer: Union[None, bool, tuple] = None,
     ):
 
         if decoder_layers is None:
@@ -230,7 +228,7 @@ class CategoricalFeature:
             decoder_layers = (decoder_layers,)
 
         if weight_randomizer is None or (
-                isinstance(weight_randomizer, bool) and not weight_randomizer
+            isinstance(weight_randomizer, bool) and not weight_randomizer
         ):
             weight_randomizer = (1, 1)
         elif isinstance(weight_randomizer, (float, int)):
@@ -267,7 +265,7 @@ class CategoricalFeature:
 
     def inverse_transform(self, data: np.ndarray) -> np.ndarray:
         data = (
-                data.argmax(axis=1) + 1
+            data.argmax(axis=1) + 1
         )  # because in array numbers starts from 0, in dict it starts from 1
         inversed = self.inverse_vectorizer(data)
         return np.where(inversed == "?", None, inversed)
