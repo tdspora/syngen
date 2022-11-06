@@ -19,7 +19,7 @@ from tensorflow.keras.layers import (
     LSTM,
     Layer,
     RepeatVector,
-    TimeDistributed,
+    TimeDistributed
 )
 from syngen.ml.vae.models.model import check_name
 
