@@ -2,6 +2,10 @@ from typing import Union, List
 from abc import ABC
 from itertools import combinations
 from collections import Counter
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.metrics import r2_score, accuracy_score
+from loguru import logger
 
 import matplotlib
 matplotlib.use('Agg')
@@ -204,20 +208,20 @@ class JensenShannonDistance(BaseMetric):
 
 
 class Correlations(BaseMetric):
-    def calculate_all(
-        self, categ_columns: List[str], cont_columns: List[str], text_columns: List[str]
+    def __init__(
+        self,
+        original: pd.DataFrame,
+        synthetic: pd.DataFrame,
+        plot: bool,
+        draws_path: str,
     ):
-        self.original = text_to_continuous(self.original, text_columns)
-        self.synthetic = text_to_continuous(self.synthetic, text_columns)
-        self.original[categ_columns] = self.original[categ_columns].fillna("")
-        self.synthetic[categ_columns] = self.synthetic[categ_columns].fillna("")
-        for col in [i + "_word_count" for i in text_columns]:
-            if self.original[col].nunique() < 50:
-                categ_columns = categ_columns | {col}
-            else:
-                cont_columns = cont_columns | {col}
-        cont_columns += [i + "_char_len" for i in text_columns]
+        super().__init__(original, synthetic)
+        self.plot = plot
+        self.draws_path = draws_path
 
+    def calculate_all(
+        self, categ_columns: List[str], cont_columns: List[str]
+    ):
         for col in categ_columns:
             map_dict = {
                 k: i + 1
@@ -229,11 +233,24 @@ class Correlations(BaseMetric):
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
         self.original_heatmap = self.__calculate_correlations(
-            self.original[categ_columns + cont_columns]
+            self.original[categ_columns + cont_columns].apply(pd.to_numeric, axis=0, errors="ignore")
         )
         self.synthetic_heatmap = self.__calculate_correlations(
-            self.synthetic[categ_columns + cont_columns]
+            self.synthetic[categ_columns + cont_columns].apply(pd.to_numeric, axis=0, errors="ignore")
         )
+        self.corr_score = self.original_heatmap - self.synthetic_heatmap
+        self.corr_score = self.corr_score.dropna(how='all').dropna(how='all', axis=1)
+
+        if self.plot:
+            plt.clf()
+            sns.set(rc={'figure.figsize': (13, 10)}, font_scale=2)
+            heatmap = sns.heatmap(
+                self.corr_score,
+                annot=True,
+            )
+
+            heatmap.figure.tight_layout()
+            plt.savefig(f"{self.draws_path}/correlations_heatmap.png")
 
     def __calculate_correlations(self, data):
         return abs(data.corr())
@@ -630,3 +647,234 @@ class UnivariateMetric(BaseMetric):
         if print_nan:
             print(f"Number of original NaN values in {column}: {original_nan_count}")
             print(f"Number of synthetic NaN values in {column}: {synthetic_nan_count}")
+
+
+class Clustering(BaseMetric):
+    def __init__(
+        self,
+        original: pd.DataFrame,
+        synthetic: pd.DataFrame,
+        plot: bool,
+        draws_path: str,
+    ):
+        super().__init__(original, synthetic)
+        self.plot = plot
+        self.draws_path = draws_path
+
+    def calculate_all(
+        self, categ_columns: List[str], cont_columns: List[str]
+    ):
+        for col in categ_columns:
+            map_dict = {
+                k: i + 1
+                for i, k in enumerate(
+                    set(self.original[col]) | set(self.synthetic[col])
+                )
+            }
+            self.original[col] = self.original[col].map(map_dict)
+            self.synthetic[col] = self.synthetic[col].map(map_dict)
+
+        row_limit = min(len(self.original), len(self.synthetic))
+        self.merged = pd.concat(
+            [
+                self.original[cont_columns + categ_columns].sample(row_limit),
+                self.synthetic[cont_columns + categ_columns].sample(row_limit)
+            ],
+            keys=['original', 'synthetic']
+        ).reset_index()
+        self.__preprocess_data()
+        optimal_clust_num = self.__automated_elbow()
+
+        def diversity(x):
+            return (min(x) / max(x))
+
+        statistics = self.__calculate_clusters(optimal_clust_num)
+        statistics.columns = ["cluster", "origin", "count"]
+        self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
+        print(f"Mean clusters homogeneity is {self.mean_score.values[0]}")
+
+        if self.plot:
+            plt.clf()
+            sns.set(font_scale=2)
+            barplot = sns.barplot(data=statistics, x="cluster", y="count", hue="origin")
+            plt.savefig(f"{self.draws_path}/clusters_barplot.png")
+        return self.mean_score.values[0]
+
+    def __automated_elbow(self, max_clusters=10):
+        result_table = {
+            "cluster_num": [],
+            "metric": []
+        }
+        for i in range(2, max_clusters):
+            clusters = KMeans(n_clusters=i).fit(self.merged_transformed)
+            metric = clusters.inertia_
+            result_table["cluster_num"].append(i)
+            result_table["metric"].append(metric)
+
+        result_table = pd.DataFrame(result_table)
+        result_table["d1"] = np.concatenate([[np.nan], np.diff(result_table["metric"])])
+        result_table["d2"] = np.concatenate([[np.nan], np.diff(result_table["d1"])])
+        result_table["certainty"] = result_table["d2"] - result_table["d1"]
+        result_table["certainty"] = np.concatenate([[np.nan], result_table["certainty"].values[:-1]]) / result_table["cluster_num"]
+        return result_table["cluster_num"].values[np.argmax(result_table["certainty"])]
+
+    def __preprocess_data(self):
+        self.merged_transformed = self.merged.apply(pd.to_numeric, axis=0, errors="ignore").select_dtypes(include="number")
+        scaler = MinMaxScaler()
+        self.merged_transformed = scaler.fit_transform(self.merged_transformed)
+
+    def __calculate_clusters(self, n):
+        clusters = KMeans(n_clusters=n).fit(self.merged_transformed)
+        labels = clusters.labels_
+        rows_labels = pd.DataFrame({"origin": self.merged["level_0"], "cluster": labels})
+        return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
+
+class Utility(BaseMetric):
+    def __init__(
+        self,
+        original: pd.DataFrame,
+        synthetic: pd.DataFrame,
+        plot: bool,
+        draws_path: str,
+    ):
+        super().__init__(original, synthetic)
+        self.plot = plot
+        self.draws_path = draws_path
+
+    def calculate_all(
+        self, categ_columns: List[str], cont_columns: List[str]
+    ):
+        for col in categ_columns:
+            map_dict = {
+                k: i + 1
+                for i, k in enumerate(
+                    set(self.original[col]) | set(self.synthetic[col])
+                )
+            }
+            self.original[col] = self.original[col].map(map_dict)
+            self.synthetic[col] = self.synthetic[col].map(map_dict)
+
+        self.original = self.original[cont_columns + categ_columns].apply(pd.to_numeric, axis=0, errors="ignore")
+        self.synthetic = self.synthetic[cont_columns + categ_columns].apply(pd.to_numeric, axis=0, errors="ignore")
+
+        self.original = self.original.select_dtypes(include="number").dropna()
+        self.synthetic = self.synthetic.select_dtypes(include="number").dropna()
+        self.synthetic = self.synthetic[self.original.columns]
+
+        excluded_cols = [col for col in categ_columns+cont_columns if self.original[col].nunique() < 2]
+        binary_cols = [col for col in categ_columns if self.original[col].nunique() == 2 and col not in excluded_cols]
+        cont_cols = [col for col in cont_columns if col not in binary_cols and col not in excluded_cols]
+        categ_cols = [col for col in categ_columns if col not in binary_cols and col not in excluded_cols]
+        best_categ, score_categ, synth_score_categ = self.__create_multi_class_models(categ_cols)
+        best_binary, score_binary, synth_score_binary = self.__create_multi_class_models(binary_cols)
+        best_regres, score_regres, synth_regres_score = self.__create_regression_models(cont_cols)
+
+        result = pd.DataFrame({
+            "Orig": [score_binary if best_binary is not None else np.nan,
+                     score_categ if best_categ is not None else np.nan,
+                     score_regres if best_regres is not None else np.nan],
+            "Synth": [synth_score_binary if best_binary is not None else np.nan,
+                      synth_score_categ if best_categ is not None else np.nan,
+                      synth_regres_score if best_regres is not None else np.nan],
+            "Synth_to_orig_ratio": [round(score_binary/synth_score_binary, 3) if best_binary is not None else np.nan,
+                     round(score_categ/synth_score_categ, 3) if best_categ is not None else np.nan,
+                     round(score_regres/synth_regres_score, 3) if best_regres is not None else np.nan],
+            "Type": ["Binary (" + best_binary if best_binary is not None else '' + ")",
+                     "Multiclass (" + best_categ if best_categ is not None else '' + ")",
+                     "Regression (" + best_regres if best_regres is not None else '' + ")"]})
+        result = pd.melt(result.dropna(), id_vars=["Type", "Synth_to_orig_ratio"])
+
+        if self.plot:
+            sns.set(font_scale=2)
+            plt.clf()
+            barplot = sns.barplot(data=result, x="Type", y="value", hue="variable")
+            plt.savefig(f"{self.draws_path}/utility_barplot.png")
+
+        if best_binary is not None:
+            print(f"The ratio of synthetic binary accuracy to original is {round(score_binary/synth_score_binary, 3)}. "
+                  f"The model considers the {best_binary} column as a target and other columns as predictors")
+        if best_categ is not None:
+            print(f"The ratio of synthetic multiclass accuracy to original is {round(score_categ / synth_score_categ, 3)}. "
+                  f"The model considers the {best_categ} column as a target and other columns as predictors")
+        if best_regres is not None:
+            print(f"The ratio of synthetic regression accuracy to original is {round(score_regres / synth_regres_score, 3)}. "
+                  f"The model considers the {best_regres} column as a target and other columns as predictors")
+
+        return result
+
+    def __get_accuracy_score(self, y_true, y_pred, task_type):
+        if task_type != "regression":
+            score = accuracy_score(
+                y_true=y_true,
+                y_pred=y_pred
+            )
+        else:
+            score = r2_score(
+                y_true=y_true,
+                y_pred=y_pred
+            )
+        return score
+
+    def __model_process(self, model_object, targets, task_type):
+        best_score = -1
+        best_target = None
+        best_model = None
+        synthetic_score = -1
+        for col in targets:
+            original = pd.get_dummies(self.original.drop(col, axis=1))
+            original = StandardScaler().fit_transform(original)
+
+            model = model_object.fit(
+                X=original[:int(original.shape[0] * 0.8), :],
+                y=self.original[col].values[:int(original.shape[0] * 0.8)]
+            )
+            score = self.__get_accuracy_score(
+                self.original[col].values[int(original.shape[0] * 0.8):],
+                model.predict(original[int(original.shape[0] * 0.8):, :]),
+                task_type
+            )
+            if score > best_score:
+                best_score = score
+                best_target = col
+                best_model = model
+
+        if best_score > -1:
+            if best_score < 0.6:
+                logger.info(f"The best score for all possible {task_type} models for the original data is "
+                            f"{best_target}, which is below 0.6. The utility metric is unreliable")
+            synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
+            synthetic = StandardScaler().fit_transform(synthetic)
+            synthetic_score = self.__get_accuracy_score(
+                self.synthetic[best_target].values,
+                best_model.predict(synthetic),
+                task_type
+            )
+        return best_target, best_score, synthetic_score
+
+
+    def __create_binary_class_models(self, binary_targets):
+        from sklearn.linear_model import LogisticRegression
+        best_target, score, synthetic_score = self.__model_process(
+            LogisticRegression(),
+            binary_targets,
+            "binary classification"
+        )
+        return best_target, score, synthetic_score
+
+    def __create_multi_class_models(self, multiclass_targets):
+        from sklearn.ensemble import GradientBoostingClassifier
+        best_target, score, synthetic_score = self.__model_process(
+            GradientBoostingClassifier(),
+            multiclass_targets,
+            "multiclass classification"
+        )
+        return best_target, score, synthetic_score
+
+    def __create_regression_models(self, cont_targets):
+        from sklearn.ensemble import GradientBoostingRegressor
+        best_target, score, synthetic_score = self.__model_process(
+            GradientBoostingRegressor(),
+            cont_targets,
+            "regression"
+        )
+        return best_target, score, synthetic_score
