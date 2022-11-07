@@ -841,7 +841,7 @@ class Utility(BaseMetric):
         if best_score > -1:
             if best_score < 0.6:
                 logger.info(f"The best score for all possible {task_type} models for the original data is "
-                            f"{best_target}, which is below 0.6. The utility metric is unreliable")
+                            f"{best_score}, which is below 0.6. The utility metric is unreliable")
             synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
             synthetic = StandardScaler().fit_transform(synthetic)
             synthetic_score = self.__get_accuracy_score(
