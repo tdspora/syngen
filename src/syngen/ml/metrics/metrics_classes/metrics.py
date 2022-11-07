@@ -766,7 +766,7 @@ class Utility(BaseMetric):
         cont_cols = [col for col in cont_columns if col not in binary_cols and col not in excluded_cols]
         categ_cols = [col for col in categ_columns if col not in binary_cols and col not in excluded_cols]
         best_categ, score_categ, synth_score_categ = self.__create_multi_class_models(categ_cols)
-        best_binary, score_binary, synth_score_binary = self.__create_multi_class_models(binary_cols)
+        best_binary, score_binary, synth_score_binary = self.__create_binary_class_models(binary_cols)
         best_regres, score_regres, synth_regres_score = self.__create_regression_models(cont_cols)
 
         result = pd.DataFrame({
