@@ -20,7 +20,7 @@ To generate data simply call
 
 `infer SIZE TABLE_NAME`
 
-This will create a csv file with the synthetic table in ./model_artifacts/tmp_store/TABLE_NAME/merged_infer.csv
+This will create a csv file with the synthetic table in ./model_artifacts/tmp_store/TABLE_NAME/merged_infer_TABLE_NAME.csv
 
 Here is a quick example:
 
