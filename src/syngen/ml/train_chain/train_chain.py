@@ -68,12 +68,8 @@ class RootHandler(BaseHandler):
         if options["drop_null"]:
             data = data.dropna()
 
-        if options["row_subset"] > len(data):
-            logger.error("Row limit inside of METADATA file seems higher than whole amount of records in the table. "
-                         "Please reduce row_limit parameter or use bigger table.")
-            raise AttributeError("Row limit higher than amount of records in table")
-        else:
-            data = data.sample(n=options["row_subset"])
+        if options["row_subset"]:
+            data = data.sample(n=min(options["row_subset"], len(data)))
             if len(data) < 100:
                 logger.error("Not enough data. The number of rows in the table after preprocessing should be more "
                              "then 100. Try 1) disable drop_null argument, 2) provide a bigger table")
