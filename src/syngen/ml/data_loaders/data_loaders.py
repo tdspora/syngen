@@ -6,6 +6,7 @@ import pandas as pd
 import pandavro as pdx
 import yaml
 from yaml import Loader
+from loguru import logger
 
 from syngen.ml.validation_schema import validate_schema, configuration_schema
 
@@ -31,9 +32,11 @@ class DataLoader(BaseDataLoader):
 
     def __init__(self, path: str):
         self.path = path
-        self.file_loader = self.get_file_loader()
+        self.file_loader = self.__get_file_loader()
 
-    def get_file_loader(self):
+    def __get_file_loader(self):
+        if not self.path:
+            raise ValueError("It seems that the information of source is absent.")
         path = Path(self.path)
 
         if path.suffix == '.avro':
@@ -58,15 +61,22 @@ class CSVLoader(BaseDataLoader):
     Class for loading and saving data in csv format
     """
 
-    def load_data(self, path, **kwargs) -> pd.DataFrame:
+    @staticmethod
+    def _load_data(path, **kwargs) -> pd.DataFrame:
         df = pd.read_csv(path, **kwargs).iloc[:, :]
         df.columns = df.columns.str.replace(':', '')
         return df
 
+    def load_data(self, path, **kwargs):
+        self._load_data(path, **kwargs)
+
     @staticmethod
-    def save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
+    def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
         if df is not None:
             df.to_csv(path, **kwargs)
+
+    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
+        self._save_data(path, df, **kwargs)
 
 
 class AvroLoader(BaseDataLoader):
