@@ -151,7 +151,7 @@ class Dataset:
         if fillna_strategy == "mean":
             fillna_value = self.df[feature].mean()
         elif fillna_strategy == "mode":
-            fillna_value = self.df[feature].mode()
+            fillna_value = self.df[feature].mode().sample(1).values[0]
         else:
             fillna_value = 0
 

@@ -7,7 +7,10 @@ import os
 from syngen.ml.metrics import (
     UnivariateMetric,
     BivariateMetric,
-    JensenShannonDistance
+    JensenShannonDistance,
+    Correlations,
+    Clustering,
+    Utility
 )
 
 
@@ -38,8 +41,11 @@ class AccuracyTest(BaseTest):
         os.makedirs(acc_draws_path, exist_ok=True)
         univariate = UnivariateMetric(self.original, self.synthetic, True, acc_draws_path)
         bivariate = BivariateMetric(self.original, self.synthetic, True, acc_draws_path)
+        correlations = Correlations(self.original, self.synthetic, True, acc_draws_path)
+        clustering = Clustering(self.original, self.synthetic, True, acc_draws_path)
+        utility = Utility(self.original, self.synthetic, True, acc_draws_path)
         acc = JensenShannonDistance(self.original, self.synthetic, True, acc_draws_path)
-        return univariate, bivariate, acc
+        return univariate, bivariate, correlations, clustering, utility, acc
 
     def __transform_to_base64(self, path):
         with open(path, "rb") as image_file:
@@ -47,12 +53,15 @@ class AccuracyTest(BaseTest):
         return "data:image/gif;base64," + encoded_string.decode('utf-8')
 
     def report(self, **kwargs):
-        univariate, bivariate, acc = self.__prepare_before_report()
+        univariate, bivariate, correlations, clustering, utility, acc = self.__prepare_before_report()
         acc.calculate_all(kwargs["categ_columns"])
         acc_median = "%.5f" % acc.calculate_heatmap_median(acc.heatmap)
 
         univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
         bivariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
+        correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+        clustering_result = clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+        utility_result = utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
 
         # Generate html report
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report_template.html") as file_:
@@ -67,7 +76,12 @@ class AccuracyTest(BaseTest):
                                accuracy_heatmap=self.__transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.png"),
                                draws_acc_path=draws_acc_path,
                                uni_imgs=uni_images,
-                               bi_imgs=bi_images
+                               correlations_heatmap=self.__transform_to_base64(f"{draws_acc_path}/correlations_heatmap.png"),
+                               clusters_barplot=self.__transform_to_base64(f"{draws_acc_path}/clusters_barplot.png"),
+                               clustering_value=clustering_result,
+                               bi_imgs=bi_images,
+                               utility_barplot=self.__transform_to_base64(f"{draws_acc_path}/utility_barplot.png"),
+                               utility_table=utility_result.to_html()
                                )
 
         with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w') as f:
