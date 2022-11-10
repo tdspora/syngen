@@ -64,23 +64,25 @@ class RootHandler(BaseHandler):
         os.makedirs(tmp_store_path, exist_ok=True)
 
     @staticmethod
-    def prepare_data(data, options):
+    def _set_options(data, options):
         if options["drop_null"]:
             data = data.dropna()
 
         if options["row_subset"]:
             data = data.sample(n=min(options["row_subset"], len(data)))
             if len(data) < 100:
-                logger.warning("The input table is too small to provide any meaningful results. "
-                               "Please consider 1) disable drop_null argument, 2) provide bigger table")
-            if len(data) < 500:
                 logger.warning(
-                    "The amount of data seems not enough to supply high-quality results. To improve the quality "
-                    "of generated data please consider any of the steps: 1) provide a bigger table, 2) disable "
-                    "drop_null argument")
+                    f"The input table contains {len(data)} rows. It is too small to provide any meaningful results. "
+                    f"Please consider 1) disable drop_null argument, 2) provide bigger table")
+            elif len(data) < 500:
+                logger.warning(
+                    f"The amount of data is {len(data)} rows. It seems that it isn't enough to supply "
+                    f"high-quality results. To improve the quality of generated data please consider any of the steps: "
+                    f"1) provide a bigger table, 2) disable drop_null argument")
+        return data
 
-        if options["epochs"] < 1:
-            raise AttributeError("Number of epochs should be > 0")
+    def prepare_data(self, data, options):
+        data = self._set_options(data, options)
 
         data_columns = set(data.columns)
         # remove completely empty columns
