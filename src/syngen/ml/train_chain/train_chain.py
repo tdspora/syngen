@@ -81,8 +81,11 @@ class RootHandler(BaseHandler):
                     f"1) provide a bigger table, 2) disable drop_null argument")
         return data
 
+    def set_options(self, data, options):
+        return self._set_options(data, options)
+
     def prepare_data(self, data, options):
-        data = self._set_options(data, options)
+        data = self.set_options(data, options)
 
         data_columns = set(data.columns)
         # remove completely empty columns
