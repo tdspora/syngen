@@ -75,9 +75,8 @@ class RootHandler(BaseHandler):
         else:
             data = data.sample(n=options["row_subset"])
             if len(data) < 100:
-                logger.error("Not enough data. The number of rows in the table after preprocessing should be more "
-                             "then 100. Try 1) disable drop_null argument, 2) provide a bigger table")
-                raise AttributeError("Not enough data")
+                logger.warning("The input table is too small to provide any meaningful results. "
+                               "Please consider 1) disable drop_null argument, 2) provide bigger table")
             if len(data) < 500:
                 logger.warning(
                     "The amount of data seems not enough to supply high-quality results. To improve the quality "
