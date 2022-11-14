@@ -96,6 +96,8 @@ class RootHandler(BaseHandler):
         data = self.prepare_data(data, kwargs)
 
         data.to_csv(self.paths["input_data_path"], index=False)
+        # generate a sampling report
+        Report().generate_report()
         return super().handle(data, **kwargs)
 
 
@@ -225,6 +227,8 @@ class VaeInferHandler(BaseHandler):
 
     def generate_keys(self, generated, size, metadata, table_name):
         metadata_of_table = metadata.get(table_name)
+        if "keys" not in metadata_of_table:
+            return None
         config_of_keys = metadata_of_table.get("keys")
         for key in config_of_keys.keys():
             if config_of_keys.get(key).get("type") == "FK":

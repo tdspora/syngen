@@ -22,6 +22,8 @@ class TrainConfig:
         return {
             "model_artifacts_path": "model_artifacts/",
             "tmp_store_path": f"model_artifacts/tmp_store/{self.table_name}",
+            "source_path": self.source,
+            "draws_path": f"model_artifacts/tmp_store/{self.table_name}/draws",
             "input_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.csv",
             "state_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints",
             "results_path": f"model_artifacts/tmp_store/{self.table_name}/metrics_{self.table_name}.csv",
