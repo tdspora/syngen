@@ -197,6 +197,20 @@ class Dataset:
                              f"and will be sampled from the PK table")
         return float_columns, int_columns, str_columns, categ_columns
 
+    def __sample_only_joined_rows(self, fk):
+        # for fk in self.foreign_key_names:
+        references = self.foreign_keys_mapping.get(fk).get("references")
+        pk_table = references.get("table")
+        pk_table_data = pd.read_csv(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv",
+                                    engine="python")
+        pk_column_label = references.get("columns")[0]
+
+        drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].keys())].index
+        if len(drop_index) > 0:
+            logger.info(f"{len(drop_index)} rows were deleted, as they did not have matching primary keys.")
+            logger.info(f"{len(self.df) - len(drop_index)} rows are left in table as input.")
+        self.df = self.df.drop(drop_index)
+
     def _assign_char_feature(self, str_columns):
         """
         Assign text based feature to text columns
@@ -282,6 +296,10 @@ class Dataset:
         ) = data_pipeline(self.df)
 
         if self.foreign_key_names:
+            for fk, val in self.foreign_keys_mapping.items():
+                if "joined_sample" in val and val["joined_sample"]:
+                    self.__sample_only_joined_rows(fk)
+
             float_columns, int_columns, str_columns, categ_columns = self.__drop_fk_columns(float_columns,
                                                                                             int_columns,
                                                                                             str_columns,
