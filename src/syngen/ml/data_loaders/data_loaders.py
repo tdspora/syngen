@@ -31,14 +31,13 @@ class DataLoader(BaseDataLoader):
     """
 
     def __init__(self, path: str):
+        if not path:
+            raise ValueError("It seems that the information of source is absent.")
         self.path = path
         self.file_loader = self.__get_file_loader()
 
     def __get_file_loader(self):
-        if not self.path:
-            raise ValueError("It seems that the information of source is absent.")
         path = Path(self.path)
-
         if path.suffix == '.avro':
             return AvroLoader()
         elif path.suffix == '.csv':
