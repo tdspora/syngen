@@ -245,7 +245,15 @@ class VaeInferHandler(BaseHandler):
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
                 synth_fk = self.kde_gen(pk_table_data, pk_column_label, size)
-                generated = pd.concat([generated.reset_index(drop=True), synth_fk], axis=1)
+                generated = generated.reset_index(drop=True)
+
+                null_column_name = f"{key}_null"
+                if null_column_name in generated.columns:
+                    not_null_column_mask = generated[null_column_name].astype("float64") <= 0.5
+                    synth_fk = synth_fk.where(not_null_column_mask, np.nan)
+                    generated = generated.drop(null_column_name, axis=1)
+
+                generated = pd.concat([generated, synth_fk], axis=1)
         return generated
 
     def handle(
