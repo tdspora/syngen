@@ -157,6 +157,10 @@ class VaeInferHandler(BaseHandler):
         tmp_store_path = self.paths["tmp_store_path"]
         os.makedirs(tmp_store_path, exist_ok=True)
 
+    def _is_pk(self):
+        is_pk = self.table_name.endswith("_pk")
+        return is_pk
+
     def run_separate(self, params: Tuple):
         i, size = params
 
@@ -200,18 +204,20 @@ class VaeInferHandler(BaseHandler):
             generated = self.run_separate((0, size))
         return generated
 
-    def kde_gen(self, pk_table, pk_column_label, size):
+    def kde_gen(self, pk_table, pk_column_label, size, fk_label):
         pk = pk_table[pk_column_label]
 
         if pk.dtype == "object":
             synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
+            synth_fk.rename(fk_label, inplace=True)
         else:
             with open(self.fk_kde_path, "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
             fk_pdf = kde.evaluate(pk)
             synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
-            synth_fk = pd.DataFrame({pk_column_label: synth_fk}).reset_index(drop=True)
+            synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)
+
         return synth_fk
 
     def generate_keys(self, generated, size, metadata, table_name):
@@ -231,7 +237,7 @@ class VaeInferHandler(BaseHandler):
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
-                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size)
+                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, key)
                 generated = pd.concat([generated.reset_index(drop=True), synth_fk], axis=1)
         return generated
 
@@ -254,12 +260,17 @@ class VaeInferHandler(BaseHandler):
             for batch in batches:
                 generated_batch = self.run(batch, run_parallel)
                 prepared_data = pd.concat([prepared_data, generated_batch])
+
+            is_pk = self._is_pk()
             if metadata_path is not None:
-                generated_data = self.generate_keys(prepared_data, size, self.metadata, self.table_name)
-                if generated_data is None:
-                    prepared_data.to_csv(self.path_to_merged_infer, index=False)
+                if not is_pk:
+                    generated_data = self.generate_keys(prepared_data, size, self.metadata, self.table_name)
+                    if generated_data is None:
+                        prepared_data.to_csv(self.path_to_merged_infer, index=False)
+                    else:
+                        generated_data.to_csv(self.path_to_merged_infer, index=False)
                 else:
-                    generated_data.to_csv(self.path_to_merged_infer, index=False)
+                    prepared_data.to_csv(self.path_to_merged_infer, index=False)
             if metadata_path is None:
                 prepared_data.to_csv(self.path_to_merged_infer, index=False)
             if print_report:
