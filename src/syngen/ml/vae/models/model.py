@@ -215,7 +215,7 @@ class CVAE:
         prediction = self.model.predict(transformed_data, batch_size=self.batch_size)
         return self.dataset.inverse_transform(prediction)
 
-    def sample(self, nb_samples: int):
+    def sample(self, nb_samples: int) -> pd.DataFrame:
         latent_sample = self.latent_model.sample(nb_samples)[0]
         np.random.shuffle(latent_sample)
 
