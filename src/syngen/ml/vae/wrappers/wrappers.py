@@ -90,8 +90,8 @@ class VAEWrapper(BaseWrapper):
         table_name: str,
         paths: dict,
         batch_size: int = 32,
-        latent_dim: int = 30,
-        latent_components: int = 30,
+        latent_dim: int = 5,
+        latent_components: int = 5,
     ):
         super(VAEWrapper, self).__init__()
         self.batch_size = batch_size
@@ -109,6 +109,18 @@ class VAEWrapper(BaseWrapper):
 
         with open(self.dataset_pickle_path, "wb") as f:
             f.write(pickle.dumps(self.dataset))
+
+    def _restore_zero_values(self, df):
+        for column in self.dataset.zero_column_names:
+            if column.endswith("_zero"):
+                # remove _zero to get original column name
+                num_column_name = column[:-5]
+                num_column = df[num_column_name].copy()
+                zero_column_mask = df[column].astype("float64") >= 0.5
+                num_column = num_column.where(zero_column_mask, 0)
+                df[num_column_name] = num_column
+                df = df.drop(column, axis=1)
+        return df
 
     def _restore_nan_values(self, df):
         for column in self.dataset.null_num_column_names:
@@ -154,7 +166,7 @@ class VAEWrapper(BaseWrapper):
             columns_subset += [
                 col
                 for col in self.df.columns
-                if col.endswith("_null") and (col[:-5] in columns_subset)
+                if col.endswith(("_null", "_zero")) and (col[:-5] in columns_subset)
             ]
 
         df = self.df.loc[:, list(set(columns_subset))]
