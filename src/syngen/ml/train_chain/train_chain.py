@@ -237,7 +237,7 @@ class VaeInferHandler(BaseHandler):
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
-                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, key)
+                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, config_of_keys.get(key).get("columns")[0])
                 generated = pd.concat([generated.reset_index(drop=True), synth_fk], axis=1)
         return generated
 

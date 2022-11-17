@@ -274,7 +274,6 @@ class CVAE:
 
     def load_state(self, path: str):
         pth = Path(path)
-
         self.model.load_weights(str(pth / "vae.ckpt"))
         self.generator_model.load_weights(str(pth / "vae_generator.ckpt"))
 
