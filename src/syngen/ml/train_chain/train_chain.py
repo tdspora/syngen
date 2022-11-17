@@ -69,7 +69,16 @@ class RootHandler(BaseHandler):
             data = data.dropna()
 
         if options["row_subset"]:
-            data = data.sample(n=options["row_subset"])
+            data = data.sample(n=min(options["row_subset"], len(data)))
+            if len(data) < 100:
+                logger.error("Not enough data. The number of rows in the table after preprocessing should be more "
+                             "then 100. Try 1) disable drop_null argument, 2) provide a bigger table")
+                raise AttributeError("Not enough data")
+            if len(data) < 500:
+                logger.warning(
+                    "The amount of data seems not enough to supply high-quality results. To improve the quality "
+                    "of generated data please consider any of the steps: 1) provide a bigger table, 2) disable "
+                    "drop_null argument")
 
         if options["epochs"] < 1:
             raise AttributeError("Number of epochs should be > 0")
@@ -226,7 +235,7 @@ class VaeInferHandler(BaseHandler):
         for key in config_of_keys.keys():
             if config_of_keys.get(key).get("type") == "FK":
                 pk_table = config_of_keys.get(key).get("references").get("table")
-                pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer.csv"
+                pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer_{pk_table}.csv"
                 if not os.path.exists(pk_path):
                     raise FileNotFoundError(
                         "The table with a primary key specified in the metadata file does not "
