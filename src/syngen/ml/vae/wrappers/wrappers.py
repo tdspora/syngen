@@ -90,8 +90,8 @@ class VAEWrapper(BaseWrapper):
         table_name: str,
         paths: dict,
         batch_size: int = 32,
-        latent_dim: int = 5,
-        latent_components: int = 5,
+        latent_dim: int = 30,
+        latent_components: int = 30,
     ):
         super(VAEWrapper, self).__init__()
         self.batch_size = batch_size
