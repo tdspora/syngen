@@ -99,7 +99,7 @@ class Worker:
         fk_tables = self._get_tables(config_of_tables, "FK")
         # chain_of_tables = [*pk_tables, *list(set(fk_tables).difference(set(pk_tables)))]
         chain_of_tables = [*pk_tables, *fk_tables]
-        print(chain_of_tables)
+
         return chain_of_tables, config_of_tables
 
     def _split_pk_fk_metadata(self, config, tables):
