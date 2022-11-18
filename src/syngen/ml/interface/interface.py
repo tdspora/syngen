@@ -170,6 +170,7 @@ class InferInterface(Interface):
         """
         Set up the handler which used in infer process
         """
+
         self.handler = VaeInferHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
@@ -187,7 +188,8 @@ class InferInterface(Interface):
             metadata={"table_name": self.config.table_name},
             paths=self.config.set_paths()
         )
-        Report().register_reporter(accuracy_reporter)
+        if not self.config.table_name.endswith("_pk"):
+            Report().register_reporter(accuracy_reporter)
 
         return self
 
@@ -207,6 +209,7 @@ class InferInterface(Interface):
             batch_size: int = None,
             random_seed: int = None,
             print_report: bool = False,
+            both_keys: bool = False
     ):
         """
         Launch the infer process
@@ -218,7 +221,8 @@ class InferInterface(Interface):
             run_parallel=run_parallel,
             batch_size=batch_size,
             random_seed=random_seed,
-            print_report=print_report
+            print_report=print_report,
+            both_keys=both_keys,
         ).\
             set_reporters().\
             set_metadata(metadata).\
