@@ -1,4 +1,4 @@
-from typing import Set
+from typing import Set, Dict
 
 from loguru import logger
 import numpy as np
@@ -33,12 +33,58 @@ class Dataset:
         self.nan_labels_dict = {}
         self.fk_kde_path = kde_path
 
+    def __set_pk_key(self, config_of_keys: Dict):
+        """
+        Set up primary key for the table
+        """
+        self.primary_keys_mapping = {
+            key: value for (key, value) in config_of_keys.items()
+            if config_of_keys.get(key).get("type") == "PK"
+        }
+        self.primary_keys_list = list(self.primary_keys_mapping.keys())
+        self.primary_key_name = self.primary_keys_list[0] if self.primary_keys_list else None
+
+        if self.primary_key_name:
+            logger.info(f"The primary key name was set: {self.primary_key_name}")
+        if self.primary_key_name is None:
+            logger.info("No primary key was set.")
+
+    def __set_uq_keys(self, config_of_keys: Dict):
+        """
+        Set up unique keys for the table
+        """
+        self.unique_keys_mapping = {
+            key: value for (key, value) in config_of_keys.items()
+            if config_of_keys.get(key).get("type") == "UQ"
+        }
+        self.unique_keys_mapping_list = list(self.unique_keys_mapping.keys())
+        self.unique_keys_list = self.unique_keys_mapping_list if self.unique_keys_mapping_list else []
+
+        if self.unique_keys_list:
+            logger.info(f"The unique keys were set: {self.unique_keys_list}")
+        if not self.unique_keys_list:
+            logger.info("No unique keys were set.")
+
+    def __set_types(self, pk_uq_keys_mapping, str_columns, categ_columns, date_columns):
+        """
+        Set up list of data types of primary and unique keys
+        """
+        self.pk_uq_keys_types = {}
+        for key_name, config in pk_uq_keys_mapping.items():
+            key_columns = config.get("columns")
+            for column in key_columns:
+                column_type = str if column in (str_columns | categ_columns | date_columns) else float
+                self.pk_uq_keys_types[column] = column_type
+
     def __set_metadata(self, metadata: dict, table_name: str):
         self.foreign_keys_list = []  # For compatibility with the Enterprise version
         self.token_keys_list = []  # For compatibility with the Enterprise version
         self.table_name = table_name
         config_of_keys = metadata.get(table_name, {}).get("keys")
+
         if config_of_keys is not None:
+            self.__set_pk_key(config_of_keys)
+            self.__set_uq_keys(config_of_keys)
             self.foreign_keys_mapping = {
                 key: value for (key, value) in config_of_keys.items()
                 if config_of_keys.get(key).get("type") == "FK"
@@ -113,6 +159,7 @@ class Dataset:
         data = pd.DataFrame(stacked_data, columns=column_names)
 
         return data
+
 
     def _preprocess_str_params(self, feature: str):
         self.df[feature] = self.df[feature].fillna("")
@@ -320,24 +367,26 @@ class Dataset:
                                                                                             int_columns,
                                                                                             str_columns,
                                                                                             categ_columns)
-        if len(str_columns) > 0:
-            self._assign_char_feature(str_columns)
 
-        if len(float_columns) > 0:
-            self._assign_float_feature(float_columns)
+        self.primary_keys_mapping.update(self.unique_keys_mapping)
+        pk_uq_keys_mapping = self.primary_keys_mapping
+        if pk_uq_keys_mapping:
+            self.__set_types(pk_uq_keys_mapping, str_columns, categ_columns, date_columns)
 
-        if len(int_columns) > 0:
-            self._assign_int_feature(int_columns)
-
-        if len(categ_columns) > 0:
-            self._assign_categ_feature(categ_columns)
-
-        if len(date_columns) > 0:
-            self._assign_date_feature(date_columns)
-
-        if len(binary_columns) > 0:
-            self._assign_binary_feature(binary_columns)
-
+        for column in self.df.columns:
+            if column in str_columns:
+                self._assign_char_feature([column])
+            elif column in float_columns:
+                self._assign_float_feature([column])
+            elif column in int_columns:
+                self._assign_int_feature([column])
+            elif column in categ_columns:
+                self._assign_categ_feature([column])
+            elif column in date_columns:
+                self._assign_date_feature([column])
+            elif column in binary_columns:
+                self._assign_binary_feature([column])
+        
         self.set_nan_params(columns_nan_labels)
 
         self.fit(self.df)
