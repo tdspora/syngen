@@ -729,6 +729,7 @@ class Clustering(BaseMetric):
         rows_labels = pd.DataFrame({"origin": self.merged["level_0"], "cluster": labels})
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
 
+
 class Utility(BaseMetric):
     def __init__(
         self,

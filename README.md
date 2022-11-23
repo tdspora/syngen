@@ -90,6 +90,7 @@ The yaml metadata file should match the following template:
         train_settings:                             # Settings for training process
             epochs: 10                              # Number of epochs if different from the default in the command line options
             drop_null: true                         # Drop rows with NULL values
+            row_limit: 1000                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
                  
         infer_settings:                             # Settings for infer process
             size: 500                               # Size for generated data
@@ -133,6 +134,7 @@ The yaml metadata file should match the following template:
         train_settings:
             epochs: 10                              # Number of epochs if different from the default in the command line options
             drop_null: true                         # Drop rows with NULL values
+            row_limit: 1000                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
      
         infer_settings:                             # Settings for infer process
             size: 500                               # Size for generated data
