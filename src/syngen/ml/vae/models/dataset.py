@@ -92,6 +92,9 @@ class Dataset:
             self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
             self.foreign_key_names = self.foreign_keys_list if self.foreign_keys_list else None
         else:
+            self.primary_keys_mapping = {}
+            self.unique_keys_mapping = {}
+            self.foreign_keys_mapping = {}
             self.foreign_key_names = None
 
     def assign_feature(self, feature, columns):
