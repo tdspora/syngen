@@ -1,6 +1,7 @@
 # Syngen
 
-Syngen is an unsupervised tabular data generation tool. It is useful for generation of test data with a given table as a template. Most datatypes including floats, integers, datetime, text, categorical, binary are supported. The linked tables i.e., tables sharing a key can also be generated using the simple statistical approach.
+Syngen is an unsupervised tabular data generation tool. It is useful for generation of test data with a given table as a template. Most datatypes including floats, integers, datetime, text, categorical, binary are supported. The linked tables i.e., tables sharing a key can also be generated using the simple statistical approach. 
+The source of data might be in CSV, Avro format and should be located locally.
 
 The tool is based on the variational autoencoder model (VAE). The Bayesian Gaussian Mixture model is used to further detangle the latent space.
 
@@ -84,7 +85,7 @@ this case they will be ignored in the CLI call.
 The yaml metadata file should match the following template:
 
     CUSTOMER:                                       # Table name
-        source: "s3://syn-gen/files/customer.csv"   # Supported formats include cloud storage locations, local files
+        source: "./files/customer.csv"              # Supported formats include local files in CSV, Avro formats
                  
         train_settings:                             # Settings for training process
             epochs: 10                              # Number of epochs if different from the default in the command line options
