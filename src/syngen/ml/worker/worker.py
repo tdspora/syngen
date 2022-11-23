@@ -85,7 +85,7 @@ class Worker:
                 "'keys', 'type' fields in metadata file"
             )
 
-    def _prepare_metadata_for_process(self, type_of_process):
+    def _prepare_metadata_for_process(self, **kwargs):
         """
         Return the list of related tables for training or infer process,
         configuration of related tables
@@ -93,7 +93,7 @@ class Worker:
         type_of_process can be "train", "infer" or "all" for the Enterprise version
         """
         config_of_tables = self.metadata
-        if type_of_process == ("infer" or "all"):
+        if kwargs.get("type_of_process") == ("infer" or "all"):
             config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
         pk_tables = self._get_tables(config_of_tables, "PK")
         fk_tables = self._get_tables(config_of_tables, "FK")
@@ -218,7 +218,7 @@ class Worker:
         Launch training process either for a single table or for related tables
         """
         if self.metadata_path is not None:
-            chain_of_tables, config_of_tables = self._prepare_metadata_for_process("train")
+            chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="train")
             self.__train_chain_of_tables(chain_of_tables, config_of_tables)
         if self.table_name is not None:
             self.__train_table()
@@ -228,7 +228,7 @@ class Worker:
         Launch infer process either for a single table or for related tables
         """
         if self.metadata_path is not None:
-            chain_of_tables, config_of_tables = self._prepare_metadata_for_process("infer")
+            chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
             self.__infer_chain_of_tables(chain_of_tables, config_of_tables)
         if self.table_name is not None:
             self.__infer_table()
