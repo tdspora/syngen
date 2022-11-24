@@ -2,6 +2,8 @@ from typing import List
 import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
 import base64
+from loguru import logger
+
 
 def encode_categorical_features(dfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
     encoder = OrdinalEncoder()
@@ -27,6 +29,10 @@ def text_to_continuous(df, text_columns: List[str]):
 
 
 def transform_to_base64(path):
-    with open(path, "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read())
-    return "data:image/gif;base64," + encoded_string.decode('utf-8')
+    try:
+        with open(path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read())
+        return "data:image/gif;base64," + encoded_string.decode('utf-8')
+    except FileNotFoundError:
+        logger.warning(f"No file found at {path}")
+        return ""
