@@ -203,8 +203,9 @@ class Dataset:
         isnull_feature = pd.isnull(self.df[feature])
 
         if isnull_feature.any():
-            logger.info(f"Column {feature} contains {isnull_feature.sum()} empty values. "
-                        f"Filling them with {fillna_strategy or 'zero'}.")
+            nan_number = isnull_feature.sum()
+            logger.info(f"Column {feature} contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
+                        f"empty values out of {len(isnull_feature)}. Filling them with {fillna_strategy or 'zero'}.")
             if fillna_strategy == "mean":
                 fillna_value = self.df[feature].mean()
             elif fillna_strategy == "mode":

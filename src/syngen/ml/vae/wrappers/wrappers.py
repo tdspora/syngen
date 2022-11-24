@@ -120,6 +120,11 @@ class VAEWrapper(BaseWrapper):
                 num_column = num_column.where(not_null_column_mask, np.nan)
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
+                num_nan_values = num_column.isna().sum()
+                logger.info(
+                    f"Column {column} has {num_nan_values} ({round(num_nan_values * 100 / len(num_column))}%) "
+                    f"empty values generated."
+                )
         return df
 
     def _restore_nan_labels(self, df):

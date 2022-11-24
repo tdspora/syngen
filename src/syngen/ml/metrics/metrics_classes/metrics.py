@@ -786,10 +786,13 @@ class Utility(BaseMetric):
         result = pd.melt(result.dropna(), id_vars=["Type", "Synth_to_orig_ratio"])
 
         if self.plot:
-            sns.set(font_scale=2)
-            plt.clf()
-            barplot = sns.barplot(data=result, x="Type", y="value", hue="variable")
-            plt.savefig(f"{self.draws_path}/utility_barplot.png")
+            if result.empty:
+                logger.info("No data to provide utility barplot")
+            else:
+                sns.set(font_scale=2)
+                plt.clf()
+                barplot = sns.barplot(data=result, x="Type", y="value", hue="variable")
+                plt.savefig(f"{self.draws_path}/utility_barplot.png")
 
         if best_binary is not None:
             print(f"The ratio of synthetic binary accuracy to original is {round(score_binary/synth_score_binary, 3)}. "
