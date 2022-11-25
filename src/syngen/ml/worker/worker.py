@@ -17,12 +17,12 @@ class Worker:
     settings: Dict
     train_interface = TrainInterface()
     infer_interface = InferInterface()
-    metadata_loader = MetadataLoader()
     metadata = None
     divided = []
 
     def __post_init__(self):
-        self.metadata = self.metadata_loader.load_data(self.metadata_path) if self.metadata_path else None
+        self.metadata_loader = MetadataLoader(self.metadata_path)
+        self.metadata = self.metadata_loader.load_data() if self.metadata_path else None
 
     def __parse_train_settings(self, config: Dict):
         """
