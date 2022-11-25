@@ -146,17 +146,17 @@ class CVAE:
 
     def __build_encoder(self, input):
         h0 = Dense(self.intermediate_dim, name="Encoder_0")(input)
-        h0 = BatchNormalization()(h0)
+        h0 = BatchNormalization(name="First_encoder_BN")(h0)
         h0 = Activation(tf.nn.leaky_relu)(h0)
         h0 = Dropout(0.2)(h0)
 
         h1 = Dense(self.intermediate_dim, name="Encoder_1")(h0)
-        h1 = BatchNormalization()(h1)
+        h1 = BatchNormalization(name="Second_encoder_BN")(h1)
         h1 = Activation(tf.nn.leaky_relu)(h1)
         h1 = Dropout(0.2)(h1)
 
         h2 = Dense(self.intermediate_dim, name="Encoder_2")(h1)
-        h2 = BatchNormalization()(h2)
+        h2 = BatchNormalization(name="Third_encoder_BN")(h2)
         h2 = Activation(tf.nn.leaky_relu)(h2)
         h2 = Dropout(0.2)(h2)
 
@@ -220,9 +220,11 @@ class CVAE:
         np.random.shuffle(latent_sample)
 
         synthetic_prediction = self.generator_model.predict(latent_sample)
-        inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
-
-        return inverse_transformed_df
+        self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
+        pk_uq_keys_mapping = self.dataset.primary_keys_mapping
+        if pk_uq_keys_mapping:
+            self.__make_pk_uq_unique(pk_uq_keys_mapping)
+        return self.inverse_transformed_df
 
     def less_likely_sample(
         self, nb_samples: int, temp: float = 0.05, variaty: int = 3
@@ -242,6 +244,15 @@ class CVAE:
 
         synthetic_prediction = self.generator_model.predict(sliced_latent_sample)
         return self.dataset.inverse_transform(synthetic_prediction)
+
+    def __make_pk_uq_unique(self, pk_uq_keys_mapping):
+        for key_name, config in pk_uq_keys_mapping.items():
+            key_columns = config.get("columns")
+            for column in key_columns:
+                key_type = self.dataset.pk_uq_keys_types[column]
+                if key_type is float:
+                    mapped_keys = np.arange(len(self.inverse_transformed_df[column])) + 1
+                    self.inverse_transformed_df[column] = mapped_keys
 
     def show_model(self):
         from IPython.display import SVG
@@ -263,7 +274,6 @@ class CVAE:
 
     def load_state(self, path: str):
         pth = Path(path)
-
         self.model.load_weights(str(pth / "vae.ckpt"))
         self.generator_model.load_weights(str(pth / "vae_generator.ckpt"))
 
