@@ -67,7 +67,7 @@ class CSVLoader(BaseDataLoader):
         return df
 
     def load_data(self, path, **kwargs):
-        self._load_data(path, **kwargs)
+        return self._load_data(path, **kwargs)
 
     @staticmethod
     def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
