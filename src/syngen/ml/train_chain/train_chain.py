@@ -180,7 +180,7 @@ class VaeInferHandler(BaseHandler):
         if self.random_seed:
             seed(self.random_seeds_list[i])
 
-        data = DataLoader().load_data(self.paths["input_data_path"])
+        data = DataLoader(self.paths["input_data_path"]).load_data()
         self.vae = self.create_wrapper(
             self.wrapper_name,
             data,
