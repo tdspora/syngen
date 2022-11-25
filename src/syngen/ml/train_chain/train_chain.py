@@ -64,28 +64,28 @@ class RootHandler(BaseHandler):
         os.makedirs(tmp_store_path, exist_ok=True)
 
     @staticmethod
-    def prepare_data(data, options):
+    def _set_options(data, options):
         if options["drop_null"]:
             data = data.dropna()
 
-        if options["row_subset"] > len(data):
-            logger.error("Row limit inside of METADATA file seems higher than whole amount of records in the table. "
-                         "Please reduce row_limit parameter or use bigger table.")
-            raise AttributeError("Row limit higher than amount of records in table")
-        else:
-            data = data.sample(n=options["row_subset"])
+        if options["row_subset"]:
+            data = data.sample(n=min(options["row_subset"], len(data)))
             if len(data) < 100:
-                logger.error("Not enough data. The number of rows in the table after preprocessing should be more "
-                             "then 100. Try 1) disable drop_null argument, 2) provide a bigger table")
-                raise AttributeError("Not enough data")
-            if len(data) < 500:
                 logger.warning(
-                    "The amount of data seems not enough to supply high-quality results. To improve the quality "
-                    "of generated data please consider any of the steps: 1) provide a bigger table, 2) disable "
-                    "drop_null argument")
+                    f"The input table contains {len(data)} rows. It is too small to provide any meaningful results. "
+                    f"Please consider 1) disable drop_null argument, 2) provide bigger table")
+            elif len(data) < 500:
+                logger.warning(
+                    f"The amount of data is {len(data)} rows. It seems that it isn't enough to supply "
+                    f"high-quality results. To improve the quality of generated data please consider any of the steps: "
+                    f"1) provide a bigger table, 2) disable drop_null argument")
+        return data
 
-        if options["epochs"] < 1:
-            raise AttributeError("Number of epochs should be > 0")
+    def set_options(self, data, options):
+        return self._set_options(data, options)
+
+    def prepare_data(self, data, options):
+        data = self.set_options(data, options)
 
         data_columns = set(data.columns)
         # remove completely empty columns
@@ -170,6 +170,10 @@ class VaeInferHandler(BaseHandler):
         tmp_store_path = self.paths["tmp_store_path"]
         os.makedirs(tmp_store_path, exist_ok=True)
 
+    def _is_pk(self):
+        is_pk = self.table_name.endswith("_pk")
+        return is_pk
+
     def run_separate(self, params: Tuple):
         i, size = params
 
@@ -213,18 +217,20 @@ class VaeInferHandler(BaseHandler):
             generated = self.run_separate((0, size))
         return generated
 
-    def kde_gen(self, pk_table, pk_column_label, size):
+    def kde_gen(self, pk_table, pk_column_label, size, fk_label):
         pk = pk_table[pk_column_label]
 
         if pk.dtype == "object":
             synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
+            synth_fk.rename(fk_label, inplace=True)
         else:
             with open(self.fk_kde_path, "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
             fk_pdf = kde.evaluate(pk)
             synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
-            synth_fk = pd.DataFrame({pk_column_label: synth_fk}).reset_index(drop=True)
+            synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)
+
         return synth_fk
 
     def generate_keys(self, generated, size, metadata, table_name):
@@ -233,7 +239,7 @@ class VaeInferHandler(BaseHandler):
         for key in config_of_keys.keys():
             if config_of_keys.get(key).get("type") == "FK":
                 pk_table = config_of_keys.get(key).get("references").get("table")
-                pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer.csv"
+                pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer_{pk_table}.csv"
                 if not os.path.exists(pk_path):
                     raise FileNotFoundError(
                         "The table with a primary key specified in the metadata file does not "
@@ -244,7 +250,7 @@ class VaeInferHandler(BaseHandler):
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
-                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size)
+                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, config_of_keys.get(key).get("columns")[0])
                 generated = pd.concat([generated.reset_index(drop=True), synth_fk], axis=1)
         return generated
 
@@ -267,12 +273,17 @@ class VaeInferHandler(BaseHandler):
             for batch in batches:
                 generated_batch = self.run(batch, run_parallel)
                 prepared_data = pd.concat([prepared_data, generated_batch])
+
+            is_pk = self._is_pk()
             if metadata_path is not None:
-                generated_data = self.generate_keys(prepared_data, size, self.metadata, self.table_name)
-                if generated_data is None:
-                    prepared_data.to_csv(self.path_to_merged_infer, index=False)
+                if not is_pk:
+                    generated_data = self.generate_keys(prepared_data, size, self.metadata, self.table_name)
+                    if generated_data is None:
+                        prepared_data.to_csv(self.path_to_merged_infer, index=False)
+                    else:
+                        generated_data.to_csv(self.path_to_merged_infer, index=False)
                 else:
-                    generated_data.to_csv(self.path_to_merged_infer, index=False)
+                    prepared_data.to_csv(self.path_to_merged_infer, index=False)
             if metadata_path is None:
                 prepared_data.to_csv(self.path_to_merged_infer, index=False)
             if print_report:

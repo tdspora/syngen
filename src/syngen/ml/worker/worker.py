@@ -13,11 +13,12 @@ class Worker:
     Class for preparing training and infer settings, metadata for training and infer process
     """
     table_name: str
-    metadata_path : Optional[str]
+    metadata_path: Optional[str]
     settings: Dict
     train_interface = TrainInterface()
     infer_interface = InferInterface()
     metadata = None
+    divided = []
 
     def __post_init__(self):
         self.metadata_loader = MetadataLoader(self.metadata_path)
@@ -84,17 +85,42 @@ class Worker:
                 "'keys', 'type' fields in metadata file"
             )
 
-    def _prepare_metadata_for_process(self):
+    def _prepare_metadata_for_process(self, **kwargs):
         """
         Return the list of related tables for training or infer process,
         configuration of related tables
+
+        type_of_process can be "train", "infer" or "all" for the Enterprise version
         """
         config_of_tables = self.metadata
+        if kwargs.get("type_of_process") == ("infer" or "all"):
+            config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
         pk_tables = self._get_tables(config_of_tables, "PK")
         fk_tables = self._get_tables(config_of_tables, "FK")
         # chain_of_tables = [*pk_tables, *list(set(fk_tables).difference(set(pk_tables)))]
         chain_of_tables = [*pk_tables, *fk_tables]
+
         return chain_of_tables, config_of_tables
+
+    def _split_pk_fk_metadata(self, config, tables):
+        for table in tables:
+            types_of_keys = [value["type"] for key, value in config[table]["keys"].items()]
+            if "PK" in types_of_keys and "FK" in types_of_keys:
+                self.divided += [table+"_pk", table+"_fk"]
+                pk_uq_part = {key: value for key, value in config[table]["keys"].items() if value["type"] in ["PK", "UQ"]}
+                fk_part = {key: value for key, value in config[table]["keys"].items() if value["type"] == "FK"}
+
+                # Do this to create a new object instead of a reference
+                as_pk_meta = {k: v for k, v in config[table].items()}
+                as_fk_meta = {k: v for k, v in config[table].items()}
+
+                as_pk_meta["keys"] = pk_uq_part
+                as_fk_meta["keys"] = fk_part
+
+                config[table + "_pk"] = as_pk_meta
+                config[table + "_fk"] = as_fk_meta
+                config.pop(table)
+        return config
 
     def __train_chain_of_tables(self, tables: List, config_of_tables: Dict):
         """
@@ -131,6 +157,7 @@ class Worker:
         :param config_of_tables: configuration of related tables declared in metadata.yml file
         """
         for table in tables:
+            both_keys = table in self.divided
             config_of_table = config_of_tables[table]
             infer_settings = self.__parse_infer_settings(config_of_table)
             logger.info(f"Infer process of the table - {table} has started.")
@@ -142,7 +169,8 @@ class Worker:
                 batch_size=infer_settings["batch_size"],
                 metadata_path=self.metadata_path,
                 random_seed=infer_settings["random_seed"],
-                print_report=infer_settings["print_report"]
+                print_report=infer_settings["print_report"],
+                both_keys=both_keys,
             )
 
     def __train_table(self):
@@ -181,7 +209,8 @@ class Worker:
             run_parallel=self.settings.get("run_parallel"),
             batch_size=self.settings.get("batch_size"),
             random_seed=self.settings.get("random_seed"),
-            print_report=self.settings.get("print_report")
+            print_report=self.settings.get("print_report"),
+            both_keys=False,
         )
 
     def launch_train(self):
@@ -189,7 +218,7 @@ class Worker:
         Launch training process either for a single table or for related tables
         """
         if self.metadata_path is not None:
-            chain_of_tables, config_of_tables = self._prepare_metadata_for_process()
+            chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="train")
             self.__train_chain_of_tables(chain_of_tables, config_of_tables)
         if self.table_name is not None:
             self.__train_table()
@@ -199,7 +228,7 @@ class Worker:
         Launch infer process either for a single table or for related tables
         """
         if self.metadata_path is not None:
-            chain_of_tables, config_of_tables = self._prepare_metadata_for_process()
+            chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
             self.__infer_chain_of_tables(chain_of_tables, config_of_tables)
         if self.table_name is not None:
             self.__infer_table()
