@@ -101,11 +101,12 @@ class MetadataLoader(BaseDataLoader):
         self.metadata_loader = self.get_metadata_loader()
 
     def get_metadata_loader(self):
-        path = Path(self.metadata_path)
-        if path.suffix in ['.yaml', '.yml']:
-            return YAMLLoader()
-        else:
-            raise NotImplementedError("File format not supported")
+        if self.metadata_path is not None:
+            path = Path(self.metadata_path)
+            if path.suffix in ['.yaml', '.yml']:
+                return YAMLLoader()
+            else:
+                raise NotImplementedError("File format not supported")
 
     def load_data(self) -> dict:
         return self.metadata_loader.load_data(self.metadata_path)
