@@ -6,7 +6,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from loguru import logger
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.train_chain import RootHandler
-from syngen.ml.reporters import Report, AccuracyReporter
+from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
 from syngen.ml.config import TrainConfig, InferConfig
 from syngen.ml.train_chain import VaeTrainHandler, VaeInferHandler
 from syngen.ml.strategies import TrainStrategy, InferStrategy
@@ -91,8 +91,17 @@ class TrainInterface(Interface, ABC):
         self.handler = root_handler
         return self
 
-    def set_reporters(*args, **kwargs):
-        pass
+    def set_reporters(self):
+        """
+        Set up reporter which used in order to create the sampling report during training process
+        """
+        sample_reporter = SampleAccuracyReporter(
+            metadata={"table_name": self.config.table_name},
+            paths=self.config.set_paths()
+        )
+        Report().register_reporter(sample_reporter)
+
+        return self
 
     def set_strategy(self, **kwargs):
         """
@@ -127,7 +136,8 @@ class TrainInterface(Interface, ABC):
 
         data = DataLoader(source).load_data()
 
-        self.set_metadata(metadata).\
+        self.set_reporters().\
+            set_metadata(metadata).\
             set_handler().\
             set_strategy(
             paths=self.config.set_paths(),

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import jinja2
-import base64
 import pandas as pd
 from typing import List
 import os
@@ -12,6 +11,7 @@ from syngen.ml.metrics import (
     Clustering,
     Utility
 )
+from syngen.ml.metrics.utils import transform_to_base64
 
 
 class BaseTest(ABC):
@@ -47,11 +47,6 @@ class AccuracyTest(BaseTest):
         acc = JensenShannonDistance(self.original, self.synthetic, True, acc_draws_path)
         return univariate, bivariate, correlations, clustering, utility, acc
 
-    def __transform_to_base64(self, path):
-        with open(path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read())
-        return "data:image/gif;base64," + encoded_string.decode('utf-8')
-
     def report(self, **kwargs):
         univariate, bivariate, correlations, clustering, utility, acc = self.__prepare_before_report()
         acc.calculate_all(kwargs["categ_columns"])
@@ -68,19 +63,18 @@ class AccuracyTest(BaseTest):
             template = jinja2.Template(file_.read())
 
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
-        uni_images = [self.__transform_to_base64(f"{draws_acc_path}/{f}") for f in os.listdir(draws_acc_path)
+        uni_images = [transform_to_base64(f"{draws_acc_path}/{f}") for f in os.listdir(draws_acc_path)
                       if f.startswith("univariate")]
-        bi_images = [self.__transform_to_base64(f"{draws_acc_path}/{f}") for f in os.listdir(draws_acc_path)
+        bi_images = [transform_to_base64(f"{draws_acc_path}/{f}") for f in os.listdir(draws_acc_path)
                      if f.startswith("bivariate")]
         html = template.render(accuracy_value=acc_median,
-                               accuracy_heatmap=self.__transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.png"),
-                               draws_acc_path=draws_acc_path,
+                               accuracy_heatmap=transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.png"),
                                uni_imgs=uni_images,
-                               correlations_heatmap=self.__transform_to_base64(f"{draws_acc_path}/correlations_heatmap.png"),
-                               clusters_barplot=self.__transform_to_base64(f"{draws_acc_path}/clusters_barplot.png"),
+                               correlations_heatmap=transform_to_base64(f"{draws_acc_path}/correlations_heatmap.png"),
+                               clusters_barplot=transform_to_base64(f"{draws_acc_path}/clusters_barplot.png"),
                                clustering_value=clustering_result,
                                bi_imgs=bi_images,
-                               utility_barplot=self.__transform_to_base64(f"{draws_acc_path}/utility_barplot.png"),
+                               utility_barplot=transform_to_base64(f"{draws_acc_path}/utility_barplot.png"),
                                utility_table=utility_result.to_html()
                                )
 

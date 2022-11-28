@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import List
 import pandas as pd
+import numpy as np
 from loguru import logger
 
 from syngen.ml.pipeline import (
@@ -8,7 +9,7 @@ from syngen.ml.pipeline import (
     get_nan_labels,
     nan_labels_to_float
 )
-from syngen.ml.metrics import AccuracyTest
+from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.metrics.utils import text_to_continuous
 
 
@@ -21,13 +22,20 @@ class Reporter:
         self.table_name = metadata["table_name"]
         self.paths = paths
 
+    def extract_report_data(self):
+        original = pd.read_csv(self.paths["original_data_path"])
+        synthetic = pd.read_csv(self.paths["synthetic_data_path"])
+        return original, synthetic
+
     def preprocess_data(self):
         """
         Preprocess original and synthetic data.
         Return original data, synthetic data, float columns, integer columns, categorical columns
         """
-        original = pd.read_csv(self.paths["original_data_path"])
-        synthetic = pd.read_csv(self.paths["synthetic_data_path"])
+        original, synthetic = self.extract_report_data()
+        missing_columns = set(original) - set(synthetic)
+        for col in missing_columns:
+            synthetic[col] = np.nan
         columns_nan_labels = get_nan_labels(original)
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
@@ -118,5 +126,36 @@ class AccuracyReporter(Reporter):
         )
         logger.info(
             f"Corresponding plot pickle files regarding to accuracy test were saved "
+            f"to folder 'model_artifacts/tmp_store/{self.table_name}/draws/'."
+        )
+
+
+class SampleAccuracyReporter(Reporter):
+    """
+    Reporter for running accuracy test
+    """
+    def extract_report_data(self):
+        original = pd.read_csv(self.paths["source_path"])
+        sampled = pd.read_csv(self.paths["input_data_path"])
+        return original, sampled
+
+    def report(self):
+        """
+        Run the report
+        """
+        (
+            original,
+            sampled,
+            float_columns,
+            int_columns,
+            categ_columns,
+        ) = self.preprocess_data()
+        accuracy_test = SampleAccuracyTest(original, sampled, self.paths)
+        accuracy_test.report(
+            cont_columns=list(float_columns | int_columns),
+            categ_columns=list(categ_columns)
+        )
+        logger.info(
+            f"Corresponding plot pickle files regarding to sampled data accuracy test were saved "
             f"to folder 'model_artifacts/tmp_store/{self.table_name}/draws/'."
         )

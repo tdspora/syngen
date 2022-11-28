@@ -93,12 +93,17 @@ class Worker:
         type_of_process can be "train", "infer" or "all" for the Enterprise version
         """
         config_of_tables = self.metadata
-        if kwargs.get("type_of_process") == ("infer" or "all"):
-            config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
-        pk_tables = self._get_tables(config_of_tables, "PK")
-        fk_tables = self._get_tables(config_of_tables, "FK")
-        # chain_of_tables = [*pk_tables, *list(set(fk_tables).difference(set(pk_tables)))]
-        chain_of_tables = [*pk_tables, *fk_tables]
+        table_names = list(config_of_tables.keys())
+        if len(table_names) == 1 and "keys" not in config_of_tables[table_names[0]]:
+            # case with one table without any keys
+            chain_of_tables = table_names
+        else:
+            if kwargs.get("type_of_process") == ("infer" or "all"):
+                config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
+            pk_tables = self._get_tables(config_of_tables, "PK")
+            fk_tables = self._get_tables(config_of_tables, "FK")
+            # chain_of_tables = [*pk_tables, *list(set(fk_tables).difference(set(pk_tables)))]
+            chain_of_tables = list({*pk_tables, *fk_tables})
 
         return chain_of_tables, config_of_tables
 

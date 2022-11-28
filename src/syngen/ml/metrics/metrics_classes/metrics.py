@@ -72,7 +72,7 @@ class JensenShannonDistance(BaseMetric):
         heatmap_no_diag = heatmap[~np.eye(heatmap.shape[0], dtype=bool)].reshape(
             heatmap.shape[0], -1
         )
-        heatmap_median = np.median(heatmap_no_diag)
+        heatmap_median = np.nanmedian(heatmap_no_diag)  # ignores nan when calculating median
         print("Median of Jensen Shannon Distance heatmap is", "%.3f" % heatmap_median)
         return heatmap_median
 
@@ -681,7 +681,7 @@ class Clustering(BaseMetric):
                 self.synthetic[cont_columns + categ_columns].sample(row_limit)
             ],
             keys=['original', 'synthetic']
-        ).reset_index()
+        ).dropna().reset_index()
         self.__preprocess_data()
         optimal_clust_num = self.__automated_elbow()
 
@@ -762,7 +762,7 @@ class Utility(BaseMetric):
         self.synthetic = self.synthetic.select_dtypes(include="number").dropna()
         self.synthetic = self.synthetic[self.original.columns]
 
-        excluded_cols = [col for col in categ_columns+cont_columns if self.original[col].nunique() < 2]
+        excluded_cols = [col for col in categ_columns + cont_columns if self.original[col].nunique() < 2]
         binary_cols = [col for col in categ_columns if self.original[col].nunique() == 2 and col not in excluded_cols]
         cont_cols = [col for col in cont_columns if col not in binary_cols and col not in excluded_cols]
         categ_cols = [col for col in categ_columns if col not in binary_cols and col not in excluded_cols]
@@ -786,10 +786,13 @@ class Utility(BaseMetric):
         result = pd.melt(result.dropna(), id_vars=["Type", "Synth_to_orig_ratio"])
 
         if self.plot:
-            sns.set(font_scale=2)
-            plt.clf()
-            barplot = sns.barplot(data=result, x="Type", y="value", hue="variable")
-            plt.savefig(f"{self.draws_path}/utility_barplot.png")
+            if result.empty:
+                logger.info("No data to provide utility barplot")
+            else:
+                sns.set(font_scale=2)
+                plt.clf()
+                barplot = sns.barplot(data=result, x="Type", y="value", hue="variable")
+                plt.savefig(f"{self.draws_path}/utility_barplot.png")
 
         if best_binary is not None:
             print(f"The ratio of synthetic binary accuracy to original is {round(score_binary/synth_score_binary, 3)}. "
@@ -824,10 +827,15 @@ class Utility(BaseMetric):
         for col in targets:
             original = pd.get_dummies(self.original.drop(col, axis=1))
             original = StandardScaler().fit_transform(original)
+            model_y = self.original[col].values[:int(original.shape[0] * 0.8)]
+            if len(set(model_y)) < 2:
+                logger.info(f"Column {col} has less than 2 classes as target. "
+                            f"It wil not be used in metric that measures regression results.")
+                continue
 
             model = model_object.fit(
                 X=original[:int(original.shape[0] * 0.8), :],
-                y=self.original[col].values[:int(original.shape[0] * 0.8)]
+                y=model_y
             )
             score = self.__get_accuracy_score(
                 self.original[col].values[int(original.shape[0] * 0.8):],
@@ -851,7 +859,6 @@ class Utility(BaseMetric):
                 task_type
             )
         return best_target, best_score, synthetic_score
-
 
     def __create_binary_class_models(self, binary_targets):
         from sklearn.linear_model import LogisticRegression
