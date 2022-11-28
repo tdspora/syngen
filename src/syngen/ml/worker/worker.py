@@ -103,7 +103,7 @@ class Worker:
             pk_tables = self._get_tables(config_of_tables, "PK")
             fk_tables = self._get_tables(config_of_tables, "FK")
             # chain_of_tables = [*pk_tables, *list(set(fk_tables).difference(set(pk_tables)))]
-            chain_of_tables = list({*pk_tables, *fk_tables})
+            chain_of_tables = list(dict.fromkeys([*pk_tables, *fk_tables]))
 
         return chain_of_tables, config_of_tables
 
