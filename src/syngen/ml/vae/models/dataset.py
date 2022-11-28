@@ -181,10 +181,11 @@ class Dataset:
 
         return max_len, rnn_units
 
-    def _preprocess_float_params(
+    def _preprocess_nan_cols(
         self, feature: str, fillna_strategy: str = None
     ) -> tuple:
         """Fill NaN values in numeric column with some value according to strategy.
+        Fill NaN values in string columns can only work in 'mode' strategy.
         If NaN values exist additional column is created and added to DataFrame.
         This column has value of 1 in case corresponding row contains NaN and 0 otherwise.
         New column name is built like 'column name'+'_null'.
@@ -194,20 +195,24 @@ class Dataset:
             fillna_strategy (str, optional): Can be 'mean', 'mode' or None.
                                              If None NaN values in column are replaced with 0.
                                              Defaults to None.
+                                             Note: string columns only work with 'mode'.
 
         Returns:
             tuple: Tuple that consists of either feature name or both feature name and new null feature name.
         """
-        if fillna_strategy == "mean":
-            fillna_value = self.df[feature].mean()
-        elif fillna_strategy == "mode":
-            fillna_value = self.df[feature].mode().sample(1).values[0]
-        else:
-            fillna_value = 0
-
         isnull_feature = pd.isnull(self.df[feature])
 
         if isnull_feature.any():
+            nan_number = isnull_feature.sum()
+            logger.info(f"Column {feature} contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
+                        f"empty values out of {len(isnull_feature)}. Filling them with {fillna_strategy or 'zero'}.")
+            if fillna_strategy == "mean":
+                fillna_value = self.df[feature].mean()
+            elif fillna_strategy == "mode":
+                fillna_value = self.df[feature].mode().sample(1).values[0]
+            else:
+                fillna_value = 0
+
             feature_null = feature + "_null"
             self.df[feature_null] = isnull_feature.astype(int)
             self.df[feature] = self.df[feature].fillna(fillna_value)
@@ -247,6 +252,20 @@ class Dataset:
                              f"and will be sampled from the PK table")
         return float_columns, int_columns, str_columns, categ_columns
 
+    def __sample_only_joined_rows(self, fk):
+        # for fk in self.foreign_key_names:
+        references = self.foreign_keys_mapping.get(fk).get("references")
+        pk_table = references.get("table")
+        pk_table_data = pd.read_csv(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv",
+                                    engine="python")
+        pk_column_label = references.get("columns")[0]
+
+        drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].keys())].index
+        if len(drop_index) > 0:
+            logger.info(f"{len(drop_index)} rows were deleted, as they did not have matching primary keys.")
+            logger.info(f"{len(self.df) - len(drop_index)} rows are left in table as input.")
+        self.df = self.df.drop(drop_index)
+
     def _assign_char_feature(self, str_columns):
         """
         Assign text based feature to text columns
@@ -267,7 +286,7 @@ class Dataset:
         """
         # num_bins = self.find_clusters(df, float_columns)
         for feature in float_columns:
-            features = self._preprocess_float_params(
+            features = self._preprocess_nan_cols(
                 feature, fillna_strategy="mean"
             )
             if len(features) == 2:
@@ -284,7 +303,7 @@ class Dataset:
         """
         # num_bins = self.find_clusters(df, int_columns)
         for feature in int_columns:
-            features = self._preprocess_float_params(feature, fillna_strategy="mean")
+            features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
             if len(features) == 2:
                 self.null_num_column_names.append(features[1])
             for feature in features:
@@ -318,6 +337,20 @@ class Dataset:
             feature = self._preprocess_categ_params(feature)
             self.assign_feature(BinaryFeature(feature), feature)
             logger.debug(f"Feature {feature} assigned as binary feature")
+    
+    def _assign_fk_feature(self):
+        """
+        Assign corresponding to FK null column and preprocess if required.
+        """
+        for fk, val in self.foreign_keys_mapping.items():
+            if "joined_sample" in val and val["joined_sample"]:
+                self.__sample_only_joined_rows(fk)
+            else:
+                features = self._preprocess_nan_cols(fk, fillna_strategy="mode")
+                if len(features) > 1:
+                    self.assign_feature(
+                        ContinuousFeature(features[1], column_type=int), features[1]
+                    )
 
     def pipeline(self) -> pd.DataFrame:
         columns_nan_labels = get_nan_labels(self.df)
@@ -332,6 +365,8 @@ class Dataset:
         ) = data_pipeline(self.df)
 
         if self.foreign_key_names:
+            self._assign_fk_feature()
+
             float_columns, int_columns, str_columns, categ_columns = self.__drop_fk_columns(float_columns,
                                                                                             int_columns,
                                                                                             str_columns,

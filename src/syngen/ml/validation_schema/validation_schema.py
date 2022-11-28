@@ -18,14 +18,15 @@ configuration_schema = Schema({
             Optional("print_report"): bool
         },
         "source": str,
-        "keys": {
+        Optional("keys"): {
             str: {
                 "type": Or("FK", "PK"),
                 "columns": [str],
                 Optional("references"): {
                     "table": str,
                     "columns": [str]
-                }
+                },
+                Optional("joined_sample"): bool
             }
         }
     }

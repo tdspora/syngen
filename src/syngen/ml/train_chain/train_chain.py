@@ -100,6 +100,8 @@ class RootHandler(BaseHandler):
         data = self.prepare_data(data, kwargs)
 
         data.to_csv(self.paths["input_data_path"], index=False)
+        # generate a sampling report
+        Report().generate_report()
         return super().handle(data, **kwargs)
 
 
@@ -235,6 +237,8 @@ class VaeInferHandler(BaseHandler):
 
     def generate_keys(self, generated, size, metadata, table_name):
         metadata_of_table = metadata.get(table_name)
+        if "keys" not in metadata_of_table:
+            return None
         config_of_keys = metadata_of_table.get("keys")
         for key in config_of_keys.keys():
             if config_of_keys.get(key).get("type") == "FK":
@@ -251,7 +255,15 @@ class VaeInferHandler(BaseHandler):
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
                 synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, config_of_keys.get(key).get("columns")[0])
-                generated = pd.concat([generated.reset_index(drop=True), synth_fk], axis=1)
+                generated = generated.reset_index(drop=True)
+
+                null_column_name = f"{key}_null"
+                if null_column_name in generated.columns:
+                    not_null_column_mask = generated[null_column_name].astype("float64") <= 0.5
+                    synth_fk = synth_fk.where(not_null_column_mask, np.nan)
+                    generated = generated.drop(null_column_name, axis=1)
+
+                generated = pd.concat([generated, synth_fk], axis=1)
         return generated
 
     def handle(
