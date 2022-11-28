@@ -161,7 +161,8 @@ train --metadata_path=PATH_TO_YAML_METADATA_FILE
 infer --metadata_path=PATH_TO_YAML_METADATA_FILE
 ```
 
-If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.
+If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.<br>
+<i>You can find the example of metadata file in [metadata.yaml](src/syngen/metadata.yaml)
 
 ### Docker images using
 
