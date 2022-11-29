@@ -27,9 +27,10 @@ Here is a quick example:
 
 ```
 pip install syngen
-train --source ./data/Churn_modelling.csv –-table_name Churn
-infer 5000 Churn
+train --source ./data/housing.csv –-table_name Housing
+infer 5000 Housing
 ```
+As the example you can use the dataset <i>"Housing"</i> in [example-data/housing.csv](example-data/housing.csv)
 
 ## Features
 
@@ -162,7 +163,7 @@ infer --metadata_path=PATH_TO_YAML_METADATA_FILE
 ```
 
 If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.<br>
-<i>You can find the example of metadata file in [metadata.yaml](src/syngen/metadata.yaml)
+<i>You can find the example of metadata file in [metadata.yaml](src/syngen/metadata.yaml)</i>
 
 ### Docker images using
 
@@ -197,4 +198,4 @@ docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infe
 ```
 
 You can add any arguments listed in the corresponding sections for infer and training processes, however, they will be 
-overwrited by corresponding arguments in the metadata file.
+overwritten by corresponding arguments in the metadata file.
