@@ -30,7 +30,8 @@ pip install syngen
 train --source ./data/housing.csv –-table_name Housing
 infer 5000 Housing
 ```
-As the example you can use the dataset <i>"Housing"</i> in [example-data/housing.csv](example-data/housing.csv)
+As the example you can use the dataset <i>"Housing"</i> in [example-data/housing.csv](example-data/housing.csv).
+In this example, our real-world data is ["Housing"](https://www.kaggle.com/datasets/camnugent/california-housing-prices) from Kaggle.
 
 ## Features
 
