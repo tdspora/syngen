@@ -1,8 +1,8 @@
-pk_test:                                  # Use table name here
+housing_properties:                       # Use table name here
   train_settings:                         # Settings for training process
     epochs: 8                             # Number of epochs
     drop_null: true                       # Drop rows with NULL values
-    row_limit: 100                        # Limit of rows for training process
+    row_limit: 1800                       # Limit of rows for training process
 
   infer_settings:                         # Settings for infer process
     size: 90                              # Size for generated data
@@ -10,18 +10,18 @@ pk_test:                                  # Use table name here
     random_seed: 10                       # Ensure reproducible tables generation
     print_report: true                    # Turn on or turn off generation of the report
 
-  source: "../data/pk_test.csv"           # Supported formats include cloud storage locations, local files
+  source: "../example-data/housing_properties.csv"# Supported formats include cloud storage locations, local files
   keys:                                   # Keys of the table
-    pk_tst:                               # Name of a key
+    households_pk:                        # Name of a key
       type: "PK"                          # Type of key
       columns:                            # Columns related to key
-        - id
+        - households
 
-fk_test:
+housing_conditions:
   train_settings:
     epochs: 5
     drop_null: true
-    row_limit: 100
+    row_limit: 1800
 
   infer_settings:
     size: 90
@@ -29,13 +29,13 @@ fk_test:
     random_seed: 10
     print_report: true
 
-  source: "../data/fk_test.csv"
+  source: "../example-data/housing_conditions.csv"
   keys:
-    fk_tst:
+    households_fk:
       type: "FK"
       columns:
-        - id
+        - households
       references:
-        table: pk_test
+        table: housing_properties
         columns:
-          - id
+          - households
