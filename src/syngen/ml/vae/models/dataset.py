@@ -106,6 +106,7 @@ class Dataset:
             self.primary_keys_mapping = {}
             self.unique_keys_mapping = {}
             self.foreign_keys_mapping = {}
+            self.foreign_keys_list = []
 
     def set_metadata(self):
         self.__set_metadata(self.metadata, self.table_name)
