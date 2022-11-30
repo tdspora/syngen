@@ -27,11 +27,11 @@ Here is a quick example:
 
 ```
 pip install syngen
-train --source ./data/housing.csv –-table_name Housing
+train --source ../example-data/housing.csv –-table_name Housing
 infer 5000 Housing
 ```
 As the example you can use the dataset <i>"Housing"</i> in [example-data/housing.csv](example-data/housing.csv).
-In this example, our real-world data is ["Housing"](https://www.kaggle.com/datasets/camnugent/california-housing-prices) from Kaggle.
+In this example, our real-world data is <a href="https://www.kaggle.com/datasets/camnugent/california-housing-prices" target="_blank">"Housing"</a> from Kaggle.
 
 ## Features
 
@@ -162,9 +162,15 @@ For related tables training you can use the commands:
 train --metadata_path=PATH_TO_YAML_METADATA_FILE
 infer --metadata_path=PATH_TO_YAML_METADATA_FILE
 ```
+Here is a quick example:
+
+```
+train --metadata_path="../example-metadata/housing_metadata.yaml"
+infer --metadata_path="../example-metadata/housing_metadata.yaml"
+```
 
 If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.<br>
-<i>You can find the example of metadata file in [metadata.yaml](src/syngen/metadata.yaml)</i>
+<i>You can find the example of metadata file in [example-metadata/housing_metadata.yaml](example-metadata/housing_metadata.yaml)</i>
 
 ### Docker images using
 
