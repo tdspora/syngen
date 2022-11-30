@@ -93,7 +93,7 @@ class VAEWrapper(BaseWrapper):
         latent_dim: int = 30,
         latent_components: int = 30,
     ):
-        super(VAEWrapper, self).__init__()
+        super().__init__()
         self.batch_size = batch_size
         self.latent_dim = latent_dim
         self.latent_components = latent_components
@@ -102,9 +102,21 @@ class VAEWrapper(BaseWrapper):
         self.vae_resources_path = paths["state_path"]
         self.dataset_pickle_path = paths["dataset_pickle_path"]
         self.fk_kde_path = paths["fk_kde_path"]
-        self.dataset = Dataset(df, self.metadata, self.table_name, self.fk_kde_path)
+        self.dataset = Dataset(
+            df=df,
+            metadata=self.metadata,
+            table_name=self.table_name,
+            fk_kde_path=self.fk_kde_path,
+            features=dict(),
+            columns=dict(),
+            is_fitted=False,
+            all_columns=list(),
+            null_num_column_names=list(),
+            nan_labels_dict=dict()
+        )
 
     def _pipeline(self):
+        self.dataset.set_metadata()
         self.df = self.dataset.pipeline()
 
         with open(self.dataset_pickle_path, "wb") as f:
