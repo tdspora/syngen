@@ -1,4 +1,5 @@
-from typing import Set, Dict
+from typing import Set, Dict, Optional, List
+from dataclasses import dataclass
 
 from loguru import logger
 import numpy as np
@@ -21,17 +22,18 @@ from syngen.ml.pipeline.pipeline import (
 )
 
 
+@dataclass
 class Dataset:
-    def __init__(self, df: pd.DataFrame, metadata: dict, table_name: str, kde_path: str):
-        self.df = df
-        self.__set_metadata(metadata, table_name)
-        self.features = dict()
-        self.columns = dict()
-        self.is_fitted = False
-        self.all_columns = []
-        self.null_num_column_names = []
-        self.nan_labels_dict = {}
-        self.fk_kde_path = kde_path
+    df: pd.DataFrame
+    metadata: Optional[Dict]
+    table_name: str
+    fk_kde_path: str
+    features: Dict
+    columns: Dict
+    is_fitted: bool
+    all_columns: List
+    null_num_column_names: List
+    nan_labels_dict: Dict
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
@@ -65,6 +67,23 @@ class Dataset:
         if not self.unique_keys_list:
             logger.info("No unique keys were set.")
 
+    def __set_fk_keys(self, config_of_keys: Dict):
+        """
+        Set up foreign keys for the table
+        """
+        self.foreign_keys_mapping = {
+            key: value for (key, value) in config_of_keys.items()
+            if config_of_keys.get(key).get("type") == "FK"
+        }
+        self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
+        fk_columns_lists = [val['columns'] for val in self.foreign_keys_mapping.values()]
+        self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
+
+        if self.foreign_keys_list:
+            logger.info(f"The following foreign keys were set: {self.foreign_keys_list}")
+        if not self.foreign_keys_list:
+            logger.info("No foreign keys were set.")
+
     def __set_types(self, pk_uq_keys_mapping, str_columns, categ_columns, date_columns):
         """
         Set up list of data types of primary and unique keys
@@ -77,25 +96,19 @@ class Dataset:
                 self.pk_uq_keys_types[column] = column_type
 
     def __set_metadata(self, metadata: dict, table_name: str):
-        self.foreign_keys_list = []  # For compatibility with the Enterprise version
-        self.token_keys_list = []  # For compatibility with the Enterprise version
-        self.table_name = table_name
         config_of_keys = metadata.get(table_name, {}).get("keys")
 
         if config_of_keys is not None:
             self.__set_pk_key(config_of_keys)
             self.__set_uq_keys(config_of_keys)
-            self.foreign_keys_mapping = {
-                key: value for (key, value) in config_of_keys.items()
-                if config_of_keys.get(key).get("type") == "FK"
-            }
-            self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
-            self.foreign_key_names = self.foreign_keys_list if self.foreign_keys_list else None
+            self.__set_fk_keys(config_of_keys)
         else:
             self.primary_keys_mapping = {}
             self.unique_keys_mapping = {}
             self.foreign_keys_mapping = {}
-            self.foreign_key_names = None
+
+    def set_metadata(self):
+        self.__set_metadata(self.metadata, self.table_name)
 
     def assign_feature(self, feature, columns):
         name = feature.name
@@ -128,7 +141,7 @@ class Dataset:
     def transform(self, data, excluded_features=set()):
         transformed_features = list()
         for name, feature in self.features.items():
-            if name not in (excluded_features and self.foreign_keys_list and self.token_keys_list):
+            if name not in (excluded_features and self.foreign_keys_list):
                 transformed_features.append(feature.transform(data[self.columns[name]]))
         return transformed_features
 
@@ -149,7 +162,7 @@ class Dataset:
         self.inverse_transformers = {}
 
         for transformed_data, (name, feature) in zip(data, self.features.items()):
-            if name not in excluded_features and name not in self.foreign_keys_list and name not in self.token_keys_list:
+            if name not in excluded_features and name not in self.foreign_keys_list:
                 column_names.extend(self.columns[name])
                 inverse_transformed_data.append(
                     feature.inverse_transform(transformed_data)
@@ -162,7 +175,6 @@ class Dataset:
         data = pd.DataFrame(stacked_data, columns=column_names)
 
         return data
-
 
     def _preprocess_str_params(self, feature: str):
         self.df[feature] = self.df[feature].fillna("")
@@ -225,7 +237,7 @@ class Dataset:
         return feature
 
     def _preprocess_fk_params(self):
-        for fk in self.foreign_key_names:
+        for fk in self.foreign_keys_list:
             fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
             for fk_column in fk_columns:
                 fk_column = self.df[fk_column]
@@ -253,7 +265,7 @@ class Dataset:
         return float_columns, int_columns, str_columns, categ_columns
 
     def __sample_only_joined_rows(self, fk):
-        # for fk in self.foreign_key_names:
+        # for fk in self.foreign_keys_list
         references = self.foreign_keys_mapping.get(fk).get("references")
         pk_table = references.get("table")
         pk_table_data = pd.read_csv(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv",
@@ -266,91 +278,84 @@ class Dataset:
             logger.info(f"{len(self.df) - len(drop_index)} rows are left in table as input.")
         self.df = self.df.drop(drop_index)
 
-    def _assign_char_feature(self, str_columns):
+    def _assign_char_feature(self, feature):
         """
         Assign text based feature to text columns
         """
-        for feature in str_columns:
-            max_len, rnn_units = self._preprocess_str_params(feature)
-            self.assign_feature(
-                CharBasedTextFeature(
-                    feature, text_max_len=max_len, rnn_units=rnn_units
-                ),
-                feature,
-            )
-            logger.debug(f"Feature {feature} assigned as text based feature")
+        max_len, rnn_units = self._preprocess_str_params(feature)
+        self.assign_feature(
+            CharBasedTextFeature(
+                feature, text_max_len=max_len, rnn_units=rnn_units
+            ),
+            feature,
+        )
+        logger.debug(f"Feature {feature} assigned as text based feature")
 
-    def _assign_float_feature(self, float_columns):
+    def _assign_float_feature(self, feature):
         """
         Assign float based feature to float columns
         """
         # num_bins = self.find_clusters(df, float_columns)
-        for feature in float_columns:
-            features = self._preprocess_nan_cols(
-                feature, fillna_strategy="mean"
+        features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
+        if len(features) == 2:
+            self.null_num_column_names.append(features[1])
+        for feature in features:
+            self.assign_feature(
+                ContinuousFeature(feature, column_type=float), feature
             )
-            if len(features) == 2:
-                self.null_num_column_names.append(features[1])
-            for feature in features:
-                self.assign_feature(
-                    ContinuousFeature(feature, column_type=float), feature
-                )
-                logger.debug(f"Feature {feature} assigned as float based feature")
+            logger.debug(f"Feature {feature} assigned as float based feature")
 
-    def _assign_int_feature(self, int_columns):
+    def _assign_int_feature(self, feature):
         """
         Assign int based feature to int columns
         """
         # num_bins = self.find_clusters(df, int_columns)
-        for feature in int_columns:
-            features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
-            if len(features) == 2:
-                self.null_num_column_names.append(features[1])
-            for feature in features:
-                self.assign_feature(
-                    ContinuousFeature(feature, column_type=int), feature
-                )
-                logger.debug(f"Feature {feature} assigned as int based feature")
+        features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
+        if len(features) == 2:
+            self.null_num_column_names.append(features[1])
+        for feature in features:
+            self.assign_feature(
+                ContinuousFeature(feature, column_type=int), feature
+            )
+            logger.debug(f"Feature {feature} assigned as int based feature")
 
-    def _assign_categ_feature(self, categ_columns):
+    def _assign_categ_feature(self, feature):
         """
         Assign categorical based feature to categorical columns
         """
-        for feature in categ_columns:
-            feature = self._preprocess_categ_params(feature)
-            self.assign_feature(CategoricalFeature(feature), feature)
-            logger.debug(f"Feature {feature} assigned as categorical based feature")
+        feature = self._preprocess_categ_params(feature)
+        self.assign_feature(CategoricalFeature(feature), feature)
+        logger.debug(f"Feature {feature} assigned as categorical based feature")
 
-    def _assign_date_feature(self, date_columns):
+    def _assign_date_feature(self, feature):
         """
         Assign date feature to date columns
         """
-        for feature in date_columns:
-            self.assign_feature(DateFeature(feature), feature)
-            logger.debug(f"Feature {feature} assigned as date feature")
+        self.assign_feature(DateFeature(feature), feature)
+        logger.debug(f"Feature {feature} assigned as date feature")
 
-    def _assign_binary_feature(self, binary_columns):
+    def _assign_binary_feature(self, feature):
         """
         Assign binary feature to binary columns
         """
-        for feature in binary_columns:
-            feature = self._preprocess_categ_params(feature)
-            self.assign_feature(BinaryFeature(feature), feature)
-            logger.debug(f"Feature {feature} assigned as binary feature")
+        feature = self._preprocess_categ_params(feature)
+        self.assign_feature(BinaryFeature(feature), feature)
+        logger.debug(f"Feature {feature} assigned as binary feature")
     
     def _assign_fk_feature(self):
         """
         Assign corresponding to FK null column and preprocess if required.
         """
-        for fk, val in self.foreign_keys_mapping.items():
-            if "joined_sample" in val and val["joined_sample"]:
-                self.__sample_only_joined_rows(fk)
+        for fk_name, config in self.foreign_keys_mapping.items():
+            if "joined_sample" in config and config["joined_sample"]:
+                self.__sample_only_joined_rows(fk_name)
             else:
-                features = self._preprocess_nan_cols(fk, fillna_strategy="mode")
-                if len(features) > 1:
-                    self.assign_feature(
-                        ContinuousFeature(features[1], column_type=int), features[1]
-                    )
+                for fk_column in self.fk_columns:
+                    features = self._preprocess_nan_cols(fk_column, fillna_strategy="mode")
+                    if len(features) > 1:
+                        self.assign_feature(
+                            ContinuousFeature(features[1], column_type=int), features[1]
+                        )
 
     def pipeline(self) -> pd.DataFrame:
         columns_nan_labels = get_nan_labels(self.df)
@@ -364,7 +369,7 @@ class Dataset:
             binary_columns,
         ) = data_pipeline(self.df)
 
-        if self.foreign_key_names:
+        if self.foreign_keys_list:
             self._assign_fk_feature()
 
             float_columns, int_columns, str_columns, categ_columns = self.__drop_fk_columns(float_columns,
@@ -379,17 +384,17 @@ class Dataset:
 
         for column in self.df.columns:
             if column in str_columns:
-                self._assign_char_feature([column])
+                self._assign_char_feature(column)
             elif column in float_columns:
-                self._assign_float_feature([column])
+                self._assign_float_feature(column)
             elif column in int_columns:
-                self._assign_int_feature([column])
+                self._assign_int_feature(column)
             elif column in categ_columns:
-                self._assign_categ_feature([column])
+                self._assign_categ_feature(column)
             elif column in date_columns:
-                self._assign_date_feature([column])
+                self._assign_date_feature(column)
             elif column in binary_columns:
-                self._assign_binary_feature([column])
+                self._assign_binary_feature(column)
         
         self.set_nan_params(columns_nan_labels)
 
