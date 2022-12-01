@@ -102,7 +102,7 @@ class CVAE:
             encoder_output = self.mu
 
         kl_loss = (
-            0.2
+            1
             * 0.5
             * tf.reduce_sum(
                 tf.exp(self.log_sigma) + self.mu ** 2 - 1.0 - self.log_sigma, 1
@@ -131,7 +131,7 @@ class CVAE:
         self.model = Model(self.inputs, self.feature_decoders)
 
         self.model.add_loss(feature_losses)
-        self.model.add_loss(kl_loss)
+        self.model.add_loss(kl_loss * 0)
 
         self.encoder_model = Model(self.inputs, encoder_output)
 
