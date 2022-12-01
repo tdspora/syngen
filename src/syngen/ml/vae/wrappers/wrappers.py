@@ -95,8 +95,8 @@ class VAEWrapper(BaseWrapper):
     ):
         super().__init__()
         self.batch_size = batch_size
-        self.latent_dim = latent_dim
-        self.latent_components = latent_components
+        self.latent_dim = min(latent_dim, int(df.shape[1] / 2))
+        self.latent_components = min(latent_components, self.latent_dim * 2)
         self.metadata = metadata
         self.table_name = table_name
         self.vae_resources_path = paths["state_path"]
@@ -228,7 +228,7 @@ class VAEWrapper(BaseWrapper):
 
     @staticmethod
     def _create_optimizer():
-        learning_rate = 1e-03
+        learning_rate = 1e-04
         return tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
     @staticmethod
