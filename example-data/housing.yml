@@ -1,5 +1,5 @@
 pk_test:
-    source: "C://Users/Pavel_Bobyrev/PycharmProjects/tdm_syngen/data/archive/housing_pk.csv"
+    source: "./housing_pk.csv"
     train_settings:                             # Settings for training process
         epochs: 10                             # Number of epochs if different from the default in the command line options                                                  
     keys:
@@ -13,7 +13,7 @@ pk_test:
         print_report: false
 
 fk_test:
-    source: "C://Users/Pavel_Bobyrev/PycharmProjects/tdm_syngen/data/archive/housing_fk.csv"
+    source: "./housing_fk.csv"
     train_settings:                             # Settings for training process
         epochs: 10                            # Number of epochs if different from the default in the command line options                                                  
     keys:
