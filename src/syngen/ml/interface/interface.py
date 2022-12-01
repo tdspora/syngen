@@ -68,7 +68,7 @@ class TrainInterface(Interface, ABC):
         self.config = TrainConfig(**kwargs)
         return self
 
-    def set_handler(self, *args):
+    def set_handler(self, schema, *args):
         """
         Set up the handler which used in training process
         """
@@ -83,6 +83,7 @@ class TrainInterface(Interface, ABC):
         vae_handler = VaeTrainHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
+            schema=schema,
             paths=paths,
             wrapper_name=VanillaVAEWrapper.__name__
         )
@@ -134,11 +135,11 @@ class TrainInterface(Interface, ABC):
             batch_size=batch_size
         )
 
-        data = DataLoader(source).load_data()
+        data, schema = DataLoader(source).load_data()
 
         self.set_reporters().\
             set_metadata(metadata).\
-            set_handler().\
+            set_handler(schema).\
             set_strategy(
             paths=self.config.set_paths(),
             handler=self.handler

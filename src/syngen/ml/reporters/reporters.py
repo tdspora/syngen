@@ -11,6 +11,7 @@ from syngen.ml.pipeline import (
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.metrics.utils import text_to_continuous
+from syngen.ml.data_loaders import DataLoader
 
 
 class Reporter:
@@ -23,8 +24,8 @@ class Reporter:
         self.paths = paths
 
     def extract_report_data(self):
-        original = pd.read_csv(self.paths["original_data_path"])
-        synthetic = pd.read_csv(self.paths["synthetic_data_path"])
+        original, schema = DataLoader(self.paths["original_data_path"]).load_data()
+        synthetic, schema = DataLoader(self.paths["synthetic_data_path"]).load_data()
         return original, synthetic
 
     def preprocess_data(self):
@@ -135,8 +136,8 @@ class SampleAccuracyReporter(Reporter):
     Reporter for running accuracy test
     """
     def extract_report_data(self):
-        original = pd.read_csv(self.paths["source_path"])
-        sampled = pd.read_csv(self.paths["input_data_path"])
+        original, schema = DataLoader(self.paths["source_path"]).load_data()
+        sampled, schema = DataLoader(self.paths["input_data_path"]).load_data()
         return original, sampled
 
     def report(self):
