@@ -17,10 +17,11 @@ The training and inference processes are separated with two cli entry points. Th
 
 This will train a model and save the model artifacts to disk.
 
-To generate data simply call
+To generate data simply call:
 
 `infer SIZE TABLE_NAME`
 
+<i>Please notice that the name should match the one you used in the training process.</i>
 This will create a csv file with the synthetic table in ./model_artifacts/tmp_store/TABLE_NAME/merged_infer_TABLE_NAME.csv
 
 Here is a quick example:
