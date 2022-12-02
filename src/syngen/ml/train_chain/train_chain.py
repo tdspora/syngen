@@ -89,8 +89,6 @@ class RootHandler(BaseHandler):
         data = self.set_options(data, options)
 
         data_columns = set(data.columns)
-        # remove completely empty columns
-        data = data.dropna(how="all", axis=1)
         dropped_cols = set(data.columns) - data_columns
         if len(dropped_cols) > 0:
             logger.info(f"Empty columns {dropped_cols} were removed")
@@ -99,10 +97,7 @@ class RootHandler(BaseHandler):
     def handle(self, data: pd.DataFrame, **kwargs):
         self._prepare_dirs()
         data = self.prepare_data(data, kwargs)
-
         data.to_csv(self.paths["input_data_path"], index=False)
-        # generate a sampling report
-        Report().generate_report()
         return super().handle(data, **kwargs)
 
 
@@ -198,7 +193,8 @@ class VaeInferHandler(BaseHandler):
         synthetic_infer = self.vae.predict_sampled_df(size)
         return synthetic_infer
 
-    def split_by_batches(self, size, nodes):
+    @staticmethod
+    def split_by_batches(size, nodes):
         quote = int(size / nodes)
         data = [quote] * nodes
         data.append((size - nodes * quote) + data.pop())

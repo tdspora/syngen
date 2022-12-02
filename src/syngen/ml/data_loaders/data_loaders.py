@@ -10,6 +10,7 @@ from avro.datafile import DataFileReader
 from avro.io import DatumReader
 
 from syngen.ml.validation_schema import validate_schema, configuration_schema
+from syngen.ml.schema_convertor import AvroSchemaConvertor
 
 
 class BaseDataLoader(ABC):
@@ -48,8 +49,6 @@ class DataLoader(BaseDataLoader):
 
     def load_data(self) -> tuple[pd.DataFrame, Optional[Dict]]:
         df, schema = self.file_loader.load_data(self.path)
-        print(f"!!!!!!!!!!!SCHEMA!!!!!!!!!!!!!!!!!!!!!!!\n")
-        print(schema)
         if df.shape[0] < 1:
             raise ValueError("Empty file was provided. Unable to train.")
         return df, schema
@@ -64,7 +63,7 @@ class CSVLoader(BaseDataLoader):
     """
 
     @staticmethod
-    def _load_data(path, **kwargs) -> pd.DataFrame:
+    def _load_data(path, **kwargs) -> tuple[pd.DataFrame, None]:
         df = pd.read_csv(path, **kwargs).iloc[:, :]
         df.columns = df.columns.str.replace(':', '')
         return df, None
@@ -96,7 +95,7 @@ class AvroLoader(BaseDataLoader):
         reader = DataFileReader(f, DatumReader())
         meta = eval(reader.meta['avro.schema'].decode())
         schema = {field["name"]: field["type"][0] for field in meta['fields']}
-        return schema
+        return AvroSchemaConvertor(schema).converted_schema
 
     @staticmethod
     def _load_df(path) -> pd.DataFrame:
@@ -119,8 +118,6 @@ class AvroLoader(BaseDataLoader):
         with open(path, 'rb') as f:
             df = self._load_df(f)
             schema = self._load_schema(f)
-            print(f"!!!!!!!!!!!!!!!SCHEMA inside load_data!!!!!!!!!!!!!!!!!!!\n")
-            print(schema)
             return df, schema
 
     @staticmethod
