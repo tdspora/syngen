@@ -17,7 +17,7 @@ class FeatureLossLayer(Layer):
 
 class SampleLayer(Layer):
     def __init__(self, gamma, capacity, **kwargs):
-        super(SampleLayer, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.gamma = gamma
         self.max_capacity = capacity
 

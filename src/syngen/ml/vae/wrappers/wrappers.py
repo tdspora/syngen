@@ -16,6 +16,7 @@ import numpy as np
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
+from syngen.ml.reporters import Report
 
 warnings.filterwarnings("ignore")
 
@@ -163,6 +164,8 @@ class VAEWrapper(BaseWrapper):
         row_subset = row_subset or len(df)
 
         self._pipeline()
+        # generate a sampling report
+        Report().generate_report()
         self._init_model()
 
         # feature_names = ['mmd'] + [name.name for name in self.dataset.features.values()]

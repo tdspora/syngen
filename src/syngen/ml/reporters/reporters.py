@@ -1,11 +1,12 @@
 from abc import abstractmethod
-from typing import List
+from typing import List, Dict
+
 import pandas as pd
 import numpy as np
 from loguru import logger
+import pickle
 
 from syngen.ml.pipeline import (
-    data_pipeline,
     get_nan_labels,
     nan_labels_to_float
 )
@@ -18,8 +19,8 @@ class Reporter:
     """
     Abstract class for reporters
     """
-    def __init__(self, metadata: dict, paths: dict):
-        super().__init__()
+    def __init__(self, metadata: Dict[str, str], paths: Dict[str, str]):
+        self.metadata = metadata
         self.table_name = metadata["table_name"]
         self.paths = paths
 
@@ -27,6 +28,10 @@ class Reporter:
         original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["synthetic_data_path"]).load_data()
         return original, synthetic
+
+    def fetch_dataset(self):
+        with open(self.paths["dataset_pickle_path"], "rb") as f:
+            return pickle.loads(f.read())
 
     def preprocess_data(self):
         """
@@ -40,8 +45,13 @@ class Reporter:
         columns_nan_labels = get_nan_labels(original)
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
-        types = data_pipeline(original)
-        str_columns, float_columns, categ_columns, date_columns, int_columns, binary_columns = types
+        dataset = self.fetch_dataset()
+        types = (
+            dataset.str_columns, dataset.date_columns,
+            dataset.int_columns, dataset.float_columns,
+            dataset.binary_columns, dataset.categ_columns
+        )
+        str_columns, date_columns, int_columns, float_columns, binary_columns, categ_columns = types
         for date_col in date_columns:
             original[date_col] = list(
                 map(lambda d: pd.Timestamp(d).value, original[date_col])

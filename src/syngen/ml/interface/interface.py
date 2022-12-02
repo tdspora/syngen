@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
 import os
+import pandas as pd
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from loguru import logger
@@ -37,7 +38,7 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    def set_reporters(self):
+    def set_reporters(self, *args):
         pass
 
     @abstractmethod
@@ -92,7 +93,7 @@ class TrainInterface(Interface, ABC):
         self.handler = root_handler
         return self
 
-    def set_reporters(self):
+    def set_reporters(self, data: pd.DataFrame, schema: Optional[Dict]):
         """
         Set up reporter which used in order to create the sampling report during training process
         """
@@ -136,8 +137,10 @@ class TrainInterface(Interface, ABC):
         )
 
         data, schema = DataLoader(source).load_data()
-
-        self.set_reporters().\
+        # remove completely empty columns
+        data = data.dropna(how="all", axis=1)
+        schema = {column: data_type for column, data_type in schema.items() if column in data.columns}
+        self.set_reporters(data, schema).\
             set_metadata(metadata).\
             set_handler(schema).\
             set_strategy(
