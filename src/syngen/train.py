@@ -22,7 +22,7 @@ def launch_train(
     epochs: int,
     drop_null: bool,
     row_limit: Optional[int],
-    batch_size: int = 32,
+    batch_size: int = 24,
 ):
     """
     Launch the work of training process
