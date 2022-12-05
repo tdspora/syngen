@@ -1,5 +1,4 @@
 from typing import Dict
-import re
 
 from loguru import logger
 
