@@ -1,13 +1,14 @@
+from typing import Tuple, Optional, Dict
+from abc import ABC, abstractmethod
+import os
+import math
+
 import pandas as pd
 import numpy as np
-import math
-import os
 import traceback
-from abc import ABC, abstractmethod
 from loguru import logger
 from numpy.random import seed, choice
 from pathos.multiprocessing import ProcessingPool
-from typing import Tuple
 import dill
 
 from syngen.ml.vae import *
@@ -48,9 +49,9 @@ class BaseHandler(AbstractHandler):
         return None
 
     @staticmethod
-    def create_wrapper(cls_name, data, **kwargs):
+    def create_wrapper(cls_name, data: pd.DataFrame, schema: Optional[Dict], **kwargs):
         return globals()[cls_name](
-            data, kwargs["metadata"], kwargs["table_name"], kwargs["paths"]
+            data, schema, kwargs["metadata"], kwargs["table_name"], kwargs["paths"]
         )
 
 
@@ -88,8 +89,6 @@ class RootHandler(BaseHandler):
         data = self.set_options(data, options)
 
         data_columns = set(data.columns)
-        # remove completely empty columns
-        data = data.dropna(how="all", axis=1)
         dropped_cols = set(data.columns) - data_columns
         if len(dropped_cols) > 0:
             logger.info(f"Empty columns {dropped_cols} were removed")
@@ -98,19 +97,17 @@ class RootHandler(BaseHandler):
     def handle(self, data: pd.DataFrame, **kwargs):
         self._prepare_dirs()
         data = self.prepare_data(data, kwargs)
-
         data.to_csv(self.paths["input_data_path"], index=False)
-        # generate a sampling report
-        Report().generate_report()
         return super().handle(data, **kwargs)
 
 
 class VaeTrainHandler(BaseHandler):
     def __init__(
-            self, metadata: dict, paths: dict, table_name: str, wrapper_name: str
+            self, metadata: dict, paths: dict, table_name: str, schema: Optional[Dict], wrapper_name: str
     ):
         super().__init__(metadata, paths, table_name)
         self.wrapper_name = wrapper_name
+        self.schema = schema
         self.state_path = self.paths["state_path"]
 
     def __fit_model(
@@ -125,6 +122,7 @@ class VaeTrainHandler(BaseHandler):
         self.model = self.create_wrapper(
             self.wrapper_name,
             data,
+            self.schema,
             metadata=self.metadata,
             table_name=self.table_name,
             paths=self.paths,
@@ -182,10 +180,11 @@ class VaeInferHandler(BaseHandler):
         if self.random_seed:
             seed(self.random_seeds_list[i])
 
-        data = DataLoader(self.paths["input_data_path"]).load_data()
+        data, schema = DataLoader(self.paths["input_data_path"]).load_data()
         self.vae = self.create_wrapper(
             self.wrapper_name,
             data,
+            schema,
             metadata={"table_name": self.table_name},
             table_name=self.table_name,
             paths=self.paths,
@@ -194,7 +193,8 @@ class VaeInferHandler(BaseHandler):
         synthetic_infer = self.vae.predict_sampled_df(size)
         return synthetic_infer
 
-    def split_by_batches(self, size, nodes):
+    @staticmethod
+    def split_by_batches(size, nodes):
         quote = int(size / nodes)
         data = [quote] * nodes
         data.append((size - nodes * quote) + data.pop())

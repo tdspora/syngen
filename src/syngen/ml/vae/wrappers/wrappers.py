@@ -1,5 +1,8 @@
-from typing import Tuple, List
+from typing import Tuple, List, Optional, Dict
 from abc import ABC, abstractmethod
+from collections import defaultdict
+from pathlib import Path
+
 import warnings
 import pickle
 import tensorflow as tf
@@ -8,13 +11,12 @@ import matplotlib.pyplot as plt
 import time
 import tqdm
 from loguru import logger
-from collections import defaultdict
-from pathlib import Path
 import pandas as pd
 import numpy as np
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
+from syngen.ml.reporters import Report
 
 warnings.filterwarnings("ignore")
 
@@ -86,6 +88,7 @@ class VAEWrapper(BaseWrapper):
     def __init__(
         self,
         df: pd.DataFrame,
+        schema: Optional[Dict],
         metadata: dict,
         table_name: str,
         paths: dict,
@@ -104,6 +107,7 @@ class VAEWrapper(BaseWrapper):
         self.fk_kde_path = paths["fk_kde_path"]
         self.dataset = Dataset(
             df=df,
+            schema=schema,
             metadata=self.metadata,
             table_name=self.table_name,
             fk_kde_path=self.fk_kde_path,
@@ -160,6 +164,8 @@ class VAEWrapper(BaseWrapper):
         row_subset = row_subset or len(df)
 
         self._pipeline()
+        # generate a sampling report
+        Report().generate_report()
         self._init_model()
 
         # feature_names = ['mmd'] + [name.name for name in self.dataset.features.values()]

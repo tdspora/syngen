@@ -1,4 +1,4 @@
-from typing import Set, Dict, Optional, List
+from typing import Dict, Optional, List
 from dataclasses import dataclass
 
 from loguru import logger
@@ -6,7 +6,6 @@ import numpy as np
 import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
-
 from syngen.ml.vae.models.features import InverseTransformer
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
@@ -16,15 +15,17 @@ from syngen.ml.vae.models.features import (
     BinaryFeature,
 )
 from syngen.ml.pipeline.pipeline import (
-    data_pipeline,
     get_nan_labels,
-    nan_labels_to_float
+    nan_labels_to_float,
+    get_tmp_df,
+    get_date_columns
 )
 
 
 @dataclass
 class Dataset:
     df: pd.DataFrame
+    schema: Optional[Dict]
     metadata: Optional[Dict]
     table_name: str
     fk_kde_path: str
@@ -84,7 +85,7 @@ class Dataset:
         if not self.foreign_keys_list:
             logger.info("No foreign keys were set.")
 
-    def __set_types(self, pk_uq_keys_mapping, str_columns, categ_columns, date_columns):
+    def __set_types(self, pk_uq_keys_mapping):
         """
         Set up list of data types of primary and unique keys
         """
@@ -92,7 +93,7 @@ class Dataset:
         for key_name, config in pk_uq_keys_mapping.items():
             key_columns = config.get("columns")
             for column in key_columns:
-                column_type = str if column in (str_columns | categ_columns | date_columns) else float
+                column_type = str if column in (self.str_columns | self.categ_columns | self.date_columns) else float
                 self.pk_uq_keys_types[column] = column_type
 
     def __set_metadata(self, metadata: dict, table_name: str):
@@ -109,7 +110,66 @@ class Dataset:
             self.foreign_keys_list = []
 
     def set_metadata(self):
+        self.__data_pipeline(self.df, self.schema)
         self.__set_metadata(self.metadata, self.table_name)
+
+    def __general_data_pipeline(self, df: pd.DataFrame, check_object_on_float: bool = False):
+        if check_object_on_float:
+            columns_nan_labels = get_nan_labels(df)
+            df = nan_labels_to_float(df, columns_nan_labels)
+
+        self.binary_columns = set([col for col in df.columns if df[col].fillna("?").nunique() == 2])
+        self.categ_columns = set(
+            [col for col in df.columns if df[col].dropna().nunique() <= 50 and col not in self.binary_columns])
+        tmp_df = get_tmp_df(df)
+        self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
+        self.int_columns = set(tmp_df.select_dtypes(include=["int", "int64"]).columns)
+
+        float_to_int_cols = set()
+        for col in self.float_columns:
+            if all(x.is_integer() for x in tmp_df[col]):
+                float_to_int_cols.add(col)
+
+        self.int_columns = (self.int_columns | float_to_int_cols) - (self.categ_columns | self.binary_columns)
+        self.float_columns = self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
+        self.str_columns = set(tmp_df.columns) - self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
+        self.date_columns = get_date_columns(tmp_df, list(self.str_columns))
+        self.str_columns -= self.date_columns
+
+    def __avro_data_pipeline(self, df, schema):
+        self.binary_columns = set(column for column, data_type in schema.items() if data_type == 'binary')
+        self.categ_columns = set(
+            [col for col in df.columns if df[col].dropna().nunique() <= 50 and col not in self.binary_columns])
+        self.int_columns = set(column for column, data_type in schema.items() if data_type == 'int')
+        self.int_columns = self.int_columns - self.categ_columns
+        self.float_columns = set(column for column, data_type in schema.items() if data_type == 'float')
+        self.float_columns = self.float_columns - self.categ_columns
+        self.str_columns = set(column for column, data_type in schema.items() if data_type == 'string')
+        self.str_columns = self.str_columns - self.categ_columns
+        self.date_columns = get_date_columns(df, list(self.str_columns)) - self.categ_columns
+        self.str_columns -= self.date_columns
+
+    def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
+        if schema is None:
+            self.__general_data_pipeline(df)
+        self.__avro_data_pipeline(df, schema)
+
+        assert len(self.str_columns) + \
+               len(self.float_columns) + \
+               len(self.int_columns) + \
+               len(self.date_columns) + \
+               len(self.categ_columns) + \
+               len(self.binary_columns) == len(df.columns), "According to number of columns with defined types, " \
+                                                            "column types are not identified correctly."
+
+        logger.debug(
+            f"Count of string columns: {len(self.str_columns)}; "
+            + f"Count of float columns: {len(self.float_columns)}; "
+            + f"Count of int columns: {len(self.int_columns)}; "
+            + f"Count of categorical columns: {len(self.categ_columns)}; "
+            + f"Count of date columns: {len(self.date_columns)}; "
+            + f"Count of binary columns: {len(self.binary_columns)}"
+        )
 
     def assign_feature(self, feature, columns):
         name = feature.name
@@ -247,23 +307,17 @@ class Dataset:
                     with open(self.fk_kde_path, "wb") as file:
                         dill.dump(kde, file)
                     logger.info(f"KDE artifacts saved to {self.fk_kde_path}")
-            yield fk, fk_columns
 
-    def __drop_fk_columns(self, *args: Set[str]) -> object:
+    def __drop_fk_columns(self):
         """
-        Drop columns which defined as foreign key
+        Drop columns in dataframe which defined as foreign key
         """
-        float_columns, int_columns, str_columns, categ_columns = args
-        for fk, fk_columns in self._preprocess_fk_params():
+        for fk in self.foreign_keys_list:
+            fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
             for fk_column in fk_columns:
                 self.df = self.df.drop(fk_column, axis=1)
-                float_columns.discard(fk_column)
-                int_columns.discard(fk_column)
-                str_columns.discard(fk_column)
-                categ_columns.discard(fk_column)
                 logger.debug(f"The column - {fk_column} of foreign key {fk} dropped from training "
                              f"and will be sampled from the PK table")
-        return float_columns, int_columns, str_columns, categ_columns
 
     def __sample_only_joined_rows(self, fk):
         # for fk in self.foreign_keys_list
@@ -361,40 +415,29 @@ class Dataset:
     def pipeline(self) -> pd.DataFrame:
         columns_nan_labels = get_nan_labels(self.df)
         self.df = nan_labels_to_float(self.df, columns_nan_labels)
-        (
-            str_columns,
-            float_columns,
-            categ_columns,
-            date_columns,
-            int_columns,
-            binary_columns,
-        ) = data_pipeline(self.df)
 
         if self.foreign_keys_list:
             self._assign_fk_feature()
-
-            float_columns, int_columns, str_columns, categ_columns = self.__drop_fk_columns(float_columns,
-                                                                                            int_columns,
-                                                                                            str_columns,
-                                                                                            categ_columns)
+            self._preprocess_fk_params()
+            self.__drop_fk_columns()
 
         self.primary_keys_mapping.update(self.unique_keys_mapping)
         pk_uq_keys_mapping = self.primary_keys_mapping
         if pk_uq_keys_mapping:
-            self.__set_types(pk_uq_keys_mapping, str_columns, categ_columns, date_columns)
+            self.__set_types(pk_uq_keys_mapping)
 
         for column in self.df.columns:
-            if column in str_columns:
+            if column in self.str_columns:
                 self._assign_char_feature(column)
-            elif column in float_columns:
+            elif column in self.float_columns:
                 self._assign_float_feature(column)
-            elif column in int_columns:
+            elif column in self.int_columns:
                 self._assign_int_feature(column)
-            elif column in categ_columns:
+            elif column in self.categ_columns:
                 self._assign_categ_feature(column)
-            elif column in date_columns:
+            elif column in self.date_columns:
                 self._assign_date_feature(column)
-            elif column in binary_columns:
+            elif column in self.binary_columns:
                 self._assign_binary_feature(column)
         
         self.set_nan_params(columns_nan_labels)
