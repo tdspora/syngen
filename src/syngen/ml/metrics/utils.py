@@ -21,10 +21,17 @@ def series_count_words(x):
     return len(str(x).split())
 
 
+def set_empty_string(value):
+    if value is None:
+        return ""
+    return str(value)
+
+
 def text_to_continuous(df, text_columns: List[str]):
     for col in text_columns:
-        df[col + "_char_len"] = df[col].fillna("").apply(len)
-        df[col + "_word_count"] = df[col].fillna("").apply(series_count_words)
+        df[col + "_char_len"] = df[col].apply(set_empty_string, convert_dtype=False).apply(len, convert_dtype=False)
+        df[col + "_word_count"] = df[col].apply(set_empty_string, convert_dtype=False).\
+            apply(series_count_words, convert_dtype=False)
     return df
 
 

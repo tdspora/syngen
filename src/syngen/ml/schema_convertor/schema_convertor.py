@@ -1,14 +1,15 @@
 from typing import Dict
+import re
 
 from loguru import logger
 
 
 class AvroSchemaConvertor:
-    def __init__(self, schema):
-        self.converted_schema = self._convert_schema(schema)
+    def __init__(self, schema, df):
+        self.converted_schema = self._convert_schema(schema, df)
 
     @staticmethod
-    def _convert_schema(schema) -> Dict:
+    def _convert_schema(schema, df) -> Dict:
         for column, data_type in schema.items():
             if 'int' in data_type or 'long' in data_type:
                 schema[column] = 'int'

@@ -19,6 +19,7 @@ class Reporter:
     """
     Abstract class for reporters
     """
+
     def __init__(self, metadata: Dict[str, str], paths: Dict[str, str]):
         self.metadata = metadata
         self.table_name = metadata["table_name"]
@@ -32,6 +33,19 @@ class Reporter:
     def fetch_dataset(self):
         with open(self.paths["dataset_pickle_path"], "rb") as f:
             return pickle.loads(f.read())
+
+    @staticmethod
+    def convert_data_types(
+            df: pd.DataFrame, binary_columns: List, str_columns: List, date_columns: List,
+            int_columns: List, float_columns: List, categ_columns: List):
+        for column in df.columns:
+            if column in [*binary_columns, *str_columns, *date_columns, *categ_columns]:
+                df[column] = df[column].astype("object")
+            elif column in int_columns:
+                df[column] = df[column].astype("int")
+            elif column in float_columns:
+                df[column] = df[column].astype("float")
+        return df
 
     def preprocess_data(self):
         """
@@ -61,6 +75,16 @@ class Reporter:
             )
 
         int_columns = date_columns | int_columns
+
+        original = self.convert_data_types(
+            original, binary_columns, str_columns, date_columns,
+            int_columns, float_columns, categ_columns
+        )
+
+        synthetic = self.convert_data_types(
+            synthetic, binary_columns, str_columns, date_columns,
+            int_columns, float_columns, categ_columns
+        )
         original = text_to_continuous(original, str_columns).drop(str_columns, axis=1)
         synthetic = text_to_continuous(synthetic, str_columns).drop(str_columns, axis=1)
 
@@ -145,6 +169,7 @@ class SampleAccuracyReporter(Reporter):
     """
     Reporter for running accuracy test
     """
+
     def extract_report_data(self):
         original, schema = DataLoader(self.paths["source_path"]).load_data()
         sampled, schema = DataLoader(self.paths["input_data_path"]).load_data()
