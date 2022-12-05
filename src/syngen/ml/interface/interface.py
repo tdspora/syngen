@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
 import os
+import pandas as pd
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from loguru import logger
@@ -37,7 +38,7 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    def set_reporters(self):
+    def set_reporters(self, *args):
         pass
 
     @abstractmethod
@@ -68,7 +69,7 @@ class TrainInterface(Interface, ABC):
         self.config = TrainConfig(**kwargs)
         return self
 
-    def set_handler(self, *args):
+    def set_handler(self, schema, *args):
         """
         Set up the handler which used in training process
         """
@@ -83,6 +84,7 @@ class TrainInterface(Interface, ABC):
         vae_handler = VaeTrainHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
+            schema=schema,
             paths=paths,
             wrapper_name=VanillaVAEWrapper.__name__
         )
@@ -91,7 +93,7 @@ class TrainInterface(Interface, ABC):
         self.handler = root_handler
         return self
 
-    def set_reporters(self):
+    def set_reporters(self, data: pd.DataFrame, schema: Optional[Dict]):
         """
         Set up reporter which used in order to create the sampling report during training process
         """
@@ -134,11 +136,13 @@ class TrainInterface(Interface, ABC):
             batch_size=batch_size
         )
 
-        data = DataLoader(source).load_data()
-
-        self.set_reporters().\
+        data, schema = DataLoader(source).load_data()
+        # remove completely empty columns
+        data = data.dropna(how="all", axis=1)
+        schema = {column: data_type for column, data_type in schema.items() if column in data.columns}
+        self.set_reporters(data, schema).\
             set_metadata(metadata).\
-            set_handler().\
+            set_handler(schema).\
             set_strategy(
             paths=self.config.set_paths(),
             handler=self.handler
