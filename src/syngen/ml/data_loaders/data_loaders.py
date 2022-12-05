@@ -96,7 +96,7 @@ class AvroLoader(BaseDataLoader):
         reader = DataFileReader(f, DatumReader())
         meta = eval(reader.meta['avro.schema'].decode())
         schema = {field["name"]: field["type"] for field in meta.get("fields", {})}
-        return AvroSchemaConvertor(schema, df).converted_schema
+        return AvroSchemaConvertor(schema).converted_schema
 
     @staticmethod
     def _load_df(path) -> pd.DataFrame:
