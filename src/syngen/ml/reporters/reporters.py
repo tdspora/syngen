@@ -38,6 +38,17 @@ class Reporter:
     def convert_data_types(
             df: pd.DataFrame, binary_columns: List, str_columns: List, date_columns: List,
             int_columns: List, float_columns: List, categ_columns: List):
+        """
+        Synchronize identified data types in data pipeline mechanism with data types in columns of dataframe
+        :param df: dataframe
+        :param binary_columns: list of columns with data type - "binary"
+        :param str_columns: list of columns with data type - "string"
+        :param date_columns: list of columns identified as date
+        :param int_columns: list of columns with data type - "integer"
+        :param float_columns: list of columns with data type - "float"
+        :param categ_columns: list of categorical columns
+        :return:
+        """
         for column in df.columns:
             if column in [*binary_columns, *str_columns, *date_columns, *categ_columns]:
                 df[column] = df[column].astype("object")
