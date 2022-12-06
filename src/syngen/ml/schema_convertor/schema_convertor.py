@@ -4,6 +4,9 @@ from loguru import logger
 
 
 class AvroSchemaConvertor:
+    """
+    Class for converting fetched avro schema
+    """
     def __init__(self, schema):
         self.converted_schema = self._convert_schema(schema)
 
