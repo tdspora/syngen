@@ -1,14 +1,25 @@
 from typing import Dict
+from abc import ABC
 
 from loguru import logger
 
 
-class AvroSchemaConvertor:
+class SchemaConvertor(ABC):
+    """Abstract class for converting fetched schema in Avro, Parquet or Delta formats"""
+    def __init__(self, schema):
+        self.converted_schema = self._convert_schema(schema)
+
+    @staticmethod
+    def _convert_schema(schema):
+        pass
+
+
+class AvroSchemaConvertor(SchemaConvertor):
     """
     Class for converting fetched avro schema
     """
     def __init__(self, schema):
-        self.converted_schema = self._convert_schema(schema)
+        super().__init__(schema)
 
     @staticmethod
     def _convert_schema(schema) -> Dict:
