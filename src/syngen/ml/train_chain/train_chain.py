@@ -250,7 +250,7 @@ class VaeInferHandler(BaseHandler):
                         "exist or is not trained. Ensure that the metadata contains the "
                         "name of referenced table with a primary key in the foreign key declaration section."
                     )
-                pk_table_data = pd.read_csv(pk_path, engine="python")
+                pk_table_data, pk_table_schema = DataLoader(pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 

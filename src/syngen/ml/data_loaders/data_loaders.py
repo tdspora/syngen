@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict, Tuple
 
 import pandas as pd
+from pandas.errors import ParserError
 import pandavro as pdx
 import yaml
 from yaml import Loader
@@ -65,9 +66,14 @@ class CSVLoader(BaseDataLoader):
 
     @staticmethod
     def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, None]:
-        df = pd.read_csv(path, **kwargs).iloc[:, :]
-        df.columns = df.columns.str.replace(':', '')
-        return df, None
+        try:
+            df = pd.read_csv(path, engine="python", **kwargs).iloc[:, :]
+            df.columns = df.columns.str.replace(':', '')
+            return df, None
+        except ParserError:
+            df = pd.read_csv(path, engine="c", **kwargs).iloc[:, :]
+            df.columns = df.columns.str.replace(':', '')
+            return df, None
 
     def load_data(self, path, **kwargs):
         return self._load_data(path, **kwargs)
@@ -85,18 +91,6 @@ class AvroLoader(BaseDataLoader):
     """
     Class for loading and saving data in avro format
     """
-
-    @staticmethod
-    def _load_schema(f, df) -> Dict[str, str]:
-        """
-        Load schema of the metadata of the table in Avro format
-        :param f: object of the class 'smart_open.Reader'
-        :return: dictionary where key is the name of the column, value is the data type of the column
-        """
-        reader = DataFileReader(f, DatumReader())
-        meta = eval(reader.meta['avro.schema'].decode())
-        schema = {field["name"]: field["type"] for field in meta.get("fields", {})}
-        return AvroSchemaConvertor(schema).converted_schema
 
     @staticmethod
     def _load_df(path) -> pd.DataFrame:
@@ -119,7 +113,7 @@ class AvroLoader(BaseDataLoader):
         try:
             with open(path, 'rb') as f:
                 df = self._load_df(f)
-                schema = self._load_schema(f, df)
+                schema = self._load_schema(f)
                 return df, schema
         except FileNotFoundError as error:
             message = f"It seems that the path tp the table isn't valid.\n" \
@@ -132,6 +126,18 @@ class AvroLoader(BaseDataLoader):
     def save_data(path: str, df: pd.DataFrame, **kwargs):
         if df is not None:
             pdx.to_avro(path, df, **kwargs)
+
+    @staticmethod
+    def _load_schema(f) -> Dict[str, str]:
+        """
+        Load schema of the metadata of the table in Avro format
+        :param f: object of the class 'smart_open.Reader'
+        :return: dictionary where key is the name of the column, value is the data type of the column
+        """
+        reader = DataFileReader(f, DatumReader())
+        meta = eval(reader.meta['avro.schema'].decode())
+        schema = {field["name"]: field["type"] for field in meta.get("fields", {})}
+        return AvroSchemaConvertor(schema).converted_schema
 
 
 class MetadataLoader(BaseDataLoader):

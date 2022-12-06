@@ -139,7 +139,10 @@ class TrainInterface(Interface, ABC):
         data, schema = DataLoader(source).load_data()
         # remove completely empty columns
         data = data.dropna(how="all", axis=1)
-        schema = {column: data_type for column, data_type in schema.items() if column in data.columns}
+        schema["fields"] = {
+            column: data_type for column, data_type in schema.get("fields", {}).items() if column in data.columns
+        }
+
         self.set_reporters(data, schema).\
             set_metadata(metadata).\
             set_handler(schema).\
