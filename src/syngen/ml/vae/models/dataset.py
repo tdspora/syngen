@@ -327,7 +327,7 @@ class Dataset:
                                     engine="python")
         pk_column_label = references.get("columns")[0]
 
-        drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].keys())].index
+        drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].values)].index
         if len(drop_index) > 0:
             logger.info(f"{len(drop_index)} rows were deleted, as they did not have matching primary keys.")
             logger.info(f"{len(self.df) - len(drop_index)} rows are left in table as input.")
