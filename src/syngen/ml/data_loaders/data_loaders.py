@@ -116,7 +116,7 @@ class AvroLoader(BaseDataLoader):
                 schema = self._load_schema(f)
                 return df, schema
         except FileNotFoundError as error:
-            message = f"It seems that the path tp the table isn't valid.\n" \
+            message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
                       f"Please, check the path to the table"
             logger.error(message)
