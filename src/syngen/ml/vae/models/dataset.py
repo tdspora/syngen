@@ -150,11 +150,11 @@ class Dataset:
         self.categ_columns = set(
             [col for col in df.columns if df[col].dropna().nunique() <= 50 and col not in self.binary_columns])
         self.int_columns = set(column for column, data_type in schema.items() if data_type == 'int')
-        self.int_columns = self.int_columns - self.categ_columns
+        self.int_columns -= self.categ_columns
         self.float_columns = set(column for column, data_type in schema.items() if data_type == 'float')
-        self.float_columns = self.float_columns - self.categ_columns
+        self.float_columns -= self.categ_columns
         self.str_columns = set(column for column, data_type in schema.items() if data_type == 'string')
-        self.str_columns = self.str_columns - self.categ_columns
+        self.str_columns -= self.categ_columns
         self.date_columns = get_date_columns(df, list(self.str_columns)) - self.categ_columns
         self.str_columns -= self.date_columns
 
