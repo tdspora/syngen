@@ -1,5 +1,6 @@
 from typing import List, Tuple
 from dateutil.parser import parse
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -141,3 +142,11 @@ def fillnan(df, str_columns, float_columns, categ_columns):
         df[c] = df[c].fillna("NaN")
 
     return df
+
+
+def fetch_dataset(dataset_pickle_path: str):
+    """
+    Deserialize and return the object of class Dataset
+    """
+    with open(dataset_pickle_path, "rb") as f:
+        return pickle.loads(f.read())

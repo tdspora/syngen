@@ -4,7 +4,6 @@ from typing import List, Dict
 import pandas as pd
 import numpy as np
 from loguru import logger
-import pickle
 
 from syngen.ml.pipeline import (
     get_nan_labels,
@@ -13,6 +12,7 @@ from syngen.ml.pipeline import (
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.metrics.utils import text_to_continuous
 from syngen.ml.data_loaders import DataLoader
+from syngen.ml.pipeline import fetch_dataset
 
 
 class Reporter:
@@ -29,10 +29,6 @@ class Reporter:
         original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["synthetic_data_path"]).load_data()
         return original, synthetic
-
-    def fetch_dataset(self):
-        with open(self.paths["dataset_pickle_path"], "rb") as f:
-            return pickle.loads(f.read())
 
     @staticmethod
     def convert_data_types(
@@ -70,7 +66,7 @@ class Reporter:
         columns_nan_labels = get_nan_labels(original)
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
-        dataset = self.fetch_dataset()
+        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
         types = (
             dataset.str_columns, dataset.date_columns,
             dataset.int_columns, dataset.float_columns,
