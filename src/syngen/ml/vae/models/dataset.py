@@ -20,6 +20,7 @@ from syngen.ml.pipeline.pipeline import (
     get_tmp_df,
     get_date_columns
 )
+from syngen.ml.data_loaders import DataLoader
 
 
 @dataclass
@@ -113,7 +114,11 @@ class Dataset:
         self.__data_pipeline(self.df, self.schema)
         self.__set_metadata(self.metadata, self.table_name)
 
-    def __general_data_pipeline(self, df: pd.DataFrame, check_object_on_float: bool = False):
+    def _general_data_pipeline(self, df: pd.DataFrame, check_object_on_float: bool = False):
+        """
+        Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
+        in case metadata of the table is absent
+        """
         if check_object_on_float:
             columns_nan_labels = get_nan_labels(df)
             df = nan_labels_to_float(df, columns_nan_labels)
@@ -136,23 +141,28 @@ class Dataset:
         self.date_columns = get_date_columns(tmp_df, list(self.str_columns))
         self.str_columns -= self.date_columns
 
-    def __avro_data_pipeline(self, df, schema):
+    def _avro_data_pipeline(self, df, schema):
+        """
+        Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
+        in case metadata of the table in Avro format is present
+        """
         self.binary_columns = set(column for column, data_type in schema.items() if data_type == 'binary')
         self.categ_columns = set(
             [col for col in df.columns if df[col].dropna().nunique() <= 50 and col not in self.binary_columns])
         self.int_columns = set(column for column, data_type in schema.items() if data_type == 'int')
-        self.int_columns = self.int_columns - self.categ_columns
+        self.int_columns -= self.categ_columns
         self.float_columns = set(column for column, data_type in schema.items() if data_type == 'float')
-        self.float_columns = self.float_columns - self.categ_columns
+        self.float_columns -= self.categ_columns
         self.str_columns = set(column for column, data_type in schema.items() if data_type == 'string')
-        self.str_columns = self.str_columns - self.categ_columns
+        self.str_columns -= self.categ_columns
         self.date_columns = get_date_columns(df, list(self.str_columns)) - self.categ_columns
         self.str_columns -= self.date_columns
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
-        if schema is None:
-            self.__general_data_pipeline(df)
-        self.__avro_data_pipeline(df, schema)
+        if not schema:
+            self._general_data_pipeline(df)
+        elif schema and schema.get("format") == 'Avro':
+            self._avro_data_pipeline(df, schema.get("fields"))
 
         assert len(self.str_columns) + \
                len(self.float_columns) + \
@@ -323,8 +333,7 @@ class Dataset:
         # for fk in self.foreign_keys_list
         references = self.foreign_keys_mapping.get(fk).get("references")
         pk_table = references.get("table")
-        pk_table_data = pd.read_csv(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv",
-                                    engine="python")
+        pk_table_data = DataLoader(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv").load_data()
         pk_column_label = references.get("columns")[0]
 
         drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].values)].index
