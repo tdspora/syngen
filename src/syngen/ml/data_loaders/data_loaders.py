@@ -66,12 +66,12 @@ class CSVLoader(BaseDataLoader):
 
     @staticmethod
     def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, None]:
+        df = pd.DataFrame()
         try:
             df = pd.read_csv(path, engine="python", **kwargs).iloc[:, :]
-            df.columns = df.columns.str.replace(':', '')
-            return df, None
         except ParserError:
             df = pd.read_csv(path, engine="c", **kwargs).iloc[:, :]
+        finally:
             df.columns = df.columns.str.replace(':', '')
             return df, None
 
