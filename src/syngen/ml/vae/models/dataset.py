@@ -333,7 +333,7 @@ class Dataset:
         # for fk in self.foreign_keys_list
         references = self.foreign_keys_mapping.get(fk).get("references")
         pk_table = references.get("table")
-        pk_table_data = DataLoader(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv").load_data()
+        pk_table_data, schema = DataLoader(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv").load_data()
         pk_column_label = references.get("columns")[0]
 
         drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].values)].index
