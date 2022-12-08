@@ -1,1 +1,2 @@
 from syngen.ml.schema_convertor.schema_convertor import AvroSchemaConvertor
+from syngen.ml.schema_convertor.schema_convertor import SchemaConvertor

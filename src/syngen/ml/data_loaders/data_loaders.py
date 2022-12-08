@@ -1,13 +1,15 @@
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 
 import pandas as pd
+from pandas.errors import ParserError
 import pandavro as pdx
 import yaml
 from yaml import Loader
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
+from loguru import logger
 
 from syngen.ml.validation_schema import validate_schema, configuration_schema
 from syngen.ml.schema_convertor import AvroSchemaConvertor
@@ -47,7 +49,7 @@ class DataLoader(BaseDataLoader):
         else:
             raise NotImplementedError("File format not supported")
 
-    def load_data(self) -> tuple[pd.DataFrame, Optional[Dict]]:
+    def load_data(self) -> Tuple[pd.DataFrame, Optional[Dict]]:
         df, schema = self.file_loader.load_data(self.path)
         if df.shape[0] < 1:
             raise ValueError("Empty file was provided. Unable to train.")
@@ -63,10 +65,15 @@ class CSVLoader(BaseDataLoader):
     """
 
     @staticmethod
-    def _load_data(path, **kwargs) -> tuple[pd.DataFrame, None]:
-        df = pd.read_csv(path, **kwargs).iloc[:, :]
-        df.columns = df.columns.str.replace(':', '')
-        return df, None
+    def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, None]:
+        df = pd.DataFrame()
+        try:
+            df = pd.read_csv(path, engine="python", **kwargs).iloc[:, :]
+        except ParserError:
+            df = pd.read_csv(path, engine="c", **kwargs).iloc[:, :]
+        finally:
+            df.columns = df.columns.str.replace(':', '')
+            return df, None
 
     def load_data(self, path, **kwargs):
         return self._load_data(path, **kwargs)
@@ -86,18 +93,6 @@ class AvroLoader(BaseDataLoader):
     """
 
     @staticmethod
-    def _load_schema(f) -> Dict[str, str]:
-        """
-        Load schema of the metadata of the table in Avro format
-        :param f: object of the class 'smart_open.Reader'
-        :return: dictionary where key is the name of the column, value is the data type of the column
-        """
-        reader = DataFileReader(f, DatumReader())
-        meta = eval(reader.meta['avro.schema'].decode())
-        schema = {field["name"]: field["type"][0] for field in meta['fields']}
-        return AvroSchemaConvertor(schema).converted_schema
-
-    @staticmethod
     def _load_df(path) -> pd.DataFrame:
         """
         Load data in Avro format
@@ -106,7 +101,7 @@ class AvroLoader(BaseDataLoader):
         """
         return pdx.from_avro(path)
 
-    def load_data(self, path: str, **kwargs) -> tuple[pd.DataFrame, Dict]:
+    def load_data(self, path: str, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
         Load data in Avro format from AWS S3, Azure Storage or locally
 
@@ -115,15 +110,34 @@ class AvroLoader(BaseDataLoader):
         str which should be should be in the next format for the connection to AWS S3: "s3://path/to/bucket"
         str which should be should be in the next format for the connection to Azure Storage: "azure://{container_name}/{blob_name}"
         """
-        with open(path, 'rb') as f:
-            df = self._load_df(f)
-            schema = self._load_schema(f)
-            return df, schema
+        try:
+            with open(path, 'rb') as f:
+                df = self._load_df(f)
+                schema = self._load_schema(f)
+                return df, schema
+        except FileNotFoundError as error:
+            message = f"It seems that the path to the table isn't valid.\n" \
+                      f"The details of the error - {error}.\n" \
+                      f"Please, check the path to the table"
+            logger.error(message)
+            raise FileNotFoundError(message)
 
     @staticmethod
     def save_data(path: str, df: pd.DataFrame, **kwargs):
         if df is not None:
             pdx.to_avro(path, df, **kwargs)
+
+    @staticmethod
+    def _load_schema(f) -> Dict[str, str]:
+        """
+        Load schema of the metadata of the table in Avro format
+        :param f: object of the class 'smart_open.Reader'
+        :return: dictionary where key is the name of the column, value is the data type of the column
+        """
+        reader = DataFileReader(f, DatumReader())
+        meta = eval(reader.meta['avro.schema'].decode())
+        schema = {field["name"]: field["type"] for field in meta.get("fields", {})}
+        return AvroSchemaConvertor(schema).converted_schema
 
 
 class MetadataLoader(BaseDataLoader):
