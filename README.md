@@ -112,12 +112,12 @@ The yaml metadata file should match the following template:
      
             FK1:                                    # One or many foreign keys
                 type: "FK"
-                columns:                            # Array of columns in the source table
+                columns:                            # Array of columns in the current table
                     - e_mail
                     - alias
                 references:
                     table: "PROFILE"                # Name of the target table
-                    columns:                        # Array of columns in the target table
+                    columns:                        # Array of columns in the parent table
                         - e_mail
                         - alias
        
@@ -157,6 +157,9 @@ The yaml metadata file should match the following template:
                     table: "CUSTOMER"
                     columns:
                         - customer_id
+
+<i>You can find the example of metadata file in [example-metadata/housing_metadata.yaml](example-metadata/housing_metadata.yaml)</i><br>
+
 For related tables training you can use the commands:
 
 ```
@@ -171,7 +174,6 @@ infer --metadata_path="./example-metadata/housing_metadata.yaml"
 ```
 
 If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.<br>
-<i>You can find the example of metadata file in [example-metadata/housing_metadata.yaml](example-metadata/housing_metadata.yaml)</i>
 
 ### Docker images using
 
