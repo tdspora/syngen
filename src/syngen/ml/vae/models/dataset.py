@@ -114,6 +114,17 @@ class Dataset:
         self.__data_pipeline(self.df, self.schema)
         self.__set_metadata(self.metadata, self.table_name)
 
+    @staticmethod
+    def _update_schema(schema: Dict[str, Dict[str, str]], df: pd.DataFrame):
+        """
+        Synchronize the schema of the table with dataframe
+        """
+        schema["fields"] = {
+            column: data_type for column, data_type in schema.get("fields").items()
+            if column in df.columns
+        }
+        return schema
+
     def _general_data_pipeline(self, df: pd.DataFrame, check_object_on_float: bool = False):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
@@ -162,6 +173,7 @@ class Dataset:
         if not schema:
             self._general_data_pipeline(df)
         elif schema and schema.get("format") == 'Avro':
+            schema = self._update_schema(schema, df)
             self._avro_data_pipeline(df, schema.get("fields"))
 
         assert len(self.str_columns) + \

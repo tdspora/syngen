@@ -9,12 +9,16 @@ from syngen.ml.worker import Worker
 
 
 @click.command()
-@click.option("--metadata_path", type=str, default=None)
-@click.option("--source", type=str, default=None)
-@click.option("--table_name", type=str, default=None)
-@click.option("--epochs", default=10, help="Epochs.")
-@click.option("--drop_null", default=False, type=bool)
-@click.option("--row_limit", default=None, type=int)
+@click.option("--metadata_path", type=str, default=None, help="Path to the metadata file")
+@click.option("--source", type=str, default=None, help="Path to the table that you want to use as a reference")
+@click.option("--table_name", type=str, default=None, help="Arbitrary string to name the directories")
+@click.option("--epochs", default=10, help="Number of trained epochs. If absent, it's defaulted to 10")
+@click.option("--drop_null", default=False, type=bool,
+              help="Flag which set whether to drop rows with at least one missing value. "
+                   "If absent, it's defaulted to False")
+@click.option("--row_limit", default=None, type=int,
+              help="Number of rows to train over. A number less than the original table length will randomly subset "
+                   "the specified rows number")
 def launch_train(
     metadata_path: Optional[str],
     source: Optional[str],
