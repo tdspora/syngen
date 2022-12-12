@@ -24,7 +24,8 @@ class TrainStrategy:
             batch_size: int,
             drop_null: bool,
     ):
-        logger.debug(f"Train model with parameters: epochs={epochs}, drop_null={drop_null}")
+        logger.debug(
+            f"Train model with parameters: epochs={epochs}, drop_null={drop_null}")
         try:
             self.handler.handle(
                 data,
@@ -61,6 +62,10 @@ class InferStrategy:
         self.batch_size = batch_size
 
     def run(self):
+        logger.debug(
+            f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}, "
+            f"print_report={self.print_report}"
+        )
         self.handler.handle(
             size=self.size,
             run_parallel=self.run_parallel,

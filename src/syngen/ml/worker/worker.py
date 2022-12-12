@@ -199,12 +199,6 @@ class Worker:
         """
         Run infer process for a single table
         """
-        if self.settings.get("size") is None:
-            raise AttributeError(
-                "The size is mandatory parameter. "
-                "It seems that the information of size for infer process is absent. "
-                "Please provide the information of size through parameter in CLI command."
-            )
         logger.info(f"Infer process of the table - {self.table_name} has started.")
         self.infer_interface.run(
             metadata=self.metadata,
