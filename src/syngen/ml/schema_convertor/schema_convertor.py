@@ -27,16 +27,16 @@ class AvroSchemaConvertor(SchemaConvertor):
         converted_schema["fields"] = dict()
         for column, data_type in schema.items():
             fields = converted_schema["fields"]
-            if 'int' in data_type or 'long' in data_type:
-                fields[column] = 'int'
-            elif 'float' in data_type or 'double' in data_type:
-                fields[column] = 'float'
-            elif 'string' in data_type:
+            if "int" in data_type or "long" in data_type:
+                fields[column] = "int"
+            elif "float" in data_type or "double" in data_type:
+                fields[column] = "float"
+            elif "string" in data_type:
                 fields[column] = 'string'
-            elif 'bytes' in data_type or 'boolean' in data_type:
-                fields[column] = 'binary'
+            elif "bytes" in data_type or "boolean" in data_type:
+                fields[column] = "binary"
             else:
-                message = "Not supported data type"
+                message = f"It seems that the column - {column} has not supported data type - {data_type}"
                 logger.error(message)
                 raise ValueError(message)
         converted_schema["format"] = "Avro"
