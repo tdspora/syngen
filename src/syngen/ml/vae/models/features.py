@@ -1,4 +1,5 @@
 from collections import Counter
+import datetime
 from itertools import chain
 from typing import Union, List
 import re
@@ -571,18 +572,21 @@ class DateFeature:
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
 
-    def __validate_format(self, date_text: pd.DataFrame):
-
+    @staticmethod
+    def __validate_format(date_text: pd.DataFrame):
         pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+"
         types = []
         for i in date_text.dropna().sample(15).values:
-            try:
-                format = guess_datetime_format(re.match(pattern, i[0]).group(0))
-                types.append(format)
-            except AttributeError:
-                pass
+            if isinstance(i[0], (datetime.date, datetime.datetime)):
+                return
+            else:
+                try:
+                    format = guess_datetime_format(re.match(pattern, i[0]).group(0))
+                    types.append(format)
+                except AttributeError:
+                    pass
 
-        return Counter(types).most_common(1)[0][0]
+                return Counter(types).most_common(1)[0][0]
 
     def fit(self, data):
         self.date_format = self.__validate_format(data)
@@ -605,6 +609,13 @@ class DateFeature:
         max_allowed_time_ns = int(9.2E18)
         unscaled = self.scaler.inverse_transform(data)
         unscaled = chain.from_iterable(unscaled)
+        if self.date_format is None:
+            return list(
+                map(
+                    lambda l: pd.Timestamp(min(max_allowed_time_ns, int(l))).to_pydatetime(),
+                    unscaled,
+                )
+            )
         return list(
             map(
                 lambda l: pd.Timestamp(min(max_allowed_time_ns, int(l))).strftime(self.date_format),
