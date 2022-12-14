@@ -61,7 +61,7 @@ Requirements for parameters of training process:
 * <i>table_name</i> - data type - string
 * <i>epochs</i> - data type - integer, must be equal to or more than 1, sensible default value is 10
 * <i>drop_null</i> - data type - boolean, sensible default value - False
-* <i>row_limit</i> - data type - integer, must be equal to or more than
+* <i>row_limit</i> - data type - integer
 * <i>metadata_path</i> - data type - string
 
 
