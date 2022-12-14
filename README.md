@@ -38,22 +38,31 @@ In this example, our real-world data is <a href="https://www.kaggle.com/datasets
 
 ### Training
 
-You can add flexibility to the training and inference processes using additional hyperparameters. For training single table call:
+You can add flexibility to the training and inference processes using additional hyperparameters.<br>
+For training of single table call:
 
 `train --source PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME --epochs INT --row_limit INT --drop_null BOOL`
 
-For training the multiple linked tables (see below) call:
+For training of the multiple linked tables call:
 
 `train --metadata_path PATH_TO_METADATA_YAML`
 
 The parameters which you can set up for training process:
 
-- <i>source</i> – a path to the file that you want to use a reference
-- <i>table_name</i> – an arbitrary string to name the directories 
-- <i>epochs</i> – the number of training epochs. Since the early stopping mechanism is implemented the bigger is the better
-- <i>row_limit</i> – the number of rows to train over. A number less then the original table length will randomly subset the specified rows number
+- <i>source</i> – required parameter for training of single table, a path to the file that you want to use a reference
+- <i>table_name</i> – required parameter for training of single table, an arbitrary string to name the directories 
+- <i>epochs</i> – a number of training epochs. Since the early stopping mechanism is implemented the bigger is the better
+- <i>row_limit</i> – a number of rows to train over. A number less then the original table length will randomly subset the specified rows number
 - <i>drop_null</i> – whether to drop rows with at least one missing value
 - <i>metadata_path</i> – a path to the json file containing the metadata for linked tables generation
+
+Requirements for parameters of training process:
+* <i>source</i> - data type - string
+* <i>table_name</i> - data type - string
+* <i>epochs</i> - data type - integer, must be equal to or more than 1, sensible default value is 10
+* <i>drop_null</i> - data type - boolean, sensible default value - False
+* <i>row_limit</i> - data type - integer, must be equal to or more than
+* <i>metadata_path</i> - data type - string
 
 
 ### Inference (generation)
@@ -76,9 +85,17 @@ The parameters which you can set up for training process:
 - <i>print_report</i> – whether to generate plots of pairwise distributions, accuracy matrix and print the median accuracy
 - <i>metadata_path</i> – a path to metadata yaml file to generate linked tables
 
+Requirements for parameters of generation process:
+* <i>size</i> - data type - integer, must be equal to or more than 1, default value is 100
+* <i>table_name</i> - data type - string
+* <i>run_parallel</i> - data type - boolean, default value is False
+* <i>batch_size</i> - data type - integer, must be equal to or more than 1
+* <i>random_seed</i> - data type - integer
+* <i>print_report</i> - data type - boolean, default value is False
+* <i>metadata_path</i> - data type - boolean
+
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI 
 will be ignored.
-
 
 
 ### Linked tables generation
