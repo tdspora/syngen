@@ -157,6 +157,7 @@ class Dataset:
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
         in case metadata of the table in Avro format is present
         """
+        logger.info(f"The schema of table - {self.table_name} was received")
         self.binary_columns = set(column for column, data_type in schema.items() if data_type == 'binary')
         self.categ_columns = set(
             [col for col in df.columns if df[col].dropna().nunique() <= 50 and col not in self.binary_columns])
