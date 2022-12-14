@@ -19,7 +19,7 @@ This will train a model and save the model artifacts to disk.
 
 To generate data simply call:
 
-`infer SIZE TABLE_NAME`
+`infer --table_name TABLE_NAME`
 
 <i>Please notice that the name should match the one you used in the training process.</i>
 This will create a csv file with the synthetic table in ./model_artifacts/tmp_store/TABLE_NAME/merged_infer_TABLE_NAME.csv
@@ -29,7 +29,7 @@ Here is a quick example:
 ```
 pip install syngen
 train --source ./example-data/housing.csv –-table_name Housing
-infer 5000 Housing
+infer --table_name Housing
 ```
 As the example you can use the dataset <i>"Housing"</i> in [example-data/housing.csv](example-data/housing.csv).
 In this example, our real-world data is <a href="https://www.kaggle.com/datasets/camnugent/california-housing-prices" target="_blank">"Housing"</a> from Kaggle.
@@ -42,17 +42,18 @@ You can add flexibility to the training and inference processes using additional
 
 `train --source PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME --epochs INT --row_limit INT --drop_null BOOL`
 
-- source – a path to the csv table that you want to use a reference
-- table_name – an arbitrary string to name the directories 
-- epochs – the number of training epochs. Since the early stopping mechanism is implemented the bigger is the better
-- row_limit – the number of rows to train over. A number less then the original table length will randomly subset the specified rows number
-- drop_null – whether to drop rows with at least one missing value
-
 For training the multiple linked tables (see below) call:
 
 `train --metadata_path PATH_TO_METADATA_YAML`
 
-- metadata_path – a path to the json file containing the metadata for linked tables generation
+The parameters which you can set up for training process:
+
+- <i>source</i> – a path to the file that you want to use a reference
+- <i>table_name</i> – an arbitrary string to name the directories 
+- <i>epochs</i> – the number of training epochs. Since the early stopping mechanism is implemented the bigger is the better
+- <i>row_limit</i> – the number of rows to train over. A number less then the original table length will randomly subset the specified rows number
+- <i>drop_null</i> – whether to drop rows with at least one missing value
+- <i>metadata_path</i> – a path to the json file containing the metadata for linked tables generation
 
 
 ### Inference (generation)
@@ -61,18 +62,19 @@ You can customize the inference processes by calling for one table:
 
 `infer --size INT --table_name STR --run_parallel BOOL --batch_size INT --random_seed INT --print_report BOOL`
  
-- size - the desired number of rows to generate
-- table_name – the name of the table, same as in training
-- run_parallel – whether to use multiprocessing (feasible for tables > 5000 rows)
-- batch_size – if specified, the generation is split into batches. This can save the RAM
-- random_seed – if specified, generates a reproducible result
-- print_report – whether to generate plots of pairwise distributions, accuracy matrix and print the median accuracy
- 
 For linked tables you can simply call:
 
 `infer --metadata_path PATH_TO_METADATA`
- 
-- metadata_path – a path to metadata yaml file to generate linked tables
+
+The parameters which you can set up for training process:
+
+- <i>size</i> - the desired number of rows to generate
+- <i>table_name</i> – the name of the table, same as in training
+- <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 5000 rows)
+- <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
+- <i>random_seed</i> – if specified, generates a reproducible result
+- <i>print_report</i> – whether to generate plots of pairwise distributions, accuracy matrix and print the median accuracy
+- <i>metadata_path</i> – a path to metadata yaml file to generate linked tables
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI 
 will be ignored.
@@ -116,7 +118,7 @@ The yaml metadata file should match the following template:
                     - e_mail
                     - alias
                 references:
-                    table: "PROFILE"                # Name of the target table
+                    table: "PROFILE"                # Name of the parent table
                     columns:                        # Array of columns in the parent table
                         - e_mail
                         - alias
@@ -177,7 +179,7 @@ If `--metadata_path` is present and the metadata contains the necessary paramete
 
 ### Docker images using
 
-The train and inference components of Syngen is available as public docker images:
+The train and inference components of <i>syngen</i> is available as public docker images:
 
 <https://hub.docker.com/r/tdspora/syngen-train>
 
