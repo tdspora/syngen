@@ -11,7 +11,9 @@ Use pip to install the library:
 
 `pip install syngen`
 
-The training and inference processes are separated with two cli entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters. To start training with the sensible defaults run
+The training and inference processes are separated with two cli entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters.<br>
+
+To start training with the sensible defaults run:
 
 `train --source PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME`
 
@@ -21,8 +23,8 @@ To generate data simply call:
 
 `infer --table_name TABLE_NAME`
 
+This will create a csv file with the synthetic table in <i>./model_artifacts/tmp_store/TABLE_NAME/merged_infer_TABLE_NAME.csv</i>.<br>
 <i>Please notice that the name should match the one you used in the training process.</i>
-This will create a csv file with the synthetic table in ./model_artifacts/tmp_store/TABLE_NAME/merged_infer_TABLE_NAME.csv
 
 Here is a quick example:
 
@@ -75,10 +77,10 @@ For linked tables you can simply call:
 
 `infer --metadata_path PATH_TO_METADATA`
 
-The parameters which you can set up for training process:
+The parameters which you can set up for generation process:
 
 - <i>size</i> - the desired number of rows to generate
-- <i>table_name</i> – the name of the table, same as in training
+- <i>table_name</i> – required parameter for inference of single table, the name of the table, same as in training
 - <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 5000 rows)
 - <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
 - <i>random_seed</i> – if specified, generates a reproducible result
@@ -194,7 +196,7 @@ infer --metadata_path="./example-metadata/housing_metadata.yaml"
 
 If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.<br>
 
-### Docker images using
+### Docker images
 
 The train and inference components of <i>syngen</i> is available as public docker images:
 
