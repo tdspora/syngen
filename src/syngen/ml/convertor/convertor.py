@@ -13,8 +13,16 @@ class Convertor(ABC):
     def _convert_schema_and_df(self, schema: Dict, df: pd.DataFrame) -> Tuple[Dict, pd.DataFrame]:
         pass
 
-    def _preprocess_df(self, schema: Dict, df: pd.DataFrame) -> pd.DataFrame:
-        pass
+    @staticmethod
+    def _preprocess_df(schema: Dict, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Preprocess data frame, update data types of columns
+        """
+        for column, data_type in schema.get("fields", {}).items():
+            if data_type == "binary":
+                df[column] = df[column].astype("string")
+            df[column] = df[column].astype(data_type)
+        return df
 
 
 class AvroConvertor(Convertor):
@@ -47,13 +55,3 @@ class AvroConvertor(Convertor):
         converted_schema["format"] = "Avro"
         preprocessed_df = self._preprocess_df(schema, df)
         return converted_schema, preprocessed_df
-
-    def _preprocess_df(self, schema: Dict, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Preprocess data frame, update data types of columns
-        """
-        for column, data_type in schema.get("fields", {}).items():
-            if data_type == "binary":
-                df[column] = df[column].astype("string")
-            df[column] = df[column].astype(data_type)
-        return df
