@@ -12,6 +12,9 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     # pattern = r'\d{2}(\.|/|\-)\d{2}(\.|/|\-)(\d{2}|\d{4})'
     # pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+"
 
+    def len_filter(x):
+        return (x.str.len() > 500).any()
+
     def date_finder(x, fuzzy=False):
         x_wo_na = x.dropna()
         count = 0
@@ -26,6 +29,10 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         else:
             return np.nan
 
+    data_subset = df[str_columns]
+    data_subset = df if not df.empty else data_subset.loc[:, data_subset.apply(len_filter)]
+    long_text_columns = data_subset.columns
+    str_columns = [i for i in str_columns if i not in long_text_columns]
     date_columns = df[str_columns].apply(date_finder).dropna()
 
     if isinstance(date_columns, pd.DataFrame):
@@ -34,7 +41,6 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         names = date_columns.index
     else:
         names = []
-
     return set(names)
 
 
