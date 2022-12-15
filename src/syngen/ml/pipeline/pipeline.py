@@ -29,8 +29,7 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
             return np.nan
 
     data_subset = df[str_columns]
-
-    data_subset = data_subset.loc[:, data_subset.apply(len_filter)]
+    data_subset = data_subset if data_subset.empty else data_subset.loc[:, data_subset.apply(len_filter)]
     long_text_columns = data_subset.columns
     str_columns = [i for i in str_columns if i not in long_text_columns]
     date_columns = df[str_columns].apply(date_finder).dropna()
