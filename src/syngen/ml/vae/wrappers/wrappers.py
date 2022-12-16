@@ -145,7 +145,9 @@ class VAEWrapper(BaseWrapper):
 
     def _restore_nan_labels(self, df):
         for column_name, nan_label in self.dataset.nan_labels_dict.items():
-            df[column_name] = df[column_name].fillna(nan_label)
+            if nan_label is None:
+                nan_label = np.nan
+            df[column_name] = df[column_name].fillna(np.nan) if nan_label is None else df[column_name].fillna(nan_label)
         return df
 
     @abstractmethod
