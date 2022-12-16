@@ -700,11 +700,12 @@ class Clustering(BaseMetric):
             plt.savefig(f"{self.draws_path}/clusters_barplot.png")
         return self.mean_score.values[0]
 
-    def __automated_elbow(self, max_clusters=10):
+    def __automated_elbow(self):
         result_table = {
             "cluster_num": [],
             "metric": []
         }
+        max_clusters = min(10, len(self.merged_transformed))
         for i in range(2, max_clusters):
             clusters = KMeans(n_clusters=i).fit(self.merged_transformed)
             metric = clusters.inertia_
