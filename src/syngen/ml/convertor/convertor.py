@@ -19,9 +19,15 @@ class Convertor(ABC):
         Preprocess data frame, update data types of columns
         """
         for column, data_type in schema.get("fields", {}).items():
-            if data_type == "binary":
+            if data_type in ["binary", "date"]:
                 df[column] = df[column].astype("string")
-            df[column] = df[column].astype(data_type)
+            elif data_type == "int":
+                if any(df[column].isnull()):
+                    df[column] = df[column].astype("float64")
+                else:
+                    df[column] = df[column].astype("int64")
+            else:
+                df[column] = df[column].astype(data_type)
         return df
 
 
@@ -53,5 +59,5 @@ class AvroConvertor(Convertor):
                 logger.error(message)
                 raise ValueError(message)
         converted_schema["format"] = "Avro"
-        preprocessed_df = self._preprocess_df(schema, df)
+        preprocessed_df = self._preprocess_df(converted_schema, df)
         return converted_schema, preprocessed_df
