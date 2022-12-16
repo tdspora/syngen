@@ -49,9 +49,12 @@ class Reporter:
             if column in [*binary_columns, *str_columns, *date_columns, *categ_columns]:
                 df[column] = df[column].astype("object")
             elif column in int_columns:
-                df[column] = df[column].astype("int")
+                if any(df[column].isnull()):
+                    df[column] = df[column].astype("float64")
+                else:
+                    df[column] = df[column].astype("int64")
             elif column in float_columns:
-                df[column] = df[column].astype("float")
+                df[column] = df[column].astype("float64")
         return df
 
     def preprocess_data(self):
