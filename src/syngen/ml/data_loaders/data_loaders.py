@@ -68,12 +68,19 @@ class CSVLoader(BaseDataLoader):
     def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, None]:
         df = pd.DataFrame()
         try:
-            df = pd.read_csv(path, engine="python", **kwargs).iloc[:, :]
-        except ParserError:
-            df = pd.read_csv(path, engine="c", **kwargs).iloc[:, :]
-        finally:
+            df = pd.read_csv(path, engine="python", **kwargs)
             df.columns = df.columns.str.replace(':', '')
             return df, None
+        except ParserError:
+            df = pd.read_csv(path, engine="c", **kwargs)
+            df.columns = df.columns.str.replace(':', '')
+            return df, None
+        except FileNotFoundError as error:
+            message = f"It seems that the path to the table isn't valid.\n" \
+                      f"The details of the error - {error}.\n" \
+                      f"Please, check the path to the table"
+            logger.error(message)
+            raise FileNotFoundError(message)
 
     def load_data(self, path, **kwargs):
         return self._load_data(path, **kwargs)
