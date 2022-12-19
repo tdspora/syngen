@@ -11,6 +11,9 @@ class Convertor(ABC):
         self.converted_schema, self.preprocessed_df = self._convert_schema_and_df(schema, df)
 
     def _convert_schema_and_df(self, schema: Dict, df: pd.DataFrame) -> Tuple[Dict, pd.DataFrame]:
+        """
+        Convert the schema of file to unified format, preprocess dataframe
+        """
         pass
 
     @staticmethod
@@ -40,7 +43,7 @@ class AvroConvertor(Convertor):
 
     def _convert_schema_and_df(self, schema, df) -> Tuple[Dict, pd.DataFrame]:
         """
-        Convert the schema of Avro file to unified format, preprocess data frame
+        Convert the schema of Avro file to unified format, preprocess dataframe
         """
         converted_schema = dict()
         converted_schema["fields"] = dict()
