@@ -137,7 +137,7 @@ class AvroLoader(BaseDataLoader):
     @staticmethod
     def _load_schema(f, df) -> Tuple[Dict[str, str], pd.DataFrame]:
         """
-        Load schema of the metadata of the table in Avro format and preprocess data frame
+        Load schema of the metadata of the table in Avro format and preprocess dataframe
         :param f: object of the class 'smart_open.Reader'
         :return: dictionary where key is the name of the column, value is the data type of the column
         """
