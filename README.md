@@ -23,8 +23,8 @@ To generate data simply call:
 
 `infer --table_name TABLE_NAME`
 
+<i>Please notice that the name should match the one you used in the training process.</i><br>
 This will create a csv file with the synthetic table in <i>./model_artifacts/tmp_store/TABLE_NAME/merged_infer_TABLE_NAME.csv</i>.<br>
-<i>Please notice that the name should match the one you used in the training process.</i>
 
 Here is a quick example:
 
@@ -51,10 +51,10 @@ For training of the multiple linked tables call:
 
 The parameters which you can set up for training process:
 
-- <i>source</i> – required parameter for training of single table, a path to the file that you want to use a reference
+- <i>source</i> – required parameter for training of single table, a path to the file that you want to use as a reference
 - <i>table_name</i> – required parameter for training of single table, an arbitrary string to name the directories 
-- <i>epochs</i> – a number of training epochs. Since the early stopping mechanism is implemented the bigger is the better
-- <i>row_limit</i> – a number of rows to train over. A number less then the original table length will randomly subset the specified rows number
+- <i>epochs</i> – a number of training epochs. Since the early stopping mechanism is implemented the bigger value of epochs is the better
+- <i>row_limit</i> – a number of rows to train over. A number less than the original table length will randomly subset the specified number of rows
 - <i>drop_null</i> – whether to drop rows with at least one missing value
 - <i>metadata_path</i> – a path to the json file containing the metadata for linked tables generation
 
@@ -94,7 +94,7 @@ Requirements for parameters of generation process:
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1
 * <i>random_seed</i> - data type - integer
 * <i>print_report</i> - data type - boolean, default value is False
-* <i>metadata_path</i> - data type - boolean
+* <i>metadata_path</i> - data type - string
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI 
 will be ignored.
@@ -103,8 +103,8 @@ will be ignored.
 ### Linked tables generation
 
 To generate linked tables, you should provide metadata in yaml format. It is used to handle complex 
-relations for any number of tables. You can also specify additional parameters needed for training and inference. In 
-this case they will be ignored in the CLI call.
+relations for any number of tables. You can also specify additional parameters needed for training and inference in the metadata file 
+and in this case, they will be ignored in the CLI call.
 
 The yaml metadata file should match the following template:
 
@@ -216,7 +216,7 @@ docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infe
 
 PATH_TO_LOCAL_FOLDER is an absolute path to the folder where your original csv is stored.
 
-You can add any arguments listed in the corresponding sections for infer and training processes.
+You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call.
 
 To run dockerized code for linked tables simply call:
 
@@ -228,5 +228,5 @@ docker pull tdspora/syngen-infer:latest
 docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
-You can add any arguments listed in the corresponding sections for infer and training processes, however, they will be 
+You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call, however, they will be 
 overwritten by corresponding arguments in the metadata file.
