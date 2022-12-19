@@ -76,6 +76,14 @@ class Reporter:
             dataset.binary_columns, dataset.categ_columns
         )
         str_columns, date_columns, int_columns, float_columns, binary_columns, categ_columns = types
+        original = original[[
+            col for col in original.columns
+            if col in set().union(*types)
+        ]]
+        synthetic = synthetic[[
+            col for col in original.columns
+            if col in set().union(*types)
+        ]]
         for date_col in date_columns:
             original[date_col] = list(
                 map(lambda d: pd.Timestamp(d).value, original[date_col])
