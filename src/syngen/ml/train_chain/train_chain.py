@@ -67,7 +67,11 @@ class RootHandler(BaseHandler):
     @staticmethod
     def _set_options(data, options):
         if options["drop_null"]:
-            data = data.dropna()
+            if not data.dropna().empty:
+                data = data.dropna()
+            else:
+                logger.warning("The specified 'drop_null' argument results in the empty dataframe, "
+                               "so it will be ignored")
 
         if options["row_subset"]:
             data = data.sample(n=min(options["row_subset"], len(data)))

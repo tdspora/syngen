@@ -47,13 +47,6 @@ class Worker:
         :param config: settings for infer process declared in metadata.yml file
         """
         size = config.get("infer_settings", {}).get("size", self.settings.get("size"))
-        if size is None:
-            raise AttributeError(
-                "The size is mandatory parameter. "
-                "It seems that the information of size for infer process is absent. "
-                "Please provide the information of size either through parameter in CLI command "
-                "or in size parameter in metadata file."
-            )
         run_parallel = config.get("infer_settings", {}).get("run_parallel", self.settings.get("run_parallel"))
         random_seed = config.get("infer_settings", {}).get("random_seed", self.settings.get("random_seed"))
         print_report = config.get("infer_settings", {}).get("print_report", self.settings.get("print_report"))
