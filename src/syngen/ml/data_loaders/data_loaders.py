@@ -12,7 +12,7 @@ from avro.io import DatumReader
 from loguru import logger
 
 from syngen.ml.validation_schema import validate_schema, configuration_schema
-from syngen.ml.schema_convertor import AvroSchemaConvertor
+from syngen.ml.convertor import AvroConvertor
 
 
 class BaseDataLoader(ABC):
@@ -68,12 +68,19 @@ class CSVLoader(BaseDataLoader):
     def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, None]:
         df = pd.DataFrame()
         try:
-            df = pd.read_csv(path, engine="python", **kwargs).iloc[:, :]
-        except ParserError:
-            df = pd.read_csv(path, engine="c", **kwargs).iloc[:, :]
-        finally:
+            df = pd.read_csv(path, engine="python", **kwargs)
             df.columns = df.columns.str.replace(':', '')
             return df, None
+        except ParserError:
+            df = pd.read_csv(path, engine="c", **kwargs)
+            df.columns = df.columns.str.replace(':', '')
+            return df, None
+        except FileNotFoundError as error:
+            message = f"It seems that the path to the table isn't valid.\n" \
+                      f"The details of the error - {error}.\n" \
+                      f"Please, check the path to the table"
+            logger.error(message)
+            raise FileNotFoundError(message)
 
     def load_data(self, path, **kwargs):
         return self._load_data(path, **kwargs)
@@ -113,8 +120,8 @@ class AvroLoader(BaseDataLoader):
         try:
             with open(path, 'rb') as f:
                 df = self._load_df(f)
-                schema = self._load_schema(f)
-                return df, schema
+                schema, preprocessed_df = self._load_schema(f, df)
+                return preprocessed_df, schema
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
@@ -128,16 +135,18 @@ class AvroLoader(BaseDataLoader):
             pdx.to_avro(path, df, **kwargs)
 
     @staticmethod
-    def _load_schema(f) -> Dict[str, str]:
+    def _load_schema(f, df) -> Tuple[Dict[str, str], pd.DataFrame]:
         """
-        Load schema of the metadata of the table in Avro format
+        Load schema of the metadata of the table in Avro format and preprocess dataframe
         :param f: object of the class 'smart_open.Reader'
         :return: dictionary where key is the name of the column, value is the data type of the column
         """
         reader = DataFileReader(f, DatumReader())
         meta = eval(reader.meta['avro.schema'].decode())
         schema = {field["name"]: field["type"] for field in meta.get("fields", {})}
-        return AvroSchemaConvertor(schema).converted_schema
+        convertor = AvroConvertor(schema, df)
+        schema, preprocessed_df = convertor.converted_schema, convertor.preprocessed_df
+        return schema, preprocessed_df
 
 
 class MetadataLoader(BaseDataLoader):
