@@ -212,6 +212,13 @@ class VaeInferHandler(BaseHandler):
             frames = pool.map(
                 self.run_separate, enumerate(self.split_by_batches(size, pool.nodes))
             )
+            config_of_keys = self.metadata.get(self.table_name).get("keys", {})
+            for key in config_of_keys.keys():
+                if config_of_keys.get(key).get("type") == "PK":
+                    cumm_len = 0
+                    for i, frame in enumerate(frames):
+                        frame[key] = frame[key].map(lambda pk_val: pk_val + cumm_len)
+                        cumm_len += len(frame)
             generated = pd.concat(frames)
         else:
             if self.random_seed:
