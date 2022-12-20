@@ -81,7 +81,7 @@ class Reporter:
             if col in set().union(*types)
         ]]
         synthetic = synthetic[[
-            col for col in original.columns
+            col for col in synthetic.columns
             if col in set().union(*types)
         ]]
         for date_col in date_columns:
