@@ -178,6 +178,16 @@ class VaeInferHandler(BaseHandler):
         is_pk = self.table_name.endswith("_pk")
         return is_pk
 
+    def _concat_slices_with_unique_pk(self, df_slices: list):
+        config_of_keys = self.metadata.get(self.table_name).get("keys", {})
+        for key in config_of_keys.keys():
+            if config_of_keys.get(key).get("type") == "PK":
+                cumm_len = 0
+                for i, frame in enumerate(df_slices):
+                    frame[key] = frame[key].map(lambda pk_val: pk_val + cumm_len)
+                    cumm_len += len(frame)
+        return pd.concat(df_slices, ignore_index=True)
+
     def run_separate(self, params: Tuple):
         i, size = params
 
@@ -216,7 +226,7 @@ class VaeInferHandler(BaseHandler):
             frames = pool.map(
                 self.run_separate, enumerate(self.split_by_batches(size, pool.nodes))
             )
-            generated = pd.concat(frames)
+            generated = self._concat_slices_with_unique_pk(frames)
         else:
             if self.random_seed:
                 self.random_seeds_list = [self.random_seed]
@@ -285,10 +295,8 @@ class VaeInferHandler(BaseHandler):
             batch_num = math.ceil(size / batch_size)
             logger.info(f"Total of {batch_num} batch(es)")
             batches = self.split_by_batches(size, batch_num)
-            prepared_data = pd.DataFrame()
-            for batch in batches:
-                generated_batch = self.run(batch, run_parallel)
-                prepared_data = pd.concat([prepared_data, generated_batch])
+            prepared_batches = [self.run(batch, run_parallel) for batch in batches]
+            prepared_data = self._concat_slices_with_unique_pk(prepared_batches) if len(prepared_batches) > 0 else pd.DataFrame()
 
             is_pk = self._is_pk()
             if metadata_path is not None:
