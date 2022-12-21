@@ -13,13 +13,13 @@ Use pip to install the library:
 
 The training and inference processes are separated with two cli entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters.<br>
 
-To start training with the sensible defaults run:
+To start training with defaults parameters run:
 
 `train --source PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME`
 
 This will train a model and save the model artifacts to disk.
 
-To generate data simply call:
+To generate with defaults parameters data simply call:
 
 `infer --table_name TABLE_NAME`
 
@@ -61,8 +61,8 @@ The parameters which you can set up for training process:
 Requirements for parameters of training process:
 * <i>source</i> - data type - string
 * <i>table_name</i> - data type - string
-* <i>epochs</i> - data type - integer, must be equal to or more than 1, sensible default value is 10
-* <i>drop_null</i> - data type - boolean, sensible default value - False
+* <i>epochs</i> - data type - integer, must be equal to or more than 1, default value is 10
+* <i>drop_null</i> - data type - boolean, default value - False
 * <i>row_limit</i> - data type - integer
 * <i>metadata_path</i> - data type - string
 
