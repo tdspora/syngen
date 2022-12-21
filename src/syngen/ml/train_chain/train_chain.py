@@ -304,7 +304,7 @@ class VaeInferHandler(BaseHandler):
                 prepared_data.to_csv(self.path_to_merged_infer, index=False)
             if print_report:
                 Report().generate_report()
-
+                Report().clear_report()
             logger.info(
                 f"Synthesis of the table - {self.table_name} was completed. "
                 f"Synthetic data saved in {self.path_to_merged_infer}"

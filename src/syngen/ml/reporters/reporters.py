@@ -148,6 +148,13 @@ class Report:
         cls.__reporters.append(reporter)
 
     @classmethod
+    def clear_report(cls):
+        """
+        Delete unnecessary reporters
+        """
+        cls.__reporters.clear()
+
+    @classmethod
     def generate_report(cls):
         """
         Generate all needed reports
