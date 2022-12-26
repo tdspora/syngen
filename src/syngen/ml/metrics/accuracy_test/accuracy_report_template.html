@@ -18,8 +18,9 @@
     <h2>Univariate distributions</h2>
     <p>The univariate distributions are either the density plots for original vs synthetic values overlapped
         for continous columns or barplots for original vs synthetic counts (in percent) for categorical columns</p>
-    {% for uni_img in uni_imgs -%}
+    {% for col, uni_img in uni_imgs.items() -%}
     <div>
+        <h4>{{col}}</h4>
         <img src="{{uni_img}}" width="600">
     </div>
     {% endfor %}
@@ -50,8 +51,9 @@
         values "Monday", "Tuesday", "Sunday" and column with values "Working", "Museum visiting" and "Walking"
         a count of each activity in each day will be calculated and plotted in the corresponding cell.
         For good synthetic data the pattern of bivariate distribution should match the original distribution</p>
-    {% for bi_img in bi_imgs -%}
+    {% for title, bi_img in bi_imgs.items() -%}
     <div>
+        <h4>{{title}}</h4>
         <img src="{{bi_img}}" width="900">
     </div>
     {% endfor %}

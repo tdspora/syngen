@@ -8,6 +8,7 @@ from sklearn.metrics import r2_score, accuracy_score
 from loguru import logger
 
 import matplotlib
+from matplotlib.colors import LinearSegmentedColormap
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +18,6 @@ import seaborn as sns
 import re
 
 from syngen.ml.pipeline import get_nan_labels, nan_labels_to_float
-from syngen.ml.metrics.utils import text_to_continuous
 
 
 class BaseMetric(ABC):
@@ -50,6 +50,9 @@ class JensenShannonDistance(BaseMetric):
         super().__init__(original, synthetic)
         self.plot = plot
         self.draws_path = draws_path
+        self.cmap = LinearSegmentedColormap.from_list(
+            "rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"]
+        )
 
     def calculate_all(self, categ_columns: List[str]):
         self.original[categ_columns] = self.original[categ_columns].fillna("")
@@ -57,23 +60,29 @@ class JensenShannonDistance(BaseMetric):
         self.heatmap, self.labels = self.__compute_vs_columns(categ_columns)
 
         if self.plot:
-            sns.set(rc={'figure.figsize': (16, 12)})
+            plt.clf()
+            sns.set(rc={"figure.figsize": (16, 12)})
             heatmap = sns.heatmap(
                 self.heatmap,
                 xticklabels=self.labels,
                 yticklabels=self.labels,
-                annot=True,
+                cmap=self.cmap,
+                vmin=0.0,
+                vmax=1.0,
+                center=0.5,
+                annot=False
             )
 
             heatmap.figure.tight_layout()
             plt.savefig(f"{self.draws_path}/accuracy_heatmap.png")
 
-    def calculate_heatmap_median(self, heatmap):
+    @staticmethod
+    def calculate_heatmap_median(heatmap):
         heatmap_no_diag = heatmap[~np.eye(heatmap.shape[0], dtype=bool)].reshape(
             heatmap.shape[0], -1
         )
         heatmap_median = np.nanmedian(heatmap_no_diag)  # ignores nan when calculating median
-        print("Median of Jensen Shannon Distance heatmap is", "%.3f" % heatmap_median)
+        logger.info("Median of Jensen Shannon Distance heatmap is {0:.3f}".format(heatmap_median))
         return heatmap_median
 
     def _calculate_pair_continuous_vs_continuous(self, first_column, second_column):
@@ -86,8 +95,6 @@ class JensenShannonDistance(BaseMetric):
             self.synthetic[first_column].fillna(self.synthetic[first_column].mean()),
             self.synthetic[second_column].fillna(self.synthetic[second_column].mean()),
         )
-
-        # return min(original_score, synthetic_score) / max(original_score, synthetic_score)
         return 1 - abs(original_score - synthetic_score)
 
     def _calculate_pair_categ_vs_continuous(self, first_column, second_column):
@@ -175,10 +182,10 @@ class JensenShannonDistance(BaseMetric):
 
         return np.array(heatmap_matrix), valid_cols
 
-    def __normalize(self, dist):
+    @staticmethod
+    def __normalize(dist):
         min_ = dist.min()
         max_ = dist.max()
-        # std = (dist - min_) / (max_ - min_)
         if max_ != min_:
             std = (dist - min_) / (max_ - min_)
         else:
@@ -218,6 +225,9 @@ class Correlations(BaseMetric):
         super().__init__(original, synthetic)
         self.plot = plot
         self.draws_path = draws_path
+        self.cmap = LinearSegmentedColormap.from_list(
+            "rg", list(reversed(["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"]))
+        )
 
     def calculate_all(
         self, categ_columns: List[str], cont_columns: List[str]
@@ -243,16 +253,21 @@ class Correlations(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(rc={'figure.figsize': (13, 10)}, font_scale=2)
+            sns.set(rc={"figure.figsize": (13, 10)}, font_scale=2)
             heatmap = sns.heatmap(
                 self.corr_score,
-                annot=True,
+                annot=False,
+                cmap=self.cmap,
+                vmin=0.0,
+                vmax=1.0,
+                center=0.5
             )
 
             heatmap.figure.tight_layout()
             plt.savefig(f"{self.draws_path}/correlations_heatmap.png")
 
-    def __calculate_correlations(self, data):
+    @staticmethod
+    def __calculate_correlations(data):
         return abs(data.corr())
 
 
@@ -267,6 +282,7 @@ class BivariateMetric(BaseMetric):
         super().__init__(original, synthetic)
         self.plot = plot
         self.draws_path = draws_path
+        self.cmap = LinearSegmentedColormap.from_list("rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"])
 
     def calculate_all(
         self,
@@ -277,6 +293,7 @@ class BivariateMetric(BaseMetric):
         self.num_not_na_ticks = num_not_na_cont_ticks
         all_columns = set(cont_columns) | set(categ_columns)
         column_pairs = list(combinations(all_columns, 2))
+        bi_imgs = {}
         for first_col, second_col in column_pairs:
             fig, self._axes = plt.subplots(1, 2, figsize=(30, 15))
             if first_col in cont_columns:
@@ -315,24 +332,25 @@ class BivariateMetric(BaseMetric):
             )
             self._plot_heatmap(
                 heatmap_orig_data,
-                f"Original: {first_col} vs. {second_col}",
                 0,
                 heatmap_min,
                 heatmap_max,
-                cbar=False,
+                cbar=False
             )
 
             self._plot_heatmap(
                 heatmap_synthetic_data,
-                f"Synthetic: {first_col} vs. {second_col}",
                 1,
                 heatmap_min,
                 heatmap_max,
-                cbar=True,
+                cbar=True
             )
-            # plt.show()
-            print(f"{self.draws_path}/bivariate_{first_col}_{second_col}.png")
-            plt.savefig(f"{self.draws_path}/bivariate_{first_col}_{second_col}.png")
+            title = f"{first_col} vs. {second_col}"
+            path_to_image = f"{self.draws_path}/bivariate_{first_col}_{second_col}.png"
+            bi_imgs[title] = path_to_image
+            logger.info(path_to_image)
+            plt.savefig(path_to_image)
+        return bi_imgs
 
     @staticmethod
     def get_common_min_max(original, synthetic):
@@ -345,7 +363,6 @@ class BivariateMetric(BaseMetric):
     def _plot_heatmap(
         self,
         heatmap_data: List,
-        title: str,
         plt_index: int,
         vmin: float,
         vmax: float,
@@ -361,10 +378,9 @@ class BivariateMetric(BaseMetric):
             ax=ax,
             vmin=vmin,
             vmax=vmax,
-            cmap="Blues",
-            cbar=cbar,
+            cmap=self.cmap,
+            cbar=cbar
         )
-        ax.set_title(title, fontsize=18)
 
     def _get_continuous_ticks(self, col_name: str):
         original_col_values = self.original[col_name].dropna().values
@@ -381,13 +397,15 @@ class BivariateMetric(BaseMetric):
         )
         return categ_ticks
 
-    def _format_categorical_labels(self, labels):
+    @staticmethod
+    def _format_categorical_labels(labels):
         return [
             str(label) if len(str(label)) < 15 else str(label[:12]) + "..."
             for label in labels
         ]
 
-    def _smooth(self, dist):
+    @staticmethod
+    def _smooth(dist):
         for i in range(1, len(dist)):
             if dist[i - 1] == dist[i]:
                 dist[i:] += 2
@@ -550,11 +568,14 @@ class UnivariateMetric(BaseMetric):
         self, cont_columns: List[str], categ_columns: List[str], print_nan: bool = False
     ):
         cont_columns = list(cont_columns)
-
+        uni_cont_images = {}
+        uni_categ_images = {}
         for col in cont_columns:
-            self.__calc_continuous(col, print_nan)
+            uni_cont_images = self.__calc_continuous(col, print_nan)
         for col in categ_columns:
-            self.__calc_categ(col)
+            uni_categ_images = self.__calc_categ(col)
+        uni_cont_images.update(uni_categ_images)
+        return uni_cont_images
 
     def __calc_categ(self, column):
         def plot_dist(column_data, sort=True, full_set=None):
@@ -587,6 +608,8 @@ class UnivariateMetric(BaseMetric):
         synthetic_ratio_counts = plot_dist(synthetic_column, False, full_values_set)
         synthetic_ratio = [synthetic_ratio_counts[label] for label in original_labels]
 
+        uni_images = {}
+
         if self.plot:
             fig = plt.figure()
 
@@ -597,16 +620,23 @@ class UnivariateMetric(BaseMetric):
                 original_ratio,
                 width=width,
                 label="Original",
-                color="#009DC4",
+                color="#3F93E1",
             )
             plt.bar(
                 x + width / 2,
                 synthetic_ratio,
                 width=width,
                 label="Synthetic",
-                color="#F6748B",
+                color="#FF9C54",
             )
             ax = plt.gca()
+            ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
+            ax.yaxis.grid(
+                color="#E5E9EB",
+                linestyle='-',
+                linewidth=1)
+            ax.set_axisbelow(True)
+            ax.set_facecolor("#FFFFFF")
             ax.set_xticks(x)
             ax.set_xticklabels(
                 [
@@ -618,11 +648,18 @@ class UnivariateMetric(BaseMetric):
             fig.autofmt_xdate()
             plt.xlabel("Category")
             plt.ylabel("Percents")
-            plt.legend()
-            plt.title(column)
+            plt.legend(
+                ["Original", "Synthetic"],
+                loc="upper center",
+                bbox_to_anchor=(0.1, 1.05),
+                ncol=2,
+                frameon=False
+            )
             if self.draws_path:
-                plt.savefig(f"{self.draws_path}/univariate_{column}.png")
-                # pl.dump(fig, open(f"{self.draws_path}univariate_{column}.pickle", "wb"))
+                path_to_image = f"{self.draws_path}/univariate_{column}.png"
+                plt.savefig(path_to_image)
+                uni_images[column] = path_to_image
+        return uni_images
 
     def __calc_continuous(self, column: str, print_nan: bool = False):
         original_nan_count = self.original[column].isna().sum()
@@ -630,23 +667,36 @@ class UnivariateMetric(BaseMetric):
         original_unique_count = self.original[column].nunique()
         synthetic_unique_count = self.synthetic[column].nunique()
 
+        uni_images = {}
+
         if self.plot and original_unique_count > 1 and synthetic_unique_count > 1:
-            fig_handle = plt.figure()
+            fig, ax = plt.subplots()
             # Kernel Density Estimation plot
-            self.original[column].plot(kind="density", color="#009DC4")
-            self.synthetic[column].plot(kind="density", color="#F6748B")
+            self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
+            self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=4)
             plt.xlabel("Value")
-            plt.legend(["Original", "Synthetic"])
-            plt.title(column)
+            plt.legend(
+                ["Original", "Synthetic"],
+                loc="upper center",
+                bbox_to_anchor=(0.1, 1.05),
+                ncol=2,
+                frameon=False
+            )
+            ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
+            ax.grid(
+                color="#E5E9EB",
+                linestyle="-",
+                linewidth=1)
+            ax.set_axisbelow(True)
+            ax.set_facecolor("#FFFFFF")
             if self.draws_path:
-                plt.savefig(f"{self.draws_path}/univariate_{column}.png")
-                # pl.dump(
-                #     fig_handle,
-                #     open(f"{self.draws_path}univariate_{column}.pickle", "wb"),
-                # )
+                path_to_image = f"{self.draws_path}/univariate_{column}.png"
+                plt.savefig(path_to_image)
+                uni_images[column] = path_to_image
         if print_nan:
-            print(f"Number of original NaN values in {column}: {original_nan_count}")
-            print(f"Number of synthetic NaN values in {column}: {synthetic_nan_count}")
+            logger.info(f"Number of original NaN values in {column}: {original_nan_count}")
+            logger.info(f"Number of synthetic NaN values in {column}: {synthetic_nan_count}")
+        return uni_images
 
 
 class Clustering(BaseMetric):
@@ -680,7 +730,7 @@ class Clustering(BaseMetric):
                 self.original[cont_columns + categ_columns].sample(row_limit),
                 self.synthetic[cont_columns + categ_columns].sample(row_limit)
             ],
-            keys=['original', 'synthetic']
+            keys=["original", "synthetic"]
         ).dropna().reset_index()
         self.__preprocess_data()
         optimal_clust_num = self.__automated_elbow()
@@ -691,12 +741,33 @@ class Clustering(BaseMetric):
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "origin", "count"]
         self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
-        print(f"Mean clusters homogeneity is {self.mean_score.values[0]}")
+        logger.info(f"Mean clusters homogeneity is {self.mean_score.values[0]}")
 
         if self.plot:
             plt.clf()
             sns.set(font_scale=2)
-            barplot = sns.barplot(data=statistics, x="cluster", y="count", hue="origin")
+            barplot = sns.barplot(
+                data=statistics,
+                x="cluster",
+                y="count",
+                hue="origin",
+                palette={"synthetic": "#ff9c54", "original": "#3f93e1"},
+                saturation=1
+            )
+            barplot.set_facecolor("#FFFFFF")
+            ax = plt.gca()
+            ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
+            ax.yaxis.grid(
+                color="#E5E9EB",
+                linestyle='-',
+                linewidth=1)
+            plt.legend(
+                ["original", "synthetic"],
+                loc="upper center",
+                bbox_to_anchor=(0.1, 1.05),
+                ncol=2,
+                frameon=False
+            )
             plt.savefig(f"{self.draws_path}/clusters_barplot.png")
         return self.mean_score.values[0]
 
@@ -772,18 +843,22 @@ class Utility(BaseMetric):
         best_regres, score_regres, synth_regres_score = self.__create_regression_models(cont_cols)
 
         result = pd.DataFrame({
-            "Orig": [score_binary if best_binary is not None else np.nan,
-                     score_categ if best_categ is not None else np.nan,
-                     score_regres if best_regres is not None else np.nan],
-            "Synth": [synth_score_binary if best_binary is not None else np.nan,
-                      synth_score_categ if best_categ is not None else np.nan,
-                      synth_regres_score if best_regres is not None else np.nan],
-            "Synth_to_orig_ratio": [round(score_binary/synth_score_binary, 3) if best_binary is not None else np.nan,
-                     round(score_categ/synth_score_categ, 3) if best_categ is not None else np.nan,
-                     round(score_regres/synth_regres_score, 3) if best_regres is not None else np.nan],
-            "Type": ["Binary (" + best_binary if best_binary is not None else '' + ")",
-                     "Multiclass (" + best_categ if best_categ is not None else '' + ")",
-                     "Regression (" + best_regres if best_regres is not None else '' + ")"]})
+            "original": [
+                score_binary if best_binary is not None else np.nan,
+                score_categ if best_categ is not None else np.nan,
+                score_regres if best_regres is not None else np.nan],
+            "synthetic": [
+                synth_score_binary if best_binary is not None else np.nan,
+                synth_score_categ if best_categ is not None else np.nan,
+                synth_regres_score if best_regres is not None else np.nan],
+            "Synth_to_orig_ratio": [
+                round(score_binary/synth_score_binary, 3) if best_binary is not None else np.nan,
+                round(score_categ/synth_score_categ, 3) if best_categ is not None else np.nan,
+                round(score_regres/synth_regres_score, 3) if best_regres is not None else np.nan],
+            "Type": [
+                "Binary (" + best_binary if best_binary is not None else '' + ")",
+                "Multiclass (" + best_categ if best_categ is not None else '' + ")",
+                "Regression (" + best_regres if best_regres is not None else '' + ")"]})
         result = pd.melt(result.dropna(), id_vars=["Type", "Synth_to_orig_ratio"])
 
         if self.plot:
@@ -792,22 +867,47 @@ class Utility(BaseMetric):
             else:
                 sns.set(font_scale=2)
                 plt.clf()
-                barplot = sns.barplot(data=result, x="Type", y="value", hue="variable")
+                barplot = sns.barplot(
+                    data=result,
+                    x="Type",
+                    y="value",
+                    hue="variable",
+                    palette={"synthetic": "#FF9C54", "original": "#3F93E1"},
+                    saturation=1
+                )
+                barplot.set_facecolor("#FFFFFF")
+                ax = plt.gca()
+                ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
+                ax.yaxis.grid(
+                    color="#E5E9EB",
+                    linestyle="-",
+                    linewidth=1)
+                plt.legend(
+                    ["original", "synthetic"],
+                    loc="upper center",
+                    bbox_to_anchor=(0.1, 1.05),
+                    ncol=2,
+                    frameon=False
+                )
                 plt.savefig(f"{self.draws_path}/utility_barplot.png")
 
         if best_binary is not None:
-            print(f"The ratio of synthetic binary accuracy to original is {round(score_binary/synth_score_binary, 3)}. "
-                  f"The model considers the {best_binary} column as a target and other columns as predictors")
+            logger.info(
+                f"The ratio of synthetic binary accuracy to original is {round(score_binary/synth_score_binary, 3)}. "
+                f"The model considers the {best_binary} column as a target and other columns as predictors")
         if best_categ is not None:
-            print(f"The ratio of synthetic multiclass accuracy to original is {round(score_categ / synth_score_categ, 3)}. "
-                  f"The model considers the {best_categ} column as a target and other columns as predictors")
+            logger.info(
+                f"The ratio of synthetic multiclass accuracy to original is {round(score_categ / synth_score_categ, 3)}. "
+                f"The model considers the {best_categ} column as a target and other columns as predictors")
         if best_regres is not None:
-            print(f"The ratio of synthetic regression accuracy to original is {round(score_regres / synth_regres_score, 3)}. "
-                  f"The model considers the {best_regres} column as a target and other columns as predictors")
+            logger.info(
+                f"The ratio of synthetic regression accuracy to original is {round(score_regres / synth_regres_score, 3)}. "
+                f"The model considers the {best_regres} column as a target and other columns as predictors")
 
         return result
 
-    def __get_accuracy_score(self, y_true, y_pred, task_type):
+    @staticmethod
+    def __get_accuracy_score(y_true, y_pred, task_type):
         if task_type != "regression":
             score = accuracy_score(
                 y_true=y_true,
