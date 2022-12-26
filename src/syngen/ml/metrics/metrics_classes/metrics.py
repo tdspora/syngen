@@ -856,9 +856,9 @@ class Utility(BaseMetric):
                 round(score_categ/synth_score_categ, 3) if best_categ is not None else np.nan,
                 round(score_regres/synth_regres_score, 3) if best_regres is not None else np.nan],
             "Type": [
-                "Binary (" + best_binary if best_binary is not None else '' + ")",
-                "Multiclass (" + best_categ if best_categ is not None else '' + ")",
-                "Regression (" + best_regres if best_regres is not None else '' + ")"]})
+                "Binary (" + f"{best_binary})" if best_binary is not None else '' + ")",
+                "Multiclass (" + f"{best_categ})" if best_categ is not None else '' + ")",
+                "Regression (" + f"{best_regres})" if best_regres is not None else '' + ")"]})
         result = pd.melt(result.dropna(), id_vars=["Type", "Synth_to_orig_ratio"])
 
         if self.plot:
