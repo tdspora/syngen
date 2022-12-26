@@ -7,8 +7,8 @@ from syngen.ml.metrics.utils import transform_to_base64
 
 
 class SampleAccuracyTest(BaseTest):
-    def __init__(self, original: pd.DataFrame, sampled: pd.DataFrame, paths: dict):
-        super().__init__(original, sampled, paths)
+    def __init__(self, original: pd.DataFrame, sampled: pd.DataFrame, paths: dict, table_name: str):
+        super().__init__(original, sampled, paths, table_name)
 
     def __get_univariate_metric(self):
         """
@@ -20,7 +20,6 @@ class SampleAccuracyTest(BaseTest):
         os.makedirs(sample_acc_draws_path, exist_ok=True)
         univariate = UnivariateMetric(self.original, self.synthetic, True, sample_acc_draws_path)
         return univariate
-
 
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()
