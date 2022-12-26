@@ -76,9 +76,8 @@ class RootHandler(BaseHandler):
         if options["row_subset"]:
             data = data.sample(n=min(options["row_subset"], len(data)))
             if len(data) < 100:
-                logger.warning(
-                    f"The input table contains {len(data)} rows. It is too small to provide any meaningful results. "
-                    f"Please consider 1) disable drop_null argument, 2) provide bigger table")
+                logger.warning("The input table is too small to provide any meaningful results. "
+                               "Please consider 1) disable drop_null argument, 2) provide bigger table")
             elif len(data) < 500:
                 logger.warning(
                     f"The amount of data is {len(data)} rows. It seems that it isn't enough to supply "

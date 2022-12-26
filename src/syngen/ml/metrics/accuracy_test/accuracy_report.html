@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet"
+			href="../../../../syngen/ml/metrics/accuracy_test/src/main.css">
+		<title>Accuracy Report</title>
+	</head>
+
+	<body>
+		<div class="container">
+			<h1 class="h1-title">Accuracy report</h1>
+			<div class="container--item">
+				<img class="linear-gradient--img"
+					src="../../../../syngen/ml/metrics/accuracy_test/src/img/linear-gradient.svg">
+				<div class="linear-gradient--description">
+					<div class="linear-gradient--description__item">
+						<div>Bad</div>
+						<div>
+							< 0.7</div>
+						</div>
+
+						<div class="linear-gradient--description__item">
+							<div>Low</div>
+							<div>0.7 - 0.8</div>
+						</div>
+
+						<div class="linear-gradient--description__item">
+							<div>Medium</div>
+							<div>0.8 - 0.9</div>
+						</div>
+
+						<div class="linear-gradient--description__item">
+							<div>High</div>
+							<div> > 0.9</div>
+						</div>
+
+					</div>
+					<p class="accuracy-report-value">Median accuracy is: {{accuracy_value}}</p>
+					<p class="accuracy-report-value">Median clusters homogeneity: {{clustering_value}}</p>
+				</div>
+				<div class="container--item">
+					<h2 class="h2-title">Accuracy heatmap</h2>
+					<p class="text-description">The accuracy heatmap is calculated in the following way: for each pair of
+						original columns a similarity between them (the Jensen-Shannon distance) is measured. The same
+						operations is performed on the same pair of columns in the synthetic dataset. The resulting score
+						is
+						calculated as 1 - abs(original_score - synthetic_score).</p>
+					<img src="{{accuracy_heatmap}}">
+
+				</div>
+				<div class="container--item">
+					<h2 class="h2-title">Content</h2>
+					<div class="anchor"
+						id="Correlations">Correlations</div>
+					<div class="anchor"
+						id="Clustering">Clustering</div>
+					<div class="anchor"
+						id="Utility">Utility</div>
+					<div class="anchor"
+						id="Univariate">Univariate distributions</div>
+					<div class="anchor"
+						id="Bivariate">Bivariate distributions</div>
+				</div>
+				<div class="container--item">
+					<h2 class="h2-title"
+						id="h2-title--correlations">Correlations</h2>
+					<p class="text-description">The correlation metric is calculated in the following manner: for each
+						pair
+						of
+						numeric columns in
+						original
+						dataset a pairwise correlations is measured thus resulting in the correlations matrix. The same
+						operation
+						is performed for the synthetic dataset. The resulting matrix is the difference between original
+						correlation
+						matrix and the synthetic one</p>
+					<img src="{{correlations_heatmap}}">
+
+				</div>
+				<div class="container--item">
+					<h2 class="h2-title"
+						id="h2-title-clustering">Clustering metric</h2>
+					<p class="text-description">For clustering metric, both original and synthetic datasets are
+						concatenated.
+						After this, a
+						clustering
+						using
+						K-means is performed on the concatenated dataset. The optimal number of clusters is chosen using
+						the
+						elbow
+						rule. For the good synthetic data the proportion of original to synthetic records in each cluster
+						should be close to 1:1. The mean clusters homogeneity is calculated as a mean of ratios of
+						original
+						to
+						synthetic
+						records in each cluster</p>
+
+					<img src="{{clusters_barplot}}">
+					<p>Mean clusters homogeneity is: {{clustering_value}}</p>
+				</div>
+
+				<div class="container--item">
+					<h2 class="h2-title"
+						id="h2-title-utility">Utility metric</h2>
+					<p class="text-description">For utility calculation an automatic modeling process is engaged. For
+						every
+						binary, categorical
+						and
+						continuous
+						column it builds a model using given column as a target and other columns as predictors. Then the
+						best
+						target
+						in
+						terms of accuracy is chosen. For each of the best targets for different modeling tasks a model is
+						trained
+						on
+						the original dataset, then tested on synthetic one. For the good synthetic data the score of
+						model on
+						the
+						generated
+						data should be close to the original one</p>
+
+					<img src={{utility_barplot}}>
+					<h3 class="h3-title">{{table_name}}</h3>
+					<table class="utility-table">
+						{{utility_table}}
+					</table>
+				</div>
+
+				<div class="container--item">
+					<h2 class="h2-title"
+						id="h2-title-univariate">Univariate distributions</h2>
+					<p class="text-description">The univariate distributions are either the density plots for original vs
+						synthetic values
+						overlapped
+						for continous columns or barplots for original vs synthetic counts (in percent) for categorical
+						columns
+					</p>
+					{% for col, uni_img in uni_imgs.items() -%}
+					<h3 class="h3-title">{{col}}</h3>
+					<img src="{{uni_img}}">
+					{% endfor %}
+				</div>
+
+				<div class="container--item">
+					<h2 class="h2-title"
+						id="h2-title-bivariate">Bivariate distributions</h2>
+					<p class="text-description">Bivariate distributions are actually the two-dimensional histograms. For
+						each
+						pair of columns each
+						combination
+						of their values' levels are plotted as a matrix, thus resulting in a grid. In each cell of this
+						grid
+						a
+						number
+						of records belonging to both classes simultaneously is calculated. For instance, for the column
+						with
+						values "Monday", "Tuesday", "Sunday" and column with values "Working", "Museum visiting" and
+						"Walking"
+						a count of each activity in each day will be calculated and plotted in the corresponding cell.
+						For good synthetic data the pattern of bivariate distribution should match the original
+						distribution
+					</p>
+					<div class="bivariate-img-container">
+						{% for title, bi_img in bi_imgs.items() -%}
+						<div class="bivariate-img-container--item">
+
+							<h3 class="h3-title">Original: {{title}}</h3>
+							<h3 class="h3-title">Synthetics: {{title}}</h3>
+							<img src="{{bi_img}}">
+
+						</div>
+						<div class="bivariate-img-container--item">
+
+							<h3 class="h3-title">Original: {{title}}</h3>
+							<h3 class="h3-title">Synthetics: {{title}}</h3>
+							<img src="{{bi_img}}">
+
+						</div>
+						{% endfor %}
+					</div>
+
+				</div>
+
+			</div>
+			<script src="../../../../syngen/ml/metrics/accuracy_test/src/script.js"></script>
+	</body>
+
+</html>
