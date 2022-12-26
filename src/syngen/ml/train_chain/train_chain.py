@@ -296,7 +296,6 @@ class VaeInferHandler(BaseHandler):
             logger.info(f"Total of {batch_num} batch(es)")
             batches = self.split_by_batches(size, batch_num)
             prepared_batches = [self.run(batch, run_parallel) for batch in batches]
-            prepared_data = pd.DataFrame()
             prepared_data = self._concat_slices_with_unique_pk(prepared_batches) if len(prepared_batches) > 0 else pd.DataFrame()
 
             is_pk = self._is_pk()
