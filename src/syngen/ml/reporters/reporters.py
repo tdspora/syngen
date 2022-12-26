@@ -172,7 +172,7 @@ class AccuracyReporter(Reporter):
             int_columns,
             categ_columns,
         ) = self.preprocess_data()
-        accuracy_test = AccuracyTest(original, synthetic, self.paths)
+        accuracy_test = AccuracyTest(original, synthetic, self.paths, self.table_name)
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
             categ_columns=list(categ_columns)
@@ -204,7 +204,7 @@ class SampleAccuracyReporter(Reporter):
             int_columns,
             categ_columns,
         ) = self.preprocess_data()
-        accuracy_test = SampleAccuracyTest(original, sampled, self.paths)
+        accuracy_test = SampleAccuracyTest(original, sampled, self.paths, self.table_name)
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
             categ_columns=list(categ_columns)
