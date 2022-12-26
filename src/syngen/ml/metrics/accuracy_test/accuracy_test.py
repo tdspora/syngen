@@ -60,7 +60,7 @@ class AccuracyTest(BaseTest):
         utility_result = utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
 
         # Generate html report
-        with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report_template.html") as file_:
+        with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
             template = jinja2.Template(file_.read())
 
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
