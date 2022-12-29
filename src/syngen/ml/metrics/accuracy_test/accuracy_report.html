@@ -166,16 +166,18 @@
 					<div class="bivariate-img-container">
 						{% for title, bi_img in bi_imgs.items() -%}
 						<div class="bivariate-img-container--item">
-
-							<h3 class="h3-title">Original: {{title}}</h3>
-							<h3 class="h3-title">Synthetics: {{title}}</h3>
+							<div class="flex-container">
+								<h3 class="h3-title">Original: {{title}}</h3>
+								<h3 class="h3-title">Synthetics: {{title}}</h3>
+							</div>
 							<img src="{{bi_img}}">
 
 						</div>
 						<div class="bivariate-img-container--item">
-
-							<h3 class="h3-title">Original: {{title}}</h3>
-							<h3 class="h3-title">Synthetics: {{title}}</h3>
+							<div class="flex-container">
+								<h3 class="h3-title">Original: {{title}}</h3>
+								<h3 class="h3-title">Synthetics: {{title}}</h3>
+							</div>
 							<img src="{{bi_img}}">
 
 						</div>
