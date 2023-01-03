@@ -4,7 +4,7 @@
 	<head>
 		<meta charset="UTF-8">
 		<link rel="stylesheet"
-			href="../../../../syngen/ml/metrics/accuracy_test/src/main.css">
+			href="../../../../../src/syngen/ml/metrics/accuracy_test/src/main.css">
 		<title>Accuracy Report</title>
 	</head>
 
@@ -13,7 +13,7 @@
 			<h1 class="h1-title">Accuracy report</h1>
 			<div class="container--item">
 				<img class="linear-gradient--img"
-					src="../../../../syngen/ml/metrics/accuracy_test/src/img/linear-gradient.svg">
+					src="../../../../../src/syngen/ml/metrics/accuracy_test/src/img/linear-gradient.svg">
 				<div class="linear-gradient--description">
 					<div class="linear-gradient--description__item">
 						<div>Bad</div>
@@ -124,9 +124,9 @@
 
 					<img src={{utility_barplot}}>
 					<h3 class="h3-title">{{table_name}}</h3>
-					<table class="utility-table">
+					<div class="utility-table">
 						{{utility_table}}
-					</table>
+					</div>
 				</div>
 
 				<div class="container--item">
@@ -167,16 +167,16 @@
 						{% for title, bi_img in bi_imgs.items() -%}
 						<div class="bivariate-img-container--item">
 							<div class="flex-container">
-								<h3 class="h3-title">Original: {{title}}</h3>
-								<h3 class="h3-title">Synthetics: {{title}}</h3>
+								<h3 class="h3-title bivariate-title">Original: {{title}}</h3>
+								<h3 class="h3-title bivariate-title">Synthetics: {{title}}</h3>
 							</div>
 							<img src="{{bi_img}}">
 
 						</div>
 						<div class="bivariate-img-container--item">
 							<div class="flex-container">
-								<h3 class="h3-title">Original: {{title}}</h3>
-								<h3 class="h3-title">Synthetics: {{title}}</h3>
+								<h3 class="h3-title bivariate-title">Original: {{title}}</h3>
+								<h3 class="h3-title bivariate-title">Synthetics: {{title}}</h3>
 							</div>
 							<img src="{{bi_img}}">
 
@@ -187,7 +187,7 @@
 				</div>
 
 			</div>
-			<script src="../../../../syngen/ml/metrics/accuracy_test/src/script.js"></script>
+			<script src="../../../../../src/syngen/ml/metrics/accuracy_test/src/script.js"></script>
 	</body>
 
 </html>
