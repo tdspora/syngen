@@ -209,6 +209,10 @@ img:not(:first-child) {
 	display: inline-block;
 }
 
+.bivariate-title {
+	margin-bottom: 0 !important;
+}
+
 @media print {
 	.container {
 		padding: 10px;
