@@ -296,7 +296,7 @@ class BivariateMetric(BaseMetric):
         bi_imgs = {}
         for first_col, second_col in column_pairs:
             fig, self._axes = plt.subplots(1, 2, figsize=(30, 15))
-            fig.subplots_adjust(top=1.5)
+            fig.subplots_adjust(top=1.0)
             if first_col in cont_columns:
                 if second_col in cont_columns:
                     (
