@@ -408,8 +408,14 @@ class Dataset:
         """
         Assign date feature to date columns
         """
-        self.assign_feature(DateFeature(feature), feature)
-        logger.debug(f"Feature {feature} assigned as date feature")
+        features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
+        self.assign_feature(DateFeature(features[0]), features[0])
+        logger.debug(f"Feature {features[0]} assigned as date feature")
+        if len(features) == 2:
+            self.null_num_column_names.append(features[1])
+            self.assign_feature(ContinuousFeature(features[1], column_type=int), features[1])
+            logger.debug(f"Feature {features[1]} assigned as int feature")
+
 
     def _assign_binary_feature(self, feature):
         """
