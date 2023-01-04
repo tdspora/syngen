@@ -181,7 +181,7 @@ class VaeInferHandler(BaseHandler):
         if self.metadata and self.table_name in self.metadata:
             config_of_keys = self.metadata.get(self.table_name).get("keys", {})
             for key in config_of_keys.keys():
-                if config_of_keys.get(key).get("type") == "PK":
+                if config_of_keys.get(key).get("type") == "PK" and not isinstance(df_slices[0][key][0], str):
                     cumm_len = 0
                     for i, frame in enumerate(df_slices):
                         frame[key] = frame[key].map(lambda pk_val: pk_val + cumm_len)
