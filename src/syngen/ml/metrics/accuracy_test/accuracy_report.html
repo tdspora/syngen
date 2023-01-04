@@ -37,7 +37,7 @@
 						</div>
 
 					</div>
-					<p class="accuracy-report-value">Median accuracy is: {{accuracy_value}}</p>
+					<p class="accuracy-report-value">Median accuracy: {{accuracy_value}}</p>
 					<p class="accuracy-report-value">Median clusters homogeneity: {{clustering_value}}</p>
 				</div>
 				<div class="container--item">
@@ -75,7 +75,7 @@
 						operation
 						is performed for the synthetic dataset. The resulting matrix is the difference between original
 						correlation
-						matrix and the synthetic one</p>
+						matrix and the synthetic one.</p>
 					<img src="{{correlations_heatmap}}">
 
 				</div>
@@ -95,10 +95,10 @@
 						original
 						to
 						synthetic
-						records in each cluster</p>
+						records in each cluster.</p>
 
 					<img src="{{clusters_barplot}}">
-					<p>Mean clusters homogeneity is: {{clustering_value}}</p>
+					<p>Mean clusters homogeneity: {{clustering_value}}</p>
 				</div>
 
 				<div class="container--item">
@@ -120,7 +120,7 @@
 						model on
 						the
 						generated
-						data should be close to the original one</p>
+						data should be close to the original one.</p>
 
 					<img src={{utility_barplot}}>
 					<h3 class="h3-title">{{table_name}}</h3>
@@ -136,7 +136,7 @@
 						synthetic values
 						overlapped
 						for continous columns or barplots for original vs synthetic counts (in percent) for categorical
-						columns
+						columns.
 					</p>
 					{% for col, uni_img in uni_imgs.items() -%}
 					<h3 class="h3-title">{{col}}</h3>
@@ -161,18 +161,10 @@
 						"Walking"
 						a count of each activity in each day will be calculated and plotted in the corresponding cell.
 						For good synthetic data the pattern of bivariate distribution should match the original
-						distribution
+						distribution.
 					</p>
 					<div class="bivariate-img-container">
 						{% for title, bi_img in bi_imgs.items() -%}
-						<div class="bivariate-img-container--item">
-							<div class="flex-container">
-								<h3 class="h3-title bivariate-title">Original: {{title}}</h3>
-								<h3 class="h3-title bivariate-title">Synthetics: {{title}}</h3>
-							</div>
-							<img src="{{bi_img}}">
-
-						</div>
 						<div class="bivariate-img-container--item">
 							<div class="flex-container">
 								<h3 class="h3-title bivariate-title">Original: {{title}}</h3>

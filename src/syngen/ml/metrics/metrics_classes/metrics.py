@@ -642,14 +642,14 @@ class UnivariateMetric(BaseMetric):
                 [
                     str(sanitize_labels(label[:30])) + "..." if len(str(label)) > 33 else sanitize_labels(str(label))
                     for label in original_labels
-                ]
+                ],
+                fontdict={"fontsize": 13}
             )
-
             fig.autofmt_xdate()
-            plt.xlabel("Category")
-            plt.ylabel("Percents")
+            plt.xlabel("category", fontsize=15)
+            plt.ylabel("percents", fontsize=15)
             plt.legend(
-                ["Original", "Synthetic"],
+                ["original", "synthetic"],
                 loc="upper center",
                 bbox_to_anchor=(0.1, 1.05),
                 ncol=2,
@@ -674,9 +674,10 @@ class UnivariateMetric(BaseMetric):
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
             self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=4)
-            plt.xlabel("Value")
+            plt.xlabel("value")
+            plt.ylabel("density")
             plt.legend(
-                ["Original", "Synthetic"],
+                ["original", "synthetic"],
                 loc="upper center",
                 bbox_to_anchor=(0.1, 1.05),
                 ncol=2,
@@ -745,7 +746,7 @@ class Clustering(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(font_scale=2)
+            sns.set(font_scale=3)
             barplot = sns.barplot(
                 data=statistics,
                 x="cluster",
@@ -764,7 +765,7 @@ class Clustering(BaseMetric):
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper center",
-                bbox_to_anchor=(0.1, 1.05),
+                bbox_to_anchor=(0.13, 1.08),
                 ncol=2,
                 frameon=False
             )
@@ -851,25 +852,25 @@ class Utility(BaseMetric):
                 synth_score_binary if best_binary is not None else np.nan,
                 synth_score_categ if best_categ is not None else np.nan,
                 synth_regres_score if best_regres is not None else np.nan],
-            "Synth_to_orig_ratio": [
+            "synth_to_orig_ratio": [
                 round(score_binary/synth_score_binary, 3) if best_binary is not None else np.nan,
                 round(score_categ/synth_score_categ, 3) if best_categ is not None else np.nan,
                 round(score_regres/synth_regres_score, 3) if best_regres is not None else np.nan],
-            "Type": [
+            "type": [
                 "Binary (" + f"{best_binary})" if best_binary is not None else '' + ")",
                 "Multiclass (" + f"{best_categ})" if best_categ is not None else '' + ")",
                 "Regression (" + f"{best_regres})" if best_regres is not None else '' + ")"]})
-        result = pd.melt(result.dropna(), id_vars=["Type", "Synth_to_orig_ratio"])
+        result = pd.melt(result.dropna(), id_vars=["type", "synth_to_orig_ratio"])
 
         if self.plot:
             if result.empty:
                 logger.info("No data to provide utility barplot")
             else:
-                sns.set(font_scale=2)
+                sns.set(font_scale=3)
                 plt.clf()
                 barplot = sns.barplot(
                     data=result,
-                    x="Type",
+                    x="type",
                     y="value",
                     hue="variable",
                     palette={"synthetic": "#FF9C54", "original": "#3F93E1"},
@@ -885,7 +886,7 @@ class Utility(BaseMetric):
                 plt.legend(
                     ["original", "synthetic"],
                     loc="upper center",
-                    bbox_to_anchor=(0.1, 1.05),
+                    bbox_to_anchor=(0.13, 1.08),
                     ncol=2,
                     frameon=False
                 )
