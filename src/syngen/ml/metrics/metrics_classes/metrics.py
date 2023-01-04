@@ -62,7 +62,7 @@ class JensenShannonDistance(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(rc={"figure.figsize": (16, 12)})
+            sns.set(rc={"figure.figsize": (20, 20)})
             heatmap = sns.heatmap(
                 self.heatmap,
                 xticklabels=self.labels,
@@ -254,7 +254,7 @@ class Correlations(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(rc={"figure.figsize": (13, 10)}, font_scale=2)
+            sns.set(rc={"figure.figsize": (20, 20)}, font_scale=3)
             heatmap = sns.heatmap(
                 self.corr_score,
                 annot=False,
@@ -647,13 +647,13 @@ class UnivariateMetric(BaseMetric):
                 fontdict={"fontsize": 13}
             )
             fig.autofmt_xdate()
-            plt.xlabel("category", fontsize=17)
-            plt.ylabel("percents", fontsize=17)
-            matplotlib.rcParams["legend.fontsize"] = 20
+            plt.xlabel("category", fontsize=25)
+            plt.ylabel("percents", fontsize=25)
+            matplotlib.rcParams["legend.fontsize"] = 25
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper center",
-                bbox_to_anchor=(0.17, 1.08),
+                bbox_to_anchor=(0.17, 1.07),
                 ncol=2,
                 frameon=False
             )
@@ -676,13 +676,13 @@ class UnivariateMetric(BaseMetric):
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
             self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=4)
-            plt.xlabel("value", fontsize=16)
-            plt.ylabel("density", fontsize=16)
-            matplotlib.rcParams["legend.fontsize"] = 20
+            plt.xlabel("value", fontsize=25)
+            plt.ylabel("density", fontsize=25)
+            matplotlib.rcParams["legend.fontsize"] = 25
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper center",
-                bbox_to_anchor=(0.17, 1.08),
+                bbox_to_anchor=(0.17, 1.07),
                 ncol=2,
                 frameon=False
             )
@@ -770,7 +770,7 @@ class Clustering(BaseMetric):
             plt.legend(
                 handles=[original_label, synthetic_label],
                 loc="upper center",
-                bbox_to_anchor=(0.13, 1.08),
+                bbox_to_anchor=(0.14, 1.09),
                 ncol=2,
                 frameon=False
             )
@@ -893,7 +893,7 @@ class Utility(BaseMetric):
                 plt.legend(
                     handles=[original_label, synthetic_label],
                     loc="upper center",
-                    bbox_to_anchor=(0.13, 1.08),
+                    bbox_to_anchor=(0.14, 1.09),
                     ncol=2,
                     frameon=False
                 )
