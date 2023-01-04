@@ -642,12 +642,12 @@ class UnivariateMetric(BaseMetric):
                 [
                     str(sanitize_labels(label[:30])) + "..." if len(str(label)) > 33 else sanitize_labels(str(label))
                     for label in original_labels
-                ]
+                ],
+                fontdict={"fontsize": 13}
             )
-
             fig.autofmt_xdate()
-            plt.xlabel("category", fontsize=20)
-            plt.ylabel("percents", fontsize=20)
+            plt.xlabel("category", fontsize=15)
+            plt.ylabel("percents", fontsize=15)
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper center",
