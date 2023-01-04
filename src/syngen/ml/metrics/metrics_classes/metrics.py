@@ -9,6 +9,7 @@ from loguru import logger
 
 import matplotlib
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.patches import Patch
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -762,8 +763,10 @@ class Clustering(BaseMetric):
                 color="#E5E9EB",
                 linestyle='-',
                 linewidth=1)
+            original_label = Patch(color="#3f93e1", label='original')
+            synthetic_label = Patch(color="#ff9c54", label='synthetic')
             plt.legend(
-                ["original", "synthetic"],
+                handles=[original_label, synthetic_label],
                 loc="upper center",
                 bbox_to_anchor=(0.13, 1.08),
                 ncol=2,
@@ -883,8 +886,10 @@ class Utility(BaseMetric):
                     color="#E5E9EB",
                     linestyle="-",
                     linewidth=1)
+                original_label = Patch(color="#3f93e1", label='original')
+                synthetic_label = Patch(color="#ff9c54", label='synthetic')
                 plt.legend(
-                    ["original", "synthetic"],
+                    handles=[original_label, synthetic_label],
                     loc="upper center",
                     bbox_to_anchor=(0.13, 1.08),
                     ncol=2,
