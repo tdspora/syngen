@@ -569,14 +569,14 @@ class UnivariateMetric(BaseMetric):
         self, cont_columns: List[str], categ_columns: List[str], print_nan: bool = False
     ):
         cont_columns = list(cont_columns)
-        uni_cont_images = {}
+        images = {}
         uni_categ_images = {}
         for col in cont_columns:
-            uni_cont_images = self.__calc_continuous(col, print_nan)
+            images = self.__calc_continuous(col, print_nan)
         for col in categ_columns:
             uni_categ_images = self.__calc_categ(col)
-        uni_cont_images.update(uni_categ_images)
-        return uni_cont_images
+        images.update(uni_categ_images)
+        return images
 
     def __calc_categ(self, column):
         def plot_dist(column_data, sort=True, full_set=None):
@@ -647,12 +647,13 @@ class UnivariateMetric(BaseMetric):
                 fontdict={"fontsize": 13}
             )
             fig.autofmt_xdate()
-            plt.xlabel("category", fontsize=15)
-            plt.ylabel("percents", fontsize=15)
+            plt.xlabel("category", fontsize=17)
+            plt.ylabel("percents", fontsize=17)
+            matplotlib.rcParams["legend.fontsize"] = 20
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper center",
-                bbox_to_anchor=(0.1, 1.05),
+                bbox_to_anchor=(0.17, 1.08),
                 ncol=2,
                 frameon=False
             )
@@ -675,12 +676,13 @@ class UnivariateMetric(BaseMetric):
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
             self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=4)
-            plt.xlabel("value")
-            plt.ylabel("density")
+            plt.xlabel("value", fontsize=16)
+            plt.ylabel("density", fontsize=16)
+            matplotlib.rcParams["legend.fontsize"] = 20
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper center",
-                bbox_to_anchor=(0.1, 1.05),
+                bbox_to_anchor=(0.17, 1.08),
                 ncol=2,
                 frameon=False
             )
