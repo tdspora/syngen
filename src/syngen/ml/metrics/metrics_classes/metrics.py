@@ -62,7 +62,7 @@ class JensenShannonDistance(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(rc={"figure.figsize": (20, 20)})
+            sns.set(rc={"figure.figsize": self.heatmap.shape})
             heatmap = sns.heatmap(
                 self.heatmap,
                 xticklabels=self.labels,
@@ -254,7 +254,7 @@ class Correlations(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(rc={"figure.figsize": (20, 20)}, font_scale=3)
+            sns.set(rc={"figure.figsize": self.corr_score.shape}, font_scale=3)
             heatmap = sns.heatmap(
                 self.corr_score,
                 annot=False,
@@ -572,9 +572,9 @@ class UnivariateMetric(BaseMetric):
         images = {}
         uni_categ_images = {}
         for col in cont_columns:
-            images = self.__calc_continuous(col, print_nan)
+            images.update(self.__calc_continuous(col, print_nan))
         for col in categ_columns:
-            uni_categ_images = self.__calc_categ(col)
+            uni_categ_images.update(self.__calc_categ(col))
         images.update(uni_categ_images)
         return images
 
@@ -643,17 +643,15 @@ class UnivariateMetric(BaseMetric):
                 [
                     str(sanitize_labels(label[:30])) + "..." if len(str(label)) > 33 else sanitize_labels(str(label))
                     for label in original_labels
-                ],
-                fontdict={"fontsize": 13}
+                ]
             )
             fig.autofmt_xdate()
-            plt.xlabel("category", fontsize=25)
-            plt.ylabel("percents", fontsize=25)
-            matplotlib.rcParams["legend.fontsize"] = 25
+            plt.xlabel("category")
+            plt.ylabel("percents")
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper center",
-                bbox_to_anchor=(0.17, 1.07),
+                bbox_to_anchor=(0.14, 1.09),
                 ncol=2,
                 frameon=False
             )
@@ -676,13 +674,12 @@ class UnivariateMetric(BaseMetric):
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
             self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=4)
-            plt.xlabel("value", fontsize=25)
-            plt.ylabel("density", fontsize=25)
-            matplotlib.rcParams["legend.fontsize"] = 25
+            plt.xlabel("value")
+            plt.ylabel("density")
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper center",
-                bbox_to_anchor=(0.17, 1.07),
+                bbox_to_anchor=(0.14, 1.09),
                 ncol=2,
                 frameon=False
             )
