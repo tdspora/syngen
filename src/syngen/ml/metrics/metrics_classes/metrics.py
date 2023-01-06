@@ -283,7 +283,9 @@ class BivariateMetric(BaseMetric):
         super().__init__(original, synthetic)
         self.plot = plot
         self.draws_path = draws_path
-        self.cmap = LinearSegmentedColormap.from_list("rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"])
+        self.cmap = LinearSegmentedColormap.from_list(
+            "rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"]
+        )
 
     def calculate_all(
         self,
@@ -612,7 +614,7 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot:
-            fig = plt.figure()
+            fig = plt.figure(figsize=(10, 10))
 
             width = 0.35
             x = np.arange(len(original_labels))
@@ -650,8 +652,8 @@ class UnivariateMetric(BaseMetric):
             plt.ylabel("percents")
             plt.legend(
                 ["original", "synthetic"],
-                loc="upper center",
-                bbox_to_anchor=(0.14, 1.09),
+                loc="upper left",
+                bbox_to_anchor=(0, 1.07),
                 ncol=2,
                 frameon=False
             )
@@ -671,6 +673,7 @@ class UnivariateMetric(BaseMetric):
 
         if self.plot and original_unique_count > 1 and synthetic_unique_count > 1:
             fig, ax = plt.subplots()
+            plt.figure(figsize=(10, 10))
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
             self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=4)
@@ -678,11 +681,12 @@ class UnivariateMetric(BaseMetric):
             plt.ylabel("density")
             plt.legend(
                 ["original", "synthetic"],
-                loc="upper center",
-                bbox_to_anchor=(0.14, 1.09),
+                loc="upper left",
+                bbox_to_anchor=(0, 1.07),
                 ncol=2,
                 frameon=False
             )
+            ax = plt.gca()
             ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
             ax.grid(
                 color="#E5E9EB",
@@ -766,8 +770,8 @@ class Clustering(BaseMetric):
             synthetic_label = Patch(color="#ff9c54", label='synthetic')
             plt.legend(
                 handles=[original_label, synthetic_label],
-                loc="upper center",
-                bbox_to_anchor=(0.14, 1.09),
+                loc="upper left",
+                bbox_to_anchor=(0, 1.09),
                 ncol=2,
                 frameon=False
             )
@@ -889,8 +893,8 @@ class Utility(BaseMetric):
                 synthetic_label = Patch(color="#ff9c54", label='synthetic')
                 plt.legend(
                     handles=[original_label, synthetic_label],
-                    loc="upper center",
-                    bbox_to_anchor=(0.14, 1.09),
+                    loc="upper left",
+                    bbox_to_anchor=(0, 1.09),
                     ncol=2,
                     frameon=False
                 )
