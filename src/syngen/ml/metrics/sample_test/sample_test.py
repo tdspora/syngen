@@ -23,15 +23,13 @@ class SampleAccuracyTest(BaseTest):
 
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()
-        univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
+        uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
 
         # Generate html report
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/sample_report_template.html") as file_:
             template = jinja2.Template(file_.read())
 
-        draws_acc_path = f"{self.paths['draws_path']}/sample_accuracy"
-        uni_images = [transform_to_base64(f"{draws_acc_path}/{f}") for f in os.listdir(draws_acc_path)
-                      if f.startswith("univariate")]
+        uni_images = {title: transform_to_base64(path) for title, path in uni_images.items()}
 
         html = template.render(uni_imgs=uni_images)
 

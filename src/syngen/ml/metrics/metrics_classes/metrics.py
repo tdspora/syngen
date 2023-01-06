@@ -9,6 +9,7 @@ from loguru import logger
 
 import matplotlib
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.patches import Patch
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -61,7 +62,7 @@ class JensenShannonDistance(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(rc={"figure.figsize": (16, 12)})
+            sns.set(rc={"figure.figsize": self.heatmap.shape})
             heatmap = sns.heatmap(
                 self.heatmap,
                 xticklabels=self.labels,
@@ -253,7 +254,7 @@ class Correlations(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(rc={"figure.figsize": (13, 10)}, font_scale=2)
+            sns.set(rc={"figure.figsize": self.corr_score.shape}, font_scale=3)
             heatmap = sns.heatmap(
                 self.corr_score,
                 annot=False,
@@ -282,7 +283,9 @@ class BivariateMetric(BaseMetric):
         super().__init__(original, synthetic)
         self.plot = plot
         self.draws_path = draws_path
-        self.cmap = LinearSegmentedColormap.from_list("rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"])
+        self.cmap = LinearSegmentedColormap.from_list(
+            "rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"]
+        )
 
     def calculate_all(
         self,
@@ -568,14 +571,14 @@ class UnivariateMetric(BaseMetric):
         self, cont_columns: List[str], categ_columns: List[str], print_nan: bool = False
     ):
         cont_columns = list(cont_columns)
-        uni_cont_images = {}
+        images = {}
         uni_categ_images = {}
         for col in cont_columns:
-            uni_cont_images = self.__calc_continuous(col, print_nan)
+            images.update(self.__calc_continuous(col, print_nan))
         for col in categ_columns:
-            uni_categ_images = self.__calc_categ(col)
-        uni_cont_images.update(uni_categ_images)
-        return uni_cont_images
+            uni_categ_images.update(self.__calc_categ(col))
+        images.update(uni_categ_images)
+        return images
 
     def __calc_categ(self, column):
         def plot_dist(column_data, sort=True, full_set=None):
@@ -611,7 +614,7 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot:
-            fig = plt.figure()
+            fig = plt.figure(figsize=(10, 10))
 
             width = 0.35
             x = np.arange(len(original_labels))
@@ -642,16 +645,15 @@ class UnivariateMetric(BaseMetric):
                 [
                     str(sanitize_labels(label[:30])) + "..." if len(str(label)) > 33 else sanitize_labels(str(label))
                     for label in original_labels
-                ],
-                fontdict={"fontsize": 13}
+                ]
             )
             fig.autofmt_xdate()
-            plt.xlabel("category", fontsize=15)
-            plt.ylabel("percents", fontsize=15)
+            plt.xlabel("category")
+            plt.ylabel("percents")
             plt.legend(
                 ["original", "synthetic"],
-                loc="upper center",
-                bbox_to_anchor=(0.1, 1.05),
+                loc="upper left",
+                bbox_to_anchor=(0, 1.07),
                 ncol=2,
                 frameon=False
             )
@@ -671,6 +673,7 @@ class UnivariateMetric(BaseMetric):
 
         if self.plot and original_unique_count > 1 and synthetic_unique_count > 1:
             fig, ax = plt.subplots()
+            plt.figure(figsize=(10, 10))
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
             self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=4)
@@ -678,11 +681,12 @@ class UnivariateMetric(BaseMetric):
             plt.ylabel("density")
             plt.legend(
                 ["original", "synthetic"],
-                loc="upper center",
-                bbox_to_anchor=(0.1, 1.05),
+                loc="upper left",
+                bbox_to_anchor=(0, 1.07),
                 ncol=2,
                 frameon=False
             )
+            ax = plt.gca()
             ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
             ax.grid(
                 color="#E5E9EB",
@@ -762,10 +766,12 @@ class Clustering(BaseMetric):
                 color="#E5E9EB",
                 linestyle='-',
                 linewidth=1)
+            original_label = Patch(color="#3f93e1", label='original')
+            synthetic_label = Patch(color="#ff9c54", label='synthetic')
             plt.legend(
-                ["original", "synthetic"],
-                loc="upper center",
-                bbox_to_anchor=(0.13, 1.08),
+                handles=[original_label, synthetic_label],
+                loc="upper left",
+                bbox_to_anchor=(0, 1.09),
                 ncol=2,
                 frameon=False
             )
@@ -883,10 +889,12 @@ class Utility(BaseMetric):
                     color="#E5E9EB",
                     linestyle="-",
                     linewidth=1)
+                original_label = Patch(color="#3f93e1", label='original')
+                synthetic_label = Patch(color="#ff9c54", label='synthetic')
                 plt.legend(
-                    ["original", "synthetic"],
-                    loc="upper center",
-                    bbox_to_anchor=(0.13, 1.08),
+                    handles=[original_label, synthetic_label],
+                    loc="upper left",
+                    bbox_to_anchor=(0, 1.09),
                     ncol=2,
                     frameon=False
                 )
