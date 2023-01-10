@@ -1,20 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Sample Report</title>
-</head>
-<body>
-<h1>Sampling quality report</h1>
-<div>
-    <h2>Univariate distributions</h2>
-    <p>Here "Synthetic" means "Sampled"</p>
-    {% for title, uni_img in uni_imgs.items() -%}
-    <div>
-        <h3>{{title}}</h3>
-        <img src="{{uni_img}}">
-    </div>
-    {% endfor %}
-</div>
-</body>
+
+	<head>
+		<meta charset="UTF-8">
+		<title>Sample Report</title>
+		<style type="text/css">
+			@font-face {
+				font-family: "Open sans";
+				src: local("Open sans"), url("/src/syngen/ml/metrics/accuracy_test/src/fonts/OpenSans-VariableFont.ttf") format("truetype");
+			}
+
+			:root {
+				--text-color: #1b191b;
+				--text-style: normal;
+			}
+
+			* {
+				margin: 0;
+				font-family: "Open sans";
+			}
+
+			img {
+				margin-bottom: 40px;
+				max-width: 745px;
+			}
+
+			.container {
+				padding: 80px 183px 80px 183px;
+			}
+
+			.container--item>img {
+				width: 100%;
+			}
+
+			.container .container--item {
+				margin-bottom: 140px;
+			}
+
+			.h1-title {
+				font-style: var(--text-style);
+				font-weight: 700;
+				font-size: 40px;
+				line-height: 54px;
+				color: var(--text-color);
+				margin-bottom: 32px;
+			}
+
+			.h2-title {
+				font-style: var(--text-style);
+				font-weight: 600;
+				font-size: 32px;
+				line-height: 48px;
+				color: var(--text-color);
+				margin-bottom: 8px;
+			}
+
+			.h3-title {
+				font-style: var(--text-style);
+				font-weight: 600;
+				font-size: 16px;
+				line-height: 24px;
+				text-transform: uppercase;
+				color: var(--text-color);
+				margin-bottom: 24px;
+			}
+
+			.text-description {
+				max-width: 745px;
+				font-style: var(--text-style);
+				font-weight: 400;
+				font-size: 14px;
+				line-height: 24px;
+				color: var(--text-color);
+				margin-bottom: 32px;
+			}
+
+		</style>
+	</head>
+
+	<body>
+		<div class="container">
+			<h1 class="h1-title">Sample report</h1>
+			<div class="container--item">
+				<h2 class="h2-title">Univariate distributions</h2>
+				<p class="text-description">The univariate distributions are either the density plots for original vs
+					synthetic values
+					overlapped
+					for continous columns or barplots for original vs synthetic counts (in percent) for categorical
+					columns.
+				</p>
+				{% for col, uni_img in uni_imgs.items() -%}
+				<h3 class="h3-title">{{col}}</h3>
+				<img src="{{uni_img}}">
+				{% endfor %}
+			</div>
+		</div>
+	</body>
+
 </html>
