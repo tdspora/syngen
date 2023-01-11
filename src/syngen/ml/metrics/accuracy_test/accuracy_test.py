@@ -65,7 +65,10 @@ class AccuracyTest(BaseTest):
 
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
         uni_images = {title: transform_to_base64(path) for title, path in uni_images.items()}
-        bi_images = {title: transform_to_base64(path) for title, path in bi_images.items()}
+        bi_images = {
+            title: transform_to_base64(path) for title, path in bi_images.items()
+            if "char_len" not in title and "word_count" not in title
+        }
         html = template.render(accuracy_value=acc_median,
                                accuracy_heatmap=transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.png"),
                                uni_imgs=uni_images,
