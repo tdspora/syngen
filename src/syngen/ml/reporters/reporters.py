@@ -12,6 +12,7 @@ from syngen.ml.pipeline import (
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.pipeline import fetch_dataset
+from syngen.ml.metrics.utils import text_to_continuous
 
 
 class Reporter:
@@ -102,8 +103,15 @@ class Reporter:
             synthetic, binary_columns, str_columns, date_columns,
             int_columns, float_columns, categ_columns
         )
-        original = original.drop(str_columns, axis=1)
-        synthetic = synthetic.drop(str_columns, axis=1)
+        original = text_to_continuous(original, str_columns).drop(str_columns, axis=1)
+        synthetic = text_to_continuous(synthetic, str_columns).drop(str_columns, axis=1)
+
+        for col in [i + "_word_count" for i in str_columns]:
+            if original[col].nunique() < 50:  # ToDo check if we need this
+                categ_columns = categ_columns | {col}
+            else:
+                int_columns = int_columns | {col}
+        int_columns = int_columns | {i + "_char_len" for i in str_columns}
 
         categ_columns = categ_columns | binary_columns
         
