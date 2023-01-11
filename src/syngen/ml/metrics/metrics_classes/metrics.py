@@ -61,8 +61,16 @@ class JensenShannonDistance(BaseMetric):
         self.heatmap, self.labels = self.__compute_vs_columns(categ_columns)
 
         if self.plot:
-            plt.clf()
-            sns.set(rc={"figure.figsize": self.heatmap.shape})
+            if self.heatmap.shape[0] < 10:
+                sns.set(
+                    rc={"figure.figsize": self.heatmap.shape},
+                    font_scale=1
+                )
+            else:
+                sns.set(
+                    rc={"figure.figsize": self.heatmap.shape},
+                    font_scale=2
+            )
             heatmap = sns.heatmap(
                 self.heatmap,
                 xticklabels=self.labels,
@@ -254,7 +262,7 @@ class Correlations(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(rc={"figure.figsize": self.corr_score.shape}, font_scale=3)
+            sns.set(rc={"figure.figsize": self.corr_score.shape}, font_scale=2)
             heatmap = sns.heatmap(
                 self.corr_score,
                 annot=False,
@@ -265,7 +273,7 @@ class Correlations(BaseMetric):
             )
 
             heatmap.figure.tight_layout()
-            plt.savefig(f"{self.draws_path}/correlations_heatmap.png")
+            plt.savefig(f"{self.draws_path}/correlations_heatmap.png", bbox_inches="tight")
 
     @staticmethod
     def __calculate_correlations(data):
@@ -284,7 +292,7 @@ class BivariateMetric(BaseMetric):
         self.plot = plot
         self.draws_path = draws_path
         self.cmap = LinearSegmentedColormap.from_list(
-            "rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"]
+            "rg", ["#0D5598", "#3E92E0", "#E8F4FF"]
         )
 
     def calculate_all(
@@ -750,7 +758,7 @@ class Clustering(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(font_scale=3)
+            sns.set(font_scale=2)
             barplot = sns.barplot(
                 data=statistics,
                 x="cluster",
@@ -775,7 +783,7 @@ class Clustering(BaseMetric):
                 ncol=2,
                 frameon=False
             )
-            plt.savefig(f"{self.draws_path}/clusters_barplot.png")
+            plt.savefig(f"{self.draws_path}/clusters_barplot.png", bbox_inches="tight")
         return self.mean_score.values[0]
 
     def __automated_elbow(self):
@@ -872,7 +880,7 @@ class Utility(BaseMetric):
             if result.empty:
                 logger.info("No data to provide utility barplot")
             else:
-                sns.set(font_scale=3)
+                sns.set(font_scale=2)
                 plt.clf()
                 barplot = sns.barplot(
                     data=result,
@@ -891,6 +899,7 @@ class Utility(BaseMetric):
                     linewidth=1)
                 original_label = Patch(color="#3f93e1", label='original')
                 synthetic_label = Patch(color="#ff9c54", label='synthetic')
+                plt.axhline(y=0, color='#000000', linestyle='-')
                 plt.legend(
                     handles=[original_label, synthetic_label],
                     loc="upper left",
@@ -898,7 +907,7 @@ class Utility(BaseMetric):
                     ncol=2,
                     frameon=False
                 )
-                plt.savefig(f"{self.draws_path}/utility_barplot.png")
+                plt.savefig(f"{self.draws_path}/utility_barplot.png", bbox_inches="tight")
 
         if best_binary is not None:
             logger.info(
@@ -940,7 +949,7 @@ class Utility(BaseMetric):
             model_y = self.original[col].values[:int(original.shape[0] * 0.8)]
             if len(set(model_y)) < 2:
                 logger.info(f"Column {col} has less than 2 classes as target. "
-                            f"It wil not be used in metric that measures regression results.")
+                            f"It will not be used in metric that measures regression results.")
                 continue
 
             model = model_object.fit(
