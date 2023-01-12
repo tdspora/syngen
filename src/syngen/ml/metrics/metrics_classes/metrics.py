@@ -655,19 +655,21 @@ class UnivariateMetric(BaseMetric):
                     for label in original_labels
                 ]
             )
+            ax.tick_params(axis='both', which='major', labelsize=10)
             fig.autofmt_xdate()
-            plt.xlabel("category")
-            plt.ylabel("percents")
+            ax.set_xlabel("category", fontsize=10)
+            ax.set_ylabel("percents", fontsize=10)
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper left",
+                fontsize=10,
                 bbox_to_anchor=(0, 1.07),
                 ncol=2,
                 frameon=False
             )
             if self.draws_path:
                 path_to_image = f"{self.draws_path}/univariate_{column}.png"
-                plt.savefig(path_to_image)
+                plt.savefig(path_to_image, bbox_inches="tight")
                 uni_images[column] = path_to_image
         return uni_images
 
@@ -685,16 +687,10 @@ class UnivariateMetric(BaseMetric):
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
             self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=4)
-            plt.xlabel("value")
-            plt.ylabel("density")
-            plt.legend(
-                ["original", "synthetic"],
-                loc="upper left",
-                bbox_to_anchor=(0, 1.07),
-                ncol=2,
-                frameon=False
-            )
             ax = plt.gca()
+            ax.set_xlabel("value", fontsize=10)
+            ax.set_ylabel("density", fontsize=10)
+            ax.tick_params(axis='both', which='major', labelsize=10)
             ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
             ax.grid(
                 color="#E5E9EB",
@@ -702,9 +698,18 @@ class UnivariateMetric(BaseMetric):
                 linewidth=1)
             ax.set_axisbelow(True)
             ax.set_facecolor("#FFFFFF")
+            ax.yaxis.get_offset_text().set_fontsize(10)
+            plt.legend(
+                ["original", "synthetic"],
+                loc="upper left",
+                fontsize=10,
+                bbox_to_anchor=(0, 1.07),
+                ncol=2,
+                frameon=False
+            )
             if self.draws_path:
                 path_to_image = f"{self.draws_path}/univariate_{column}.png"
-                plt.savefig(path_to_image)
+                plt.savefig(path_to_image, bbox_inches="tight")
                 uni_images[column] = path_to_image
         if print_nan:
             logger.info(f"Number of original NaN values in {column}: {original_nan_count}")
