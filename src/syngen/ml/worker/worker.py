@@ -27,7 +27,7 @@ class Worker:
     def __parse_train_settings(self, config: Dict):
         """
         Parse the settings for training process
-        :param config: settings for training process declared in metadata.yml file
+        :param config: settings for training process declared in metadata.yaml file
         """
         epochs = config.get("train_settings", {}).get("epochs", self.settings.get("epochs"))
         drop_null = config.get("train_settings", {}).get("drop_null", self.settings.get("drop_null"))
@@ -44,7 +44,7 @@ class Worker:
     def __parse_infer_settings(self, config: Dict):
         """
         Parse the settings for infer process
-        :param config: settings for infer process declared in metadata.yml file
+        :param config: settings for infer process declared in metadata.yaml file
         """
         size = config.get("infer_settings", {}).get("size", self.settings.get("size"))
         run_parallel = config.get("infer_settings", {}).get("run_parallel", self.settings.get("run_parallel"))
@@ -63,7 +63,7 @@ class Worker:
     def _get_tables(config: Dict, key_type: str):
         """
         Return the list of related tables regarding to the type of key - 'primary key', 'foreign key'
-        :param config: configuration of related tables declared in metadata.yml file
+        :param config: configuration of related tables declared in metadata.yaml file
         :param key_type: type of key either 'primary key' ('PK') or 'foreign key' ('FK')
         """
         try:
@@ -124,7 +124,7 @@ class Worker:
         """
         Run training process for the list of related tables
         :param tables: the list of related tables for training process
-        :param config_of_tables: configuration of related tables declared in metadata.yml file
+        :param config_of_tables: configuration of related tables declared in metadata.yaml file
         """
         for table in tables:
             config_of_table = config_of_tables[table]
@@ -152,7 +152,7 @@ class Worker:
         """
         Run infer process for the list of related tables
         :param tables: the list of related tables for infer process
-        :param config_of_tables: configuration of related tables declared in metadata.yml file
+        :param config_of_tables: configuration of related tables declared in metadata.yaml file
         """
         for table in tables:
             both_keys = table in self.divided
