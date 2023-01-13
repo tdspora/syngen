@@ -61,21 +61,11 @@ class JensenShannonDistance(BaseMetric):
         self.heatmap, self.labels = self.__compute_vs_columns(categ_columns)
 
         if self.plot:
-            if self.heatmap.shape[0] < 5:
-                sns.set(
-                    rc={"figure.figsize": self.heatmap.shape},
-                    font_scale=0.5
-                )
-            elif self.heatmap.shape[0] < 10:
-                sns.set(
-                    rc={"figure.figsize": self.heatmap.shape},
-                    font_scale=1
-                )
-            else:
-                sns.set(
-                    rc={"figure.figsize": self.heatmap.shape},
-                    font_scale=2
-                )
+            plt.clf()
+            sns.set(
+                rc={"figure.figsize": self.heatmap.shape},
+                font_scale=2
+            )
             heatmap = sns.heatmap(
                 self.heatmap,
                 xticklabels=self.labels,
@@ -84,11 +74,12 @@ class JensenShannonDistance(BaseMetric):
                 vmin=0.0,
                 vmax=1.0,
                 center=0.5,
-                annot=False
+                annot=False,
+                square=True
             )
 
             heatmap.figure.tight_layout()
-            plt.savefig(f"{self.draws_path}/accuracy_heatmap.png")
+            plt.savefig(f"{self.draws_path}/accuracy_heatmap.png", bbox_inches="tight")
 
     @staticmethod
     def calculate_heatmap_median(heatmap):
@@ -274,7 +265,8 @@ class Correlations(BaseMetric):
                 cmap=self.cmap,
                 vmin=0.0,
                 vmax=1.0,
-                center=0.5
+                center=0.5,
+                square=True
             )
 
             heatmap.figure.tight_layout()
@@ -768,7 +760,7 @@ class Clustering(BaseMetric):
 
         if self.plot:
             plt.clf()
-            sns.set(font_scale=2)
+            sns.set(font_scale=3)
             barplot = sns.barplot(
                 data=statistics,
                 x="cluster",
@@ -890,8 +882,8 @@ class Utility(BaseMetric):
             if result.empty:
                 logger.info("No data to provide utility barplot")
             else:
-                sns.set(font_scale=2)
                 plt.clf()
+                sns.set(font_scale=3)
                 barplot = sns.barplot(
                     data=result,
                     x="type",
