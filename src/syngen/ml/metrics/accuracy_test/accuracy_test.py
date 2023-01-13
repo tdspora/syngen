@@ -70,13 +70,13 @@ class AccuracyTest(BaseTest):
             if "char_len" not in title and "word_count" not in title
         }
         html = template.render(accuracy_value=acc_median,
-                               accuracy_heatmap=transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.svg"),
+                               accuracy_heatmap=transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.png"),
                                uni_imgs=uni_images,
-                               correlations_heatmap=transform_to_base64(f"{draws_acc_path}/correlations_heatmap.svg"),
-                               clusters_barplot=transform_to_base64(f"{draws_acc_path}/clusters_barplot.svg"),
+                               correlations_heatmap=transform_to_base64(f"{draws_acc_path}/correlations_heatmap.png"),
+                               clusters_barplot=transform_to_base64(f"{draws_acc_path}/clusters_barplot.png"),
                                clustering_value=clustering_result,
                                bi_imgs=bi_images,
-                               utility_barplot=transform_to_base64(f"{draws_acc_path}/utility_barplot.svg"),
+                               utility_barplot=transform_to_base64(f"{draws_acc_path}/utility_barplot.png"),
                                utility_table=utility_result.to_html(),
                                table_name=self.table_name
                                )
