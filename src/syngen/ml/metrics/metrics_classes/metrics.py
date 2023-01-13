@@ -61,7 +61,12 @@ class JensenShannonDistance(BaseMetric):
         self.heatmap, self.labels = self.__compute_vs_columns(categ_columns)
 
         if self.plot:
-            if self.heatmap.shape[0] < 10:
+            if self.heatmap.shape[0] < 5:
+                sns.set(
+                    rc={"figure.figsize": self.heatmap.shape},
+                    font_scale=0.5
+                )
+            elif self.heatmap.shape[0] < 10:
                 sns.set(
                     rc={"figure.figsize": self.heatmap.shape},
                     font_scale=1
@@ -70,7 +75,7 @@ class JensenShannonDistance(BaseMetric):
                 sns.set(
                     rc={"figure.figsize": self.heatmap.shape},
                     font_scale=2
-            )
+                )
             heatmap = sns.heatmap(
                 self.heatmap,
                 xticklabels=self.labels,
