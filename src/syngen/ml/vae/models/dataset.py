@@ -384,7 +384,7 @@ class Dataset:
         """
         # num_bins = self.find_clusters(df, float_columns)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
-        if len(features) == 2:
+        if len(features) == 2 and feature[1].endswith("_null"):
             self.null_num_column_names.append(features[1])
         if len(features) == 2 and features[1].endswith('_zero'):
             self.zero_num_column_names.append(features[1])
