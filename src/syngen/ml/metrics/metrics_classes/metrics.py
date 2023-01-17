@@ -63,7 +63,10 @@ class JensenShannonDistance(BaseMetric):
         if self.plot:
             plt.clf()
             sns.set(
-                rc={"figure.figsize": self.heatmap.shape},
+                rc={
+                    "xtick.labelsize": self.heatmap.shape[0],
+                    "ytick.labelsize": self.heatmap.shape[0],
+                },
                 font_scale=2
             )
             heatmap = sns.heatmap(
@@ -74,12 +77,13 @@ class JensenShannonDistance(BaseMetric):
                 vmin=0.0,
                 vmax=1.0,
                 center=0.5,
-                annot=False,
-                square=True
+                annot=False
             )
-
+            heatmap.figure.set_size_inches(self.heatmap.shape)
+            heatmap.axes.tick_params(axis="x", rotation=90)
+            heatmap.axes.tick_params(axis="y", rotation=0)
             heatmap.figure.tight_layout()
-            plt.savefig(f"{self.draws_path}/accuracy_heatmap.png", bbox_inches="tight")
+            plt.savefig(f"{self.draws_path}/accuracy_heatmap.svg", bbox_inches="tight")
 
     @staticmethod
     def calculate_heatmap_median(heatmap):
@@ -270,7 +274,7 @@ class Correlations(BaseMetric):
             )
 
             heatmap.figure.tight_layout()
-            plt.savefig(f"{self.draws_path}/correlations_heatmap.png", bbox_inches="tight")
+            plt.savefig(f"{self.draws_path}/correlations_heatmap.svg", bbox_inches="tight")
 
     @staticmethod
     def __calculate_correlations(data):
@@ -354,7 +358,7 @@ class BivariateMetric(BaseMetric):
                 cbar=True
             )
             title = f"{first_col} vs. {second_col}"
-            path_to_image = f"{self.draws_path}/bivariate_{first_col}_{second_col}.png"
+            path_to_image = f"{self.draws_path}/bivariate_{first_col}_{second_col}.svg"
             bi_imgs[title] = path_to_image
             logger.info(path_to_image)
             plt.savefig(path_to_image)
@@ -665,7 +669,7 @@ class UnivariateMetric(BaseMetric):
                 frameon=False
             )
             if self.draws_path:
-                path_to_image = f"{self.draws_path}/univariate_{column}.png"
+                path_to_image = f"{self.draws_path}/univariate_{column}.svg"
                 plt.savefig(path_to_image, bbox_inches="tight")
                 uni_images[column] = path_to_image
         return uni_images
@@ -705,7 +709,7 @@ class UnivariateMetric(BaseMetric):
                 frameon=False
             )
             if self.draws_path:
-                path_to_image = f"{self.draws_path}/univariate_{column}.png"
+                path_to_image = f"{self.draws_path}/univariate_{column}.svg"
                 plt.savefig(path_to_image, bbox_inches="tight")
                 uni_images[column] = path_to_image
         if print_nan:
@@ -785,7 +789,7 @@ class Clustering(BaseMetric):
                 ncol=2,
                 frameon=False
             )
-            plt.savefig(f"{self.draws_path}/clusters_barplot.png", bbox_inches="tight")
+            plt.savefig(f"{self.draws_path}/clusters_barplot.svg", bbox_inches="tight")
         return self.mean_score.values[0]
 
     def __automated_elbow(self):
@@ -909,7 +913,8 @@ class Utility(BaseMetric):
                     ncol=2,
                     frameon=False
                 )
-                plt.savefig(f"{self.draws_path}/utility_barplot.png", bbox_inches="tight")
+                plt.savefig(f"{self.draws_path}/utility_barplot.svg", bbox_inches="tight")
+                plt.clf()
 
         if best_binary is not None:
             logger.info(
