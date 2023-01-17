@@ -212,7 +212,7 @@ class Worker:
         if self.metadata_path is not None:
             chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="train")
             self.__train_chain_of_tables(chain_of_tables, config_of_tables)
-        if self.table_name is not None:
+        elif self.table_name is not None:
             self.__train_table()
 
     def launch_infer(self):
