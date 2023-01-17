@@ -914,7 +914,6 @@ class Utility(BaseMetric):
                     frameon=False
                 )
                 plt.savefig(f"{self.draws_path}/utility_barplot.svg", bbox_inches="tight", format="svg")
-                plt.clf()
 
         if best_binary is not None:
             logger.info(
