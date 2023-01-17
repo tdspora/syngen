@@ -39,7 +39,7 @@ def transform_to_base64(path):
     try:
         with open(path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read())
-        return "data:image/gif;base64," + encoded_string.decode('utf-8')
+        return "data:image/svg+xml;base64," + encoded_string.decode('utf-8')
     except FileNotFoundError:
         logger.warning(f"No file found at {path}")
         return ""
