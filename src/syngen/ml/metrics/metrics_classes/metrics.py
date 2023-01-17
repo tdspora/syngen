@@ -66,6 +66,8 @@ class JensenShannonDistance(BaseMetric):
                 rc={
                     "xtick.labelsize": self.heatmap.shape[0],
                     "ytick.labelsize": self.heatmap.shape[0],
+                    "ytick.major.size": 1.5,
+                    "ytick.major.width": 0.2
                 },
                 font_scale=2
             )
