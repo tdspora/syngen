@@ -50,26 +50,22 @@ class InferStrategy:
             size: int,
             run_parallel: bool,
             metadata_path: Optional[str],
-            print_report: bool,
             batch_size: Optional[int],
             handler: VaeInferHandler,
     ):
         self.handler = handler
         self.size = size
         self.run_parallel = run_parallel
-        self.print_report = print_report
         self.metadata_path = metadata_path
         self.batch_size = batch_size
 
     def run(self):
         logger.debug(
-            f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}, "
-            f"print_report={self.print_report}"
+            f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}"
         )
         self.handler.handle(
             size=self.size,
             run_parallel=self.run_parallel,
             batch_size=self.batch_size,
-            print_report=self.print_report,
             metadata_path=self.metadata_path,
         )

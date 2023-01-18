@@ -9,14 +9,14 @@ configuration_schema = Schema({
         Optional("train_settings"): {
             Optional("epochs"): And(int, lambda n: n >= 1),
             Optional("drop_null"): bool,
-            Optional("row_limit"): And(int, lambda n: n >= 1)
+            Optional("row_limit"): And(int, lambda n: n >= 1),
+            Optional("print_report"): bool
         },
         Optional("infer_settings"): {
             Optional("size"): And(int, lambda n: n >= 1),
             Optional("run_parallel"): bool,
             Optional("batch_size"): And(int, lambda n: n >=1),
-            Optional("random_seed"): int,
-            Optional("print_report"): bool
+            Optional("random_seed"): int
         },
         "source": str,
         Optional("keys"): {

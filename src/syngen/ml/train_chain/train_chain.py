@@ -12,7 +12,6 @@ from pathos.multiprocessing import ProcessingPool
 import dill
 
 from syngen.ml.vae import *
-from syngen.ml.reporters import Report
 from syngen.ml.data_loaders import DataLoader
 
 
@@ -311,9 +310,6 @@ class VaeInferHandler(BaseHandler):
                     prepared_data.to_csv(self.path_to_merged_infer, index=False)
             if metadata_path is None:
                 prepared_data.to_csv(self.path_to_merged_infer, index=False)
-            if print_report:
-                Report().generate_report()
-                Report().clear_report()
             logger.info(
                 f"Synthesis of the table - {self.table_name} was completed. "
                 f"Synthetic data saved in {self.path_to_merged_infer}"

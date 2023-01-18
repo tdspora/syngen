@@ -8,12 +8,13 @@ class TrainConfig:
     The configuration class to set up the work of train process
     """
     source: Optional[str]
-    epochs: int = 10
-    drop_null: bool = False
-    row_limit: Optional[int] = None
-    table_name: Optional[str] = None
-    metadata_path: Optional[str] = None
-    batch_size: int = 32
+    epochs: int
+    drop_null: bool
+    row_limit: Optional[int]
+    table_name: Optional[str]
+    metadata_path: Optional[str]
+    print_report: bool
+    batch_size: int
 
     def set_paths(self):
         """
@@ -30,6 +31,8 @@ class TrainConfig:
             "bad_columns_path": f"model_artifacts/tmp_store/{self.table_name}/bad_columns_{self.table_name}.csv",
             "dataset_pickle_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/fk_kde.pkl",
+            "original_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.csv",
+            "synthetic_data_path": f"model_artifacts/tmp_store/{self.table_name}/merged_infer_{self.table_name}.csv",
         }
 
 
@@ -38,13 +41,12 @@ class InferConfig:
     """
     The configuration class to set up the work of infer process
     """
-    size: int
+    size: Optional[int]
     table_name: Optional[str]
-    run_parallel: bool = True
-    batch_size: Optional[int] = None
-    metadata_path: Optional[str] = None
-    random_seed: Optional[int] = None
-    print_report: bool = False
+    run_parallel: bool
+    batch_size: Optional[int]
+    metadata_path: Optional[str]
+    random_seed: Optional[int]
     both_keys: bool
 
     def set_paths(self):
