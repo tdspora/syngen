@@ -279,7 +279,7 @@ class Dataset:
         return max_len, rnn_units
 
     def _preprocess_nan_cols(
-        self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.5
+        self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
     ) -> tuple:
         """Fill NaN values in numeric column with some value according to strategy.
         Fill NaN values in string columns can only work in 'mode' strategy.
@@ -302,7 +302,7 @@ class Dataset:
                               zero_cutoff)
         if many_zeros_feature:
             feature_zero = feature + '_zero'
-            self.df[feature_zero] = self.df[feature].apply(lambda x: 0 if x==0 else 1)
+            self.df[feature_zero] = self.df[feature].apply(lambda x: 0 if x == 0 else 1)
             if not isnull_feature.any():
                 return (feature, feature_zero)
         if isnull_feature.any():
