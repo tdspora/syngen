@@ -38,10 +38,6 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    def set_reporters(self, *args):
-        pass
-
-    @abstractmethod
     def set_strategy(self):
         pass
 
@@ -93,7 +89,7 @@ class TrainInterface(Interface, ABC):
         self.handler = root_handler
         return self
 
-    def set_reporters(self, data: pd.DataFrame, schema: Optional[Dict]):
+    def set_reporters(self):
         """
         Set up reporter which used in order to create the sampling report during training process
         """
@@ -102,6 +98,12 @@ class TrainInterface(Interface, ABC):
             paths=self.config.set_paths()
         )
         Report().register_reporter(sample_reporter)
+
+        accuracy_reporter = AccuracyReporter(
+            metadata={"table_name": self.config.table_name},
+            paths=self.config.set_paths()
+        )
+        Report().register_reporter(accuracy_reporter)
 
         return self
 
@@ -116,12 +118,13 @@ class TrainInterface(Interface, ABC):
             self,
             metadata,
             source: str,
-            epochs: int = 10,
-            drop_null: bool = False,
-            row_limit: int = None,
-            table_name: str = None,
-            metadata_path: str = None,
-            batch_size: int = 32
+            epochs: int,
+            drop_null: bool,
+            row_limit: int,
+            table_name: str,
+            metadata_path: str,
+            print_report: bool,
+            batch_size: int
     ):
         """
         Launch the training process
@@ -133,6 +136,7 @@ class TrainInterface(Interface, ABC):
             row_limit=row_limit,
             table_name=table_name,
             metadata_path=metadata_path,
+            print_report=print_report,
             batch_size=batch_size
         )
 
@@ -144,7 +148,7 @@ class TrainInterface(Interface, ABC):
                 column: data_type for column, data_type in schema.get("fields", {}).items() if column in data.columns
             }
 
-        self.set_reporters(data, schema).\
+        self.set_reporters().\
             set_metadata(metadata).\
             set_handler(schema).\
             set_strategy(
@@ -188,19 +192,6 @@ class InferInterface(Interface):
         )
         return self
 
-    def set_reporters(self):
-        """
-        Set up reporter which used in order to create the report during infer process
-        """
-        accuracy_reporter = AccuracyReporter(
-            metadata={"table_name": self.config.table_name},
-            paths=self.config.set_paths()
-        )
-        if not self.config.table_name.endswith("_pk"):
-            Report().register_reporter(accuracy_reporter)
-
-        return self
-
     def set_strategy(self, **kwargs):
         """
         Set up the strategy for infer process
@@ -213,11 +204,10 @@ class InferInterface(Interface):
             size: int,
             table_name: str,
             metadata_path: str,
-            run_parallel: bool = True,
-            batch_size: int = None,
-            random_seed: int = None,
-            print_report: bool = False,
-            both_keys: bool = False
+            run_parallel: bool,
+            batch_size: Optional[int],
+            random_seed: Optional[int],
+            both_keys: bool
     ):
         """
         Launch the infer process
@@ -229,10 +219,8 @@ class InferInterface(Interface):
             run_parallel=run_parallel,
             batch_size=batch_size,
             random_seed=random_seed,
-            print_report=print_report,
             both_keys=both_keys,
         ).\
-            set_reporters().\
             set_metadata(metadata).\
             set_handler().\
             set_strategy(
@@ -240,8 +228,7 @@ class InferInterface(Interface):
                 run_parallel=self.config.run_parallel,
                 batch_size=self.config.batch_size,
                 metadata_path=self.config.metadata_path,
-                handler=self.handler,
-                print_report=self.config.print_report
+                handler=self.handler
             )
 
         self.strategy.run()

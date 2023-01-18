@@ -166,8 +166,6 @@ class VAEWrapper(BaseWrapper):
         row_subset = row_subset or len(df)
 
         self._pipeline()
-        # generate a sampling report
-        Report().generate_report()
         self._init_model()
 
         # feature_names = ['mmd'] + [name.name for name in self.dataset.features.values()]

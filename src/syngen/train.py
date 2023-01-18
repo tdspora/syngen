@@ -19,6 +19,9 @@ from syngen.ml.worker import Worker
 @click.option("--row_limit", default=None, type=int,
               help="Number of rows to train over. A number less than the original table length will randomly subset "
                    "the specified rows number")
+@click.option("--print_report", default=False, type=bool,
+              help="Whether to print quality report. Might require significant time "
+                   "for big generated tables (>1000 rows). If absent, it's defaulted to False")
 def launch_train(
     metadata_path: Optional[str],
     source: Optional[str],
@@ -26,6 +29,7 @@ def launch_train(
     epochs: int,
     drop_null: bool,
     row_limit: Optional[int],
+    print_report: bool,
     batch_size: int = 24,
 ):
     """
@@ -39,6 +43,7 @@ def launch_train(
     epochs
     drop_null
     row_limit
+    print_report
     batch_size
     -------
 
@@ -72,7 +77,8 @@ def launch_train(
         "epochs": epochs,
         "drop_null": drop_null,
         "row_limit": row_limit,
-        "batch_size": batch_size
+        "batch_size": batch_size,
+        "print_report": print_report
     }
     worker = Worker(
         table_name=table_name,

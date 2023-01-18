@@ -5,6 +5,8 @@ from loguru import logger
 
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.interface import TrainInterface, InferInterface
+from syngen.ml.reporters import Report
+from syngen.ml.data_loaders import DataLoader
 
 
 @dataclass
@@ -32,12 +34,14 @@ class Worker:
         epochs = config.get("train_settings", {}).get("epochs", self.settings.get("epochs"))
         drop_null = config.get("train_settings", {}).get("drop_null", self.settings.get("drop_null"))
         row_limit = config.get("train_settings", {}).get("row_limit", self.settings.get("row_limit"))
+        print_report = config.get("train_settings", {}).get("print_report", self.settings.get("print_report"))
         batch_size = config.get("train_settings", {}).setdefault("batch_size", 32)
         return {
             "table_name": self.table_name,
             "epochs": epochs,
             "drop_null": drop_null,
             "row_limit": row_limit,
+            "print_report": print_report,
             "batch_size": batch_size
         }
 
@@ -49,13 +53,11 @@ class Worker:
         size = config.get("infer_settings", {}).get("size", self.settings.get("size"))
         run_parallel = config.get("infer_settings", {}).get("run_parallel", self.settings.get("run_parallel"))
         random_seed = config.get("infer_settings", {}).get("random_seed", self.settings.get("random_seed"))
-        print_report = config.get("infer_settings", {}).get("print_report", self.settings.get("print_report"))
         batch_size = config.get("infer_settings", {}).get("batch_size", self.settings.get("batch_size"))
         return {
             "size": size,
             "run_parallel": run_parallel,
             "random_seed": random_seed,
-            "print_report": print_report,
             "batch_size": batch_size
         }
 
@@ -145,8 +147,33 @@ class Worker:
                 row_limit=train_settings["row_limit"],
                 table_name=table,
                 metadata_path=self.metadata_path,
+                print_report=train_settings["print_report"],
                 batch_size=train_settings["batch_size"]
             )
+
+        for table in tables:
+            config_of_table = config_of_tables[table]
+            source = config_of_table.get("source", None)
+            row_limit = self.settings.get("row_limit")
+            data, schema = DataLoader(source).load_data()
+            size = len(data) if row_limit is None else row_limit
+
+            both_keys = table in self.divided
+            logger.info(f"Infer process of the table - {table} has started.")
+            self.infer_interface.run(
+                metadata=self.metadata,
+                size=size,
+                table_name=table,
+                run_parallel=False,
+                batch_size=None,
+                metadata_path=self.metadata_path,
+                random_seed=None,
+                both_keys=both_keys,
+            )
+
+            if self.settings.get("print_report"):
+                Report().generate_report()
+                Report().clear_report()
 
     def __infer_chain_of_tables(self, tables: List, config_of_tables: Dict):
         """
@@ -167,7 +194,6 @@ class Worker:
                 batch_size=infer_settings["batch_size"],
                 metadata_path=self.metadata_path,
                 random_seed=infer_settings["random_seed"],
-                print_report=infer_settings["print_report"],
                 both_keys=both_keys,
             )
 
@@ -176,17 +202,39 @@ class Worker:
         Run training process for a single table
         :return:
         """
+        source = self.settings.get("source")
+        row_limit = self.settings.get("row_limit")
+        data, schema = DataLoader(source).load_data()
+        size = len(data) if row_limit is None else row_limit
+
         logger.info(f"Training process of the table - {self.table_name} has started.")
         self.train_interface.run(
             metadata=self.metadata,
-            source=self.settings.get("source"),
+            source=source,
             epochs=self.settings.get("epochs"),
             drop_null=self.settings.get("drop_null"),
             row_limit=self.settings.get("row_limit"),
             table_name=self.table_name,
             metadata_path=self.metadata_path,
+            print_report=self.settings.get("print_report"),
             batch_size=self.settings.get("batch_size")
         )
+
+        logger.info(f"Infer process of the table - {self.table_name} has started.")
+        self.infer_interface.run(
+            metadata=self.metadata,
+            size=size,
+            table_name=self.table_name,
+            metadata_path=self.metadata_path,
+            run_parallel=False,
+            batch_size=None,
+            random_seed=None,
+            both_keys=False
+        )
+
+        if self.settings.get("print_report"):
+            Report().generate_report()
+            Report().clear_report()
 
     def __infer_table(self):
         """
@@ -201,7 +249,6 @@ class Worker:
             run_parallel=self.settings.get("run_parallel"),
             batch_size=self.settings.get("batch_size"),
             random_seed=self.settings.get("random_seed"),
-            print_report=self.settings.get("print_report"),
             both_keys=False,
         )
 
