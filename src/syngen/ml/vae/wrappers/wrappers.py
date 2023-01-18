@@ -116,6 +116,7 @@ class VAEWrapper(BaseWrapper):
             is_fitted=False,
             all_columns=list(),
             null_num_column_names=list(),
+            zero_num_column_names=list(),
             nan_labels_dict=dict()
         )
 
@@ -125,6 +126,23 @@ class VAEWrapper(BaseWrapper):
 
         with open(self.dataset_pickle_path, "wb") as f:
             f.write(pickle.dumps(self.dataset))
+
+    def _restore_zero_values(self, df):
+        for column in self.dataset.zero_num_column_names:
+            if column.endswith("_zero"):
+                # remove _zero to get original column name
+                num_column_name = column[:-5]
+                num_column = df[num_column_name].copy()
+                zero_column_mask = df[column].astype("float") >= 0.5
+                num_column = num_column.where(zero_column_mask, 0)
+                num_zero_values = (num_column == 0).sum()
+                df[num_column_name] = num_column
+                df = df.drop(column, axis=1)
+                logger.info(
+                    f"Column {column} has {num_zero_values} ({round(num_zero_values * 100 / len(num_column))}%) "
+                    f"zero values generated."
+                )
+        return df
 
     def _restore_nan_values(self, df):
         for column in self.dataset.null_num_column_names:
@@ -177,7 +195,7 @@ class VAEWrapper(BaseWrapper):
             columns_subset += [
                 col
                 for col in self.df.columns
-                if col.endswith("_null") and (col[:-5] in columns_subset)
+                if col.endswith(("_null", "_zero")) and (col[:-5] in columns_subset)
             ]
 
         df = self.df.loc[:, list(set(columns_subset))]
@@ -282,7 +300,8 @@ class VAEWrapper(BaseWrapper):
     def predict_sampled_df(self, n: int) -> pd.DataFrame:
         sampled_df = self.model.sample(n)
         sampled_df = self._restore_nan_values(sampled_df)
-        return self._restore_nan_labels(sampled_df)
+        sampled_df = self._restore_zero_values(sampled_df)
+        return sampled_df
 
     def predict_less_likely_samples(
         self, df: pd.DataFrame, n: int, temp=0.05, variaty=3
