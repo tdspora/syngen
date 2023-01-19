@@ -35,7 +35,7 @@ class Worker:
         drop_null = config.get("train_settings", {}).get("drop_null", self.settings.get("drop_null"))
         row_limit = config.get("train_settings", {}).get("row_limit", self.settings.get("row_limit"))
         print_report = config.get("train_settings", {}).get("print_report", self.settings.get("print_report"))
-        batch_size = config.get("train_settings", {}).setdefault("batch_size", 32)
+        batch_size = config.get("train_settings", {}).setdefault("batch_size", 24)
         return {
             "table_name": self.table_name,
             "epochs": epochs,
@@ -97,7 +97,6 @@ class Worker:
                 config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
             pk_tables = self._get_tables(config_of_tables, "PK")
             fk_tables = self._get_tables(config_of_tables, "FK")
-            # chain_of_tables = [*pk_tables, *list(set(fk_tables).difference(set(pk_tables)))]
             chain_of_tables = list(dict.fromkeys([*pk_tables, *fk_tables]))
 
         return chain_of_tables, config_of_tables
@@ -122,7 +121,19 @@ class Worker:
                 config.pop(table)
         return config
 
-    def __train_chain_of_tables(self, tables: List, config_of_tables: Dict):
+    @staticmethod
+    def _set_size_of_generated_data(source: str, row_limit: Optional[int]) -> int:
+        """
+        Set up the size of generated data
+        :param source: the path of the original table
+        :param row_limit: row_limit which has already set up for current training process
+        :return: size: size of generated data
+        """
+        data, schema = DataLoader(source).load_data()
+        size = len(data) if row_limit is None else row_limit
+        return size
+
+    def __train_chain_of_tables_with_generation(self, tables: List, config_of_tables: Dict):
         """
         Run training process for the list of related tables
         :param tables: the list of related tables for training process
@@ -138,42 +149,37 @@ class Worker:
                     f"Please provide the information of source in metadata file."
                 )
             train_settings = self.__parse_train_settings(config_of_table)
-            logger.info(f"Training process of the table - {table} has started.")
-            self.train_interface.run(
-                metadata=self.metadata,
+            self.__train_table(
                 source=source,
-                epochs=train_settings["epochs"],
-                drop_null=train_settings["drop_null"],
-                row_limit=train_settings["row_limit"],
+                epochs=train_settings.get("epochs"),
+                drop_null=train_settings.get("drop_null"),
+                row_limit=train_settings.get("row_limit"),
                 table_name=table,
-                metadata_path=self.metadata_path,
-                print_report=train_settings["print_report"],
-                batch_size=train_settings["batch_size"]
+                print_report=train_settings.get("print_report"),
+                batch_size=train_settings.get("batch_size")
             )
 
         for table in tables:
             config_of_table = config_of_tables[table]
-            source = config_of_table.get("source", None)
-            row_limit = self.settings.get("row_limit")
-            data, schema = DataLoader(source).load_data()
-            size = len(data) if row_limit is None else row_limit
+            train_settings = self.__parse_train_settings(config_of_table)
+            source = config_of_table.get("source")
+            row_limit = train_settings.get("row_limit")
+
+            size = self._set_size_of_generated_data(source, row_limit)
 
             both_keys = table in self.divided
-            logger.info(f"Infer process of the table - {table} has started.")
-            self.infer_interface.run(
-                metadata=self.metadata,
+
+            self.__infer_table(
                 size=size,
                 table_name=table,
                 run_parallel=False,
-                batch_size=None,
-                metadata_path=self.metadata_path,
-                random_seed=None,
-                both_keys=both_keys,
+                batch_size=1000,
+                random_seed=1,
+                both_keys=both_keys
             )
 
-            if self.settings.get("print_report"):
-                Report().generate_report()
-                Report().clear_report()
+        Report().generate_report()
+        Report().clear_report()
 
     def __infer_chain_of_tables(self, tables: List, config_of_tables: Dict):
         """
@@ -185,71 +191,66 @@ class Worker:
             both_keys = table in self.divided
             config_of_table = config_of_tables[table]
             infer_settings = self.__parse_infer_settings(config_of_table)
-            logger.info(f"Infer process of the table - {table} has started.")
-            self.infer_interface.run(
-                metadata=self.metadata,
-                size=infer_settings["size"],
+            self.__infer_table(
+                size=infer_settings.get("size"),
                 table_name=table,
-                run_parallel=infer_settings["run_parallel"],
-                batch_size=infer_settings["batch_size"],
-                metadata_path=self.metadata_path,
+                run_parallel=infer_settings.get("run_parallel"),
+                batch_size=infer_settings.get("batch_size"),
                 random_seed=infer_settings["random_seed"],
-                both_keys=both_keys,
+                both_keys=both_keys
             )
 
-    def __train_table(self):
+    def __train_table_with_generation(self):
         """
         Run training process for a single table
         :return:
         """
         source = self.settings.get("source")
         row_limit = self.settings.get("row_limit")
-        data, schema = DataLoader(source).load_data()
-        size = len(data) if row_limit is None else row_limit
 
-        logger.info(f"Training process of the table - {self.table_name} has started.")
+        size = self._set_size_of_generated_data(source, row_limit)
+
+        self.__train_table()
+        self.__infer_table(
+            size=size,
+            run_parallel=False,
+            batch_size=1000,
+            random_seed=1
+        )
+
+        Report().generate_report()
+        Report().clear_report()
+
+    def __train_table(self, **kwargs):
+        table = self.table_name if self.table_name else kwargs["table_name"]
+        logger.info(f"Training process of the table - {table} has started.")
         self.train_interface.run(
             metadata=self.metadata,
-            source=source,
-            epochs=self.settings.get("epochs"),
-            drop_null=self.settings.get("drop_null"),
-            row_limit=self.settings.get("row_limit"),
-            table_name=self.table_name,
+            source=kwargs.get("source") if kwargs.get("source") else self.settings.get("source"),
+            epochs=kwargs.get("epochs") if kwargs.get("epochs") else self.settings.get("epochs"),
+            drop_null=kwargs.get("drop_null") if kwargs.get("drop_null") else self.settings.get("drop_null"),
+            row_limit=kwargs.get("row_limit") if kwargs.get("row_limit") else self.settings.get("row_limit"),
+            table_name=table,
             metadata_path=self.metadata_path,
-            print_report=self.settings.get("print_report"),
-            batch_size=self.settings.get("batch_size")
+            print_report=kwargs.get("print_report") if kwargs.get("print_report") else self.settings.get("print_report"),
+            batch_size=kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")
         )
 
-        logger.info(f"Infer process of the table - {self.table_name} has started.")
-        self.infer_interface.run(
-            metadata=self.metadata,
-            size=size,
-            table_name=self.table_name,
-            metadata_path=self.metadata_path,
-            run_parallel=False,
-            batch_size=None,
-            random_seed=None,
-            both_keys=False
-        )
-
-        if self.settings.get("print_report"):
-            Report().generate_report()
-            Report().clear_report()
-
-    def __infer_table(self):
+    def __infer_table(self, **kwargs):
         """
         Run infer process for a single table
         """
-        logger.info(f"Infer process of the table - {self.table_name} has started.")
+        table = self.table_name if self.table_name is not None else kwargs["table_name"]
+        logger.info(f"Infer process of the table - {table} has started.")
         self.infer_interface.run(
             metadata=self.metadata,
-            size=self.settings.get("size"),
-            table_name=self.table_name,
+            size=kwargs.get("size") if kwargs.get("size") else self.settings.get("size"),
+            table_name=table,
             metadata_path=self.metadata_path,
-            run_parallel=self.settings.get("run_parallel"),
-            batch_size=self.settings.get("batch_size"),
-            random_seed=self.settings.get("random_seed"),
-            both_keys=False,
+            run_parallel=kwargs.get("run_parallel") if kwargs.get("run_parallel") is not None else self.settings.get("run_parallel"),
+            batch_size=kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size"),
+            random_seed=kwargs.get("random_seed") if kwargs.get("random_seed") else self.settings.get("random_seed"),
+            both_keys=kwargs.get("both_keys") if kwargs.get("random_seed") else False
         )
 
     def launch_train(self):
@@ -258,9 +259,9 @@ class Worker:
         """
         if self.metadata_path is not None:
             chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="train")
-            self.__train_chain_of_tables(chain_of_tables, config_of_tables)
+            self.__train_chain_of_tables_with_generation(chain_of_tables, config_of_tables)
         elif self.table_name is not None:
-            self.__train_table()
+            self.__train_table_with_generation()
 
     def launch_infer(self):
         """

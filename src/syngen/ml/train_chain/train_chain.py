@@ -214,7 +214,7 @@ class VaeInferHandler(BaseHandler):
         data.append((size - nodes * quote) + data.pop())
         return data
 
-    def run(self, size: int, run_parallel: bool = True):
+    def run(self, size: int, run_parallel: bool):
         logger.info("Start data synthesis")
         if run_parallel:
             pool = ProcessingPool()
@@ -282,17 +282,24 @@ class VaeInferHandler(BaseHandler):
 
     def handle(
             self,
-            size: int,
-            run_parallel: bool = True,
-            batch_size: int = None,
-            print_report: bool = False,
-            metadata_path: str = None,
+            **kwargs
     ):
         self._prepare_dir()
+
+        batch_size = kwargs.get("batch_size")
+        size = kwargs.get("size")
+        run_parallel = kwargs.get("run_parallel")
+        metadata_path = kwargs.get("metadata_path")
+        random_seed = kwargs.get("random_seed")
+
         try:
             if not batch_size:
                 batch_size = size
             batch_num = math.ceil(size / batch_size)
+            logger.debug(
+                f"Infer model with parameters: size={size}, run_parallel={run_parallel}, "
+                f"batch_size={batch_size}, random_seed={random_seed}"
+            )
             logger.info(f"Total of {batch_num} batch(es)")
             batches = self.split_by_batches(size, batch_num)
             prepared_batches = [self.run(batch, run_parallel) for batch in batches]

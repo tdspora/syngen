@@ -16,7 +16,6 @@ import numpy as np
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
-from syngen.ml.reporters import Report
 
 warnings.filterwarnings("ignore")
 
@@ -177,7 +176,7 @@ class VAEWrapper(BaseWrapper):
         df: pd.DataFrame,
         row_subset: int = None,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
-        batch_size: int = 32,
+        batch_size: int = 24,
         epochs: int = 30,
         verbose: int = 0,
     ):
@@ -185,8 +184,6 @@ class VAEWrapper(BaseWrapper):
 
         self._pipeline()
         self._init_model()
-
-        # feature_names = ['mmd'] + [name.name for name in self.dataset.features.values()]
 
         if columns_subset is None:
             columns_subset = self.df.columns
@@ -210,7 +207,7 @@ class VAEWrapper(BaseWrapper):
         self.model.model = self.vae
         self.fit_sampler(df.dropna())
 
-    def _train(self, dataset, row_subset, epochs: int):
+    def _train(self, dataset, epochs: int):
         step = self._train_step
 
         self.feature_losses = defaultdict(list)
