@@ -223,17 +223,25 @@ class Worker:
 
     def __train_table(self, **kwargs):
         table = self.table_name if self.table_name else kwargs["table_name"]
+        source = kwargs.get("source") if kwargs.get("source") else self.settings.get("source")
+        epochs = kwargs.get("epochs") if kwargs.get("epochs") else self.settings.get("epochs")
+        drop_null = kwargs.get("drop_null") if kwargs.get("drop_null") else self.settings.get("drop_null")
+        row_limit = kwargs.get("row_limit") if kwargs.get("row_limit") else self.settings.get("row_limit")
+        print_report = kwargs.get("print_report") if kwargs.get("print_report") else self.settings.get("print_report")
+        batch_size = kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")
+
         logger.info(f"Training process of the table - {table} has started.")
+
         self.train_interface.run(
             metadata=self.metadata,
-            source=kwargs.get("source") if kwargs.get("source") else self.settings.get("source"),
-            epochs=kwargs.get("epochs") if kwargs.get("epochs") else self.settings.get("epochs"),
-            drop_null=kwargs.get("drop_null") if kwargs.get("drop_null") else self.settings.get("drop_null"),
-            row_limit=kwargs.get("row_limit") if kwargs.get("row_limit") else self.settings.get("row_limit"),
+            source=source,
+            epochs=epochs,
+            drop_null=drop_null,
+            row_limit=row_limit,
             table_name=table,
             metadata_path=self.metadata_path,
-            print_report=kwargs.get("print_report") if kwargs.get("print_report") else self.settings.get("print_report"),
-            batch_size=kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")
+            print_report=print_report,
+            batch_size=batch_size
         )
 
     def __infer_table(self, **kwargs):
@@ -241,16 +249,23 @@ class Worker:
         Run infer process for a single table
         """
         table = self.table_name if self.table_name is not None else kwargs["table_name"]
+        size = kwargs.get("size") if kwargs.get("size") else self.settings.get("size")
+        run_parallel = kwargs.get("run_parallel") if kwargs.get("run_parallel") is not None \
+            else self.settings.get("run_parallel")
+        batch_size = kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")
+        random_seed = kwargs.get("random_seed") if kwargs.get("random_seed") else self.settings.get("random_seed")
+        both_keys = kwargs.get("both_keys") if kwargs.get("random_seed") else False
+
         logger.info(f"Infer process of the table - {table} has started.")
         self.infer_interface.run(
             metadata=self.metadata,
-            size=kwargs.get("size") if kwargs.get("size") else self.settings.get("size"),
+            size=size,
             table_name=table,
             metadata_path=self.metadata_path,
-            run_parallel=kwargs.get("run_parallel") if kwargs.get("run_parallel") is not None else self.settings.get("run_parallel"),
-            batch_size=kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size"),
-            random_seed=kwargs.get("random_seed") if kwargs.get("random_seed") else self.settings.get("random_seed"),
-            both_keys=kwargs.get("both_keys") if kwargs.get("random_seed") else False
+            run_parallel=run_parallel,
+            batch_size=batch_size,
+            random_seed=random_seed,
+            both_keys=both_keys
         )
 
     def launch_train(self):
