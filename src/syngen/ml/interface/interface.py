@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
 import os
-import pandas as pd
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from loguru import logger
@@ -93,17 +92,19 @@ class TrainInterface(Interface, ABC):
         """
         Set up reporter which used in order to create the sampling report during training process
         """
-        sample_reporter = SampleAccuracyReporter(
-            metadata={"table_name": self.config.table_name},
-            paths=self.config.set_paths()
-        )
-        Report().register_reporter(sample_reporter)
+        if self.config.print_report and self.config.row_limit:
+            sample_reporter = SampleAccuracyReporter(
+                metadata={"table_name": self.config.table_name},
+                paths=self.config.set_paths()
+            )
+            Report().register_reporter(sample_reporter)
 
-        accuracy_reporter = AccuracyReporter(
-            metadata={"table_name": self.config.table_name},
-            paths=self.config.set_paths()
-        )
-        Report().register_reporter(accuracy_reporter)
+        if self.config.print_report:
+            accuracy_reporter = AccuracyReporter(
+                metadata={"table_name": self.config.table_name},
+                paths=self.config.set_paths()
+            )
+            Report().register_reporter(accuracy_reporter)
 
         return self
 
@@ -228,6 +229,7 @@ class InferInterface(Interface):
                 run_parallel=self.config.run_parallel,
                 batch_size=self.config.batch_size,
                 metadata_path=self.config.metadata_path,
+                random_seed=self.config.random_seed,
                 handler=self.handler
             )
 

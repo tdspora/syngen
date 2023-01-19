@@ -1,9 +1,9 @@
 import re
+from pathlib import Path
 
 import tensorflow as tf
 from loguru import logger
 import pickle
-from pathlib import Path
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
     Input,
@@ -35,7 +35,7 @@ class CVAE:
     def __init__(
         self,
         dataset,
-        batch_size=32,
+        batch_size=24,
         latent_dim=30,
         intermediate_dim=512,
         latent_components=30,

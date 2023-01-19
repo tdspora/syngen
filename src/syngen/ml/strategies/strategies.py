@@ -47,10 +47,11 @@ class TrainStrategy:
 class InferStrategy:
     def __init__(
             self,
-            size: int,
-            run_parallel: bool,
-            metadata_path: Optional[str],
+            size,
+            run_parallel,
             batch_size: Optional[int],
+            metadata_path: Optional[str],
+            random_seed: Optional[int],
             handler: VaeInferHandler,
     ):
         self.handler = handler
@@ -58,14 +59,13 @@ class InferStrategy:
         self.run_parallel = run_parallel
         self.metadata_path = metadata_path
         self.batch_size = batch_size
+        self.random_seed = random_seed
 
     def run(self):
-        logger.debug(
-            f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}"
-        )
         self.handler.handle(
             size=self.size,
             run_parallel=self.run_parallel,
             batch_size=self.batch_size,
             metadata_path=self.metadata_path,
+            random_seed=self.random_seed
         )
