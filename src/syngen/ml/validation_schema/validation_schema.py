@@ -16,7 +16,8 @@ configuration_schema = Schema({
             Optional("size"): And(int, lambda n: n >= 1),
             Optional("run_parallel"): bool,
             Optional("batch_size"): And(int, lambda n: n >=1),
-            Optional("random_seed"): int
+            Optional("random_seed"): int,
+            Optional("print_report"): bool
         },
         "source": str,
         Optional("keys"): {

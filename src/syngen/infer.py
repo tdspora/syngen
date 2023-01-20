@@ -19,12 +19,16 @@ from syngen.ml.worker import Worker
 @click.option("--random_seed", default=None, type=int,
               help="Set any int in case you want reproducible results. To reproduce generated data again, "
                    "use the same int in this command.")
+@click.option("--print_report", default=False, type=bool,
+              help="Whether to print quality report. Might require significant time "
+                   "for big generated tables (>1000 rows). If absent, it's defaulted to False")
 def launch_infer(
         metadata_path: Optional[str],
         size: Optional[int],
         table_name: Optional[str],
         run_parallel: bool,
         batch_size: Optional[int],
+        print_report: bool,
         random_seed: Optional[int]
 ):
     """
@@ -36,6 +40,7 @@ def launch_infer(
     table_name
     run_parallel
     batch_size
+    print_report
     random_seed
     -------
 
@@ -55,6 +60,7 @@ def launch_infer(
         "size": size,
         "run_parallel": run_parallel,
         "batch_size": batch_size,
+        "print_report": print_report,
         "random_seed": random_seed
     }
     worker = Worker(

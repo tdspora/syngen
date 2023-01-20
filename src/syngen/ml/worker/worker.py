@@ -164,22 +164,22 @@ class Worker:
             train_settings = self.__parse_train_settings(config_of_table)
             source = config_of_table.get("source")
             row_limit = train_settings.get("row_limit")
+            print_report = train_settings.get("print_report")
 
             size = self._set_size_of_generated_data(source, row_limit)
 
             both_keys = table in self.divided
 
-            self.__infer_table(
-                size=size,
-                table_name=table,
-                run_parallel=False,
-                batch_size=1000,
-                random_seed=1,
-                both_keys=both_keys
-            )
-
-        Report().generate_report()
-        Report().clear_report()
+            if print_report:
+                self.__infer_table(
+                    size=size,
+                    table_name=table,
+                    run_parallel=False,
+                    batch_size=1000,
+                    random_seed=1,
+                    print_report=print_report,
+                    both_keys=both_keys
+                )
 
     def __infer_chain_of_tables(self, tables: List, config_of_tables: Dict):
         """
@@ -196,7 +196,8 @@ class Worker:
                 table_name=table,
                 run_parallel=infer_settings.get("run_parallel"),
                 batch_size=infer_settings.get("batch_size"),
-                random_seed=infer_settings["random_seed"],
+                random_seed=infer_settings.get("random_seed"),
+                print_report=infer_settings.get("print_report"),
                 both_keys=both_keys
             )
 
@@ -207,19 +208,19 @@ class Worker:
         """
         source = self.settings.get("source")
         row_limit = self.settings.get("row_limit")
+        print_report = self.settings.get("print_report")
 
         size = self._set_size_of_generated_data(source, row_limit)
 
         self.__train_table()
-        self.__infer_table(
-            size=size,
-            run_parallel=False,
-            batch_size=1000,
-            random_seed=1
-        )
 
-        Report().generate_report()
-        Report().clear_report()
+        if print_report:
+            self.__infer_table(
+                size=size,
+                run_parallel=False,
+                batch_size=1000,
+                random_seed=1
+            )
 
     def __train_table(self, **kwargs):
         table = self.table_name if self.table_name else kwargs["table_name"]
@@ -255,6 +256,7 @@ class Worker:
         batch_size = kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")
         random_seed = kwargs.get("random_seed") if kwargs.get("random_seed") else self.settings.get("random_seed")
         both_keys = kwargs.get("both_keys") if kwargs.get("random_seed") else False
+        print_report = kwargs.get("print_report") if kwargs.get("print_report") else self.settings.get("random_seed")
 
         logger.info(f"Infer process of the table - {table} has started.")
         self.infer_interface.run(
@@ -265,8 +267,18 @@ class Worker:
             run_parallel=run_parallel,
             batch_size=batch_size,
             random_seed=random_seed,
+            print_report=print_report,
             both_keys=both_keys
         )
+
+    @staticmethod
+    def _generate_reports():
+        """
+        Generate reports
+        :return:
+        """
+        Report().generate_report()
+        Report().clear_report()
 
     def launch_train(self):
         """
@@ -275,8 +287,10 @@ class Worker:
         if self.metadata_path is not None:
             chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="train")
             self.__train_chain_of_tables_with_generation(chain_of_tables, config_of_tables)
+            self._generate_reports()
         elif self.table_name is not None:
             self.__train_table_with_generation()
+            self._generate_reports()
 
     def launch_infer(self):
         """
@@ -285,5 +299,7 @@ class Worker:
         if self.metadata_path is not None:
             chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
             self.__infer_chain_of_tables(chain_of_tables, config_of_tables)
+            self._generate_reports()
         if self.table_name is not None:
             self.__infer_table()
+            self._generate_reports()
