@@ -6,7 +6,6 @@ from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.interface import TrainInterface, InferInterface
 from syngen.ml.reporters import Report
-from syngen.ml.data_loaders import DataLoader
 
 
 @dataclass
@@ -121,18 +120,6 @@ class Worker:
                 config.pop(table)
         return config
 
-    @staticmethod
-    def _set_size_of_generated_data(source: str, row_limit: Optional[int]) -> int:
-        """
-        Set up the size of generated data
-        :param source: the path of the original table
-        :param row_limit: row_limit which has already set up for current training process
-        :return: size: size of generated data
-        """
-        data, schema = DataLoader(source).load_data()
-        size = len(data) if row_limit is None else row_limit
-        return size
-
     def __train_chain_of_tables_with_generation(self, tables: List, config_of_tables: Dict):
         """
         Run training process for the list of related tables
@@ -162,17 +149,12 @@ class Worker:
         for table in tables:
             config_of_table = config_of_tables[table]
             train_settings = self.__parse_train_settings(config_of_table)
-            source = config_of_table.get("source")
-            row_limit = train_settings.get("row_limit")
             print_report = train_settings.get("print_report")
-
-            size = self._set_size_of_generated_data(source, row_limit)
 
             both_keys = table in self.divided
 
             if print_report:
                 self.__infer_table(
-                    size=size,
                     table_name=table,
                     run_parallel=False,
                     batch_size=1000,
@@ -204,19 +186,11 @@ class Worker:
     def __train_table_with_generation(self):
         """
         Run training process for a single table
-        :return:
         """
-        source = self.settings.get("source")
-        row_limit = self.settings.get("row_limit")
-        print_report = self.settings.get("print_report")
-
-        size = self._set_size_of_generated_data(source, row_limit)
-
         self.__train_table()
 
-        if print_report:
+        if self.settings.get("print_report"):
             self.__infer_table(
-                size=size,
                 run_parallel=False,
                 batch_size=1000,
                 random_seed=1
@@ -250,13 +224,13 @@ class Worker:
         Run infer process for a single table
         """
         table = self.table_name if self.table_name is not None else kwargs["table_name"]
-        size = kwargs.get("size") if kwargs.get("size") else self.settings.get("size")
+        size = self.settings.get("size")
         run_parallel = kwargs.get("run_parallel") if kwargs.get("run_parallel") is not None \
             else self.settings.get("run_parallel")
         batch_size = kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")
         random_seed = kwargs.get("random_seed") if kwargs.get("random_seed") else self.settings.get("random_seed")
         both_keys = kwargs.get("both_keys") if kwargs.get("random_seed") else False
-        print_report = kwargs.get("print_report") if kwargs.get("print_report") else self.settings.get("random_seed")
+        print_report = kwargs.get("print_report") if kwargs.get("print_report") else self.settings.get("print_report")
 
         logger.info(f"Infer process of the table - {table} has started.")
         self.infer_interface.run(

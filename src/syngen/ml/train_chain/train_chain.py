@@ -73,7 +73,8 @@ class RootHandler(BaseHandler):
                                "so it will be ignored")
 
         if options["row_subset"]:
-            data = data.sample(n=min(options["row_subset"], len(data)))
+            row_subset = min(options["row_subset"], len(data))
+            data = data.sample(n=row_subset)
             if len(data) < 100:
                 logger.warning("The input table is too small to provide any meaningful results. "
                                "Please consider 1) disable drop_null argument, 2) provide bigger table")
@@ -280,6 +281,16 @@ class VaeInferHandler(BaseHandler):
                 generated = pd.concat([generated, synth_fk], axis=1)
         return generated
 
+    def set_size_of_generated_data(self) -> int:
+        """
+        Return the count of rows of original data
+        in order to generate the data of the same size
+        if the information of the parameter 'size' is absent
+        :return:
+        """
+        data = pd.read_csv(self.paths["input_data_path"])
+        return len(data)
+
     def handle(
             self,
             **kwargs
@@ -287,7 +298,7 @@ class VaeInferHandler(BaseHandler):
         self._prepare_dir()
 
         batch_size = kwargs.get("batch_size")
-        size = kwargs.get("size")
+        size = kwargs.get("size") if kwargs.get("size") else self.set_size_of_generated_data()
         run_parallel = kwargs.get("run_parallel")
         metadata_path = kwargs.get("metadata_path")
         random_seed = kwargs.get("random_seed")
