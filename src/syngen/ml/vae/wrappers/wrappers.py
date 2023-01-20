@@ -180,7 +180,6 @@ class VAEWrapper(BaseWrapper):
         epochs: int = 30,
         verbose: int = 0,
     ):
-        row_subset = row_subset or len(df)
 
         self._pipeline()
         self._init_model()
@@ -202,7 +201,7 @@ class VAEWrapper(BaseWrapper):
 
         self.optimizer = self._create_optimizer()
         self.loss_metric = self._create_loss()
-        self._train(train_dataset, row_subset, epochs)
+        self._train(train_dataset, epochs)
 
         self.model.model = self.vae
         self.fit_sampler(df.dropna())

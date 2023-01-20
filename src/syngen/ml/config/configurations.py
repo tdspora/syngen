@@ -47,6 +47,7 @@ class InferConfig:
     batch_size: Optional[int]
     metadata_path: Optional[str]
     random_seed: Optional[int]
+    print_report: bool
     both_keys: bool
 
     def set_paths(self):
