@@ -324,12 +324,12 @@ class Dataset:
         for fk in self.foreign_keys_list:
             fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
             for fk_column in fk_columns:
-                fk_column = self.df[fk_column]
-                if fk_column.dtype != "object":
-                    kde = gaussian_kde(fk_column)
-                    with open(self.fk_kde_path, "wb") as file:
+                fk_column_values = self.df[fk_column]
+                if fk_column_values.dtype != "object":
+                    kde = gaussian_kde(fk_column_values)
+                    with open(f"{self.fk_kde_path}_{fk_column}.pkl", "wb") as file:
                         dill.dump(kde, file)
-                    logger.info(f"KDE artifacts saved to {self.fk_kde_path}")
+                    logger.info(f"KDE artifacts saved to {self.fk_kde_path}_{fk_column}.pkl")
 
     def __drop_fk_columns(self):
         """
