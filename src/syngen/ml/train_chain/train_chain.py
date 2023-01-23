@@ -181,10 +181,11 @@ class VaeInferHandler(BaseHandler):
         if self.metadata and self.table_name in self.metadata:
             config_of_keys = self.metadata.get(self.table_name).get("keys", {})
             for key in config_of_keys.keys():
-                if config_of_keys.get(key).get("type") == "PK" and not isinstance(df_slices[0][key][0], str):
+                column = config_of_keys.get(key).get("columns")[0]
+                if config_of_keys.get(key).get("type") == "PK" and not isinstance(df_slices[0][column][0], str):
                     cumm_len = 0
                     for i, frame in enumerate(df_slices):
-                        frame[key] = frame[key].map(lambda pk_val: pk_val + cumm_len)
+                        frame[column] = frame[column].map(lambda pk_val: pk_val + cumm_len)
                         cumm_len += len(frame)
         return pd.concat(df_slices, ignore_index=True)
 
@@ -240,10 +241,10 @@ class VaeInferHandler(BaseHandler):
             synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
             synth_fk.rename(fk_label, inplace=True)
         else:
-            with open(self.fk_kde_path, "rb") as file:
+            with open(f"{self.fk_kde_path}_{fk_label}.pkl", "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
-            fk_pdf = kde.evaluate(pk)
+            fk_pdf = np.maximum(kde.evaluate(pk), 1e-10)
             synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
             synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)
 
