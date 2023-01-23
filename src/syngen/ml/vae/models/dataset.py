@@ -36,6 +36,7 @@ class Dataset:
     is_fitted: bool
     all_columns: List
     null_num_column_names: List
+    zero_num_column_names: List
     nan_labels_dict: Dict
 
     def __set_pk_key(self, config_of_keys: Dict):
@@ -286,7 +287,7 @@ class Dataset:
         return max_len, rnn_units
 
     def _preprocess_nan_cols(
-        self, feature: str, fillna_strategy: str = None
+        self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
     ) -> tuple:
         """Fill NaN values in numeric column with some value according to strategy.
         Fill NaN values in string columns can only work in 'mode' strategy.
@@ -305,7 +306,13 @@ class Dataset:
             tuple: Tuple that consists of either feature name or both feature name and new null feature name.
         """
         isnull_feature = pd.isnull(self.df[feature])
-
+        many_zeros_feature = ((self.df[feature] == 0).sum() / (len(self.df[feature])) >
+                              zero_cutoff)
+        if many_zeros_feature:
+            feature_zero = feature + '_zero'
+            self.df[feature_zero] = self.df[feature].apply(lambda x: 0 if x == 0 else 1)
+            if not isnull_feature.any():
+                return (feature, feature_zero)
         if isnull_feature.any():
             nan_number = isnull_feature.sum()
             logger.info(f"Column {feature} contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
@@ -313,14 +320,17 @@ class Dataset:
             if fillna_strategy == "mean":
                 fillna_value = self.df[feature].mean()
             elif fillna_strategy == "mode":
-                fillna_value = self.df[feature].mode().sample(1).values[0]
+                fillna_value = self.df[feature].dropna().mode().sample(1).values[0]
             else:
                 fillna_value = 0
 
             feature_null = feature + "_null"
             self.df[feature_null] = isnull_feature.astype(int)
             self.df[feature] = self.df[feature].fillna(fillna_value)
-            return (feature, feature_null)
+            if not many_zeros_feature:
+                return (feature, feature_null)
+            else:
+                return (feature, feature_null, feature_zero)
         else:
             return (feature,)
 
@@ -393,8 +403,12 @@ class Dataset:
         """
         # num_bins = self.find_clusters(df, float_columns)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
-        if len(features) == 2:
+        if len(features) == 2 and features[1].endswith("_null"):
             self.null_num_column_names.append(features[1])
+        if len(features) == 2 and features[1].endswith('_zero'):
+            self.zero_num_column_names.append(features[1])
+        if len(features) == 3:
+            self.zero_num_column_names.append(features[2])
         for feature in features:
             self.assign_feature(
                 ContinuousFeature(feature, column_type=float), feature
@@ -407,8 +421,12 @@ class Dataset:
         """
         # num_bins = self.find_clusters(df, int_columns)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
-        if len(features) == 2:
+        if len(features) == 2 and features[1].endswith("_null"):
             self.null_num_column_names.append(features[1])
+        if len(features) == 2 and features[1].endswith('_zero'):
+            self.zero_num_column_names.append(features[1])
+        if len(features) == 3:
+            self.zero_num_column_names.append(features[2])
         for feature in features:
             self.assign_feature(
                 ContinuousFeature(feature, column_type=int), feature
