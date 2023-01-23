@@ -24,8 +24,6 @@ class TrainStrategy:
             batch_size: int,
             drop_null: bool,
     ):
-        logger.debug(
-            f"Train model with parameters: epochs={epochs}, drop_null={drop_null}")
         try:
             self.handler.handle(
                 data,

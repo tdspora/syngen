@@ -153,14 +153,13 @@ class Worker:
 
             both_keys = table in self.divided
 
-            if print_report:
-                self.__infer_table(
-                    table_name=table,
-                    run_parallel=False,
-                    batch_size=1000,
-                    random_seed=1,
-                    print_report=print_report,
-                    both_keys=both_keys
+            self.__infer_table(
+                table_name=table,
+                run_parallel=False,
+                batch_size=1000,
+                random_seed=1,
+                print_report=print_report,
+                both_keys=both_keys
                 )
 
     def __infer_chain_of_tables(self, tables: List, config_of_tables: Dict):
@@ -224,7 +223,7 @@ class Worker:
         Run infer process for a single table
         """
         table = self.table_name if self.table_name is not None else kwargs["table_name"]
-        size = self.settings.get("size")
+        size = kwargs.get("size") if kwargs.get("size") else self.settings.get("size")
         run_parallel = kwargs.get("run_parallel") if kwargs.get("run_parallel") is not None \
             else self.settings.get("run_parallel")
         batch_size = kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")

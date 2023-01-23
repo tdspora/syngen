@@ -83,6 +83,7 @@ class RootHandler(BaseHandler):
                     f"The amount of data is {len(data)} rows. It seems that it isn't enough to supply "
                     f"high-quality results. To improve the quality of generated data please consider any of the steps: "
                     f"1) provide a bigger table, 2) disable drop_null argument")
+        logger.info(f"The subset of rows was set to {len(data)}.")
         return data
 
     def set_options(self, data, options):
@@ -114,7 +115,11 @@ class VaeTrainHandler(BaseHandler):
         self.state_path = self.paths["state_path"]
 
     def __fit_model(
-            self, data: pd.DataFrame, epochs: int, batch_size: int
+            self,
+            data: pd.DataFrame,
+            epochs: int,
+            batch_size: int,
+            drop_null: bool
     ):
         os.makedirs(self.state_path, exist_ok=True)
         logger.info("Start VAE training")
@@ -132,6 +137,8 @@ class VaeTrainHandler(BaseHandler):
         )
 
         self.model.batch_size = min(batch_size, len(data))
+        logger.debug(
+            f"Train model with parameters: epochs={epochs}, batch_size={batch_size}, drop_null={drop_null}")
         self.model.fit_on_df(
             data,
             epochs=epochs,
@@ -144,7 +151,8 @@ class VaeTrainHandler(BaseHandler):
         self.__fit_model(
             data,
             kwargs["epochs"],
-            kwargs["batch_size"]
+            kwargs["batch_size"],
+            kwargs["row_subset"]
         )
         return super().handle(data, **kwargs)
 

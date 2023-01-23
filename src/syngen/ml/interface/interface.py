@@ -44,22 +44,7 @@ class Interface(ABC):
         """
         Set up reporter which used in order to create the sampling report during training process
         """
-        if isinstance(self.config, TrainConfig):
-            if self.config.print_report and self.config.row_limit:
-                sample_reporter = SampleAccuracyReporter(
-                    metadata={"table_name": self.config.table_name},
-                    paths=self.config.set_paths()
-                )
-                Report().register_reporter(sample_reporter)
-
-        if self.config.print_report:
-            accuracy_reporter = AccuracyReporter(
-                metadata={"table_name": self.config.table_name},
-                paths=self.config.set_paths()
-            )
-            Report().register_reporter(accuracy_reporter)
-
-        return self
+        pass
 
     def set_metadata(self, metadata):
         if metadata:
@@ -107,6 +92,22 @@ class TrainInterface(Interface, ABC):
 
         root_handler.set_next(vae_handler)
         self.handler = root_handler
+        return self
+
+    def set_reporters(self):
+        if self.config.print_report:
+            sample_reporter = SampleAccuracyReporter(
+                metadata={"table_name": self.config.table_name},
+                paths=self.config.set_paths()
+            )
+            Report().register_reporter(sample_reporter)
+
+            accuracy_reporter = AccuracyReporter(
+                metadata={"table_name": self.config.table_name},
+                paths=self.config.set_paths()
+            )
+            Report().register_reporter(accuracy_reporter)
+
         return self
 
     def set_strategy(self, **kwargs):
@@ -192,6 +193,16 @@ class InferInterface(Interface):
             wrapper_name=VanillaVAEWrapper.__name__,
             random_seed=self.config.random_seed
         )
+        return self
+
+    def set_reporters(self):
+        if self.config.print_report:
+            accuracy_reporter = AccuracyReporter(
+                metadata={"table_name": self.config.table_name},
+                paths=self.config.set_paths()
+            )
+            Report().register_reporter(accuracy_reporter)
+
         return self
 
     def set_strategy(self, **kwargs):
