@@ -198,7 +198,7 @@ class Dataset:
         name = feature.name
 
         if name in self.features:
-            raise Exception("%s is already contained in features" % name)
+            raise Exception(f"{name} is already contained in features")
 
         if not isinstance(columns, (list, tuple)):
             columns = [columns]
