@@ -336,14 +336,19 @@ class Dataset:
                 correspondent_pk_table = self.foreign_keys_mapping[fk]["references"]["table"]
                 correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
                 if fk_column_values.dtype == "object":
-                    with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"
-                              f"{correspondent_pk_col}_mapper.pkl", "rb") as file:
-                        mapper = pickle.load(file)
+                    try:
+                        with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"              
+                                  f"{correspondent_pk_col}_mapper.pkl", "rb") as file:
+                            mapper = pickle.load(file)
+                    except FileNotFoundError:
+                        logger.warning(f"The mapper for the {fk_column} text key is not found. Simple sampling will be used.")
+                        continue
                     fk_column_values = fk_column_values.map(mapper)
                 kde = gaussian_kde(fk_column_values)
-                with open(f"{self.fk_kde_path}_{fk_column}.pkl", "wb") as file:
+                with open(f"{self.fk_kde_path}{fk_column}.pkl", "wb") as file:
                     dill.dump(kde, file)
-                logger.info(f"KDE artifacts saved to {self.fk_kde_path}_{fk_column}.pkl")
+
+                logger.info(f"KDE artifacts saved to {self.fk_kde_path}{fk_column}.pkl")
 
     def __drop_fk_columns(self):
         """
