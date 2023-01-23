@@ -1,14 +1,22 @@
 import jinja2
 import pandas as pd
 import os
+from typing import Dict
 from syngen.ml.metrics import UnivariateMetric, BaseTest
 
 from syngen.ml.metrics.utils import transform_to_base64
 
 
 class SampleAccuracyTest(BaseTest):
-    def __init__(self, original: pd.DataFrame, sampled: pd.DataFrame, paths: dict, table_name: str):
-        super().__init__(original, sampled, paths, table_name)
+    def __init__(
+            self,
+            original: pd.DataFrame,
+            sampled: pd.DataFrame,
+            paths: dict,
+            table_name: str,
+            config: Dict
+    ):
+        super().__init__(original, sampled, paths, table_name, config)
 
     def __get_univariate_metric(self):
         """
@@ -31,7 +39,10 @@ class SampleAccuracyTest(BaseTest):
 
         uni_images = {title: transform_to_base64(path) for title, path in uni_images.items()}
 
-        html = template.render(uni_imgs=uni_images)
+        html = template.render(
+            uni_imgs=uni_images,
+            config=self.config
+        )
 
         with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w') as f:
             f.write(html)

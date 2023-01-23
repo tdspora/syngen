@@ -58,50 +58,8 @@ class RootHandler(BaseHandler):
     def __init__(self, metadata: dict, paths: dict, table_name: str):
         super().__init__(metadata, paths, table_name)
 
-    def _prepare_dirs(self):
-        os.makedirs(self.paths["model_artifacts_path"], exist_ok=True)
-        tmp_store_path = self.paths["tmp_store_path"]
-        os.makedirs(tmp_store_path, exist_ok=True)
-
-    @staticmethod
-    def _set_options(data, options):
-        if options["drop_null"]:
-            if not data.dropna().empty:
-                data = data.dropna()
-            else:
-                logger.warning("The specified 'drop_null' argument results in the empty dataframe, "
-                               "so it will be ignored")
-
-        if options["row_subset"]:
-            row_subset = min(options["row_subset"], len(data))
-            data = data.sample(n=row_subset)
-            if len(data) < 100:
-                logger.warning("The input table is too small to provide any meaningful results. "
-                               "Please consider 1) disable drop_null argument, 2) provide bigger table")
-            elif len(data) < 500:
-                logger.warning(
-                    f"The amount of data is {len(data)} rows. It seems that it isn't enough to supply "
-                    f"high-quality results. To improve the quality of generated data please consider any of the steps: "
-                    f"1) provide a bigger table, 2) disable drop_null argument")
-        logger.info(f"The subset of rows was set to {len(data)}.")
-        return data
-
-    def set_options(self, data, options):
-        return self._set_options(data, options)
-
-    def prepare_data(self, data, options):
-        data = self.set_options(data, options)
-
-        data_columns = set(data.columns)
-        dropped_cols = set(data.columns) - data_columns
-        if len(dropped_cols) > 0:
-            logger.info(f"Empty columns {dropped_cols} were removed")
-        return data
-
     def handle(self, data: pd.DataFrame, **kwargs):
-        self._prepare_dirs()
-        data = self.prepare_data(data, kwargs)
-        data.to_csv(self.paths["input_data_path"], index=False)
+        data, schema = DataLoader(self.paths["input_data_path"]).load_data()
         return super().handle(data, **kwargs)
 
 

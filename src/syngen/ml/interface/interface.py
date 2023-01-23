@@ -67,7 +67,8 @@ class TrainInterface(Interface, ABC):
         """
         Set up configuration for training process
         """
-        self.config = TrainConfig(**kwargs)
+        configuration = TrainConfig(**kwargs)
+        self.config = configuration
         return self
 
     def set_handler(self, schema, *args):
@@ -94,19 +95,14 @@ class TrainInterface(Interface, ABC):
         self.handler = root_handler
         return self
 
-    def set_reporters(self):
+    def set_reporters(self, **kwargs):
         if self.config.print_report:
             sample_reporter = SampleAccuracyReporter(
                 metadata={"table_name": self.config.table_name},
-                paths=self.config.set_paths()
+                paths=self.config.set_paths(),
+                config=self.config.to_dict()
             )
             Report().register_reporter(sample_reporter)
-
-            accuracy_reporter = AccuracyReporter(
-                metadata={"table_name": self.config.table_name},
-                paths=self.config.set_paths()
-            )
-            Report().register_reporter(accuracy_reporter)
 
         return self
 
@@ -143,17 +139,9 @@ class TrainInterface(Interface, ABC):
             batch_size=batch_size
         )
 
-        data, schema = DataLoader(source).load_data()
-        # remove completely empty columns
-        data = data.dropna(how="all", axis=1)
-        if schema is not None:
-            schema["fields"] = {
-                column: data_type for column, data_type in schema.get("fields", {}).items() if column in data.columns
-            }
-
         self.set_reporters().\
             set_metadata(metadata).\
-            set_handler(schema).\
+            set_handler(self.config.schema).\
             set_strategy(
             paths=self.config.set_paths(),
             handler=self.handler
@@ -161,6 +149,7 @@ class TrainInterface(Interface, ABC):
 
         logger.info("Generator: 'vae', mode: 'train'")
 
+        data, schema = DataLoader(path=self.config.paths["input_data_path"]).load_data()
         self.strategy.run(
             data,
             epochs=self.config.epochs,
@@ -199,7 +188,8 @@ class InferInterface(Interface):
         if self.config.print_report:
             accuracy_reporter = AccuracyReporter(
                 metadata={"table_name": self.config.table_name},
-                paths=self.config.set_paths()
+                paths=self.config.set_paths(),
+                config=self.config.to_dict()
             )
             Report().register_reporter(accuracy_reporter)
 

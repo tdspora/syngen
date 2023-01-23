@@ -246,6 +246,11 @@
 	<body>
 		<div class="container">
 			<h1 class="h1-title">Accuracy report</h1>
+			<p class="text-description">
+				The report was generated during the inference process with the next parameters:
+				size = {{ config.get("size") }}, run_parallel = {{ config.get("run_parallel") }},
+				batch_size = {{ config.get("batch_size") }}, random_seed = {{ config.get("random_seed") }}
+			</p>
 			<div class="container--item">
 				<svg class="linear-gradient--img"
 					width="1000"

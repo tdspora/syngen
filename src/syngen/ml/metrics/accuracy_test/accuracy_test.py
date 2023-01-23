@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import jinja2
 import pandas as pd
-from typing import List
+from typing import List, Dict
 import os
 from syngen.ml.metrics import (
     UnivariateMetric,
@@ -15,11 +15,19 @@ from syngen.ml.metrics.utils import transform_to_base64
 
 
 class BaseTest(ABC):
-    def __init__(self, original: pd.DataFrame, synthetic: pd.DataFrame, paths: dict, table_name: str):
+    def __init__(
+            self,
+            original: pd.DataFrame,
+            synthetic: pd.DataFrame,
+            paths: dict,
+            table_name: str,
+            config: Dict
+    ):
         self.original = original
         self.synthetic = synthetic
         self.paths = paths
         self.table_name = table_name
+        self.config = config
 
     @abstractmethod
     def report(
@@ -29,8 +37,15 @@ class BaseTest(ABC):
 
 
 class AccuracyTest(BaseTest):
-    def __init__(self, original: pd.DataFrame, synthetic: pd.DataFrame, paths: dict, table_name: str):
-        super().__init__(original, synthetic, paths, table_name)
+    def __init__(
+            self,
+            original: pd.DataFrame,
+            synthetic: pd.DataFrame,
+            paths: dict,
+            table_name: str,
+            config: Dict
+    ):
+        super().__init__(original, synthetic, paths, table_name, config)
 
     def __prepare_before_report(self):
         """
@@ -78,7 +93,8 @@ class AccuracyTest(BaseTest):
                                bi_imgs=bi_images,
                                utility_barplot=transform_to_base64(f"{draws_acc_path}/utility_barplot.svg"),
                                utility_table=utility_result.to_html(),
-                               table_name=self.table_name
+                               table_name=self.table_name,
+                               config=self.config
                                )
 
         with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w') as f:
