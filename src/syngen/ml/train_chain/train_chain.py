@@ -239,7 +239,7 @@ class VaeInferHandler(BaseHandler):
         pk = pk_table[pk_column_label]
 
         try:
-            with open(f"{self.fk_kde_path}_{fk_label}.pkl", "rb") as file:
+            with open(f"{self.fk_kde_path}{fk_label}.pkl", "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
             numeric_pk = np.arange(len(pk)) if pk.dtype == "object" else pk
