@@ -10,6 +10,7 @@ from loguru import logger
 from numpy.random import seed, choice
 from pathos.multiprocessing import ProcessingPool
 import dill
+import pickle
 
 from syngen.ml.vae import *
 from syngen.ml.reporters import Report
@@ -237,16 +238,19 @@ class VaeInferHandler(BaseHandler):
     def kde_gen(self, pk_table, pk_column_label, size, fk_label):
         pk = pk_table[pk_column_label]
 
-        if pk.dtype == "object":
-            synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
-            synth_fk.rename(fk_label, inplace=True)
-        else:
-            with open(self.fk_kde_path, "rb") as file:
+        try:
+            with open(f"{self.fk_kde_path}{fk_label}.pkl", "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
-            fk_pdf = kde.evaluate(pk)
+            numeric_pk = np.arange(len(pk)) if pk.dtype == "object" else pk
+            fk_pdf = np.maximum(kde.evaluate(numeric_pk), 1e-12)
             synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
             synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)
+
+        except FileNotFoundError:
+            logger.warning(f"The mapper for the {fk_label} text key is not found. Making simple sampling")
+            synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
+            synth_fk.rename(fk_label, inplace=True)
 
         return synth_fk
 

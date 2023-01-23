@@ -753,6 +753,9 @@ class Clustering(BaseMetric):
             ],
             keys=["original", "synthetic"]
         ).dropna().reset_index()
+        if len(self.merged) == 0:
+            logger.warning("No clustering metric will be formed due to empty DataFrame")
+            return None
         self.__preprocess_data()
         optimal_clust_num = self.__automated_elbow()
 
