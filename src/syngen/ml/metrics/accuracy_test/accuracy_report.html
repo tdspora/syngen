@@ -247,10 +247,13 @@
 		<div class="container">
 			<h1 class="h1-title">Accuracy report</h1>
 			<p class="text-description">
-				The report was generated during the inference process with the next parameters:
-				size = {{ config.get("size") }}, run_parallel = {{ config.get("run_parallel") }},
-				batch_size = {{ config.get("batch_size") }}, random_seed = {{ config.get("random_seed") }}
-			</p>
+				The report was generated during the inference process of the table - {{ table_name }} in {{ time }} with the next parameters:</p>
+				<ul>
+					<li>size = {{ config.get("size") }}</li>
+					<li>run_parallel = {{ config.get("run_parallel") }}</li>
+					<li>batch_size = {{ config.get("batch_size") }}</li>
+					<li>random_seed = {{ config.get("random_seed") }}</li>
+				</ul>
 			<div class="container--item">
 				<svg class="linear-gradient--img"
 					width="1000"

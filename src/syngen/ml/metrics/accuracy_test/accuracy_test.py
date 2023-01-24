@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
-import jinja2
-import pandas as pd
+from datetime import datetime
 from typing import List, Dict
 import os
+
+import jinja2
+import pandas as pd
+
 from syngen.ml.metrics import (
     UnivariateMetric,
     BivariateMetric,
@@ -94,7 +97,8 @@ class AccuracyTest(BaseTest):
                                utility_barplot=transform_to_base64(f"{draws_acc_path}/utility_barplot.svg"),
                                utility_table=utility_result.to_html(),
                                table_name=self.table_name,
-                               config=self.config
+                               config=self.config,
+                               time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
                                )
 
         with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w') as f:
