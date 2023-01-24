@@ -1,8 +1,10 @@
-import jinja2
-import pandas as pd
 import os
 from typing import Dict
 from syngen.ml.metrics import UnivariateMetric, BaseTest
+from datetime import datetime
+
+import jinja2
+import pandas as pd
 
 from syngen.ml.metrics.utils import transform_to_base64
 
@@ -41,7 +43,9 @@ class SampleAccuracyTest(BaseTest):
 
         html = template.render(
             uni_imgs=uni_images,
-            config=self.config
+            config=self.config,
+            time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
+            table=self.table_name
         )
 
         with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w') as f:
