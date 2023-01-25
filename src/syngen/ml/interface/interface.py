@@ -71,24 +71,26 @@ class TrainInterface(Interface, ABC):
         self.config = configuration
         return self
 
-    def set_handler(self, schema, *args):
+    def set_handler(self):
         """
         Set up the handler which used in training process
         """
-        paths = self.config.set_paths()
-
         root_handler = RootHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
-            paths=paths
+            paths=self.config.paths
         )
 
         vae_handler = VaeTrainHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
-            schema=schema,
-            paths=paths,
-            wrapper_name=VanillaVAEWrapper.__name__
+            schema=self.config.schema,
+            paths=self.config.paths,
+            wrapper_name=VanillaVAEWrapper.__name__,
+            epochs=self.config.epochs,
+            row_subset=self.config.row_subset,
+            drop_null=self.config.drop_null,
+            batch_size=self.config.batch_size
         )
 
         root_handler.set_next(vae_handler)
@@ -99,7 +101,7 @@ class TrainInterface(Interface, ABC):
         if self.config.print_report:
             sample_reporter = SampleAccuracyReporter(
                 metadata={"table_name": self.config.table_name},
-                paths=self.config.set_paths(),
+                paths=self.config.paths,
                 config=self.config.to_dict()
             )
             Report().register_reporter(sample_reporter)
@@ -141,22 +143,16 @@ class TrainInterface(Interface, ABC):
 
         self.set_reporters().\
             set_metadata(metadata).\
-            set_handler(self.config.schema).\
+            set_handler().\
             set_strategy(
-            paths=self.config.set_paths(),
-            handler=self.handler
-        )
+                paths=self.config.paths,
+                handler=self.handler
+            )
 
         logger.info("Generator: 'vae', mode: 'train'")
 
         data, schema = DataLoader(path=self.config.paths["input_data_path"]).load_data()
-        self.strategy.run(
-            data,
-            epochs=self.config.epochs,
-            row_subset=self.config.row_limit,
-            batch_size=self.config.batch_size,
-            drop_null=self.config.drop_null
-        )
+        self.strategy.run(data)
 
 
 class InferInterface(Interface):
@@ -167,20 +163,26 @@ class InferInterface(Interface):
         """
         Set up the configuration for infer process
         """
-        self.config = InferConfig(**kwargs)
+        configuration = InferConfig(**kwargs)
+        self.config = configuration
         return self
 
-    def set_handler(self):
+    def set_handler(self, size):
         """
         Set up the handler which used in infer process
         """
 
         self.handler = VaeInferHandler(
             metadata=self.metadata,
+            metadata_path=self.config.metadata_path,
             table_name=self.config.table_name,
-            paths=self.config.set_paths(),
+            paths=self.config.paths,
             wrapper_name=VanillaVAEWrapper.__name__,
-            random_seed=self.config.random_seed
+            size=self.config.size,
+            random_seed=self.config.random_seed,
+            batch_size=self.config.batch_size,
+            run_parallel=self.config.run_parallel,
+            print_report=self.config.print_report
         )
         return self
 
@@ -188,7 +190,7 @@ class InferInterface(Interface):
         if self.config.print_report:
             accuracy_reporter = AccuracyReporter(
                 metadata={"table_name": self.config.table_name},
-                paths=self.config.set_paths(),
+                paths=self.config.paths,
                 config=self.config.to_dict()
             )
             Report().register_reporter(accuracy_reporter)
@@ -228,13 +230,8 @@ class InferInterface(Interface):
         ).\
             set_reporters(). \
             set_metadata(metadata).\
-            set_handler().\
+            set_handler(size).\
             set_strategy(
-                size=self.config.size,
-                run_parallel=self.config.run_parallel,
-                batch_size=self.config.batch_size,
-                metadata_path=self.config.metadata_path,
-                random_seed=self.config.random_seed,
                 handler=self.handler
             )
 

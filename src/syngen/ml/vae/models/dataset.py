@@ -434,7 +434,6 @@ class Dataset:
             self.assign_feature(ContinuousFeature(features[1], column_type=int), features[1])
             logger.debug(f"Feature {features[1]} assigned as int feature")
 
-
     def _assign_binary_feature(self, feature):
         """
         Assign binary feature to binary columns

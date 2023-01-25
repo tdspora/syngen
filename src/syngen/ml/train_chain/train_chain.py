@@ -5,7 +5,6 @@ import math
 
 import pandas as pd
 import numpy as np
-import traceback
 from loguru import logger
 from numpy.random import seed, choice
 from pathos.multiprocessing import ProcessingPool
@@ -65,19 +64,29 @@ class RootHandler(BaseHandler):
 
 class VaeTrainHandler(BaseHandler):
     def __init__(
-            self, metadata: dict, paths: dict, table_name: str, schema: Optional[Dict], wrapper_name: str
+            self,
+            metadata: dict,
+            paths: dict,
+            table_name: str,
+            schema: Optional[Dict],
+            wrapper_name: str,
+            epochs: int,
+            row_subset: int,
+            drop_null: bool,
+            batch_size: int
     ):
         super().__init__(metadata, paths, table_name)
         self.wrapper_name = wrapper_name
         self.schema = schema
+        self.epochs = epochs
+        self.row_subset = row_subset
+        self.drop_null = drop_null
+        self.batch_size = batch_size
         self.state_path = self.paths["state_path"]
 
     def __fit_model(
             self,
-            data: pd.DataFrame,
-            epochs: int,
-            batch_size: int,
-            drop_null: bool
+            data: pd.DataFrame
     ):
         os.makedirs(self.state_path, exist_ok=True)
         logger.info("Start VAE training")
@@ -94,24 +103,21 @@ class VaeTrainHandler(BaseHandler):
             paths=self.paths,
         )
 
-        self.model.batch_size = min(batch_size, len(data))
+        self.model.batch_size = min(self.batch_size, len(data))
+
         logger.debug(
-            f"Train model with parameters: epochs={epochs}, batch_size={batch_size}, drop_null={drop_null}")
+            f"Train model with parameters: epochs={self.epochs}, row_subset={self.row_subset}, "
+            f"drop_null={self.drop_null}, batch_size={self.batch_size}")
         self.model.fit_on_df(
             data,
-            epochs=epochs,
+            epochs=self.epochs,
         )
 
         self.model.save_state(self.state_path)
         logger.info("Finished VAE training")
 
     def handle(self, data: pd.DataFrame, **kwargs):
-        self.__fit_model(
-            data,
-            kwargs["epochs"],
-            kwargs["batch_size"],
-            kwargs["row_subset"]
-        )
+        self.__fit_model(data)
         return super().handle(data, **kwargs)
 
 
@@ -119,17 +125,27 @@ class VaeInferHandler(BaseHandler):
     def __init__(
             self,
             metadata: dict,
+            metadata_path: Optional[str],
             paths: dict,
             table_name: str,
             wrapper_name: str,
-            random_seed: int = None,
+            size: Optional[int],
+            random_seed: Optional[int],
+            batch_size: Optional[int],
+            run_parallel: bool,
+            print_report: bool
     ):
         super().__init__(metadata, paths, table_name)
+        self.metadata_path = metadata_path
         self.random_seed = random_seed
         self.random_seeds_list = []
         if random_seed:
             seed(random_seed)
         self.vae = None
+        self.size = size
+        self.batch_size = batch_size if batch_size is not None else self.size
+        self.run_parallel = run_parallel
+        self.print_report = print_report
         self.wrapper_name = wrapper_name
         self.vae_state_path = self.paths["state_path"]
         self.path_to_merged_infer = self.paths["path_to_merged_infer"]
@@ -161,7 +177,14 @@ class VaeInferHandler(BaseHandler):
         if self.random_seed:
             seed(self.random_seeds_list[i])
 
-        data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        input_data_existed = DataLoader(self.paths["input_data_path"]).has_existed_path
+
+        if input_data_existed:
+            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        else:
+            data = pd.DataFrame()
+            schema = None
+
         self.vae = self.create_wrapper(
             self.wrapper_name,
             data,
@@ -247,59 +270,31 @@ class VaeInferHandler(BaseHandler):
                 generated = pd.concat([generated, synth_fk], axis=1)
         return generated
 
-    def set_size_of_generated_data(self) -> int:
-        """
-        Return the count of rows of original data
-        in order to generate the data of the same size
-        if the information of the parameter 'size' is absent
-        :return:
-        """
-        data = pd.read_csv(self.paths["input_data_path"])
-        return len(data)
-
     def handle(
             self,
             **kwargs
     ):
         self._prepare_dir()
 
-        batch_size = kwargs.get("batch_size")
-        size = kwargs.get("size") if kwargs.get("size") else self.set_size_of_generated_data()
-        run_parallel = kwargs.get("run_parallel")
-        metadata_path = kwargs.get("metadata_path")
-        random_seed = kwargs.get("random_seed")
+        batch_num = math.ceil(self.size / self.batch_size)
+        logger.debug(
+            f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}, "
+            f"batch_size={self.batch_size}, random_seed={self.random_seed}, print_report={self.print_report}"
+        )
+        logger.info(f"Total of {batch_num} batch(es)")
+        batches = self.split_by_batches(self.size, batch_num)
+        prepared_batches = [self.run(batch, self.run_parallel) for batch in batches]
+        prepared_data = self._concat_slices_with_unique_pk(prepared_batches) if len(prepared_batches) > 0 else pd.DataFrame()
 
-        try:
-            if not batch_size:
-                batch_size = size
-            batch_num = math.ceil(size / batch_size)
-            logger.debug(
-                f"Infer model with parameters: size={size}, run_parallel={run_parallel}, "
-                f"batch_size={batch_size}, random_seed={random_seed}"
-            )
-            logger.info(f"Total of {batch_num} batch(es)")
-            batches = self.split_by_batches(size, batch_num)
-            prepared_batches = [self.run(batch, run_parallel) for batch in batches]
-            prepared_data = self._concat_slices_with_unique_pk(prepared_batches) if len(prepared_batches) > 0 else pd.DataFrame()
-
-            is_pk = self._is_pk()
-            if metadata_path is not None:
-                if not is_pk:
-                    generated_data = self.generate_keys(prepared_data, size, self.metadata, self.table_name)
-                    if generated_data is None:
-                        prepared_data.to_csv(self.path_to_merged_infer, index=False)
-                    else:
-                        generated_data.to_csv(self.path_to_merged_infer, index=False)
-                else:
+        is_pk = self._is_pk()
+        if self.metadata_path is not None:
+            if not is_pk:
+                generated_data = self.generate_keys(prepared_data, self.size, self.metadata, self.table_name)
+                if generated_data is None:
                     prepared_data.to_csv(self.path_to_merged_infer, index=False)
-            if metadata_path is None:
+                else:
+                    generated_data.to_csv(self.path_to_merged_infer, index=False)
+            else:
                 prepared_data.to_csv(self.path_to_merged_infer, index=False)
-            logger.info(
-                f"Synthesis of the table - {self.table_name} was completed. "
-                f"Synthetic data saved in {self.path_to_merged_infer}"
-            )
-        except Exception as e:
-            logger.info(f"Generation of the table - {self.table_name} failed on running stage.")
-            logger.error(e)
-            logger.error(traceback.format_exc())
-            raise
+        if self.metadata_path is None:
+            prepared_data.to_csv(self.path_to_merged_infer, index=False)

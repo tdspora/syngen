@@ -91,14 +91,14 @@ class VAEWrapper(BaseWrapper):
         metadata: dict,
         table_name: str,
         paths: dict,
-        batch_size: int = 32,
-        latent_dim: int = 30,
+        batch_size: int = 24,
+        latent_dim: int = 10,
         latent_components: int = 30,
     ):
         super().__init__()
         self.batch_size = batch_size
-        self.latent_dim = min(latent_dim, int(df.shape[1] / 2))
-        self.latent_components = min(latent_components, self.latent_dim * 2)
+        self.latent_dim = latent_dim
+        self.latent_components = latent_components
         self.metadata = metadata
         self.table_name = table_name
         self.vae_resources_path = paths["state_path"]
@@ -139,7 +139,7 @@ class VAEWrapper(BaseWrapper):
                 df = df.drop(column, axis=1)
                 logger.info(
                     f"Column {column} has {num_zero_values} ({round(num_zero_values * 100 / len(num_column))}%) "
-                    f"zero values generated."
+                    f"zero values generated"
                 )
         return df
 
@@ -177,7 +177,7 @@ class VAEWrapper(BaseWrapper):
         row_subset: int = None,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
         batch_size: int = 24,
-        epochs: int = 30,
+        epochs: int = 10,
         verbose: int = 0,
     ):
 
@@ -336,11 +336,13 @@ class VanillaVAEWrapper(VAEWrapper):
     """
 
     def _init_model(self):
+        latent_dim = min(self.latent_dim, int(len(self.dataset.columns) / 2))
+
         self.model = CVAE(
             self.dataset,
             batch_size=self.batch_size,
-            latent_dim=self.latent_dim,
-            latent_components=self.latent_components,
+            latent_dim=latent_dim,
+            latent_components=min(self.latent_components, latent_dim * 2),
             intermediate_dim=128,
         )
 
