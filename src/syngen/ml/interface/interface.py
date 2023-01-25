@@ -4,7 +4,6 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from loguru import logger
-from syngen.ml.data_loaders import DataLoader
 from syngen.ml.train_chain import RootHandler
 from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
 from syngen.ml.config import TrainConfig, InferConfig
@@ -151,8 +150,7 @@ class TrainInterface(Interface, ABC):
 
         logger.info("Generator: 'vae', mode: 'train'")
 
-        data, schema = DataLoader(path=self.config.paths["input_data_path"]).load_data()
-        self.strategy.run(data)
+        self.strategy.run()
 
 
 class InferInterface(Interface):

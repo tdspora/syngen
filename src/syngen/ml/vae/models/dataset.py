@@ -1,11 +1,12 @@
 from typing import Dict, Optional, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from loguru import logger
 import numpy as np
 import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
+
 from syngen.ml.vae.models.features import InverseTransformer
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
@@ -37,6 +38,7 @@ class Dataset:
     null_num_column_names: List
     zero_num_column_names: List
     nan_labels_dict: Dict
+    inverse_transformers: Dict = field(default_factory=dict)
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
@@ -243,8 +245,6 @@ class Dataset:
         if not isinstance(data, list):
             data = [data]
         assert self._check_count_features(data)
-
-        self.inverse_transformers = {}
 
         for transformed_data, (name, feature) in zip(data, self.features.items()):
             if name not in excluded_features and name not in self.foreign_keys_list:

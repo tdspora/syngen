@@ -16,6 +16,7 @@ import numpy as np
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
+from syngen.ml.pipeline import fetch_dataset
 
 warnings.filterwarnings("ignore")
 
@@ -32,11 +33,8 @@ class BaseWrapper(ABC):
     def fit_on_df(
         self,
         df: pd.DataFrame,
-        row_subset: List[int] = None,
-        columns_subset: List[str] = None,
-        batch_size: int = 10,
-        epochs: int = 30,
-        verbose: int = 0,
+        epochs: int,
+        columns_subset: List[str] = None
     ):
         pass
 
@@ -91,6 +89,7 @@ class VAEWrapper(BaseWrapper):
         metadata: dict,
         table_name: str,
         paths: dict,
+        process: str,
         batch_size: int = 24,
         latent_dim: int = 10,
         latent_components: int = 30,
@@ -104,20 +103,23 @@ class VAEWrapper(BaseWrapper):
         self.vae_resources_path = paths["state_path"]
         self.dataset_pickle_path = paths["dataset_pickle_path"]
         self.fk_kde_path = paths["fk_kde_path"]
-        self.dataset = Dataset(
-            df=df,
-            schema=schema,
-            metadata=self.metadata,
-            table_name=self.table_name,
-            fk_kde_path=self.fk_kde_path,
-            features=dict(),
-            columns=dict(),
-            is_fitted=False,
-            all_columns=list(),
-            null_num_column_names=list(),
-            zero_num_column_names=list(),
-            nan_labels_dict=dict()
-        )
+        if process == "train":
+            self.dataset = Dataset(
+                df=df,
+                schema=schema,
+                metadata=self.metadata,
+                table_name=self.table_name,
+                fk_kde_path=self.fk_kde_path,
+                features=dict(),
+                columns=dict(),
+                is_fitted=False,
+                all_columns=list(),
+                null_num_column_names=list(),
+                zero_num_column_names=list(),
+                nan_labels_dict=dict()
+            )
+        elif process == "infer":
+            self.dataset = fetch_dataset(self.dataset_pickle_path)
 
     def _pipeline(self):
         self.dataset.set_metadata()
@@ -174,11 +176,8 @@ class VAEWrapper(BaseWrapper):
     def fit_on_df(
         self,
         df: pd.DataFrame,
-        row_subset: int = None,
+        epochs: int,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
-        batch_size: int = 24,
-        epochs: int = 10,
-        verbose: int = 0,
     ):
 
         self._pipeline()
