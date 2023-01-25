@@ -1,6 +1,5 @@
 import traceback
 from typing import Dict
-import pandas as pd
 from loguru import logger
 
 from syngen.ml.train_chain import RootHandler
@@ -12,9 +11,9 @@ class TrainStrategy:
         self.tmp_store_path = paths['tmp_store_path']
         self.handler = handler
 
-    def run(self, data: pd.DataFrame):
+    def run(self):
         try:
-            self.handler.handle(data)
+            self.handler.handle()
 
         except Exception as e:
             logger.info(f"Training of the table - {self.handler.table_name} failed on running stage.")

@@ -49,7 +49,7 @@ class BaseHandler(AbstractHandler):
     @staticmethod
     def create_wrapper(cls_name, data: pd.DataFrame, schema: Optional[Dict], **kwargs):
         return globals()[cls_name](
-            data, schema, kwargs["metadata"], kwargs["table_name"], kwargs["paths"]
+            data, schema, kwargs["metadata"], kwargs["table_name"], kwargs["paths"], kwargs["process"]
         )
 
 
@@ -57,7 +57,7 @@ class RootHandler(BaseHandler):
     def __init__(self, metadata: dict, paths: dict, table_name: str):
         super().__init__(metadata, paths, table_name)
 
-    def handle(self, data: pd.DataFrame, **kwargs):
+    def handle(self, **kwargs):
         data, schema = DataLoader(self.paths["input_data_path"]).load_data()
         return super().handle(data, **kwargs)
 
@@ -101,6 +101,7 @@ class VaeTrainHandler(BaseHandler):
             metadata=self.metadata,
             table_name=self.table_name,
             paths=self.paths,
+            process="train"
         )
 
         self.model.batch_size = min(self.batch_size, len(data))
@@ -192,6 +193,7 @@ class VaeInferHandler(BaseHandler):
             metadata={"table_name": self.table_name},
             table_name=self.table_name,
             paths=self.paths,
+            process="infer"
         )
         self.vae.load_state(self.vae_state_path)
         synthetic_infer = self.vae.predict_sampled_df(size)
