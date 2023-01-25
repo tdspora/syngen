@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Tuple
@@ -39,6 +40,12 @@ class DataLoader(BaseDataLoader):
             raise ValueError("It seems that the information of source is absent.")
         self.path = path
         self.file_loader = self.__get_file_loader()
+        self.has_existed_path = self.check_if_path_exists()
+
+    def check_if_path_exists(self):
+        if os.path.exists(self.path):
+            return True
+        return False
 
     def __get_file_loader(self):
         path = Path(self.path)

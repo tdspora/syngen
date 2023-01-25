@@ -53,11 +53,13 @@ class Worker:
         run_parallel = config.get("infer_settings", {}).get("run_parallel", self.settings.get("run_parallel"))
         random_seed = config.get("infer_settings", {}).get("random_seed", self.settings.get("random_seed"))
         batch_size = config.get("infer_settings", {}).get("batch_size", self.settings.get("batch_size"))
+        print_report = config.get("infer_settings", {}).get("print_report", self.settings.get("print_report"))
         return {
             "size": size,
             "run_parallel": run_parallel,
             "random_seed": random_seed,
-            "batch_size": batch_size
+            "batch_size": batch_size,
+            "print_report": print_report
         }
 
     @staticmethod
@@ -188,12 +190,11 @@ class Worker:
         """
         self.__train_table()
 
-        if self.settings.get("print_report"):
-            self.__infer_table(
-                run_parallel=False,
-                batch_size=1000,
-                random_seed=1
-            )
+        self.__infer_table(
+            run_parallel=False,
+            batch_size=1000,
+            random_seed=1
+        )
 
     def __train_table(self, **kwargs):
         table = self.table_name if self.table_name else kwargs["table_name"]
@@ -228,10 +229,11 @@ class Worker:
             else self.settings.get("run_parallel")
         batch_size = kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")
         random_seed = kwargs.get("random_seed") if kwargs.get("random_seed") else self.settings.get("random_seed")
-        both_keys = kwargs.get("both_keys") if kwargs.get("random_seed") else False
-        print_report = kwargs.get("print_report") if kwargs.get("print_report") else self.settings.get("print_report")
+        both_keys = kwargs.get("both_keys") if kwargs.get("both_keys") else False
+        print_report = kwargs.get("print_report") if kwargs.get("print_report") is not None \
+            else self.settings.get("print_report")
 
-        logger.info(f"Infer process of the table - {table} has started.")
+        logger.info(f"Infer process of the table - {table} has started")
         self.infer_interface.run(
             metadata=self.metadata,
             size=size,

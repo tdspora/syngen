@@ -43,21 +43,36 @@ class TrainConfig:
         }
 
     def _prepare_dirs(self):
+        """
+        Create main directories for saving original, synthetic data and model artifacts
+        """
         os.makedirs(self.paths["model_artifacts_path"], exist_ok=True)
         tmp_store_path = self.paths["tmp_store_path"]
         os.makedirs(tmp_store_path, exist_ok=True)
 
     def extract_data(self):
+        """
+        Extract data and schema necessary for training process
+        """
         data, schema = DataLoader(self.source).load_data()
         # remove completely empty columns
+        data_columns = set(data.columns)
         data = data.dropna(how="all", axis=1)
+
+        dropped_cols = data_columns - set(data.columns)
+        if len(dropped_cols) > 0:
+            logger.info(f"Empty columns - {', '.join(dropped_cols)} were removed")
+
         if schema is not None:
             schema["fields"] = {
                 column: data_type for column, data_type in schema.get("fields", {}).items() if column in data.columns
             }
         return data, schema
 
-    def _set_options(self, data) -> pd.DataFrame:
+    def _preprocess_data(self, data) -> pd.DataFrame:
+        """
+        Preprocess data and set the parameter "row_subset" for training process
+        """
         if self.drop_null:
             if not data.dropna().empty:
                 data = data.dropna()
@@ -78,21 +93,19 @@ class TrainConfig:
                     f"high-quality results. To improve the quality of generated data please consider any of the steps: "
                     f"1) provide a bigger table, 2) disable drop_null argument")
 
-        logger.info(f"The subset of rows was set to {len(data)}.")
+        logger.info(f"The subset of rows was set to {len(data)}")
 
         self.row_subset = len(data)
         return data
 
-    def set_options(self, data) -> pd.DataFrame:
-        return self._set_options(data)
+    def preprocess_data(self, data) -> pd.DataFrame:
+        return self._preprocess_data(data)
 
     def prepare_data(self, data):
-        data = self.set_options(data)
-
-        data_columns = set(data.columns)
-        dropped_cols = set(data.columns) - data_columns
-        if len(dropped_cols) > 0:
-            logger.info(f"Empty columns {dropped_cols} were removed")
+        """
+        Preprocess and save data necessary for training process
+        """
+        data = self.preprocess_data(data)
         data.to_csv(self.paths["input_data_path"], index=False)
 
     def set_paths(self) -> Dict:
@@ -128,6 +141,17 @@ class InferConfig:
     random_seed: Optional[int]
     print_report: bool
     both_keys: bool
+
+    def __post_init__(self):
+        self.paths = self.set_paths()
+        if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
+            self.print_report = False
+            logger.warning(
+                f"It seems that the path to original data of the table - {self.table_name} doesn't exist. "
+                f"In this case, the accuracy report of the table - {self.table_name} won't be generated")
+        if self.size is None and DataLoader(self.paths["input_data_path"]).has_existed_path:
+            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+            self.size = len(data)
 
     def to_dict(self) -> Dict:
         """
