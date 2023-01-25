@@ -147,21 +147,24 @@ class Worker:
                 print_report=train_settings.get("print_report"),
                 batch_size=train_settings.get("batch_size")
             )
+        generation_of_reports = any(
+            [config.get("train_settings", {}).get("print_report", False) for table, config in config_of_tables.items()]
+        )
+        if generation_of_reports:
+            for table in tables:
+                config_of_table = config_of_tables[table]
+                train_settings = self.__parse_train_settings(config_of_table)
+                print_report = train_settings.get("print_report")
 
-        for table in tables:
-            config_of_table = config_of_tables[table]
-            train_settings = self.__parse_train_settings(config_of_table)
-            print_report = train_settings.get("print_report")
+                both_keys = table in self.divided
 
-            both_keys = table in self.divided
-
-            self.__infer_table(
-                table_name=table,
-                run_parallel=False,
-                batch_size=1000,
-                random_seed=1,
-                print_report=print_report,
-                both_keys=both_keys
+                self.__infer_table(
+                    table_name=table,
+                    run_parallel=False,
+                    batch_size=1000,
+                    random_seed=1,
+                    print_report=print_report,
+                    both_keys=both_keys
                 )
 
     def __infer_chain_of_tables(self, tables: List, config_of_tables: Dict):
@@ -190,11 +193,12 @@ class Worker:
         """
         self.__train_table()
 
-        self.__infer_table(
-            run_parallel=False,
-            batch_size=1000,
-            random_seed=1
-        )
+        if self.settings.get("print_report"):
+            self.__infer_table(
+                run_parallel=False,
+                batch_size=1000,
+                random_seed=1
+            )
 
     def __train_table(self, **kwargs):
         table = self.table_name if self.table_name else kwargs["table_name"]
