@@ -81,14 +81,11 @@ class Worker:
                 "'keys', 'type' fields in metadata file"
             )
 
-    def _extract_setting(self, params, setting, check_rule="check_if_True"):
+    def _extract_setting(self, params, setting):
         """
         Extract the value of the certain setting
         """
-        if check_rule == "check_if_True":
-            return params.get(setting) if params.get(setting) else self.settings.get(setting)
-        if check_rule == "check_if_None":
-            return params.get(setting) if params.get(setting) is not None else self.settings.get(setting)
+        return params.get(setting) if params.get(setting) is not None else self.settings.get(setting)
 
     def _prepare_metadata_for_process(self, **kwargs):
         """
@@ -238,11 +235,11 @@ class Worker:
         """
         table = self.table_name if self.table_name is not None else kwargs["table_name"]
         size = self._extract_setting(kwargs, setting="size")
-        run_parallel = self._extract_setting(kwargs, setting="run_parallel", check_rule="check_if_None")
+        run_parallel = self._extract_setting(kwargs, setting="run_parallel")
         batch_size = self._extract_setting(kwargs, setting="batch_size")
         random_seed = self._extract_setting(kwargs, setting="random_seed")
         both_keys = kwargs.get("both_keys", False)
-        print_report = self._extract_setting(kwargs, setting="print_report", check_rule="check_if_None")
+        print_report = self._extract_setting(kwargs, setting="print_report")
 
         logger.info(f"Infer process of the table - {table} has started")
         self.infer_interface.run(
