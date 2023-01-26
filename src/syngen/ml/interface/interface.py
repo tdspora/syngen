@@ -165,7 +165,7 @@ class InferInterface(Interface):
         self.config = configuration
         return self
 
-    def set_handler(self, size):
+    def set_handler(self):
         """
         Set up the handler which used in infer process
         """
@@ -228,7 +228,7 @@ class InferInterface(Interface):
         ).\
             set_reporters(). \
             set_metadata(metadata).\
-            set_handler(size).\
+            set_handler().\
             set_strategy(
                 handler=self.handler
             )
