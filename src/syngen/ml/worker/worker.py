@@ -30,11 +30,14 @@ class Worker:
         Parse the settings for training process
         :param config: settings for training process declared in metadata.yaml file
         """
-        epochs = config.get("train_settings", {}).get("epochs", self.settings.get("epochs"))
-        drop_null = config.get("train_settings", {}).get("drop_null", self.settings.get("drop_null"))
-        row_limit = config.get("train_settings", {}).get("row_limit", self.settings.get("row_limit"))
-        print_report = config.get("train_settings", {}).get("print_report", self.settings.get("print_report"))
-        batch_size = config.get("train_settings", {}).setdefault("batch_size", 24)
+        train_settings = config.get("train_settings", {})
+
+        epochs = self._extract_setting(train_settings, setting="epochs")
+        drop_null = self._extract_setting(train_settings, setting="drop_null")
+        row_limit = self._extract_setting(train_settings, setting="row_limit")
+        print_report = self._extract_setting(train_settings, setting="print_report")
+        batch_size = self._extract_setting(train_settings, setting="batch_size")
+
         return {
             "table_name": self.table_name,
             "epochs": epochs,
@@ -49,11 +52,14 @@ class Worker:
         Parse the settings for infer process
         :param config: settings for infer process declared in metadata.yaml file
         """
-        size = config.get("infer_settings", {}).get("size", self.settings.get("size"))
-        run_parallel = config.get("infer_settings", {}).get("run_parallel", self.settings.get("run_parallel"))
-        random_seed = config.get("infer_settings", {}).get("random_seed", self.settings.get("random_seed"))
-        batch_size = config.get("infer_settings", {}).get("batch_size", self.settings.get("batch_size"))
-        print_report = config.get("infer_settings", {}).get("print_report", self.settings.get("print_report"))
+        infer_settings = config.get("infer_settings", {})
+
+        size = self._extract_setting(infer_settings, "size")
+        run_parallel = self._extract_setting(infer_settings, "run_parallel")
+        random_seed = self._extract_setting(infer_settings, "random_seed")
+        batch_size = self._extract_setting(infer_settings, "batch_size")
+        print_report = self._extract_setting(infer_settings, "print_report")
+
         return {
             "size": size,
             "run_parallel": run_parallel,
@@ -242,6 +248,7 @@ class Worker:
         print_report = self._extract_setting(kwargs, setting="print_report")
 
         logger.info(f"Infer process of the table - {table} has started")
+
         self.infer_interface.run(
             metadata=self.metadata,
             size=size,
