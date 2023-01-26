@@ -143,6 +143,7 @@ class InferConfig:
     both_keys: bool
 
     def __post_init__(self):
+        self.batch_size = self.batch_size if self.batch_size is not None else self.size
         self.paths = self.set_paths()
         if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
             self.print_report = False

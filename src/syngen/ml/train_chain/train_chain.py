@@ -132,7 +132,7 @@ class VaeInferHandler(BaseHandler):
             wrapper_name: str,
             size: Optional[int],
             random_seed: Optional[int],
-            batch_size: Optional[int],
+            batch_size: int,
             run_parallel: bool,
             print_report: bool
     ):
@@ -144,7 +144,7 @@ class VaeInferHandler(BaseHandler):
             seed(random_seed)
         self.vae = None
         self.size = size
-        self.batch_size = batch_size if batch_size is not None else self.size
+        self.batch_size = batch_size
         self.run_parallel = run_parallel
         self.print_report = print_report
         self.wrapper_name = wrapper_name
