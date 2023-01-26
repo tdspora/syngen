@@ -81,6 +81,15 @@ class Worker:
                 "'keys', 'type' fields in metadata file"
             )
 
+    def _extract_setting(self, params, setting, check_rule="check_if_True"):
+        """
+        Extract the value of the certain setting
+        """
+        if check_rule == "check_if_True":
+            return params.get(setting) if params.get(setting) else self.settings.get(setting)
+        if check_rule == "check_if_None":
+            return params.get(setting) if params.get(setting) is not None else self.settings.get(setting)
+
     def _prepare_metadata_for_process(self, **kwargs):
         """
         Return the list of related tables for training or infer process,
@@ -202,12 +211,12 @@ class Worker:
 
     def __train_table(self, **kwargs):
         table = self.table_name if self.table_name else kwargs["table_name"]
-        source = kwargs.get("source") if kwargs.get("source") else self.settings.get("source")
-        epochs = kwargs.get("epochs") if kwargs.get("epochs") else self.settings.get("epochs")
-        drop_null = kwargs.get("drop_null") if kwargs.get("drop_null") else self.settings.get("drop_null")
-        row_limit = kwargs.get("row_limit") if kwargs.get("row_limit") else self.settings.get("row_limit")
-        print_report = kwargs.get("print_report") if kwargs.get("print_report") else self.settings.get("print_report")
-        batch_size = kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")
+        source = self._extract_setting(kwargs, setting="source")
+        epochs = self._extract_setting(kwargs, setting="epochs")
+        drop_null = self._extract_setting(kwargs, setting="drop_null")
+        row_limit = self._extract_setting(kwargs, setting="row_limit")
+        print_report = self._extract_setting(kwargs, setting="print_report")
+        batch_size = self._extract_setting(kwargs, setting="batch_size")
 
         logger.info(f"Training process of the table - {table} has started.")
 
@@ -228,14 +237,12 @@ class Worker:
         Run infer process for a single table
         """
         table = self.table_name if self.table_name is not None else kwargs["table_name"]
-        size = kwargs.get("size") if kwargs.get("size") else self.settings.get("size")
-        run_parallel = kwargs.get("run_parallel") if kwargs.get("run_parallel") is not None \
-            else self.settings.get("run_parallel")
-        batch_size = kwargs.get("batch_size") if kwargs.get("batch_size") else self.settings.get("batch_size")
-        random_seed = kwargs.get("random_seed") if kwargs.get("random_seed") else self.settings.get("random_seed")
-        both_keys = kwargs.get("both_keys") if kwargs.get("both_keys") else False
-        print_report = kwargs.get("print_report") if kwargs.get("print_report") is not None \
-            else self.settings.get("print_report")
+        size = self._extract_setting(kwargs, setting="size")
+        run_parallel = self._extract_setting(kwargs, setting="run_parallel", check_rule="check_if_None")
+        batch_size = self._extract_setting(kwargs, setting="batch_size")
+        random_seed = self._extract_setting(kwargs, setting="random_seed")
+        both_keys = kwargs.get("both_keys", False)
+        print_report = self._extract_setting(kwargs, setting="print_report", check_rule="check_if_None")
 
         logger.info(f"Infer process of the table - {table} has started")
         self.infer_interface.run(
