@@ -21,9 +21,9 @@ class TrainConfig:
     metadata_path: Optional[str]
     print_report: bool
     batch_size: int
-    paths: Dict = field(default_factory=dict)
-    row_subset: int = field(default=None)
-    schema: Dict = field(default=None)
+    paths: Dict = field(init=False, default_factory=dict)
+    row_subset: int = field(init=False, default=None)
+    schema: Dict = field(init=False, default=None)
 
     def __post_init__(self):
         self.paths = self.set_paths()
