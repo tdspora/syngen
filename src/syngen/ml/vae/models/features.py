@@ -144,6 +144,7 @@ class ContinuousFeature:
         self.column_type = column_type
 
     def fit(self, data: pd.DataFrame):
+        self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
         normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
         self.scaler = StandardScaler() if normality >= 0.05 else MinMaxScaler()
         self.scaler.fit(data)
@@ -154,6 +155,7 @@ class ContinuousFeature:
 
     def inverse_transform(self, data: np.ndarray) -> np.ndarray:
         reverse_transformed = self.scaler.inverse_transform(data)
+        reverse_transformed = np.abs(reverse_transformed) if self.is_positive else reverse_transformed
         return (
             reverse_transformed
             if self.column_type is float
@@ -588,6 +590,7 @@ class DateFeature:
         self.date_format = self.__validate_format(data)
         data = chain.from_iterable(data.values)
         data = pd.DataFrame(list(map(lambda d: pd.Timestamp(d).value, data)))
+        self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
         normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
         data = np.array(data).reshape(-1, 1)
 
@@ -606,14 +609,24 @@ class DateFeature:
         min_allowed_time_ns = int(-9.2E18)
         unscaled = self.scaler.inverse_transform(data)
         unscaled = chain.from_iterable(unscaled)
-        return list(
-            map(
-                lambda l: pd.Timestamp(
-                    max(min(max_allowed_time_ns, int(l)), min_allowed_time_ns)
-                ).strftime(self.date_format),
-                unscaled,
+        if self.is_positive:
+            return list(
+                map(
+                    lambda l: pd.Timestamp(
+                        abs(min(max_allowed_time_ns, int(l)))
+                    ).strftime(self.date_format),
+                    unscaled,
+                )
             )
-        )
+        else:
+            return list(
+                map(
+                    lambda l: pd.Timestamp(
+                        max(min(max_allowed_time_ns, int(l)), min_allowed_time_ns)
+                    ).strftime(self.date_format),
+                    unscaled,
+                )
+            )
 
     @lazy
     def input(self):
