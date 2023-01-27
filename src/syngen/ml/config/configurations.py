@@ -57,7 +57,7 @@ class TrainConfig:
         return DataLoader(self.source).load_data()
 
     @staticmethod
-    def _remove_empty_columns(data) -> pd.DataFrame:
+    def _remove_empty_columns(data: pd.DataFrame) -> pd.DataFrame:
         """
         Remove completely empty columns from dataframe
         """
@@ -70,7 +70,7 @@ class TrainConfig:
         return data
 
     @staticmethod
-    def _adjust_schema(schema, data) -> str:
+    def _adjust_schema(data: pd.DataFrame, schema: Optional[Dict]) -> Optional[Dict]:
         """
         Adjust schema after removing empty columns from dataframe
         """
@@ -82,7 +82,7 @@ class TrainConfig:
             }
         return schema
 
-    def _extract_data(self) -> Tuple[pd.DataFrame, str]:
+    def _extract_data(self) -> Tuple[pd.DataFrame, Optional[Dict]]:
         """
         Extract data and schema necessary for training process
         """
@@ -91,7 +91,7 @@ class TrainConfig:
         schema = self._adjust_schema(data, schema)
         return data, schema
 
-    def _preprocess_data(self, data) -> pd.DataFrame:
+    def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Preprocess data and set the parameter "row_subset" for training process
         """
@@ -120,10 +120,10 @@ class TrainConfig:
         self.row_subset = len(data)
         return data
 
-    def _save_input_data(self, data):
+    def _save_input_data(self, data: pd.DataFrame):
         data.to_csv(self.paths["input_data_path"], index=False)
 
-    def _prepare_data(self, data):
+    def _prepare_data(self, data: pd.DataFrame):
         """
         Preprocess and save data necessary for training process
         """
