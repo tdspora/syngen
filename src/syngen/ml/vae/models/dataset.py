@@ -1,3 +1,4 @@
+import pickle
 from typing import Dict, Optional, List
 from dataclasses import dataclass, field
 
@@ -103,6 +104,13 @@ class Dataset:
                 column_type = str if column in (self.str_columns | self.categ_columns | self.date_columns) else float
                 self.pk_uq_keys_types[column] = column_type
 
+    def __map_text_pk(self):
+        for pk, pk_type in self.pk_uq_keys_types.items():
+            if pk_type is str:
+                mapper = {k: n for n, k in enumerate(self.df[pk])}
+                with open(f"{self.fk_kde_path}{pk}_mapper.pkl", "wb") as file:
+                    pickle.dump(mapper, file)
+
     def __set_metadata(self, metadata: dict, table_name: str):
         config_of_keys = metadata.get(table_name, {}).get("keys")
 
@@ -204,7 +212,7 @@ class Dataset:
         name = feature.name
 
         if name in self.features:
-            raise Exception("%s is already contained in features" % name)
+            raise Exception(f"{name} is already contained in features")
 
         if not isinstance(columns, (list, tuple)):
             columns = [columns]
@@ -315,7 +323,7 @@ class Dataset:
             if fillna_strategy == "mean":
                 fillna_value = self.df[feature].mean()
             elif fillna_strategy == "mode":
-                fillna_value = self.df[feature].mode().sample(1).values[0]
+                fillna_value = self.df[feature].dropna().mode().sample(1).values[0]
             else:
                 fillna_value = 0
 
@@ -337,12 +345,23 @@ class Dataset:
         for fk in self.foreign_keys_list:
             fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
             for fk_column in fk_columns:
-                fk_column = self.df[fk_column]
-                if fk_column.dtype != "object":
-                    kde = gaussian_kde(fk_column)
-                    with open(self.fk_kde_path, "wb") as file:
-                        dill.dump(kde, file)
-                    logger.info(f"KDE artifacts saved to {self.fk_kde_path}")
+                fk_column_values = self.df[fk_column]
+                correspondent_pk_table = self.foreign_keys_mapping[fk]["references"]["table"]
+                correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
+                if fk_column_values.dtype == "object":
+                    try:
+                        with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"              
+                                  f"{correspondent_pk_col}_mapper.pkl", "rb") as file:
+                            mapper = pickle.load(file)
+                    except FileNotFoundError:
+                        logger.warning(f"The mapper for the {fk_column} text key is not found. Simple sampling will be used.")
+                        continue
+                    fk_column_values = fk_column_values.map(mapper)
+                kde = gaussian_kde(fk_column_values)
+                with open(f"{self.fk_kde_path}{fk_column}.pkl", "wb") as file:
+                    dill.dump(kde, file)
+
+                logger.info(f"KDE artifacts saved to {self.fk_kde_path}{fk_column}.pkl")
 
     def __drop_fk_columns(self):
         """
@@ -387,7 +406,7 @@ class Dataset:
         """
         # num_bins = self.find_clusters(df, float_columns)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
-        if len(features) == 2 and feature[1].endswith("_null"):
+        if len(features) == 2 and features[1].endswith("_null"):
             self.null_num_column_names.append(features[1])
         if len(features) == 2 and features[1].endswith('_zero'):
             self.zero_num_column_names.append(features[1])
@@ -405,7 +424,7 @@ class Dataset:
         """
         # num_bins = self.find_clusters(df, int_columns)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
-        if len(features) == 2 and feature[1].endswith("_null"):
+        if len(features) == 2 and features[1].endswith("_null"):
             self.null_num_column_names.append(features[1])
         if len(features) == 2 and features[1].endswith('_zero'):
             self.zero_num_column_names.append(features[1])
@@ -473,6 +492,7 @@ class Dataset:
         pk_uq_keys_mapping = self.primary_keys_mapping
         if pk_uq_keys_mapping:
             self.__set_types(pk_uq_keys_mapping)
+            self.__map_text_pk()
 
         for column in self.df.columns:
             if column in self.str_columns:

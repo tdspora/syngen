@@ -72,7 +72,7 @@
 				font-size: 40px;
 				line-height: 54px;
 				color: var(--text-color);
-				margin-bottom: 32px;
+				margin-bottom: 60px;
 			}
 
 			.h2-title {
@@ -109,7 +109,7 @@
 			}
 
 			.linear-gradient--img {
-				max-width: 1000px;
+				max-width: 745px;
 				width: 100%;
 				flex-basis: 50%;
 				margin-bottom: 32px;
@@ -117,7 +117,7 @@
 
 			.linear-gradient--description {
 				display: flex;
-				max-width: 1000px;
+				max-width: 745px;
 				width: 100%;
 			}
 
@@ -245,66 +245,69 @@
 
 	<body>
 		<div class="container">
-			<h1 class="h1-title">Accuracy report</h1>
-			<p class="text-description">
-				The report was generated during the inference process of the table - {{ table_name }} in {{ time }} with the next parameters:</p>
-				<ul>
-					<li>size = {{ config.get("size") }}</li>
-					<li>run_parallel = {{ config.get("run_parallel") }}</li>
-					<li>batch_size = {{ config.get("batch_size") }}</li>
-					<li>random_seed = {{ config.get("random_seed") }}</li>
-				</ul>
+			<h1 class="h1-title">Synthetic Data Quality</h1>
 			<div class="container--item">
-				<svg class="linear-gradient--img"
-					width="1000"
+
+				<h2 class="h2-title"
+					style="margin-bottom:36px">Accuracy heatmap</h2>
+				<p class="accuracy-report-value">Median accuracy: {{accuracy_value}}</p>
+				<p class="accuracy-report-value"
+					style="margin-bottom:36px">Median clusters homogeneity: {{clustering_value}}</p>
+				<svg width="749"
 					height="28"
-					viewBox="0 0 1000 28"
+					viewBox="0 0 749 28"
 					fill="none"
-					xmlns="http://www.w3.org/2000/svg">
-					<g clip-path="url(#clip0_4403_58822)">
-						<rect width="1000"
+					xmlns="http://www.w3.org/2000/svg"
+					style="margin-bottom:8px">
+					<g clip-path="url(#clip0_4981_69461)">
+						<rect width="749"
 							height="28"
 							rx="14"
-							transform="matrix(-1 0 0 1 1000 0)"
-							fill="url(#paint0_linear_4403_58822)" />
-						<line x1="251.5"
-							x2="251.5"
+							transform="matrix(-1 0 0 1 749 0)"
+							fill="url(#paint0_linear_4981_69461)" />
+						<line x1="189.5"
+							x2="189.5"
 							y2="28"
 							stroke="white"
 							stroke-width="3" />
-						<line x1="501.5"
-							x2="501.5"
+						<line x1="376.5"
+							x2="376.5"
 							y2="28"
 							stroke="white"
 							stroke-width="3" />
-						<line x1="751.5"
-							x2="751.5"
+						<line x1="563.5"
+							x2="563.5"
 							y2="28"
 							stroke="white"
 							stroke-width="3" />
 					</g>
 					<defs>
-						<linearGradient id="paint0_linear_4403_58822"
-							x1="1000"
+						<linearGradient id="paint0_linear_4981_69461"
+							x1="749"
 							y1="13.9999"
-							x2="5.67408e-06"
-							y2="14.0004"
+							x2="4.24983e-06"
+							y2="14.0002"
 							gradientUnits="userSpaceOnUse">
-							<stop stop-color="#CD3D6E" />
-							<stop offset="0.2803"
+							<stop offset="0.0122884"
+								stop-color="#96195C" />
+							<stop offset="0.0952561"
+								stop-color="#C43767" />
+							<stop offset="0.186909"
+								stop-color="#9574BF" />
+							<stop offset="0.260159"
+								stop-color="#6C82CF" />
+							<stop offset="0.417742"
 								stop-color="#3E92E0" />
-							<stop offset="0.500458"
-								stop-color="#78B5EB" />
-							<stop offset="0.781743"
-								stop-color="#C4E1F9" />
+							<stop offset="0.751543"
+								stop-color="#BADCF7" />
 							<stop offset="1"
 								stop-color="#E8F4FF" />
 						</linearGradient>
-						<clipPath id="clip0_4403_58822">
-							<rect width="1000"
+						<clipPath id="clip0_4981_69461">
+							<rect width="749"
 								height="28"
 								rx="14"
-								transform="matrix(-1 0 0 1 1000 0)"
+								transform="matrix(-1 0 0 1 749 0)"
 								fill="white" />
 						</clipPath>
 					</defs>
@@ -312,32 +315,28 @@
 
 				<div class="linear-gradient--description">
 					<div class="linear-gradient--description__item">
-						<div>Bad</div>
+						<div style="margin-bottom:8px">Bad</div>
 						<div>
 							< 0.7</div>
 						</div>
 
 						<div class="linear-gradient--description__item">
-							<div>Low</div>
+							<div style="margin-bottom:8px">Low</div>
 							<div>0.7 - 0.8</div>
 						</div>
 
 						<div class="linear-gradient--description__item">
-							<div>Medium</div>
+							<div style="margin-bottom:8px">Medium</div>
 							<div>0.8 - 0.9</div>
 						</div>
 
 						<div class="linear-gradient--description__item">
-							<div>High</div>
+							<div style="margin-bottom:8px">High</div>
 							<div> > 0.9</div>
 						</div>
 
 					</div>
-					<p class="accuracy-report-value">Median accuracy: {{accuracy_value}}</p>
-					<p class="accuracy-report-value">Median clusters homogeneity: {{clustering_value}}</p>
-				</div>
-				<div class="container--item">
-					<h2 class="h2-title">Accuracy heatmap</h2>
+
 					<p class="text-description">The accuracy heatmap is calculated in the following way: for each pair of
 						original columns a similarity between them (the Jensen-Shannon distance) is measured. The same
 						operations is performed on the same pair of columns in the synthetic dataset. The resulting score
@@ -362,6 +361,61 @@
 				<div class="container--item">
 					<h2 class="h2-title"
 						id="h2-title--correlations">Correlations</h2>
+					<svg width="745"
+						height="28"
+						viewBox="0 0 745 28"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+						style="margin-bottom:8px">
+						<g clip-path="url(#clip0_5005_69105)">
+							<rect width="745"
+								height="28"
+								rx="14"
+								fill="url(#paint0_linear_5005_69105)" />
+						</g>
+						<defs>
+							<linearGradient id="paint0_linear_5005_69105"
+								x1="745"
+								y1="13.9999"
+								x2="4.22713e-06"
+								y2="14.0002"
+								gradientUnits="userSpaceOnUse">
+								<stop offset="0.0122884"
+									stop-color="#96195C" />
+								<stop offset="0.0952561"
+									stop-color="#C43767" />
+								<stop offset="0.186909"
+									stop-color="#9574BF" />
+								<stop offset="0.260159"
+									stop-color="#6C82CF" />
+								<stop offset="0.417742"
+									stop-color="#3E92E0" />
+								<stop offset="0.751543"
+									stop-color="#BADCF7" />
+								<stop offset="1"
+									stop-color="#E8F4FF" />
+							</linearGradient>
+							<clipPath id="clip0_5005_69105">
+								<rect width="745"
+									height="28"
+									rx="14"
+									fill="white" />
+							</clipPath>
+						</defs>
+					</svg>
+
+					<div class="linear-gradient--description"
+						style="justify-content:space-between; width: auto;">
+						<div class="linear-gradient--description__item"
+							style="width: auto;">
+							<div>GOOD</div>
+						</div>
+
+						<div class="linear-gradient--description__item"
+							style="width: auto;">
+							<div>BAD</div>
+						</div>
+					</div>
 					<p class="text-description">The correlation metric is calculated in the following manner: for each
 						pair
 						of
