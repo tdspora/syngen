@@ -38,7 +38,10 @@ class Dataset:
     null_num_column_names: List
     zero_num_column_names: List
     nan_labels_dict: Dict
-    inverse_transformers: Dict = field(default_factory=dict)
+    inverse_transformers: Dict = field(init=False)
+
+    def __post_init__(self):
+        self.inverse_transformers = dict()
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
