@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Dict
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -116,32 +115,24 @@ class TrainInterface(Interface, ABC):
 
     def run(
             self,
-            metadata,
-            source: str,
-            epochs: int,
-            drop_null: bool,
-            row_limit: int,
-            table_name: str,
-            metadata_path: str,
-            print_report: bool,
-            batch_size: int
+            **kwargs
     ):
         """
         Launch the training process
         """
         self.set_config(
-            source=source,
-            epochs=epochs,
-            drop_null=drop_null,
-            row_limit=row_limit,
-            table_name=table_name,
-            metadata_path=metadata_path,
-            print_report=print_report,
-            batch_size=batch_size
+            source=kwargs["source"],
+            epochs=kwargs["epochs"],
+            drop_null=kwargs["drop_null"],
+            row_limit=kwargs["row_limit"],
+            table_name=kwargs["table_name"],
+            metadata_path=kwargs["metadata_path"],
+            print_report=kwargs["print_report"],
+            batch_size=kwargs["batch_size"]
         )
 
         self.set_reporters().\
-            set_metadata(metadata).\
+            set_metadata(kwargs["metadata"]).\
             set_handler().\
             set_strategy(
                 paths=self.config.paths,
@@ -203,31 +194,23 @@ class InferInterface(Interface):
 
     def run(
             self,
-            metadata: Optional[Dict],
-            size: int,
-            table_name: str,
-            metadata_path: str,
-            run_parallel: bool,
-            batch_size: Optional[int],
-            random_seed: Optional[int],
-            print_report: bool,
-            both_keys: bool
+            **kwargs
     ):
         """
         Launch the infer process
         """
         self.set_config(
-            size=size,
-            table_name=table_name,
-            metadata_path=metadata_path,
-            run_parallel=run_parallel,
-            batch_size=batch_size,
-            random_seed=random_seed,
-            print_report=print_report,
-            both_keys=both_keys,
+            size=kwargs["size"],
+            table_name=kwargs["table_name"],
+            metadata_path=kwargs["metadata_path"],
+            run_parallel=kwargs["run_parallel"],
+            batch_size=kwargs["batch_size"],
+            random_seed=kwargs["random_seed"],
+            print_report=kwargs["print_report"],
+            both_keys=kwargs["both_keys"],
         ).\
             set_reporters(). \
-            set_metadata(metadata).\
+            set_metadata(kwargs["metadata"]).\
             set_handler().\
             set_strategy(
                 handler=self.handler
