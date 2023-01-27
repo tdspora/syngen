@@ -100,13 +100,7 @@
 		<div class="container">
 			<h1 class="h1-title">Sample report</h1>
 			<p class="text-description">
-				The report was generated during the training process of the table - {{ table_name }} in {{ time }} with the next parameters: </p>
-				<ul>
-					<li>epoch = {{ config.get("epochs") }}</li>
-					<li>drop_null = {{ config.get("drop_null") }}</li>
-					<li>row_subset = {{ config.get("row_subset") }}</li>
-					<li>batch_size = {{ config.get("batch_size") }}</li>
-				</ul>
+                The report was generated during the training process of the table - {{ table }} in {{ time }} with the next parameters: epoch = {{ config.get("epochs") }}, drop_null = {{ config.get("drop_null") }}, row_subset = {{ config.get("row_subset") }}, batch_size = {{ config.get("batch_size") }} </p>
 			<div class="container--item">
 				<h2 class="h2-title">Univariate distributions</h2>
 				<p class="text-description">The univariate distributions are either the density plots for original vs
