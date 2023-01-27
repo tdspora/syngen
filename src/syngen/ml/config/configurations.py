@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 import os
 
 from loguru import logger
@@ -26,10 +26,10 @@ class TrainConfig:
     schema: Dict = field(init=False)
 
     def __post_init__(self):
-        self.paths = self.set_paths()
+        self.paths = self._set_paths()
         self._prepare_dirs()
-        data, self.schema = self.extract_data()
-        self.prepare_data(data)
+        data, self.schema = self._extract_data()
+        self._prepare_data(data)
 
     def to_dict(self) -> Dict:
         """
@@ -50,23 +50,45 @@ class TrainConfig:
         tmp_store_path = self.paths["tmp_store_path"]
         os.makedirs(tmp_store_path, exist_ok=True)
 
-    def extract_data(self):
+    def __load_source(self) -> Tuple[pd.DataFrame, Dict]:
         """
-        Extract data and schema necessary for training process
+        Return dataframe and schema of original data
         """
-        data, schema = DataLoader(self.source).load_data()
-        # remove completely empty columns
+        return DataLoader(self.source).load_data()
+
+    @staticmethod
+    def _remove_empty_columns(data) -> pd.DataFrame:
+        """
+        Remove completely empty columns from dataframe
+        """
         data_columns = set(data.columns)
         data = data.dropna(how="all", axis=1)
 
         dropped_cols = data_columns - set(data.columns)
         if len(dropped_cols) > 0:
             logger.info(f"Empty columns - {', '.join(dropped_cols)} were removed")
+        return data
 
+    @staticmethod
+    def _adjust_schema(schema, data) -> str:
+        """
+        Adjust schema after removing empty columns from dataframe
+        """
         if schema is not None:
             schema["fields"] = {
-                column: data_type for column, data_type in schema.get("fields", {}).items() if column in data.columns
+                column: data_type
+                for column, data_type in schema.get("fields", {}).items()
+                if column in data.columns
             }
+        return schema
+
+    def _extract_data(self) -> Tuple[pd.DataFrame, str]:
+        """
+        Extract data and schema necessary for training process
+        """
+        data, schema = self.__load_source()
+        data = self._remove_empty_columns(data)
+        schema = self._adjust_schema(data, schema)
         return data, schema
 
     def _preprocess_data(self, data) -> pd.DataFrame:
@@ -98,17 +120,17 @@ class TrainConfig:
         self.row_subset = len(data)
         return data
 
-    def preprocess_data(self, data) -> pd.DataFrame:
-        return self._preprocess_data(data)
+    def _save_input_data(self, data):
+        data.to_csv(self.paths["input_data_path"], index=False)
 
-    def prepare_data(self, data):
+    def _prepare_data(self, data):
         """
         Preprocess and save data necessary for training process
         """
-        data = self.preprocess_data(data)
-        data.to_csv(self.paths["input_data_path"], index=False)
+        data = self._preprocess_data(data)
+        self._save_input_data(data)
 
-    def set_paths(self) -> Dict:
+    def _set_paths(self) -> Dict:
         """
         Create the paths which used in training process
         """
@@ -144,7 +166,7 @@ class InferConfig:
 
     def __post_init__(self):
         self.batch_size = self.batch_size if self.batch_size is not None else self.size
-        self.paths = self.set_paths()
+        self.paths = self._set_paths()
         if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
             self.print_report = False
             logger.warning(
@@ -166,7 +188,7 @@ class InferConfig:
             "random_seed": self.random_seed
         }
 
-    def set_paths(self) -> Dict:
+    def _set_paths(self) -> Dict:
         """
         Create the paths which used in inference process
         """
