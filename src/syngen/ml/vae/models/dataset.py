@@ -32,16 +32,23 @@ class Dataset:
     metadata: Optional[Dict]
     table_name: str
     fk_kde_path: str
-    features: Dict
-    columns: Dict
-    is_fitted: bool
-    all_columns: List
-    null_num_column_names: List
-    zero_num_column_names: List
-    nan_labels_dict: Dict
+    features: Dict = field(init=False)
+    columns: Dict = field(init=False)
+    is_fitted: bool = field(init=False)
+    all_columns: List = field(init=False)
+    null_num_column_names: List = field(init=False)
+    zero_num_column_names: List = field(init=False)
+    nan_labels_dict: Dict = field(init=False)
     inverse_transformers: Dict = field(init=False)
 
     def __post_init__(self):
+        self.features = dict()
+        self.columns = dict()
+        self.is_fitted = False
+        self.all_columns = list()
+        self.null_num_column_names = list()
+        self.zero_num_column_names = list()
+        self.nan_labels_dict = dict()
         self.inverse_transformers = dict()
 
     def __set_pk_key(self, config_of_keys: Dict):

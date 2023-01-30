@@ -90,11 +90,14 @@ class VAEWrapper(BaseWrapper):
         table_name: str,
         paths: dict,
         process: str,
-        batch_size: int = 24,
+        batch_size: int,
         latent_dim: int = 10,
         latent_components: int = 30,
     ):
         super().__init__()
+        self.df = df
+        self.schema = schema
+        self.process = process
         self.batch_size = batch_size
         self.latent_dim = latent_dim
         self.latent_components = latent_components
@@ -103,25 +106,21 @@ class VAEWrapper(BaseWrapper):
         self.vae_resources_path = paths["state_path"]
         self.dataset_pickle_path = paths["dataset_pickle_path"]
         self.fk_kde_path = paths["fk_kde_path"]
-        if process == "train":
+
+    def __post__init(self):
+        if self.process == "train":
             self.dataset = Dataset(
-                df=df,
-                schema=schema,
+                df=self.df,
+                schema=self.schema,
                 metadata=self.metadata,
                 table_name=self.table_name,
-                fk_kde_path=self.fk_kde_path,
-                features=dict(),
-                columns=dict(),
-                is_fitted=False,
-                all_columns=list(),
-                null_num_column_names=list(),
-                zero_num_column_names=list(),
-                nan_labels_dict=dict()
+                fk_kde_path=self.fk_kde_path
             )
-        elif process == "infer":
+        elif self.process == "infer":
             self.dataset = fetch_dataset(self.dataset_pickle_path)
 
     def _pipeline(self):
+        self.__post__init()
         self.dataset.set_metadata()
         self.df = self.dataset.pipeline()
 
@@ -179,7 +178,7 @@ class VAEWrapper(BaseWrapper):
         epochs: int,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
     ):
-
+        self.__post__init()
         self._pipeline()
         self._init_model()
 

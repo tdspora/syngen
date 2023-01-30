@@ -49,7 +49,13 @@ class BaseHandler(AbstractHandler):
     @staticmethod
     def create_wrapper(cls_name, data: pd.DataFrame, schema: Optional[Dict], **kwargs):
         return globals()[cls_name](
-            data, schema, kwargs["metadata"], kwargs["table_name"], kwargs["paths"], kwargs["process"]
+            data,
+            schema,
+            metadata=kwargs["metadata"],
+            table_name=kwargs["table_name"],
+            paths=kwargs["paths"],
+            batch_size=kwargs["batch_size"],
+            process=kwargs["process"]
         )
 
 
@@ -101,9 +107,9 @@ class VaeTrainHandler(BaseHandler):
             metadata=self.metadata,
             table_name=self.table_name,
             paths=self.paths,
+            batch_size=self.batch_size,
             process="train"
         )
-
         self.model.batch_size = min(self.batch_size, len(data))
 
         logger.debug(
@@ -193,6 +199,7 @@ class VaeInferHandler(BaseHandler):
             metadata={"table_name": self.table_name},
             table_name=self.table_name,
             paths=self.paths,
+            batch_size=self.batch_size,
             process="infer"
         )
         self.vae.load_state(self.vae_state_path)
