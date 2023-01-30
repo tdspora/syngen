@@ -120,7 +120,6 @@ class VAEWrapper(BaseWrapper):
             self.dataset = fetch_dataset(self.dataset_pickle_path)
 
     def _pipeline(self):
-        self.__post__init()
         self.dataset.set_metadata()
         self.df = self.dataset.pipeline()
 
