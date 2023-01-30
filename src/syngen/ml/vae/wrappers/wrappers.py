@@ -20,6 +20,8 @@ from syngen.ml.reporters import Report
 
 warnings.filterwarnings("ignore")
 
+BATCH_SIZE_DEFAULT = 32
+
 
 class BaseWrapper(ABC):
     """
@@ -92,7 +94,7 @@ class VAEWrapper(BaseWrapper):
         metadata: dict,
         table_name: str,
         paths: dict,
-        batch_size: int = 32,
+        batch_size: int = BATCH_SIZE_DEFAULT,
         latent_dim: int = 30,
         latent_components: int = 30,
     ):
@@ -177,7 +179,7 @@ class VAEWrapper(BaseWrapper):
         df: pd.DataFrame,
         row_subset: int = None,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
-        batch_size: int = 32,
+        batch_size: int = BATCH_SIZE_DEFAULT,
         epochs: int = 30,
         verbose: int = 0,
     ):
@@ -252,9 +254,9 @@ class VAEWrapper(BaseWrapper):
                 break
             epoch += 1
 
-    @staticmethod
-    def _create_optimizer():
-        learning_rate = 1e-04
+    # @staticmethod
+    def _create_optimizer(self):
+        learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
         return tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
     @staticmethod

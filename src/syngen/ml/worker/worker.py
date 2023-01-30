@@ -32,7 +32,7 @@ class Worker:
         epochs = config.get("train_settings", {}).get("epochs", self.settings.get("epochs"))
         drop_null = config.get("train_settings", {}).get("drop_null", self.settings.get("drop_null"))
         row_limit = config.get("train_settings", {}).get("row_limit", self.settings.get("row_limit"))
-        batch_size = config.get("train_settings", {}).setdefault("batch_size", 32)
+        batch_size = config.get("train_settings", {}).setdefault("batch_size", self.settings.get("batch_size"))
         return {
             "table_name": self.table_name,
             "epochs": epochs,
