@@ -52,7 +52,7 @@ class BaseHandler(AbstractHandler):
     @staticmethod
     def create_wrapper(cls_name, data: pd.DataFrame, schema: Optional[Dict], **kwargs):
         return globals()[cls_name](
-            data, schema, kwargs["metadata"], kwargs["table_name"], kwargs["paths"]
+            data, schema, kwargs["metadata"], kwargs["table_name"], kwargs["paths"], kwargs["batch_size"]
         )
 
 
@@ -130,6 +130,7 @@ class VaeTrainHandler(BaseHandler):
             metadata=self.metadata,
             table_name=self.table_name,
             paths=self.paths,
+            batch_size=batch_size
         )
 
         self.model.batch_size = min(batch_size, len(data))
@@ -204,6 +205,7 @@ class VaeInferHandler(BaseHandler):
             metadata={"table_name": self.table_name},
             table_name=self.table_name,
             paths=self.paths,
+            batch_size=None
         )
         self.vae.load_state(self.vae_state_path)
         synthetic_infer = self.vae.predict_sampled_df(size)

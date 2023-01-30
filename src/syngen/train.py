@@ -19,6 +19,8 @@ from syngen.ml.worker import Worker
 @click.option("--row_limit", default=None, type=int,
               help="Number of rows to train over. A number less than the original table length will randomly subset "
                    "the specified rows number")
+@click.option("--batch_size", default=32, type=int, help="Number of rows that goes in one batch. "
+                                                         "This parameter can help to control memory consumption.")
 def launch_train(
     metadata_path: Optional[str],
     source: Optional[str],
@@ -26,7 +28,7 @@ def launch_train(
     epochs: int,
     drop_null: bool,
     row_limit: Optional[int],
-    batch_size: int = 24,
+    batch_size: int = 32,
 ):
     """
     Launch the work of training process
