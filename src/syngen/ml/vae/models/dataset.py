@@ -351,7 +351,8 @@ class Dataset:
                                   f"{correspondent_pk_col}_mapper.pkl", "rb") as file:
                             mapper = pickle.load(file)
                     except FileNotFoundError:
-                        logger.warning(f"The mapper for the {fk_column} text key is not found. Simple sampling will be used.")
+                        logger.warning(f"The mapper for the {fk_column} text key is not found. "
+                                       f"Simple sampling will be used.")
                         continue
                     fk_column_values = fk_column_values.map(mapper)
                 kde = gaussian_kde(fk_column_values)
