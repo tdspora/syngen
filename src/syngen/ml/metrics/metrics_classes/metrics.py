@@ -349,7 +349,7 @@ class BivariateMetric(BaseMetric):
                 0,
                 heatmap_min,
                 heatmap_max,
-                cbar=False
+                cbar=True
             )
 
             self._plot_heatmap(
