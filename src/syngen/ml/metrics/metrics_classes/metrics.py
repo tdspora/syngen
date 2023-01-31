@@ -765,7 +765,7 @@ class Clustering(BaseMetric):
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "origin", "count"]
         self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
-        logger.info(f"Mean clusters homogeneity is {self.mean_score.values[0]}")
+        logger.info("Mean clusters homogeneity is {0:.4f}".format(self.mean_score.values[0]))
 
         if self.plot:
             plt.clf()
