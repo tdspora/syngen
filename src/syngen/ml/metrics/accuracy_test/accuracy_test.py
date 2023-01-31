@@ -51,12 +51,12 @@ class AccuracyTest(BaseTest):
     def report(self, **kwargs):
         univariate, bivariate, correlations, clustering, utility, acc = self.__prepare_before_report()
         acc.calculate_all(kwargs["categ_columns"])
-        acc_median = "%.5f" % acc.calculate_heatmap_median(acc.heatmap)
+        acc_median = "%.4f" % acc.calculate_heatmap_median(acc.heatmap)
 
         uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
         bi_images = bivariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
         correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
-        clustering_result = clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+        clustering_result = "%.4f" % clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
         utility_result = utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
 
         # Generate html report
