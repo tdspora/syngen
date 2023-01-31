@@ -93,7 +93,7 @@ class JensenShannonDistance(BaseMetric):
             heatmap.shape[0], -1
         )
         heatmap_median = np.nanmedian(heatmap_no_diag)  # ignores nan when calculating median
-        logger.info("Median of Jensen Shannon Distance heatmap is {0:.3f}".format(heatmap_median))
+        logger.info("Median of Jensen Shannon Distance heatmap is {0:.4f}".format(heatmap_median))
         return heatmap_median
 
     def _calculate_pair_continuous_vs_continuous(self, first_column, second_column):
