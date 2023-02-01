@@ -98,7 +98,7 @@ class VAEWrapper(BaseWrapper):
     ):
         super().__init__()
         self.batch_size = batch_size
-        self.latent_dim = min(latent_dim, int(df.shape[1] / 2))
+        self.latent_dim = max(min(latent_dim, df.shape[1] // 2), 1)
         self.latent_components = min(latent_components, self.latent_dim * 2)
         self.metadata = metadata
         self.table_name = table_name
