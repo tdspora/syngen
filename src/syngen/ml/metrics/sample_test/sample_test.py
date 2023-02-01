@@ -31,7 +31,8 @@ class SampleAccuracyTest(BaseTest):
 
         uni_images = {title: transform_to_base64(path) for title, path in uni_images.items()}
 
-        html = template.render(uni_imgs=uni_images)
+        html = template.render(uni_imgs=uni_images,
+                               table_name=self.table_name)
 
         with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w') as f:
             f.write(html)
