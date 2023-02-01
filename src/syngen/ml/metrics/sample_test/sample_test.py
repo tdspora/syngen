@@ -29,9 +29,13 @@ class SampleAccuracyTest(BaseTest):
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/sample_report_template.html") as file_:
             template = jinja2.Template(file_.read())
 
-        uni_images = {title: transform_to_base64(path) for title, path in uni_images.items()}
+        uni_images = {
+            title: transform_to_base64(path) for title, path in uni_images.items()
+            if "word_count" not in title
+        }
 
-        html = template.render(uni_imgs=uni_images)
+        html = template.render(uni_imgs=uni_images,
+                               table_name=self.table_name)
 
         with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w') as f:
             f.write(html)
