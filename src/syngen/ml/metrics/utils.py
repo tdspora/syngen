@@ -1,7 +1,8 @@
 from typing import List
+import base64
+
 import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
-import base64
 from loguru import logger
 
 
@@ -29,9 +30,8 @@ def set_empty_string(value):
 
 def text_to_continuous(df, text_columns: List[str]):
     for col in text_columns:
-        df[col + "_char_len"] = df[col].apply(set_empty_string, convert_dtype=False).apply(len, convert_dtype=False)
-        df[col + "_word_count"] = df[col].apply(set_empty_string, convert_dtype=False).\
-            apply(series_count_words, convert_dtype=False)
+        df[col + "_char_len"] = df[col].apply(set_empty_string, convert_dtype=False).apply(len)
+        df[col + "_word_count"] = df[col].apply(set_empty_string, convert_dtype=False).apply(series_count_words)
     return df
 
 
