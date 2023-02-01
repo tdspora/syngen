@@ -295,8 +295,8 @@ class Dataset:
     def _preprocess_nan_cols(
         self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
     ) -> tuple:
-        """Fill NaN values in numeric column with some value according to strategy.
-        Fill NaN values in string columns can only work in 'mode' strategy.
+        """Fill NaN values in numeric column with some value according to strategies.
+        Fill NaN values in string columns can only work in 'mode' strategies.
         If NaN values exist additional column is created and added to DataFrame.
         This column has value of 1 in case corresponding row contains NaN and 0 otherwise.
         New column name is built like 'column name'+'_null'.
