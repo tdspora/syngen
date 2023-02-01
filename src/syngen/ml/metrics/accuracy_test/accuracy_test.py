@@ -64,7 +64,10 @@ class AccuracyTest(BaseTest):
             template = jinja2.Template(file_.read())
 
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
-        uni_images = {title: transform_to_base64(path) for title, path in uni_images.items()}
+        uni_images = {
+            title: transform_to_base64(path) for title, path in uni_images.items()
+            if "word_count" not in title
+        }
         bi_images = {
             title: transform_to_base64(path) for title, path in bi_images.items()
             if "char_len" not in title and "word_count" not in title
