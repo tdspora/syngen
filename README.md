@@ -250,7 +250,6 @@ docker run --rm \
 docker pull tdspora/syngen-infer:latest
 docker run --rm \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
-  --size=NUMBER_OF_ROWS \
   --table_name=TABLE_NAME
 ```
 
