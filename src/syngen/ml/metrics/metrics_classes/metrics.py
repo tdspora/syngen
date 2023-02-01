@@ -2,11 +2,12 @@ from typing import Union, List
 from abc import ABC
 from itertools import combinations
 from collections import Counter
+import re
+
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.metrics import r2_score, accuracy_score
 from loguru import logger
-
 import matplotlib
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Patch
@@ -16,7 +17,6 @@ import numpy as np
 import pandas as pd
 import scipy.stats as st
 import seaborn as sns
-import re
 
 from syngen.ml.pipeline import get_nan_labels, nan_labels_to_float
 
@@ -171,7 +171,7 @@ class JensenShannonDistance(BaseMetric):
         return 1 - abs(original_score - synthetic_score)
 
     def __compute_vs_columns(self, categ_columns: List[str]):
-        valid_cols = self.original.columns
+        valid_cols = [col for col in self.original.columns if "word_count" not in col]
         mask = list(map(lambda col: col in categ_columns, valid_cols))
         heatmap_matrix = []
         for i, c in enumerate(valid_cols):
@@ -243,6 +243,8 @@ class Correlations(BaseMetric):
     def calculate_all(
         self, categ_columns: List[str], cont_columns: List[str]
     ):
+        categ_columns = [col for col in categ_columns if "word_count" not in col]
+        cont_columns = [col for col in cont_columns if "word_count" not in col]
         for col in categ_columns:
             map_dict = {
                 k: i + 1
@@ -309,7 +311,7 @@ class BivariateMetric(BaseMetric):
         column_pairs = list(combinations(all_columns, 2))
         bi_imgs = {}
         for first_col, second_col in column_pairs:
-            fig, self._axes = plt.subplots(1, 2, figsize=(30, 15))
+            fig, self._axes = plt.subplots(1, 2, figsize=(30, 15), gridspec_kw={'width_ratios': [7, 8.7]})
             if first_col in cont_columns:
                 if second_col in cont_columns:
                     (
@@ -374,6 +376,17 @@ class BivariateMetric(BaseMetric):
         vmin = min(min(original_flat), min(synthetic_flat))
         return vmin, vmax
 
+    @staticmethod
+    def __format_float_tick_labels(labels: List) -> List:
+        if any([isinstance(i, float) for i in labels]) and (max(labels) > 1e5 or min(labels) < 1e-03):
+            labels = [f"{label:.4e}" for label in labels]
+            return labels
+        if any([isinstance(i, float) for i in labels]):
+            labels = [f"{round(i, 4)}" for i in labels]
+            return labels
+        else:
+            return labels
+
     def _plot_heatmap(
         self,
         heatmap_data: List,
@@ -385,6 +398,8 @@ class BivariateMetric(BaseMetric):
         ax = self._axes.flat[plt_index]
         ax.tick_params(labelsize=14)
         heatmap, x_tick_labels, y_tick_labels = heatmap_data
+        x_tick_labels = self.__format_float_tick_labels(x_tick_labels)
+        y_tick_labels = self.__format_float_tick_labels(y_tick_labels)
         sns.heatmap(
             heatmap,
             xticklabels=x_tick_labels,
@@ -685,7 +700,6 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot and original_unique_count > 1 and synthetic_unique_count > 1:
-            fig, ax = plt.subplots()
             plt.figure(figsize=(10, 10))
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
