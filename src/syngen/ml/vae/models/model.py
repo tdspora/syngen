@@ -35,12 +35,10 @@ class CVAE:
     def __init__(
         self,
         dataset,
-        batch_size=24,
-        latent_dim=30,
-        intermediate_dim=512,
-        latent_components=30,
-        cond_columns={},
-        is_cond=False,
+        batch_size,
+        latent_dim,
+        intermediate_dim,
+        latent_components
     ):
         self.dataset = dataset
         self.intermediate_dim = intermediate_dim
@@ -50,8 +48,8 @@ class CVAE:
         self.model = None
         self.latent_model = None
         self.metrics = {}
-        self.cond_features = cond_columns
-        self.is_cond = is_cond
+        self.cond_features = {}
+        self.is_cond = False
 
     def sample_z(self, args):
         mu, log_sigma = args
