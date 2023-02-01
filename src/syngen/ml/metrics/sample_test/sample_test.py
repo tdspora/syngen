@@ -34,7 +34,8 @@ class SampleAccuracyTest(BaseTest):
             if "word_count" not in title
         }
 
-        html = template.render(uni_imgs=uni_images)
+        html = template.render(uni_imgs=uni_images,
+                               table_name=self.table_name)
 
         with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w') as f:
             f.write(html)
