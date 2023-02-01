@@ -64,5 +64,5 @@ class InferConfig:
             "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
             "dataset_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
-            "path_to_no_ml": f"model_artifacts/resources/{self.table_name}/no_ml/checkpoints/",
+            "path_to_no_ml": f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/",
         }
