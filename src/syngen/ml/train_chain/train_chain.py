@@ -11,6 +11,10 @@ from numpy.random import seed, choice
 from pathos.multiprocessing import ProcessingPool
 import dill
 import pickle
+from scipy.stats import gaussian_kde
+from collections import OrderedDict
+from tensorflow.keras.preprocessing.text import Tokenizer
+
 
 from syngen.ml.vae import *
 from syngen.ml.reporters import Report
@@ -105,6 +109,83 @@ class RootHandler(BaseHandler):
         return super().handle(data, **kwargs)
 
 
+class LongTextsHandler(BaseHandler):
+    def __init__(self,
+                 metadata: dict,
+                 paths: dict,
+                 table_name: str,
+                 schema: Optional[Dict]):
+        super().__init__(metadata, paths, table_name)
+        self.no_ml_state_path = self.paths["no_ml_state_path"]
+        self.schema = schema
+
+    def series_count_words(self, x):
+        return len(str(x).split())
+
+    def _prepare_dir(self):
+        os.makedirs(self.no_ml_state_path, exist_ok=True)
+
+    def handle(self, data: pd.DataFrame, **kwargs):
+        self._prepare_dir()
+
+        def len_filter(x):
+            return (x.str.len() > 200).any()
+
+        try:
+            if self.schema is None:
+                data_subset = data.select_dtypes(include="object")
+            else:
+                text_columns = [
+                    col for col, data_type in self.schema.get("fields", {}).items() if data_type in ["string", "binary"]
+                ]
+                data_subset = data[text_columns]
+            data_subset = data_subset.loc[:, data_subset.apply(len_filter)]
+            columns = set(data_subset.columns)
+            if columns:
+                logger.info(
+                    f"Please note that the columns - {columns} contain long texts (> 200 symbols). "
+                    f"Such texts' handling consumes significant resources and results in poor quality content, "
+                    f"therefore this column(-s) will be generated using a simplified statistical approach.")
+        except (FileNotFoundError, pd.errors.EmptyDataError, ValueError):
+            data_subset = pd.DataFrame()
+
+        if len(data_subset.columns) > 0:
+            features = {}
+            for col in data_subset.columns:
+                tokenizer = Tokenizer(lower=False, char_level=True)
+                if type(data_subset[col].dropna().values[0]) is bytes:
+                    text_col = data_subset[col].str.decode("utf-8", errors="ignore")
+                else:
+                    text_col = data_subset[col]
+                text_col = text_col.fillna("")
+                tokenizer.fit_on_texts(text_col)
+
+                indexes = OrderedDict((k, v) for k, v in tokenizer.word_index.items() if k != ' ')
+                counts = OrderedDict((k, v) for k, v in tokenizer.word_counts.items() if k != ' ')
+                ordered_indexes = OrderedDict((k, indexes[k]) for k in counts.keys())
+                text_structure = np.array([text_col.str.len(),
+                                           text_col.apply(self.series_count_words)])
+                noise_to_prevent_singularity = np.random.uniform(
+                    low=-1e-4,
+                    high=1e-4,
+                    size=(text_structure.shape[0], text_structure.shape[1])
+                )
+                bw_width = text_structure.shape[1] / text_structure.shape[1]**1.3
+                kde = gaussian_kde(
+                    (text_structure + noise_to_prevent_singularity).astype("float64"),
+                    bw_method=bw_width
+                )
+                features[col] = {"counts": counts, "indexes": ordered_indexes, "kde": kde}
+
+            with open(self.no_ml_state_path + "kde_params.pkl", "wb") as file:
+                dill.dump(features, file)
+
+        else:
+            logger.info(
+                f"No columns to train kde over found"
+            )
+        return super().handle(data, **kwargs)
+
 class VaeTrainHandler(BaseHandler):
     def __init__(
             self, metadata: dict, paths: dict, table_name: str, schema: Optional[Dict], wrapper_name: str
@@ -113,6 +194,7 @@ class VaeTrainHandler(BaseHandler):
         self.wrapper_name = wrapper_name
         self.schema = schema
         self.state_path = self.paths["state_path"]
+        self.path_to_no_ml = self.paths["no_ml_state_path"]
 
     def __fit_model(
             self, data: pd.DataFrame, epochs: int, batch_size: int
@@ -143,6 +225,17 @@ class VaeTrainHandler(BaseHandler):
         logger.info("Finished VAE training")
 
     def handle(self, data: pd.DataFrame, **kwargs):
+        try:
+            with open(self.path_to_no_ml + "kde_params.pkl", "rb") as file:
+                features = dill.load(file)
+            if len(set(features.keys()) ^ set(data.columns)) == 0:
+                logger.info("No columns to train with VAE")
+                return super().handle(data, **kwargs)
+            else:
+                data = data.drop(list(features.keys()), axis=1)
+        except Exception:
+            logger.info("There is no long texts features")
+
         self.__fit_model(
             data,
             kwargs["epochs"],
@@ -168,8 +261,17 @@ class VaeInferHandler(BaseHandler):
         self.vae = None
         self.wrapper_name = wrapper_name
         self.vae_state_path = self.paths["state_path"]
+        self.has_vae = os.path.exists(self.vae_state_path)
         self.path_to_merged_infer = self.paths["path_to_merged_infer"]
         self.fk_kde_path = self.paths["fk_kde_path"]
+        self.no_ml_path = self.paths["path_to_no_ml"]
+        self.has_no_ml = os.path.exists(self.no_ml_path + "kde_params.pkl")
+
+    @staticmethod
+    def synth_word(size, indexes, counts):
+        return ("".join(np.random.choice(np.array(list(indexes)),
+                                         size=size,
+                                         p=np.array(list(counts.values())) / sum(np.array(list(counts.values()))))))
 
     def _prepare_dir(self):
         tmp_store_path = self.paths["tmp_store_path"]
@@ -198,17 +300,32 @@ class VaeInferHandler(BaseHandler):
             seed(self.random_seeds_list[i])
 
         data, schema = DataLoader(self.paths["input_data_path"]).load_data()
-        self.vae = self.create_wrapper(
-            self.wrapper_name,
-            data,
-            schema,
-            metadata={"table_name": self.table_name},
-            table_name=self.table_name,
-            paths=self.paths,
-            batch_size=None
-        )
-        self.vae.load_state(self.vae_state_path)
-        synthetic_infer = self.vae.predict_sampled_df(size)
+        if self.has_vae:
+            self.vae = self.create_wrapper(
+                self.wrapper_name,
+                data,
+                schema,
+                metadata={"table_name": self.table_name},
+                table_name=self.table_name,
+                paths=self.paths,
+            )
+            self.vae.load_state(self.vae_state_path)
+            synthetic_infer = self.vae.predict_sampled_df(size)
+        elif self.has_no_ml:
+            synthetic_infer = pd.DataFrame()
+        if self.has_no_ml:
+            with open(self.no_ml_path + "kde_params.pkl", "rb") as file:
+                features = dill.load(file)
+            for col in features.keys():
+                kde = features[col]["kde"]
+                text_structures = np.maximum(kde.resample(size).astype('int32'), 0)
+                indexes = features[col]["indexes"]
+                counts = features[col]["counts"]
+                generated_column = [" ".join([self.synth_word(s, indexes, counts) for s in
+                                              np.maximum(np.random.normal(i / j, 1, j).astype('int32'), 2)])
+                                    for i, j in zip(*text_structures)]
+                synthetic_infer[col] = generated_column
+
         return synthetic_infer
 
     @staticmethod

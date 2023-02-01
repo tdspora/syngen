@@ -9,7 +9,7 @@ from syngen.ml.data_loaders import DataLoader
 from syngen.ml.train_chain import RootHandler
 from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
 from syngen.ml.config import TrainConfig, InferConfig
-from syngen.ml.train_chain import VaeTrainHandler, VaeInferHandler
+from syngen.ml.train_chain import VaeTrainHandler, VaeInferHandler, LongTextsHandler
 from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.vae import VanillaVAEWrapper
 
@@ -81,6 +81,13 @@ class TrainInterface(Interface, ABC):
             paths=paths
         )
 
+        long_texts_handler = LongTextsHandler(
+            metadata=self.metadata,
+            schema=schema,
+            table_name=self.config.table_name,
+            paths=paths
+        )
+
         vae_handler = VaeTrainHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
@@ -89,7 +96,7 @@ class TrainInterface(Interface, ABC):
             wrapper_name=VanillaVAEWrapper.__name__
         )
 
-        root_handler.set_next(vae_handler)
+        root_handler.set_next(long_texts_handler).set_next(vae_handler)
         self.handler = root_handler
         return self
 
