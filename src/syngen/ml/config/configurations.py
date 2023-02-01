@@ -31,7 +31,6 @@ class TrainConfig:
             "dataset_pickle_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/",
             "no_ml_state_path": f"model_artifacts/resources/{self.table_name}/no_ml/checkpoints/",
-            "no_ml_infer_path": f"model_artifacts/tmp_store/{self.table_name}/no_ml_text_infer.csv"
         }
 
 
