@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from loguru import logger
 
 from syngen.ml.data_loaders import MetadataLoader
-from syngen.ml.interface import TrainInterface, InferInterface
+from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
 
 
@@ -16,14 +16,20 @@ class Worker:
     table_name: str
     metadata_path: Optional[str]
     settings: Dict
-    train_interface = TrainInterface()
-    infer_interface = InferInterface()
+    train_strategy = TrainStrategy()
+    infer_strategy = InferStrategy()
     metadata = None
     divided = []
 
     def __post_init__(self):
         self.metadata_loader = MetadataLoader(self.metadata_path)
         self.metadata = self.metadata_loader.load_data() if self.metadata_path else None
+
+    def _extract_setting(self, params, setting=None):
+        """
+        Extract the value of the certain setting
+        """
+        return params.get(setting) if params.get(setting) is not None else self.settings.get(setting)
 
     def __parse_train_settings(self, config: Dict):
         """
@@ -76,22 +82,16 @@ class Worker:
         :param key_type: type of key either 'primary key' ('PK') or 'foreign key' ('FK')
         """
         try:
-            tbls = [table_name for table_name, config in config.items()
-                    for key in config["keys"]
-                    if config["keys"][key]["type"] == key_type]
-            return list(dict.fromkeys(tbls))
+            tables = [table_name for table_name, config in config.items()
+                      for key in config["keys"]
+                      if config["keys"][key]["type"] == key_type]
+            return list(dict.fromkeys(tables))
         except KeyError:
             raise KeyError(
                 "The structure of metadata file seems to be invalid. "
                 "Please check the presence of 'configuration', 'tables', "
                 "'keys', 'type' fields in metadata file"
             )
-
-    def _extract_setting(self, params, setting):
-        """
-        Extract the value of the certain setting
-        """
-        return params.get(setting) if params.get(setting) is not None else self.settings.get(setting)
 
     def _prepare_metadata_for_process(self, **kwargs):
         """
@@ -223,7 +223,7 @@ class Worker:
 
         logger.info(f"Training process of the table - {table} has started.")
 
-        self.train_interface.run(
+        self.train_strategy.run(
             metadata=self.metadata,
             source=source,
             epochs=epochs,
@@ -249,7 +249,7 @@ class Worker:
 
         logger.info(f"Infer process of the table - {table} has started")
 
-        self.infer_interface.run(
+        self.infer_strategy.run(
             metadata=self.metadata,
             size=size,
             table_name=table,
