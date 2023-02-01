@@ -293,8 +293,8 @@ class Dataset:
     def _preprocess_nan_cols(
         self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
     ) -> tuple:
-        """Fill NaN values in numeric column with some value according to strategies.
-        Fill NaN values in string columns can only work in 'mode' strategies.
+        """Fill NaN values in numeric column with some value according to strategy.
+        Fill NaN values in string columns can only work in 'mode' strategy.
         If NaN values exist additional column is created and added to DataFrame.
         This column has value of 1 in case corresponding row contains NaN and 0 otherwise.
         New column name is built like 'column name'+'_null'.
@@ -357,23 +357,6 @@ class Dataset:
                     except FileNotFoundError:
                         logger.warning(f"The mapper for the {fk_column} text key is not found. "
                                        f"Simple sampling will be used.")
-                        continue
-                    fk_column_values = fk_column_values.map(mapper)
-                kde = gaussian_kde(fk_column_values)
-                with open(f"{self.fk_kde_path}{fk_column}.pkl", "wb") as file:
-                    dill.dump(kde, file)
-
-                logger.info(f"KDE artifacts saved to {self.fk_kde_path}{fk_column}.pkl")
-                fk_column_values = self.df[fk_column]
-                correspondent_pk_table = self.foreign_keys_mapping[fk]["references"]["table"]
-                correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
-                if fk_column_values.dtype == "object":
-                    try:
-                        with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"              
-                                  f"{correspondent_pk_col}_mapper.pkl", "rb") as file:
-                            mapper = pickle.load(file)
-                    except FileNotFoundError:
-                        logger.warning(f"The mapper for the {fk_column} text key is not found. Simple sampling will be used.")
                         continue
                     fk_column_values = fk_column_values.map(mapper)
                 kde = gaussian_kde(fk_column_values)
