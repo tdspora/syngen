@@ -10,6 +10,7 @@ configuration_schema = Schema({
             Optional("epochs"): And(int, lambda n: n >= 1),
             Optional("drop_null"): bool,
             Optional("row_limit"): And(int, lambda n: n >= 1),
+            Optional("batch_size"): And(int, lambda n: n >= 1),
             Optional("print_report"): bool
         },
         Optional("infer_settings"): {
