@@ -69,12 +69,12 @@ class AccuracyTest(BaseTest):
     def report(self, **kwargs):
         univariate, bivariate, correlations, clustering, utility, acc = self.__prepare_before_report()
         acc.calculate_all(kwargs["categ_columns"])
-        acc_median = "%.5f" % acc.calculate_heatmap_median(acc.heatmap)
+        acc_median = "%.4f" % acc.calculate_heatmap_median(acc.heatmap)
 
         uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
         bi_images = bivariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
         correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
-        clustering_result = clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+        clustering_result = "%.4f" % clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
         utility_result = utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
 
         # Generate html report
@@ -82,7 +82,10 @@ class AccuracyTest(BaseTest):
             template = jinja2.Template(file_.read())
 
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
-        uni_images = {title: transform_to_base64(path) for title, path in uni_images.items()}
+        uni_images = {
+            title: transform_to_base64(path) for title, path in uni_images.items()
+            if "word_count" not in title
+        }
         bi_images = {
             title: transform_to_base64(path) for title, path in bi_images.items()
             if "char_len" not in title and "word_count" not in title

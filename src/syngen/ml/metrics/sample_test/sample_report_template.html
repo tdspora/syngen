@@ -3,7 +3,7 @@
 
 	<head>
 		<meta charset="UTF-8">
-		<title>Sample Report</title>
+		<title>Sample Report - {{table_name}}</title>
 		<style type="text/css">
 			@font-face {
 				font-family: "Open sans";
@@ -94,6 +94,7 @@
 			}
 
 		</style>
+
 	</head>
 
 	<body>
@@ -110,8 +111,10 @@
 					columns.
 				</p>
 				{% for col, uni_img in uni_imgs.items() -%}
-				<h3 class="h3-title">{{col}}</h3>
-				<img src="{{uni_img}}">
+				<div style="page-break-after: always;">
+					<h3 class="h3-title">Column Name: {{col}}</h3>
+					<img src="{{uni_img}}">
+				</div>
 				{% endfor %}
 			</div>
 		</div>

@@ -22,6 +22,8 @@ from syngen.ml.worker import Worker
 @click.option("--print_report", default=False, type=bool,
               help="Whether to print quality report. Might require significant time "
                    "for big generated tables (>1000 rows). If absent, it's defaulted to False")
+@click.option("--batch_size", default=32, type=int, help="Number of rows that goes in one batch. "
+                                                         "This parameter can help to control memory consumption.")
 def launch_train(
     metadata_path: Optional[str],
     source: Optional[str],
@@ -30,7 +32,7 @@ def launch_train(
     drop_null: bool,
     row_limit: Optional[int],
     print_report: bool,
-    batch_size: int = 24,
+    batch_size: int = 32,
 ):
     """
     Launch the work of training process
