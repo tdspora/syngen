@@ -8,7 +8,6 @@ import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
 
-from syngen.ml.vae.models.features import InverseTransformer
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
     CharBasedTextFeature,
@@ -269,9 +268,6 @@ class Dataset:
                 column_names.extend(self.columns[name])
                 inverse_transformed_data.append(
                     feature.inverse_transform(transformed_data)
-                )
-                self.inverse_transformers[name] = InverseTransformer(
-                    name, feature.inverse_transform
                 )
 
         stacked_data = np.column_stack(inverse_transformed_data)
