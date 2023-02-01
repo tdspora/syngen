@@ -117,7 +117,6 @@ class LongTextsHandler(BaseHandler):
                  schema: Optional[Dict]):
         super().__init__(metadata, paths, table_name)
         self.no_ml_state_path = self.paths["no_ml_state_path"]
-        self.no_ml_infer_path = self.paths["no_ml_infer_path"]
         self.schema = schema
 
     def series_count_words(self, x):
@@ -144,7 +143,7 @@ class LongTextsHandler(BaseHandler):
             columns = set(data_subset.columns)
             if columns:
                 logger.info(
-                    f"Please note that the columns - {columns} contain long texts (> 500 symbols). "
+                    f"Please note that the columns - {columns} contain long texts (> 200 symbols). "
                     f"Such texts' handling consumes significant resources and results in poor quality content, "
                     f"therefore this column(-s) will be generated using a simplified statistical approach.")
         except (FileNotFoundError, pd.errors.EmptyDataError, ValueError):
