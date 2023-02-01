@@ -54,7 +54,8 @@ train --source PATH_TO_ORIGINAL_CSV \
     --epochs INT \
     --row_limit INT \
     --drop_null BOOL \
-    --print_report BOOL
+    --print_report BOOL \
+    --batch_size INT
 ```
 
 For training of the multiple linked tables call:
@@ -70,6 +71,7 @@ The parameters which you can set up for training process:
 - <i>epochs</i> – a number of training epochs. Since the early stopping mechanism is implemented the bigger value of epochs is the better
 - <i>row_limit</i> – a number of rows to train over. A number less than the original table length will randomly subset the specified number of rows
 - <i>drop_null</i> – whether to drop rows with at least one missing value
+- <i>batch_size</i> – if specified, the training is split into batches. This can save the RAM
 - <i>print_report</i> - whether to generate plots of accuracy heatmap, heatmap due correlation metrics, clustering metric, utility metric, univariate and bivariate distributions
 - <i>metadata_path</i> – a path to the metadata file containing the metadata for linked tables
 
@@ -139,6 +141,7 @@ The yaml metadata file should match the following template:
             epochs: 10                              # Number of epochs if different from the default in the command line options
             drop_null: False                        # Drop rows with NULL values
             row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
+            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
             print_report: False                     # Turn on or turn off generation of the report
                  
         infer_settings:                             # Settings for infer process
@@ -186,6 +189,7 @@ The yaml metadata file should match the following template:
             epochs: 10                              # Number of epochs if different from the default in the command line options
             drop_null: False                        # Drop rows with NULL values
             row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
+            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
             print_report: False                     # Turn on or turn off generation of the report
      
         infer_settings:                             # Settings for infer process
