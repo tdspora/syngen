@@ -34,6 +34,7 @@
 
 			.container .container--item {
 				margin-bottom: 140px;
+				page-break-after: always;
 			}
 
 			.container .container--item:not(:nth-child(2)) {
@@ -240,27 +241,24 @@
 			}
 
 		</style>
-		<title>Accuracy Report</title>
+		<title>Accuracy Report - {{table_name}}</title>
 	</head>
 
 	<body>
 		<div class="container">
-			<h1 class="h1-title">Synthetic Data Quality</h1>
+			<h1 class="h1-title">Accuracy Report</h1>
 			<div class="container--item">
 
 				<h2 class="h2-title"
-					style="margin-bottom:36px">Accuracy heatmap</h2>
-				<p class="text-description">
-                The report was generated during the inference process of the table - {{ table_name }} in {{ time }} with the next parameters: size = {{ config.get("size") }}, run_parallel = {{ config.get("run_parallel") }}, batch_size = {{ config.get("batch_size") }}, random_seed = {{ config.get("random_seed") }} </p>
+					style="margin-bottom:36px">Synthetic Data Quality</h2>
 				<p class="accuracy-report-value">Median accuracy: {{accuracy_value}}</p>
 				<p class="accuracy-report-value"
 					style="margin-bottom:36px">Median clusters homogeneity: {{clustering_value}}</p>
-				<svg width="749"
-					height="28"
+				<svg height="28"
 					viewBox="0 0 749 28"
 					fill="none"
 					xmlns="http://www.w3.org/2000/svg"
-					style="margin-bottom:8px">
+					style="margin-bottom:8px; width:100%; max-width: 749px;">
 					<g clip-path="url(#clip0_4981_69461)">
 						<rect width="749"
 							height="28"
@@ -362,13 +360,13 @@
 				</div>
 				<div class="container--item">
 					<h2 class="h2-title"
-						id="h2-title--correlations">Correlations</h2>
-					<svg width="745"
-						height="28"
+						id="h2-title--correlations"
+						style="margin-bottom:32px">Correlations</h2>
+					<svg height="28"
 						viewBox="0 0 745 28"
 						fill="none"
 						xmlns="http://www.w3.org/2000/svg"
-						style="margin-bottom:8px">
+						style="margin-bottom:8px; width:100%; max-width: 745px;">
 						<g clip-path="url(#clip0_5005_69105)">
 							<rect width="745"
 								height="28"
@@ -491,8 +489,10 @@
 						columns.
 					</p>
 					{% for col, uni_img in uni_imgs.items() -%}
-					<h3 class="h3-title">{{col}}</h3>
-					<img src="{{uni_img}}">
+					<div style="page-break-after: always;">
+						<h3 class="h3-title">Column Name: {{col}}</h3>
+						<img src="{{uni_img}}">
+					</div>
 					{% endfor %}
 				</div>
 

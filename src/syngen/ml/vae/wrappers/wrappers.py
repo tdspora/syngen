@@ -20,6 +20,8 @@ from syngen.ml.pipeline import fetch_dataset
 
 warnings.filterwarnings("ignore")
 
+BATCH_SIZE_DEFAULT = 32
+
 
 class BaseWrapper(ABC):
     """
@@ -243,9 +245,9 @@ class VAEWrapper(BaseWrapper):
                 break
             epoch += 1
 
-    @staticmethod
-    def _create_optimizer():
-        learning_rate = 1e-04
+    # @staticmethod
+    def _create_optimizer(self):
+        learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
         return tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
     @staticmethod

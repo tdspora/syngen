@@ -29,8 +29,8 @@ class Convertor(ABC):
                     df[column] = df[column].astype("float64")
                 else:
                     df[column] = df[column].astype("int64")
-            else:
-                df[column] = df[column].astype(data_type)
+            elif data_type == "string":
+                df[column] = df[column].astype("object")
         return df
 
 
