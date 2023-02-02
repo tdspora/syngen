@@ -308,6 +308,7 @@ class VaeInferHandler(BaseHandler):
                 metadata={"table_name": self.table_name},
                 table_name=self.table_name,
                 paths=self.paths,
+                batch_size=None
             )
             self.vae.load_state(self.vae_state_path)
             synthetic_infer = self.vae.predict_sampled_df(size)
