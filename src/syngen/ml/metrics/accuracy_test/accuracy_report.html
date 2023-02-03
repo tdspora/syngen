@@ -28,7 +28,7 @@
 				padding: 80px 183px 80px 183px;
 			}
 
-			.container--item>img {
+			.container--item>div>img {
 				width: 100%;
 			}
 
@@ -140,6 +140,10 @@
 				color: var(--text-color);
 			}
 
+			.utility-table {
+				overflow-x: auto;
+			}
+
 			.utility-table table {
 				border-spacing: 0;
 				margin-bottom: 42px;
@@ -201,7 +205,7 @@
 				display: inline-block;
 			}
 
-			.bivariate-img-container--item img {
+			.bivariate-img-container--item>img {
 				max-width: 1000px;
 				width: 100%;
 				background-size: contain;
@@ -210,7 +214,7 @@
 
 			.bivariate-img-container--item .flex-container {
 				display: flex;
-				justify-content: space-around;
+				justify-content: space-evenly;
 			}
 
 			.bivariate-img-container--item .flex-container .h3-title {
@@ -344,7 +348,8 @@
 						operations is performed on the same pair of columns in the synthetic dataset. The resulting score
 						is
 						calculated as 1 - abs(original_score - synthetic_score).</p>
-					<img src="{{accuracy_heatmap}}">
+					<img style="width: 100%;"
+						src="{{accuracy_heatmap}}">
 
 				</div>
 				<div class="container--item">
@@ -428,7 +433,8 @@
 						is performed for the synthetic dataset. The resulting matrix is the difference between original
 						correlation
 						matrix and the synthetic one.</p>
-					<img src="{{correlations_heatmap}}">
+					<img style="width: 100%;"
+						src="{{correlations_heatmap}}">
 
 				</div>
 				<div class="container--item">
@@ -449,7 +455,8 @@
 						synthetic
 						records in each cluster.</p>
 
-					<img src="{{clusters_barplot}}">
+					<img style="width: 100%;"
+						src="{{clusters_barplot}}">
 					<p>Mean clusters homogeneity: {{clustering_value}}</p>
 				</div>
 
@@ -474,7 +481,8 @@
 						generated
 						data should be close to the original one.</p>
 
-					<img src={{utility_barplot}}>
+					<img style="width: 100%;"
+						src={{utility_barplot}}>
 					<h3 class="h3-title">{{table_name}}</h3>
 					<div class="utility-table">
 						{{utility_table}}
