@@ -1,5 +1,6 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
+from copy import deepcopy
 
 from loguru import logger
 
@@ -100,7 +101,7 @@ class Worker:
 
         type_of_process can be "train", "infer" or "all" for the Enterprise version
         """
-        config_of_tables = self.metadata
+        config_of_tables = deepcopy(self.metadata)
         table_names = list(config_of_tables.keys())
         if len(table_names) == 1 and "keys" not in config_of_tables[table_names[0]]:
             # case with one table without any keys
@@ -134,14 +135,21 @@ class Worker:
                 config.pop(table)
         return config
 
-    def __train_chain_of_tables_with_generation(self, tables: List, config_of_tables: Dict):
+    def __train_chain_of_tables_with_generation(
+            self,
+            metadata_for_training: Tuple[List, Dict],
+            metadata_for_inference: Tuple[List, Dict]
+    ):
         """
         Run training process for the list of related tables
-        :param tables: the list of related tables for training process
-        :param config_of_tables: configuration of related tables declared in metadata.yaml file
+        :param metadata_for_training: the tuple included the list of related tables and metadata for training process
+        :param metadata_for_inference: the tuple included the list of related tables and metadata for inference process
         """
-        for table in tables:
-            config_of_table = config_of_tables[table]
+        chain_for_tables_for_training, config_of_metadata_for_training = metadata_for_training
+        chain_for_tables_for_inference, config_of_metadata_for_inference = metadata_for_inference
+
+        for table in chain_for_tables_for_training:
+            config_of_table = config_of_metadata_for_training[table]
             source = config_of_table.get("source", None)
             if source is None:
                 raise AttributeError(
@@ -160,11 +168,15 @@ class Worker:
                 batch_size=train_settings.get("batch_size")
             )
         generation_of_reports = any(
-            [config.get("train_settings", {}).get("print_report", False) for table, config in config_of_tables.items()]
+            [
+                config.get("train_settings", {}).get("print_report", False)
+                for table, config in config_of_metadata_for_training.items()
+            ]
         )
+        self.metadata = config_of_metadata_for_inference
         if generation_of_reports:
-            for table in tables:
-                config_of_table = config_of_tables[table]
+            for table in chain_for_tables_for_inference:
+                config_of_table = config_of_metadata_for_inference[table]
                 train_settings = self.__parse_train_settings(config_of_table)
                 print_report = train_settings.get("print_report")
 
@@ -275,8 +287,9 @@ class Worker:
         Launch training process either for a single table or for related tables
         """
         if self.metadata_path is not None:
-            chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="all")
-            self.__train_chain_of_tables_with_generation(chain_of_tables, config_of_tables)
+            metadata_for_training = self._prepare_metadata_for_process()
+            metadata_for_inference = self._prepare_metadata_for_process(type_of_process="infer")
+            self.__train_chain_of_tables_with_generation(metadata_for_training, metadata_for_inference)
             self._generate_reports()
         elif self.table_name is not None:
             self.__train_table_with_generation()
@@ -288,6 +301,7 @@ class Worker:
         """
         if self.metadata_path is not None:
             chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
+            self.metadata = config_of_tables
             self.__infer_chain_of_tables(chain_of_tables, config_of_tables)
             self._generate_reports()
         if self.table_name is not None:
