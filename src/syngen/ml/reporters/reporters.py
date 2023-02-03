@@ -7,11 +7,11 @@ from loguru import logger
 
 from syngen.ml.pipeline import (
     get_nan_labels,
-    nan_labels_to_float
+    nan_labels_to_float,
+    fetch_dataset
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.pipeline import fetch_dataset
 from syngen.ml.metrics.utils import text_to_continuous
 
 
@@ -30,33 +30,6 @@ class Reporter:
         original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["synthetic_data_path"]).load_data()
         return original, synthetic
-
-    @staticmethod
-    def convert_data_types(
-            df: pd.DataFrame, binary_columns: List, str_columns: List, date_columns: List,
-            int_columns: List, float_columns: List, categ_columns: List):
-        """
-        Synchronize identified data types in data pipeline mechanism with data types in columns of dataframe
-        :param df: dataframe
-        :param binary_columns: list of columns with data type - "binary"
-        :param str_columns: list of columns with data type - "string"
-        :param date_columns: list of columns identified as date
-        :param int_columns: list of columns with data type - "integer"
-        :param float_columns: list of columns with data type - "float"
-        :param categ_columns: list of categorical columns
-        :return:
-        """
-        for column in df.columns:
-            if column in [*binary_columns, *str_columns, *date_columns, *categ_columns]:
-                df[column] = df[column].astype("object")
-            elif column in int_columns:
-                if any(df[column].isnull()):
-                    df[column] = df[column].astype("float64")
-                else:
-                    df[column] = df[column].astype("int64")
-            elif column in float_columns:
-                df[column] = df[column].astype("float64")
-        return df
 
     def preprocess_data(self):
         """
@@ -95,15 +68,6 @@ class Reporter:
 
         int_columns = date_columns | int_columns
 
-        original = self.convert_data_types(
-            original, binary_columns, str_columns, date_columns,
-            int_columns, float_columns, categ_columns
-        )
-
-        synthetic = self.convert_data_types(
-            synthetic, binary_columns, str_columns, date_columns,
-            int_columns, float_columns, categ_columns
-        )
         original = text_to_continuous(original, str_columns).drop(str_columns, axis=1)
         synthetic = text_to_continuous(synthetic, str_columns).drop(str_columns, axis=1)
 
@@ -119,7 +83,6 @@ class Reporter:
         for categ_col in categ_columns:
             original[categ_col] = original[categ_col].astype(str)
             synthetic[categ_col] = synthetic[categ_col].astype(str)
-            
         return original, synthetic, float_columns, int_columns, categ_columns
 
     @abstractmethod

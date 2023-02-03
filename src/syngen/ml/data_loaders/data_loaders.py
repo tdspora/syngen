@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Tuple
+import pickle
 
 import pandas as pd
 from pandas.errors import ParserError
@@ -53,6 +54,8 @@ class DataLoader(BaseDataLoader):
             return AvroLoader()
         elif path.suffix == '.csv':
             return CSVLoader()
+        elif path.suffix == ".pkl":
+            return BinaryLoader()
         else:
             raise NotImplementedError("File format not supported")
 
@@ -191,3 +194,18 @@ class YAMLLoader(BaseDataLoader):
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         raise NotImplementedError("Saving YAML files is not supported")
+
+
+class BinaryLoader(BaseDataLoader):
+    """
+    Class for loading and saving data using byte stream
+    """
+
+    def load_data(self, path: str, *kwargs) -> Tuple[pd.DataFrame, None]:
+        with open(path, "rb") as f:
+            data = pickle.load(f)
+        return data, None
+
+    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
+        with open(path, "wb") as f:
+            pickle.dump(df, f)

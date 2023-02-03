@@ -97,10 +97,11 @@ class LongTextsHandler(BaseHandler):
 
         try:
             if self.schema is None:
-                data_subset = data.select_dtypes(include="object")
+                data_subset = data.select_dtypes(include="string")
             else:
                 text_columns = [
-                    col for col, data_type in self.schema.get("fields", {}).items() if data_type in ["string", "binary"]
+                    col for col, data_type in self.schema.get("fields", {}).items()
+                    if data_type in ["string", "binary"]
                 ]
                 data_subset = data[text_columns]
             data_subset = data_subset.loc[:, data_subset.apply(len_filter)]
@@ -217,7 +218,7 @@ class VaeTrainHandler(BaseHandler):
             else:
                 data = data.drop(list(features.keys()), axis=1)
         except Exception:
-            logger.info("There is no long texts features")
+            logger.info("There are no long texts columns")
 
         self.__fit_model(data)
         return super().handle(data, **kwargs)
@@ -296,6 +297,7 @@ class VaeInferHandler(BaseHandler):
             data = pd.DataFrame()
             schema = None
 
+        synthetic_infer = pd.DataFrame()
         if self.has_vae:
             self.vae = self.create_wrapper(
                 self.wrapper_name,
@@ -309,8 +311,6 @@ class VaeInferHandler(BaseHandler):
             )
             self.vae.load_state(self.vae_state_path)
             synthetic_infer = self.vae.predict_sampled_df(size)
-        elif self.has_no_ml:
-            synthetic_infer = pd.DataFrame()
         if self.has_no_ml:
             with open(self.no_ml_path + "kde_params.pkl", "rb") as file:
                 features = dill.load(file)
@@ -359,7 +359,7 @@ class VaeInferHandler(BaseHandler):
             with open(f"{self.fk_kde_path}{fk_label}.pkl", "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
-            numeric_pk = np.arange(len(pk)) if pk.dtype == "object" else pk
+            numeric_pk = np.arange(len(pk)) if pk.dtype == "string" else pk
             fk_pdf = np.maximum(kde.evaluate(numeric_pk), 1e-12)
             synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
             synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)

@@ -121,7 +121,7 @@ class TrainConfig:
         return data
 
     def _save_input_data(self, data: pd.DataFrame):
-        data.to_csv(self.paths["input_data_path"], index=False)
+        DataLoader(self.paths["input_data_path"]).save_data(self.paths["input_data_path"], data)
 
     def _prepare_data(self, data: pd.DataFrame):
         """
@@ -139,13 +139,13 @@ class TrainConfig:
             "tmp_store_path": f"model_artifacts/tmp_store/{self.table_name}",
             "source_path": self.source,
             "draws_path": f"model_artifacts/tmp_store/{self.table_name}/draws",
-            "input_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.csv",
+            "input_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.pkl",
             "state_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints",
             "results_path": f"model_artifacts/tmp_store/{self.table_name}/metrics_{self.table_name}.csv",
             "bad_columns_path": f"model_artifacts/tmp_store/{self.table_name}/bad_columns_{self.table_name}.csv",
             "dataset_pickle_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/",
-            "original_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.csv",
+            "original_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.pkl",
             "synthetic_data_path": f"model_artifacts/tmp_store/{self.table_name}/merged_infer_{self.table_name}.csv",
             "no_ml_state_path": f"model_artifacts/resources/{self.table_name}/no_ml/checkpoints/"
         }
@@ -195,10 +195,10 @@ class InferConfig:
         """
         dynamic_name = self.table_name[:-3] if self.both_keys else self.table_name
         return {
-            "original_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.csv",
+            "original_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
             "synthetic_data_path": f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
             "draws_path": f"model_artifacts/tmp_store/{dynamic_name}/draws",
-            "input_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.csv",
+            "input_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
             "path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
             "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
