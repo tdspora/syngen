@@ -359,7 +359,7 @@ class VaeInferHandler(BaseHandler):
             with open(f"{self.fk_kde_path}{fk_label}.pkl", "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
-            numeric_pk = np.arange(len(pk)) if pk.dtype == "string" else pk
+            numeric_pk = np.arange(len(pk)) if pk.dtype == np.str else pk
             fk_pdf = np.maximum(kde.evaluate(numeric_pk), 1e-12)
             synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
             synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)
