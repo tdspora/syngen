@@ -29,7 +29,8 @@ class TrainConfig:
             "results_path": f"model_artifacts/tmp_store/{self.table_name}/metrics_{self.table_name}.csv",
             "bad_columns_path": f"model_artifacts/tmp_store/{self.table_name}/bad_columns_{self.table_name}.csv",
             "dataset_pickle_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/model_dataset.pkl",
-            "fk_kde_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/"
+            "fk_kde_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/",
+            "no_ml_state_path": f"model_artifacts/resources/{self.table_name}/no_ml/checkpoints/",
         }
 
 
@@ -62,5 +63,6 @@ class InferConfig:
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
             "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
             "dataset_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
-            "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/"
+            "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
+            "path_to_no_ml": f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/",
         }
