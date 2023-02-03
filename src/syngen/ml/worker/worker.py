@@ -106,7 +106,7 @@ class Worker:
             # case with one table without any keys
             chain_of_tables = table_names
         else:
-            if kwargs.get("type_of_process") == ("infer" or "all"):
+            if kwargs.get("type_of_process") in ("infer", "all"):
                 config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
             pk_tables = self._get_tables(config_of_tables, "PK")
             fk_tables = self._get_tables(config_of_tables, "FK")
@@ -172,7 +172,7 @@ class Worker:
 
                 self.__infer_table(
                     table_name=table,
-                    run_parallel=False,
+                    run_parallel=True,
                     batch_size=1000,
                     random_seed=1,
                     print_report=print_report,
@@ -207,7 +207,7 @@ class Worker:
 
         if self.settings.get("print_report"):
             self.__infer_table(
-                run_parallel=False,
+                run_parallel=True,
                 batch_size=1000,
                 random_seed=1
             )
@@ -275,7 +275,7 @@ class Worker:
         Launch training process either for a single table or for related tables
         """
         if self.metadata_path is not None:
-            chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="train")
+            chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="all")
             self.__train_chain_of_tables_with_generation(chain_of_tables, config_of_tables)
             self._generate_reports()
         elif self.table_name is not None:

@@ -1,6 +1,6 @@
-import pickle
 from typing import Dict, Optional, List
 from dataclasses import dataclass, field
+import pickle
 
 from loguru import logger
 import numpy as np
@@ -349,7 +349,7 @@ class Dataset:
                 fk_column_values = self.df[fk_column]
                 correspondent_pk_table = self.foreign_keys_mapping[fk]["references"]["table"]
                 correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
-                if fk_column_values.dtype == "object":
+                if fk_column_values.dtype == "string":
                     try:
                         with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"              
                                   f"{correspondent_pk_col}_mapper.pkl", "rb") as file:

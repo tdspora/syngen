@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 from dateutil.parser import parse
 import pickle
 
@@ -53,7 +53,7 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
         dict: dict that maps nan str label to column name
     """
     columns_nan_labels = {}
-    object_columns = df.select_dtypes(include=["object"]).columns
+    object_columns = df.select_dtypes(include=["string"]).columns
     for column in object_columns:
         str_values = []
         float_val = None
