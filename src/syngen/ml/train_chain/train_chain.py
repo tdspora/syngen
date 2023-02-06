@@ -1,7 +1,8 @@
-from typing import Tuple, Optional, Dict
+from typing import Tuple, Optional, Dict, List
 from abc import ABC, abstractmethod
 import os
 import math
+from dataclasses import dataclass, field
 
 import pandas as pd
 import numpy as np
@@ -27,15 +28,15 @@ class AbstractHandler(ABC):
         pass
 
 
+@dataclass
 class BaseHandler(AbstractHandler):
-    def __init__(self, metadata: dict, paths: dict, table_name: str):
-        self.metadata = metadata
-        self.paths = paths
-        self.table_name = table_name
-        if self.table_name is None:
-            raise KeyError("No table name was provided.")
+    metadata: Dict
+    paths: Dict
+    table_name: str
+    _next_handler: Optional[AbstractHandler] = field(init=False)
 
-    _next_handler: AbstractHandler = None
+    def __post_init__(self):
+        self._next_handler = None
 
     def set_next(self, handler: AbstractHandler) -> AbstractHandler:
         self._next_handler = handler
@@ -62,34 +63,27 @@ class BaseHandler(AbstractHandler):
         )
 
 
+@dataclass
 class RootHandler(BaseHandler):
-    def __init__(self, metadata: dict, paths: dict, table_name: str):
-        super().__init__(metadata, paths, table_name)
 
     def handle(self, **kwargs):
         data, schema = DataLoader(self.paths["input_data_path"]).load_data()
         return super().handle(data, **kwargs)
 
 
+@dataclass
 class LongTextsHandler(BaseHandler):
-    def __init__(self,
-                 metadata: dict,
-                 paths: dict,
-                 table_name: str,
-                 schema: Optional[Dict]):
-        super().__init__(metadata, paths, table_name)
-        self.no_ml_state_path = self.paths["no_ml_state_path"]
-        self.schema = schema
+    schema: Optional[Dict]
 
     @staticmethod
     def series_count_words(x):
         return len(str(x).split())
 
     def _prepare_dir(self):
-        os.makedirs(self.no_ml_state_path, exist_ok=True)
+        os.makedirs(self.paths["no_ml_state_path"], exist_ok=True)
 
     def _save_no_ml_checkpoints(self, features: Dict):
-        with open(self.no_ml_state_path + "kde_params.pkl", "wb") as file:
+        with open(f'{self.paths["no_ml_state_path"]}kde_params.pkl', "wb") as file:
             dill.dump(features, file)
 
     def handle(self, data: pd.DataFrame, **kwargs):
@@ -154,34 +148,20 @@ class LongTextsHandler(BaseHandler):
         return super().handle(data, **kwargs)
 
 
+@dataclass
 class VaeTrainHandler(BaseHandler):
-    def __init__(
-            self,
-            metadata: dict,
-            paths: dict,
-            table_name: str,
-            schema: Optional[Dict],
-            wrapper_name: str,
-            epochs: int,
-            row_subset: int,
-            drop_null: bool,
-            batch_size: int
-    ):
-        super().__init__(metadata, paths, table_name)
-        self.wrapper_name = wrapper_name
-        self.schema = schema
-        self.epochs = epochs
-        self.row_subset = row_subset
-        self.drop_null = drop_null
-        self.batch_size = batch_size
-        self.state_path = self.paths["state_path"]
-        self.path_to_no_ml = self.paths["no_ml_state_path"]
+    wrapper_name: str
+    schema: Dict
+    epochs: int
+    row_subset: int
+    drop_null: bool
+    batch_size: int
 
     def __fit_model(
             self,
             data: pd.DataFrame
     ):
-        os.makedirs(self.state_path, exist_ok=True)
+        os.makedirs(self.paths["state_path"], exist_ok=True)
         logger.info("Start VAE training")
         if data is None:
             logger.error("For mode = 'train' path must be provided")
@@ -207,12 +187,12 @@ class VaeTrainHandler(BaseHandler):
             epochs=self.epochs,
         )
 
-        self.model.save_state(self.state_path)
+        self.model.save_state(self.paths["state_path"])
         logger.info("Finished VAE training")
 
     def handle(self, data: pd.DataFrame, **kwargs):
         try:
-            with open(self.path_to_no_ml + "kde_params.pkl", "rb") as file:
+            with open(f'{self.paths["no_ml_state_path"]}kde_params.pkl', "rb") as file:
                 features = dill.load(file)
             if len(set(features.keys()) ^ set(data.columns)) == 0:
                 logger.info("No columns to train with VAE")
@@ -226,38 +206,26 @@ class VaeTrainHandler(BaseHandler):
         return super().handle(data, **kwargs)
 
 
+@dataclass
 class VaeInferHandler(BaseHandler):
-    def __init__(
-            self,
-            metadata: dict,
-            metadata_path: Optional[str],
-            paths: dict,
-            table_name: str,
-            wrapper_name: str,
-            size: Optional[int],
-            random_seed: Optional[int],
-            batch_size: int,
-            run_parallel: bool,
-            print_report: bool
-    ):
-        super().__init__(metadata, paths, table_name)
-        self.metadata_path = metadata_path
-        self.random_seed = random_seed
-        self.random_seeds_list = []
-        if random_seed:
-            seed(random_seed)
+    metadata_path: str
+    random_seed: Optional[int]
+    size: int
+    batch_size: int
+    run_parallel: bool
+    print_report: bool
+    wrapper_name: str
+    random_seed_list: List = field(init=False)
+    vae: Optional[VAEWrapper] = field(init=False)
+    has_vae: bool = field(init=False)
+    has_no_ml: bool = field(init=False)
+
+    def __post_init__(self):
+        self.random_seed = seed(self.random_seed) if self.random_seed else None
+        self.random_seeds_list = list()
         self.vae = None
-        self.size = size
-        self.batch_size = batch_size
-        self.run_parallel = run_parallel
-        self.print_report = print_report
-        self.wrapper_name = wrapper_name
-        self.vae_state_path = self.paths["state_path"]
-        self.has_vae = os.path.exists(self.vae_state_path)
-        self.path_to_merged_infer = self.paths["path_to_merged_infer"]
-        self.fk_kde_path = self.paths["fk_kde_path"]
-        self.no_ml_path = self.paths["path_to_no_ml"]
-        self.has_no_ml = os.path.exists(self.no_ml_path + "kde_params.pkl")
+        self.has_vae = os.path.exists(self.paths["state_path"])
+        self.has_no_ml = os.path.exists(f'{self.paths["path_no_ml"]}kde_params.pkl')
 
     @staticmethod
     def synth_word(size, indexes, counts):
@@ -311,10 +279,10 @@ class VaeInferHandler(BaseHandler):
                 batch_size=self.batch_size,
                 process="infer"
             )
-            self.vae.load_state(self.vae_state_path)
+            self.vae.load_state(self.paths["state_path"])
             synthetic_infer = self.vae.predict_sampled_df(size)
         if self.has_no_ml:
-            with open(self.no_ml_path + "kde_params.pkl", "rb") as file:
+            with open(f'{self.paths["path_to_no_ml"]}kde_params.pkl', "rb") as file:
                 features = dill.load(file)
             for col in features.keys():
                 kde = features[col]["kde"]
@@ -358,7 +326,7 @@ class VaeInferHandler(BaseHandler):
         pk = pk_table[pk_column_label]
 
         try:
-            with open(f"{self.fk_kde_path}{fk_label}.pkl", "rb") as file:
+            with open(f'{self.paths["fk_kde_path"]}{fk_label}.pkl', "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
             numeric_pk = np.arange(len(pk)) if pk.dtype in ("string", "object") else pk
@@ -425,10 +393,10 @@ class VaeInferHandler(BaseHandler):
             if not is_pk:
                 generated_data = self.generate_keys(prepared_data, self.size, self.metadata, self.table_name)
                 if generated_data is None:
-                    prepared_data.to_csv(self.path_to_merged_infer, index=False)
+                    prepared_data.to_csv(self.paths["path_to_merged_infer"], index=False)
                 else:
-                    generated_data.to_csv(self.path_to_merged_infer, index=False)
+                    generated_data.to_csv(self.paths["path_to_merged_infer"], index=False)
             else:
-                prepared_data.to_csv(self.path_to_merged_infer, index=False)
+                prepared_data.to_csv(self.paths["path_to_merged_infer"], index=False)
         if self.metadata_path is None:
-            prepared_data.to_csv(self.path_to_merged_infer, index=False)
+            prepared_data.to_csv(self.paths["path_to_merged_infer"], index=False)
