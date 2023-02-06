@@ -13,7 +13,6 @@ from scipy.stats import gaussian_kde
 from collections import OrderedDict
 from tensorflow.keras.preprocessing.text import Tokenizer
 
-
 from syngen.ml.vae import *
 from syngen.ml.data_loaders import DataLoader
 
@@ -89,6 +88,10 @@ class LongTextsHandler(BaseHandler):
     def _prepare_dir(self):
         os.makedirs(self.no_ml_state_path, exist_ok=True)
 
+    def _save_no_ml_checkpoints(self, features: Dict):
+        with open(self.no_ml_state_path + "kde_params.pkl", "wb") as file:
+            dill.dump(features, file)
+
     def handle(self, data: pd.DataFrame, **kwargs):
         self._prepare_dir()
 
@@ -97,7 +100,7 @@ class LongTextsHandler(BaseHandler):
 
         try:
             if self.schema is None:
-                data_subset = data.select_dtypes(include="string")
+                data_subset = data.select_dtypes(include=["string", "object"])
             else:
                 text_columns = [
                     col for col, data_type in self.schema.get("fields", {}).items()
@@ -142,8 +145,7 @@ class LongTextsHandler(BaseHandler):
                 )
                 features[col] = {"counts": counts, "indexes": ordered_indexes, "kde": kde}
 
-            with open(self.no_ml_state_path + "kde_params.pkl", "wb") as file:
-                dill.dump(features, file)
+            self._save_no_ml_checkpoints(features)
 
         else:
             logger.info(
@@ -359,7 +361,7 @@ class VaeInferHandler(BaseHandler):
             with open(f"{self.fk_kde_path}{fk_label}.pkl", "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
-            numeric_pk = np.arange(len(pk)) if pk.dtype == np.str else pk
+            numeric_pk = np.arange(len(pk)) if pk.dtype in ("string", "object") else pk
             fk_pdf = np.maximum(kde.evaluate(numeric_pk), 1e-12)
             synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
             synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)
