@@ -225,7 +225,7 @@ class VaeInferHandler(BaseHandler):
         self.random_seeds_list = list()
         self.vae = None
         self.has_vae = os.path.exists(self.paths["state_path"])
-        self.has_no_ml = os.path.exists(f'{self.paths["path_no_ml"]}kde_params.pkl')
+        self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}kde_params.pkl')
 
     @staticmethod
     def synth_word(size, indexes, counts):
