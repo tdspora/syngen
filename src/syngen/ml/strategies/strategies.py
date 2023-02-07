@@ -208,5 +208,5 @@ class InferStrategy(Strategy):
 
         logger.info(
             f"Synthesis of the table - {self.handler.table_name} was completed. "
-            f"Synthetic data saved in {self.handler.path_to_merged_infer}"
+            f"Synthetic data saved in {self.handler.paths['path_to_merged_infer']}"
         )

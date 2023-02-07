@@ -48,7 +48,7 @@ class SampleAccuracyTest(BaseTest):
             uni_imgs=uni_images,
             config=self.config,
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
-            table=self.table_name
+            table_name=self.table_name
         )
 
         with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w') as f:
