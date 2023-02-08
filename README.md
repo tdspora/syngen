@@ -79,8 +79,10 @@ Requirements for parameters of training process:
 * <i>source</i> - data type - string
 * <i>table_name</i> - data type - string
 * <i>epochs</i> - data type - integer, must be equal to or more than 1, default value is 10
-* <i>drop_null</i> - data type - boolean, default value - False
 * <i>row_limit</i> - data type - integer
+* <i>drop_null</i> - data type - boolean, default value - False
+* <i>batch_size</i> - data type - integer, default value - 32
+* <i>print_report</i> - data type - boolean, default value is False
 * <i>metadata_path</i> - data type - string
 
 
