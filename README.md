@@ -72,7 +72,7 @@ The parameters which you can set up for training process:
 - <i>row_limit</i> – a number of rows to train over. A number less than the original table length will randomly subset the specified number of rows
 - <i>drop_null</i> – whether to drop rows with at least one missing value
 - <i>batch_size</i> – if specified, the training is split into batches. This can save the RAM
-- <i>print_report</i> - whether to generate plots of accuracy heatmap, heatmap due correlation metrics, clustering metric, utility metric, univariate and bivariate distributions
+- <i>print_report</i> - whether to generate plots of accuracy report and sample report
 - <i>metadata_path</i> – a path to the metadata file containing the metadata for linked tables
 
 Requirements for parameters of training process:
@@ -110,7 +110,7 @@ The parameters which you can set up for generation process:
 - <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 5000 rows)
 - <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
 - <i>random_seed</i> – if specified, generates a reproducible result
-- <i>print_report</i> – whether to generate plots of accuracy heatmap, heatmap due correlation metrics, clustering metric, utility metric, univariate and bivariate distributions
+- <i>print_report</i> – whether to generate plots of accuracy report, sample report
 - <i>metadata_path</i> – a path to metadata file to generate linked tables
 
 Requirements for parameters of generation process:
