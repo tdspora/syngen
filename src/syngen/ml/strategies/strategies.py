@@ -131,8 +131,8 @@ class TrainStrategy(Strategy, ABC):
             logger.error(e)
             logger.error(traceback.format_exc())
             raise
-
-        logger.info(f"Training of the table - {self.handler.table_name} was completed")
+        else:
+            logger.info(f"Training of the table - {self.handler.table_name} was completed")
 
 
 class InferStrategy(Strategy):
@@ -205,8 +205,8 @@ class InferStrategy(Strategy):
             logger.error(e)
             logger.error(traceback.format_exc())
             raise
-
-        logger.info(
-            f"Synthesis of the table - {self.handler.table_name} was completed. "
-            f"Synthetic data saved in {self.handler.paths['path_to_merged_infer']}"
-        )
+        else:
+            logger.info(
+                f"Synthesis of the table - {self.handler.table_name} was completed. "
+                f"Synthetic data saved in {self.handler.paths['path_to_merged_infer']}"
+            )
