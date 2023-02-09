@@ -141,8 +141,6 @@ class TrainConfig:
             "draws_path": f"model_artifacts/tmp_store/{self.table_name}/draws",
             "input_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.pkl",
             "state_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints",
-            "results_path": f"model_artifacts/tmp_store/{self.table_name}/metrics_{self.table_name}.csv",
-            "bad_columns_path": f"model_artifacts/tmp_store/{self.table_name}/bad_columns_{self.table_name}.csv",
             "dataset_pickle_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/",
             "original_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.pkl",
