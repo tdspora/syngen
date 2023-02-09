@@ -243,7 +243,7 @@ class Dataset:
     def transform(self, data, excluded_features=set()):
         transformed_features = list()
         for name, feature in self.features.items():
-            if name not in (excluded_features and self.foreign_keys_list):
+            if name not in (excluded_features and self.fk_columns):
                 transformed_features.append(feature.transform(data[self.columns[name]]))
         return transformed_features
 
@@ -252,7 +252,7 @@ class Dataset:
         return self.transform(data)
 
     def _check_count_features(self, data):
-        return (len(data) == len(self.features)) or (len(data) + len(self.foreign_keys_list) == len(self.features))
+        return (len(data) == len(self.features)) or (len(data) + len(self.fk_columns) == len(self.features))
 
     def inverse_transform(self, data, excluded_features=set()):
         inverse_transformed_data = list()
@@ -262,7 +262,7 @@ class Dataset:
         assert self._check_count_features(data)
 
         for transformed_data, (name, feature) in zip(data, self.features.items()):
-            if name not in excluded_features and name not in self.foreign_keys_list:
+            if name not in excluded_features and name not in self.fk_columns:
                 column_names.extend(self.columns[name])
                 inverse_transformed_data.append(
                     feature.inverse_transform(transformed_data)
@@ -377,7 +377,6 @@ class Dataset:
                              f"and will be sampled from the PK table")
 
     def __sample_only_joined_rows(self, fk):
-        # for fk in self.foreign_keys_list
         references = self.foreign_keys_mapping.get(fk).get("references")
         pk_table = references.get("table")
         pk_table_data, schema = DataLoader(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv").load_data()
