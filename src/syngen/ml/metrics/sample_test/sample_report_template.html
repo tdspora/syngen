@@ -34,7 +34,7 @@
 			}
 
 			.container .container--item {
-				margin-bottom: 140px;
+				margin-bottom: 80px;
 			}
 
 			.h1-title {
@@ -76,6 +76,25 @@
 				margin-bottom: 32px;
 			}
 
+			.accuracy-report-value {
+				font-style: var(--text-style);
+				font-weight: 400;
+				font-size: 20px;
+				line-height: 28px;
+				color: var(--text-color);
+				margin-bottom: 8px;
+			}
+
+			.accuracy-report-value>span {
+				font-weight: 600;
+			}
+
+			.parameters>ul {
+				font-size: 20px;
+				line-height: 28px;
+				font-weight: 600;
+			}
+
 			@media print {
 				.container {
 					padding: 10px;
@@ -100,8 +119,30 @@
 	<body>
 		<div class="container">
 			<h1 class="h1-title">Sample report</h1>
-			<p class="text-description">
-                The report was generated during the training process of the table - {{ table_name }} in {{ time }} with the next parameters: epoch = {{ config.get("epochs") }}, drop_null = {{ config.get("drop_null") }}, row_subset = {{ config.get("row_subset") }}, batch_size = {{ config.get("batch_size") }} </p>
+			<div class="container--item"
+				style="page-break-after: always;">
+				<div style="margin-bottom:16px">
+					<div class="accuracy-report-value"
+						style="margin-bottom:0px">Table name:
+					</div>
+					<div class="accuracy-report-value"><span>{{table_name}}</span></div>
+				</div>
+				<div style="margin-bottom:16px">
+					<div class="accuracy-report-value"
+						style="margin-bottom:0px">Report generated at:
+					</div>
+					<div class="accuracy-report-value"><span>{{time}}</span></div>
+				</div>
+				<div class="parameters">
+					<div class="accuracy-report-value"
+						style="margin-bottom:0px">Parameters:</div>
+					<ul>
+						<!-- {% for parameter_key, parameter_value in config.items() -%} -->
+						<li>{{parameter_key}} = {{parameter_value}}</li>
+						<!-- {% endfor %} -->
+					</ul>
+				</div>
+			</div>
 			<div class="container--item">
 				<h2 class="h2-title">Univariate distributions</h2>
 				<p class="text-description">The univariate distributions are either the density plots for original vs
