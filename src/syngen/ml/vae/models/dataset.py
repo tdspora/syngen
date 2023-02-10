@@ -242,8 +242,14 @@ class Dataset:
 
     def transform(self, data, excluded_features=set()):
         transformed_features = list()
-        for name, feature in self.features.items():
-            if name not in (excluded_features and self.fk_columns):
+        selected_features = {
+            name: feature
+            for name, feature in self.features.items()
+            if name not in (excluded_features and self.fk_columns)
+        }
+        for name, feature in selected_features.items():
+            if name not in excluded_features and \
+                    name not in self.fk_columns:
                 transformed_features.append(feature.transform(data[self.columns[name]]))
         return transformed_features
 
