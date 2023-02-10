@@ -248,9 +248,7 @@ class Dataset:
             if name not in (excluded_features and self.fk_columns)
         }
         for name, feature in selected_features.items():
-            if name not in excluded_features and \
-                    name not in self.fk_columns:
-                transformed_features.append(feature.transform(data[self.columns[name]]))
+            transformed_features.append(feature.transform(data[self.columns[name]]))
         return transformed_features
 
     def fit_transform(self, data):
