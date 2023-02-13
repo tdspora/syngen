@@ -221,7 +221,8 @@ class VaeInferHandler(BaseHandler):
     has_no_ml: bool = field(init=False)
 
     def __post_init__(self):
-        self.random_seed = seed(self.random_seed) if self.random_seed else None
+        if self.random_seed:
+            seed(self.random_seed)
         self.random_seeds_list = list()
         self.vae = None
         self.has_vae = os.path.exists(self.paths["state_path"])

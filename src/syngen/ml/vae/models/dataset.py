@@ -124,9 +124,14 @@ class Dataset:
             self.__set_fk_keys(config_of_keys)
         else:
             self.primary_keys_mapping = {}
+            self.primary_keys_list = []
+            self.primary_key_name = None
             self.unique_keys_mapping = {}
+            self.unique_keys_mapping_list = []
+            self.unique_keys_list = []
             self.foreign_keys_mapping = {}
             self.foreign_keys_list = []
+            self.fk_columns = []
 
     def set_metadata(self):
         self.__data_pipeline(self.df, self.schema)
@@ -245,7 +250,7 @@ class Dataset:
         selected_features = {
             name: feature
             for name, feature in self.features.items()
-            if name not in (excluded_features and self.fk_columns)
+            if name not in excluded_features and name not in self.fk_columns
         }
         for name, feature in selected_features.items():
             transformed_features.append(feature.transform(data[self.columns[name]]))
