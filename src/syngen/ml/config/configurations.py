@@ -1,5 +1,5 @@
 from attr import define
-from typing import Optional
+from typing import Optional, Dict
 
 
 @define(kw_only=True)
@@ -31,6 +31,16 @@ class TrainConfig:
             "dataset_pickle_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/",
             "no_ml_state_path": f"model_artifacts/resources/{self.table_name}/no_ml/checkpoints/",
+        }
+
+    def to_dict(self) -> Dict:
+        """
+        Return the values of the settings of training process
+        """
+        return {
+            "epochs": self.epochs,
+            "drop_null": self.drop_null,
+            "batch_size": self.batch_size
         }
 
 
@@ -65,4 +75,16 @@ class InferConfig:
             "dataset_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
             "path_to_no_ml": f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/",
+        }
+
+    def to_dict(self) -> Dict:
+        """
+        Return the values of the settings of inference process
+        :return:
+        """
+        return {
+            "size": self.size,
+            "run_parallel": self.run_parallel,
+            "batch_size": self.batch_size,
+            "random_seed": self.random_seed
         }
