@@ -20,10 +20,16 @@ class Reporter:
     Abstract class for reporters
     """
 
-    def __init__(self, metadata: Dict[str, str], paths: Dict[str, str]):
+    def __init__(
+            self,
+            metadata: Dict[str, str],
+            paths: Dict[str, str],
+            config: Dict[str, str]
+    ):
         self.metadata = metadata
         self.table_name = metadata["table_name"]
         self.paths = paths
+        self.config = config
 
     def extract_report_data(self):
         original, schema = DataLoader(self.paths["original_data_path"]).load_data()
@@ -180,7 +186,7 @@ class AccuracyReporter(Reporter):
             int_columns,
             categ_columns,
         ) = self.preprocess_data()
-        accuracy_test = AccuracyTest(original, synthetic, self.paths, self.table_name)
+        accuracy_test = AccuracyTest(original, synthetic, self.paths, self.table_name, self.config)
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
             categ_columns=list(categ_columns)
@@ -212,7 +218,7 @@ class SampleAccuracyReporter(Reporter):
             int_columns,
             categ_columns,
         ) = self.preprocess_data()
-        accuracy_test = SampleAccuracyTest(original, sampled, self.paths, self.table_name)
+        accuracy_test = SampleAccuracyTest(original, sampled, self.paths, self.table_name, self.config)
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
             categ_columns=list(categ_columns)

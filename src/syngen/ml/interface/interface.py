@@ -106,7 +106,8 @@ class TrainInterface(Interface, ABC):
         """
         sample_reporter = SampleAccuracyReporter(
             metadata={"table_name": self.config.table_name},
-            paths=self.config.set_paths()
+            paths=self.config.set_paths(),
+            config=self.config.to_dict()
         )
         Report().register_reporter(sample_reporter)
 
@@ -201,7 +202,8 @@ class InferInterface(Interface):
         """
         accuracy_reporter = AccuracyReporter(
             metadata={"table_name": self.config.table_name},
-            paths=self.config.set_paths()
+            paths=self.config.set_paths(),
+            config=self.config.to_dict()
         )
         if not self.config.table_name.endswith("_pk"):
             Report().register_reporter(accuracy_reporter)
