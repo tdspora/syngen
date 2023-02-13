@@ -33,12 +33,8 @@
 			}
 
 			.container .container--item {
-				margin-bottom: 140px;
+				margin-bottom: 80px;
 				page-break-after: always;
-			}
-
-			.container .container--item:not(:nth-child(2)) {
-				margin-bottom: 100px;
 			}
 
 			.anchor {
@@ -65,6 +61,10 @@
 				line-height: 28px;
 				color: var(--text-color);
 				margin-bottom: 8px;
+			}
+
+			.accuracy-report-value>span {
+				font-weight: 600;
 			}
 
 			.h1-title {
@@ -227,6 +227,12 @@
 				margin-bottom: 0 !important;
 			}
 
+			.parameters>ul {
+				font-size: 20px;
+				line-height: 28px;
+				font-weight: 600;
+			}
+
 			@media print {
 				.container {
 					padding: 10px;
@@ -235,6 +241,12 @@
 				.utility-table tbody tr:nth-child(3),
 				.utility-table tbody tr:nth-child(4) {
 					background: #f2f4f5;
+				}
+
+				.heatmap {
+					margin: 0 !important;
+					max-width: 580px !important;
+					width: auto !important;
 				}
 			}
 
@@ -252,12 +264,34 @@
 		<div class="container">
 			<h1 class="h1-title">Accuracy Report</h1>
 			<div class="container--item">
+				<div style="margin-bottom:16px">
+					<div class="accuracy-report-value"
+						style="margin-bottom:0px">Table name:
+					</div>
+					<div class="accuracy-report-value"><span>{{table_name}}</span></div>
+				</div>
+				<div style="margin-bottom:16px">
+					<div class="accuracy-report-value"
+						style="margin-bottom:0px">Report generated at:
+					</div>
+					<div class="accuracy-report-value"><span>{{time}}</span></div>
+				</div>
+				<div class="parameters">
+					<div class="accuracy-report-value"
+						style="margin-bottom:0px">Parameters:</div>
+					<ul>
+						<!-- {% for parameter_key, parameter_value in config.items() -%} -->
+						<li>{{parameter_key}} = {{parameter_value}}</li>
+						<!-- {% endfor %} -->
+					</ul>
+				</div>
+			</div>
+			<div class="container--item">
 
 				<h2 class="h2-title"
 					style="margin-bottom:36px">Synthetic Data Quality</h2>
-				<p class="accuracy-report-value">Median accuracy: {{accuracy_value}}</p>
 				<p class="accuracy-report-value"
-					style="margin-bottom:36px">Median clusters homogeneity: {{clustering_value}}</p>
+					style="margin-bottom:36px">Median accuracy: <span>{{accuracy_value}}</span></p>
 				<svg height="28"
 					viewBox="0 0 749 28"
 					fill="none"
@@ -346,7 +380,8 @@
 						operations is performed on the same pair of columns in the synthetic dataset. The resulting score
 						is
 						calculated as 1 - abs(original_score - synthetic_score).</p>
-					<img style="width: 100%;"
+					<img class="heatmap"
+						style="width: 100%;"
 						src="{{accuracy_heatmap}}">
 
 				</div>
@@ -431,7 +466,8 @@
 						is performed for the synthetic dataset. The resulting matrix is the difference between original
 						correlation
 						matrix and the synthetic one.</p>
-					<img style="width: 100%;"
+					<img class="heatmap"
+						style="width: 100%;"
 						src="{{correlations_heatmap}}">
 
 				</div>
@@ -452,10 +488,11 @@
 						to
 						synthetic
 						records in each cluster.</p>
-
+					<p class="accuracy-report-value"
+						style="margin-bottom:36px">Median clusters homogeneity:<span>{{clustering_value}}</span> </p>
 					<img style="width: 100%;"
 						src="{{clusters_barplot}}">
-					<p>Mean clusters homogeneity: {{clustering_value}}</p>
+
 				</div>
 
 				<div class="container--item">
