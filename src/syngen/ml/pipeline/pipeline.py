@@ -21,7 +21,7 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
             try:
                 parse(x, fuzzy=fuzzy)
                 count += 1
-            except ValueError:
+            except (ValueError, OverflowError):
                 continue
         if count > len(x_wo_na) * 0.8:
             return 1
