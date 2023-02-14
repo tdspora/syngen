@@ -46,9 +46,9 @@ class SampleAccuracyTest(BaseTest):
 
         html = template.render(
             uni_imgs=uni_images,
+            table_name=self.table_name,
             config=self.config,
-            time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
-            table_name=self.table_name
+            time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
         )
 
         with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w') as f:
