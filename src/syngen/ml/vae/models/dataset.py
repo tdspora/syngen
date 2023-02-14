@@ -171,7 +171,8 @@ class Dataset:
 
         self.int_columns = (self.int_columns | float_to_int_cols) - (self.categ_columns | self.binary_columns)
         self.float_columns = self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
-        self.str_columns = set(tmp_df.columns) - self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
+        self.str_columns = \
+            set(tmp_df.columns) - self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
         self.date_columns = get_date_columns(tmp_df, list(self.str_columns))
         self.str_columns -= self.date_columns
 
@@ -250,7 +251,7 @@ class Dataset:
         selected_features = {
             name: feature
             for name, feature in self.features.items()
-            if name not in excluded_features and name not in self.fk_columns
+            if name not in excluded_features
         }
         for name, feature in selected_features.items():
             transformed_features.append(feature.transform(data[self.columns[name]]))
@@ -300,7 +301,7 @@ class Dataset:
         return max_len, rnn_units
 
     def _preprocess_nan_cols(
-        self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
+            self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
     ) -> tuple:
         """Fill NaN values in numeric column with some value according to strategy.
         Fill NaN values in string columns can only work in 'mode' strategy.
@@ -360,7 +361,7 @@ class Dataset:
                 correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
                 if fk_column_values.dtype in (pd.StringDtype(), "object"):
                     try:
-                        with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"              
+                        with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"
                                   f"{correspondent_pk_col}_mapper.pkl", "rb") as file:
                             mapper = pickle.load(file)
                     except FileNotFoundError:
@@ -388,7 +389,8 @@ class Dataset:
     def __sample_only_joined_rows(self, fk):
         references = self.foreign_keys_mapping.get(fk).get("references")
         pk_table = references.get("table")
-        pk_table_data, schema = DataLoader(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv").load_data()
+        pk_table_data, schema = DataLoader(
+            f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv").load_data()
         pk_column_label = references.get("columns")[0]
 
         drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].values)].index
@@ -473,7 +475,7 @@ class Dataset:
         feature = self._preprocess_categ_params(feature)
         self.assign_feature(BinaryFeature(feature), feature)
         logger.debug(f"Feature {feature} assigned as binary feature")
-    
+
     def _assign_fk_feature(self):
         """
         Assign corresponding to FK null column and preprocess if required.
@@ -517,7 +519,7 @@ class Dataset:
                 self._assign_date_feature(column)
             elif column in self.binary_columns:
                 self._assign_binary_feature(column)
-        
+
         self.set_nan_params(columns_nan_labels)
 
         self.fit(self.df)
