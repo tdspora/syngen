@@ -164,7 +164,6 @@ class InferConfig:
     both_keys: bool
 
     def __post_init__(self):
-        self.batch_size = self.batch_size if self.batch_size is not None else self.size
         self.paths = self._set_paths()
         if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
             self.print_report = False
@@ -174,6 +173,7 @@ class InferConfig:
         if self.size is None and DataLoader(self.paths["input_data_path"]).has_existed_path:
             data, schema = DataLoader(self.paths["input_data_path"]).load_data()
             self.size = len(data)
+        self.batch_size = self.batch_size if self.batch_size is not None else self.size
 
     def to_dict(self) -> Dict:
         """
