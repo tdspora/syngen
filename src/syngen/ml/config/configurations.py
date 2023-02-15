@@ -30,6 +30,7 @@ class TrainConfig:
         self._prepare_dirs()
         data, self.schema = self._extract_data()
         self._prepare_data(data)
+        self._set_batch_size()
 
     def to_dict(self) -> Dict:
         """
@@ -41,6 +42,12 @@ class TrainConfig:
             "row_subset": self.row_subset,
             "batch_size": self.batch_size
         }
+
+    def _set_batch_size(self):
+        """
+        Set up "batch_size" for training process
+        """
+        self.batch_size = min(self.batch_size, self.row_subset)
 
     def _prepare_dirs(self):
         """
@@ -165,15 +172,9 @@ class InferConfig:
 
     def __post_init__(self):
         self.paths = self._set_paths()
-        if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
-            self.print_report = False
-            logger.warning(
-                f"It seems that the path to original data of the table - {self.table_name} doesn't exist. "
-                f"In this case, the accuracy report of the table - {self.table_name} won't be generated")
-        if self.size is None and DataLoader(self.paths["input_data_path"]).has_existed_path:
-            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
-            self.size = len(data)
-        self.batch_size = self.batch_size if self.batch_size is not None else self.size
+        self._set_up_reporting()
+        self._set_up_size()
+        self._set_up_batch_size()
 
     def to_dict(self) -> Dict:
         """
@@ -186,6 +187,30 @@ class InferConfig:
             "batch_size": self.batch_size,
             "random_seed": self.random_seed
         }
+
+    def _set_up_reporting(self):
+        """
+        Check whether it is possible to generate the report
+        """
+        if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
+            self.print_report = False
+            logger.warning(
+                f"It seems that the path to original data of the table - {self.table_name} doesn't exist. "
+                f"In this case, the accuracy report of the table - {self.table_name} won't be generated")
+
+    def _set_up_size(self):
+        """
+        Set up "size" of generated data
+        """
+        if self.size is None and DataLoader(self.paths["input_data_path"]).has_existed_path:
+            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+            self.size = len(data)
+
+    def _set_up_batch_size(self):
+        """
+        Set up "batch_size" of inference process
+        """
+        self.batch_size = min(self.batch_size, self.size) if self.batch_size is not None else self.size
 
     def _set_paths(self) -> Dict:
         """
