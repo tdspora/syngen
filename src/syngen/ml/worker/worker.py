@@ -179,12 +179,11 @@ class Worker:
                 config_of_table = config_of_metadata_for_inference[table]
                 train_settings = self.__parse_train_settings(config_of_table)
                 print_report = train_settings.get("print_report")
-
                 both_keys = table in self.divided
 
                 self.__infer_table(
                     table_name=table,
-                    run_parallel=True,
+                    run_parallel=False,
                     batch_size=1000,
                     random_seed=1,
                     print_report=print_report,
@@ -219,7 +218,7 @@ class Worker:
 
         if self.settings.get("print_report"):
             self.__infer_table(
-                run_parallel=True,
+                run_parallel=False,
                 batch_size=1000,
                 random_seed=1
             )
@@ -256,7 +255,7 @@ class Worker:
         run_parallel = self._extract_setting(kwargs, setting="run_parallel")
         batch_size = self._extract_setting(kwargs, setting="batch_size")
         random_seed = self._extract_setting(kwargs, setting="random_seed")
-        both_keys = kwargs.get("both_keys", False)
+        both_keys = self.table_name in self.divided
         print_report = self._extract_setting(kwargs, setting="print_report")
 
         logger.info(f"Infer process of the table - {table} has started")
