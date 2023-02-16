@@ -3,6 +3,7 @@ housing_properties:                       # Use table name here
     epochs: 8                             # Number of epochs
     drop_null: true                       # Drop rows with NULL values
     row_limit: 1800                       # Limit of rows for training process
+    print_report: true                    # Turn on or turn off generation of the report
 
   infer_settings:                         # Settings for infer process
     size: 90                              # Size for generated data
@@ -22,6 +23,7 @@ housing_conditions:
     epochs: 5
     drop_null: true
     row_limit: 1800
+    print_report: true
 
   infer_settings:
     size: 90

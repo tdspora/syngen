@@ -255,7 +255,7 @@ class Worker:
         run_parallel = self._extract_setting(kwargs, setting="run_parallel")
         batch_size = self._extract_setting(kwargs, setting="batch_size")
         random_seed = self._extract_setting(kwargs, setting="random_seed")
-        both_keys = self.table_name in self.divided
+        both_keys = table in self.divided
         print_report = self._extract_setting(kwargs, setting="print_report")
 
         logger.info(f"Infer process of the table - {table} has started")
