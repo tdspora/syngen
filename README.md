@@ -15,20 +15,25 @@ The training and inference processes are separated with two cli entry points. Th
 
 To start training with defaults parameters run:
 
-`train --source PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME`
+```bash
+train --source PATH_TO_ORIGINAL_CSV \
+    --table_name TABLE_NAME
+```
 
 This will train a model and save the model artifacts to disk.
 
 To generate with defaults parameters data simply call:
 
-`infer --table_name TABLE_NAME`
+```bash
+infer --table_name TABLE_NAME
+```
 
 <i>Please notice that the name should match the one you used in the training process.</i><br>
 This will create a csv file with the synthetic table in <i>./model_artifacts/tmp_store/TABLE_NAME/merged_infer_TABLE_NAME.csv</i>.<br>
 
 Here is a quick example:
 
-```
+```bash
 pip install syngen
 train --source ./example-data/housing.csv –-table_name Housing
 infer --table_name Housing
@@ -43,11 +48,21 @@ In this example, our real-world data is <a href="https://www.kaggle.com/datasets
 You can add flexibility to the training and inference processes using additional hyperparameters.<br>
 For training of single table call:
 
-`train --source PATH_TO_ORIGINAL_CSV --table_name TABLE_NAME --epochs INT --row_limit INT --drop_null BOOL`
+```bash
+train --source PATH_TO_ORIGINAL_CSV \
+    --table_name TABLE_NAME \
+    --epochs INT \
+    --row_limit INT \
+    --drop_null BOOL \
+    --print_report BOOL \
+    --batch_size INT
+```
 
 For training of the multiple linked tables call:
 
-`train --metadata_path PATH_TO_METADATA_YAML`
+```bash
+train --metadata_path PATH_TO_METADATA_YAML
+```
 
 The parameters which you can set up for training process:
 
@@ -56,14 +71,18 @@ The parameters which you can set up for training process:
 - <i>epochs</i> – a number of training epochs. Since the early stopping mechanism is implemented the bigger value of epochs is the better
 - <i>row_limit</i> – a number of rows to train over. A number less than the original table length will randomly subset the specified number of rows
 - <i>drop_null</i> – whether to drop rows with at least one missing value
-- <i>metadata_path</i> – a path to the json file containing the metadata for linked tables generation
+- <i>batch_size</i> – if specified, the training is split into batches. This can save the RAM
+- <i>print_report</i> - whether to generate plots of accuracy report and sample report
+- <i>metadata_path</i> – a path to the metadata file containing the metadata for linked tables
 
 Requirements for parameters of training process:
 * <i>source</i> - data type - string
 * <i>table_name</i> - data type - string
 * <i>epochs</i> - data type - integer, must be equal to or more than 1, default value is 10
-* <i>drop_null</i> - data type - boolean, default value - False
 * <i>row_limit</i> - data type - integer
+* <i>drop_null</i> - data type - boolean, default value - False
+* <i>batch_size</i> - data type - integer, default value - 32
+* <i>print_report</i> - data type - boolean, default value is False
 * <i>metadata_path</i> - data type - string
 
 
@@ -71,11 +90,20 @@ Requirements for parameters of training process:
 
 You can customize the inference processes by calling for one table:
 
-`infer --size INT --table_name STR --run_parallel BOOL --batch_size INT --random_seed INT --print_report BOOL`
+```bash
+infer --size INT \
+    --table_name STR \
+    --run_parallel BOOL \
+    --batch_size INT \
+    --random_seed INT \
+    --print_report BOOL
+```
  
 For linked tables you can simply call:
 
-`infer --metadata_path PATH_TO_METADATA`
+```bash
+infer --metadata_path PATH_TO_METADATA
+```
 
 The parameters which you can set up for generation process:
 
@@ -84,8 +112,8 @@ The parameters which you can set up for generation process:
 - <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 5000 rows)
 - <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
 - <i>random_seed</i> – if specified, generates a reproducible result
-- <i>print_report</i> – whether to generate plots of pairwise distributions, accuracy matrix and print the median accuracy
-- <i>metadata_path</i> – a path to metadata yaml file to generate linked tables
+- <i>print_report</i> – whether to generate plots of accuracy report, sample report
+- <i>metadata_path</i> – a path to metadata file to generate linked tables
 
 Requirements for parameters of generation process:
 * <i>size</i> - data type - integer, must be equal to or more than 1, default value is 100
@@ -113,13 +141,17 @@ The yaml metadata file should match the following template:
                  
         train_settings:                             # Settings for training process
             epochs: 10                              # Number of epochs if different from the default in the command line options
-            drop_null: true                         # Drop rows with NULL values
-            row_limit: 1000                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
+            drop_null: False                        # Drop rows with NULL values
+            row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
+            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
+            print_report: False                     # Turn on or turn off generation of the report
                  
         infer_settings:                             # Settings for infer process
-            size: 500                               # Size for generated data
-            run_parallel: True                      # Turn on or turn off parallel training process
-            print_report: True                      # Turn on or turn off generation of the report
+            size: 100                               # Size for generated data
+            run_parallel: False                     # Turn on or turn off parallel training process
+            print_report: False                     # Turn on or turn off generation of the report
+            batch_size: None                        # If specified, the generation is split into batches. This can save the RAM
+            random_seed: None                       # If specified, generates a reproducible result
         keys:
             PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
                 type: "PK"                          # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
@@ -157,13 +189,17 @@ The yaml metadata file should match the following template:
      
         train_settings:
             epochs: 10                              # Number of epochs if different from the default in the command line options
-            drop_null: true                         # Drop rows with NULL values
-            row_limit: 1000                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
+            drop_null: False                        # Drop rows with NULL values
+            row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
+            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
+            print_report: False                     # Turn on or turn off generation of the report
      
         infer_settings:                             # Settings for infer process
-            size: 500                               # Size for generated data
-            run_parallel: True                      # Turn on or turn off parallel training process
-            print_report: True                      # Turn on or turn off generation of the report
+            size: 100                               # Size for generated data
+            run_parallel: False                     # Turn on or turn off parallel training process
+            print_report: False                     # Turn on or turn off generation of the report
+            batch_size: None                        # If specified, the generation is split into batches. This can save the RAM
+            random_seed: None                       # If specified, generates a reproducible result
         keys:
             pk_order_id:
                 type: "PK"
@@ -183,13 +219,13 @@ The yaml metadata file should match the following template:
 
 For related tables training you can use the commands:
 
-```
+```bash
 train --metadata_path=PATH_TO_YAML_METADATA_FILE
 infer --metadata_path=PATH_TO_YAML_METADATA_FILE
 ```
 Here is a quick example:
 
-```
+```bash
 train --metadata_path="./example-metadata/housing_metadata.yaml"
 infer --metadata_path="./example-metadata/housing_metadata.yaml"
 ```
@@ -206,12 +242,17 @@ The train and inference components of <i>syngen</i> is available as public docke
 
 To run dockerized code (see parameters description in *Training* and *Inference* sections) for one table call:
 
-```
+```bash
 docker pull tdspora/syngen-train:latest
-docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train --table_name=TABLE_NAME --source=./model_artifacts/YOUR_CSV_FILE.csv
+docker run --rm \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
+  --table_name=TABLE_NAME \
+  --source=./model_artifacts/YOUR_CSV_FILE.csv
 
 docker pull tdspora/syngen-infer:latest
-docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer --size=NUMBER_OF_ROWS --table_name=TABLE_NAME
+docker run --rm \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
+  --table_name=TABLE_NAME
 ```
 
 PATH_TO_LOCAL_FOLDER is an absolute path to the folder where your original csv is stored.
@@ -220,12 +261,16 @@ You can add any arguments listed in the corresponding sections for infer and tra
 
 To run dockerized code for linked tables simply call:
 
-```
+```bash
 docker pull tdspora/syngen-train:latest
-docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+docker run --rm \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
 docker pull tdspora/syngen-infer:latest
-docker run --rm -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+docker run --rm \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
 You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call, however, they will be 

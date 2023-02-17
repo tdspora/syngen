@@ -1,9 +1,10 @@
+import os
 from typing import Dict
+from syngen.ml.metrics import UnivariateMetric, BaseTest
 from datetime import datetime
+
 import jinja2
 import pandas as pd
-import os
-from syngen.ml.metrics import UnivariateMetric, BaseTest
 
 from syngen.ml.metrics.utils import transform_to_base64
 

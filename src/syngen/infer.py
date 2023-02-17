@@ -28,8 +28,8 @@ def launch_infer(
         table_name: Optional[str],
         run_parallel: bool,
         batch_size: Optional[int],
-        random_seed: Optional[int],
         print_report: bool,
+        random_seed: Optional[int]
 ):
     """
     Launch the work of infer process
@@ -40,8 +40,8 @@ def launch_infer(
     table_name
     run_parallel
     batch_size
-    random_seed
     print_report
+    random_seed
     -------
 
     """
@@ -60,8 +60,8 @@ def launch_infer(
         "size": size,
         "run_parallel": run_parallel,
         "batch_size": batch_size,
-        "random_seed": random_seed,
-        "print_report": print_report
+        "print_report": print_report,
+        "random_seed": random_seed
     }
     worker = Worker(
         table_name=table_name,

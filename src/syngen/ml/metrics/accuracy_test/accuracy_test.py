@@ -5,6 +5,7 @@ import os
 
 import jinja2
 import pandas as pd
+
 from syngen.ml.metrics import (
     UnivariateMetric,
     BivariateMetric,

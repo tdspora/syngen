@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple
 from abc import ABC
 
 import pandas as pd
@@ -30,7 +30,7 @@ class Convertor(ABC):
                 else:
                     df[column] = df[column].astype("int64")
             elif data_type == "string":
-                df[column] = df[column].astype("object")
+                df[column] = df[column].astype("string")
         return df
 
 

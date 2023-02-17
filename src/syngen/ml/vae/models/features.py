@@ -684,12 +684,3 @@ class DateFeature:
         random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
 
         return random_weight * tf.keras.losses.MSE(self.input, self.decoder)
-
-
-class InverseTransformer:
-    def __init__(self, name, transformer):
-        self.name = check_name(name)
-        self.transformer = transformer
-
-    def transform(self, data):
-        return self.transformer(data)
