@@ -16,7 +16,7 @@ import numpy as np
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
-from syngen.ml.reporters import Report
+from syngen.ml.pipeline import fetch_dataset
 
 warnings.filterwarnings("ignore")
 
@@ -35,11 +35,8 @@ class BaseWrapper(ABC):
     def fit_on_df(
         self,
         df: pd.DataFrame,
-        row_subset: List[int] = None,
-        columns_subset: List[str] = None,
-        batch_size: int = 10,
-        epochs: int = 30,
-        verbose: int = 0,
+        epochs: int,
+        columns_subset: List[str] = None
     ):
         pass
 
@@ -94,33 +91,35 @@ class VAEWrapper(BaseWrapper):
         metadata: dict,
         table_name: str,
         paths: dict,
-        batch_size: int = BATCH_SIZE_DEFAULT,
-        latent_dim: int = 30,
+        process: str,
+        batch_size: int,
+        latent_dim: int = 10,
         latent_components: int = 30,
     ):
         super().__init__()
+        self.df = df
+        self.schema = schema
+        self.process = process
         self.batch_size = batch_size
-        self.latent_dim = max(min(latent_dim, df.shape[1] // 2), 1)
-        self.latent_components = min(latent_components, self.latent_dim * 2)
+        self.latent_dim = latent_dim
+        self.latent_components = latent_components
         self.metadata = metadata
         self.table_name = table_name
         self.vae_resources_path = paths["state_path"]
         self.dataset_pickle_path = paths["dataset_pickle_path"]
         self.fk_kde_path = paths["fk_kde_path"]
-        self.dataset = Dataset(
-            df=df,
-            schema=schema,
-            metadata=self.metadata,
-            table_name=self.table_name,
-            fk_kde_path=self.fk_kde_path,
-            features=dict(),
-            columns=dict(),
-            is_fitted=False,
-            all_columns=list(),
-            null_num_column_names=list(),
-            zero_num_column_names=list(),
-            nan_labels_dict=dict()
-        )
+
+    def __post__init(self):
+        if self.process == "train":
+            self.dataset = Dataset(
+                df=self.df,
+                schema=self.schema,
+                metadata=self.metadata,
+                table_name=self.table_name,
+                fk_kde_path=self.fk_kde_path
+            )
+        elif self.process == "infer":
+            self.dataset = fetch_dataset(self.dataset_pickle_path)
 
     def _pipeline(self):
         self.dataset.set_metadata()
@@ -142,7 +141,7 @@ class VAEWrapper(BaseWrapper):
                 df = df.drop(column, axis=1)
                 logger.info(
                     f"Column {column} has {num_zero_values} ({round(num_zero_values * 100 / len(num_column))}%) "
-                    f"zero values generated."
+                    f"zero values generated"
                 )
         return df
 
@@ -177,20 +176,12 @@ class VAEWrapper(BaseWrapper):
     def fit_on_df(
         self,
         df: pd.DataFrame,
-        row_subset: int = None,
+        epochs: int,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
-        batch_size: int = BATCH_SIZE_DEFAULT,
-        epochs: int = 30,
-        verbose: int = 0,
     ):
-        row_subset = row_subset or len(df)
-
+        self.__post__init()
         self._pipeline()
-        # generate a sampling report
-        Report().generate_report()
         self._init_model()
-
-        # feature_names = ['mmd'] + [name.name for name in self.dataset.features.values()]
 
         if columns_subset is None:
             columns_subset = self.df.columns
@@ -209,12 +200,12 @@ class VAEWrapper(BaseWrapper):
 
         self.optimizer = self._create_optimizer()
         self.loss_metric = self._create_loss()
-        self._train(train_dataset, row_subset, epochs)
+        self._train(train_dataset, epochs)
 
         self.model.model = self.vae
         self.fit_sampler(df.dropna())
 
-    def _train(self, dataset, row_subset, epochs: int):
+    def _train(self, dataset, epochs: int):
         step = self._train_step
 
         self.feature_losses = defaultdict(list)
@@ -344,11 +335,13 @@ class VanillaVAEWrapper(VAEWrapper):
     """
 
     def _init_model(self):
+        latent_dim = min(self.latent_dim, int(len(self.dataset.columns) / 2))
+
         self.model = CVAE(
             self.dataset,
             batch_size=self.batch_size,
-            latent_dim=self.latent_dim,
-            latent_components=self.latent_components,
+            latent_dim=latent_dim,
+            latent_components=min(self.latent_components, latent_dim * 2),
             intermediate_dim=128,
         )
 

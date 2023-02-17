@@ -1,13 +1,13 @@
-import pickle
 from typing import Dict, Optional, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import pickle
 
 from loguru import logger
 import numpy as np
 import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
-from syngen.ml.vae.models.features import InverseTransformer
+
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
     CharBasedTextFeature,
@@ -31,13 +31,22 @@ class Dataset:
     metadata: Optional[Dict]
     table_name: str
     fk_kde_path: str
-    features: Dict
-    columns: Dict
-    is_fitted: bool
-    all_columns: List
-    null_num_column_names: List
-    zero_num_column_names: List
-    nan_labels_dict: Dict
+    features: Dict = field(init=False)
+    columns: Dict = field(init=False)
+    is_fitted: bool = field(init=False)
+    all_columns: List = field(init=False)
+    null_num_column_names: List = field(init=False)
+    zero_num_column_names: List = field(init=False)
+    nan_labels_dict: Dict = field(init=False)
+
+    def __post_init__(self):
+        self.features = dict()
+        self.columns = dict()
+        self.is_fitted = False
+        self.all_columns = list()
+        self.null_num_column_names = list()
+        self.zero_num_column_names = list()
+        self.nan_labels_dict = dict()
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
@@ -115,9 +124,14 @@ class Dataset:
             self.__set_fk_keys(config_of_keys)
         else:
             self.primary_keys_mapping = {}
+            self.primary_keys_list = []
+            self.primary_key_name = None
             self.unique_keys_mapping = {}
+            self.unique_keys_mapping_list = []
+            self.unique_keys_list = []
             self.foreign_keys_mapping = {}
             self.foreign_keys_list = []
+            self.fk_columns = []
 
     def set_metadata(self):
         self.__data_pipeline(self.df, self.schema)
@@ -157,7 +171,8 @@ class Dataset:
 
         self.int_columns = (self.int_columns | float_to_int_cols) - (self.categ_columns | self.binary_columns)
         self.float_columns = self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
-        self.str_columns = set(tmp_df.columns) - self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
+        self.str_columns = \
+            set(tmp_df.columns) - self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
         self.date_columns = get_date_columns(tmp_df, list(self.str_columns))
         self.str_columns -= self.date_columns
 
@@ -233,9 +248,13 @@ class Dataset:
 
     def transform(self, data, excluded_features=set()):
         transformed_features = list()
-        for name, feature in self.features.items():
-            if name not in (excluded_features and self.foreign_keys_list):
-                transformed_features.append(feature.transform(data[self.columns[name]]))
+        selected_features = {
+            name: feature
+            for name, feature in self.features.items()
+            if name not in excluded_features
+        }
+        for name, feature in selected_features.items():
+            transformed_features.append(feature.transform(data[self.columns[name]]))
         return transformed_features
 
     def fit_transform(self, data):
@@ -243,7 +262,7 @@ class Dataset:
         return self.transform(data)
 
     def _check_count_features(self, data):
-        return (len(data) == len(self.features)) or (len(data) + len(self.foreign_keys_list) == len(self.features))
+        return (len(data) == len(self.features)) or (len(data) + len(self.fk_columns) == len(self.features))
 
     def inverse_transform(self, data, excluded_features=set()):
         inverse_transformed_data = list()
@@ -252,16 +271,11 @@ class Dataset:
             data = [data]
         assert self._check_count_features(data)
 
-        self.inverse_transformers = {}
-
         for transformed_data, (name, feature) in zip(data, self.features.items()):
-            if name not in excluded_features and name not in self.foreign_keys_list:
+            if name not in excluded_features and name not in self.fk_columns:
                 column_names.extend(self.columns[name])
                 inverse_transformed_data.append(
                     feature.inverse_transform(transformed_data)
-                )
-                self.inverse_transformers[name] = InverseTransformer(
-                    name, feature.inverse_transform
                 )
 
         stacked_data = np.column_stack(inverse_transformed_data)
@@ -287,7 +301,7 @@ class Dataset:
         return max_len, rnn_units
 
     def _preprocess_nan_cols(
-        self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
+            self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
     ) -> tuple:
         """Fill NaN values in numeric column with some value according to strategy.
         Fill NaN values in string columns can only work in 'mode' strategy.
@@ -345,9 +359,9 @@ class Dataset:
                 fk_column_values = self.df[fk_column]
                 correspondent_pk_table = self.foreign_keys_mapping[fk]["references"]["table"]
                 correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
-                if fk_column_values.dtype == "object":
+                if fk_column_values.dtype in (pd.StringDtype(), "object"):
                     try:
-                        with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"              
+                        with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"
                                   f"{correspondent_pk_col}_mapper.pkl", "rb") as file:
                             mapper = pickle.load(file)
                     except FileNotFoundError:
@@ -373,10 +387,10 @@ class Dataset:
                              f"and will be sampled from the PK table")
 
     def __sample_only_joined_rows(self, fk):
-        # for fk in self.foreign_keys_list
         references = self.foreign_keys_mapping.get(fk).get("references")
         pk_table = references.get("table")
-        pk_table_data, schema = DataLoader(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv").load_data()
+        pk_table_data, schema = \
+            DataLoader(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv").load_data()
         pk_column_label = references.get("columns")[0]
 
         drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].values)].index
@@ -454,7 +468,6 @@ class Dataset:
             self.assign_feature(ContinuousFeature(features[1], column_type=int), features[1])
             logger.debug(f"Feature {features[1]} assigned as int feature")
 
-
     def _assign_binary_feature(self, feature):
         """
         Assign binary feature to binary columns
@@ -462,7 +475,7 @@ class Dataset:
         feature = self._preprocess_categ_params(feature)
         self.assign_feature(BinaryFeature(feature), feature)
         logger.debug(f"Feature {feature} assigned as binary feature")
-    
+
     def _assign_fk_feature(self):
         """
         Assign corresponding to FK null column and preprocess if required.
@@ -506,7 +519,7 @@ class Dataset:
                 self._assign_date_feature(column)
             elif column in self.binary_columns:
                 self._assign_binary_feature(column)
-        
+
         self.set_nan_params(columns_nan_labels)
 
         self.fit(self.df)
