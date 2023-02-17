@@ -26,7 +26,7 @@ class Worker:
         self.metadata_loader = MetadataLoader(self.metadata_path)
         self.metadata = self.metadata_loader.load_data() if self.metadata_path else None
 
-    def _extract_setting(self, params, setting=None):
+    def _extract_setting(self, params, setting):
         """
         Extract the value of the certain setting
         """
