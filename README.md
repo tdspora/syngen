@@ -145,6 +145,10 @@ The yaml metadata file should match the following template:
             row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
             batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
             print_report: False                     # Turn on or turn off generation of the report
+            column_types:
+                categorical:                        # Force listed columns to have categorical type (use dictionary of values)
+                    - sex
+                    - relationship_status
                  
         infer_settings:                             # Settings for infer process
             size: 100                               # Size for generated data
@@ -193,6 +197,10 @@ The yaml metadata file should match the following template:
             row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
             batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
             print_report: False                     # Turn on or turn off generation of the report
+            column_types:
+                categorical:                        # Force listed columns to have categorical type (use dictionary of values)
+                    - sex
+                    - relationship_status
      
         infer_settings:                             # Settings for infer process
             size: 100                               # Size for generated data
