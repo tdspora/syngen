@@ -174,6 +174,7 @@ class JensenShannonDistance(BaseMetric):
         valid_cols = [col for col in self.original.columns if "word_count" not in col]
         mask = list(map(lambda col: col in categ_columns, valid_cols))
         heatmap_matrix = []
+        index = []
         for i, c in enumerate(valid_cols):
             row = []
             for j, c_ in enumerate(valid_cols):
