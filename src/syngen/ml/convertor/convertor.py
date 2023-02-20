@@ -56,7 +56,7 @@ class AvroConvertor(Convertor):
             elif "string" in data_type:
                 fields[column] = "string"
             elif "bytes" in data_type:
-                fields[column] = "binary"
+                fields[column] = "string"
             else:
                 message = f"It seems that the column - {column} has not supported data type - {data_type}"
                 logger.error(message)
