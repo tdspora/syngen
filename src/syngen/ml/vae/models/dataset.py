@@ -172,27 +172,26 @@ class Dataset:
                 f"Please, check the metadata file."
             )
 
+    def _check_if_not_key(self, column: str, column_list: List, key_type: str):
+        """
+        Exclude the column from the list of categorical columns
+        if it relates to certain type of key
+        """
+        if column in column_list:
+            logger.warning(
+                f"The column - '{column}' was excluded from the list of categorical columns "
+                f"as this column was set as the {key_type} of the table - '{self.table_name}'")
+            self.categ_columns.remove(column)
+
     def _check_if_not_key_column(self):
         """
         Exclude the column from the list of categorical columns
         if it relates to primary key, unique key or foreign key
         """
         for col in self.categ_columns:
-            if col in self.pk_columns:
-                logger.warning(
-                    f"The column - '{col}' was excluded from the list of categorical columns "
-                    f"as this column was set as the primary key of the table - '{self.table_name}'")
-                self.categ_columns.remove(col)
-            if col in self.uq_columns:
-                logger.warning(
-                    f"The column - '{col}' was excluded from the list of categorical columns "
-                    f"as this column was set as the unique key of the table - '{self.table_name}'")
-                self.categ_columns.remove(col)
-            if col in self.fk_columns:
-                logger.warning(
-                    f"The column - '{col}' was excluded from the list of categorical columns "
-                    f"as this column was set as the foreign key of the table - '{self.table_name}'")
-                self.categ_columns.remove(col)
+            self._check_if_not_key(column=col, column_list=self.pk_columns, key_type="primary key")
+            self._check_if_not_key(column=col, column_list=self.uq_columns, key_type="unique key")
+            self._check_if_not_key(column=col, column_list=self.fk_columns, key_type="foreign key")
 
     def _check_if_column_binary(self):
         """
@@ -224,6 +223,9 @@ class Dataset:
         else:
             self.categ_columns = set()
 
+    def _set_binary_columns(self, df: pd.DataFrame):
+        self.binary_columns = set([col for col in df.columns if df[col].fillna("?").nunique() == 2])
+
     def _set_categorical_columns(self, df: pd.DataFrame):
         """
         Set up the list of categorical columns
@@ -245,7 +247,7 @@ class Dataset:
             columns_nan_labels = get_nan_labels(df)
             df = nan_labels_to_float(df, columns_nan_labels)
 
-        self.binary_columns = set([col for col in df.columns if df[col].fillna("?").nunique() == 2])
+        self._set_binary_columns(df)
         self._set_categorical_columns(df)
         tmp_df = get_tmp_df(df)
         self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
@@ -269,15 +271,15 @@ class Dataset:
         in case metadata of the table in Avro format is present
         """
         logger.info(f"The schema of table - {self.table_name} was received")
-        self.binary_columns = set(column for column, data_type in schema.items() if data_type == 'binary')
+        self._set_binary_columns(df)
         self._set_categorical_columns(df)
         self.int_columns = set(column for column, data_type in schema.items() if data_type == 'int')
         self.int_columns = self.int_columns - self.categ_columns - self.binary_columns
         self.float_columns = set(column for column, data_type in schema.items() if data_type == 'float')
         self.float_columns = self.float_columns - self.categ_columns - self.binary_columns
         self.str_columns = set(column for column, data_type in schema.items() if data_type == 'string')
-        self.str_columns = self.str_columns - self.categ_columns - self.int_columns
-        self.date_columns = get_date_columns(df, list(self.str_columns)) - self.categ_columns
+        self.str_columns = self.str_columns - self.categ_columns - self.int_columns - self.binary_columns
+        self.date_columns = get_date_columns(df, list(self.str_columns)) - self.categ_columns - self.binary_columns
         self.str_columns -= self.date_columns
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
