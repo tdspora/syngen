@@ -224,6 +224,9 @@ class Dataset:
             self.categ_columns = set()
 
     def _set_binary_columns(self, df: pd.DataFrame):
+        """
+        Set up the list of binary columns
+        """
         self.binary_columns = set([col for col in df.columns if df[col].fillna("?").nunique() == 2])
 
     def _set_categorical_columns(self, df: pd.DataFrame):
