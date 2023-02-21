@@ -183,7 +183,7 @@ class Dataset:
                 f"as this column was set as the {key_type} of the table - '{self.table_name}'")
             self.categ_columns.remove(column)
 
-    def _check_if_not_key_column(self):
+    def __check_if_not_key_column(self):
         """
         Exclude the column from the list of categorical columns
         if it relates to primary key, unique key or foreign key
@@ -212,7 +212,7 @@ class Dataset:
 
             if self.categ_columns:
                 self._check_if_column_existed()
-                self._check_if_not_key_column()
+                self.__check_if_not_key_column()
                 self._check_if_column_binary()
 
             if self.categ_columns:
@@ -420,7 +420,7 @@ class Dataset:
                 return (feature, feature_zero)
         if isnull_feature.any():
             nan_number = isnull_feature.sum()
-            logger.info(f"Column {feature} contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
+            logger.info(f"Column '{feature}' contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
                         f"empty values out of {len(isnull_feature)}. Filling them with {fillna_strategy or 'zero'}.")
             if fillna_strategy == "mean":
                 fillna_value = self.df[feature].mean()
@@ -553,11 +553,11 @@ class Dataset:
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
         self.assign_feature(DateFeature(features[0]), features[0])
-        logger.debug(f"Column {features[0]} assigned as date feature")
+        logger.debug(f"Column '{features[0]}' assigned as date feature")
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
             self.assign_feature(ContinuousFeature(features[1], column_type=int), features[1])
-            logger.debug(f"Column {features[1]} assigned as int feature")
+            logger.debug(f"Column '{features[1]}' assigned as int feature")
 
     def _assign_binary_feature(self, feature):
         """
@@ -565,7 +565,7 @@ class Dataset:
         """
         feature = self._preprocess_categ_params(feature)
         self.assign_feature(BinaryFeature(feature), feature)
-        logger.debug(f"Column {feature} assigned as binary feature")
+        logger.debug(f"Column '{feature}' assigned as binary feature")
 
     def _assign_fk_feature(self):
         """
