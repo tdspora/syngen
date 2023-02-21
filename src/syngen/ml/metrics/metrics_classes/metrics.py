@@ -640,7 +640,7 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot:
-            fig = plt.figure(figsize=(10, 10))
+            fig = plt.figure(figsize=(8, 6.5))
 
             width = 0.35
             x = np.arange(len(original_labels))
@@ -663,7 +663,7 @@ class UnivariateMetric(BaseMetric):
             ax.yaxis.grid(
                 color="#E5E9EB",
                 linestyle='-',
-                linewidth=1)
+                linewidth=0.5)
             ax.set_axisbelow(True)
             ax.set_facecolor("#FFFFFF")
             ax.set_xticks(x)
@@ -673,14 +673,14 @@ class UnivariateMetric(BaseMetric):
                     for label in original_labels
                 ]
             )
-            ax.tick_params(axis='both', which='major', labelsize=10)
+            ax.tick_params(axis='both', which='major', labelsize=9)
             fig.autofmt_xdate()
-            ax.set_xlabel("category", fontsize=10)
-            ax.set_ylabel("percents", fontsize=10)
+            ax.set_xlabel("category", fontsize=9)
+            ax.set_ylabel("percents", fontsize=9)
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper left",
-                fontsize=10,
+                fontsize=9,
                 bbox_to_anchor=(0, 1.07),
                 ncol=2,
                 frameon=False
@@ -700,26 +700,26 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot and original_unique_count > 1 and synthetic_unique_count > 1:
-            plt.figure(figsize=(10, 10))
+            plt.figure(figsize=(8, 6.5))
             # Kernel Density Estimation plot
-            self.original[column].plot(kind="density", color="#3F93E1", linewidth=4)
-            self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=4)
+            self.original[column].plot(kind="density", color="#3F93E1", linewidth=2)
+            self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=2)
             ax = plt.gca()
-            ax.set_xlabel("value", fontsize=10)
-            ax.set_ylabel("density", fontsize=10)
-            ax.tick_params(axis='both', which='major', labelsize=10)
+            ax.set_xlabel("value", fontsize=9)
+            ax.set_ylabel("density", fontsize=9)
+            ax.tick_params(axis='both', which='major', labelsize=9)
             ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
             ax.grid(
                 color="#E5E9EB",
                 linestyle="-",
-                linewidth=1)
+                linewidth=0.5)
             ax.set_axisbelow(True)
             ax.set_facecolor("#FFFFFF")
-            ax.yaxis.get_offset_text().set_fontsize(10)
+            ax.yaxis.get_offset_text().set_fontsize(9)
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper left",
-                fontsize=10,
+                fontsize=9,
                 bbox_to_anchor=(0, 1.07),
                 ncol=2,
                 frameon=False
