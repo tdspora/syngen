@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass, field
 import pickle
 
@@ -219,27 +219,34 @@ class Dataset:
                 logger.info(
                     f"The columns - {self.categ_columns} were set as categorical "
                     f"due to the information from the metadata of the table - '{self.table_name}'")
-                self.categ_columns = set(self.categ_columns)
+            self.categ_columns = set(self.categ_columns)
         else:
             self.categ_columns = set()
 
     def _set_binary_columns(self, df: pd.DataFrame):
         """
-        Set up the list of binary columns
+        Set up the list of binary columns based on the count of unique values in the column
         """
         self.binary_columns = set([col for col in df.columns if df[col].fillna("?").nunique() == 2])
+
+    def _define_categorical_columns(self, df):
+        """
+        Define the list of categorical columns based on the count of unique values in the column
+        """
+        defined_columns = set(
+            [
+                col for col in df.columns
+                if df[col].dropna().nunique() <= 50 and col not in self.binary_columns
+            ]
+        )
+        self.categ_columns.update(defined_columns)
 
     def _set_categorical_columns(self, df: pd.DataFrame):
         """
         Set up the list of categorical columns
         """
         self._fetch_categorical_columns()
-        if not self.categ_columns:
-            self.categ_columns = [
-                col for col in df.columns
-                if df[col].dropna().nunique() <= 50 and col not in self.binary_columns
-            ]
-            self.categ_columns = set(self.categ_columns)
+        self._define_categorical_columns(df)
 
     def _general_data_pipeline(self, df: pd.DataFrame, check_object_on_float: bool = False):
         """
@@ -374,10 +381,11 @@ class Dataset:
 
         return data
 
-    def _preprocess_str_params(self, feature: str):
+    def _preprocess_str_params(self, feature: str) -> Tuple[int, int]:
         self.df[feature] = self.df[feature].fillna("")
         max_len = int(self.df[feature].apply(lambda line: len(line)).max())
-        if 1 < max_len < 7:
+        rnn_units = 16
+        if 1 <= max_len < 7:
             rnn_units = 32
 
         if 6 < max_len < 13:
@@ -388,7 +396,6 @@ class Dataset:
 
         if max_len > 16:
             rnn_units = 512
-
         return max_len, rnn_units
 
     def _preprocess_nan_cols(
