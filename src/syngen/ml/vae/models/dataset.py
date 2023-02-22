@@ -164,6 +164,7 @@ class Dataset:
             if col not in self.df.columns:
                 removed_columns.append(col)
                 self.categ_columns.remove(col)
+            continue
         if removed_columns:
             logger.warning(
                 f"The columns - {removed_columns} were mentioned as categorical "
@@ -200,6 +201,7 @@ class Dataset:
         for col in self.categ_columns:
             if col in self.binary_columns:
                 self.binary_columns.remove(col)
+            continue
 
     def _fetch_categorical_columns(self):
         """
