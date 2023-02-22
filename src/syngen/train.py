@@ -12,18 +12,18 @@ from syngen.ml.worker import Worker
 @click.option("--metadata_path", type=str, default=None, help="Path to the metadata file")
 @click.option("--source", type=str, default=None, help="Path to the table that you want to use as a reference")
 @click.option("--table_name", type=str, default=None, help="Arbitrary string to name the directories")
-@click.option("--epochs", default=10, help="Number of trained epochs. If absent, it's defaulted to 10")
-@click.option("--drop_null", default=False, type=bool,
+@click.option("--epochs", default=10, type=click.IntRange(1), help="Number of trained epochs. If absent, it's defaulted to 10")
+@click.option("--drop_null", default=False, type=click.BOOL,
               help="Flag which set whether to drop rows with at least one missing value. "
                    "If absent, it's defaulted to False")
-@click.option("--row_limit", default=None, type=int,
+@click.option("--row_limit", default=None, type=click.IntRange(1),
               help="Number of rows to train over. A number less than the original table length will randomly subset "
                    "the specified rows number")
-@click.option("--print_report", default=False, type=bool,
+@click.option("--print_report", default=False, type=click.BOOL,
               help="Whether to print quality report. Might require significant time "
                    "for big generated tables (>1000 rows). If absent, it's defaulted to False")
-@click.option("--batch_size", default=32, type=int, help="Number of rows that goes in one batch. "
-                                                         "This parameter can help to control memory consumption.")
+@click.option("--batch_size", default=32, type=click.IntRange(1),
+              help="Number of rows that goes in one batch. This parameter can help to control memory consumption.")
 def launch_train(
     metadata_path: Optional[str],
     source: Optional[str],
