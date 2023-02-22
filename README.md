@@ -147,8 +147,8 @@ The yaml metadata file should match the following template:
             print_report: False                     # Turn on or turn off generation of the report
             column_types:
                 categorical:                        # Force listed columns to have categorical type (use dictionary of values)
-                    - sex
-                    - relationship_status
+                    - gender
+                    - marital_status
                  
         infer_settings:                             # Settings for infer process
             size: 100                               # Size for generated data
@@ -199,8 +199,8 @@ The yaml metadata file should match the following template:
             print_report: False                     # Turn on or turn off generation of the report
             column_types:
                 categorical:                        # Force listed columns to have categorical type (use dictionary of values)
-                    - sex
-                    - relationship_status
+                    - gender
+                    - marital_status
      
         infer_settings:                             # Settings for infer process
             size: 100                               # Size for generated data
