@@ -57,7 +57,7 @@ class TrainConfig:
         tmp_store_path = self.paths["tmp_store_path"]
         os.makedirs(tmp_store_path, exist_ok=True)
 
-    def __load_source(self) -> Tuple[pd.DataFrame, Dict]:
+    def _load_source(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Return dataframe and schema of original data
         """
@@ -93,7 +93,7 @@ class TrainConfig:
         """
         Extract data and schema necessary for training process
         """
-        data, schema = self.__load_source()
+        data, schema = self._load_source()
         data = self._remove_empty_columns(data)
         schema = self._adjust_schema(data, schema)
         return data, schema
