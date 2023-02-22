@@ -74,6 +74,7 @@ The parameters which you can set up for training process:
 - <i>batch_size</i> – if specified, the training is split into batches. This can save the RAM
 - <i>print_report</i> - whether to generate plots of accuracy report and sample report
 - <i>metadata_path</i> – a path to the metadata file containing the metadata for linked tables
+- <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
 
 Requirements for parameters of training process:
 * <i>source</i> - data type - string
@@ -81,9 +82,10 @@ Requirements for parameters of training process:
 * <i>epochs</i> - data type - integer, must be equal to or more than 1, default value is 10
 * <i>row_limit</i> - data type - integer
 * <i>drop_null</i> - data type - boolean, default value - False
-* <i>batch_size</i> - data type - integer, default value - 32
+* <i>batch_size</i> - data type - integer, must be equal to or more than 1, default value - 32
 * <i>print_report</i> - data type - boolean, default value is False
 * <i>metadata_path</i> - data type - string
+* <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 
 
 ### Inference (generation)
@@ -145,6 +147,10 @@ The yaml metadata file should match the following template:
             row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
             batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
             print_report: False                     # Turn on or turn off generation of the report
+            column_types:
+                categorical:                        # Force listed columns to have categorical type (use dictionary of values)
+                    - gender
+                    - marital_status
                  
         infer_settings:                             # Settings for infer process
             size: 100                               # Size for generated data
@@ -193,6 +199,10 @@ The yaml metadata file should match the following template:
             row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
             batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
             print_report: False                     # Turn on or turn off generation of the report
+            column_types:
+                categorical:                        # Force listed columns to have categorical type (use dictionary of values)
+                    - gender
+                    - marital_status
      
         infer_settings:                             # Settings for infer process
             size: 100                               # Size for generated data
