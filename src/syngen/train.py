@@ -12,7 +12,8 @@ from syngen.ml.worker import Worker
 @click.option("--metadata_path", type=str, default=None, help="Path to the metadata file")
 @click.option("--source", type=str, default=None, help="Path to the table that you want to use as a reference")
 @click.option("--table_name", type=str, default=None, help="Arbitrary string to name the directories")
-@click.option("--epochs", default=10, type=click.IntRange(1), help="Number of trained epochs. If absent, it's defaulted to 10")
+@click.option("--epochs", default=10, type=click.IntRange(1),
+              help="Number of trained epochs. If absent, it's defaulted to 10")
 @click.option("--drop_null", default=False, type=click.BOOL,
               help="Flag which set whether to drop rows with at least one missing value. "
                    "If absent, it's defaulted to False")
