@@ -122,7 +122,7 @@ Requirements for parameters of generation process:
 * <i>table_name</i> - data type - string
 * <i>run_parallel</i> - data type - boolean, default value is False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1
-* <i>random_seed</i> - data type - integer
+* <i>random_seed</i> - data type - integer, must be equal to or more than 0
 * <i>print_report</i> - data type - boolean, default value is False
 * <i>metadata_path</i> - data type - string
 
