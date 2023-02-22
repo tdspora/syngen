@@ -169,7 +169,7 @@ class Dataset:
                 f"The columns - {removed_columns} were mentioned as categorical "
                 f"in the metadata of the table - '{self.table_name}'. "
                 f"It seems that the columns are absent in the table - '{self.table_name}'. "
-                f"Please, check the metadata file."
+                f"Please, check the metadata file"
             )
 
     def _check_if_not_key(self, column: str, column_list: List, key_type: str):
