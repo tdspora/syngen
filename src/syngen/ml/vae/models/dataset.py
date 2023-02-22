@@ -163,8 +163,10 @@ class Dataset:
         for col in self.categ_columns:
             if col not in self.df.columns:
                 removed_columns.append(col)
-                self.categ_columns.remove(col)
             continue
+
+        self.categ_columns = [i for i in self.categ_columns if i not in removed_columns]
+
         if removed_columns:
             logger.warning(
                 f"The columns - {removed_columns} were mentioned as categorical "
@@ -198,10 +200,13 @@ class Dataset:
         """
         Remove the column from the list of binary columns
         """
-        for col in self.categ_columns:
-            if col in self.binary_columns:
-                self.binary_columns.remove(col)
-            continue
+
+        self.binary_columns = set(
+            [
+                col for col in self.binary_columns
+                if col not in self.categ_columns
+            ]
+        )
 
     def _fetch_categorical_columns(self):
         """
