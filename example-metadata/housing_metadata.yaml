@@ -24,6 +24,9 @@ housing_conditions:
     drop_null: true
     row_limit: 1800
     print_report: true
+    column_types:
+      categorical:                        # Force listed columns to have categorical type (use dictionary of values)
+        - housing_median_age
 
   infer_settings:
     size: 90

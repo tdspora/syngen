@@ -11,7 +11,10 @@ configuration_schema = Schema({
             Optional("drop_null"): bool,
             Optional("row_limit"): And(int, lambda n: n >= 1),
             Optional("batch_size"): And(int, lambda n: n >= 1),
-            Optional("print_report"): bool
+            Optional("print_report"): bool,
+            Optional("column_types"): {
+                Optional("categorical"): [str]
+            }
         },
         Optional("infer_settings"): {
             Optional("size"): And(int, lambda n: n >= 1),
@@ -23,7 +26,7 @@ configuration_schema = Schema({
         "source": str,
         Optional("keys"): {
             str: {
-                "type": Or("FK", "PK"),
+                "type": Or("FK", "PK", "UQ"),
                 "columns": [str],
                 Optional("references"): {
                     "table": str,

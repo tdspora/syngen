@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass, field
 import pickle
 
@@ -58,6 +58,8 @@ class Dataset:
         }
         self.primary_keys_list = list(self.primary_keys_mapping.keys())
         self.primary_key_name = self.primary_keys_list[0] if self.primary_keys_list else None
+        pk_columns_lists = [val['columns'] for val in self.primary_keys_mapping.values()]
+        self.pk_columns = [col for uq_cols in pk_columns_lists for col in uq_cols]
 
         if self.primary_key_name:
             logger.info(f"The primary key name was set: {self.primary_key_name}")
@@ -74,6 +76,8 @@ class Dataset:
         }
         self.unique_keys_mapping_list = list(self.unique_keys_mapping.keys())
         self.unique_keys_list = self.unique_keys_mapping_list if self.unique_keys_mapping_list else []
+        uq_columns_lists = [val['columns'] for val in self.unique_keys_mapping.values()]
+        self.uq_columns = [col for uq_cols in uq_columns_lists for col in uq_cols]
 
         if self.unique_keys_list:
             logger.info(f"The unique keys were set: {self.unique_keys_list}")
@@ -126,16 +130,18 @@ class Dataset:
             self.primary_keys_mapping = {}
             self.primary_keys_list = []
             self.primary_key_name = None
+            self.pk_columns = []
             self.unique_keys_mapping = {}
             self.unique_keys_mapping_list = []
             self.unique_keys_list = []
+            self.uq_columns = []
             self.foreign_keys_mapping = {}
             self.foreign_keys_list = []
             self.fk_columns = []
 
     def set_metadata(self):
-        self.__data_pipeline(self.df, self.schema)
         self.__set_metadata(self.metadata, self.table_name)
+        self.__data_pipeline(self.df, self.schema)
 
     @staticmethod
     def _update_schema(schema: Dict[str, Dict[str, str]], df: pd.DataFrame):
@@ -148,6 +154,107 @@ class Dataset:
         }
         return schema
 
+    def _check_if_column_existed(self):
+        """
+        Exclude the column from the list of categorical columns
+        if it doesn't exist in the table
+        """
+        removed_columns = []
+        for col in self.categ_columns:
+            if col not in self.df.columns:
+                removed_columns.append(col)
+            continue
+
+        self.categ_columns = [i for i in self.categ_columns if i not in removed_columns]
+
+        if removed_columns:
+            logger.warning(
+                f"The columns - {removed_columns} were mentioned as categorical "
+                f"in the metadata of the table - '{self.table_name}'. "
+                f"It seems that the columns are absent in the table - '{self.table_name}'. "
+                f"Please, check the metadata file"
+            )
+
+    def _check_if_not_key(self, column: str, column_list: List, key_type: str):
+        """
+        Exclude the column from the list of categorical columns
+        if it relates to certain type of key
+        """
+        if column in column_list:
+            logger.warning(
+                f"The column - '{column}' was excluded from the list of categorical columns "
+                f"as this column was set as the {key_type} of the table - '{self.table_name}'")
+            self.categ_columns.remove(column)
+
+    def _check_if_not_key_column(self):
+        """
+        Exclude the column from the list of categorical columns
+        if it relates to primary key, unique key or foreign key
+        """
+        for col in self.categ_columns:
+            self._check_if_not_key(column=col, column_list=self.pk_columns, key_type="primary key")
+            self._check_if_not_key(column=col, column_list=self.uq_columns, key_type="unique key")
+            self._check_if_not_key(column=col, column_list=self.fk_columns, key_type="foreign key")
+
+    def _check_if_column_binary(self):
+        """
+        Remove the column from the list of binary columns
+        """
+
+        self.binary_columns = set(
+            [
+                col for col in self.binary_columns
+                if col not in self.categ_columns
+            ]
+        )
+
+    def _fetch_categorical_columns(self):
+        """
+        Fetch the categorical columns from the metadata
+        """
+        metadata_of_table = self.metadata.get(self.table_name)
+        if metadata_of_table is not None:
+            self.categ_columns = \
+                metadata_of_table.get("train_settings", {}).get("column_types", {}).get("categorical", [])
+
+            if self.categ_columns:
+                self._check_if_column_existed()
+                self._check_if_not_key_column()
+                self._check_if_column_binary()
+
+            if self.categ_columns:
+                logger.info(
+                    f"The columns - {self.categ_columns} were set as categorical "
+                    f"due to the information from the metadata of the table - '{self.table_name}'")
+            self.categ_columns = set(self.categ_columns)
+        else:
+            self.categ_columns = set()
+
+    def _set_binary_columns(self, df: pd.DataFrame):
+        """
+        Set up the list of binary columns based on the count of unique values in the column
+        """
+        self.binary_columns = set([col for col in df.columns if df[col].fillna("?").nunique() == 2])
+
+    def _define_categorical_columns(self, df):
+        """
+        Define the list of categorical columns based on the count of unique values in the column
+        """
+        defined_columns = set(
+            [
+                col for col in df.columns
+                if df[col].dropna().nunique() <= 50 and col not in self.binary_columns
+            ]
+        )
+        self.categ_columns.update(defined_columns)
+
+    def _set_categorical_columns(self, df: pd.DataFrame):
+        """
+        Set up the list of categorical columns
+        """
+        self._fetch_categorical_columns()
+        self._define_categorical_columns(df)
+
     def _general_data_pipeline(self, df: pd.DataFrame, check_object_on_float: bool = False):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
@@ -157,9 +264,8 @@ class Dataset:
             columns_nan_labels = get_nan_labels(df)
             df = nan_labels_to_float(df, columns_nan_labels)
 
-        self.binary_columns = set([col for col in df.columns if df[col].fillna("?").nunique() == 2])
-        self.categ_columns = set(
-            [col for col in df.columns if df[col].dropna().nunique() <= 50 and col not in self.binary_columns])
+        self._set_binary_columns(df)
+        self._set_categorical_columns(df)
         tmp_df = get_tmp_df(df)
         self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
         self.int_columns = set(tmp_df.select_dtypes(include=["int", "int64"]).columns)
@@ -182,16 +288,15 @@ class Dataset:
         in case metadata of the table in Avro format is present
         """
         logger.info(f"The schema of table - {self.table_name} was received")
-        self.binary_columns = set(column for column, data_type in schema.items() if data_type == 'binary')
-        self.categ_columns = set(
-            [col for col in df.columns if df[col].dropna().nunique() <= 50 and col not in self.binary_columns])
+        self._set_binary_columns(df)
+        self._set_categorical_columns(df)
         self.int_columns = set(column for column, data_type in schema.items() if data_type == 'int')
         self.int_columns = self.int_columns - self.categ_columns - self.binary_columns
         self.float_columns = set(column for column, data_type in schema.items() if data_type == 'float')
         self.float_columns = self.float_columns - self.categ_columns - self.binary_columns
         self.str_columns = set(column for column, data_type in schema.items() if data_type == 'string')
-        self.str_columns = self.str_columns - self.categ_columns - self.int_columns
-        self.date_columns = get_date_columns(df, list(self.str_columns)) - self.categ_columns
+        self.str_columns = self.str_columns - self.categ_columns - self.int_columns - self.binary_columns
+        self.date_columns = get_date_columns(df, list(self.str_columns)) - self.categ_columns - self.binary_columns
         self.str_columns -= self.date_columns
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
@@ -283,10 +388,11 @@ class Dataset:
 
         return data
 
-    def _preprocess_str_params(self, feature: str):
+    def _preprocess_str_params(self, feature: str) -> Tuple[int, int]:
         self.df[feature] = self.df[feature].fillna("")
         max_len = int(self.df[feature].apply(lambda line: len(line)).max())
-        if 1 < max_len < 7:
+        rnn_units = 16
+        if 1 <= max_len < 7:
             rnn_units = 32
 
         if 6 < max_len < 13:
@@ -297,7 +403,6 @@ class Dataset:
 
         if max_len > 16:
             rnn_units = 512
-
         return max_len, rnn_units
 
     def _preprocess_nan_cols(
@@ -329,7 +434,7 @@ class Dataset:
                 return (feature, feature_zero)
         if isnull_feature.any():
             nan_number = isnull_feature.sum()
-            logger.info(f"Column {feature} contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
+            logger.info(f"Column '{feature}' contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
                         f"empty values out of {len(isnull_feature)}. Filling them with {fillna_strategy or 'zero'}.")
             if fillna_strategy == "mean":
                 fillna_value = self.df[feature].mean()
@@ -383,7 +488,7 @@ class Dataset:
             fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
             for fk_column in fk_columns:
                 self.df = self.df.drop(fk_column, axis=1)
-                logger.debug(f"The column - {fk_column} of foreign key {fk} dropped from training "
+                logger.debug(f"The column - '{fk_column}' of foreign key '{fk}' dropped from training "
                              f"and will be sampled from the PK table")
 
     def __sample_only_joined_rows(self, fk):
@@ -410,7 +515,7 @@ class Dataset:
             ),
             feature,
         )
-        logger.debug(f"Feature {feature} assigned as text based feature")
+        logger.debug(f"Column '{feature}' assigned as text based feature")
 
     def _assign_float_feature(self, feature):
         """
@@ -428,7 +533,7 @@ class Dataset:
             self.assign_feature(
                 ContinuousFeature(feature, column_type=float), feature
             )
-            logger.debug(f"Feature {feature} assigned as float based feature")
+            logger.debug(f"Column '{feature}' assigned as float based feature")
 
     def _assign_int_feature(self, feature):
         """
@@ -446,7 +551,7 @@ class Dataset:
             self.assign_feature(
                 ContinuousFeature(feature, column_type=int), feature
             )
-            logger.debug(f"Feature {feature} assigned as int based feature")
+            logger.debug(f"Column '{feature}' assigned as int based feature")
 
     def _assign_categ_feature(self, feature):
         """
@@ -454,7 +559,7 @@ class Dataset:
         """
         feature = self._preprocess_categ_params(feature)
         self.assign_feature(CategoricalFeature(feature), feature)
-        logger.debug(f"Feature {feature} assigned as categorical based feature")
+        logger.debug(f"Column '{feature}' assigned as categorical based feature")
 
     def _assign_date_feature(self, feature):
         """
@@ -462,11 +567,11 @@ class Dataset:
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
         self.assign_feature(DateFeature(features[0]), features[0])
-        logger.debug(f"Feature {features[0]} assigned as date feature")
+        logger.debug(f"Column '{features[0]}' assigned as date feature")
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
             self.assign_feature(ContinuousFeature(features[1], column_type=int), features[1])
-            logger.debug(f"Feature {features[1]} assigned as int feature")
+            logger.debug(f"Column '{features[1]}' assigned as int feature")
 
     def _assign_binary_feature(self, feature):
         """
@@ -474,7 +579,7 @@ class Dataset:
         """
         feature = self._preprocess_categ_params(feature)
         self.assign_feature(BinaryFeature(feature), feature)
-        logger.debug(f"Feature {feature} assigned as binary feature")
+        logger.debug(f"Column '{feature}' assigned as binary feature")
 
     def _assign_fk_feature(self):
         """

@@ -59,8 +59,11 @@ class VAEWrapper(BaseWrapper):
     Attributes
     ----------
     df
+    schema
     metadata
+    table_name
     paths
+    process
     batch_size
     latent_dim
     latent_components
@@ -79,9 +82,9 @@ class VAEWrapper(BaseWrapper):
     predict_sampled_df(df, n)
         generate new data based on df that consist of n rows and return the result as pd.DataFrame
 
-    predict_less_likely_samples(df, n, temp=0.05, variaty=3)
-        generate new data based on df that consist of n which has less probablity
-        computed as log lokelihood and return the result as pd.DataFrame
+    predict_less_likely_samples(df, n, temp=0.05, variety=3)
+        generate new data based on df that consist of n which has less probability
+        computed as log likelihood and return the result as pd.DataFrame
     """
 
     def __init__(
