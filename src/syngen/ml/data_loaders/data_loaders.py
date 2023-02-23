@@ -59,7 +59,7 @@ class DataLoader(BaseDataLoader):
         else:
             raise NotImplementedError("File format not supported")
 
-    def load_data(self) -> Tuple[pd.DataFrame, Optional[Dict]]:
+    def load_data(self) -> Tuple[pd.DataFrame, Dict]:
         df, schema = self.file_loader.load_data(self.path)
         if df.shape[0] < 1:
             raise ValueError("Empty file was provided. Unable to train.")
@@ -75,16 +75,16 @@ class CSVLoader(BaseDataLoader):
     """
 
     @staticmethod
-    def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, None]:
+    def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         df = pd.DataFrame()
         try:
             df = pd.read_csv(path, engine="python", **kwargs)
             df.columns = df.columns.str.replace(':', '')
-            return df, None
+            return df, {}
         except ParserError:
             df = pd.read_csv(path, engine="c", **kwargs)
             df.columns = df.columns.str.replace(':', '')
-            return df, None
+            return df, {}
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
