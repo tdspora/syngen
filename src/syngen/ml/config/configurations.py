@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, Set
 import os
 
 from loguru import logger
@@ -64,7 +64,7 @@ class TrainConfig:
         return DataLoader(self.source).load_data()
 
     @staticmethod
-    def _remove_empty_columns(data: pd.DataFrame) -> pd.DataFrame:
+    def _remove_empty_columns(data: pd.DataFrame) -> Tuple[pd.DataFrame, Set]:
         """
         Remove completely empty columns from dataframe
         """
@@ -74,28 +74,33 @@ class TrainConfig:
         dropped_cols = data_columns - set(data.columns)
         if len(dropped_cols) > 0:
             logger.info(f"Empty columns - {', '.join(dropped_cols)} were removed")
-        return data
+        return data, dropped_cols
 
     @staticmethod
-    def _adjust_schema(data: pd.DataFrame, schema: Optional[Dict]) -> Optional[Dict]:
+    def _mark_removed_columns(data: pd.DataFrame, schema: Optional[Dict], dropped_columns: Set) -> Optional[Dict]:
         """
-        Adjust schema after removing empty columns from dataframe
+        Mark removed columns in the schema
         """
-        if schema is not None:
+        if not schema and dropped_columns:
             schema["fields"] = {
-                column: data_type
+                column: "removed"
+                for column in dropped_columns
+            }
+        else:
+            schema["fields"] = {
+                column: "removed"
                 for column, data_type in schema.get("fields", {}).items()
-                if column in data.columns
+                if column not in data.columns
             }
         return schema
 
-    def _extract_data(self) -> Tuple[pd.DataFrame, Optional[Dict]]:
+    def _extract_data(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Extract data and schema necessary for training process
         """
         data, schema = self._load_source()
-        data = self._remove_empty_columns(data)
-        schema = self._adjust_schema(data, schema)
+        data, dropped_columns = self._remove_empty_columns(data)
+        schema = self._mark_removed_columns(data, schema, dropped_columns)
         return data, schema
 
     def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
