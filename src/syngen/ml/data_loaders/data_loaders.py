@@ -14,7 +14,7 @@ from avro.io import DatumReader
 from loguru import logger
 
 from syngen.ml.validation_schema import validate_schema, configuration_schema
-from syngen.ml.convertor import AvroConvertor
+from syngen.ml.convertor import CSVConvertor, AvroConvertor
 
 
 class BaseDataLoader(ABC):
@@ -80,11 +80,11 @@ class CSVLoader(BaseDataLoader):
         try:
             df = pd.read_csv(path, engine="python", **kwargs)
             df.columns = df.columns.str.replace(':', '')
-            return df, {}
+            return df, CSVConvertor(df).schema
         except ParserError:
             df = pd.read_csv(path, engine="c", **kwargs)
             df.columns = df.columns.str.replace(':', '')
-            return df, {}
+            return df, CSVConvertor(df).schema
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
