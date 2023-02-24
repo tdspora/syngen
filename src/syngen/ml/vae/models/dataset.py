@@ -159,7 +159,7 @@ class Dataset:
         Exclude the column from the list of categorical columns
         if it was removed previously as empty column
         """
-        removed = [col for col, data_type in schema.get("fields").items() if data_type == "removed"]
+        removed = [col for col, data_type in schema.get("fields", {}).items() if data_type == "removed"]
         for col in self.categ_columns:
             if col in removed:
                 self.categ_columns.remove(col)
@@ -183,7 +183,7 @@ class Dataset:
 
         if removed_columns:
             logger.warning(
-                f"The columns - {removed_columns} were mentioned as categorical "
+                f"The columns - {', '.join(removed_columns)} were mentioned as categorical "
                 f"in the metadata of the table - '{self.table_name}'. "
                 f"It seems that the columns are absent in the table - '{self.table_name}'. "
                 f"Please, check the metadata file"
@@ -237,14 +237,13 @@ class Dataset:
                 self._check_if_not_key_column()
                 self._check_if_column_binary()
 
+                self.categ_columns = set(self.categ_columns)
+
             if self.categ_columns:
                 logger.info(
-                    f"The columns - {self.categ_columns} were set as categorical "
+                    f"The columns - {', '.join(self.categ_columns)} were set as categorical "
                     f"due to the information from the metadata of the table - '{self.table_name}'")
-                self.categ_columns = set(self.categ_columns)
-            else:
-                self.categ_columns = set(self.categ_columns)
-        else:
+        elif metadata_of_table is None:
             self.categ_columns = set()
 
     def _set_binary_columns(self, df: pd.DataFrame):
