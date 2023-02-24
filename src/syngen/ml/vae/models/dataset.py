@@ -160,7 +160,7 @@ class Dataset:
         if it was removed previously as empty column
         """
         removed = [col for col, data_type in schema.get("fields", {}).items() if data_type == "removed"]
-        for col in self.categ_columns:
+        for col in list(self.categ_columns):
             if col in removed:
                 self.categ_columns.remove(col)
                 logger.warning(
@@ -206,7 +206,7 @@ class Dataset:
         Exclude the column from the list of categorical columns
         if it relates to primary key, unique key or foreign key
         """
-        for col in self.categ_columns:
+        for col in list(self.categ_columns):
             self._check_if_not_key(column=col, column_list=self.pk_columns, key_type="primary key")
             self._check_if_not_key(column=col, column_list=self.uq_columns, key_type="unique key")
             self._check_if_not_key(column=col, column_list=self.fk_columns, key_type="foreign key")
