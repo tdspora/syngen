@@ -81,17 +81,16 @@ class TrainConfig:
         """
         Mark removed columns in the schema
         """
-        if not schema.get("format") == "CSV" and dropped_columns:
+        if schema.get("format") == "CSV" and dropped_columns:
             schema["fields"] = {
                 column: "removed"
                 for column in dropped_columns
             }
         else:
-            schema["fields"] = {
-                column: "removed"
-                for column, data_type in schema.get("fields", {}).items()
-                if column not in data.columns
-            }
+            for column, data_type in schema.get("fields", {}).items():
+                if column not in data.columns:
+                    schema["fields"][column] = "removed"
+                continue
         return schema
 
     def _extract_data(self) -> Tuple[pd.DataFrame, Dict]:
