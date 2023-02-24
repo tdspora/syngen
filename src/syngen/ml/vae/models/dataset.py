@@ -154,7 +154,7 @@ class Dataset:
         }
         return schema
 
-    def _check_if_column_in_removed(self, schema):
+    def _check_if_column_in_removed(self, schema: Dict):
         """
         Exclude the column from the list of categorical columns
         if it was removed previously as empty column
@@ -167,6 +167,7 @@ class Dataset:
                     f"The column - '{col}' was excluded from the list of categorical columns "
                     f"as this column is empty and was removed from the table - '{self.table_name}'"
                 )
+            continue
 
     def _check_if_column_existed(self):
         """
@@ -179,7 +180,7 @@ class Dataset:
                 removed_columns.append(col)
             continue
 
-        self.categ_columns = [i for i in self.categ_columns if i not in removed_columns]
+        self.categ_columns = set([i for i in self.categ_columns if i not in removed_columns])
 
         if removed_columns:
             logger.warning(
@@ -227,9 +228,12 @@ class Dataset:
         Fetch the categorical columns from the metadata
         """
         metadata_of_table = self.metadata.get(self.table_name)
+
+        self.categ_columns = set()
+
         if metadata_of_table is not None:
             self.categ_columns = \
-                metadata_of_table.get("train_settings", {}).get("column_types", {}).get("categorical", [])
+                set(metadata_of_table.get("train_settings", {}).get("column_types", {}).get("categorical", []))
 
             if self.categ_columns:
                 self._check_if_column_in_removed(schema)
@@ -237,14 +241,10 @@ class Dataset:
                 self._check_if_not_key_column()
                 self._check_if_column_binary()
 
-                self.categ_columns = set(self.categ_columns)
-
             if self.categ_columns:
                 logger.info(
                     f"The columns - {', '.join(self.categ_columns)} were set as categorical "
                     f"due to the information from the metadata of the table - '{self.table_name}'")
-        elif metadata_of_table is None:
-            self.categ_columns = set()
 
     def _set_binary_columns(self, df: pd.DataFrame):
         """
