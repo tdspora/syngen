@@ -77,11 +77,11 @@ class TrainConfig:
         return data, dropped_cols
 
     @staticmethod
-    def _mark_removed_columns(data: pd.DataFrame, schema: Optional[Dict], dropped_columns: Set) -> Optional[Dict]:
+    def _mark_removed_columns(data: pd.DataFrame, schema: Optional[Dict], dropped_columns: Set) -> Dict:
         """
         Mark removed columns in the schema
         """
-        if not schema and dropped_columns:
+        if not schema.get("format") == "CSV" and dropped_columns:
             schema["fields"] = {
                 column: "removed"
                 for column in dropped_columns

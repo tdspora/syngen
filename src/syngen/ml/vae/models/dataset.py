@@ -241,7 +241,9 @@ class Dataset:
                 logger.info(
                     f"The columns - {self.categ_columns} were set as categorical "
                     f"due to the information from the metadata of the table - '{self.table_name}'")
-            self.categ_columns = set(self.categ_columns)
+                self.categ_columns = set(self.categ_columns)
+            else:
+                self.categ_columns = set(self.categ_columns)
         else:
             self.categ_columns = set()
 
@@ -315,9 +317,9 @@ class Dataset:
         self.str_columns -= self.date_columns
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
-        if not schema.get("fields") or all([data_type == "removed" for data_type in schema.get("fields").values()]):
+        if schema.get("format") == "CSV":
             self._general_data_pipeline(df, schema)
-        elif schema and schema.get("format") == 'Avro':
+        elif schema.get("format") == 'Avro':
             schema = self._update_schema(schema, df)
             self._avro_data_pipeline(df, schema.get("fields"))
 

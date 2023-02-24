@@ -91,13 +91,13 @@ class TrainStrategy(Strategy, ABC):
         return self
 
     def set_reporters(self, **kwargs):
-        if self.config.print_report:
-            sample_reporter = SampleAccuracyReporter(
-                metadata={"table_name": self.config.table_name},
-                paths=self.config.paths,
-                config=self.config.to_dict()
-            )
-            Report().register_reporter(sample_reporter)
+        # if self.config.print_report:
+        #     sample_reporter = SampleAccuracyReporter(
+        #         metadata={"table_name": self.config.table_name},
+        #         paths=self.config.paths,
+        #         config=self.config.to_dict()
+        #     )
+        #     Report().register_reporter(sample_reporter)
 
         return self
 
