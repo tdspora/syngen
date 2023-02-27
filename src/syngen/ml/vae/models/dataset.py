@@ -154,6 +154,21 @@ class Dataset:
         }
         return schema
 
+    def _check_if_column_in_removed(self, schema: Dict):
+        """
+        Exclude the column from the list of categorical columns
+        if it was removed previously as empty column
+        """
+        removed = [col for col, data_type in schema.get("fields", {}).items() if data_type == "removed"]
+        for col in list(self.categ_columns):
+            if col in removed:
+                self.categ_columns.remove(col)
+                logger.warning(
+                    f"The column - '{col}' was excluded from the list of categorical columns "
+                    f"as this column is empty and was removed from the table - '{self.table_name}'"
+                )
+            continue
+
     def _check_if_column_existed(self):
         """
         Exclude the column from the list of categorical columns
@@ -165,11 +180,11 @@ class Dataset:
                 removed_columns.append(col)
             continue
 
-        self.categ_columns = [i for i in self.categ_columns if i not in removed_columns]
+        self.categ_columns = set([i for i in self.categ_columns if i not in removed_columns])
 
         if removed_columns:
             logger.warning(
-                f"The columns - {removed_columns} were mentioned as categorical "
+                f"The columns - {', '.join(removed_columns)} were mentioned as categorical "
                 f"in the metadata of the table - '{self.table_name}'. "
                 f"It seems that the columns are absent in the table - '{self.table_name}'. "
                 f"Please, check the metadata file"
@@ -191,7 +206,7 @@ class Dataset:
         Exclude the column from the list of categorical columns
         if it relates to primary key, unique key or foreign key
         """
-        for col in self.categ_columns:
+        for col in list(self.categ_columns):
             self._check_if_not_key(column=col, column_list=self.pk_columns, key_type="primary key")
             self._check_if_not_key(column=col, column_list=self.uq_columns, key_type="unique key")
             self._check_if_not_key(column=col, column_list=self.fk_columns, key_type="foreign key")
@@ -208,27 +223,28 @@ class Dataset:
             ]
         )
 
-    def _fetch_categorical_columns(self):
+    def _fetch_categorical_columns(self, schema: Dict):
         """
         Fetch the categorical columns from the metadata
         """
         metadata_of_table = self.metadata.get(self.table_name)
+
+        self.categ_columns = set()
+
         if metadata_of_table is not None:
             self.categ_columns = \
-                metadata_of_table.get("train_settings", {}).get("column_types", {}).get("categorical", [])
+                set(metadata_of_table.get("train_settings", {}).get("column_types", {}).get("categorical", []))
 
             if self.categ_columns:
+                self._check_if_column_in_removed(schema)
                 self._check_if_column_existed()
                 self._check_if_not_key_column()
                 self._check_if_column_binary()
 
             if self.categ_columns:
                 logger.info(
-                    f"The columns - {self.categ_columns} were set as categorical "
+                    f"The columns - {', '.join(self.categ_columns)} were set as categorical "
                     f"due to the information from the metadata of the table - '{self.table_name}'")
-            self.categ_columns = set(self.categ_columns)
-        else:
-            self.categ_columns = set()
 
     def _set_binary_columns(self, df: pd.DataFrame):
         """
@@ -248,14 +264,14 @@ class Dataset:
         )
         self.categ_columns.update(defined_columns)
 
-    def _set_categorical_columns(self, df: pd.DataFrame):
+    def _set_categorical_columns(self, df: pd.DataFrame, schema: Dict):
         """
         Set up the list of categorical columns
         """
-        self._fetch_categorical_columns()
+        self._fetch_categorical_columns(schema)
         self._define_categorical_columns(df)
 
-    def _general_data_pipeline(self, df: pd.DataFrame, check_object_on_float: bool = False):
+    def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = False):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
         in case metadata of the table is absent
@@ -265,7 +281,7 @@ class Dataset:
             df = nan_labels_to_float(df, columns_nan_labels)
 
         self._set_binary_columns(df)
-        self._set_categorical_columns(df)
+        self._set_categorical_columns(df, schema)
         tmp_df = get_tmp_df(df)
         self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
         self.int_columns = set(tmp_df.select_dtypes(include=["int", "int64"]).columns)
@@ -289,7 +305,7 @@ class Dataset:
         """
         logger.info(f"The schema of table - {self.table_name} was received")
         self._set_binary_columns(df)
-        self._set_categorical_columns(df)
+        self._set_categorical_columns(df, schema)
         self.int_columns = set(column for column, data_type in schema.items() if data_type == 'int')
         self.int_columns = self.int_columns - self.categ_columns - self.binary_columns
         self.float_columns = set(column for column, data_type in schema.items() if data_type == 'float')
@@ -300,9 +316,9 @@ class Dataset:
         self.str_columns -= self.date_columns
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
-        if not schema:
-            self._general_data_pipeline(df)
-        elif schema and schema.get("format") == 'Avro':
+        if schema.get("format") == "CSV":
+            self._general_data_pipeline(df, schema)
+        elif schema.get("format") == 'Avro':
             schema = self._update_schema(schema, df)
             self._avro_data_pipeline(df, schema.get("fields"))
 

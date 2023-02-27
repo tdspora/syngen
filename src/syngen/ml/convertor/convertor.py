@@ -1,5 +1,6 @@
 from typing import Dict, Tuple
 from abc import ABC
+from dataclasses import dataclass
 
 import pandas as pd
 from loguru import logger
@@ -32,6 +33,15 @@ class Convertor(ABC):
             elif data_type == "string":
                 df[column] = df[column].astype("string")
         return df
+
+
+@dataclass
+class CSVConvertor:
+    """
+    Class for supporting custom schema for csv files
+    """
+    df: pd.DataFrame()
+    schema = {"format": "CSV"}
 
 
 class AvroConvertor(Convertor):
