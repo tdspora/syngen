@@ -164,8 +164,8 @@ class Dataset:
             if col in removed:
                 self.categ_columns.remove(col)
                 logger.warning(
-                    f"The column - '{col}' was excluded from the list of categorical columns "
-                    f"as this column is empty and was removed from the table - '{self.table_name}'"
+                    f"The column '{col}' was excluded from the list of categorical columns "
+                    f"as far as this column is empty and was removed from the table - '{self.table_name}'"
                 )
             continue
 
@@ -197,8 +197,8 @@ class Dataset:
         """
         if column in column_list:
             logger.warning(
-                f"The column - '{column}' was excluded from the list of categorical columns "
-                f"as this column was set as the {key_type} of the table - '{self.table_name}'")
+                f"The column '{column}' was excluded from the list of categorical columns "
+                f"as far as this column was set as the {key_type} of the table - '{self.table_name}'")
             self.categ_columns.remove(column)
 
     def _check_if_not_key_column(self):
