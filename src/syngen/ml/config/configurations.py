@@ -200,7 +200,8 @@ class InferConfig:
             self.print_report = False
             logger.warning(
                 f"It seems that the path to original data of the table - {self.table_name} doesn't exist. "
-                f"In this case, the accuracy report of the table - {self.table_name} won't be generated")
+                f"In this case, the accuracy report of the table - {self.table_name} won't be generated. "
+                f"The parameter '--print_report' of the table - {self.table_name} will be set to False\n")
 
     def _set_up_size(self):
         """
