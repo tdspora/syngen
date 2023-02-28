@@ -93,7 +93,14 @@ class CSVLoader(BaseDataLoader):
             raise FileNotFoundError(message)
 
     def load_data(self, path, **kwargs):
-        return self._load_data(path, **kwargs)
+        try:
+            return self._load_data(path, **kwargs)
+        except UnicodeDecodeError as error:
+            message = f"It seems that the content of the data in the path - '{path}' " \
+                      f"doesn't have the encoding UTF-8. The details of the error - {error}.\n" \
+                      f"Please, use the data in UTF-8 encoding"
+            logger.error(message)
+            raise ValueError(message)
 
     @staticmethod
     def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
