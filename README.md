@@ -1,7 +1,7 @@
 # Syngen
 
 Syngen is an unsupervised tabular data generation tool. It is useful for generation of test data with a given table as a template. Most datatypes including floats, integers, datetime, text, categorical, binary are supported. The linked tables i.e., tables sharing a key can also be generated using the simple statistical approach. 
-The source of data might be in CSV, Avro format and should be located locally.
+The source of data might be in CSV, Avro format and should be located locally and be in UTF-8 encoding.
 
 The tool is based on the variational autoencoder model (VAE). The Bayesian Gaussian Mixture model is used to further detangle the latent space.
 
