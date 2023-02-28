@@ -60,10 +60,17 @@ class DataLoader(BaseDataLoader):
             raise NotImplementedError("File format not supported")
 
     def load_data(self) -> Tuple[pd.DataFrame, Dict]:
-        df, schema = self.file_loader.load_data(self.path)
-        if df.shape[0] < 1:
-            raise ValueError("Empty file was provided. Unable to train.")
-        return df, schema
+        try:
+            df, schema = self.file_loader.load_data(self.path)
+            if df.shape[0] < 1:
+                raise ValueError("Empty file was provided. Unable to train.")
+            return df, schema
+        except UnicodeDecodeError as error:
+            message = f"It seems that the content of the data in the path - '{self.path}' " \
+                      f"doesn't have the encoding UTF-8. The details of the error - {error}.\n" \
+                      f"Please, use the data in UTF-8 encoding"
+            logger.error(message)
+            raise ValueError(message)
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         self.file_loader.save_data(path, df)
@@ -93,14 +100,7 @@ class CSVLoader(BaseDataLoader):
             raise FileNotFoundError(message)
 
     def load_data(self, path, **kwargs):
-        try:
-            return self._load_data(path, **kwargs)
-        except UnicodeDecodeError as error:
-            message = f"It seems that the content of the data in the path - '{path}' " \
-                      f"doesn't have the encoding UTF-8. The details of the error - {error}.\n" \
-                      f"Please, use the data in UTF-8 encoding"
-            logger.error(message)
-            raise ValueError(message)
+        return self._load_data(path, **kwargs)
 
     @staticmethod
     def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
