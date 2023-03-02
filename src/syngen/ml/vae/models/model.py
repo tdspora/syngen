@@ -244,8 +244,10 @@ class CVAE:
         return self.dataset.inverse_transform(synthetic_prediction)
 
     def __check_pk_numeric_convertability(self, column, key_type):
-        return self.inverse_transformed_df[column].dropna().str.isnumeric().all() \
-               and key_type is str
+        if key_type is str:
+            return self.inverse_transformed_df[column].dropna().str.isnumeric().all()
+        else:
+            return False
 
     def __make_pk_uq_unique(self, pk_uq_keys_mapping):
         for key_name, config in pk_uq_keys_mapping.items():
