@@ -243,12 +243,15 @@ class CVAE:
         synthetic_prediction = self.generator_model.predict(sliced_latent_sample)
         return self.dataset.inverse_transform(synthetic_prediction)
 
+    def __check_pk_numeric_convertability(self, column, key_type):
+        return self.inverse_transformed_df[column].dropna().str.isnumeric().all() and key_type is str
+
     def __make_pk_uq_unique(self, pk_uq_keys_mapping):
         for key_name, config in pk_uq_keys_mapping.items():
             key_columns = config.get("columns")
             for column in key_columns:
                 key_type = self.dataset.pk_uq_keys_types[column]
-                if key_type is float:
+                if key_type is float or self.__check_pk_numeric_convertability(column, key_type):
                     mapped_keys = np.arange(len(self.inverse_transformed_df[column])) + 1
                     self.inverse_transformed_df[column] = mapped_keys
 
