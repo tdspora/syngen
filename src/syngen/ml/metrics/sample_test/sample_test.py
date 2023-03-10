@@ -2,6 +2,7 @@ import os
 from typing import Dict
 from syngen.ml.metrics import UnivariateMetric, BaseTest
 from datetime import datetime
+import shutil
 
 import jinja2
 import pandas as pd
@@ -31,6 +32,12 @@ class SampleAccuracyTest(BaseTest):
         univariate = UnivariateMetric(self.original, self.synthetic, True, sample_acc_draws_path)
         return univariate
 
+    def __remove_artifacts(self):
+        """
+        Remove artifacts after creating Sample report
+        """
+        shutil.rmtree(f"{self.paths['draws_path']}/sample_accuracy")
+
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()
         uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
@@ -51,5 +58,7 @@ class SampleAccuracyTest(BaseTest):
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
         )
 
-        with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w') as f:
+        with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w', encoding="utf-8") as f:
             f.write(html)
+
+        self.__remove_artifacts()

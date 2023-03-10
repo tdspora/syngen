@@ -194,7 +194,7 @@ class YAMLLoader(BaseDataLoader):
     Class for loading and saving data in YAML format
     """
     def load_data(self, metadata_path: str) -> dict:
-        with open(metadata_path, "r") as metadata_file:
+        with open(metadata_path, "r", encoding="utf-8") as metadata_file:
             metadata = yaml.load(metadata_file, Loader=Loader)
             validate_schema(configuration_schema, metadata)
         return metadata

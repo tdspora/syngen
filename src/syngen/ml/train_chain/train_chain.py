@@ -13,6 +13,7 @@ import dill
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
 from tensorflow.keras.preprocessing.text import Tokenizer
+from slugify import slugify
 
 from syngen.ml.vae import *
 from syngen.ml.data_loaders import DataLoader
@@ -350,7 +351,7 @@ class VaeInferHandler(BaseHandler):
         for key in config_of_keys.keys():
             if config_of_keys.get(key).get("type") == "FK":
                 pk_table = config_of_keys.get(key).get("references").get("table")
-                pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer_{pk_table}.csv"
+                pk_path = f"model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
                 if not os.path.exists(pk_path):
                     raise FileNotFoundError(
                         "The table with a primary key specified in the metadata file does not "

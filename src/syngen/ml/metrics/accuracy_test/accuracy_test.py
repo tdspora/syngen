@@ -1,3 +1,4 @@
+import shutil
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List, Dict
@@ -66,6 +67,12 @@ class AccuracyTest(BaseTest):
         acc = JensenShannonDistance(self.original, self.synthetic, True, acc_draws_path)
         return univariate, bivariate, correlations, clustering, utility, acc
 
+    def __remove_artifacts(self):
+        """
+        Remove artifacts after creating Accuracy report
+        """
+        shutil.rmtree(f"{self.paths['draws_path']}/accuracy")
+
     def report(self, **kwargs):
         univariate, bivariate, correlations, clustering, utility, acc = self.__prepare_before_report()
         acc.calculate_all(kwargs["categ_columns"])
@@ -104,5 +111,7 @@ class AccuracyTest(BaseTest):
                                time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
                                )
 
-        with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w') as f:
+        with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w', encoding="utf-8") as f:
             f.write(html)
+
+        self.__remove_artifacts()

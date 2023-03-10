@@ -7,6 +7,7 @@ import numpy as np
 import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
+from slugify import slugify
 
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
@@ -478,11 +479,11 @@ class Dataset:
             fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
             for fk_column in fk_columns:
                 fk_column_values = self.df[fk_column]
-                correspondent_pk_table = self.foreign_keys_mapping[fk]["references"]["table"]
-                correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
+                correspondent_pk_table = slugify(self.foreign_keys_mapping[fk]["references"]["table"])
+                correspondent_pk_col = slugify(self.foreign_keys_mapping[fk]["references"]["columns"][0])
                 if fk_column_values.dtype in (pd.StringDtype(), "object"):
                     try:
-                        with open(f"{self.fk_kde_path.replace(self.table_name, correspondent_pk_table)}"
+                        with open(f"{self.fk_kde_path.replace(slugify(self.table_name), correspondent_pk_table)}"
                                   f"{correspondent_pk_col}_mapper.pkl", "rb") as file:
                             mapper = pickle.load(file)
                     except FileNotFoundError:
@@ -491,10 +492,10 @@ class Dataset:
                         continue
                     fk_column_values = fk_column_values.map(mapper)
                 kde = gaussian_kde(fk_column_values)
-                with open(f"{self.fk_kde_path}{fk_column}.pkl", "wb") as file:
+                with open(f"{self.fk_kde_path}{slugify(fk_column)}.pkl", "wb") as file:
                     dill.dump(kde, file)
 
-                logger.info(f"KDE artifacts saved to {self.fk_kde_path}{fk_column}.pkl")
+                logger.info(f"KDE artifacts saved to {self.fk_kde_path}{slugify(fk_column)}.pkl")
 
     def __drop_fk_columns(self):
         """
