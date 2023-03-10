@@ -156,7 +156,7 @@ class AccuracyReporter(Reporter):
         )
         logger.info(
             f"Corresponding plot pickle files regarding to accuracy test were saved "
-            f"to folder 'model_artifacts/tmp_store/{self.table_name}/draws/'."
+            f"to folder '{self.paths['draws_path']}'."
         )
 
 
@@ -188,5 +188,5 @@ class SampleAccuracyReporter(Reporter):
         )
         logger.info(
             f"Corresponding plot pickle files regarding to sampled data accuracy test were saved "
-            f"to folder 'model_artifacts/tmp_store/{self.table_name}/draws/'."
+            f"to folder {self.paths['draws_path']}."
         )

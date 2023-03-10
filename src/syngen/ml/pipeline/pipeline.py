@@ -1,9 +1,11 @@
 from typing import List
 from dateutil.parser import parse
 import pickle
+from functools import wraps
 
 import pandas as pd
 import numpy as np
+from slugify import slugify
 
 
 def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
@@ -114,3 +116,19 @@ def fetch_dataset(dataset_pickle_path: str):
     """
     with open(dataset_pickle_path, "rb") as f:
         return pickle.loads(f.read())
+
+
+def slugify_name(attribute, new_attribute):
+    """
+    Slugify the value of the attribute of the instance
+    and set it to the new attribute
+    """
+    def wrapper(function):
+        def inner_wrapper(*args, **kwargs):
+            object_, = args
+            fetched_attribute = object_.__getattribute__(attribute)
+            value_of_new_attribute = slugify(fetched_attribute)
+            object_.__setattr__(new_attribute, value_of_new_attribute)
+            return function(*args, **kwargs)
+        return inner_wrapper
+    return wrapper
