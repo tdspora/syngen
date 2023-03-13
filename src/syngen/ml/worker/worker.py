@@ -224,7 +224,7 @@ class Worker:
             )
 
     def __train_table(self, **kwargs):
-        table = self.table_name if self.table_name else kwargs["table_name"]
+        table = self.table_name if self.table_name else kwargs.get("table_name")
         source = self._extract_setting(kwargs, setting="source")
         epochs = self._extract_setting(kwargs, setting="epochs")
         drop_null = self._extract_setting(kwargs, setting="drop_null")
@@ -250,7 +250,7 @@ class Worker:
         """
         Run infer process for a single table
         """
-        table = self.table_name if self.table_name is not None else kwargs["table_name"]
+        table = self.table_name if self.table_name is not None else kwargs.get("table_name")
         size = self._extract_setting(kwargs, setting="size")
         run_parallel = self._extract_setting(kwargs, setting="run_parallel")
         batch_size = self._extract_setting(kwargs, setting="batch_size")
