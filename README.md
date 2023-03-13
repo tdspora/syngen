@@ -1,6 +1,6 @@
-# Syngen
+# EPAM Syngen
 
-Syngen is an unsupervised tabular data generation tool. It is useful for generation of test data with a given table as a template. Most datatypes including floats, integers, datetime, text, categorical, binary are supported. The linked tables i.e., tables sharing a key can also be generated using the simple statistical approach. 
+EPAM Syngen is an unsupervised tabular data generation tool. It is useful for generation of test data with a given table as a template. Most datatypes including floats, integers, datetime, text, categorical, binary are supported. The linked tables i.e., tables sharing a key can also be generated using the simple statistical approach. 
 The source of data might be in CSV, Avro format and should be located locally and be in UTF-8 encoding.
 
 The tool is based on the variational autoencoder model (VAE). The Bayesian Gaussian Mixture model is used to further detangle the latent space.
@@ -285,3 +285,13 @@ docker run --rm \
 
 You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call, however, they will be 
 overwritten by corresponding arguments in the metadata file.
+
+## Contribution
+
+We welcome contributions from the community to help us improve and maintain our public GitHub repository. We appreciate any feedback, bug reports, or feature requests, and we encourage developers to submit fixes or new features using issues.
+
+If you have found a bug or have a feature request, please submit an issue to our GitHub repository. Please provide as much detail as possible, including steps to reproduce the issue or a clear description of the feature request. Our team will review the issue and work with you to address any problems or discuss any potential new features.
+
+If you would like to contribute a fix or a new feature, please submit a pull request to our GitHub repository. Please make sure your code follows our coding standards and best practices. Our team will review your pull request and work with you to ensure that it meets our standards and is ready for inclusion in our codebase.
+
+We appreciate your contributions and thank you for your interest in helping us maintain and improve our public GitHub repository.
