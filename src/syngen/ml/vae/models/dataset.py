@@ -7,7 +7,6 @@ import numpy as np
 import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
-from slugify import slugify
 
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
@@ -23,6 +22,7 @@ from syngen.ml.pipeline.pipeline import (
     get_date_columns
 )
 from syngen.ml.data_loaders import DataLoader
+from syngen.ml.pipeline import slugify_parameters
 
 
 @dataclass
@@ -474,28 +474,49 @@ class Dataset:
         self.df[feature] = self.df[feature].fillna("?").astype(str)
         return feature
 
+    @staticmethod
+    @slugify_parameters(exclude_params=("fk_kde_path", "fk_column"))
+    def _fetch_mapper(fk_kde_path, table_name, pk_table, pk_column, fk_column):
+        """
+        Fetch the mapper for foreign key in data type - 'string'
+        """
+        try:
+            with open(f"{fk_kde_path.replace(table_name, pk_table)}{pk_column}_mapper.pkl", "rb") as file:
+                mapper = pickle.load(file)
+            return mapper
+        except FileNotFoundError:
+            logger.warning(f"The mapper for the {fk_column} text key is not found. "
+                           f"Simple sampling will be used.")
+
+    @staticmethod
+    @slugify_parameters(exclude_params=("kde", "fk_kde_path"))
+    def _save_kde_artifacts(kde, fk_kde_path, fk_column):
+        """
+        Save KDE artifacts
+        """
+        with open(f"{fk_kde_path}{fk_column}.pkl", "wb") as file:
+            dill.dump(kde, file)
+
+        logger.info(f"KDE artifacts saved to {fk_kde_path}{fk_column}.pkl")
+
     def _preprocess_fk_params(self):
         for fk in self.foreign_keys_list:
             fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
             for fk_column in fk_columns:
                 fk_column_values = self.df[fk_column]
-                correspondent_pk_table = slugify(self.foreign_keys_mapping[fk]["references"]["table"])
-                correspondent_pk_col = slugify(self.foreign_keys_mapping[fk]["references"]["columns"][0])
+                correspondent_pk_table = self.foreign_keys_mapping[fk]["references"]["table"]
+                correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
                 if fk_column_values.dtype in (pd.StringDtype(), "object"):
-                    try:
-                        with open(f"{self.fk_kde_path.replace(slugify(self.table_name), correspondent_pk_table)}"
-                                  f"{correspondent_pk_col}_mapper.pkl", "rb") as file:
-                            mapper = pickle.load(file)
-                    except FileNotFoundError:
-                        logger.warning(f"The mapper for the {fk_column} text key is not found. "
-                                       f"Simple sampling will be used.")
-                        continue
+                    mapper = self._fetch_mapper(
+                        fk_kde_path=self.fk_kde_path,
+                        table_name=self.table_name,
+                        pk_table=correspondent_pk_table,
+                        pk_column=correspondent_pk_col,
+                        fk_column=fk_column
+                    )
                     fk_column_values = fk_column_values.map(mapper)
                 kde = gaussian_kde(fk_column_values)
-                with open(f"{self.fk_kde_path}{slugify(fk_column)}.pkl", "wb") as file:
-                    dill.dump(kde, file)
-
-                logger.info(f"KDE artifacts saved to {self.fk_kde_path}{slugify(fk_column)}.pkl")
+                self._save_kde_artifacts(kde=kde, fk_kde_path=self.fk_kde_path, fk_column=fk_column)
 
     def __drop_fk_columns(self):
         """

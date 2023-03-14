@@ -4,4 +4,5 @@ from syngen.ml.pipeline.pipeline import nan_labels_to_float
 from syngen.ml.pipeline.pipeline import get_tmp_df
 from syngen.ml.pipeline.pipeline import fillnan
 from syngen.ml.pipeline.pipeline import fetch_dataset
-from syngen.ml.pipeline.pipeline import slugify_name
+from syngen.ml.pipeline.pipeline import slugify_attribute
+from syngen.ml.pipeline.pipeline import slugify_parameters
