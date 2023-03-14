@@ -6,7 +6,7 @@ from loguru import logger
 import pandas as pd
 
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.pipeline import slugify_name
+from syngen.ml.pipeline import slugify_attribute
 
 
 @dataclass
@@ -143,7 +143,7 @@ class TrainConfig:
         data = self._preprocess_data(data)
         self._save_input_data(data)
 
-    @slugify_name("table_name", "slugify_table_name")
+    @slugify_attribute(table_name="slugify_table_name")
     def _set_paths(self) -> Dict:
         """
         Create the paths which used in training process
@@ -226,7 +226,7 @@ class InferConfig:
         """
         self.batch_size = min(self.batch_size, self.size) if self.batch_size is not None else self.size
 
-    @slugify_name("table_name", "slugify_table_name")
+    @slugify_attribute(table_name="slugify_table_name")
     def _set_paths(self) -> Dict:
         """
         Create the paths which used in inference process
