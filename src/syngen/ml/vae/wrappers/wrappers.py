@@ -16,7 +16,7 @@ import numpy as np
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
-from syngen.ml.pipeline import fetch_dataset
+from syngen.ml.utils import fetch_dataset
 
 warnings.filterwarnings("ignore")
 

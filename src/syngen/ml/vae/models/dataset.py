@@ -15,14 +15,14 @@ from syngen.ml.vae.models.features import (
     DateFeature,
     BinaryFeature,
 )
-from syngen.ml.pipeline.pipeline import (
+from syngen.ml.utils.pipeline import (
     get_nan_labels,
     nan_labels_to_float,
     get_tmp_df,
     get_date_columns
 )
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.pipeline import slugify_parameters
+from syngen.ml.utils import slugify_parameters
 
 
 @dataclass

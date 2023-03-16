@@ -19,7 +19,7 @@ import pandas as pd
 import scipy.stats as st
 import seaborn as sns
 
-from syngen.ml.pipeline import get_nan_labels, nan_labels_to_float
+from syngen.ml.utils import get_nan_labels, nan_labels_to_float
 
 
 class BaseMetric(ABC):
