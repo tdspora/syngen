@@ -1,5 +1,4 @@
 from collections import Counter
-import datetime
 from itertools import chain
 from typing import Union, List
 import re
@@ -22,7 +21,7 @@ from tensorflow.keras.layers import (
     RepeatVector,
     TimeDistributed
 )
-from syngen.ml.vae.models.model import check_name
+from slugify import slugify
 
 
 def dict_inverse(dictionary):
@@ -69,7 +68,7 @@ class BinaryFeature:
             name: str,
             weight: float = 1.0
     ):
-        self.name = "_".join(name.split())
+        self.name = slugify("_".join(name.split()), regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
         self.weight = weight
 
     def fit(self, data: pd.DataFrame):
@@ -137,7 +136,7 @@ class ContinuousFeature:
         elif isinstance(weight_randomizer, (float, int)):
             weight_randomizer = (weight_randomizer, weight_randomizer)
 
-        self.name = check_name("_".join(name.split()))
+        self.name = slugify("_".join(name.split()), regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
         self.weight = weight
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
@@ -239,7 +238,7 @@ class CategoricalFeature:
         elif isinstance(weight_randomizer, bool) and weight_randomizer:
             weight_randomizer = (0, 1)
 
-        self.name = check_name("_".join(name.split()))
+        self.name = slugify("_".join(name.split()), regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
         self.weight = weight
         self.one_hot_encoder = ce.OneHotEncoder(
             return_df=False, handle_unknown="ignore"
@@ -345,7 +344,7 @@ class CharBasedTextFeature:
         dropout: int = 0,
     ):
 
-        self.name = check_name("_".join(name.split()))
+        self.name = slugify("_".join(name.split()), regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
         self.weight = weight
         self.decoder = None
         self.text_max_len = text_max_len
@@ -569,7 +568,7 @@ class DateFeature:
         elif isinstance(weight_randomizer, (float, int)):
             weight_randomizer = (weight_randomizer, weight_randomizer)
 
-        self.name = check_name("_".join(name.split()))
+        self.name = slugify("_".join(name.split()), regex_pattern="^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
         self.weight = weight
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer

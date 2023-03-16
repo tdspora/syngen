@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 
 import tensorflow as tf
@@ -18,13 +17,9 @@ from tensorflow.keras.layers import (
 from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
+from slugify import slugify
 
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
-
-
-def check_name(name):
-    pattern = r"[^A-Za-z0-9_\\.]"
-    return re.sub(pattern, "_", name)
 
 
 class CVAE:
@@ -118,7 +113,7 @@ class CVAE:
         for i, (name, feature) in enumerate(self.dataset.features.items()):
             feature_decoder = feature.create_decoder(self.global_decoder)
 
-            FeatureLossLayer(feature, name=check_name(name))
+            FeatureLossLayer(feature, name=slugify(name, regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$"))
             feature_tensor = feature_decoder
             feature_losses.append(feature.loss)
 
@@ -140,7 +135,7 @@ class CVAE:
 
     def __append_metric(self, name, tensor):
         self.model.metrics.append(tensor)
-        self.model.metrics_names.append(check_name(name))
+        self.model.metrics_names.append(slugify(name, regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$"))
 
     def __build_encoder(self, input):
         h0 = Dense(self.intermediate_dim, name="Encoder_0")(input)
