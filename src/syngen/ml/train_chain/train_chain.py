@@ -16,7 +16,7 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 
 from syngen.ml.vae import *
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.pipeline import slugify_parameters
+from syngen.ml.utils import slugify_parameters
 
 
 class AbstractHandler(ABC):

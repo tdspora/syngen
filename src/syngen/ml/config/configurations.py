@@ -6,7 +6,7 @@ from loguru import logger
 import pandas as pd
 
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.pipeline import slugify_attribute
+from syngen.ml.utils import slugify_attribute
 
 
 @dataclass
