@@ -124,7 +124,7 @@ def slugify_attribute(**kwargs):
     """
     def wrapper(function):
         def inner_wrapper(*args):
-            object_, = args
+            object_, *other = args
             for attribute, new_attribute in kwargs.items():
                 fetched_attribute = object_.__getattribute__(attribute)
                 value_of_new_attribute = slugify(fetched_attribute)
