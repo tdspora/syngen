@@ -15,7 +15,7 @@ from syngen.ml.vae.models.features import (
     DateFeature,
     BinaryFeature,
 )
-from syngen.ml.utils.pipeline import (
+from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
     get_tmp_df,

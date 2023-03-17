@@ -7,6 +7,5 @@ from syngen.ml.utils.utils import (
     fetch_dataset,
     slugify_attribute,
     slugify_parameters,
-    slugify_parameter_with_restriction,
     inverse_dict
 )
