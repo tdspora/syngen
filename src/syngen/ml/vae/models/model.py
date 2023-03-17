@@ -51,7 +51,7 @@ class CVAE:
         return mu + tf.exp(log_sigma / 2) * eps
 
     @staticmethod
-    @slugify_parameters(exclude_params=("feature",), regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
+    @slugify_parameters(exclude_params=("feature",))
     def _create_feature_loss_layer(feature, name):
         FeatureLossLayer(feature, name=name)
 

@@ -86,11 +86,9 @@ class CSVLoader(BaseDataLoader):
         df = pd.DataFrame()
         try:
             df = pd.read_csv(path, engine="python", **kwargs)
-            df.columns = df.columns.str.replace(':', '')
             return df, CSVConvertor(df).schema
         except ParserError:
             df = pd.read_csv(path, engine="c", **kwargs)
-            df.columns = df.columns.str.replace(':', '')
             return df, CSVConvertor(df).schema
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \

@@ -38,7 +38,7 @@ class BaseFeature:
         self.weight: float = 1.0
 
     @staticmethod
-    @slugify_parameters(regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
+    @slugify_parameters()
     def _reset_name(name):
         """
         Slugify the attribute 'name' of the instance
