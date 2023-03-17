@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 from dateutil.parser import parse
 import pickle
 
@@ -152,3 +152,24 @@ def slugify_parameters(exclude_params=()):
         return inner_wrapper
 
     return wrapper
+
+
+def slugify_parameter_with_restriction(**kwargs):
+    """
+    Slugify the value of the parameter with restrictions
+    defined in 'regex_pattern' that describes disallowed characters
+    """
+    def wrapper(function):
+        def inner_wrapper(arg):
+            arg = slugify(arg, regex_pattern=kwargs.get("regex_pattern"))
+            return function(arg)
+        return inner_wrapper
+
+    return wrapper
+
+
+def inverse_dict(dictionary: Dict) -> Dict:
+    """
+    Swap keys and values in the dictionary
+    """
+    return dict(zip(dictionary.values(), dictionary.keys()))
