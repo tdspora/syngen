@@ -2,13 +2,14 @@ from collections import Counter
 from itertools import chain
 from typing import Union, List
 import re
+from lazy import lazy
+
 import category_encoders as ce
 import numpy as np
 import pandas as pd
 from pandas._libs.tslibs.parsing import guess_datetime_format
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from lazy import lazy
 from scipy.stats import shapiro
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from tensorflow.keras import losses
@@ -21,67 +22,96 @@ from tensorflow.keras.layers import (
     RepeatVector,
     TimeDistributed
 )
-from slugify import slugify
+
+from syngen.ml.utils import slugify_parameters, inverse_dict
 
 
-def dict_inverse(dictionary):
-    return dict(zip(dictionary.values(), dictionary.keys()))
+class BaseFeature:
+    """
+    Base class for feature classes.
+    Each feature class implements feature preprocessing, transformation and inverse transformation.
+    What is more, each feature class contains modules for the neural network (NN), including
+    corresponding input, encoder, decoder, and loss
+    """
+    def __init__(self, name):
+        self.name: str = self._reset_name(name=name)
+        self.weight: float = 1.0
+
+    @staticmethod
+    @slugify_parameters(regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
+    def _reset_name(name):
+        """
+        Slugify the attribute 'name' of the instance
+        """
+        return name
+
+    def fit(self, data: pd.DataFrame):
+        """
+        Fit scalars, one-hot encoders, and mappers in the data
+        """
+        pass
+
+    def transform(self, data: pd.DataFrame) -> List:
+        """
+        Transform feature to numeric format according to the fitted preprocessors
+        """
+        pass
+
+    def inverse_transform(self, data: List) -> np.ndarray:
+        """
+        Inverse transform feature from numeric to original format to obtain an original-like table
+        """
+        pass
+
+    def input(self) -> tf.Tensor:
+        """
+        Define a feature-specific input for the NN
+        """
+        pass
+
+    def encoder(self) -> tf.Tensor:
+        """
+        Define a feature-specific encoder for the NN
+        """
+        pass
+
+    def __decoder_layer(self) -> tf.Tensor:
+        """
+        Define an elementary layer for decoder to use in create_decoder() method
+        """
+        pass
+
+    def create_decoder(self, encoder_output: tf.Tensor):
+        """
+        Create a feature-specific decoder combining given decoder layers and encoder outputs
+        """
+        pass
+
+    def loss(self) -> tf.Tensor:
+        """
+        Define a feature-specific loss taking into account the data types
+        """
+        pass
 
 
-"""
-Each feature class implements feature preprocessing, transformation and inverse transformation.
-What is more, each feature class contains modules for the neural network (NN), including
-corresponding input, encoder, decoder, and loss.
-
-Methods
--------
-fit(data)
-    fir scalers, one-hot encoders and mappers on data
-
-transform(data)
-    transform feature to numeric format according to the fitted preprocessors
-
-inverse_transform(data)
-    inverse transform feature from numeric to original format to obtain an original-like table
-
-input()
-    define a feature-specific input for the NN
-
-encoder()
-    define a feature-specific encoder for the NN
-
-create_decoder(encoder_output)
-    create a feature-specific decoder combining given decoder layers and encoder outputs
-
-loss()
-    define a feature-specific loss taking into account the data types
-
-__decoder_layer()
-    define an elementary layer for decoder to use in create_decoder() method
-"""
-
-
-class BinaryFeature:
-    # A class to process binary features, i.e. features containing only two unique values
-    def __init__(
-            self,
-            name: str,
-            weight: float = 1.0
-    ):
-        self.name = slugify("_".join(name.split()), regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
-        self.weight = weight
+class BinaryFeature(BaseFeature):
+    """
+    A class to process binary features, i.e. features containing only two unique values
+    """
+    def __init__(self, name: str):
+        super().__init__(name="_".join(name.split()))
 
     def fit(self, data: pd.DataFrame):
         self.mapping = {k: n for n, k in enumerate(np.unique(data))}
-        self.inverse_mapping = dict_inverse(self.mapping)
+        self.inverse_mapping = inverse_dict(self.mapping)
         self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get)
         self.input_dimension = data.shape[1]
 
-    def transform(self, data: pd.DataFrame) -> list:
+    def transform(self, data: pd.DataFrame) -> List:
         data = data.replace(self.mapping)
         return data.astype("float64")
 
-    def inverse_transform(self, data: list) -> np.ndarray:
+    def inverse_transform(self, data: List) -> np.ndarray:
         data = np.round(data)
         inversed = self.inverse_vectorizer(data)
         return np.where(inversed == "?", None, inversed)
@@ -110,17 +140,18 @@ class BinaryFeature:
         return self.weight * losses.binary_crossentropy(self.input, self.decoder)
 
 
-class ContinuousFeature:
-    # A class to process the continuous numeric features, including floats and integers
+class ContinuousFeature(BaseFeature):
+    """
+    A class to process the continuous numeric features, including floats and integers
+    """
     def __init__(
         self,
         name: str,
-        weight: float = 1.0,
         decoder_layers: Union[None, tuple, int] = (60,),
         weight_randomizer: Union[None, bool, tuple] = None,
         column_type=float,
     ):
-
+        super().__init__(name="_".join(name.split()))
         if decoder_layers is None:
             decoder_layers = ()
         elif isinstance(decoder_layers, int):
@@ -136,8 +167,6 @@ class ContinuousFeature:
         elif isinstance(weight_randomizer, (float, int)):
             weight_randomizer = (weight_randomizer, weight_randomizer)
 
-        self.name = slugify("_".join(name.split()), regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
-        self.weight = weight
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
         self.column_type = column_type
@@ -214,12 +243,13 @@ class ContinuousFeature:
         return random_weight * tf.keras.losses.MSE(self.input, self.decoder)
 
 
-class CategoricalFeature:
-    # A class to process categorical values, i.e. values with 2 < unique_values < 50
+class CategoricalFeature(BaseFeature):
+    """
+    A class to process categorical values, i.e. values with 2 < unique_values < 50
+    """
     def __init__(
         self,
         name: str,
-        weight: float = 1.0,
         decoder_layers: Union[None, tuple, int] = (60,),
         weight_randomizer: Union[None, bool, tuple] = None,
     ):
@@ -238,8 +268,7 @@ class CategoricalFeature:
         elif isinstance(weight_randomizer, bool) and weight_randomizer:
             weight_randomizer = (0, 1)
 
-        self.name = slugify("_".join(name.split()), regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
-        self.weight = weight
+        super().__init__(name="_".join(name.split()))
         self.one_hot_encoder = ce.OneHotEncoder(
             return_df=False, handle_unknown="ignore"
         )
@@ -253,7 +282,7 @@ class CategoricalFeature:
         self.mapping = {
             k: v for k, v in self.one_hot_encoder.category_mapping[0]["mapping"].items()
         }
-        self.inverse_mapping = dict_inverse(self.mapping)
+        self.inverse_mapping = inverse_dict(self.mapping)
         self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get)
 
         # because in mapping exist additional class None, input dimensionality should be less on 1
@@ -333,19 +362,18 @@ class CategoricalFeature:
         )
 
 
-class CharBasedTextFeature:
-    # A class to process the text features
+class CharBasedTextFeature(BaseFeature):
+    """
+    A class to process the text features
+    """
     def __init__(
         self,
         name: str,
         text_max_len: int,
-        weight: float = 1.0,
         rnn_units: int = 128,
         dropout: int = 0,
     ):
-
-        self.name = slugify("_".join(name.split()), regex_pattern=r"^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
-        self.weight = weight
+        super().__init__(name="_".join(name.split()))
         self.decoder = None
         self.text_max_len = text_max_len
         self.rnn_units = rnn_units
@@ -362,7 +390,7 @@ class CharBasedTextFeature:
 
         tokenizer = Tokenizer(lower=False, char_level=True)
         tokenizer.fit_on_texts(data)
-        tokenizer.inverse_dict = dict_inverse(tokenizer.word_index)
+        tokenizer.inverse_dict = inverse_dict(tokenizer.word_index)
 
         self.vocab_size = len(tokenizer.word_index)
         self.tokenizer = tokenizer
@@ -549,9 +577,11 @@ class CharBasedTextFeature:
         )
 
 
-class DateFeature:
-    # A class to process datetime features
-    def __init__(self, name, weight=1.0, decoder_layers=(60,), weight_randomizer=None):
+class DateFeature(BaseFeature):
+    """
+    A class to process datetime features
+    """
+    def __init__(self, name, decoder_layers=(60,), weight_randomizer=None):
 
         if decoder_layers is None:
             decoder_layers = ()
@@ -568,8 +598,7 @@ class DateFeature:
         elif isinstance(weight_randomizer, (float, int)):
             weight_randomizer = (weight_randomizer, weight_randomizer)
 
-        self.name = slugify("_".join(name.split()), regex_pattern="^[^A-Za-z0-9.][^A-Za-z0-9_.\\/>-]*$")
-        self.weight = weight
+        super().__init__(name="_".join(name.split()))
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
 
