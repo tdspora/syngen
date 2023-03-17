@@ -874,7 +874,8 @@ class Utility(BaseMetric):
         self.synthetic = self.synthetic.select_dtypes(include="number").dropna()
         self.synthetic = self.synthetic[self.original.columns]
 
-        excluded_cols = [col for col in categ_columns + cont_columns if self.original[col].nunique() < 2]
+        excluded_cols = [col for col in categ_columns + cont_columns if self.original[col].nunique() < 2  or
+                         col.endswith(("_word_count", "_char_len"))]
         binary_cols = [col for col in categ_columns if self.original[col].nunique() == 2 and col not in excluded_cols]
         cont_cols = [col for col in cont_columns if col not in binary_cols and col not in excluded_cols]
         categ_cols = [col for col in categ_columns if col not in binary_cols and col not in excluded_cols]
@@ -884,22 +885,24 @@ class Utility(BaseMetric):
 
         result = pd.DataFrame({
             "original": [
-                score_binary if best_binary is not None else np.nan,
-                score_categ if best_categ is not None else np.nan,
-                score_regres if best_regres is not None else np.nan],
+                round(score_binary, 3) if best_binary is not None else np.nan,
+                round(score_categ, 3) if best_categ is not None else np.nan,
+                round(score_regres, 3) if best_regres is not None else np.nan],
             "synthetic": [
-                synth_score_binary if best_binary is not None else np.nan,
-                synth_score_categ if best_categ is not None else np.nan,
-                synth_regres_score if best_regres is not None else np.nan],
+                round(synth_score_binary / score_binary, 3) if best_binary is not None else np.nan,
+                round(synth_score_categ / score_categ, 3) if best_categ is not None else np.nan,
+                round(synth_regres_score / score_regres, 3) if best_regres is not None else np.nan],
             "synth_to_orig_ratio": [
-                round(score_binary/synth_score_binary, 3) if best_binary is not None else np.nan,
-                round(score_categ/synth_score_categ, 3) if best_categ is not None else np.nan,
-                round(score_regres/synth_regres_score, 3) if best_regres is not None else np.nan],
+                round(synth_score_binary/score_binary, 3) if best_binary is not None else np.nan,
+                round(synth_score_categ/score_categ, 3) if best_categ is not None else np.nan,
+                round(synth_regres_score/score_regres, 3) if best_regres is not None else np.nan],
             "type": [
                 "Binary (" + f"{best_binary})" if best_binary is not None else '' + ")",
                 "Multiclass (" + f"{best_categ})" if best_categ is not None else '' + ")",
                 "Regression (" + f"{best_regres})" if best_regres is not None else '' + ")"]})
         result = pd.melt(result.dropna(), id_vars=["type", "synth_to_orig_ratio"])
+        result.columns = ["Type", "Synth to orig ratio", "Origin", "Model score"]
+        result = result.sort_values("Type")
 
         if self.plot:
             if result.empty:
@@ -909,9 +912,9 @@ class Utility(BaseMetric):
                 sns.set(font_scale=3)
                 barplot = sns.barplot(
                     data=result,
-                    x="type",
-                    y="value",
-                    hue="variable",
+                    x="Type",
+                    y="Model score",
+                    hue="Origin",
                     palette={"synthetic": "#FF9C54", "original": "#3F93E1"},
                     saturation=1
                 )
