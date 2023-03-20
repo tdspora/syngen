@@ -125,22 +125,18 @@ def slugify_attribute(**kwargs):
     def wrapper(function):
         def inner_wrapper(*args):
             object_, *other = args
-            regex_pattern = kwargs.get('regex_pattern', None)
             for attribute, new_attribute in kwargs.items():
-                if attribute != 'regex_pattern':
-                    fetched_attribute = object_.__getattribute__(attribute)
-                    value_of_new_attribute = slugify(fetched_attribute, regex_pattern)
-                    object_.__setattr__(new_attribute, value_of_new_attribute)
+                fetched_attribute = object_.__getattribute__(attribute)
+                value_of_new_attribute = slugify(fetched_attribute)
+                object_.__setattr__(new_attribute, value_of_new_attribute)
             return function(*args)
         return inner_wrapper
     return wrapper
 
 
-def slugify_parameters(regex_pattern=None, exclude_params=()):
+def slugify_parameters(exclude_params=()):
     """
     Slugify the values of parameters, excluding specified parameters
-    with restrictions defined in 'regex_pattern'
-    that describes disallowed characters
     """
     def wrapper(function):
         def inner_wrapper(**kwargs):
@@ -149,7 +145,7 @@ def slugify_parameters(regex_pattern=None, exclude_params=()):
                 if key in exclude_params:
                     updated_kwargs[key] = value
                 else:
-                    updated_kwargs[key] = slugify(value, regex_pattern=regex_pattern)
+                    updated_kwargs[key] = slugify(value)
             return function(**updated_kwargs)
         return inner_wrapper
 

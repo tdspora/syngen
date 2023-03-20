@@ -22,3 +22,4 @@ Jinja2
 schema
 avro
 python-slugify[unidecode]>=7.0.0
+pytest
