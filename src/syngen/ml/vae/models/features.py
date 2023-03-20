@@ -604,14 +604,20 @@ class DateFeature(BaseFeature):
 
     @staticmethod
     def __validate_format(date_text: pd.DataFrame):
-        pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+"
+        pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+|" \
+                  r"[A-Z][a-z]+ \d{1,2} \d{4}|" \
+                  r"[A-Z][a-z]+ \d{1,2}, \d{4}|" \
+                  r"\d{2} [A-Z][a-z]+ \d{4}"
         types = []
-        for i in date_text.dropna().sample(15).values:
+        sample = date_text.dropna().sample(100, replace=len(date_text) <= 100).values
+        print(sample)
+        for i in sample:
             try:
-                format = guess_datetime_format(re.match(pattern, i[0]).group(0))
-                types.append(format)
+                date_format = guess_datetime_format(re.match(pattern, i[0]).group(0))
+                types.append(date_format)
             except AttributeError:
                 pass
+        print(types)
         return Counter(types).most_common(1)[0][0]
 
     def fit(self, data):
