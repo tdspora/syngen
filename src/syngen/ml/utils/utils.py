@@ -1,9 +1,10 @@
-from typing import List
+from typing import List, Dict
 from dateutil.parser import parse
 import pickle
 
 import pandas as pd
 import numpy as np
+from slugify import slugify
 
 
 def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
@@ -114,3 +115,45 @@ def fetch_dataset(dataset_pickle_path: str):
     """
     with open(dataset_pickle_path, "rb") as f:
         return pickle.loads(f.read())
+
+
+def slugify_attribute(**kwargs):
+    """
+    Slugify the value of the attribute of the instance
+    and set it to the new attribute
+    """
+    def wrapper(function):
+        def inner_wrapper(*args):
+            object_, *other = args
+            for attribute, new_attribute in kwargs.items():
+                fetched_attribute = object_.__getattribute__(attribute)
+                value_of_new_attribute = slugify(fetched_attribute)
+                object_.__setattr__(new_attribute, value_of_new_attribute)
+            return function(*args)
+        return inner_wrapper
+    return wrapper
+
+
+def slugify_parameters(exclude_params=()):
+    """
+    Slugify the values of parameters, excluding specified parameters
+    """
+    def wrapper(function):
+        def inner_wrapper(**kwargs):
+            updated_kwargs = {}
+            for key, value in kwargs.items():
+                if key in exclude_params:
+                    updated_kwargs[key] = value
+                else:
+                    updated_kwargs[key] = slugify(value)
+            return function(**updated_kwargs)
+        return inner_wrapper
+
+    return wrapper
+
+
+def inverse_dict(dictionary: Dict) -> Dict:
+    """
+    Swap keys and values in the dictionary
+    """
+    return dict(zip(dictionary.values(), dictionary.keys()))

@@ -4,6 +4,7 @@ from itertools import combinations
 from collections import Counter
 import re
 
+import tqdm
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.metrics import r2_score, accuracy_score
@@ -18,7 +19,7 @@ import pandas as pd
 import scipy.stats as st
 import seaborn as sns
 
-from syngen.ml.pipeline import get_nan_labels, nan_labels_to_float
+from syngen.ml.utils import get_nan_labels, nan_labels_to_float
 
 
 class BaseMetric(ABC):
@@ -310,7 +311,9 @@ class BivariateMetric(BaseMetric):
         all_columns = set(cont_columns) | set(categ_columns)
         column_pairs = list(combinations(all_columns, 2))
         bi_imgs = {}
-        for first_col, second_col in column_pairs:
+        for i, (first_col, second_col) in tqdm.tqdm(iterable=enumerate(column_pairs),
+                                                    desc="Generating images...",
+                                                    total=len(column_pairs)):
             fig, self._axes = plt.subplots(1, 2, figsize=(30, 15), gridspec_kw={'width_ratios': [7, 8.7]})
             if first_col in cont_columns:
                 if second_col in cont_columns:
@@ -364,7 +367,6 @@ class BivariateMetric(BaseMetric):
             title = f"{first_col} vs. {second_col}"
             path_to_image = f"{self.draws_path}/bivariate_{first_col}_{second_col}.svg"
             bi_imgs[title] = path_to_image
-            logger.info(path_to_image)
             plt.savefig(path_to_image, format="svg")
         return bi_imgs
 
