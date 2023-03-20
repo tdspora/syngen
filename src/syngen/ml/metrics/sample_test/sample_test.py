@@ -2,6 +2,7 @@ import os
 from typing import Dict
 from syngen.ml.metrics import UnivariateMetric, BaseTest
 from datetime import datetime
+import shutil
 
 import jinja2
 import pandas as pd
@@ -19,17 +20,20 @@ class SampleAccuracyTest(BaseTest):
             config: Dict
     ):
         super().__init__(original, sampled, paths, table_name, config)
+        self.draws_path = f"{self.paths['draws_path']}/sample_accuracy"
 
     def __get_univariate_metric(self):
         """
         Do preparation work before creating the report
         """
-        draws_path = self.paths["draws_path"]
-        os.makedirs(draws_path, exist_ok=True)
-        sample_acc_draws_path = f"{draws_path}/sample_accuracy"
-        os.makedirs(sample_acc_draws_path, exist_ok=True)
-        univariate = UnivariateMetric(self.original, self.synthetic, True, sample_acc_draws_path)
-        return univariate
+        self._prepare_dir()
+        return UnivariateMetric(self.original, self.synthetic, True, self.draws_path)
+
+    def __remove_artifacts(self):
+        """
+        Remove artifacts after creating Sample report
+        """
+        shutil.rmtree(f"{self.paths['draws_path']}/sample_accuracy")
 
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()
@@ -51,5 +55,7 @@ class SampleAccuracyTest(BaseTest):
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
         )
 
-        with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w') as f:
+        with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w', encoding="utf-8") as f:
             f.write(html)
+
+        self._remove_artifacts()

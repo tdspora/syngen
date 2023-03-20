@@ -16,6 +16,7 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 
 from syngen.ml.vae import *
 from syngen.ml.data_loaders import DataLoader
+from syngen.ml.utils import slugify_parameters
 
 
 class AbstractHandler(ABC):
@@ -342,6 +343,21 @@ class VaeInferHandler(BaseHandler):
 
         return synth_fk
 
+    @staticmethod
+    @slugify_parameters()
+    def _set_pk_path(pk_table) -> str:
+        """
+        Set the path to synthetic data of corresponding pk table
+        """
+        pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer_{pk_table}.csv"
+        if not os.path.exists(pk_path):
+            raise FileNotFoundError(
+                "The table with a primary key specified in the metadata file does not "
+                "exist or is not trained. Ensure that the metadata contains the "
+                "name of referenced table with a primary key in the foreign key declaration section."
+            )
+        return pk_path
+
     def generate_keys(self, generated, size, metadata, table_name):
         metadata_of_table = metadata.get(table_name)
         if "keys" not in metadata_of_table:
@@ -350,13 +366,7 @@ class VaeInferHandler(BaseHandler):
         for key in config_of_keys.keys():
             if config_of_keys.get(key).get("type") == "FK":
                 pk_table = config_of_keys.get(key).get("references").get("table")
-                pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer_{pk_table}.csv"
-                if not os.path.exists(pk_path):
-                    raise FileNotFoundError(
-                        "The table with a primary key specified in the metadata file does not "
-                        "exist or is not trained. Ensure that the metadata contains the "
-                        "name of referenced table with a primary key in the foreign key declaration section."
-                    )
+                pk_path = self._set_pk_path(pk_table=pk_table)
                 pk_table_data, pk_table_schema = DataLoader(pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")

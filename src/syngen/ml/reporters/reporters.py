@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from loguru import logger
 
-from syngen.ml.pipeline import (
+from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
     fetch_dataset
@@ -156,7 +156,7 @@ class AccuracyReporter(Reporter):
         )
         logger.info(
             f"Corresponding plot pickle files regarding to accuracy test were saved "
-            f"to folder 'model_artifacts/tmp_store/{self.table_name}/draws/'."
+            f"to folder '{self.paths['draws_path']}'."
         )
 
 
@@ -188,5 +188,5 @@ class SampleAccuracyReporter(Reporter):
         )
         logger.info(
             f"Corresponding plot pickle files regarding to sampled data accuracy test were saved "
-            f"to folder 'model_artifacts/tmp_store/{self.table_name}/draws/'."
+            f"to folder {self.paths['draws_path']}."
         )
