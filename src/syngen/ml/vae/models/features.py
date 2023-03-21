@@ -604,6 +604,17 @@ class DateFeature(BaseFeature):
 
     @staticmethod
     def __validate_format(date_text: pd.DataFrame):
+        """
+        Define the most common date format.
+        Supported date formats -
+        MM/DD/YYYY; MM-DD-YYYY; DD/MM/YYYY; DD-MM-YYYY;
+        YYYY/MM/DD; YYYY-MM-DD; MMM DD, YYYY; MMM DD YYYY;
+        DD MMM YYYY; YYYY-MM-DD HH:MM:SS
+
+        Not supported formats -
+        MM/DD/YY, DD/MM/YY, YY/MM/DD, MM-DD-YY, DD-MM-YY
+
+        """
         pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+|" \
                   r"[A-Z][a-z]+ \d{1,2} \d{4}|" \
                   r"[A-Z][a-z]+ \d{1,2}, \d{4}|" \
