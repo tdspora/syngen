@@ -621,14 +621,15 @@ class DateFeature(BaseFeature):
                   r"\d{2} [A-Z][a-z]+ \d{4}"
         types = []
         sample = date_text.dropna().sample(100, replace=len(date_text) <= 100).values
-        print(sample)
         for i in sample:
-            try:
-                date_format = guess_datetime_format(re.match(pattern, i[0]).group(0))
-                types.append(date_format)
-            except AttributeError:
-                pass
+            date_format = guess_datetime_format(re.match(pattern, i[0]).group(0))
+            types.append(date_format)
         print(types)
+        print(list(filter(lambda x: x is None, types)))
+        if not list(filter(lambda x: bool(x), types)) or not types:
+            return "%d-%m-%Y"
+        if Counter(types).most_common(1)[0][0] is None:
+            return Counter(types).most_common(2)[1][0]
         return Counter(types).most_common(1)[0][0]
 
     def fit(self, data):
