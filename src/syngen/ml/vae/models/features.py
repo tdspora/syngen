@@ -624,8 +624,6 @@ class DateFeature(BaseFeature):
         for i in sample:
             date_format = guess_datetime_format(re.match(pattern, i[0]).group(0))
             types.append(date_format)
-        print(types)
-        print(list(filter(lambda x: x is None, types)))
         if not list(filter(lambda x: bool(x), types)) or not types:
             return "%d-%m-%Y"
         if Counter(types).most_common(1)[0][0] is None:
