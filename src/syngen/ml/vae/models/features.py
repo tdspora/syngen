@@ -604,14 +604,30 @@ class DateFeature(BaseFeature):
 
     @staticmethod
     def __validate_format(date_text: pd.DataFrame):
-        pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+"
+        """
+        Define the most common date format.
+        Supported date formats -
+        MM/DD/YYYY; MM-DD-YYYY; DD/MM/YYYY; DD-MM-YYYY;
+        YYYY/MM/DD; YYYY-MM-DD; MMM DD, YYYY; MMM DD YYYY;
+        DD MMM YYYY; YYYY-MM-DD HH:MM:SS
+
+        Not supported formats -
+        MM/DD/YY, DD/MM/YY, YY/MM/DD, MM-DD-YY, DD-MM-YY
+
+        """
+        pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+|" \
+                  r"[A-Z][a-z]+ \d{1,2} \d{4}|" \
+                  r"[A-Z][a-z]+ \d{1,2}, \d{4}|" \
+                  r"\d{2} [A-Z][a-z]+ \d{4}"
         types = []
-        for i in date_text.dropna().sample(15).values:
-            try:
-                format = guess_datetime_format(re.match(pattern, i[0]).group(0))
-                types.append(format)
-            except AttributeError:
-                pass
+        sample = date_text.dropna().sample(100, replace=len(date_text) <= 100).values
+        for i in sample:
+            date_format = guess_datetime_format(re.match(pattern, i[0]).group(0))
+            types.append(date_format)
+        if not list(filter(lambda x: bool(x), types)) or not types:
+            return "%d-%m-%Y"
+        if Counter(types).most_common(1)[0][0] is None:
+            return Counter(types).most_common(2)[1][0]
         return Counter(types).most_common(1)[0][0]
 
     def fit(self, data):
