@@ -88,7 +88,7 @@ class Reporter:
         for categ_col in categ_columns:
             original[categ_col] = original[categ_col].astype(str)
             synthetic[categ_col] = synthetic[categ_col].astype(str)
-        return original, synthetic, float_columns, int_columns, categ_columns
+        return original, synthetic, float_columns, int_columns, categ_columns, date_columns
 
     @abstractmethod
     def report(self, **kwargs):
@@ -148,11 +148,13 @@ class AccuracyReporter(Reporter):
             float_columns,
             int_columns,
             categ_columns,
+            date_columns
         ) = self.preprocess_data()
         accuracy_test = AccuracyTest(original, synthetic, self.paths, self.table_name, self.config)
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
-            categ_columns=list(categ_columns)
+            categ_columns=list(categ_columns),
+            date_columns=list(date_columns)
         )
         logger.info(
             f"Corresponding plot pickle files regarding to accuracy test were saved "
@@ -180,11 +182,13 @@ class SampleAccuracyReporter(Reporter):
             float_columns,
             int_columns,
             categ_columns,
+            date_columns
         ) = self.preprocess_data()
         accuracy_test = SampleAccuracyTest(original, sampled, self.paths, self.table_name, self.config)
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
-            categ_columns=list(categ_columns)
+            categ_columns=list(categ_columns),
+            date_columns=list(date_columns)
         )
         logger.info(
             f"Corresponding plot pickle files regarding to sampled data accuracy test were saved "
