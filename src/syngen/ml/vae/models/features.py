@@ -35,6 +35,7 @@ class BaseFeature:
     """
     def __init__(self, name):
         self.name: str = self._reset_name(name=name)
+        self.original_name: str = name
         self.weight: float = 1.0
 
     @staticmethod
