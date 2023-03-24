@@ -891,13 +891,13 @@ class Utility(BaseMetric):
                 round(score_categ, 3) if best_categ is not None else np.nan,
                 round(score_regres, 3) if best_regres is not None else np.nan],
             "synthetic": [
-                round(synth_score_binary / score_binary, 3) if best_binary is not None else np.nan,
-                round(synth_score_categ / score_categ, 3) if best_categ is not None else np.nan,
-                round(synth_regres_score / score_regres, 3) if best_regres is not None else np.nan],
+                round(synth_score_binary, 3) if best_binary is not None else np.nan,
+                round(synth_score_categ, 3) if best_categ is not None else np.nan,
+                round(max(0, synth_regres_score), 3) if best_regres is not None else np.nan],
             "synth_to_orig_ratio": [
                 round(synth_score_binary/score_binary, 3) if best_binary is not None else np.nan,
                 round(synth_score_categ/score_categ, 3) if best_categ is not None else np.nan,
-                round(synth_regres_score/score_regres, 3) if best_regres is not None else np.nan],
+                round(max(0, synth_regres_score)/score_regres, 3) if best_regres is not None else np.nan],
             "type": [
                 "Binary (" + f"{best_binary})" if best_binary is not None else '' + ")",
                 "Multiclass (" + f"{best_categ})" if best_categ is not None else '' + ")",
