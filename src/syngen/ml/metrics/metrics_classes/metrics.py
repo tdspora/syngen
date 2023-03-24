@@ -889,7 +889,8 @@ class Utility(BaseMetric):
             "original": [
                 round(score_binary, 3) if best_binary is not None else np.nan,
                 round(score_categ, 3) if best_categ is not None else np.nan,
-                round(score_regres, 3) if best_regres is not None else np.nan],
+                # Do this to avoid zero division
+                round(max(score_regres, 1e-10), 3) if best_regres is not None else np.nan],
             "synthetic": [
                 round(synth_score_binary, 3) if best_binary is not None else np.nan,
                 round(synth_score_categ, 3) if best_categ is not None else np.nan,
