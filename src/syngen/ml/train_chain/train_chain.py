@@ -162,7 +162,6 @@ class VaeTrainHandler(BaseHandler):
             self,
             data: pd.DataFrame
     ):
-        os.makedirs(self.paths["state_path"], exist_ok=True)
         logger.info("Start VAE training")
         if data is None:
             logger.error("For mode = 'train' path must be provided")
