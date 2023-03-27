@@ -6,6 +6,7 @@ from loguru import logger
 import pandas as pd
 
 from syngen.ml.data_loaders import DataLoader
+from syngen.ml.utils import slugify_attribute
 
 
 @dataclass
@@ -24,6 +25,7 @@ class TrainConfig:
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
+    slugify_table_name: str = field(init=False)
 
     def __post_init__(self):
         self.paths = self._set_paths()
@@ -141,22 +143,28 @@ class TrainConfig:
         data = self._preprocess_data(data)
         self._save_input_data(data)
 
+    @slugify_attribute(table_name="slugify_table_name")
     def _set_paths(self) -> Dict:
         """
         Create the paths which used in training process
         """
+
         return {
             "model_artifacts_path": "model_artifacts/",
-            "tmp_store_path": f"model_artifacts/tmp_store/{self.table_name}",
+            "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}",
             "source_path": self.source,
-            "draws_path": f"model_artifacts/tmp_store/{self.table_name}/draws",
-            "input_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.pkl",
-            "state_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints",
-            "dataset_pickle_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/model_dataset.pkl",
-            "fk_kde_path": f"model_artifacts/resources/{self.table_name}/vae/checkpoints/",
-            "original_data_path": f"model_artifacts/tmp_store/{self.table_name}/input_data_{self.table_name}.pkl",
-            "synthetic_data_path": f"model_artifacts/tmp_store/{self.table_name}/merged_infer_{self.table_name}.csv",
-            "no_ml_state_path": f"model_artifacts/resources/{self.table_name}/no_ml/checkpoints/"
+            "draws_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/draws",
+            "input_data_path":
+                f"model_artifacts/tmp_store/{self.slugify_table_name}/input_data_{self.slugify_table_name}.pkl",
+            "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
+            "dataset_pickle_path":
+                f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/model_dataset.pkl",
+            "fk_kde_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/",
+            "original_data_path":
+                f"model_artifacts/tmp_store/{self.slugify_table_name}/input_data_{self.slugify_table_name}.pkl",
+            "synthetic_data_path":
+                f"model_artifacts/tmp_store/{self.slugify_table_name}/merged_infer_{self.slugify_table_name}.csv",
+            "no_ml_state_path": f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
         }
 
 
@@ -173,6 +181,7 @@ class InferConfig:
     random_seed: Optional[int]
     print_report: bool
     both_keys: bool
+    slugify_table_name: str = field(init=False)
 
     def __post_init__(self):
         self.paths = self._set_paths()
@@ -217,11 +226,12 @@ class InferConfig:
         """
         self.batch_size = min(self.batch_size, self.size) if self.batch_size is not None else self.size
 
+    @slugify_attribute(table_name="slugify_table_name")
     def _set_paths(self) -> Dict:
         """
         Create the paths which used in inference process
         """
-        dynamic_name = self.table_name[:-3] if self.both_keys else self.table_name
+        dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         return {
             "original_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
             "synthetic_data_path": f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
