@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 
 import tensorflow as tf
@@ -20,12 +19,7 @@ import numpy as np
 import pandas as pd
 
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
-
-
-def check_name(name):
-    pattern = r"[^A-Za-z0-9_\\.]"
-    return re.sub(pattern, "_", name)
-
+from syngen.ml.utils import slugify_parameters
 
 class CVAE:
     """
@@ -55,6 +49,11 @@ class CVAE:
         mu, log_sigma = args
         eps = tf.random.normal(shape=(self.latent_dim,), mean=0.0, stddev=1.0)
         return mu + tf.exp(log_sigma / 2) * eps
+
+    @staticmethod
+    @slugify_parameters(exclude_params=("feature",))
+    def _create_feature_loss_layer(feature, name):
+        FeatureLossLayer(feature, name=name)
 
     def build_model(self):
         self.inputs = list()
@@ -118,7 +117,7 @@ class CVAE:
         for i, (name, feature) in enumerate(self.dataset.features.items()):
             feature_decoder = feature.create_decoder(self.global_decoder)
 
-            FeatureLossLayer(feature, name=check_name(name))
+            self._create_feature_loss_layer(feature=feature, name=name)
             feature_tensor = feature_decoder
             feature_losses.append(feature.loss)
 
@@ -137,10 +136,6 @@ class CVAE:
         self.generator_model = Model(generator_input, generator_outputs)
 
         return self.model
-
-    def __append_metric(self, name, tensor):
-        self.model.metrics.append(tensor)
-        self.model.metrics_names.append(check_name(name))
 
     def __build_encoder(self, input):
         h0 = Dense(self.intermediate_dim, name="Encoder_0")(input)
@@ -244,7 +239,10 @@ class CVAE:
         return self.dataset.inverse_transform(synthetic_prediction)
 
     def __check_pk_numeric_convertability(self, column, key_type):
-        return self.inverse_transformed_df[column].dropna().str.isnumeric().all() and key_type is str
+        if key_type is str:
+            return self.inverse_transformed_df[column].dropna().str.isnumeric().all()
+        else:
+            return False
 
     def __make_pk_uq_unique(self, pk_uq_keys_mapping):
         for key_name, config in pk_uq_keys_mapping.items():

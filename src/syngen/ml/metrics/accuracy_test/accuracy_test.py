@@ -1,3 +1,4 @@
+import shutil
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -31,6 +32,7 @@ class BaseTest(ABC):
         self.paths = paths
         self.table_name = table_name
         self.config = config
+        self.draws_path = str()
 
     @abstractmethod
     def report(
@@ -41,6 +43,19 @@ class BaseTest(ABC):
         date_columns: Optional[List[str]]
     ):
         pass
+
+    def _prepare_dir(self):
+        """
+        Create the directory where images and reports should be stored
+        """
+        os.makedirs(self.paths["draws_path"], exist_ok=True)
+        os.makedirs(self.draws_path, exist_ok=True)
+
+    def _remove_artifacts(self):
+        """
+        Remove artifacts after creating Accuracy report
+        """
+        shutil.rmtree(self.draws_path)
 
 
 class AccuracyTest(BaseTest):
@@ -53,21 +68,19 @@ class AccuracyTest(BaseTest):
             config: Dict
     ):
         super().__init__(original, synthetic, paths, table_name, config)
+        self.draws_path = f"{self.paths['draws_path']}/accuracy"
 
     def __prepare_before_report(self):
         """
         Do preparation work before creating the report
         """
-        draws_path = self.paths["draws_path"]
-        os.makedirs(draws_path, exist_ok=True)
-        acc_draws_path = f"{draws_path}/accuracy"
-        os.makedirs(acc_draws_path, exist_ok=True)
-        univariate = UnivariateMetric(self.original, self.synthetic, True, acc_draws_path)
-        bivariate = BivariateMetric(self.original, self.synthetic, True, acc_draws_path)
-        correlations = Correlations(self.original, self.synthetic, True, acc_draws_path)
-        clustering = Clustering(self.original, self.synthetic, True, acc_draws_path)
-        utility = Utility(self.original, self.synthetic, True, acc_draws_path)
-        acc = JensenShannonDistance(self.original, self.synthetic, True, acc_draws_path)
+        self._prepare_dir()
+        univariate = UnivariateMetric(self.original, self.synthetic, True, self.draws_path)
+        bivariate = BivariateMetric(self.original, self.synthetic, True, self.draws_path)
+        correlations = Correlations(self.original, self.synthetic, True, self.draws_path)
+        clustering = Clustering(self.original, self.synthetic, True, self.draws_path)
+        utility = Utility(self.original, self.synthetic, True, self.draws_path)
+        acc = JensenShannonDistance(self.original, self.synthetic, True, self.draws_path)
         return univariate, bivariate, correlations, clustering, utility, acc
 
     def report(self, **kwargs):
@@ -108,5 +121,7 @@ class AccuracyTest(BaseTest):
                                time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
                                )
 
-        with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w') as f:
+        with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w', encoding="utf-8") as f:
             f.write(html)
+
+        self._remove_artifacts()
