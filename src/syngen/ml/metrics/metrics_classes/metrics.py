@@ -1,9 +1,11 @@
-from typing import Union, List
+from typing import Union, List, Optional
 from abc import ABC
 from itertools import combinations
 from collections import Counter
 import re
+import datetime
 
+import tqdm
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.metrics import r2_score, accuracy_score
@@ -17,8 +19,12 @@ import numpy as np
 import pandas as pd
 import scipy.stats as st
 import seaborn as sns
+from slugify import slugify
 
-from syngen.ml.pipeline import get_nan_labels, nan_labels_to_float
+from syngen.ml.utils import (
+    get_nan_labels,
+    nan_labels_to_float
+)
 
 
 class BaseMetric(ABC):
@@ -300,17 +306,34 @@ class BivariateMetric(BaseMetric):
             "rg", ["#0D5598", "#3E92E0", "#E8F4FF"]
         )
 
+    def _format_date_labels(self, heatmap_orig_data, heatmap_synthetic_data, axis):
+        heatmap_orig, x_tick_labels_orig, y_tick_labels_orig = heatmap_orig_data
+        heatmap_synth, x_tick_labels_synth, y_tick_labels_synth = heatmap_synthetic_data
+        if axis == 0:
+            y_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9) for i in y_tick_labels_orig]
+            y_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9) for i in y_tick_labels_synth]
+        else:
+            x_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9) for i in x_tick_labels_orig]
+            x_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9) for i in x_tick_labels_synth]
+        return (heatmap_orig, x_tick_labels_orig, y_tick_labels_orig), \
+               (heatmap_synth, x_tick_labels_synth, y_tick_labels_synth)
+
+
     def calculate_all(
         self,
         cont_columns: List[str],
         categ_columns: List[str],
+        date_columns: Optional[List[str]],
         num_not_na_cont_ticks: int = 10,
     ):
+        self.date_columns = date_columns if date_columns else []
         self.num_not_na_ticks = num_not_na_cont_ticks
         all_columns = set(cont_columns) | set(categ_columns)
         column_pairs = list(combinations(all_columns, 2))
         bi_imgs = {}
-        for first_col, second_col in column_pairs:
+        for i, (first_col, second_col) in tqdm.tqdm(iterable=enumerate(column_pairs),
+                                                    desc="Generating images...",
+                                                    total=len(column_pairs)):
             fig, self._axes = plt.subplots(1, 2, figsize=(30, 15), gridspec_kw={'width_ratios': [7, 8.7]})
             if first_col in cont_columns:
                 if second_col in cont_columns:
@@ -318,7 +341,7 @@ class BivariateMetric(BaseMetric):
                         heatmap_orig_data,
                         heatmap_synthetic_data,
                     ) = self._calculate_pair_continuous_vs_continuous(
-                        y_col=first_col, x_col=second_col
+                        y_col=second_col, x_col=first_col
                     )
                 elif second_col in categ_columns:
                     (
@@ -326,6 +349,17 @@ class BivariateMetric(BaseMetric):
                         heatmap_synthetic_data,
                     ) = self._calculate_pair_continuous_vs_categ(
                         cont_col=first_col, categ_col=second_col
+                    )
+
+                    heatmap_orig_data = (
+                        np.transpose(heatmap_orig_data[0]),
+                        heatmap_orig_data[2],
+                        heatmap_orig_data[1]
+                    )
+                    heatmap_synthetic_data = (
+                        np.transpose(heatmap_synthetic_data[0]),
+                        heatmap_synthetic_data[2],
+                        heatmap_synthetic_data[1]
                     )
             elif first_col in categ_columns:
                 if second_col in cont_columns:
@@ -340,12 +374,22 @@ class BivariateMetric(BaseMetric):
                         heatmap_orig_data,
                         heatmap_synthetic_data,
                     ) = self._calculate_pair_categ_vs_categ(
-                        y_col=first_col, x_col=second_col
+                        y_col=second_col, x_col=first_col
                     )
 
             heatmap_min, heatmap_max = self.get_common_min_max(
                 heatmap_orig_data[0], heatmap_synthetic_data[0]
             )
+
+            if first_col in self.date_columns:
+                heatmap_orig_data, heatmap_synthetic_data = self._format_date_labels(
+                    heatmap_orig_data, heatmap_synthetic_data, 0
+                )
+            if second_col in self.date_columns:
+                heatmap_orig_data, heatmap_synthetic_data = self._format_date_labels(
+                    heatmap_orig_data, heatmap_synthetic_data, 1
+                )
+
             self._plot_heatmap(
                 heatmap_orig_data,
                 0,
@@ -361,10 +405,10 @@ class BivariateMetric(BaseMetric):
                 heatmap_max,
                 cbar=True
             )
+            # first_col is x axis, second_col is y axis
             title = f"{first_col} vs. {second_col}"
-            path_to_image = f"{self.draws_path}/bivariate_{first_col}_{second_col}.svg"
+            path_to_image = f"{self.draws_path}/bivariate_{slugify(first_col)}_{slugify(second_col)}.svg"
             bi_imgs[title] = path_to_image
-            logger.info(path_to_image)
             plt.savefig(path_to_image, format="svg")
         return bi_imgs
 
@@ -686,7 +730,7 @@ class UnivariateMetric(BaseMetric):
                 frameon=False
             )
             if self.draws_path:
-                path_to_image = f"{self.draws_path}/univariate_{column}.svg"
+                path_to_image = f"{self.draws_path}/univariate_{slugify(column)}.svg"
                 plt.savefig(path_to_image, bbox_inches="tight", format="svg")
                 uni_images[column] = path_to_image
         return uni_images
@@ -725,7 +769,7 @@ class UnivariateMetric(BaseMetric):
                 frameon=False
             )
             if self.draws_path:
-                path_to_image = f"{self.draws_path}/univariate_{column}.svg"
+                path_to_image = f"{self.draws_path}/univariate_{slugify(column)}.svg"
                 plt.savefig(path_to_image, bbox_inches="tight", format="svg")
                 uni_images[column] = path_to_image
         if print_nan:
@@ -777,7 +821,7 @@ class Clustering(BaseMetric):
             return (min(x) / max(x))
 
         statistics = self.__calculate_clusters(optimal_clust_num)
-        statistics.columns = ["cluster", "origin", "count"]
+        statistics.columns = ["cluster", "dataset", "count"]
         self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
         logger.info("Mean clusters homogeneity is {0:.4f}".format(self.mean_score.values[0]))
 
@@ -788,7 +832,7 @@ class Clustering(BaseMetric):
                 data=statistics,
                 x="cluster",
                 y="count",
-                hue="origin",
+                hue="dataset",
                 palette={"synthetic": "#ff9c54", "original": "#3f93e1"},
                 saturation=1
             )
@@ -874,7 +918,8 @@ class Utility(BaseMetric):
         self.synthetic = self.synthetic.select_dtypes(include="number").dropna()
         self.synthetic = self.synthetic[self.original.columns]
 
-        excluded_cols = [col for col in categ_columns + cont_columns if self.original[col].nunique() < 2]
+        excluded_cols = [col for col in categ_columns + cont_columns if self.original[col].nunique() < 2  or
+                         col.endswith(("_word_count", "_char_len"))]
         binary_cols = [col for col in categ_columns if self.original[col].nunique() == 2 and col not in excluded_cols]
         cont_cols = [col for col in cont_columns if col not in binary_cols and col not in excluded_cols]
         categ_cols = [col for col in categ_columns if col not in binary_cols and col not in excluded_cols]
@@ -884,22 +929,25 @@ class Utility(BaseMetric):
 
         result = pd.DataFrame({
             "original": [
-                score_binary if best_binary is not None else np.nan,
-                score_categ if best_categ is not None else np.nan,
-                score_regres if best_regres is not None else np.nan],
+                round(score_binary, 3) if best_binary is not None else np.nan,
+                round(score_categ, 3) if best_categ is not None else np.nan,
+                # Do this to avoid zero division
+                round(max(score_regres, 1e-10), 3) if best_regres is not None else np.nan],
             "synthetic": [
-                synth_score_binary if best_binary is not None else np.nan,
-                synth_score_categ if best_categ is not None else np.nan,
-                synth_regres_score if best_regres is not None else np.nan],
+                round(synth_score_binary, 3) if best_binary is not None else np.nan,
+                round(synth_score_categ, 3) if best_categ is not None else np.nan,
+                round(max(0, synth_regres_score), 3) if best_regres is not None else np.nan],
             "synth_to_orig_ratio": [
-                round(score_binary/synth_score_binary, 3) if best_binary is not None else np.nan,
-                round(score_categ/synth_score_categ, 3) if best_categ is not None else np.nan,
-                round(score_regres/synth_regres_score, 3) if best_regres is not None else np.nan],
+                round(synth_score_binary/score_binary, 3) if best_binary is not None else np.nan,
+                round(synth_score_categ/score_categ, 3) if best_categ is not None else np.nan,
+                round(max(0, synth_regres_score)/score_regres, 3) if best_regres is not None else np.nan],
             "type": [
                 "Binary (" + f"{best_binary})" if best_binary is not None else '' + ")",
                 "Multiclass (" + f"{best_categ})" if best_categ is not None else '' + ")",
                 "Regression (" + f"{best_regres})" if best_regres is not None else '' + ")"]})
         result = pd.melt(result.dropna(), id_vars=["type", "synth_to_orig_ratio"])
+        result.columns = ["Type", "Synth to orig ratio", "Origin", "Model score"]
+        result = result.sort_values("Type").reset_index(drop=True)
 
         if self.plot:
             if result.empty:
@@ -909,9 +957,9 @@ class Utility(BaseMetric):
                 sns.set(font_scale=3)
                 barplot = sns.barplot(
                     data=result,
-                    x="type",
-                    y="value",
-                    hue="variable",
+                    x="Type",
+                    y="Model score",
+                    hue="Origin",
                     palette={"synthetic": "#FF9C54", "original": "#3F93E1"},
                     saturation=1
                 )
