@@ -30,10 +30,11 @@ class Strategy(ABC):
         pass
 
     @abstractmethod
-    def set_handler(self, *args, **kwargs):
+    def add_handler(self, *args, **kwargs):
         pass
 
-    def set_reporters(self):
+    @abstractmethod
+    def add_reporters(self):
         """
         Set up reporter which used in order to create the sampling report during training process
         """
@@ -64,7 +65,7 @@ class TrainStrategy(Strategy, ABC):
         self.config = configuration
         return self
 
-    def set_handler(self):
+    def add_handler(self):
         """
         Set up the handler which used in training process
         """
@@ -90,7 +91,7 @@ class TrainStrategy(Strategy, ABC):
         self.handler = root_handler
         return self
 
-    def set_reporters(self, **kwargs):
+    def add_reporters(self, **kwargs):
         if self.config.print_report:
             sample_reporter = SampleAccuracyReporter(
                 metadata={"table_name": self.config.table_name},
@@ -119,9 +120,9 @@ class TrainStrategy(Strategy, ABC):
             batch_size=kwargs["batch_size"]
         )
 
-        self.set_reporters().\
+        self.add_reporters().\
             set_metadata(kwargs["metadata"]).\
-            set_handler()
+            add_handler()
 
         try:
             self.handler.handle()
@@ -147,7 +148,7 @@ class InferStrategy(Strategy):
         self.config = configuration
         return self
 
-    def set_handler(self):
+    def add_handler(self):
         """
         Set up the handler which used in infer process
         """
@@ -166,7 +167,7 @@ class InferStrategy(Strategy):
         )
         return self
 
-    def set_reporters(self):
+    def add_reporters(self):
         if self.config.print_report:
             accuracy_reporter = AccuracyReporter(
                 metadata={"table_name": self.config.table_name},
@@ -194,9 +195,9 @@ class InferStrategy(Strategy):
             print_report=kwargs["print_report"],
             both_keys=kwargs["both_keys"],
         ).\
-            set_reporters(). \
+            add_reporters(). \
             set_metadata(kwargs["metadata"]).\
-            set_handler()
+            add_handler()
 
         try:
             self.handler.handle()
