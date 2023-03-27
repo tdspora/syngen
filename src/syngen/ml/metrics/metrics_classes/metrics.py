@@ -306,11 +306,11 @@ class BivariateMetric(BaseMetric):
         heatmap_orig, x_tick_labels_orig, y_tick_labels_orig = heatmap_orig_data
         heatmap_synth, x_tick_labels_synth, y_tick_labels_synth = heatmap_synthetic_data
         if axis == 0:
-            y_tick_labels_orig = [datetime.datetime.fromtimestamp(float(i) * 1e-9) for i in y_tick_labels_orig]
-            y_tick_labels_synth = [datetime.datetime.fromtimestamp(float(i) * 1e-9) for i in y_tick_labels_synth]
+            y_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9) for i in y_tick_labels_orig]
+            y_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9) for i in y_tick_labels_synth]
         else:
-            x_tick_labels_orig = [datetime.datetime.fromtimestamp(float(i) * 1e-9) for i in x_tick_labels_orig]
-            x_tick_labels_synth = [datetime.datetime.fromtimestamp(float(i) * 1e-9) for i in x_tick_labels_synth]
+            x_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9) for i in x_tick_labels_orig]
+            x_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9) for i in x_tick_labels_synth]
         return (heatmap_orig, x_tick_labels_orig, y_tick_labels_orig), \
                (heatmap_synth, x_tick_labels_synth, y_tick_labels_synth)
 
@@ -378,7 +378,6 @@ class BivariateMetric(BaseMetric):
             )
 
             if first_col in self.date_columns:
-
                 heatmap_orig_data, heatmap_synthetic_data = self._format_date_labels(
                     heatmap_orig_data, heatmap_synthetic_data, 0
                 )
