@@ -16,6 +16,7 @@ from syngen.ml.metrics import (
     Utility
 )
 from syngen.ml.metrics.utils import transform_to_base64
+from syngen.ml.data_loaders import BinaryLoader
 
 
 class BaseTest(ABC):
@@ -65,9 +66,9 @@ class AccuracyTest(BaseTest):
             synthetic: pd.DataFrame,
             paths: dict,
             table_name: str,
-            config: Dict
+            infer_config: Dict
     ):
-        super().__init__(original, synthetic, paths, table_name, config)
+        super().__init__(original, synthetic, paths, table_name, infer_config)
         self.draws_path = f"{self.paths['draws_path']}/accuracy"
 
     def __prepare_before_report(self):
@@ -98,6 +99,8 @@ class AccuracyTest(BaseTest):
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
             template = jinja2.Template(file_.read())
 
+        train_config = BinaryLoader().load_data(self.paths["train_config_pickle_path"])
+
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
         uni_images = {
             title: transform_to_base64(path) for title, path in uni_images.items()
@@ -117,7 +120,8 @@ class AccuracyTest(BaseTest):
                                utility_barplot=transform_to_base64(f"{draws_acc_path}/utility_barplot.svg"),
                                utility_table=utility_result.to_html(),
                                table_name=self.table_name,
-                               config=self.config,
+                               train_config=train_config,
+                               infer_config=self.config,
                                time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
                                )
 
