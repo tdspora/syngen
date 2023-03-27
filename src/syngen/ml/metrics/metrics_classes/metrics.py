@@ -344,7 +344,7 @@ class BivariateMetric(BaseMetric):
                         heatmap_orig_data,
                         heatmap_synthetic_data,
                     ) = self._calculate_pair_continuous_vs_categ(
-                        cont_col=first_col, categ_col=second_col  # x is first, y is second
+                        cont_col=first_col, categ_col=second_col  # x is second, y is first
                     )
 
                     heatmap_orig_data = (
@@ -356,7 +356,7 @@ class BivariateMetric(BaseMetric):
                         np.transpose(heatmap_synthetic_data[0]),
                         heatmap_synthetic_data[2],
                         heatmap_synthetic_data[1]
-                    )  # x is second, y is first
+                    )  # x is first, y is second
             elif first_col in categ_columns:
                 if second_col in cont_columns:
                     (
