@@ -26,6 +26,7 @@
 
 			.container {
 				padding: 80px 183px 80px 183px;
+				max-width: 749px;
 			}
 
 			.container--item>div>img {
@@ -227,10 +228,31 @@
 				margin-bottom: 0 !important;
 			}
 
-			.parameters>ul {
+			.parameters>div>ul {
 				font-size: 20px;
 				line-height: 28px;
 				font-weight: 600;
+				display: inline-block;
+				min-width: 300px;
+				margin-bottom: 20px;
+			}
+
+			.parameters>div {
+				display: inline-block;
+			}
+
+			.no-data {
+				text-align: center;
+				font-weight: 400;
+				font-size: 20px;
+				line-height: 28px;
+				color: #73818E
+			}
+
+			.no-data>span {
+				position: relative;
+				margin-left: 20px;
+				bottom: 6px;
 			}
 
 			@media print {
@@ -277,13 +299,26 @@
 					<div class="accuracy-report-value"><span>{{time}}</span></div>
 				</div>
 				<div class="parameters">
-					<div class="accuracy-report-value"
-						style="margin-bottom:0px">Parameters:</div>
-					<ul>
-						 {% for parameter_key, parameter_value in config.items() -%}
-						<li>{{parameter_key}} = {{parameter_value}}</li>
-						 {% endfor %}
-					</ul>
+					<div>
+						<div class="accuracy-report-value"
+							style="margin-bottom:0px">Training parameters:</div>
+						<ul>
+							<!-- {% for training_parameter_key, training_parameter_value in training_config.items() -%}
+						<li>{{training_parameter_key}} = {{training_parameter_value}}</li>
+						{% endfor %} -->
+
+						</ul>
+					</div>
+					<div>
+						<div class="accuracy-report-value"
+							style="margin-bottom:0px">Inference parameters:</div>
+						<ul>
+							<!-- {% for inference_parameter_key, inference_parameter_value in inference_config.items() -%}
+						<li>{{inference_parameter_key}} = {{inference_parameter_value}}</li>
+						{% endfor %} -->
+
+						</ul>
+					</div>
 				</div>
 			</div>
 			<div class="container--item">
@@ -498,6 +533,7 @@
 				<div class="container--item">
 					<h2 class="h2-title"
 						id="h2-title-utility">Utility metric</h2>
+					{% if is_data_avalibale %}
 					<p class="text-description">For utility calculation an automatic modeling process is engaged. For
 						every
 						binary, categorical
@@ -522,6 +558,49 @@
 					<div class="utility-table">
 						{{utility_table}}
 					</div>
+					{% else %}
+					<p class="no-data">
+						<svg width="33"
+							height="33"
+							viewBox="0 0 33 33"
+							fill="none"
+							xmlns="http://www.w3.org/2000/svg">
+							<rect x="23.5"
+								y="16"
+								width="6"
+								height="13"
+								rx="1"
+								stroke="#73818E"
+								stroke-width="2" />
+							<path d="M5.5 29L27.5 29"
+								stroke="#73818E"
+								stroke-width="2"
+								stroke-linecap="round" />
+							<rect x="13.5"
+								y="2"
+								width="6"
+								height="27"
+								rx="1"
+								stroke="#73818E"
+								stroke-width="2" />
+							<rect x="3.5"
+								y="9"
+								width="6"
+								height="20"
+								rx="1"
+								stroke="#73818E"
+								stroke-width="2" />
+							<path
+								d="M28.3297 3.54394C29.0549 2.81869 30.2308 2.81869 30.9561 3.54394C31.6813 4.2692 31.6813 5.44508 30.9561 6.17034L5.67034 31.4561C4.94508 32.1813 3.76921 32.1813 3.04395 31.4561L3.75105 30.7489L3.04394 31.4561C2.31869 30.7308 2.31869 29.5549 3.04394 28.8297L28.3297 3.54394Z"
+								fill="#73818E"
+								stroke="white"
+								stroke-width="2"
+								stroke-linecap="round" />
+						</svg>
+						<span>No data available</span>
+					</p>
+					{% endif %}
+
 				</div>
 
 				<div class="container--item">
