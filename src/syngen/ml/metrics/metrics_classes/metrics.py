@@ -19,8 +19,12 @@ import numpy as np
 import pandas as pd
 import scipy.stats as st
 import seaborn as sns
+from slugify import slugify
 
-from syngen.ml.utils import get_nan_labels, nan_labels_to_float
+from syngen.ml.utils import (
+    get_nan_labels,
+    nan_labels_to_float
+)
 
 
 class BaseMetric(ABC):
@@ -403,7 +407,7 @@ class BivariateMetric(BaseMetric):
             )
             # first_col is x axis, second_col is y axis
             title = f"{first_col} vs. {second_col}"
-            path_to_image = f"{self.draws_path}/bivariate_{first_col}_{second_col}.svg"
+            path_to_image = f"{self.draws_path}/bivariate_{slugify(first_col)}_{slugify(second_col)}.svg"
             bi_imgs[title] = path_to_image
             plt.savefig(path_to_image, format="svg")
         return bi_imgs
@@ -726,7 +730,7 @@ class UnivariateMetric(BaseMetric):
                 frameon=False
             )
             if self.draws_path:
-                path_to_image = f"{self.draws_path}/univariate_{column}.svg"
+                path_to_image = f"{self.draws_path}/univariate_{slugify(column)}.svg"
                 plt.savefig(path_to_image, bbox_inches="tight", format="svg")
                 uni_images[column] = path_to_image
         return uni_images
@@ -765,7 +769,7 @@ class UnivariateMetric(BaseMetric):
                 frameon=False
             )
             if self.draws_path:
-                path_to_image = f"{self.draws_path}/univariate_{column}.svg"
+                path_to_image = f"{self.draws_path}/univariate_{slugify(column)}.svg"
                 plt.savefig(path_to_image, bbox_inches="tight", format="svg")
                 uni_images[column] = path_to_image
         if print_nan:
