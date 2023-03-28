@@ -310,11 +310,11 @@ class BivariateMetric(BaseMetric):
         heatmap_orig, x_tick_labels_orig, y_tick_labels_orig = heatmap_orig_data
         heatmap_synth, x_tick_labels_synth, y_tick_labels_synth = heatmap_synthetic_data
         if axis == "y":
-            y_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9).date() for i in y_tick_labels_orig]
-            y_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9).date() for i in y_tick_labels_synth]
+            y_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9) for i in y_tick_labels_orig]
+            y_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9) for i in y_tick_labels_synth]
         else:
-            x_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9).date() for i in x_tick_labels_orig]
-            x_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9).date() for i in x_tick_labels_synth]
+            x_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9) for i in x_tick_labels_orig]
+            x_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9) for i in x_tick_labels_synth]
         return (heatmap_orig, x_tick_labels_orig, y_tick_labels_orig), \
                (heatmap_synth, x_tick_labels_synth, y_tick_labels_synth)
 

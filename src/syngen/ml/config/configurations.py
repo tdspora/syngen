@@ -57,6 +57,7 @@ class TrainConfig:
         """
         os.makedirs(self.paths["model_artifacts_path"], exist_ok=True)
         tmp_store_path = self.paths["tmp_store_path"]
+        os.makedirs(self.paths["state_path"], exist_ok=True)
         os.makedirs(tmp_store_path, exist_ok=True)
 
     def _load_source(self) -> Tuple[pd.DataFrame, Dict]:
@@ -157,6 +158,7 @@ class TrainConfig:
             "input_data_path":
                 f"model_artifacts/tmp_store/{self.slugify_table_name}/input_data_{self.slugify_table_name}.pkl",
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
+            "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/train_config.pkl",
             "dataset_pickle_path":
                 f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/",
@@ -239,6 +241,7 @@ class InferConfig:
             "input_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
             "path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
             "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
+            "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/train_config.pkl",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
             "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
             "dataset_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
