@@ -99,7 +99,7 @@ class AccuracyTest(BaseTest):
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
             template = jinja2.Template(file_.read())
 
-        train_config = BinaryLoader().load_data(self.paths["train_config_pickle_path"])
+        training_config, _ = BinaryLoader().load_data(self.paths["train_config_pickle_path"])
 
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
         uni_images = {
@@ -120,8 +120,8 @@ class AccuracyTest(BaseTest):
                                utility_barplot=transform_to_base64(f"{draws_acc_path}/utility_barplot.svg"),
                                utility_table=utility_result.to_html(),
                                table_name=self.table_name,
-                               train_config=train_config,
-                               infer_config=self.config,
+                               training_config=training_config,
+                               inference_config=self.config,
                                time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
                                )
 
