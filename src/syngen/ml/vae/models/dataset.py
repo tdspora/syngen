@@ -341,7 +341,7 @@ class Dataset:
         )
 
     def assign_feature(self, feature, columns):
-        name = feature.name
+        name = feature.original_name
 
         if name in self.features:
             raise Exception(f"{name} is already contained in features")
