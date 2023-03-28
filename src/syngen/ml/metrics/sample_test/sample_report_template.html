@@ -135,11 +135,11 @@
 				</div>
 				<div class="parameters">
 					<div class="accuracy-report-value"
-						style="margin-bottom:0px">Parameters:</div>
+						style="margin-bottom:0px">Training parameters:</div>
 					<ul>
-						<!-- {% for parameter_key, parameter_value in config.items() -%} -->
+						{% for parameter_key, parameter_value in config.items() -%}
 						<li>{{parameter_key}} = {{parameter_value}}</li>
-						<!-- {% endfor %} -->
+						{% endfor %}
 					</ul>
 				</div>
 			</div>
