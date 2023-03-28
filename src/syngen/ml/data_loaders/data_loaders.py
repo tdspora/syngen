@@ -209,7 +209,7 @@ class BinaryLoader(BaseDataLoader):
     def load_data(self, path: str, *kwargs) -> Tuple[pd.DataFrame, None]:
         with open(path, "rb") as f:
             data = pickle.load(f)
-        return data, None
+        return data
 
     def save_data(self, path: str, data, **kwargs):
         with open(path, "wb") as f:
