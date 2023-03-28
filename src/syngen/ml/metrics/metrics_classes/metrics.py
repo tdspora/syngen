@@ -309,12 +309,12 @@ class BivariateMetric(BaseMetric):
     def _format_date_labels(self, heatmap_orig_data, heatmap_synthetic_data, axis):
         heatmap_orig, x_tick_labels_orig, y_tick_labels_orig = heatmap_orig_data
         heatmap_synth, x_tick_labels_synth, y_tick_labels_synth = heatmap_synthetic_data
-        if axis == 0:
-            y_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9) for i in y_tick_labels_orig]
-            y_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9) for i in y_tick_labels_synth]
+        if axis == "y":
+            y_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9).date() for i in y_tick_labels_orig]
+            y_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9).date() for i in y_tick_labels_synth]
         else:
-            x_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9) for i in x_tick_labels_orig]
-            x_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9) for i in x_tick_labels_synth]
+            x_tick_labels_orig = [datetime.datetime.fromtimestamp(i * 1e-9).date() for i in x_tick_labels_orig]
+            x_tick_labels_synth = [datetime.datetime.fromtimestamp(i * 1e-9).date() for i in x_tick_labels_synth]
         return (heatmap_orig, x_tick_labels_orig, y_tick_labels_orig), \
                (heatmap_synth, x_tick_labels_synth, y_tick_labels_synth)
 
@@ -341,14 +341,14 @@ class BivariateMetric(BaseMetric):
                         heatmap_orig_data,
                         heatmap_synthetic_data,
                     ) = self._calculate_pair_continuous_vs_continuous(
-                        y_col=second_col, x_col=first_col
+                        y_col=second_col, x_col=first_col  # x is first, y is second
                     )
                 elif second_col in categ_columns:
                     (
                         heatmap_orig_data,
                         heatmap_synthetic_data,
                     ) = self._calculate_pair_continuous_vs_categ(
-                        cont_col=first_col, categ_col=second_col
+                        cont_col=first_col, categ_col=second_col  # x is second, y is first
                     )
 
                     heatmap_orig_data = (
@@ -360,14 +360,14 @@ class BivariateMetric(BaseMetric):
                         np.transpose(heatmap_synthetic_data[0]),
                         heatmap_synthetic_data[2],
                         heatmap_synthetic_data[1]
-                    )
+                    )  # x is first, y is second
             elif first_col in categ_columns:
                 if second_col in cont_columns:
                     (
                         heatmap_orig_data,
                         heatmap_synthetic_data,
                     ) = self._calculate_pair_continuous_vs_categ(
-                        cont_col=second_col, categ_col=first_col
+                        cont_col=second_col, categ_col=first_col   # x is first, y is second
                     )
                 elif second_col in categ_columns:
                     (
@@ -383,11 +383,11 @@ class BivariateMetric(BaseMetric):
 
             if first_col in self.date_columns:
                 heatmap_orig_data, heatmap_synthetic_data = self._format_date_labels(
-                    heatmap_orig_data, heatmap_synthetic_data, 0
+                    heatmap_orig_data, heatmap_synthetic_data, "x"
                 )
             if second_col in self.date_columns:
                 heatmap_orig_data, heatmap_synthetic_data = self._format_date_labels(
-                    heatmap_orig_data, heatmap_synthetic_data, 1
+                    heatmap_orig_data, heatmap_synthetic_data, "y"
                 )
 
             self._plot_heatmap(
