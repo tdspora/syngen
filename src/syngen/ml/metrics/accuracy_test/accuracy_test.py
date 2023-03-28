@@ -58,6 +58,13 @@ class BaseTest(ABC):
         """
         shutil.rmtree(self.draws_path)
 
+    def _fetch_training_config(self):
+        """
+        Fetch the parameters of the training configuration
+        """
+        training_config, _ = BinaryLoader().load_data(self.paths["train_config_pickle_path"])
+        return training_config
+
 
 class AccuracyTest(BaseTest):
     def __init__(
@@ -99,8 +106,6 @@ class AccuracyTest(BaseTest):
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
             template = jinja2.Template(file_.read())
 
-        training_config, _ = BinaryLoader().load_data(self.paths["train_config_pickle_path"])
-
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
         uni_images = {
             title: transform_to_base64(path) for title, path in uni_images.items()
@@ -121,7 +126,7 @@ class AccuracyTest(BaseTest):
                                utility_table=utility_result.to_html(),
                                is_data_available=False if utility_result.empty else True,
                                table_name=self.table_name,
-                               training_config=training_config,
+                               training_config=self._fetch_training_config(),
                                inference_config=self.config,
                                time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
                                )
