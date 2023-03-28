@@ -99,7 +99,7 @@ class AccuracyTest(BaseTest):
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
             template = jinja2.Template(file_.read())
 
-        training_config = BinaryLoader().load_data(self.paths["train_config_pickle_path"])
+        training_config, _ = BinaryLoader().load_data(self.paths["train_config_pickle_path"])
 
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
         uni_images = {
