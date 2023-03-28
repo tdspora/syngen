@@ -9,6 +9,7 @@ from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
 from syngen.ml.config import TrainConfig, InferConfig
 from syngen.ml.train_chain import VaeTrainHandler, VaeInferHandler
 from syngen.ml.vae import VanillaVAEWrapper
+from syngen.ml.data_loaders import BinaryLoader
 
 
 class Strategy(ABC):
@@ -56,6 +57,11 @@ class TrainStrategy(Strategy, ABC):
     """
     Class of the strategies of training process
     """
+    def _save_training_config(self):
+        BinaryLoader().save_data(
+            path=self.config.paths["train_config_pickle_path"],
+            data=self.config.to_dict()
+        )
 
     def set_config(self, **kwargs):
         """
@@ -63,6 +69,7 @@ class TrainStrategy(Strategy, ABC):
         """
         configuration = TrainConfig(**kwargs)
         self.config = configuration
+        self._save_training_config()
         return self
 
     def add_handler(self):

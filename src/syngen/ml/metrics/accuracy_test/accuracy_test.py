@@ -16,6 +16,7 @@ from syngen.ml.metrics import (
     Utility
 )
 from syngen.ml.metrics.utils import transform_to_base64
+from syngen.ml.data_loaders import BinaryLoader
 
 
 class BaseTest(ABC):
@@ -57,6 +58,13 @@ class BaseTest(ABC):
         """
         shutil.rmtree(self.draws_path)
 
+    def _fetch_training_config(self):
+        """
+        Fetch the parameters of the training configuration
+        """
+        training_config, _ = BinaryLoader().load_data(self.paths["train_config_pickle_path"])
+        return training_config
+
 
 class AccuracyTest(BaseTest):
     def __init__(
@@ -65,9 +73,9 @@ class AccuracyTest(BaseTest):
             synthetic: pd.DataFrame,
             paths: dict,
             table_name: str,
-            config: Dict
+            infer_config: Dict
     ):
-        super().__init__(original, synthetic, paths, table_name, config)
+        super().__init__(original, synthetic, paths, table_name, infer_config)
         self.draws_path = f"{self.paths['draws_path']}/accuracy"
 
     def __prepare_before_report(self):
@@ -116,8 +124,10 @@ class AccuracyTest(BaseTest):
                                bi_imgs=bi_images,
                                utility_barplot=transform_to_base64(f"{draws_acc_path}/utility_barplot.svg"),
                                utility_table=utility_result.to_html(),
+                               is_data_available=False if utility_result.empty else True,
                                table_name=self.table_name,
-                               config=self.config,
+                               training_config=self._fetch_training_config(),
+                               inference_config=self.config,
                                time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
                                )
 

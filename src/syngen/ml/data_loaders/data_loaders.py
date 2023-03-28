@@ -211,6 +211,6 @@ class BinaryLoader(BaseDataLoader):
             data = pickle.load(f)
         return data, None
 
-    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
+    def save_data(self, path: str, data, **kwargs):
         with open(path, "wb") as f:
-            pickle.dump(df, f)
+            pickle.dump(data, f)

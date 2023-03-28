@@ -17,9 +17,9 @@ class SampleAccuracyTest(BaseTest):
             sampled: pd.DataFrame,
             paths: dict,
             table_name: str,
-            config: Dict
+            train_config: Dict
     ):
-        super().__init__(original, sampled, paths, table_name, config)
+        super().__init__(original, sampled, paths, table_name, train_config)
         self.draws_path = f"{self.paths['draws_path']}/sample_accuracy"
 
     def __get_univariate_metric(self):
