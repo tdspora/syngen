@@ -514,6 +514,8 @@ class Dataset:
                         pk_column=correspondent_pk_col,
                         fk_column=fk_column
                     )
+                    if mapper is None:
+                        continue
                     fk_column_values = fk_column_values.map(mapper)
                 kde = gaussian_kde(fk_column_values)
                 self._save_kde_artifacts(kde=kde, fk_kde_path=self.fk_kde_path, fk_column=fk_column)
