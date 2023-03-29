@@ -37,7 +37,7 @@ class SampleAccuracyTest(BaseTest):
 
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()
-        uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
+        uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"])
 
         # Generate html report
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/sample_report_template.html") as file_:

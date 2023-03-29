@@ -634,13 +634,17 @@ class UnivariateMetric(BaseMetric):
         pass
 
     def calculate_all(
-        self, cont_columns: List[str], categ_columns: List[str], print_nan: bool = False
+        self,
+        cont_columns: List[str],
+        categ_columns: List[str],
+        date_columns: Optional[List[str]],
+        print_nan: bool = False
     ):
         cont_columns = list(cont_columns)
         images = {}
         uni_categ_images = {}
         for col in cont_columns:
-            images.update(self.__calc_continuous(col, print_nan))
+            images.update(self.__calc_continuous(column=col, print_nan=print_nan, isdate=col in date_columns))
         for col in categ_columns:
             uni_categ_images.update(self.__calc_categ(col))
         images.update(uni_categ_images)
@@ -731,7 +735,7 @@ class UnivariateMetric(BaseMetric):
                 uni_images[column] = path_to_image
         return uni_images
 
-    def __calc_continuous(self, column: str, print_nan: bool = False):
+    def __calc_continuous(self, column: str, isdate: bool, print_nan: bool = False):
         original_nan_count = self.original[column].isna().sum()
         synthetic_nan_count = self.synthetic[column].isna().sum()
         original_unique_count = self.original[column].nunique()
@@ -740,6 +744,7 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot and original_unique_count > 1 and synthetic_unique_count > 1:
+            plt.clf()
             plt.figure(figsize=(8, 6.5))
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=2)
@@ -764,6 +769,12 @@ class UnivariateMetric(BaseMetric):
                 ncol=2,
                 frameon=False
             )
+            if isdate:
+                lower_x, upper_x = ax.dataLim._points[:, 0]
+                len_x_labels = len(ax.get_xticklabels())
+                x_ticks = np.linspace(lower_x, upper_x, len_x_labels)
+                x_ticks = [datetime.datetime.fromtimestamp(int(i * 1e-9)) for i in x_ticks]
+                ax.set_xticklabels(x_ticks, rotation=45, ha="right")
             if self.draws_path:
                 path_to_image = f"{self.draws_path}/univariate_{column}.svg"
                 plt.savefig(path_to_image, bbox_inches="tight", format="svg")
