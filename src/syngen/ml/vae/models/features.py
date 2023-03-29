@@ -100,7 +100,7 @@ class BinaryFeature(BaseFeature):
     A class to process binary features, i.e. features containing only two unique values
     """
     def __init__(self, name: str):
-        super().__init__(name="_".join(name.split()))
+        super().__init__(name=name)
 
     def fit(self, data: pd.DataFrame):
         self.mapping = {k: n for n, k in enumerate(np.unique(data))}
@@ -152,7 +152,7 @@ class ContinuousFeature(BaseFeature):
         weight_randomizer: Union[None, bool, tuple] = None,
         column_type=float,
     ):
-        super().__init__(name="_".join(name.split()))
+        super().__init__(name=name)
         if decoder_layers is None:
             decoder_layers = ()
         elif isinstance(decoder_layers, int):
@@ -374,7 +374,7 @@ class CharBasedTextFeature(BaseFeature):
         rnn_units: int = 128,
         dropout: int = 0,
     ):
-        super().__init__(name="_".join(name.split()))
+        super().__init__(name=name)
         self.decoder = None
         self.text_max_len = text_max_len
         self.rnn_units = rnn_units
@@ -599,7 +599,7 @@ class DateFeature(BaseFeature):
         elif isinstance(weight_randomizer, (float, int)):
             weight_randomizer = (weight_randomizer, weight_randomizer)
 
-        super().__init__(name="_".join(name.split()))
+        super().__init__(name=name)
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
 
