@@ -7,6 +7,7 @@ import numpy as np
 import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
+from slugify import slugify
 
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
@@ -507,13 +508,14 @@ class Dataset:
                 correspondent_pk_table = self.foreign_keys_mapping[fk]["references"]["table"]
                 correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
                 if fk_column_values.dtype in (pd.StringDtype(), "object"):
-                    mapper = self._fetch_mapper(
-                        fk_kde_path=self.fk_kde_path,
-                        table_name=self.table_name,
-                        pk_table=correspondent_pk_table,
-                        pk_column=correspondent_pk_col,
-                        fk_column=fk_column
-                    )
+                    try:
+                        with open(f"{self.fk_kde_path.replace(slugify(self.table_name), slugify(correspondent_pk_table))}"
+                                  f"{slugify(correspondent_pk_col)}_mapper.pkl", "rb") as file:
+                            mapper = pickle.load(file)
+                    except FileNotFoundError:
+                        logger.warning(f"The mapper for the {fk_column} text key is not found. "
+                                       f"Simple sampling will be used.")
+                        continue
                     fk_column_values = fk_column_values.map(mapper)
                 kde = gaussian_kde(fk_column_values)
                 self._save_kde_artifacts(kde=kde, fk_kde_path=self.fk_kde_path, fk_column=fk_column)
