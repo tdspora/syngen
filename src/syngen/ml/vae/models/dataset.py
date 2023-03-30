@@ -260,7 +260,8 @@ class Dataset:
         defined_columns = set(
             [
                 col for col in df.columns
-                if df[col].dropna().nunique() <= 50 and col not in self.binary_columns
+                if
+                df[col].dropna().nunique() <= 50 and col not in self.binary_columns.union(set(self.primary_keys_list))
             ]
         )
         self.categ_columns.update(defined_columns)
