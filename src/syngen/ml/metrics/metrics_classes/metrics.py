@@ -744,14 +744,24 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot and original_unique_count > 1 and synthetic_unique_count > 1:
+            plt.clf()
             plt.figure(figsize=(8, 6.5))
             # Kernel Density Estimation plot
             self.original[column].plot(kind="density", color="#3F93E1", linewidth=2)
             self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=2)
             ax = plt.gca()
+            fig = ax.get_figure()
+            fig.canvas.draw()
             ax.set_xlabel("value", fontsize=9)
             ax.set_ylabel("density", fontsize=9)
             ax.tick_params(axis='both', which='major', labelsize=9)
+            ax.ticklabel_format(axis="x", style='plain')
+            fmt = ax.yaxis.get_major_formatter()
+            fmt.set_useMathText(True)
+            ax.yaxis.offsetText.set_visible(False)
+            ax.yaxis.set_label_text(f"density {fmt.get_offset()}")
+            ax.yaxis.get_offset_text().set_fontsize(9)
+            plt.xticks(rotation=45)
             ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
             ax.grid(
                 color="#E5E9EB",
@@ -759,7 +769,6 @@ class UnivariateMetric(BaseMetric):
                 linewidth=0.5)
             ax.set_axisbelow(True)
             ax.set_facecolor("#FFFFFF")
-            ax.yaxis.get_offset_text().set_fontsize(9)
             plt.legend(
                 ["original", "synthetic"],
                 loc="upper left",
