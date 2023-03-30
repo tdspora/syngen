@@ -96,7 +96,7 @@ class AccuracyTest(BaseTest):
         acc.calculate_all(kwargs["categ_columns"])
         acc_median = "%.4f" % acc.calculate_heatmap_median(acc.heatmap)
 
-        uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"])
+        uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"])
         bi_images = bivariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"])
         correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
         clustering_result = "%.4f" % clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
