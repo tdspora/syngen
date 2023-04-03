@@ -5,7 +5,6 @@ from typing import Optional, Dict, Tuple
 import pickle
 
 import pandas as pd
-from pandas.errors import ParserError
 import pandavro as pdx
 import yaml
 from yaml import Loader
@@ -15,6 +14,7 @@ from loguru import logger
 
 from syngen.ml.validation_schema import validate_schema, configuration_schema
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
+from syngen.ml.utils import trim_string
 
 
 class BaseDataLoader(ABC):
@@ -85,10 +85,7 @@ class CSVLoader(BaseDataLoader):
     def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         df = pd.DataFrame()
         try:
-            df = pd.read_csv(path, engine="python", **kwargs)
-            return df, CSVConvertor(df).schema
-        except ParserError:
-            df = pd.read_csv(path, engine="c", **kwargs)
+            df = pd.read_csv(path, engine="c", **kwargs).apply(trim_string, axis=0)
             return df, CSVConvertor(df).schema
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \

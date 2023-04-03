@@ -157,3 +157,10 @@ def inverse_dict(dictionary: Dict) -> Dict:
     Swap keys and values in the dictionary
     """
     return dict(zip(dictionary.values(), dictionary.keys()))
+
+
+def trim_string(col):
+    if isinstance(col.dtype, str):
+        return col.str.slice(stop=10 * 1024)
+    else:
+        return col
