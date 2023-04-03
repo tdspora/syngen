@@ -3,6 +3,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Tuple
 import pickle
+import csv
 
 import pandas as pd
 from pandas.errors import ParserError
@@ -83,6 +84,7 @@ class CSVLoader(BaseDataLoader):
 
     @staticmethod
     def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+        csv.field_size_limit(2 ** 30 - 1)
         df = pd.DataFrame()
         try:
             df = pd.read_csv(path, engine="python", **kwargs)
