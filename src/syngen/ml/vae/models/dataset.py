@@ -224,7 +224,7 @@ class Dataset:
             ]
         )
 
-    def _fetch_categorical_columns(self, schema: Dict):
+    def _fetch_categorical_columns(self):
         """
         Fetch the categorical columns from the metadata
         """
@@ -235,17 +235,17 @@ class Dataset:
         if metadata_of_table is not None:
             self.categ_columns = \
                 set(metadata_of_table.get("train_settings", {}).get("column_types", {}).get("categorical", []))
+        if self.categ_columns:
+            logger.info(
+                f"The columns - {', '.join(self.categ_columns)} were defined as categorical "
+                f"due to the information from the metadata of the table - '{self.table_name}'")
 
-            if self.categ_columns:
-                self._check_if_column_in_removed(schema)
-                self._check_if_column_existed()
-                self._check_if_not_key_column()
-                self._check_if_column_binary()
-
-            if self.categ_columns:
-                logger.info(
-                    f"The columns - {', '.join(self.categ_columns)} were set as categorical "
-                    f"due to the information from the metadata of the table - '{self.table_name}'")
+    def _check_if_column_categorical(self, schema: Dict):
+        if self.categ_columns:
+            self._check_if_column_in_removed(schema=schema)
+            self._check_if_column_existed()
+            self._check_if_not_key_column()
+            self._check_if_column_binary()
 
     def _set_binary_columns(self, df: pd.DataFrame):
         """
@@ -269,8 +269,9 @@ class Dataset:
         """
         Set up the list of categorical columns
         """
-        self._fetch_categorical_columns(schema)
+        self._fetch_categorical_columns()
         self._define_categorical_columns(df)
+        self._check_if_column_categorical(schema=schema)
 
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = False):
         """
