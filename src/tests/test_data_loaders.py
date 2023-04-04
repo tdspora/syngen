@@ -92,3 +92,11 @@ class TestDataLoader(TestCase):
 
         assert isinstance(df, pd.DataFrame)
         assert schema == {'fields': {'gender': 'int', 'height': 'float', 'id': 'int'}, 'format': 'Avro'}
+
+    def test_load_data_from_empty_table_in_avro_format(self):
+        with pytest.raises(ValueError):
+            with self.assertLogs(level="ERROR") as captured_log:
+                DataLoader("tests/fixtures/avro_tables/empty_table.avro").load_data()
+            self.assertIn(
+                captured_log.output, "It seems that empty file was provided. Unable to train."
+            )
