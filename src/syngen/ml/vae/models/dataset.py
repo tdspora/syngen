@@ -202,7 +202,7 @@ class Dataset:
                 f"as far as this column was set as the {key_type} of the table - '{self.table_name}'")
             self.categ_columns.remove(column)
 
-    def _check_if_not_key_column(self):
+    def __check_if_not_key_column(self):
         """
         Exclude the column from the list of categorical columns
         if it relates to primary key, unique key or foreign key
@@ -244,7 +244,7 @@ class Dataset:
         if self.categ_columns:
             self._check_if_column_in_removed(schema=schema)
             self._check_if_column_existed()
-            self._check_if_not_key_column()
+            self.__check_if_not_key_column()
             self._check_if_column_binary()
 
     def _set_binary_columns(self, df: pd.DataFrame):
