@@ -22,17 +22,20 @@ class Convertor(ABC):
         """
         Preprocess data frame, update data types of columns
         """
-        for column, data_type in schema.get("fields", {}).items():
-            if data_type in ["binary", "date"]:
-                df[column] = df[column].astype("string")
-            elif data_type == "int":
-                if any(df[column].isnull()):
-                    df[column] = df[column].astype("float64")
-                else:
-                    df[column] = df[column].astype("int64")
-            elif data_type == "string":
-                df[column] = df[column].astype("string")
-        return df
+        if not df.empty:
+            for column, data_type in schema.get("fields", {}).items():
+                if data_type in ["binary", "date"]:
+                    df[column] = df[column].astype("string")
+                elif data_type == "int":
+                    if any(df[column].isnull()):
+                        df[column] = df[column].astype("float64")
+                    else:
+                        df[column] = df[column].astype("int64")
+                elif data_type == "string":
+                    df[column] = df[column].astype("string")
+            return df
+        else:
+            return df
 
 
 @dataclass
