@@ -100,7 +100,7 @@ class CSVLoader(BaseDataLoader):
     @staticmethod
     def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
         if df is not None:
-            df.to_csv(path, **kwargs)
+            df.to_csv(path, **kwargs, index=False)
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         self._save_data(path, df, **kwargs)
