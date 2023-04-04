@@ -38,7 +38,7 @@ class DataLoader(BaseDataLoader):
 
     def __init__(self, path: str):
         if not path:
-            raise ValueError("It seems that the information of source is absent.")
+            raise ValueError("It seems that the information of source is absent")
         self.path = path
         self.file_loader = self.__get_file_loader()
         self.has_existed_path = self.check_if_path_exists()
@@ -63,7 +63,7 @@ class DataLoader(BaseDataLoader):
         try:
             df, schema = self.file_loader.load_data(self.path)
             if df.shape[0] < 1:
-                raise ValueError("Empty file was provided. Unable to train.")
+                raise ValueError("Empty file was provided. Unable to train")
             return df, schema
         except UnicodeDecodeError as error:
             message = f"It seems that the content of the data in the path - '{self.path}' " \
