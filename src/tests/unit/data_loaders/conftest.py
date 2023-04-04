@@ -33,6 +33,20 @@ def test_pickle_path():
         os.remove(test_path)
 
 @pytest.fixture
+def test_yaml_path():
+    test_path = 'test.yaml'
+    yield test_path
+    if os.path.exists(test_path):
+        os.remove(test_path)
+
+@pytest.fixture
+def test_yml_path():
+    test_path = 'test.yml'
+    yield test_path
+    if os.path.exists(test_path):
+        os.remove(test_path)
+
+@pytest.fixture
 def test_df():
     return pd.DataFrame(
         {

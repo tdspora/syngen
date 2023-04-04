@@ -2,12 +2,15 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 import os
+from unittest.mock import patch
 
 from syngen.ml.data_loaders import (
     DataLoader,
     CSVLoader,
     AvroLoader,
-    BinaryLoader
+    BinaryLoader,
+    MetadataLoader,
+    YAMLLoader
 )
 
 
@@ -183,3 +186,92 @@ def test_save_data_in_pickle_format(test_pickle_path, test_df):
 
     loaded_df, schema = data_loader.load_data()
     pd.testing.assert_frame_equal(loaded_df, test_df)
+
+
+def test_initialize_metadata_loader():
+    test_metadata_loader = MetadataLoader("tests/unit/data_loaders/fixtures/metadata/metadata.yaml")
+    assert test_metadata_loader.metadata_path == "tests/unit/data_loaders/fixtures/metadata/metadata.yaml"
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+
+def test_initialize_metadata_loader_with_unsupported_format():
+    with pytest.raises(NotImplementedError) as error:
+        MetadataLoader("path/to/table.test")
+        assert str(error.value) == "File format not supported"
+
+def test_load_metadata_in_yaml_format():
+    path_to_metadata = "tests/unit/data_loaders/fixtures/metadata/metadata.yaml"
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+    metadata = test_metadata_loader.load_data()
+    assert metadata == {
+        "pk_test": {
+            "train_settings": {
+                "drop_null": False,
+                "epochs": 1,
+                "print_report": False,
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "print_report": True,
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100
+            },
+            "keys": {
+                "pk_id": {
+                    "columns": ["Id"],
+                    "type": "PK"
+                }
+            },
+            "source": "..\\data\\pk_test.csv"
+        }
+    }
+
+def test_load_metadata_in_yml_format():
+    path_to_metadata = "tests/unit/data_loaders/fixtures/metadata/metadata.yml"
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+    metadata = test_metadata_loader.load_data()
+    assert metadata == {
+        "pk_test": {
+            "train_settings": {
+                "drop_null": False,
+                "epochs": 1,
+                "print_report": False,
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "print_report": True,
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100
+            },
+            "keys": {
+                "pk_id": {
+                    "columns": ["Id"],
+                    "type": "PK"
+                }
+            },
+            "source": "..\\data\\pk_test.csv"
+        }
+    }
+
+def test_save_metadata_in_yaml_format(test_yaml_path, test_df):
+    metadata_loader = MetadataLoader(test_yaml_path)
+    assert isinstance(metadata_loader.metadata_loader, YAMLLoader)
+
+    with pytest.raises(NotImplementedError) as error:
+        metadata_loader.save_data(test_yaml_path, test_df)
+        assert str(error) == "Saving YAML files is not supported"
+
+def test_save_metadata_in_yml_format(test_yml_path, test_df):
+    metadata_loader = MetadataLoader(test_yml_path)
+    assert isinstance(metadata_loader.metadata_loader, YAMLLoader)
+
+    with pytest.raises(NotImplementedError) as error:
+        metadata_loader.save_data(test_yml_path, test_df)
+        assert str(error) == "Saving YAML files is not supported"
+
+
