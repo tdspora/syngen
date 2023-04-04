@@ -35,16 +35,17 @@ class TestDataLoader(TestCase):
         assert test_data_loader.has_existed_path is False
         assert isinstance(test_data_loader.file_loader, AvroLoader)
 
-    def test_initialize_data_loader_for_single_table_with_unsupported_format_1(self):
-        with pytest.raises(NotImplementedError):
+    def test_initialize_data_loader_for_single_table_with_unsupported_format(self):
+        with pytest.raises(NotImplementedError) as error:
             DataLoader("path/to/table.test")
+            assert str(error.value) == "File format not supported"
 
-    def test_initialize_data_loader_for_single_table_with_unsupported_format_2(self):
+    def test_initialize_data_loader_for_single_table_with_empty_path(self):
         with pytest.raises(ValueError):
             with self.assertLogs(level="ERROR") as captured_log:
                 DataLoader("")
             self.assertIn(
-                captured_log.output, "It seems that the file format isn't supported for the path - path/to/table.test"
+                captured_log.output, "It seems that the information of source is absent"
             )
 
     def test_load_data_from_table_in_csv_format(self):
@@ -65,7 +66,7 @@ class TestDataLoader(TestCase):
             with self.assertLogs(level="ERROR") as captured_log:
                 DataLoader("tests/fixtures/csv_tables/empty_table.csv").load_data()
             self.assertIn(
-                captured_log.output, "It seems that empty file was provided. Unable to train."
+                captured_log.output, "It seems that empty file was provided. Unable to train"
             )
 
     def test_load_data_from_table_in_csv_format_in_not_utf_8(self):
