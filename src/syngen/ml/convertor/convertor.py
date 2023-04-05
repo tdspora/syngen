@@ -1,5 +1,5 @@
 from typing import Dict, Tuple
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 import pandas as pd
@@ -11,6 +11,7 @@ class Convertor(ABC):
     def __init__(self, schema, df):
         self.converted_schema, self.preprocessed_df = self._convert_schema_and_df(schema, df)
 
+    @abstractmethod
     def _convert_schema_and_df(self, schema: Dict, df: pd.DataFrame) -> Tuple[Dict, pd.DataFrame]:
         """
         Convert the schema of file to unified format, preprocess dataframe

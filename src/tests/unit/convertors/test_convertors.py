@@ -46,13 +46,6 @@ SCHEMA = {
 }
 
 
-# def test_convertor():
-#     schema = SCHEMA
-#
-#     convertor = Convertor(schema, pd.DataFrame())
-#     assert convertor.converted_schema == schema
-#     assert convertor.converted_schema == {)
-
 def test_initiate_csv_convertor():
     df, schema = DataLoader("tests/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv").load_data()
     convertor = CSVConvertor(df)
@@ -63,9 +56,7 @@ def test_initiate_csv_convertor():
 def test_initiate_avro_convertor():
     df = pdx.from_avro("tests/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro")
 
-    schema = SCHEMA
-
-    convertor = AvroConvertor(schema, df)
+    convertor = AvroConvertor(SCHEMA, df)
 
     assert df.dtypes.to_dict() == {
         "EmployeeKey": dtype("int64"),
