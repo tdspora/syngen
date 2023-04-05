@@ -71,7 +71,7 @@ class AvroConvertor(Convertor):
             elif "bytes" in data_type:
                 fields[column] = "string"
             else:
-                message = f"It seems that the column - {column} has not supported data type - {data_type}"
+                message = f"It seems that the column - '{column}' has unsupported data type - '{data_type}'"
                 logger.error(message)
                 raise ValueError(message)
         converted_schema["format"] = "Avro"
