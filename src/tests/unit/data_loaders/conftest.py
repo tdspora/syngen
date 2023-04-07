@@ -11,6 +11,7 @@ def test_csv_path():
     if os.path.exists(test_path):
         os.remove(test_path)
 
+
 @pytest.fixture
 def test_avro_path():
     test_path = 'test.avro'
@@ -18,12 +19,6 @@ def test_avro_path():
     if os.path.exists(test_path):
         os.remove(test_path)
 
-@pytest.fixture
-def test_pickle_path():
-    test_path = 'test.pkl'
-    yield test_path
-    if os.path.exists(test_path):
-        os.remove(test_path)
 
 @pytest.fixture
 def test_pickle_path():
@@ -31,6 +26,15 @@ def test_pickle_path():
     yield test_path
     if os.path.exists(test_path):
         os.remove(test_path)
+
+
+@pytest.fixture
+def test_pickle_path():
+    test_path = 'test.pkl'
+    yield test_path
+    if os.path.exists(test_path):
+        os.remove(test_path)
+
 
 @pytest.fixture
 def test_yaml_path():
@@ -39,12 +43,14 @@ def test_yaml_path():
     if os.path.exists(test_path):
         os.remove(test_path)
 
+
 @pytest.fixture
 def test_yml_path():
     test_path = 'test.yml'
     yield test_path
     if os.path.exists(test_path):
         os.remove(test_path)
+
 
 @pytest.fixture
 def test_df():
