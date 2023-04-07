@@ -84,6 +84,7 @@ class TrainConfig:
         """
         Mark removed columns in the schema
         """
+        schema["fields"] = dict()
         if schema.get("format") == "CSV" and dropped_columns:
             schema["fields"] = {
                 column: "removed"
