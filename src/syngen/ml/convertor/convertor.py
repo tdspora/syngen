@@ -1,5 +1,5 @@
 from typing import Dict, Tuple
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 import pandas as pd
@@ -11,6 +11,7 @@ class Convertor(ABC):
     def __init__(self, schema, df):
         self.converted_schema, self.preprocessed_df = self._convert_schema_and_df(schema, df)
 
+    @abstractmethod
     def _convert_schema_and_df(self, schema: Dict, df: pd.DataFrame) -> Tuple[Dict, pd.DataFrame]:
         """
         Convert the schema of file to unified format, preprocess dataframe
@@ -22,17 +23,20 @@ class Convertor(ABC):
         """
         Preprocess data frame, update data types of columns
         """
-        for column, data_type in schema.get("fields", {}).items():
-            if data_type in ["binary", "date"]:
-                df[column] = df[column].astype("string")
-            elif data_type == "int":
-                if any(df[column].isnull()):
-                    df[column] = df[column].astype("float64")
-                else:
-                    df[column] = df[column].astype("int64")
-            elif data_type == "string":
-                df[column] = df[column].astype("string")
-        return df
+        if not df.empty:
+            for column, data_type in schema.get("fields", {}).items():
+                if data_type in ["binary", "date"]:
+                    df[column] = df[column].astype("string")
+                elif data_type == "int":
+                    if any(df[column].isnull()):
+                        df[column] = df[column].astype("float64")
+                    else:
+                        df[column] = df[column].astype("int64")
+                elif data_type == "string":
+                    df[column] = df[column].astype("string")
+            return df
+        else:
+            return df
 
 
 @dataclass
@@ -68,7 +72,7 @@ class AvroConvertor(Convertor):
             elif "bytes" in data_type:
                 fields[column] = "string"
             else:
-                message = f"It seems that the column - {column} has not supported data type - {data_type}"
+                message = f"It seems that the column - '{column}' has unsupported data type - '{data_type}'"
                 logger.error(message)
                 raise ValueError(message)
         converted_schema["format"] = "Avro"
