@@ -10,6 +10,7 @@ class TestSlugify(TestCase):
             attr_2="Мой другой аттрибут",
             attr_3="@#$12345*&^"
         )
+
         @slugify_attribute(attr_1="slug_attr1", attr_2="slug_attr2", attr_3="slug_attr3")
         def dummy_function(mock):
             pass

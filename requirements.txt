@@ -23,3 +23,5 @@ schema
 avro
 python-slugify[unidecode]>=7.0.0
 pytest
+pytest-reportportal
+reportportal-client
