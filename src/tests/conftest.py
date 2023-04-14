@@ -1,7 +1,9 @@
 import pytest
 import os
+import logging
 
 import pandas as pd
+from reportportal_client import RPLogger
 
 
 @pytest.fixture
@@ -61,3 +63,11 @@ def test_df():
             "id": [925, 84, 821, 383]
         }
     )
+
+
+@pytest.fixture(scope="session")
+def rp_logger():
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logging.setLoggerClass(RPLogger)
+    return logger
