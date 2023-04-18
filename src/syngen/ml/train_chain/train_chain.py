@@ -226,7 +226,7 @@ class VaeInferHandler(BaseHandler):
         self.random_seeds_list = list()
         self.vae = None
         self.has_vae = os.path.exists(self.paths["state_path"])
-        self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}kde_params.pkl')
+        self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
     @staticmethod
     def synth_word(size, indexes, counts):
@@ -283,7 +283,7 @@ class VaeInferHandler(BaseHandler):
             self.vae.load_state(self.paths["state_path"])
             synthetic_infer = self.vae.predict_sampled_df(size)
         if self.has_no_ml:
-            with open(f'{self.paths["path_to_no_ml"]}kde_params.pkl', "rb") as file:
+            with open(f'{self.paths["path_to_no_ml"]}', "rb") as file:
                 features = dill.load(file)
             for col in features.keys():
                 kde = features[col]["kde"]
