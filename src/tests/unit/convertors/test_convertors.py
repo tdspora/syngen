@@ -47,16 +47,16 @@ SCHEMA = {
 
 
 def test_initiate_csv_convertor(rp_logger):
-    rp_logger.debug("Initiating the instance of the class CSVConvertor")
+    rp_logger.info("Initiating the instance of the class CSVConvertor")
     df, schema = DataLoader("tests/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv").load_data()
     convertor = CSVConvertor(df)
     assert convertor.schema == {"format": "CSV"}
     pd.testing.assert_frame_equal(convertor.df, df)
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_initiate_avro_convertor(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor")
+    rp_logger.info("Initiating the instance of the class AvroConvertor")
     df = pdx.from_avro("tests/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro")
 
     convertor = AvroConvertor(SCHEMA, df)
@@ -166,11 +166,11 @@ def test_initiate_avro_convertor(rp_logger):
                "EmployeePhoto": "string[python]"
            }
     pd.testing.assert_series_equal(convertor.preprocessed_df.dtypes, df.dtypes)
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog, rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor "
+    rp_logger.info("Initiating the instance of the class AvroConvertor "
                     "with the schema containing unsupported data type")
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
@@ -184,11 +184,11 @@ def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog
 
             assert str(error.value) == "It seems that the column - 'Test' has unsupported data type - 'test'"
             assert "It seems that the column - 'Test' has unsupported data type - 'test'" in caplog.text
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_preprocess_df_if_column_is_int(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor with the schema containing "
+    rp_logger.info("Initiating the instance of the class AvroConvertor with the schema containing "
                     "only one column with data type - 'int'")
     df = pd.DataFrame({
         "Test": [1, 2, 3]
@@ -198,11 +198,11 @@ def test_preprocess_df_if_column_is_int(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "int64"
     }
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_preprocess_df_if_column_is_int_in_column_with_null_values(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor with the schema "
+    rp_logger.info("Initiating the instance of the class AvroConvertor with the schema "
                     "containing one nullable column with data type - 'int'")
     df = pd.DataFrame({
         "Test": [1, 2, np.NAN]
@@ -212,11 +212,11 @@ def test_preprocess_df_if_column_is_int_in_column_with_null_values(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "float64"
     }
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_preprocess_df_if_column_is_float(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor "
+    rp_logger.info("Initiating the instance of the class AvroConvertor "
                     "with the schema containing one column with data type - 'float'")
     df = pd.DataFrame({
         "Test": [1.0, 2.0, 3.0]
@@ -226,11 +226,11 @@ def test_preprocess_df_if_column_is_float(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "float64"
     }
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_preprocess_df_if_column_is_double(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor "
+    rp_logger.info("Initiating the instance of the class AvroConvertor "
                     "with the schema containing one column with data type - 'double'")
     df = pd.DataFrame({
         "Test": [1.055, 2.034, 3.099]
@@ -240,11 +240,11 @@ def test_preprocess_df_if_column_is_double(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "float64"
     }
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_preprocess_df_if_column_is_string(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor "
+    rp_logger.info("Initiating the instance of the class AvroConvertor "
                     "with the schema containing  one column with data type - 'string'")
     df = pd.DataFrame({
         "Test": ["1", "2", "3"]
@@ -254,11 +254,11 @@ def test_preprocess_df_if_column_is_string(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "string[python]"
     }
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_preprocess_df_if_column_is_boolean(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor "
+    rp_logger.info("Initiating the instance of the class AvroConvertor "
                     "with the schema containing one column with data type - 'boolean'")
     df = pd.DataFrame({
         "Test": [True, False, True]
@@ -268,11 +268,11 @@ def test_preprocess_df_if_column_is_boolean(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "int64"
     }
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_preprocess_df_if_column_is_datetime(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor "
+    rp_logger.info("Initiating the instance of the class AvroConvertor "
                     "with the schema containing one column with data type - 'datetime'")
     df = pd.DataFrame({
         "Test": pd.date_range('20130101', periods=3)
@@ -282,11 +282,11 @@ def test_preprocess_df_if_column_is_datetime(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "string[python]"
     }
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_preprocess_df_if_column_is_binary(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor "
+    rp_logger.info("Initiating the instance of the class AvroConvertor "
                     "with the schema containing one column with data type - 'bytes'")
     df = pd.DataFrame({
         "Test": [b"test", b"test2", b"test3"]
@@ -296,11 +296,11 @@ def test_preprocess_df_if_column_is_binary(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "string[python]"
     }
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
 
 
 def test_preprocess_df_if_column_has_unsupported_data_type(rp_logger):
-    rp_logger.debug("Initiating the instance of the class AvroConvertor "
+    rp_logger.info("Initiating the instance of the class AvroConvertor "
                     "with the schema containing unsupported data type")
     df = pd.DataFrame({
         "Test": [1, 2, 3]
@@ -309,4 +309,4 @@ def test_preprocess_df_if_column_has_unsupported_data_type(rp_logger):
     with pytest.raises(ValueError) as error:
         AvroConvertor({"Test": ["test"]}, df)
         assert str(error.value) == "It seems that the column - 'Test' has unsupported data type - 'test'"
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")

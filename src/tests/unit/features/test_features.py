@@ -55,9 +55,9 @@ test_data = [
 
 @pytest.mark.parametrize("data, expected_date_format", test_data)
 def test_validate_date_format(data, expected_date_format, rp_logger):
-    rp_logger.debug("Validating date format with data: %s and expected date format: %s", data, expected_date_format)
+    rp_logger.info("Validating date format with data: %s and expected date format: %s", data, expected_date_format)
     data = pd.DataFrame(data)
     date_feature = DateFeature(name="date_feature")
     date_feature.fit(data)
     assert date_feature.date_format == expected_date_format
-    rp_logger.debug("Test passed successfully")
+    rp_logger.info("Test passed successfully")
