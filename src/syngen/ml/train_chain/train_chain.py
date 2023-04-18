@@ -94,7 +94,7 @@ class LongTextsHandler(BaseHandler):
             return (x.str.len() > 200).any()
 
         try:
-            if self.schema is None:
+            if self.schema.get("format", "") == "CSV":
                 data_subset = data.select_dtypes(include=[pd.StringDtype(), "object"])
             else:
                 text_columns = [
