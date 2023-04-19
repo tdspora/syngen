@@ -171,7 +171,7 @@ def test_initiate_avro_convertor(rp_logger):
 
 def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog, rp_logger):
     rp_logger.info("Initiating the instance of the class AvroConvertor "
-                    "with the schema containing unsupported data type")
+                   "with the schema containing unsupported data type")
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
             df = pdx.from_avro("tests/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro")
