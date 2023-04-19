@@ -5,9 +5,20 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from loguru import logger
 from syngen.ml.train_chain import RootHandler
-from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
-from syngen.ml.config import TrainConfig, InferConfig
-from syngen.ml.train_chain import VaeTrainHandler, VaeInferHandler
+from syngen.ml.reporters import (
+    Report,
+    AccuracyReporter,
+    SampleAccuracyReporter
+)
+from syngen.ml.config import (
+    TrainConfig,
+    InferConfig
+)
+from syngen.ml.train_chain import (
+    LongTextsHandler,
+    VaeTrainHandler,
+    VaeInferHandler
+)
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
 
@@ -94,7 +105,15 @@ class TrainStrategy(Strategy, ABC):
             batch_size=self.config.batch_size
         )
 
-        root_handler.set_next(vae_handler)
+        long_text_handler = LongTextsHandler(
+            metadata=self.metadata,
+            table_name=self.config.table_name,
+            schema=self.config.schema,
+            paths=self.config.paths
+        )
+
+        root_handler.set_next(long_text_handler).set_next(vae_handler)
+
         self.handler = root_handler
         return self
 
