@@ -41,8 +41,7 @@ class Reporter:
         types = (
             dataset.str_columns, dataset.date_columns,
             dataset.int_columns, dataset.float_columns,
-            dataset.binary_columns, dataset.categ_columns,
-            dataset.long_text_columns
+            dataset.binary_columns, dataset.categ_columns
         )
         return types
 
@@ -59,7 +58,7 @@ class Reporter:
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
         types = self.fetch_data_types()
-        str_columns, date_columns, int_columns, float_columns, binary_columns, categ_columns, long_text_columns = types
+        str_columns, date_columns, int_columns, float_columns, binary_columns, categ_columns = types
         original = original[[
             col for col in original.columns
             if col in set().union(*types)
