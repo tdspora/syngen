@@ -172,17 +172,6 @@ class VaeTrainHandler(BaseHandler):
         logger.info("Finished VAE training")
 
     def handle(self, data: pd.DataFrame, **kwargs):
-        # try:
-        #     with open(f'{self.paths["no_ml_state_path"]}kde_params.pkl', "rb") as file:
-        #         features = dill.load(file)
-        #     if len(set(features.keys()) ^ set(data.columns)) == 0:
-        #         logger.info("No columns to train with VAE")
-        #         return super().handle(data, **kwargs)
-        #     else:
-        #         data = data.drop(list(features.keys()), axis=1)
-        # except Exception:
-        #     logger.info("There are no long texts columns")
-
         self.__fit_model(data)
         return super().handle(data, **kwargs)
 
