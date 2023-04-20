@@ -16,7 +16,7 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 
 from syngen.ml.vae import *
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.utils import slugify_parameters
+from syngen.ml.utils import slugify_parameters, fetch_dataset
 
 
 class AbstractHandler(ABC):
@@ -90,36 +90,17 @@ class LongTextsHandler(BaseHandler):
     def handle(self, data: pd.DataFrame, **kwargs):
         self._prepare_dir()
 
-        def len_filter(x):
-            return (x.str.len() > 200).any()
+        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        long_text_columns = dataset.long_text_columns
 
-        try:
-            if self.schema.get("format", "") == "CSV":
-                data_subset = data.select_dtypes(include=[pd.StringDtype(), "object"])
-            else:
-                text_columns = [
-                    col for col, data_type in self.schema.get("fields", {}).items()
-                    if data_type in ["string", "binary"]
-                ]
-                data_subset = data[text_columns]
-            data_subset = data_subset.loc[:, data_subset.apply(len_filter)]
-            columns = set(data_subset.columns)
-            if columns:
-                logger.info(
-                    f"Please note that the columns - {columns} contain long texts (> 200 symbols). "
-                    f"Such texts' handling consumes significant resources and results in poor quality content, "
-                    f"therefore this column(-s) will be generated using a simplified statistical approach.")
-        except (FileNotFoundError, pd.errors.EmptyDataError, ValueError):
-            data_subset = pd.DataFrame()
-
-        if len(data_subset.columns) > 0:
+        if len(long_text_columns) > 0:
             features = {}
-            for col in data_subset.columns:
+            for col in long_text_columns:
                 tokenizer = Tokenizer(lower=False, char_level=True)
-                if type(data_subset[col].dropna().values[0]) is bytes:
-                    text_col = data_subset[col].str.decode("utf-8", errors="ignore")
+                if type(data[col].dropna().values[0]) is bytes:
+                    text_col = data[col].str.decode("utf-8", errors="ignore")
                 else:
-                    text_col = data_subset[col]
+                    text_col = data[col]
                 text_col = text_col.fillna("")
                 tokenizer.fit_on_texts(text_col)
 
@@ -191,16 +172,16 @@ class VaeTrainHandler(BaseHandler):
         logger.info("Finished VAE training")
 
     def handle(self, data: pd.DataFrame, **kwargs):
-        try:
-            with open(f'{self.paths["no_ml_state_path"]}kde_params.pkl', "rb") as file:
-                features = dill.load(file)
-            if len(set(features.keys()) ^ set(data.columns)) == 0:
-                logger.info("No columns to train with VAE")
-                return super().handle(data, **kwargs)
-            else:
-                data = data.drop(list(features.keys()), axis=1)
-        except Exception:
-            logger.info("There are no long texts columns")
+        # try:
+        #     with open(f'{self.paths["no_ml_state_path"]}kde_params.pkl', "rb") as file:
+        #         features = dill.load(file)
+        #     if len(set(features.keys()) ^ set(data.columns)) == 0:
+        #         logger.info("No columns to train with VAE")
+        #         return super().handle(data, **kwargs)
+        #     else:
+        #         data = data.drop(list(features.keys()), axis=1)
+        # except Exception:
+        #     logger.info("There are no long texts columns")
 
         self.__fit_model(data)
         return super().handle(data, **kwargs)
