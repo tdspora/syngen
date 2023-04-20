@@ -325,8 +325,7 @@ class Dataset:
         self.date_columns = \
             get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
             self.binary_columns - self.long_text_columns
-        self.str_columns = \
-            self.str_columns - self.date_columns - self.long_text_columns
+        self.str_columns -= self.date_columns
 
     def _avro_data_pipeline(self, df, schema):
         """
