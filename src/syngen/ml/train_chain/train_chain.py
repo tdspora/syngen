@@ -163,6 +163,13 @@ class VaeTrainHandler(BaseHandler):
         logger.debug(
             f"Train model with parameters: epochs={self.epochs}, row_subset={self.row_subset}, "
             f"drop_null={self.drop_null}, batch_size={self.batch_size}")
+
+        self.model.prepare_dataset()
+
+        features = fetch_dataset(self.paths["dataset_pickle_path"]).features
+        if len(features) == 0:
+            logger.info("No features to train VAE on")
+            return
         self.model.fit_on_df(
             data,
             epochs=self.epochs,
@@ -195,7 +202,7 @@ class VaeInferHandler(BaseHandler):
             seed(self.random_seed)
         self.random_seeds_list = list()
         self.vae = None
-        self.has_vae = os.path.exists(self.paths["state_path"])
+        self.has_vae = len(fetch_dataset(self.paths["dataset_pickle_path"]).features) > 0
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
     @staticmethod

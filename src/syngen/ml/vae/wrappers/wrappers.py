@@ -176,14 +176,16 @@ class VAEWrapper(BaseWrapper):
     def _init_model(self):
         pass
 
+    def prepare_dataset(self):
+        self.__post__init()
+        self._pipeline()
+
     def fit_on_df(
         self,
         df: pd.DataFrame,
         epochs: int,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
     ):
-        self.__post__init()
-        self._pipeline()
         self._init_model()
 
         if columns_subset is None:
