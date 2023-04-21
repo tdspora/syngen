@@ -1,6 +1,7 @@
 from typing import List, Dict
 from dateutil.parser import parse
 import pickle
+from datetime import datetime, timedelta
 
 import pandas as pd
 import numpy as np
@@ -164,3 +165,14 @@ def trim_string(col):
         return col.str.slice(stop=10 * 1024)
     else:
         return col
+
+
+def convert_to_time(timestamp):
+    """
+    Convert timestamp to datetime
+    """
+    timestamp = int(timestamp * 1e-9)
+    if timestamp < 0:
+        return datetime(1970, 1, 1) + timedelta(seconds=timestamp)
+    else:
+        return datetime.utcfromtimestamp(timestamp)

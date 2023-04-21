@@ -9,5 +9,6 @@ from syngen.ml.utils.utils import (
     slugify_parameters,
     inverse_dict,
     get_nan_labels,
-    trim_string
+    trim_string,
+    convert_to_time
 )
