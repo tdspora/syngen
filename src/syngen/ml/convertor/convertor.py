@@ -45,7 +45,7 @@ class CSVConvertor:
     Class for supporting custom schema for csv files
     """
     df: pd.DataFrame()
-    schema = {"format": "CSV"}
+    schema = {"fields": {}, "format": "CSV"}
 
 
 class AvroConvertor(Convertor):

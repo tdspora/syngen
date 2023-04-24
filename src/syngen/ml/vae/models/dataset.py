@@ -287,13 +287,15 @@ class Dataset:
                 if data_type == "string"
             ]
             data_subset = df[text_columns]
-        data_subset = data_subset.loc[:, data_subset.apply(lambda x: (x.str.len() > 200).any())]
-        self.long_text_columns = set(data_subset.columns)
-        if self.long_text_columns:
-            logger.info(
-                f"Please note that the columns - {self.long_text_columns} contain long texts (> 200 symbols). "
-                f"Such texts' handling consumes significant resources and results in poor quality content, "
-                f"therefore this column(-s) will be generated using a simplified statistical approach")
+        self.long_text_columns = set()
+        if not data_subset.empty:
+            data_subset = data_subset.loc[:, data_subset.apply(lambda x: (x.str.len() > 200).any())]
+            self.long_text_columns = set(data_subset.columns)
+            if self.long_text_columns:
+                logger.info(
+                    f"Please note that the columns - {self.long_text_columns} contain long texts (> 200 symbols). "
+                    f"Such texts' handling consumes significant resources and results in poor quality content, "
+                    f"therefore this column(-s) will be generated using a simplified statistical approach")
 
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = False):
         """
