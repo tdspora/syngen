@@ -112,7 +112,7 @@ class VAEWrapper(BaseWrapper):
         self.dataset_pickle_path = paths["dataset_pickle_path"]
         self.fk_kde_path = paths["fk_kde_path"]
 
-    def __post__init(self):
+    def __post__init__(self):
         if self.process == "train":
             self.dataset = Dataset(
                 df=self.df,
@@ -177,7 +177,7 @@ class VAEWrapper(BaseWrapper):
         pass
 
     def prepare_dataset(self):
-        self.__post__init()
+        self.__post__init__()
         self._pipeline()
 
     def fit_on_df(

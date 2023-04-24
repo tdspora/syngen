@@ -126,8 +126,8 @@ class AvroLoader(BaseDataLoader):
 
         :param
         path:
-        str which should be should be in the next format for the connection to AWS S3: "s3://path/to/bucket"
-        str which should be should be in the next format for the connection to Azure Storage: "azure://{container_name}/{blob_name}"
+        str which should be in the next format for the connection to AWS S3: "s3://path/to/bucket"
+        str which should be in the next format for the connection to Azure Storage: "azure://{container_name}/{blob_name}"
         """
         try:
             with open(path, 'rb') as f:
