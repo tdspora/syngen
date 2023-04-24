@@ -110,8 +110,9 @@ class Worker:
             if kwargs.get("type_of_process") in ("infer", "all"):
                 config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
             pk_tables = self._get_tables(config_of_tables, "PK")
+            uq_tables = self._get_tables(config_of_tables, "UQ")
             fk_tables = self._get_tables(config_of_tables, "FK")
-            chain_of_tables = list(dict.fromkeys([*pk_tables, *fk_tables]))
+            chain_of_tables = list(dict.fromkeys([*pk_tables, *uq_tables, *fk_tables]))
 
         return chain_of_tables, config_of_tables
 
