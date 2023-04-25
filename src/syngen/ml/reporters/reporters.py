@@ -82,7 +82,7 @@ class Reporter:
         original = text_to_continuous(original, text_columns).drop(text_columns, axis=1)
         synthetic = text_to_continuous(synthetic, text_columns).drop(text_columns, axis=1)
 
-        for col in [i + "_word_count" for i in str_columns]:
+        for col in [i + "_word_count" for i in text_columns]:
             if original[col].nunique() < 50:  # ToDo check if we need this
                 categ_columns = categ_columns | {col}
             else:
