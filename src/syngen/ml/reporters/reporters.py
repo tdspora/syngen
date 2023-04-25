@@ -41,7 +41,8 @@ class Reporter:
         types = (
             dataset.str_columns, dataset.date_columns,
             dataset.int_columns, dataset.float_columns,
-            dataset.binary_columns, dataset.categ_columns
+            dataset.binary_columns, dataset.categ_columns,
+            dataset.long_text_columns
         )
         return types
 
@@ -58,7 +59,8 @@ class Reporter:
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
         types = self.fetch_data_types()
-        str_columns, date_columns, int_columns, float_columns, binary_columns, categ_columns = types
+        str_columns, date_columns, int_columns, float_columns, \
+            binary_columns, categ_columns, long_text_columns = types
         original = original[[
             col for col in original.columns
             if col in set().union(*types)
@@ -76,16 +78,16 @@ class Reporter:
             )
 
         int_columns = date_columns | int_columns
+        text_columns = str_columns | long_text_columns
+        original = text_to_continuous(original, text_columns).drop(text_columns, axis=1)
+        synthetic = text_to_continuous(synthetic, text_columns).drop(text_columns, axis=1)
 
-        original = text_to_continuous(original, str_columns).drop(str_columns, axis=1)
-        synthetic = text_to_continuous(synthetic, str_columns).drop(str_columns, axis=1)
-
-        for col in [i + "_word_count" for i in str_columns]:
+        for col in [i + "_word_count" for i in text_columns]:
             if original[col].nunique() < 50:  # ToDo check if we need this
                 categ_columns = categ_columns | {col}
             else:
                 int_columns = int_columns | {col}
-        int_columns = int_columns | {i + "_char_len" for i in str_columns}
+        int_columns = int_columns | {i + "_char_len" for i in text_columns}
 
         categ_columns = categ_columns | binary_columns
         

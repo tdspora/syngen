@@ -112,7 +112,7 @@ class TrainStrategy(Strategy, ABC):
             paths=self.config.paths
         )
 
-        root_handler.set_next(long_text_handler).set_next(vae_handler)
+        root_handler.set_next(vae_handler).set_next(long_text_handler)
 
         self.handler = root_handler
         return self
