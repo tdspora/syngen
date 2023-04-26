@@ -203,6 +203,8 @@ The yaml metadata file should match the following template:
                 categorical:                        # Force listed columns to have categorical type (use dictionary of values)
                     - gender
                     - marital_status
+                passthru:
+                    - age
      
         infer_settings:                             # Settings for infer process
             size: 100                               # Size for generated data
