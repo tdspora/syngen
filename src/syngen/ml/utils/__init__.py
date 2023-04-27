@@ -10,5 +10,6 @@ from syngen.ml.utils.utils import (
     inverse_dict,
     get_nan_labels,
     trim_string,
-    convert_to_time
+    convert_to_time,
+    check_if_features_assigned
 )

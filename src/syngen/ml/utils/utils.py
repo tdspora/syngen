@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from slugify import slugify
+from loguru import logger
 
 
 def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
@@ -176,3 +177,14 @@ def convert_to_time(timestamp):
         return datetime(1970, 1, 1) + timedelta(seconds=timestamp)
     else:
         return datetime.utcfromtimestamp(timestamp)
+
+
+def check_if_features_assigned(dataset_pickle_path: str):
+    """
+    Check if features are assigned in the dataset
+    """
+    features = fetch_dataset(dataset_pickle_path).features
+    if len(features) == 0:
+        logger.info("No features to train VAE on")
+        return False
+    return True
