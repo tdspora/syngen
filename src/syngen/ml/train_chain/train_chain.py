@@ -16,7 +16,11 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 
 from syngen.ml.vae import *
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.utils import slugify_parameters, fetch_dataset
+from syngen.ml.utils import (
+    slugify_parameters,
+    fetch_dataset,
+    check_if_features_assigned
+)
 
 
 class AbstractHandler(ABC):
@@ -166,14 +170,13 @@ class VaeTrainHandler(BaseHandler):
 
         self.model.prepare_dataset()
 
-        features = fetch_dataset(self.paths["dataset_pickle_path"]).features
-        if len(features) == 0:
-            logger.info("No features to train VAE on")
-            return
         self.model.fit_on_df(
             data,
             epochs=self.epochs,
         )
+
+        if not check_if_features_assigned(self.paths["dataset_pickle_path"]):
+            return
 
         self.model.save_state(self.paths["state_path"])
         logger.info("Finished VAE training")

@@ -16,7 +16,10 @@ import numpy as np
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
-from syngen.ml.utils import fetch_dataset
+from syngen.ml.utils import (
+    fetch_dataset,
+    check_if_features_assigned
+)
 
 warnings.filterwarnings("ignore")
 
@@ -124,12 +127,20 @@ class VAEWrapper(BaseWrapper):
         elif self.process == "infer":
             self.dataset = fetch_dataset(self.dataset_pickle_path)
 
-    def _pipeline(self):
-        self.dataset.set_metadata()
-        self.df = self.dataset.pipeline()
-
+    def _save_dataset(self):
+        """
+        Save dataset object on the disk
+        """
         with open(self.dataset_pickle_path, "wb") as f:
             f.write(pickle.dumps(self.dataset))
+
+    def _pipeline(self):
+        """
+        Launch the pipeline in the dataset
+        """
+        self.df = self.dataset.pipeline()
+        self._save_dataset()
+
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
@@ -176,9 +187,16 @@ class VAEWrapper(BaseWrapper):
     def _init_model(self):
         pass
 
+    def _set_dataset_metadata(self):
+        """
+        Set metadata for the dataset and save it on the disk
+        """
+        self.dataset.set_metadata()
+        self._save_dataset()
+
     def prepare_dataset(self):
         self.__post__init__()
-        self._pipeline()
+        self._set_dataset_metadata()
 
     def fit_on_df(
         self,
@@ -186,6 +204,9 @@ class VAEWrapper(BaseWrapper):
         epochs: int,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
     ):
+        self._pipeline()
+        if not check_if_features_assigned(self.dataset_pickle_path):
+            return
         self._init_model()
 
         if columns_subset is None:
@@ -208,7 +229,7 @@ class VAEWrapper(BaseWrapper):
         self._train(train_dataset, epochs)
 
         self.model.model = self.vae
-        self.fit_sampler(df.dropna())
+        self.fit_sampler(df)
 
     def _train(self, dataset, epochs: int):
         step = self._train_step
