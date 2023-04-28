@@ -170,12 +170,13 @@ class VaeTrainHandler(BaseHandler):
 
         self.model.prepare_dataset()
 
-        if not check_if_features_assigned(self.paths["dataset_pickle_path"]):
-            return
         self.model.fit_on_df(
             data,
             epochs=self.epochs,
         )
+
+        if not check_if_features_assigned(self.paths["dataset_pickle_path"]):
+            return
 
         self.model.save_state(self.paths["state_path"])
         logger.info("Finished VAE training")
