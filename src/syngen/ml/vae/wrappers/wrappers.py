@@ -127,11 +127,20 @@ class VAEWrapper(BaseWrapper):
         elif self.process == "infer":
             self.dataset = fetch_dataset(self.dataset_pickle_path)
 
-    def _pipeline(self):
-        self.df = self.dataset.pipeline()
-
+    def _save_dataset(self):
+        """
+        Save dataset object on the disk
+        """
         with open(self.dataset_pickle_path, "wb") as f:
             f.write(pickle.dumps(self.dataset))
+
+    def _pipeline(self):
+        """
+        Launch the pipeline in the dataset
+        """
+        self.df = self.dataset.pipeline()
+        self._save_dataset()
+
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
@@ -179,10 +188,11 @@ class VAEWrapper(BaseWrapper):
         pass
 
     def _set_dataset_metadata(self):
+        """
+        Set metadata for the dataset and save it on the disk
+        """
         self.dataset.set_metadata()
-
-        with open(self.dataset_pickle_path, "wb") as f:
-            f.write(pickle.dumps(self.dataset))
+        self._save_dataset()
 
     def prepare_dataset(self):
         self.__post__init__()
