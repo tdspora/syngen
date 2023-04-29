@@ -598,7 +598,7 @@ class Dataset:
         """
         Assign float based feature to float columns
         """
-        # num_bins = self.find_clusters(df, float_columns)
+
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
         if len(features) == 2 and features[1].endswith("_null"):
             self.null_num_column_names.append(features[1])

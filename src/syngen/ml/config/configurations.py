@@ -139,7 +139,7 @@ class TrainConfig:
     def _save_input_data(self, data: pd.DataFrame):
         DataLoader(self.paths["input_data_path"]).save_data(self.paths["input_data_path"], data)
 
-    def _prepare_data(self, data: pd.DataFrame, random_state: int):
+    def _prepare_data(self, data: pd.DataFrame, random_state):
         """
         Preprocess and save data necessary for training process
         """
