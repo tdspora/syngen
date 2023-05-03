@@ -3,6 +3,8 @@ import pandas as pd
 
 from syngen.ml.vae.models.features import DateFeature
 
+from tests.conftest import SUCCESSFUL_MESSAGE
+
 test_data = [
             ({"Date": ["01-01-2020", "02/02/2000", "05-05-2020"]}, "%m-%d-%Y"),
             ({"Date": ["31-01-2020", "20/02/2000", "25-05-2020"]}, "%d-%m-%Y"),
@@ -60,4 +62,4 @@ def test_validate_date_format(data, expected_date_format, rp_logger):
     date_feature = DateFeature(name="date_feature")
     date_feature.fit(data)
     assert date_feature.date_format == expected_date_format
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
