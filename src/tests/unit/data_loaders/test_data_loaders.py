@@ -101,7 +101,7 @@ def test_load_data_from_table_in_csv_format(rp_logger):
     ) is None
 
     assert isinstance(df, pd.DataFrame)
-    assert schema == {"format": "CSV"}
+    assert schema == {"fields": {}, "format": "CSV"}
     rp_logger.info("Test passed successfully")
 
 
@@ -141,7 +141,7 @@ def test_save_data_in_csv_format(test_csv_path, test_df, rp_logger):
 
     loaded_df, schema = data_loader.load_data()
     pd.testing.assert_frame_equal(loaded_df, test_df)
-    assert schema == {"format": "CSV"}
+    assert schema == {"fields": {}, "format": "CSV"}
     rp_logger.info("Test passed successfully")
 
 
@@ -270,7 +270,7 @@ def test_initialize_metadata_loader_in_unsupported_format(rp_logger):
     rp_logger.info("Initializing metadata loader in unsupported format")
     with pytest.raises(NotImplementedError) as error:
         MetadataLoader("path/to/table.test")
-        assert str(error.value) == "File format not supported"
+        assert str(error.value) == "The format of metadata isn't supported"
     rp_logger.info("Test passed successfully")
 
 
