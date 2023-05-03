@@ -46,16 +46,12 @@ def launch_infer(
 
     """
     if not metadata_path and not table_name:
-        raise AttributeError("It seems that the information of metadata_path or table_name is absent. "
-                             "Please provide either the information of metadata_path or the information of table_name.")
-    if metadata_path:
-        if table_name:
-            logger.warning("The information of metadata_path was provided. "
-                           "In this case the information of table_name will be ignored.")
-            table_name = None
-        if not metadata_path.endswith(('.yaml', '.yml')):
-            raise NotImplementedError("This format for metadata_path is not supported. "
-                                      "Please provide metadata_path in '.yaml' or in '.yml' format")
+        raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' is absent. "
+                             "Please provide either the information of 'metadata_path' or the information of 'table_name'")
+    if metadata_path and table_name:
+        logger.warning("The information of 'metadata_path' was provided. "
+                       "In this case the information of 'table_name' will be ignored")
+        table_name = None
     settings = {
         "size": size,
         "run_parallel": run_parallel,

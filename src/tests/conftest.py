@@ -2,9 +2,14 @@ import pytest
 import os
 import logging
 
+from loguru import logger
+from _pytest.logging import LogCaptureFixture
+
 import pandas as pd
 from reportportal_client import RPLogger
 
+
+SUCCESSFUL_MESSAGE = "The test passed successfully"
 
 @pytest.fixture
 def test_csv_path():
@@ -71,3 +76,16 @@ def rp_logger():
     logger.setLevel(logging.DEBUG)
     logging.setLoggerClass(RPLogger)
     return logger
+
+
+@pytest.fixture
+def caplog(caplog: LogCaptureFixture):
+    handler_id = logger.add(
+        caplog.handler,
+        format="{message}",
+        level=0,
+        filter=lambda record: record["level"].no >= caplog.handler.level,
+        enqueue=False
+    )
+    yield caplog
+    logger.remove(handler_id)
