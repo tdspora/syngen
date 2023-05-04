@@ -51,30 +51,29 @@ def launch_train(
     -------
 
     """
-    if not metadata_path and not source:
-        raise AttributeError("It seems that the information of metadata_path or source is absent. "
-                             "Please provide either the information of metadata_path or "
-                             "the information of source and table_name.")
-    if metadata_path:
-        if source:
-            logger.warning("The information of metadata_path was provided. "
-                           "In this case the information of source will be ignored.")
-        if table_name:
-            logger.warning("The information of metadata_path was provided. "
-                           "In this case the information of table_name will be ignored.")
-            table_name = None
-        if not metadata_path.endswith(('.yaml', '.yml')):
-            raise NotImplementedError("This format for metadata_path is not supported. "
-                                      "Please provide metadata_path in '.yaml' or '.yml' format")
-    if not metadata_path:
-        if source and not table_name:
-            raise AttributeError("It seems that the information of table_name is absent. "
-                                 "In the case the information of metadata_path is absent, "
-                                 "the information of source and table_name should be provided.")
-        if table_name and not source:
-            raise AttributeError("It seems that the information of source is absent. "
-                                 "In the case the information of metadata_path is absent, "
-                                 "the information of source and table_name should be provided.")
+    if not metadata_path and not source and not table_name:
+        raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' and 'source' is absent. "
+                             "Please provide either the information of 'metadata_path' or "
+                             "the information of 'source' and 'table_name'")
+    elif metadata_path and table_name and source:
+        logger.warning("The information of 'metadata_path' was provided. "
+                       "In this case the information of 'table_name' and 'source' will be ignored")
+        table_name = None
+    elif metadata_path and source:
+        logger.warning("The information of 'metadata_path' was provided. "
+                       "In this case the information of 'source' will be ignored")
+    elif metadata_path and table_name:
+        logger.warning("The information of 'metadata_path' was provided. "
+                       "In this case the information of 'table_name' will be ignored")
+        table_name = None
+    elif source and not table_name:
+        raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' is absent. "
+                             "Please provide either the information of 'metadata_path' or "
+                             "the information of 'source' and 'table_name'")
+    elif table_name and not source:
+        raise AttributeError("It seems that the information of 'metadata_path' or 'source' is absent. "
+                             "Please provide either the information of 'metadata_path' or "
+                             "the information of 'source' and 'table_name'")
     settings = {
         "source": source,
         "epochs": epochs,

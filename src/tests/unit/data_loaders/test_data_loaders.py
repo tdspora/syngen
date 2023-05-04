@@ -12,6 +12,7 @@ from syngen.ml.data_loaders import (
     MetadataLoader,
     YAMLLoader
 )
+from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 def test_initialize_data_loader_for_local_csv_table_with_existed_path(rp_logger):
@@ -20,7 +21,7 @@ def test_initialize_data_loader_for_local_csv_table_with_existed_path(rp_logger)
     assert test_data_loader.path == "tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
     assert test_data_loader.has_existed_path is True
     assert isinstance(test_data_loader.file_loader, CSVLoader)
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initialize_data_loader_for_local_csv_table_with_not_existed_path(rp_logger):
@@ -29,7 +30,7 @@ def test_initialize_data_loader_for_local_csv_table_with_not_existed_path(rp_log
     assert test_data_loader.path == "path/to/table.csv"
     assert test_data_loader.has_existed_path is False
     assert isinstance(test_data_loader.file_loader, CSVLoader)
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initialize_data_loader_for_local_avro_table_with_existed_path(rp_logger):
@@ -38,7 +39,7 @@ def test_initialize_data_loader_for_local_avro_table_with_existed_path(rp_logger
     assert test_data_loader.path == "tests/unit/data_loaders/fixtures/avro_tables/table_with_data.avro"
     assert test_data_loader.has_existed_path is True
     assert isinstance(test_data_loader.file_loader, AvroLoader)
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initialize_data_loader_for_local_avro_table_with_not_existed_path(rp_logger):
@@ -47,7 +48,7 @@ def test_initialize_data_loader_for_local_avro_table_with_not_existed_path(rp_lo
     assert test_data_loader.path == "path/to/table.avro"
     assert test_data_loader.has_existed_path is False
     assert isinstance(test_data_loader.file_loader, AvroLoader)
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initialize_data_loader_for_local_pickle_table_with_existed_path(rp_logger):
@@ -56,7 +57,7 @@ def test_initialize_data_loader_for_local_pickle_table_with_existed_path(rp_logg
     assert test_data_loader.path == "tests/unit/data_loaders/fixtures/pickle_tables/table_with_data.pkl"
     assert test_data_loader.has_existed_path is True
     assert isinstance(test_data_loader.file_loader, BinaryLoader)
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initialize_data_loader_for_local_pickle_table_with_not_existed_path(rp_logger):
@@ -65,7 +66,7 @@ def test_initialize_data_loader_for_local_pickle_table_with_not_existed_path(rp_
     assert test_data_loader.path == "path/to/table.pkl"
     assert test_data_loader.has_existed_path is False
     assert isinstance(test_data_loader.file_loader, BinaryLoader)
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initialize_data_loader_for_local_table_in_unsupported_format(rp_logger):
@@ -73,7 +74,7 @@ def test_initialize_data_loader_for_local_table_in_unsupported_format(rp_logger)
     with pytest.raises(NotImplementedError) as error:
         DataLoader("path/to/table.test")
         assert str(error.value) == "File format not supported"
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initialize_data_loader_for_local_table_with_empty_path(caplog, rp_logger):
@@ -82,7 +83,7 @@ def test_initialize_data_loader_for_local_table_with_empty_path(caplog, rp_logge
         with caplog.at_level("ERROR"):
             DataLoader("")
         assert "It seems that the information of source is absent" in caplog.text
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_data_from_table_in_csv_format(rp_logger):
@@ -101,8 +102,8 @@ def test_load_data_from_table_in_csv_format(rp_logger):
     ) is None
 
     assert isinstance(df, pd.DataFrame)
-    assert schema == {"format": "CSV"}
-    rp_logger.info("Test passed successfully")
+    assert schema == {"fields": {}, "format": "CSV"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_data_from_empty_table_in_csv_format(caplog, rp_logger):
@@ -113,7 +114,7 @@ def test_load_data_from_empty_table_in_csv_format(caplog, rp_logger):
         with caplog.at_level("ERROR"):
             data_loader.load_data()
         assert "It seems that empty file was provided. Unable to train" in caplog.text
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_data_from_table_in_csv_format_in_not_utf_8(caplog, rp_logger):
@@ -128,7 +129,7 @@ def test_load_data_from_table_in_csv_format_in_not_utf_8(caplog, rp_logger):
         assert f"It seems that the content of the data in the path - '{path}' " \
                f"doesn't have the encoding UTF-8. The details of the error - {error}.\n" \
                f"Please, use the data in UTF-8 encoding" in caplog.text
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_save_data_in_csv_format(test_csv_path, test_df, rp_logger):
@@ -141,8 +142,8 @@ def test_save_data_in_csv_format(test_csv_path, test_df, rp_logger):
 
     loaded_df, schema = data_loader.load_data()
     pd.testing.assert_frame_equal(loaded_df, test_df)
-    assert schema == {"format": "CSV"}
-    rp_logger.info("Test passed successfully")
+    assert schema == {"fields": {}, "format": "CSV"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_data_from_table_in_avro_format(rp_logger):
@@ -170,7 +171,7 @@ def test_load_data_from_table_in_avro_format(rp_logger):
         },
         "format": "Avro"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
@@ -185,7 +186,7 @@ def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
             data_loader.load_data()
         assert "It seems that empty file was provided. Unable to train" in caplog.text
 
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_save_data_in_avro_format(test_avro_path, test_df, rp_logger):
@@ -206,7 +207,7 @@ def test_save_data_in_avro_format(test_avro_path, test_df, rp_logger):
         },
         "format": "Avro"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_data_from_table_in_pickle_format(rp_logger):
@@ -227,7 +228,7 @@ def test_load_data_from_table_in_pickle_format(rp_logger):
 
     assert isinstance(df, pd.DataFrame)
     assert schema is None
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_data_from_empty_table_in_pickle_format(caplog, rp_logger):
@@ -241,7 +242,7 @@ def test_load_data_from_empty_table_in_pickle_format(caplog, rp_logger):
         with caplog.at_level("ERROR"):
             data_loader.load_data()
         assert "It seems that empty file was provided. Unable to train" in caplog.text
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_save_data_in_pickle_format(test_pickle_path, test_df, rp_logger):
@@ -255,7 +256,7 @@ def test_save_data_in_pickle_format(test_pickle_path, test_df, rp_logger):
     loaded_df, schema = data_loader.load_data()
     pd.testing.assert_frame_equal(loaded_df, test_df)
     assert schema is None
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initialize_metadata_loader(rp_logger):
@@ -263,15 +264,15 @@ def test_initialize_metadata_loader(rp_logger):
     test_metadata_loader = MetadataLoader("tests/unit/data_loaders/fixtures/metadata/metadata.yaml")
     assert test_metadata_loader.metadata_path == "tests/unit/data_loaders/fixtures/metadata/metadata.yaml"
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initialize_metadata_loader_in_unsupported_format(rp_logger):
     rp_logger.info("Initializing metadata loader in unsupported format")
     with pytest.raises(NotImplementedError) as error:
         MetadataLoader("path/to/table.test")
-        assert str(error.value) == "File format not supported"
-    rp_logger.info("Test passed successfully")
+        assert str(error.value) == "The format of metadata isn't supported"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_metadata_in_yaml_format(rp_logger):
@@ -304,7 +305,7 @@ def test_load_metadata_in_yaml_format(rp_logger):
             "source": "..\\data\\pk_test.csv"
         }
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_metadata_in_yml_format(rp_logger):
@@ -337,7 +338,7 @@ def test_load_metadata_in_yml_format(rp_logger):
             "source": "..\\data\\pk_test.csv"
         }
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
@@ -378,7 +379,7 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
                 # Assert that validate_schema was called with the correct arguments
                 # mock_validate_schema.assert_called_once_with(configuration_schema, expected_metadata)
                 assert metadata == expected_metadata
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_metadata_by_yaml_loader_in_yml_format(rp_logger):
@@ -419,7 +420,7 @@ def test_load_metadata_by_yaml_loader_in_yml_format(rp_logger):
                 # Assert that validate_schema was called with the correct arguments
                 # mock_validate_schema.assert_called_once_with(configuration_schema, expected_metadata)
                 assert metadata == expected_metadata
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_save_metadata_in_yaml_format(test_yaml_path, test_df, rp_logger):
@@ -430,7 +431,7 @@ def test_save_metadata_in_yaml_format(test_yaml_path, test_df, rp_logger):
     with pytest.raises(NotImplementedError) as error:
         metadata_loader.save_data(test_yaml_path, test_df)
         assert str(error) == "Saving YAML files is not supported"
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_save_metadata_in_yml_format(test_yml_path, test_df, rp_logger):
@@ -441,4 +442,4 @@ def test_save_metadata_in_yml_format(test_yml_path, test_df, rp_logger):
     with pytest.raises(NotImplementedError) as error:
         metadata_loader.save_data(test_yml_path, test_df)
         assert str(error) == "Saving YAML files is not supported"
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)

@@ -8,6 +8,8 @@ from syngen.ml.utils import (
     convert_to_time
 )
 
+from tests.conftest import SUCCESSFUL_MESSAGE
+
 
 def test_slugify_attribute(rp_logger):
     mock = Mock(
@@ -26,7 +28,7 @@ def test_slugify_attribute(rp_logger):
     assert mock.slug_attr1 == "my-test-attribute"
     assert mock.slug_attr2 == "moi-drugoi-attribut"
     assert mock.slug_attr3 == "12345"
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @pytest.mark.parametrize(
@@ -43,7 +45,7 @@ def test_slugify_parameters(parameter, expected_parameter, rp_logger):
         return name
 
     assert dummy_function(name=parameter), expected_parameter
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 @pytest.mark.parametrize("timestamp, expected_timestamp", [
     (1e18, datetime(2001, 9, 9, 1, 46, 40)),
@@ -54,4 +56,4 @@ def test_slugify_parameters(parameter, expected_parameter, rp_logger):
 def test_convert_to_time(timestamp, expected_timestamp, rp_logger):
     rp_logger.info(f"Converting timestamp - {timestamp} to datetime")
     assert convert_to_time(timestamp) == expected_timestamp
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
