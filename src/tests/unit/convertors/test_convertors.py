@@ -11,6 +11,8 @@ from syngen.ml.convertor import (
 )
 from syngen.ml.data_loaders import DataLoader
 
+from tests.conftest import SUCCESSFUL_MESSAGE
+
 SCHEMA = {
     "EmployeeKey": ["int", "null"],
     "ParentEmployeeKey": ["long", "null"],
@@ -50,9 +52,9 @@ def test_initiate_csv_convertor(rp_logger):
     rp_logger.info("Initiating the instance of the class CSVConvertor")
     df, schema = DataLoader("tests/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv").load_data()
     convertor = CSVConvertor(df)
-    assert convertor.schema == {"format": "CSV"}
+    assert convertor.schema == {"fields": {}, "format": "CSV"}
     pd.testing.assert_frame_equal(convertor.df, df)
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initiate_avro_convertor(rp_logger):
@@ -166,7 +168,7 @@ def test_initiate_avro_convertor(rp_logger):
                "EmployeePhoto": "string[python]"
            }
     pd.testing.assert_series_equal(convertor.preprocessed_df.dtypes, df.dtypes)
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog, rp_logger):
@@ -184,7 +186,7 @@ def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog
 
             assert str(error.value) == "It seems that the column - 'Test' has unsupported data type - 'test'"
             assert "It seems that the column - 'Test' has unsupported data type - 'test'" in caplog.text
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_preprocess_df_if_column_is_int(rp_logger):
@@ -198,7 +200,7 @@ def test_preprocess_df_if_column_is_int(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "int64"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_preprocess_df_if_column_is_int_in_column_with_null_values(rp_logger):
@@ -212,7 +214,7 @@ def test_preprocess_df_if_column_is_int_in_column_with_null_values(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "float64"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_preprocess_df_if_column_is_float(rp_logger):
@@ -226,7 +228,7 @@ def test_preprocess_df_if_column_is_float(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "float64"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_preprocess_df_if_column_is_double(rp_logger):
@@ -240,7 +242,7 @@ def test_preprocess_df_if_column_is_double(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "float64"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_preprocess_df_if_column_is_string(rp_logger):
@@ -254,7 +256,7 @@ def test_preprocess_df_if_column_is_string(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "string[python]"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_preprocess_df_if_column_is_boolean(rp_logger):
@@ -268,7 +270,7 @@ def test_preprocess_df_if_column_is_boolean(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "int64"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_preprocess_df_if_column_is_datetime(rp_logger):
@@ -282,7 +284,7 @@ def test_preprocess_df_if_column_is_datetime(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "string[python]"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_preprocess_df_if_column_is_binary(rp_logger):
@@ -296,7 +298,7 @@ def test_preprocess_df_if_column_is_binary(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": "string[python]"
     }
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_preprocess_df_if_column_has_unsupported_data_type(rp_logger):
@@ -309,4 +311,4 @@ def test_preprocess_df_if_column_has_unsupported_data_type(rp_logger):
     with pytest.raises(ValueError) as error:
         AvroConvertor({"Test": ["test"]}, df)
         assert str(error.value) == "It seems that the column - 'Test' has unsupported data type - 'test'"
-    rp_logger.info("Test passed successfully")
+    rp_logger.info(SUCCESSFUL_MESSAGE)

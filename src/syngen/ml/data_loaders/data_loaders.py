@@ -175,7 +175,7 @@ class MetadataLoader(BaseDataLoader):
             if path.suffix in ['.yaml', '.yml']:
                 return YAMLLoader()
             else:
-                raise NotImplementedError("File format not supported")
+                raise NotImplementedError("The format of metadata isn't supported")
 
     def load_data(self) -> dict:
         return self.metadata_loader.load_data(self.metadata_path)
