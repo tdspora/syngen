@@ -18,6 +18,7 @@ class TrainConfig:
     epochs: int
     drop_null: bool
     row_limit: Optional[int]
+    random_state: Optional[int]
     table_name: Optional[str]
     metadata_path: Optional[str]
     print_report: bool
@@ -31,7 +32,7 @@ class TrainConfig:
         self.paths = self._set_paths()
         self._prepare_dirs()
         data, self.schema = self._extract_data()
-        self._prepare_data(data)
+        self._prepare_data(data, self.random_state)
         self._set_batch_size()
 
     def to_dict(self) -> Dict:
@@ -105,7 +106,7 @@ class TrainConfig:
         schema = self._mark_removed_columns(data, schema, dropped_columns)
         return data, schema
 
-    def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _preprocess_data(self, data: pd.DataFrame, random_state) -> pd.DataFrame:
         """
         Preprocess data and set the parameter "row_subset" for training process
         """
@@ -119,7 +120,8 @@ class TrainConfig:
         if self.row_limit:
             self.row_subset = min(self.row_limit, len(data))
 
-            data = data.sample(n=self.row_subset)
+            data = data.sample(n=self.row_subset, random_state=random_state)
+
             if len(data) < 100:
                 logger.warning("The input table is too small to provide any meaningful results. "
                                "Please consider 1) disable drop_null argument, 2) provide bigger table")
@@ -137,11 +139,11 @@ class TrainConfig:
     def _save_input_data(self, data: pd.DataFrame):
         DataLoader(self.paths["input_data_path"]).save_data(self.paths["input_data_path"], data)
 
-    def _prepare_data(self, data: pd.DataFrame):
+    def _prepare_data(self, data: pd.DataFrame, random_state):
         """
         Preprocess and save data necessary for training process
         """
-        data = self._preprocess_data(data)
+        data = self._preprocess_data(data, random_state)
         self._save_input_data(data)
 
     @slugify_attribute(table_name="slugify_table_name")
