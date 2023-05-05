@@ -41,6 +41,10 @@ class Dataset:
     nan_labels_dict: Dict = field(init=False)
 
     def __post_init__(self):
+        self._predefine_fields()
+        self._set_metadata()
+
+    def _predefine_fields(self):
         self.features = dict()
         self.columns = dict()
         self.is_fitted = False
@@ -142,7 +146,7 @@ class Dataset:
             self.foreign_keys_list = []
             self.fk_columns = []
 
-    def set_metadata(self):
+    def _set_metadata(self):
         self.__set_metadata(self.metadata, self.table_name)
         self.__data_pipeline(self.df, self.schema)
 
@@ -373,7 +377,7 @@ class Dataset:
             + f"Count of int columns: {len(self.int_columns)}; "
             + f"Count of categorical columns: {len(self.categ_columns)}; "
             + f"Count of date columns: {len(self.date_columns)}; "
-            + f"Count of binary columns: {len(self.binary_columns)}"
+            + f"Count of binary columns: {len(self.binary_columns)};"
             + f"Count of long text columns: {len(self.long_text_columns)}"
         )
 
