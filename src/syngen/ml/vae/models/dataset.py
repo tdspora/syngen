@@ -291,6 +291,7 @@ class Dataset:
         if not data_subset.empty:
             data_subset = data_subset.loc[:, data_subset.apply(lambda x: (x.str.len() > 200).any())]
             self.long_text_columns = set(data_subset.columns)
+            self.long_text_columns -= self.categ_columns
             if self.long_text_columns:
                 logger.info(
                     f"Please note that the columns - {self.long_text_columns} contain long texts (> 200 symbols). "
