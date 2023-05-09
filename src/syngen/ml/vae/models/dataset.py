@@ -377,7 +377,7 @@ class Dataset:
             + f"Count of int columns: {len(self.int_columns)}; "
             + f"Count of categorical columns: {len(self.categ_columns)}; "
             + f"Count of date columns: {len(self.date_columns)}; "
-            + f"Count of binary columns: {len(self.binary_columns)};"
+            + f"Count of binary columns: {len(self.binary_columns)}; "
             + f"Count of long text columns: {len(self.long_text_columns)}"
         )
 
