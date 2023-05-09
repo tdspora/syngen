@@ -187,16 +187,9 @@ class VAEWrapper(BaseWrapper):
     def _init_model(self):
         pass
 
-    def _set_dataset_metadata(self):
-        """
-        Set metadata for the dataset and save it on the disk
-        """
-        self.dataset.set_metadata()
-        self._save_dataset()
-
     def prepare_dataset(self):
         self.__post__init__()
-        self._set_dataset_metadata()
+        self._save_dataset()
 
     def fit_on_df(
         self,
