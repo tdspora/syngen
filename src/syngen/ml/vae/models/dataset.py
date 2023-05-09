@@ -301,7 +301,7 @@ class Dataset:
                     f"Such texts' handling consumes significant resources and results in poor quality content, "
                     f"therefore this column(-s) will be generated using a simplified statistical approach")
 
-    def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = False):
+    def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
         in case metadata of the table is absent
