@@ -72,7 +72,7 @@ The parameters which you can set up for training process:
 - <i>row_limit</i> – a number of rows to train over. A number less than the original table length will randomly subset the specified number of rows
 - <i>drop_null</i> – whether to drop rows with at least one missing value
 - <i>batch_size</i> – if specified, the training is split into batches. This can save the RAM
-- <i>print_report</i> - whether to generate plots of accuracy report and sample report
+- <i>print_report</i> - whether to generate accuracy and sampling reports. Please note that the sampling report is generated only if the `row_limit` parameter is set.
 - <i>metadata_path</i> – a path to the metadata file containing the metadata for linked tables
 - <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
 
