@@ -1,6 +1,9 @@
 from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass, field
 import pickle
+from uuid import UUID
+from datetime import datetime
+import base32_crockford
 
 from loguru import logger
 import numpy as np
@@ -115,7 +118,9 @@ class Dataset:
             key_columns = config.get("columns")
             for column in key_columns:
                 column_type = \
-                    str if column in (self.str_columns | self.categ_columns | self.date_columns | self.long_text_columns) \
+                    str if column in (
+                        self.str_columns | self.categ_columns | self.date_columns | self.long_text_columns | self.uuid_columns
+                    ) \
                     else float
                 self.pk_uq_keys_types[column] = column_type
 
@@ -266,7 +271,7 @@ class Dataset:
         defined_columns = set(
             [
                 col for col in df.columns
-                if df[col].dropna().nunique() <= 50 and col not in self.binary_columns
+                if df[col].dropna().nunique() <= 5 and col not in self.binary_columns
             ]
         )
         self.categ_columns.update(defined_columns)
@@ -302,6 +307,60 @@ class Dataset:
                     f"Such texts' handling consumes significant resources and results in poor quality content, "
                     f"therefore this column(-s) will be generated using a simplified statistical approach")
 
+    def _set_uuid_columns(self, df: pd.DataFrame):
+        """
+        Set up the list of columns with uuid
+        """
+
+        def is_valid_ulid(uuid):
+            ulid_timestamp = uuid[:10]
+            try:
+                assert len(uuid) == 26
+                ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
+                datetime.fromtimestamp(ulid_timestamp_int / 1000.0)
+                return "ulid"
+            except:
+                return
+
+        def is_valid_uuid(x):
+            """
+            Check if uuid_to_test is a valid UUID
+            """
+            result = []
+            for i in x:
+                for v in [1, 2, 3, 4, 5]:
+                    try:
+                        uuid_obj = UUID(i, version=v)
+                        if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
+                            result.append(v)
+                    except ValueError:
+                        continue
+                result.append(is_valid_ulid(i))
+            # returning the mode of the list, i.e. the most frequent element
+            if result:
+                return max(set(result), key=result.count)
+            else:
+                return 0
+
+        if self.schema.get("format", "") == "CSV":
+            data_subset = df.select_dtypes(include=[pd.StringDtype(), "object"])
+        else:
+            text_columns = [
+                col for col, data_type in self.schema.get("fields", {}).items()
+                if data_type == "string"
+            ]
+            data_subset = df[text_columns]
+        self.uuid_columns = {}
+        self.uuid_columns_types = {}
+        if not data_subset.empty:
+            data_subset = data_subset.dropna().apply(is_valid_uuid)
+            self.uuid_columns_types = dict(data_subset[data_subset.isin([1, 2, 3, 4, 5, "ulid"])])
+            self.uuid_columns = set(self.uuid_columns_types.keys())
+            if self.uuid_columns:
+                logger.info(
+                    f"The columns - {self.uuid_columns} contain UUIDs")
+
+
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
@@ -311,6 +370,7 @@ class Dataset:
             columns_nan_labels = get_nan_labels(df)
             df = nan_labels_to_float(df, columns_nan_labels)
 
+        self._set_uuid_columns(df)
         self._set_binary_columns(df)
         self._set_categorical_columns(df, schema)
         self._set_long_text_columns(df)
@@ -327,12 +387,14 @@ class Dataset:
         self.float_columns = self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
         self.str_columns = \
             set(tmp_df.columns) - self.float_columns - self.categ_columns - \
-            self.int_columns - self.binary_columns - self.long_text_columns
+            self.int_columns - self.binary_columns - self.long_text_columns - set(self.uuid_columns)
         self.categ_columns -= self.long_text_columns
         self.date_columns = \
             get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
             self.binary_columns - self.long_text_columns
         self.str_columns -= self.date_columns
+        self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
+        self.uuid_columns_types = {k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns}
 
     def _avro_data_pipeline(self, df, schema):
         """
@@ -355,6 +417,7 @@ class Dataset:
             get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
             self.binary_columns - self.long_text_columns
         self.str_columns -= self.date_columns
+        self.long_text_columns -= self.uuid_columns
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
         if schema.get("format") == "CSV":
@@ -369,7 +432,8 @@ class Dataset:
                len(self.date_columns) + \
                len(self.categ_columns) + \
                len(self.binary_columns) + \
-               len(self.long_text_columns) == len(df.columns), "According to number of columns with defined types, " \
+               len(self.long_text_columns) + \
+               len(self.uuid_columns) == len(df.columns), "According to number of columns with defined types, " \
                                                                "column types are not identified correctly"
 
         logger.debug(
@@ -559,7 +623,8 @@ class Dataset:
                     if mapper is None:
                         continue
                     fk_column_values = fk_column_values.map(mapper)
-                kde = gaussian_kde(fk_column_values)
+                noise_to_prevent_singularity = np.random.normal(0, 0.0001, len(fk_column_values))
+                kde = gaussian_kde(fk_column_values + noise_to_prevent_singularity)
                 self._save_kde_artifacts(kde=kde, fk_kde_path=self.fk_kde_path, fk_column=fk_column)
 
     def __drop_fk_columns(self):
