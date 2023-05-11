@@ -276,6 +276,17 @@ class Dataset:
         )
         self.categ_columns.update(defined_columns)
 
+    def _select_str_columns(self, df):
+        if self.schema.get("format", "") == "CSV":
+            data_subset = df.select_dtypes(include=[pd.StringDtype(), "object"])
+        else:
+            text_columns = [
+                col for col, data_type in self.schema.get("fields", {}).items()
+                if data_type == "string"
+            ]
+            data_subset = df[text_columns]
+        return data_subset
+
     def _set_categorical_columns(self, df: pd.DataFrame, schema: Dict):
         """
         Set up the list of categorical columns
@@ -288,14 +299,8 @@ class Dataset:
         """
         Set up the list of columns with long texts (> 200 symbols)
         """
-        if self.schema.get("format", "") == "CSV":
-            data_subset = df.select_dtypes(include=[pd.StringDtype(), "object"])
-        else:
-            text_columns = [
-                col for col, data_type in self.schema.get("fields", {}).items()
-                if data_type == "string"
-            ]
-            data_subset = df[text_columns]
+        data_subset = self._select_str_columns(df)
+
         self.long_text_columns = set()
         if not data_subset.empty:
             data_subset = data_subset.loc[:, data_subset.apply(lambda x: (x.str.len() > 200).any())]
@@ -307,53 +312,50 @@ class Dataset:
                     f"Such texts' handling consumes significant resources and results in poor quality content, "
                     f"therefore this column(-s) will be generated using a simplified statistical approach")
 
+    def _is_valid_ulid(self, uuid):
+        """
+        Check if uuid_to_test is a valid ULID (https://github.com/ulid/spec)
+        """
+        ulid_timestamp = uuid[:10]
+        try:
+            assert len(uuid) == 26
+            ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
+            datetime.fromtimestamp(ulid_timestamp_int / 1000.0)
+            return "ulid"
+        except:
+            return
+
+    def _is_valid_uuid(self, x):
+        """
+        Check if uuid_to_test is a valid UUID
+        """
+        result = []
+        for i in x:
+            for v in [1, 2, 3, 4, 5]:
+                try:
+                    uuid_obj = UUID(i, version=v)
+                    if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
+                        result.append(v)
+                except ValueError:
+                    continue
+            result.append(self._is_valid_ulid(i))
+        # returning the mode of the list, i.e. the most frequent element
+        if result:
+            return max(set(result), key=result.count)
+        else:
+            return 0
+
     def _set_uuid_columns(self, df: pd.DataFrame):
         """
         Set up the list of columns with uuid
         """
 
-        def is_valid_ulid(uuid):
-            ulid_timestamp = uuid[:10]
-            try:
-                assert len(uuid) == 26
-                ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
-                datetime.fromtimestamp(ulid_timestamp_int / 1000.0)
-                return "ulid"
-            except:
-                return
+        data_subset = self._select_str_columns(df)
 
-        def is_valid_uuid(x):
-            """
-            Check if uuid_to_test is a valid UUID
-            """
-            result = []
-            for i in x:
-                for v in [1, 2, 3, 4, 5]:
-                    try:
-                        uuid_obj = UUID(i, version=v)
-                        if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
-                            result.append(v)
-                    except ValueError:
-                        continue
-                result.append(is_valid_ulid(i))
-            # returning the mode of the list, i.e. the most frequent element
-            if result:
-                return max(set(result), key=result.count)
-            else:
-                return 0
-
-        if self.schema.get("format", "") == "CSV":
-            data_subset = df.select_dtypes(include=[pd.StringDtype(), "object"])
-        else:
-            text_columns = [
-                col for col, data_type in self.schema.get("fields", {}).items()
-                if data_type == "string"
-            ]
-            data_subset = df[text_columns]
         self.uuid_columns = {}
         self.uuid_columns_types = {}
         if not data_subset.empty:
-            data_subset = data_subset.dropna().apply(is_valid_uuid)
+            data_subset = data_subset.dropna().apply(self._is_valid_uuid)
             self.uuid_columns_types = dict(data_subset[data_subset.isin([1, 2, 3, 4, 5, "ulid"])])
             self.uuid_columns = set(self.uuid_columns_types.keys())
             if self.uuid_columns:
