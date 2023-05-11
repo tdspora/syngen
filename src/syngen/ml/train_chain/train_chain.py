@@ -248,6 +248,41 @@ class VaeInferHandler(BaseHandler):
                 generated_uuid_column.append(ulid.generate())
         return generated_uuid_column
 
+    def generate_vae(self, size, data, schema):
+        self.vae = self.create_wrapper(
+            self.wrapper_name,
+            data,
+            schema,
+            metadata={"table_name": self.table_name},
+            table_name=self.table_name,
+            paths=self.paths,
+            batch_size=self.batch_size,
+            process="infer"
+        )
+        self.vae.load_state(self.paths["state_path"])
+        synthetic_infer = self.vae.predict_sampled_df(size)
+        return synthetic_infer
+
+    def generate_long_texts(self, size, synthetic_infer):
+        with open(f'{self.paths["path_to_no_ml"]}', "rb") as file:
+            features = dill.load(file)
+        for col in features.keys():
+            kde = features[col]["kde"]
+            text_structures = np.maximum(kde.resample(size).astype('int32'), 0)
+            indexes = features[col]["indexes"]
+            counts = features[col]["counts"]
+            generated_column = [" ".join([self.synth_word(s, indexes, counts) for s in
+                                          np.maximum(np.random.normal(i / j, 1, j).astype('int32'), 2)])
+                                for i, j in zip(*text_structures)]
+            synthetic_infer[col] = generated_column
+        return synthetic_infer
+
+    def generate_uuid(self, size, dataset, uuid_columns, synthetic_infer):
+        uuid_columns_types = dataset.uuid_columns_types
+        for col in uuid_columns:
+            synthetic_infer[col] = self._generate_uuids(uuid_columns_types[col], size)
+        return synthetic_infer
+
     def run_separate(self, params: Tuple):
         i, size = params
 
@@ -264,38 +299,14 @@ class VaeInferHandler(BaseHandler):
 
         synthetic_infer = pd.DataFrame()
         if self.has_vae:
-            self.vae = self.create_wrapper(
-                self.wrapper_name,
-                data,
-                schema,
-                metadata={"table_name": self.table_name},
-                table_name=self.table_name,
-                paths=self.paths,
-                batch_size=self.batch_size,
-                process="infer"
-            )
-            self.vae.load_state(self.paths["state_path"])
-            synthetic_infer = self.vae.predict_sampled_df(size)
+            synthetic_infer = self.generate_vae(size, data, schema)
         if self.has_no_ml:
-            with open(f'{self.paths["path_to_no_ml"]}', "rb") as file:
-                features = dill.load(file)
-            for col in features.keys():
-                kde = features[col]["kde"]
-                text_structures = np.maximum(kde.resample(size).astype('int32'), 0)
-                indexes = features[col]["indexes"]
-                counts = features[col]["counts"]
-                generated_column = [" ".join([self.synth_word(s, indexes, counts) for s in
-                                              np.maximum(np.random.normal(i / j, 1, j).astype('int32'), 2)])
-                                    for i, j in zip(*text_structures)]
-                synthetic_infer[col] = generated_column
+            synthetic_infer = self.generate_long_texts(size, synthetic_infer)
 
         dataset = fetch_dataset(self.paths["dataset_pickle_path"])
         uuid_columns = dataset.uuid_columns
-        self.has_uuid = len(uuid_columns) > 0
-        if self.has_uuid:
-            uuid_columns_types = dataset.uuid_columns_types
-            for col in uuid_columns:
-                synthetic_infer[col] = self._generate_uuids(uuid_columns_types[col], size)
+        if uuid_columns:
+            synthetic_infer = self.generate_uuid(size, dataset, uuid_columns, synthetic_infer)
 
         return synthetic_infer
 
