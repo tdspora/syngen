@@ -114,7 +114,7 @@ The parameters which you can set up for generation process:
 - <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 5000 rows)
 - <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
 - <i>random_seed</i> – if specified, generates a reproducible result
-- <i>print_report</i> – whether to generate plots of accuracy report, sample report
+- <i>print_report</i> – whether to generate accuracy and sampling reports. Please note that the sampling report is generated only if the row_limit parameter is set.
 - <i>metadata_path</i> – a path to metadata file to generate linked tables
 
 Requirements for parameters of generation process:
