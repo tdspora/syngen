@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from slugify import slugify
 from loguru import logger
+import pickle as pkl
 
 
 def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
@@ -188,3 +189,10 @@ def check_if_features_assigned(dataset_pickle_path: str):
         logger.info("No features to train VAE on")
         return False
     return True
+
+def fetch_training_config(train_config_pickle_path):
+    """
+    Fetch the parameters of the training configuration
+    """
+    with open(train_config_pickle_path, "rb") as f:
+        return pkl.load(f)
