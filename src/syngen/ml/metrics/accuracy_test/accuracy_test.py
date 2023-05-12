@@ -16,7 +16,8 @@ from syngen.ml.metrics import (
     Utility
 )
 from syngen.ml.metrics.utils import transform_to_base64
-from syngen.ml.data_loaders import BinaryLoader
+from syngen.ml.utils import fetch_training_config
+
 
 
 class BaseTest(ABC):
@@ -57,13 +58,6 @@ class BaseTest(ABC):
         Remove artifacts after creating Accuracy report
         """
         shutil.rmtree(self.draws_path)
-
-    def _fetch_training_config(self):
-        """
-        Fetch the parameters of the training configuration
-        """
-        training_config, _ = BinaryLoader().load_data(self.paths["train_config_pickle_path"])
-        return training_config
 
 
 class AccuracyTest(BaseTest):
@@ -126,7 +120,7 @@ class AccuracyTest(BaseTest):
                                utility_table=utility_result.to_html(),
                                is_data_available=False if utility_result.empty else True,
                                table_name=self.table_name,
-                               training_config=self._fetch_training_config(),
+                               training_config=fetch_training_config(self.paths["train_config_pickle_path"]).to_dict(),
                                inference_config=self.config,
                                time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
                                )
