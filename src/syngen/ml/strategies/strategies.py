@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 import os
 import traceback
-import random
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from loguru import logger
@@ -22,8 +21,6 @@ from syngen.ml.train_chain import (
 )
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
-
-RANDOM_STATE = random.randint(0, 2 ** 32 - 1)
 
 class Strategy(ABC):
     """
@@ -73,7 +70,7 @@ class TrainStrategy(Strategy, ABC):
     def _save_training_config(self):
         BinaryLoader().save_data(
             path=self.config.paths["train_config_pickle_path"],
-            data=self.config.to_dict()
+            data=self.config
         )
 
     def set_config(self, **kwargs):
@@ -82,6 +79,7 @@ class TrainStrategy(Strategy, ABC):
         """
         configuration = TrainConfig(**kwargs)
         self.config = configuration
+        self.config.preprocess_data()
         self._save_training_config()
         return self
 
@@ -145,8 +143,7 @@ class TrainStrategy(Strategy, ABC):
             table_name=kwargs["table_name"],
             metadata_path=kwargs["metadata_path"],
             print_report=kwargs["print_report"],
-            batch_size=kwargs["batch_size"],
-            random_state=RANDOM_STATE
+            batch_size=kwargs["batch_size"]
         )
 
         self.add_reporters().\
