@@ -1,7 +1,11 @@
+import random
 from typing import Tuple, Optional, Dict, List
 from abc import ABC, abstractmethod
 import os
 import math
+import uuid
+from ulid import ULID
+from uuid import UUID
 from dataclasses import dataclass, field
 
 import pandas as pd
@@ -227,12 +231,57 @@ class VaeInferHandler(BaseHandler):
             config_of_keys = self.metadata.get(self.table_name).get("keys", {})
             for key in config_of_keys.keys():
                 column = config_of_keys.get(key).get("columns")[0]
-                if config_of_keys.get(key).get("type") == "PK" and not isinstance(df_slices[0][column][0], str):
+                if config_of_keys.get(key).get("type") == "PK" and not isinstance(df_slices[0][column][0], (str, UUID, ULID)):
                     cumm_len = 0
                     for i, frame in enumerate(df_slices):
                         frame[column] = frame[column].map(lambda pk_val: pk_val + cumm_len)
                         cumm_len += len(frame)
         return pd.concat(df_slices, ignore_index=True)
+
+    def _generate_uuids(self, version: int, size: int):
+        ulid = ULID()
+        generated_uuid_column = []
+        for i in range(size):
+            if version != "ulid":
+                generated_uuid_column.append(uuid.UUID(int=random.getrandbits(128), version=int(version)))
+            else:
+                generated_uuid_column.append(ulid.generate())
+        return generated_uuid_column
+
+    def generate_vae(self, size, data, schema):
+        self.vae = self.create_wrapper(
+            self.wrapper_name,
+            data,
+            schema,
+            metadata={"table_name": self.table_name},
+            table_name=self.table_name,
+            paths=self.paths,
+            batch_size=self.batch_size,
+            process="infer"
+        )
+        self.vae.load_state(self.paths["state_path"])
+        synthetic_infer = self.vae.predict_sampled_df(size)
+        return synthetic_infer
+
+    def generate_long_texts(self, size, synthetic_infer):
+        with open(f'{self.paths["path_to_no_ml"]}', "rb") as file:
+            features = dill.load(file)
+        for col in features.keys():
+            kde = features[col]["kde"]
+            text_structures = np.maximum(kde.resample(size).astype('int32'), 0)
+            indexes = features[col]["indexes"]
+            counts = features[col]["counts"]
+            generated_column = [" ".join([self.synth_word(s, indexes, counts) for s in
+                                          np.maximum(np.random.normal(i / j, 1, j).astype('int32'), 2)])
+                                for i, j in zip(*text_structures)]
+            synthetic_infer[col] = generated_column
+        return synthetic_infer
+
+    def generate_uuid(self, size, dataset, uuid_columns, synthetic_infer):
+        uuid_columns_types = dataset.uuid_columns_types
+        for col in uuid_columns:
+            synthetic_infer[col] = self._generate_uuids(uuid_columns_types[col], size)
+        return synthetic_infer
 
     def run_separate(self, params: Tuple):
         i, size = params
@@ -250,30 +299,14 @@ class VaeInferHandler(BaseHandler):
 
         synthetic_infer = pd.DataFrame()
         if self.has_vae:
-            self.vae = self.create_wrapper(
-                self.wrapper_name,
-                data,
-                schema,
-                metadata={"table_name": self.table_name},
-                table_name=self.table_name,
-                paths=self.paths,
-                batch_size=self.batch_size,
-                process="infer"
-            )
-            self.vae.load_state(self.paths["state_path"])
-            synthetic_infer = self.vae.predict_sampled_df(size)
+            synthetic_infer = self.generate_vae(size, data, schema)
         if self.has_no_ml:
-            with open(f'{self.paths["path_to_no_ml"]}', "rb") as file:
-                features = dill.load(file)
-            for col in features.keys():
-                kde = features[col]["kde"]
-                text_structures = np.maximum(kde.resample(size).astype('int32'), 0)
-                indexes = features[col]["indexes"]
-                counts = features[col]["counts"]
-                generated_column = [" ".join([self.synth_word(s, indexes, counts) for s in
-                                              np.maximum(np.random.normal(i / j, 1, j).astype('int32'), 2)])
-                                    for i, j in zip(*text_structures)]
-                synthetic_infer[col] = generated_column
+            synthetic_infer = self.generate_long_texts(size, synthetic_infer)
+
+        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        uuid_columns = dataset.uuid_columns
+        if uuid_columns:
+            synthetic_infer = self.generate_uuid(size, dataset, uuid_columns, synthetic_infer)
 
         return synthetic_infer
 
@@ -318,7 +351,7 @@ class VaeInferHandler(BaseHandler):
         except FileNotFoundError:
             logger.warning(f"The mapper for the {fk_label} text key is not found. Making simple sampling")
             synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
-            synth_fk.rename(fk_label, inplace=True)
+            synth_fk = synth_fk.rename(fk_label)
 
         return synth_fk
 
@@ -344,13 +377,14 @@ class VaeInferHandler(BaseHandler):
         config_of_keys = metadata_of_table.get("keys")
         for key in config_of_keys.keys():
             if config_of_keys.get(key).get("type") == "FK":
+                fk_column_name = config_of_keys.get(key).get("columns")[0]
                 pk_table = config_of_keys.get(key).get("references").get("table")
                 pk_path = self._set_pk_path(pk_table=pk_table)
                 pk_table_data, pk_table_schema = DataLoader(pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
-                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, config_of_keys.get(key).get("columns")[0])
+                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, fk_column_name)
                 generated = generated.reset_index(drop=True)
 
                 null_column_name = f"{key}_null"
@@ -359,7 +393,7 @@ class VaeInferHandler(BaseHandler):
                     synth_fk = synth_fk.where(not_null_column_mask, np.nan)
                     generated = generated.drop(null_column_name, axis=1)
 
-                generated = pd.concat([generated, synth_fk], axis=1)
+                generated[fk_column_name] = synth_fk
         return generated
 
     def handle(

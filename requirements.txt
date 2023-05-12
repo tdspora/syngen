@@ -25,3 +25,5 @@ python-slugify[unidecode]>=7.0.0
 pytest
 pytest-reportportal
 reportportal-client
+base32-crockford
+py-ulid

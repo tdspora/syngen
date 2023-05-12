@@ -239,7 +239,7 @@ class CVAE:
         return self.dataset.inverse_transform(synthetic_prediction)
 
     def __check_pk_numeric_convertability(self, column, key_type):
-        if key_type is str and column not in self.dataset.long_text_columns:
+        if key_type is str and column not in self.dataset.long_text_columns | self.dataset.uuid_columns:
             return self.inverse_transformed_df[column].dropna().str.isnumeric().all()
         else:
             return False
