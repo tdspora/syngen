@@ -5,3 +5,7 @@ pk_test:                                  # Use table name here
 
   source: ..\data\pk_test.csv             # Supported formats include cloud storage locations, local files
   keys:                                   # Keys of the table
+    pk_id:                                # Name of a key
+      type: "PK"                          # Type of key
+      columns:                            # Columns related to key
+        - Id

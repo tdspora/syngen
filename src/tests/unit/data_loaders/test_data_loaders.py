@@ -456,8 +456,13 @@ def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
         "pk_test": {
             "train_settings": {},
             "infer_settings": {},
-            "keys": {},
-            "source": "..\\data\\pk_test.csv"
+            "source": "..\\data\\pk_test.csv",
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            }
         }
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)

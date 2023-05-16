@@ -30,20 +30,17 @@ configuration_schema = Schema({
             None
         ),
         "source": str,
-        Optional("keys"): Or(
-            {
-                str: {
-                    "type": Or("FK", "PK", "UQ"),
-                    "columns": [str],
-                    Optional("references"): {
-                        "table": str,
-                        "columns": [str]
-                    },
-                    Optional("joined_sample"): bool
-                }
-            },
-            None
-        )
+        Optional("keys"): {
+            str: {
+                "type": Or("FK", "PK", "UQ"),
+                "columns": [str],
+                Optional("references"): {
+                    "table": str,
+                    "columns": [str]
+                },
+                Optional("joined_sample"): bool
+            }
+        }
     }
 }
 )
