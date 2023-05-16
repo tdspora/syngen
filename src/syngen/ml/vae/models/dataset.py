@@ -352,7 +352,7 @@ class Dataset:
 
         data_subset = self._select_str_columns(df)
 
-        self.uuid_columns = {}
+        self.uuid_columns = set()
         self.uuid_columns_types = {}
         if not data_subset.empty:
             data_subset = data_subset.dropna().apply(self._is_valid_uuid)
@@ -361,7 +361,6 @@ class Dataset:
             if self.uuid_columns:
                 logger.info(
                     f"The columns - {self.uuid_columns} contain UUIDs")
-
 
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """
