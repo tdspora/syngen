@@ -1,0 +1,7 @@
+pk_test:                                  # Use table name here
+  train_settings:                         # Settings for training process
+
+  infer_settings:                         # Settings for infer process
+
+  source: ..\data\pk_test.csv             # Supported formats include cloud storage locations, local files
+  keys:                                   # Keys of the table
