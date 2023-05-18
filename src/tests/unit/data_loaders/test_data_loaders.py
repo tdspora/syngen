@@ -446,7 +446,7 @@ def test_save_metadata_in_yml_format(test_yml_path, test_df, rp_logger):
 
 
 def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
-    rp_logger.info("Loading metadata in yaml format with 'train_settings', 'infer_settings', 'keys' defined as None")
+    rp_logger.info("Loading metadata in yaml format with 'train_settings', 'infer_settings' defined as None")
     path_to_metadata = "tests/unit/data_loaders/fixtures/metadata/metadata_with_none_params.yaml"
     test_metadata_loader = MetadataLoader(path_to_metadata)
 
