@@ -193,11 +193,11 @@ class YAMLLoader(BaseDataLoader):
             metadata = yaml.load(metadata_file, Loader=Loader)
             validate_schema(configuration_schema, metadata)
             parameters = ["train_settings", "infer_settings"]
-            metadata = self.replace_none_values_for_settings(parameters, metadata)
+            metadata = self.replace_none_values_of_metadata_settings(parameters, metadata)
         return metadata
 
     @staticmethod
-    def replace_none_values_for_settings(parameters, metadata: dict):
+    def replace_none_values_of_metadata_settings(parameters, metadata: dict):
         """
         Replace None values for parameters
         in the metadata
