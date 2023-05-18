@@ -23,7 +23,9 @@ from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import (
     slugify_parameters,
     fetch_dataset,
-    check_if_features_assigned
+    check_if_features_assigned,
+    generate_uuid,
+    generate_uuids
 )
 
 
@@ -238,16 +240,6 @@ class VaeInferHandler(BaseHandler):
                         cumm_len += len(frame)
         return pd.concat(df_slices, ignore_index=True)
 
-    def _generate_uuids(self, version: int, size: int):
-        ulid = ULID()
-        generated_uuid_column = []
-        for i in range(size):
-            if version != "ulid":
-                generated_uuid_column.append(uuid.UUID(int=random.getrandbits(128), version=int(version)))
-            else:
-                generated_uuid_column.append(ulid.generate())
-        return generated_uuid_column
-
     def generate_vae(self, size, data, schema):
         self.vae = self.create_wrapper(
             self.wrapper_name,
@@ -277,11 +269,6 @@ class VaeInferHandler(BaseHandler):
             synthetic_infer[col] = generated_column
         return synthetic_infer
 
-    def generate_uuid(self, size, dataset, uuid_columns, synthetic_infer):
-        uuid_columns_types = dataset.uuid_columns_types
-        for col in uuid_columns:
-            synthetic_infer[col] = self._generate_uuids(uuid_columns_types[col], size)
-        return synthetic_infer
 
     def run_separate(self, params: Tuple):
         i, size = params
@@ -306,7 +293,7 @@ class VaeInferHandler(BaseHandler):
         dataset = fetch_dataset(self.paths["dataset_pickle_path"])
         uuid_columns = dataset.uuid_columns
         if uuid_columns:
-            synthetic_infer = self.generate_uuid(size, dataset, uuid_columns, synthetic_infer)
+            synthetic_infer = generate_uuid(size, dataset, uuid_columns, synthetic_infer)
 
         return synthetic_infer
 
