@@ -362,7 +362,6 @@ class Dataset:
                 logger.info(
                     f"The columns - {self.uuid_columns} contain UUIDs")
 
-
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
