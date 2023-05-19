@@ -396,7 +396,7 @@ class Dataset:
             self.int_columns - self.binary_columns - self.long_text_columns - set(self.uuid_columns)
         self.categ_columns -= self.long_text_columns
         self.date_columns = \
-            get_date_columns(df, list(self.str_columns), self.long_text_columns) - self.categ_columns - \
+            get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
             self.binary_columns - self.long_text_columns
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
