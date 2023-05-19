@@ -76,9 +76,20 @@ class Worker:
         }
 
     @staticmethod
+    def _get_tables_without_keys(config_of_tables: Dict) -> List[str]:
+        """
+        Return the list of tables without the information about keys
+        """
+        tables_without_keys = []
+        for table in config_of_tables.keys():
+            if not config_of_tables[table].get("keys"):
+                tables_without_keys.append(table)
+        return tables_without_keys
+
+    @staticmethod
     def _get_tables(config: Dict, key_type: str):
         """
-        Return the list of related tables regarding to the type of key - 'primary key', 'foreign key'
+        Return the list of related tables regarding the type of key - 'primary key', 'foreign key'
         :param config: configuration of related tables declared in metadata.yaml file
         :param key_type: type of key either 'primary key' ('PK') or 'foreign key' ('FK')
         """
@@ -102,17 +113,13 @@ class Worker:
         type_of_process can be "train", "infer" or "all" for the Enterprise version
         """
         config_of_tables = deepcopy(self.metadata)
-        table_names = list(config_of_tables.keys())
-        if len(table_names) == 1 and "keys" not in config_of_tables[table_names[0]]:
-            # case with one table without any keys
-            chain_of_tables = table_names
-        else:
-            if kwargs.get("type_of_process") in ("infer", "all"):
-                config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
-            pk_tables = self._get_tables(config_of_tables, "PK")
-            uq_tables = self._get_tables(config_of_tables, "UQ")
-            fk_tables = self._get_tables(config_of_tables, "FK")
-            chain_of_tables = list(dict.fromkeys([*pk_tables, *uq_tables, *fk_tables]))
+        tables_without_keys = self._get_tables_without_keys(config_of_tables)
+        if kwargs.get("type_of_process") in ("infer", "all"):
+            config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
+        pk_tables = self._get_tables(config_of_tables, "PK")
+        uq_tables = self._get_tables(config_of_tables, "UQ")
+        fk_tables = self._get_tables(config_of_tables, "FK")
+        chain_of_tables = list(dict.fromkeys([*tables_without_keys, *pk_tables, *uq_tables, *fk_tables]))
 
         return chain_of_tables, config_of_tables
 
