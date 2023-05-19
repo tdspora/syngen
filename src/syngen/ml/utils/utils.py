@@ -30,14 +30,8 @@ def generate_uuid(size, dataset, uuid_columns, synthetic_infer):
         synthetic_infer[col] = generate_uuids(uuid_columns_types[col], size)
     return synthetic_infer
 
-def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
-    # TODO: extend pattern to more formats
-    # pattern = r'\d{2}(\.|/|\-)\d{2}(\.|/|\-)(\d{2}|\d{4})'
-    # pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+"
 
-    def len_filter(x):
-        return (x.str.len() > 500).any()
-
+def get_date_columns(df: pd.DataFrame, str_columns: List[str], long_text_columns: set):
     def date_finder(x, fuzzy=False):
         x_wo_na = x.dropna()
         count = 0
@@ -52,9 +46,6 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         else:
             return np.nan
 
-    data_subset = df[str_columns]
-    data_subset = data_subset if data_subset.empty else data_subset.loc[:, data_subset.apply(len_filter)]
-    long_text_columns = data_subset.columns
     str_columns = [i for i in str_columns if i not in long_text_columns]
     date_columns = df[str_columns].apply(date_finder).dropna()
 
