@@ -8,7 +8,27 @@ import numpy as np
 from slugify import slugify
 from loguru import logger
 import pickle as pkl
+import uuid
+from ulid import ULID
+from uuid import UUID
+import random
 
+def generate_uuids(version: int, size: int):
+    ulid = ULID()
+    generated_uuid_column = []
+    for i in range(size):
+        if version != "ulid":
+            generated_uuid_column.append(uuid.UUID(int=random.getrandbits(128), version=int(version)))
+        else:
+            generated_uuid_column.append(ulid.generate())
+    return generated_uuid_column
+
+
+def generate_uuid(size, dataset, uuid_columns, synthetic_infer):
+    uuid_columns_types = dataset.uuid_columns_types
+    for col in uuid_columns:
+        synthetic_infer[col] = generate_uuids(uuid_columns_types[col], size)
+    return synthetic_infer
 
 def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     # TODO: extend pattern to more formats

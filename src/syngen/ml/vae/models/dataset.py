@@ -366,6 +366,10 @@ class Dataset:
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
         in case metadata of the table is absent
+
+        :param df: dataframe
+        :param schema: metadata of the table
+        :param check_object_on_float: if True, check if object columns can be converted to float
         """
         if check_object_on_float:
             columns_nan_labels = get_nan_labels(df)

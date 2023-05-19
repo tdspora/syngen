@@ -86,7 +86,7 @@ class CSVLoader(BaseDataLoader):
         df = pd.DataFrame()
         try:
             df = pd.read_csv(path, engine="c", **kwargs).apply(trim_string, axis=0)
-            return df, CSVConvertor(df).schema
+            return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
