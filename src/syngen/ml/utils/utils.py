@@ -31,7 +31,7 @@ def generate_uuid(size, dataset, uuid_columns, synthetic_infer):
     return synthetic_infer
 
 
-def get_date_columns(df: pd.DataFrame, str_columns: List[str], long_text_columns: set):
+def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     def date_finder(x, fuzzy=False):
         x_wo_na = x.dropna()
         count = 0
@@ -46,7 +46,6 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str], long_text_columns
         else:
             return np.nan
 
-    str_columns = [i for i in str_columns if i not in long_text_columns]
     date_columns = df[str_columns].apply(date_finder).dropna()
 
     if isinstance(date_columns, pd.DataFrame):
