@@ -443,3 +443,26 @@ def test_save_metadata_in_yml_format(test_yml_path, test_df, rp_logger):
         metadata_loader.save_data(test_yml_path, test_df)
         assert str(error) == "Saving YAML files is not supported"
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
+    rp_logger.info("Loading metadata in yaml format with 'train_settings', 'infer_settings' defined as None")
+    path_to_metadata = "tests/unit/data_loaders/fixtures/metadata/metadata_with_none_params.yaml"
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+    metadata = test_metadata_loader.load_data()
+    assert metadata == {
+        "pk_test": {
+            "train_settings": {},
+            "infer_settings": {},
+            "source": "..\\data\\pk_test.csv",
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            }
+        }
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)

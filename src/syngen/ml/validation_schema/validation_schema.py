@@ -6,23 +6,29 @@ from loguru import logger
 
 configuration_schema = Schema({
     str: {
-        Optional("train_settings"): {
-            Optional("epochs"): And(int, lambda n: n >= 1),
-            Optional("drop_null"): bool,
-            Optional("row_limit"): And(int, lambda n: n >= 1),
-            Optional("batch_size"): And(int, lambda n: n >= 1),
-            Optional("print_report"): bool,
-            Optional("column_types"): {
-                Optional("categorical"): [str]
-            }
-        },
-        Optional("infer_settings"): {
-            Optional("size"): And(int, lambda n: n >= 1),
-            Optional("run_parallel"): bool,
-            Optional("batch_size"): And(int, lambda n: n >= 1),
-            Optional("random_seed"): And(int, lambda n: n >= 0),
-            Optional("print_report"): bool
-        },
+        Optional("train_settings"): Or(
+            {
+                Optional("epochs"): And(int, lambda n: n >= 1),
+                Optional("drop_null"): bool,
+                Optional("row_limit"): And(int, lambda n: n >= 1),
+                Optional("batch_size"): And(int, lambda n: n >= 1),
+                Optional("print_report"): bool,
+                Optional("column_types"): {
+                    Optional("categorical"): [str]
+                }
+            },
+            None
+        ),
+        Optional("infer_settings"): Or(
+            {
+                Optional("size"): And(int, lambda n: n >= 1),
+                Optional("run_parallel"): bool,
+                Optional("batch_size"): And(int, lambda n: n >= 1),
+                Optional("random_seed"): And(int, lambda n: n >= 0),
+                Optional("print_report"): bool
+            },
+            None
+        ),
         "source": str,
         Optional("keys"): {
             str: {
