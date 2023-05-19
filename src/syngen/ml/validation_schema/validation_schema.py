@@ -4,6 +4,20 @@ from schema import Schema, Optional, And, Or, SchemaError
 from loguru import logger
 
 
+def keys_schema():
+    schema = {
+        str: {
+            "type": Or("FK", "PK", "UQ"),
+            "columns": [str],
+            Optional("joined_sample"): bool
+        }
+    }
+    if schema[str]["type"] == "FK":
+        schema[str]["references"] = {"table": str, "columns": [str]}
+    else:
+        schema[str][Optional("references")] = {"table": str, "columns": [str]}
+    return schema
+
 configuration_schema = Schema({
     str: {
         Optional("train_settings"): Or(
@@ -30,20 +44,9 @@ configuration_schema = Schema({
             None
         ),
         "source": str,
-        Optional("keys"): {
-            str: {
-                "type": Or("FK", "PK", "UQ"),
-                "columns": [str],
-                Optional("references"): {
-                    "table": str,
-                    "columns": [str]
-                },
-                Optional("joined_sample"): bool
-            }
-        }
+        Optional("keys"): Or(keys_schema(), None)
     }
-}
-)
+})
 
 
 def validate_schema(configuration_schema: Schema, metadata: Dict):

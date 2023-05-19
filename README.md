@@ -58,7 +58,7 @@ train --source PATH_TO_ORIGINAL_CSV \
     --batch_size INT
 ```
 
-For training of the multiple linked tables call:
+To train one or more tables using a metadata file, you can use the following command:
 
 ```bash
 train --metadata_path PATH_TO_METADATA_YAML
@@ -73,7 +73,7 @@ The parameters which you can set up for training process:
 - <i>drop_null</i> – whether to drop rows with at least one missing value
 - <i>batch_size</i> – if specified, the training is split into batches. This can save the RAM
 - <i>print_report</i> - whether to generate accuracy and sampling reports. Please note that the sampling report is generated only if the `row_limit` parameter is set.
-- <i>metadata_path</i> – a path to the metadata file containing the metadata for linked tables
+- <i>metadata_path</i> – a path to the metadata file containing the metadata
 - <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
 
 Requirements for parameters of training process:
@@ -101,7 +101,7 @@ infer --size INT \
     --print_report BOOL
 ```
  
-For linked tables you can simply call:
+To generate one or more tables using a metadata file, you can use the following command:
 
 ```bash
 infer --metadata_path PATH_TO_METADATA
@@ -115,7 +115,7 @@ The parameters which you can set up for generation process:
 - <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
 - <i>random_seed</i> – if specified, generates a reproducible result
 - <i>print_report</i> – whether to generate accuracy and sampling reports. Please note that the sampling report is generated only if the row_limit parameter is set.
-- <i>metadata_path</i> – a path to metadata file to generate linked tables
+- <i>metadata_path</i> – a path to metadata file
 
 Requirements for parameters of generation process:
 * <i>size</i> - data type - integer, must be equal to or more than 1, default value is 100
@@ -132,33 +132,37 @@ will be ignored.
 
 ### Linked tables generation
 
-To generate linked tables, you should provide metadata in yaml format. It is used to handle complex 
-relations for any number of tables. You can also specify additional parameters needed for training and inference in the metadata file 
-and in this case, they will be ignored in the CLI call.
+To generate one or more tables, you might provide metadata in yaml format. By providing information about the relationships 
+between tables via metadata, it becomes possible to manage complex relationships across any number of tables. 
+You can also specify additional parameters needed for training and inference in the metadata file and in this case, 
+they will be ignored in the CLI call.
+
+<i>Note:</i> By using metadata file, you can also generate tables with absent relationships. 
+In this case, the tables will be generated independently.
 
 The yaml metadata file should match the following template:
 
-    CUSTOMER:                                       # Table name
-        source: "./files/customer.csv"              # Supported formats include local files in CSV, Avro formats
+    CUSTOMER:                                       # Table name. Required parameter
+        source: "./files/customer.csv"              # Supported formats include local files in CSV, Avro formats. Required parameter
                  
-        train_settings:                             # Settings for training process
-            epochs: 10                              # Number of epochs if different from the default in the command line options
-            drop_null: False                        # Drop rows with NULL values
-            row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
-            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
-            print_report: False                     # Turn on or turn off generation of the report
+        train_settings:                             # Settings for training process. Optional parameter
+            epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
+            drop_null: False                        # Drop rows with NULL values. Optional parameter
+            row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
+            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
+            print_report: False                     # Turn on or turn off generation of the report. Optional parameter
             column_types:
-                categorical:                        # Force listed columns to have categorical type (use dictionary of values)
+                categorical:                        # Force listed columns to have categorical type (use dictionary of values). Optional parameter
                     - gender
                     - marital_status
                  
-        infer_settings:                             # Settings for infer process
-            size: 100                               # Size for generated data
-            run_parallel: False                     # Turn on or turn off parallel training process
-            print_report: False                     # Turn on or turn off generation of the report
-            batch_size: None                        # If specified, the generation is split into batches. This can save the RAM
-            random_seed: None                       # If specified, generates a reproducible result
-        keys:
+        infer_settings:                             # Settings for infer process. Optional parameter
+            size: 100                               # Size for generated data. Optional parameter
+            run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
+            print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+            batch_size: None                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
+            random_seed: None                       # If specified, generates a reproducible result. Optional parameter
+        keys:                                       # Keys of the table. Optional parameter
             PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
                 type: "PK"                          # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
                 columns:                            # Array of column names
@@ -190,27 +194,27 @@ The yaml metadata file should match the following template:
                         - address_id
 
      
-    ORDER:
-        source: "./files/order.csv"
+    ORDER:                                          # Table name. Required parameter
+        source: "./files/order.csv"                 # Supported formats include local files in CSV, Avro formats. Required parameter
      
-        train_settings:
-            epochs: 10                              # Number of epochs if different from the default in the command line options
-            drop_null: False                        # Drop rows with NULL values
-            row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number
-            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM
-            print_report: False                     # Turn on or turn off generation of the report
+        train_settings:                             # Settings for training process. Optional parameter
+            epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
+            drop_null: False                        # Drop rows with NULL values. Optional parameter
+            row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
+            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
+            print_report: False                     # Turn on or turn off generation of the report. Optional parameter
             column_types:
-                categorical:                        # Force listed columns to have categorical type (use dictionary of values)
+                categorical:                        # Force listed columns to have categorical type (use dictionary of values). Optional parameter
                     - gender
                     - marital_status
      
-        infer_settings:                             # Settings for infer process
-            size: 100                               # Size for generated data
-            run_parallel: False                     # Turn on or turn off parallel training process
-            print_report: False                     # Turn on or turn off generation of the report
-            batch_size: None                        # If specified, the generation is split into batches. This can save the RAM
-            random_seed: None                       # If specified, generates a reproducible result
-        keys:
+        infer_settings:                             # Settings for infer process. Optional parameter
+            size: 100                               # Size for generated data. Optional parameter
+            run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
+            print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+            batch_size: None                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
+            random_seed: None                       # If specified, generates a reproducible result. Optional parameter
+        keys:                                       # Keys of the table. Optional parameter
             pk_order_id:
                 type: "PK"
                 columns:
@@ -227,7 +231,7 @@ The yaml metadata file should match the following template:
 
 <i>You can find the example of metadata file in [example-metadata/housing_metadata.yaml](example-metadata/housing_metadata.yaml)</i><br>
 
-For related tables training you can use the commands:
+By providing the necessary information through a metadata file, you can initiate training and inference processes using the following commands:
 
 ```bash
 train --metadata_path=PATH_TO_YAML_METADATA_FILE
@@ -269,7 +273,7 @@ PATH_TO_LOCAL_FOLDER is an absolute path to the folder where your original csv i
 
 You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call.
 
-To run dockerized code for linked tables simply call:
+To run dockerized code by providing the metadata file simply call:
 
 ```bash
 docker pull tdspora/syngen-train:latest
