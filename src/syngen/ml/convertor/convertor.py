@@ -39,7 +39,7 @@ class Convertor(ABC):
             else:
                 df_object_subset = df.select_dtypes(["object"])
                 for column in df_object_subset:
-                    df[column] = [str(i) if i != np.nan else i for i in df[column]]
+                    df[column] = [i if not isinstance(i, str) and np.isnan(i) else str(i) for i in df[column]]
             return df
         else:
             return df
