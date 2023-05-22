@@ -51,9 +51,9 @@ SCHEMA = {
 def test_initiate_csv_convertor(rp_logger):
     rp_logger.info("Initiating the instance of the class CSVConvertor")
     df, schema = DataLoader("tests/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv").load_data()
-    convertor = CSVConvertor(df)
-    assert convertor.schema == {"fields": {}, "format": "CSV"}
-    pd.testing.assert_frame_equal(convertor.df, df)
+    convertor = CSVConvertor({"fields": {}, "format": "CSV"}, df)
+    assert convertor.converted_schema == {"fields": {}, "format": "CSV"}
+    pd.testing.assert_frame_equal(convertor.preprocessed_df, df)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
