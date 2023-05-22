@@ -1,13 +1,13 @@
-from typing import Dict
+from typing import Dict, List
 
 from schema import Schema, Optional, And, Or, SchemaError
 from loguru import logger
 
 
-def keys_schema():
+def keys_schema(types_of_keys: List[str]):
     schema = {
         str: {
-            "type": Or("FK", "PK", "UQ"),
+            "type": Or(*types_of_keys),
             "columns": [str],
             Optional("joined_sample"): bool
         }
@@ -44,7 +44,7 @@ configuration_schema = Schema({
             None
         ),
         "source": str,
-        Optional("keys"): Or(keys_schema(), None)
+        Optional("keys"): Or(keys_schema(types_of_keys=["FK", "PK", "UQ"]), None)
     }
 })
 
