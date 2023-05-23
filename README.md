@@ -290,6 +290,22 @@ docker run --rm \
 You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call, however, they will be 
 overwritten by corresponding arguments in the metadata file.
 
+#### Logging level
+
+Set the `LOGURU_LEVEL` environment variable to desired level of logging.
+For example, to suppress the debug messages, add `-e LOGURU_LEVEL=INFO` to the `docker run` command:
+```bash
+docker pull tdspora/syngen-train:latest
+docker run --rm -e LOGURU_LEVEL=INFO \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+
+docker pull tdspora/syngen-infer:latest
+docker run --rm -e LOGURU_LEVEL=INFO \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+```
+
 ## Contribution
 
 We welcome contributions from the community to help us improve and maintain our public GitHub repository. We appreciate any feedback, bug reports, or feature requests, and we encourage developers to submit fixes or new features using issues.
