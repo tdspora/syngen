@@ -74,6 +74,11 @@ def launch_train(
         raise AttributeError("It seems that the information of 'metadata_path' or 'source' is absent. "
                              "Please provide either the information of 'metadata_path' or "
                              "the information of 'source' and 'table_name'")
+    logger.warning(
+        "The training process will be executed according to the information mentioned in 'train_settings' "
+        "in the metadata file. If appropriate information is absent from the metadata file, then the values "
+        "of parameters sent through CLI will be used. Otherwise, the values of parameters will be defaulted"
+    )
     settings = {
         "source": source,
         "epochs": epochs,

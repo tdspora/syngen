@@ -10,6 +10,7 @@ import numpy as np
 import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
+import tqdm
 
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
@@ -504,7 +505,10 @@ class Dataset:
             data = [data]
         assert self._check_count_features(data)
 
-        for transformed_data, (name, feature) in zip(data, self.features.items()):
+        for transformed_data, (name, feature) in tqdm.tqdm(
+                iterable=zip(data, self.features.items()),
+                desc="Generation of the data...",
+                total=len(data)):
             if name not in excluded_features and name not in self.fk_columns:
                 column_names.extend(self.columns[name])
                 inverse_transformed_data.append(
