@@ -129,6 +129,17 @@ Requirements for parameters of generation process:
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI 
 will be ignored.
 
+<i>Note:</i> If you want to set the logging level, you can use the parameter <i>log_level</i> in the CLI call:
+
+```bash
+train --source STR --table_name STR --log_level STR
+train --metadata_path STR --log_level STR
+infer --size INT --table_name STR --log_level STR
+infer --metadata_path STR --log_level STR
+```
+
+where <i>log_level</i> might be one of the following values: <i>DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
+
 
 ### Linked tables generation
 
