@@ -32,7 +32,8 @@ def launch_infer(
         run_parallel: bool,
         batch_size: Optional[int],
         print_report: bool,
-        random_seed: Optional[int]
+        random_seed: Optional[int],
+        log_level: str
 ):
     """
     Launch the work of infer process
@@ -45,6 +46,7 @@ def launch_infer(
     batch_size
     print_report
     random_seed
+    log_level
     -------
 
     """
