@@ -6,6 +6,7 @@ import click
 from loguru import logger
 
 from syngen.ml.worker import Worker
+from syngen.ml.utils import setup_logger
 
 
 @click.command()
@@ -23,6 +24,8 @@ from syngen.ml.worker import Worker
 @click.option("--print_report", default=False, type=click.BOOL,
               help="Whether to print quality report. Might require significant time "
                    "for big generated tables (>1000 rows). If absent, it's defaulted to False")
+@click.option("--log_level", default="INFO", type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+              help="Set the logging level which will be used in the process. If absent, it's defaulted to 'INFO'")
 @click.option("--batch_size", default=32, type=click.IntRange(1),
               help="Number of rows that goes in one batch. This parameter can help to control memory consumption.")
 def launch_train(
@@ -33,6 +36,7 @@ def launch_train(
     drop_null: bool,
     row_limit: Optional[int],
     print_report: bool,
+    log_level: str,
     batch_size: int = 32,
 ):
     """
@@ -47,10 +51,12 @@ def launch_train(
     drop_null
     row_limit
     print_report
+    log_level
     batch_size
     -------
 
     """
+    setup_logger(log_level)
     if not metadata_path and not source and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' and 'source' is absent. "
                              "Please provide either the information of 'metadata_path' or "
