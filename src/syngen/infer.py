@@ -4,6 +4,7 @@ import click
 from loguru import logger
 
 from syngen.ml.worker import Worker
+from syngen.ml.utils import setup_logger
 
 
 @click.command()
@@ -22,6 +23,8 @@ from syngen.ml.worker import Worker
 @click.option("--print_report", default=False, type=click.BOOL,
               help="Whether to print quality report. Might require significant time "
                    "for big generated tables (>1000 rows). If absent, it's defaulted to False")
+@click.option("--log_level", default="INFO", type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+              help="Set the logging level which will be used in the process. If absent, it's defaulted to 'INFO'")
 def launch_infer(
         metadata_path: Optional[str],
         size: Optional[int],
@@ -45,6 +48,7 @@ def launch_infer(
     -------
 
     """
+    setup_logger(log_level)
     if not metadata_path and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' is absent. "
                              "Please provide either the information of 'metadata_path' or the information of 'table_name'")

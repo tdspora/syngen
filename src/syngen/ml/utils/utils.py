@@ -2,6 +2,7 @@ from typing import List, Dict
 from dateutil.parser import parse
 import pickle
 from datetime import datetime, timedelta
+import sys
 
 import pandas as pd
 import numpy as np
@@ -10,7 +11,6 @@ from loguru import logger
 import pickle as pkl
 import uuid
 from ulid import ULID
-from uuid import UUID
 import random
 
 def generate_uuids(version: int, size: int):
@@ -206,3 +206,11 @@ def fetch_training_config(train_config_pickle_path):
     """
     with open(train_config_pickle_path, "rb") as f:
         return pkl.load(f)
+
+def setup_logger(log_level: str):
+    """
+    Setup logger depending on the log level
+    :param log_level: the level of logging
+    """
+    logger.remove()
+    logger.add(sys.stdout, level=log_level)
