@@ -3,7 +3,6 @@ from abc import ABC
 from itertools import combinations
 from collections import Counter
 import re
-import datetime
 
 import tqdm
 from sklearn.cluster import KMeans
@@ -1037,7 +1036,9 @@ class Utility(BaseMetric):
         best_target = None
         best_model = None
         synthetic_score = -1
-        for col in targets:
+        for i, col in tqdm.tqdm(iterable=enumerate(targets),
+                                desc="Calculating utility metric...",
+                                total=len(targets)):
             original = pd.get_dummies(self.original.drop(col, axis=1))
             original = StandardScaler().fit_transform(original)
             model_y = self.original[col].values[:int(original.shape[0] * 0.8)]
