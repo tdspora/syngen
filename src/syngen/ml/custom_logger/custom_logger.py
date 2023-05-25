@@ -3,6 +3,10 @@ import sys
 from loguru import logger
 
 class SingletonLogger:
+    """
+    Singleton class for logger
+    in order to avoid multiple handlers with different logging levels
+    """
     _instance = None
 
     def __new__(cls, *args, **kwargs):
