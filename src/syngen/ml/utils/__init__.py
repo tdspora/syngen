@@ -14,6 +14,5 @@ from syngen.ml.utils.utils import (
     check_if_features_assigned,
     fetch_training_config,
     generate_uuid,
-    generate_uuids,
-    setup_logger
+    generate_uuids
 )

@@ -4,7 +4,7 @@ import click
 from loguru import logger
 
 from syngen.ml.worker import Worker
-from syngen.ml.utils import setup_logger
+from syngen.ml.custom_logger import setup_logger
 
 
 @click.command()
