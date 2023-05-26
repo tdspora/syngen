@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import tensorflow as tf
-from loguru import logger
 import pickle
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
@@ -20,6 +19,7 @@ import pandas as pd
 
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
 from syngen.ml.utils import slugify_parameters
+from syngen.ml.custom_logger import custom_logger
 
 class CVAE:
     """
@@ -83,7 +83,7 @@ class CVAE:
         if self.is_cond:
             if len(self.cond_inputs) > 1:
                 self.cond_input = concatenate(self.cond_inputs)
-                logger.info(f"Conditioning on {set(self.cond_features)}")
+                custom_logger.info(f"Conditioning on {set(self.cond_features)}")
             else:
                 self.cond_input = self.cond_inputs[0]
             z_cond = concatenate([z, self.cond_input])
@@ -190,18 +190,18 @@ class CVAE:
         return self.model.fit(transformed_data, batch_size=self.batch_size, **kwargs)
 
     def fit_sampler(self, data: pd.DataFrame):
-        logger.info("Fit sampler")
+        custom_logger.info("Fit sampler")
         transformed_data = self.dataset.transform(data)
-        logger.info("Start encoding")
+        custom_logger.info("Start encoding")
         latent_points = self.encoder_model.predict(transformed_data)
 
-        logger.info("Creating BayesianGaussianMixture")
+        custom_logger.info("Creating BayesianGaussianMixture")
         self.latent_model = BayesianGaussianMixture(
             n_components=self.latent_components, n_init=10
         )
-        logger.info("Fitting BayesianGaussianMixture")
+        custom_logger.info("Fitting BayesianGaussianMixture")
         self.latent_model.fit(latent_points)
-        logger.info("Finished fitting BayesianGaussianMixture")
+        custom_logger.info("Finished fitting BayesianGaussianMixture")
 
     def predict(self, data: pd.DataFrame) -> pd.DataFrame:
         transformed_data = self.dataset.transform(data)

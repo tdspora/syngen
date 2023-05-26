@@ -2,12 +2,11 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Tuple, Set
 import os
 
-from loguru import logger
 import pandas as pd
 
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_attribute
-
+from syngen.ml.custom_logger import custom_logger
 
 @dataclass
 class TrainConfig:
@@ -78,7 +77,7 @@ class TrainConfig:
 
         dropped_cols = data_columns - set(data.columns)
         if len(dropped_cols) > 0:
-            logger.info(f"Empty columns - {', '.join(dropped_cols)} were removed")
+            custom_logger.info(f"Empty columns - {', '.join(dropped_cols)} were removed")
         return data, dropped_cols
 
     @staticmethod
@@ -115,8 +114,8 @@ class TrainConfig:
             if not data.dropna().empty:
                 data = data.dropna()
             else:
-                logger.warning("The specified 'drop_null' argument results in the empty dataframe, "
-                               "so it will be ignored")
+                custom_logger.warning("The specified 'drop_null' argument results in the empty dataframe, "
+                                      "so it will be ignored")
 
         if self.row_limit:
             self.row_subset = min(self.row_limit, len(data))
@@ -124,15 +123,15 @@ class TrainConfig:
             data = data.sample(n=self.row_subset)
 
             if len(data) < 100:
-                logger.warning("The input table is too small to provide any meaningful results. "
-                               "Please consider 1) disable drop_null argument, 2) provide bigger table")
+                custom_logger.warning("The input table is too small to provide any meaningful results. "
+                                      "Please consider 1) disable drop_null argument, 2) provide bigger table")
             elif len(data) < 500:
-                logger.warning(
+                custom_logger.warning(
                     f"The amount of data is {len(data)} rows. It seems that it isn't enough to supply "
                     f"high-quality results. To improve the quality of generated data please consider any of the steps: "
                     f"1) provide a bigger table, 2) disable drop_null argument")
 
-        logger.info(f"The subset of rows was set to {len(data)}")
+        custom_logger.info(f"The subset of rows was set to {len(data)}")
 
         self.row_subset = len(data)
         return data
@@ -212,7 +211,7 @@ class InferConfig:
         """
         if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
             self.print_report = False
-            logger.warning(
+            custom_logger.warning(
                 f"It seems that the path to original data of the table - {self.table_name} doesn't exist. "
                 f"In this case, the accuracy report of the table - {self.table_name} won't be generated. "
                 f"The parameter '--print_report' of the table - {self.table_name} will be set to False\n")

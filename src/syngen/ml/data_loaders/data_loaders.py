@@ -10,11 +10,11 @@ import yaml
 from yaml import Loader
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
-from loguru import logger
 
 from syngen.ml.validation_schema import validate_schema, configuration_schema
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
+from syngen.ml.custom_logger import custom_logger
 
 
 class BaseDataLoader(ABC):
@@ -69,7 +69,7 @@ class DataLoader(BaseDataLoader):
             message = f"It seems that the content of the data in the path - '{self.path}' " \
                       f"doesn't have the encoding UTF-8. The details of the error - {error}.\n" \
                       f"Please, use the data in UTF-8 encoding"
-            logger.error(message)
+            custom_logger.error(message)
             raise ValueError(message)
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
@@ -91,7 +91,7 @@ class CSVLoader(BaseDataLoader):
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
                       f"Please, check the path to the table"
-            logger.error(message)
+            custom_logger.error(message)
             raise FileNotFoundError(message)
 
     def load_data(self, path, **kwargs):
@@ -138,7 +138,7 @@ class AvroLoader(BaseDataLoader):
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
                       f"Please, check the path to the table"
-            logger.error(message)
+            custom_logger.error(message)
             raise FileNotFoundError(message)
 
     @staticmethod
