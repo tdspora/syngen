@@ -2,12 +2,10 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from copy import deepcopy
 
-from loguru import logger
-
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
-
+from syngen.ml.custom_logger import custom_logger
 
 @dataclass
 class Worker:
@@ -17,6 +15,7 @@ class Worker:
     table_name: str
     metadata_path: Optional[str]
     settings: Dict
+    log_level: str
     train_strategy = TrainStrategy()
     infer_strategy = InferStrategy()
     metadata = None
@@ -240,7 +239,7 @@ class Worker:
         print_report = self._extract_setting(kwargs, setting="print_report")
         batch_size = self._extract_setting(kwargs, setting="batch_size")
 
-        logger.info(f"Training process of the table - {table} has started.")
+        custom_logger.info(f"Training process of the table - {table} has started.")
 
         self.train_strategy.run(
             metadata=self.metadata,
@@ -266,7 +265,7 @@ class Worker:
         both_keys = table in self.divided
         print_report = self._extract_setting(kwargs, setting="print_report")
 
-        logger.info(f"Infer process of the table - {table} has started")
+        custom_logger.info(f"Infer process of the table - {table} has started")
 
         self.infer_strategy.run(
             metadata=self.metadata,
@@ -277,6 +276,7 @@ class Worker:
             batch_size=batch_size,
             random_seed=random_seed,
             print_report=print_report,
+            log_level=self.log_level,
             both_keys=both_keys
         )
 

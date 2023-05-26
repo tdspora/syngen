@@ -1,1 +1,1 @@
-from syngen.ml.custom_logger.custom_logger import setup_logger
+from syngen.ml.custom_logger.custom_logger import SingletonLogger, custom_logger
