@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 import os
 import traceback
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-from loguru import logger
 from syngen.ml.train_chain import RootHandler
 from syngen.ml.reporters import (
     Report,
@@ -21,6 +20,7 @@ from syngen.ml.train_chain import (
 )
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
+from syngen.ml.custom_logger import custom_logger
 
 class Strategy(ABC):
     """
@@ -154,12 +154,12 @@ class TrainStrategy(Strategy, ABC):
             self.handler.handle()
 
         except Exception as e:
-            logger.info(f"Training of the table - {self.handler.table_name} failed on running stage.")
-            logger.error(e)
-            logger.error(traceback.format_exc())
+            custom_logger.info(f"Training of the table - {self.handler.table_name} failed on running stage.")
+            custom_logger.error(e)
+            custom_logger.error(traceback.format_exc())
             raise
         else:
-            logger.info(f"Training of the table - {self.handler.table_name} was completed")
+            custom_logger.info(f"Training of the table - {self.handler.table_name} was completed")
 
 
 class InferStrategy(Strategy):
@@ -189,7 +189,8 @@ class InferStrategy(Strategy):
             random_seed=self.config.random_seed,
             batch_size=self.config.batch_size,
             run_parallel=self.config.run_parallel,
-            print_report=self.config.print_report
+            print_report=self.config.print_report,
+            log_level=self.config.log_level
         )
         return self
 
@@ -219,6 +220,7 @@ class InferStrategy(Strategy):
             batch_size=kwargs["batch_size"],
             random_seed=kwargs["random_seed"],
             print_report=kwargs["print_report"],
+            log_level=kwargs["log_level"],
             both_keys=kwargs["both_keys"],
         ).\
             add_reporters(). \
@@ -228,12 +230,12 @@ class InferStrategy(Strategy):
         try:
             self.handler.handle()
         except Exception as e:
-            logger.info(f"Generation of the table - {self.handler.table_name} failed on running stage.")
-            logger.error(e)
-            logger.error(traceback.format_exc())
+            custom_logger.info(f"Generation of the table - {self.handler.table_name} failed on running stage.")
+            custom_logger.error(e)
+            custom_logger.error(traceback.format_exc())
             raise
         else:
-            logger.info(
+            custom_logger.info(
                 f"Synthesis of the table - {self.handler.table_name} was completed. "
                 f"Synthetic data saved in {self.handler.paths['path_to_merged_infer']}"
             )

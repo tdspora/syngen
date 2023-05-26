@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 import pandas as pd
 import numpy as np
-from loguru import logger
+
+from syngen.ml.custom_logger import custom_logger
 
 
 class Convertor(ABC):
@@ -85,7 +86,7 @@ class AvroConvertor(Convertor):
                 fields[column] = "string"
             else:
                 message = f"It seems that the column - '{column}' has unsupported data type - '{data_type}'"
-                logger.error(message)
+                custom_logger.error(message)
                 raise ValueError(message)
         converted_schema["format"] = "Avro"
         preprocessed_df = self._preprocess_df(converted_schema, df)

@@ -1,10 +1,9 @@
 from typing import Optional
 
 import click
-from loguru import logger
 
 from syngen.ml.worker import Worker
-from syngen.ml.custom_logger import setup_logger
+from syngen.ml.custom_logger import custom_logger
 
 
 @click.command()
@@ -50,15 +49,15 @@ def launch_infer(
     -------
 
     """
-    setup_logger(log_level)
+    custom_logger.setup_log_level(log_level)
     if not metadata_path and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' is absent. "
                              "Please provide either the information of 'metadata_path' or the information of 'table_name'")
     if metadata_path and table_name:
-        logger.warning("The information of 'metadata_path' was provided. "
+        custom_logger.warning("The information of 'metadata_path' was provided. "
                        "In this case the information of 'table_name' will be ignored")
         table_name = None
-    logger.warning(
+    custom_logger.warning(
         "The inference process will be executed according to the information mentioned in 'infer_settings' "
         "in the metadata file. If appropriate information is absent from the metadata file, then the values "
         "of parameters sent through CLI will be used. Otherwise, the values of parameters will be defaulted"
@@ -68,12 +67,14 @@ def launch_infer(
         "run_parallel": run_parallel,
         "batch_size": batch_size,
         "print_report": print_report,
-        "random_seed": random_seed
+        "random_seed": random_seed,
+        "log_level": log_level
     }
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
-        settings=settings
+        settings=settings,
+        log_level=log_level
     )
     worker.launch_infer()
 
