@@ -10,7 +10,6 @@ from tensorflow.python.data.experimental import AutoShardPolicy
 import matplotlib.pyplot as plt
 import time
 import tqdm
-from loguru import logger
 import pandas as pd
 import numpy as np
 
@@ -20,6 +19,7 @@ from syngen.ml.utils import (
     fetch_dataset,
     check_if_features_assigned
 )
+from syngen.ml.custom_logger import custom_logger
 
 warnings.filterwarnings("ignore")
 
@@ -153,7 +153,7 @@ class VAEWrapper(BaseWrapper):
                 num_zero_values = (num_column == 0).sum()
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
-                logger.info(
+                custom_logger.info(
                     f"Column {column} has {num_zero_values} ({round(num_zero_values * 100 / len(num_column))}%) "
                     f"zero values generated"
                 )
@@ -170,7 +170,7 @@ class VAEWrapper(BaseWrapper):
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
                 num_nan_values = num_column.isna().sum()
-                logger.info(
+                custom_logger.info(
                     f"Column {column} has {num_nan_values} ({round(num_nan_values * 100 / len(num_column))}%) "
                     f"empty values generated."
                 )
@@ -251,14 +251,14 @@ class VAEWrapper(BaseWrapper):
                 self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 loss_grows_num_epochs = 0
 
-            logger.info(
+            custom_logger.info(
                 f"epoch: {epoch}, loss: {mean_loss}, time: {time.time()-t1}, sec"
             )
 
             prev_total_loss = mean_loss
             if loss_grows_num_epochs == es_patience:
                 self.vae.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
-                logger.info(
+                custom_logger.info(
                     f"The loss does not become lower for {loss_grows_num_epochs} epochs in a row. Stopping the training."
                 )
                 break
@@ -325,7 +325,7 @@ class VAEWrapper(BaseWrapper):
 
     def save_state(self, path: str):
         self.model.save_state(path)
-        logger.info(f"Saved VAE state in {path}")
+        custom_logger.info(f"Saved VAE state in {path}")
 
     def load_state(self, path: str):
         try:
@@ -339,7 +339,7 @@ class VAEWrapper(BaseWrapper):
         except (FileNotFoundError, ValueError):
             raise FileNotFoundError("Missing file with VAE state")
 
-        logger.info(f"Loaded VAE state from {path}")
+        custom_logger.info(f"Loaded VAE state from {path}")
         return state
 
 

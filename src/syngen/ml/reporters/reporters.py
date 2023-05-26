@@ -3,7 +3,6 @@ from typing import List, Dict
 
 import pandas as pd
 import numpy as np
-from loguru import logger
 
 from syngen.ml.utils import (
     get_nan_labels,
@@ -13,6 +12,7 @@ from syngen.ml.utils import (
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.metrics.utils import text_to_continuous
+from syngen.ml.custom_logger import custom_logger
 
 
 class Reporter:
@@ -162,7 +162,7 @@ class AccuracyReporter(Reporter):
             categ_columns=list(categ_columns),
             date_columns=list(date_columns)
         )
-        logger.info(
+        custom_logger.info(
             f"Corresponding plot pickle files regarding to accuracy test were saved "
             f"to folder '{self.paths['draws_path']}'."
         )
@@ -196,7 +196,7 @@ class SampleAccuracyReporter(Reporter):
             categ_columns=list(categ_columns),
             date_columns=list(date_columns)
         )
-        logger.info(
+        custom_logger.info(
             f"Corresponding plot pickle files regarding to sampled data accuracy test were saved "
             f"to folder {self.paths['draws_path']}."
         )

@@ -2,16 +2,17 @@ from typing import List, Dict
 from dateutil.parser import parse
 import pickle
 from datetime import datetime, timedelta
-import sys
 
 import pandas as pd
 import numpy as np
 from slugify import slugify
-from loguru import logger
 import pickle as pkl
 import uuid
 from ulid import ULID
 import random
+
+from syngen.ml.custom_logger import custom_logger
+
 
 def generate_uuids(version: int, size: int):
     ulid = ULID()
@@ -196,7 +197,7 @@ def check_if_features_assigned(dataset_pickle_path: str):
     """
     features = fetch_dataset(dataset_pickle_path).features
     if len(features) == 0:
-        logger.info("No features to train VAE on")
+        custom_logger.info("No features to train VAE on")
         return False
     return True
 

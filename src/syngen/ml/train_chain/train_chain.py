@@ -1,16 +1,13 @@
-import random
 from typing import Tuple, Optional, Dict, List
 from abc import ABC, abstractmethod
 import os
 import math
-import uuid
 from ulid import ULID
 from uuid import UUID
 from dataclasses import dataclass, field
 
 import pandas as pd
 import numpy as np
-from loguru import logger
 from numpy.random import seed, choice
 from pathos.multiprocessing import ProcessingPool
 import dill
@@ -24,9 +21,9 @@ from syngen.ml.utils import (
     slugify_parameters,
     fetch_dataset,
     check_if_features_assigned,
-    generate_uuid,
-    generate_uuids
+    generate_uuid
 )
+from syngen.ml.custom_logger import custom_logger
 
 
 class AbstractHandler(ABC):
@@ -134,7 +131,7 @@ class LongTextsHandler(BaseHandler):
             self._save_no_ml_checkpoints(features)
 
         else:
-            logger.info(
+            custom_logger.info(
                 f"No columns to train kde over found"
             )
         return super().handle(data, **kwargs)
@@ -153,9 +150,9 @@ class VaeTrainHandler(BaseHandler):
             self,
             data: pd.DataFrame
     ):
-        logger.info("Start VAE training")
+        custom_logger.info("Start VAE training")
         if data is None:
-            logger.error("For mode = 'train' path must be provided")
+            custom_logger.error("For mode = 'train' path must be provided")
             raise ValueError("Can't read data from path or path is None")
 
         self.model = self.create_wrapper(
@@ -170,7 +167,7 @@ class VaeTrainHandler(BaseHandler):
         )
         self.model.batch_size = min(self.batch_size, len(data))
 
-        logger.debug(
+        custom_logger.debug(
             f"Train model with parameters: epochs={self.epochs}, row_subset={self.row_subset}, "
             f"drop_null={self.drop_null}, batch_size={self.batch_size}")
 
@@ -185,7 +182,7 @@ class VaeTrainHandler(BaseHandler):
             return
 
         self.model.save_state(self.paths["state_path"])
-        logger.info("Finished VAE training")
+        custom_logger.info("Finished VAE training")
 
     def handle(self, data: pd.DataFrame, **kwargs):
         self.__fit_model(data)
@@ -305,7 +302,7 @@ class VaeInferHandler(BaseHandler):
         return data
 
     def run(self, size: int, run_parallel: bool):
-        logger.info("Start data synthesis")
+        custom_logger.info("Start data synthesis")
         if run_parallel:
             pool = ProcessingPool()
             if self.random_seed:
@@ -336,7 +333,7 @@ class VaeInferHandler(BaseHandler):
             synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)
 
         except FileNotFoundError:
-            logger.warning(f"The mapper for the {fk_label} text key is not found. Making simple sampling")
+            custom_logger.warning(f"The mapper for the {fk_label} text key is not found. Making simple sampling")
             synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
             synth_fk = synth_fk.rename(fk_label)
 
@@ -369,7 +366,7 @@ class VaeInferHandler(BaseHandler):
                 pk_path = self._set_pk_path(pk_table=pk_table)
                 pk_table_data, pk_table_schema = DataLoader(pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
-                logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
+                custom_logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
                 synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, fk_column_name)
                 generated = generated.reset_index(drop=True)
@@ -390,11 +387,11 @@ class VaeInferHandler(BaseHandler):
         self._prepare_dir()
 
         batch_num = math.ceil(self.size / self.batch_size)
-        logger.debug(
+        custom_logger.debug(
             f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}, "
             f"batch_size={self.batch_size}, random_seed={self.random_seed}, print_report={self.print_report}"
         )
-        logger.info(f"Total of {batch_num} batch(es)")
+        custom_logger.info(f"Total of {batch_num} batch(es)")
         batches = self.split_by_batches(self.size, batch_num)
         prepared_batches = [self.run(batch, self.run_parallel) for batch in batches]
         prepared_data = self._concat_slices_with_unique_pk(prepared_batches) if len(prepared_batches) > 0 else pd.DataFrame()

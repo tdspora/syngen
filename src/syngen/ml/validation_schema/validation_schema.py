@@ -1,7 +1,8 @@
 from typing import Dict, List
 
 from schema import Schema, Optional, And, Or, SchemaError
-from loguru import logger
+
+from syngen.ml.custom_logger import custom_logger
 
 
 def keys_schema(types_of_keys: List[str]):
@@ -57,9 +58,9 @@ def validate_schema(configuration_schema: Schema, metadata: Dict):
     """
     try:
         configuration_schema.validate(metadata)
-        logger.info("The schema of metadata file is valid")
+        custom_logger.info("The schema of metadata file is valid")
     except SchemaError as err:
-        logger.error(
+        custom_logger.error(
             f"It seems that the schema of metadata file isn't valid. "
             f"The details of validation error - {err}")
         raise err
