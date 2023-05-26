@@ -189,7 +189,8 @@ class InferStrategy(Strategy):
             random_seed=self.config.random_seed,
             batch_size=self.config.batch_size,
             run_parallel=self.config.run_parallel,
-            print_report=self.config.print_report
+            print_report=self.config.print_report,
+            log_level=self.config.log_level
         )
         return self
 
@@ -219,6 +220,7 @@ class InferStrategy(Strategy):
             batch_size=kwargs["batch_size"],
             random_seed=kwargs["random_seed"],
             print_report=kwargs["print_report"],
+            log_level=kwargs["log_level"],
             both_keys=kwargs["both_keys"],
         ).\
             add_reporters(). \

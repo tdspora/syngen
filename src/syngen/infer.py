@@ -67,12 +67,14 @@ def launch_infer(
         "run_parallel": run_parallel,
         "batch_size": batch_size,
         "print_report": print_report,
-        "random_seed": random_seed
+        "random_seed": random_seed,
+        "log_level": log_level
     }
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
-        settings=settings
+        settings=settings,
+        log_level=log_level
     )
     worker.launch_infer()
 

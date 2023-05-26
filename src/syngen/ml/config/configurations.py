@@ -185,6 +185,7 @@ class InferConfig:
     random_seed: Optional[int]
     print_report: bool
     both_keys: bool
+    log_level: str
     slugify_table_name: str = field(init=False)
 
     def __post_init__(self):

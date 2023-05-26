@@ -198,6 +198,7 @@ class VaeInferHandler(BaseHandler):
     run_parallel: bool
     print_report: bool
     wrapper_name: str
+    log_level: str
     random_seed_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)
     has_vae: bool = field(init=False)
@@ -268,6 +269,7 @@ class VaeInferHandler(BaseHandler):
 
 
     def run_separate(self, params: Tuple):
+        custom_logger.setup_log_level(self.log_level)
         i, size = params
 
         if self.random_seed:
