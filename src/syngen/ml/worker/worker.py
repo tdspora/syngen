@@ -15,6 +15,7 @@ class Worker:
     table_name: str
     metadata_path: Optional[str]
     settings: Dict
+    log_level: str
     train_strategy = TrainStrategy()
     infer_strategy = InferStrategy()
     metadata = None
@@ -275,6 +276,7 @@ class Worker:
             batch_size=batch_size,
             random_seed=random_seed,
             print_report=print_report,
+            log_level=self.log_level,
             both_keys=both_keys
         )
 
