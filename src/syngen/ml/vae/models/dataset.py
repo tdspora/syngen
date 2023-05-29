@@ -450,7 +450,7 @@ class Dataset:
             + f"Count of date columns: {len(self.date_columns)}; "
             + f"Count of binary columns: {len(self.binary_columns)}; "
             + f"Count of long text columns: {len(self.long_text_columns)}; "
-            + f"Count of uuid columns: {len(self.uuid_columns)}; "
+            + f"Count of uuid columns: {len(self.uuid_columns)}"
         )
 
     def assign_feature(self, feature, columns):
