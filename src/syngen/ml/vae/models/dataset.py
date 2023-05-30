@@ -313,7 +313,8 @@ class Dataset:
                     f"Such texts' handling consumes significant resources and results in poor quality content, "
                     f"therefore this column(-s) will be generated using a simplified statistical approach")
 
-    def _is_valid_ulid(self, uuid):
+    @staticmethod
+    def _is_valid_ulid(uuid):
         """
         Check if uuid_to_test is a valid ULID (https://github.com/ulid/spec)
         """
@@ -331,15 +332,14 @@ class Dataset:
         Check if uuid_to_test is a valid UUID
         """
         result = []
-        for i in x:
+        for i in x.dropna():
             for v in [1, 2, 3, 4, 5]:
                 try:
                     uuid_obj = UUID(i, version=v)
                     if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
                         result.append(v)
                 except ValueError:
-                    continue
-            result.append(self._is_valid_ulid(i))
+                    result.append(self._is_valid_ulid(i))
         # returning the mode of the list, i.e. the most frequent element
         if result:
             return max(set(result), key=result.count)
@@ -356,7 +356,7 @@ class Dataset:
         self.uuid_columns = set()
         self.uuid_columns_types = {}
         if not data_subset.empty:
-            data_subset = data_subset.dropna().apply(self._is_valid_uuid)
+            data_subset = data_subset.apply(self._is_valid_uuid)
             self.uuid_columns_types = dict(data_subset[data_subset.isin([1, 2, 3, 4, 5, "ulid"])])
             self.uuid_columns = set(self.uuid_columns_types.keys())
             if self.uuid_columns:
@@ -449,7 +449,8 @@ class Dataset:
             + f"Count of categorical columns: {len(self.categ_columns)}; "
             + f"Count of date columns: {len(self.date_columns)}; "
             + f"Count of binary columns: {len(self.binary_columns)}; "
-            + f"Count of long text columns: {len(self.long_text_columns)}"
+            + f"Count of long text columns: {len(self.long_text_columns)}; "
+            + f"Count of uuid columns: {len(self.uuid_columns)}"
         )
 
     def assign_feature(self, feature, columns):
