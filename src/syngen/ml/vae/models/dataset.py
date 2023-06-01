@@ -33,7 +33,7 @@ from syngen.ml.custom_logger import custom_logger
 class Dataset:
     df: pd.DataFrame
     schema: Optional[Dict]
-    metadata: Optional[Dict]
+    metadata: Dict
     table_name: str
     fk_kde_path: str
     features: Dict = field(init=False)
@@ -340,7 +340,6 @@ class Dataset:
                         result.append(v)
                 except ValueError:
                     result.append(self._is_valid_ulid(i))
-        # returning the mode of the list, i.e. the most frequent element
         if result:
             return max(set(result), key=result.count)
         else:
@@ -348,7 +347,7 @@ class Dataset:
 
     def _set_uuid_columns(self, df: pd.DataFrame):
         """
-        Set up the list of columns with uuid
+        Set up the list of columns with UUIDs
         """
 
         data_subset = self._select_str_columns(df)
@@ -359,9 +358,14 @@ class Dataset:
             data_subset = data_subset.apply(self._is_valid_uuid)
             self.uuid_columns_types = dict(data_subset[data_subset.isin([1, 2, 3, 4, 5, "ulid"])])
             self.uuid_columns = set(self.uuid_columns_types.keys())
-            if self.uuid_columns:
-                custom_logger.info(
-                    f"The columns - {self.uuid_columns} contain UUIDs")
+
+    def _set_date_columns(self, df: pd.DataFrame):
+        """
+        Set up the list of date columns
+        """
+        self.date_columns = \
+            get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
+            self.binary_columns - self.long_text_columns
 
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """
@@ -393,11 +397,9 @@ class Dataset:
         self.float_columns = self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
         self.str_columns = \
             set(tmp_df.columns) - self.float_columns - self.categ_columns - \
-            self.int_columns - self.binary_columns - self.long_text_columns - set(self.uuid_columns)
+            self.int_columns - self.binary_columns - self.long_text_columns - self.uuid_columns
         self.categ_columns -= self.long_text_columns
-        self.date_columns = \
-            get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
-            self.binary_columns - self.long_text_columns
+        self._set_date_columns(df)
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
         self.uuid_columns_types = {k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns}
@@ -408,6 +410,7 @@ class Dataset:
         in case metadata of the table in Avro format is present
         """
         custom_logger.info(f"The schema of table - {self.table_name} was received")
+        self._set_uuid_columns(df)
         self._set_binary_columns(df)
         self._set_categorical_columns(df, schema)
         self._set_long_text_columns(df)
@@ -417,13 +420,12 @@ class Dataset:
         self.float_columns = self.float_columns - self.categ_columns - self.binary_columns
         self.str_columns = set(column for column, data_type in schema.items() if data_type == 'string')
         self.categ_columns -= self.long_text_columns
-        self.str_columns = \
-            self.str_columns - self.categ_columns - self.int_columns - self.binary_columns - self.long_text_columns
-        self.date_columns = \
-            get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
-            self.binary_columns - self.long_text_columns
+        self.str_columns = self.str_columns - self.categ_columns - self.binary_columns \
+                           - self.long_text_columns - self.uuid_columns
+        self._set_date_columns(df)
         self.str_columns -= self.date_columns
-        self.long_text_columns -= self.uuid_columns
+        self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
+        self.uuid_columns_types = {k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns}
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
         if schema.get("format") == "CSV":
@@ -452,6 +454,8 @@ class Dataset:
             + f"Count of long text columns: {len(self.long_text_columns)}; "
             + f"Count of uuid columns: {len(self.uuid_columns)}"
         )
+        for column in self.uuid_columns:
+            custom_logger.debug(f"Column '{column}' defined as UUID column")
 
     def assign_feature(self, feature, columns):
         name = feature.original_name
@@ -696,7 +700,6 @@ class Dataset:
         """
         Assign int based feature to int columns
         """
-        # num_bins = self.find_clusters(df, int_columns)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
         if len(features) == 2 and features[1].endswith("_null"):
             self.null_num_column_names.append(features[1])
