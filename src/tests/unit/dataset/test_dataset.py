@@ -46,7 +46,7 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns.avro",
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.avro"
 ])
-def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_table):
+def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test_table):
     df = pdx.from_avro(path_to_test_table)
     dataset = Dataset(
         df=df,

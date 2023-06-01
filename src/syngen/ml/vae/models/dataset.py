@@ -397,7 +397,7 @@ class Dataset:
         self.float_columns = self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
         self.str_columns = \
             set(tmp_df.columns) - self.float_columns - self.categ_columns - \
-            self.int_columns - self.binary_columns - self.long_text_columns - set(self.uuid_columns)
+            self.int_columns - self.binary_columns - self.long_text_columns - self.uuid_columns
         self.categ_columns -= self.long_text_columns
         self._set_date_columns(df)
         self.str_columns -= self.date_columns
@@ -420,9 +420,8 @@ class Dataset:
         self.float_columns = self.float_columns - self.categ_columns - self.binary_columns
         self.str_columns = set(column for column, data_type in schema.items() if data_type == 'string')
         self.categ_columns -= self.long_text_columns
-        self.str_columns = \
-            self.str_columns - self.categ_columns - self.int_columns - self.binary_columns \
-            - self.long_text_columns - self.uuid_columns
+        self.str_columns = self.str_columns - self.categ_columns - self.binary_columns \
+                           - self.long_text_columns - self.uuid_columns
         self._set_date_columns(df)
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
