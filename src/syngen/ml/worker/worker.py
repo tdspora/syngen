@@ -176,12 +176,18 @@ class Worker:
                 print_report = train_settings.get("print_report")
                 both_keys = table in self.divided
 
-                self.__infer_table(
+                custom_logger.info(f"Infer process of the table - {table} has started")
+
+                self.infer_strategy.run(
+                    metadata=self.metadata,
+                    size=None,
                     table_name=table,
+                    metadata_path=self.metadata_path,
                     run_parallel=False,
                     batch_size=1000,
                     random_seed=1,
                     print_report=print_report,
+                    log_level=self.log_level,
                     both_keys=both_keys
                 )
 
@@ -192,46 +198,28 @@ class Worker:
         :param config_of_tables: configuration of tables declared in metadata file
         """
         for table in tables:
+            custom_logger.info(f"Infer process of the table - {table} has started")
             both_keys = table in self.divided
             config_of_table = config_of_tables[table]
             infer_settings = config_of_table["infer_settings"]
-            self.__infer_table(
-                size=infer_settings.get("size"),
+
+            self.infer_strategy.run(
+                metadata=self.metadata,
+                size=infer_settings["size"],
                 table_name=table,
-                run_parallel=infer_settings.get("run_parallel"),
-                batch_size=infer_settings.get("batch_size"),
-                random_seed=infer_settings.get("random_seed"),
-                print_report=infer_settings.get("print_report"),
+                metadata_path=self.metadata_path,
+                run_parallel=infer_settings["run_parallel"],
+                batch_size=infer_settings["batch_size"],
+                random_seed=infer_settings["random_seed"],
+                print_report=infer_settings["print_report"],
+                log_level=self.log_level,
                 both_keys=both_keys
             )
-
-    def __infer_table(self, **kwargs):
-        """
-        Run infer process for a single table
-        """
-        table = self.table_name if self.table_name is not None else kwargs.get("table_name")
-        both_keys = table in self.divided
-
-        custom_logger.info(f"Infer process of the table - {table} has started")
-
-        self.infer_strategy.run(
-            metadata=self.metadata,
-            size=kwargs.get("size"),
-            table_name=table,
-            metadata_path=self.metadata_path,
-            run_parallel=kwargs.get("run_parallel"),
-            batch_size=kwargs.get("batch_size"),
-            random_seed=kwargs.get("random_seed"),
-            print_report=kwargs.get("print_report"),
-            log_level=self.log_level,
-            both_keys=both_keys
-        )
 
     @staticmethod
     def _generate_reports():
         """
         Generate reports
-        :return:
         """
         Report().generate_report()
         Report().clear_report()
