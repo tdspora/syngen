@@ -19,8 +19,6 @@ class Worker:
     type: str
     train_strategy = TrainStrategy()
     infer_strategy = InferStrategy()
-    training_settings = dict()
-    infer_settings = dict()
     metadata = None
     divided = []
 
