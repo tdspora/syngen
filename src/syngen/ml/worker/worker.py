@@ -25,9 +25,39 @@ class Worker:
     divided = []
 
     def __post_init__(self):
-        self.metadata = self.fetch_metadata()
+        self.metadata = self.__fetch_metadata()
 
-    def fetch_metadata(self) -> Dict[str, str]:
+
+    def _update_metadata_for_table(self, metadata: Dict) -> Dict[str, str]:
+        """
+        Update the metadata for training or inference process if a metadata file wasn't provided
+        """
+        if self.type == "train":
+            metadata[self.table_name]["train_settings"].update(self.settings)
+        elif self.type == "infer":
+            metadata[self.table_name]["infer_settings"].update(self.settings)
+        return metadata
+
+    def _update_metadata_for_tables(self, metadata: Dict) -> Dict[str, str]:
+        """
+        Update the metadata for training or inference process if a metadata file was provided
+        """
+        if self.type == "train":
+            for table in metadata.keys():
+                metadata[table]["train_settings"].update({
+                    setting: value for setting, value in self.settings.items()
+                    if setting not in metadata[table]["train_settings"]
+                })
+            return metadata
+        elif self.type == "infer":
+            for key in metadata.keys():
+                metadata[key]["infer_settings"].update({
+                    setting: value for setting, value in self.settings.items()
+                    if setting not in metadata[key]["infer_settings"]
+                })
+            return metadata
+
+    def __fetch_metadata(self) -> Dict[str, str]:
         """
         Fetch the metadata for training or infer process
         """
@@ -45,23 +75,12 @@ class Worker:
                     "source": source
                 }
             }
-            if self.type == "train":
-                metadata[self.table_name]["train_settings"] = self.settings
-            elif self.type == "infer":
-                metadata[self.table_name]["infer_settings"] = self.settings
+            metadata = self._update_metadata_for_table(metadata)
+            return metadata
         # Update a metadata for training or infer process if a metadata file was provided
-        elif metadata and self.type == "train":
-            for table in metadata.keys():
-                metadata[table]["train_settings"].update({
-                    setting: value for setting, value in self.settings.items()
-                    if setting not in metadata[table]["train_settings"]
-                })
-        elif metadata and self.type == "infer":
-            for key in metadata.keys():
-                metadata[key]["infer_settings"].update({
-                    setting: value for setting, value in self.settings.items()
-                    if setting not in metadata[key]["infer_settings"]
-                })
+        if self.metadata_path:
+            metadata = self._update_metadata_for_tables(metadata)
+            return metadata
         return metadata
 
     @staticmethod
