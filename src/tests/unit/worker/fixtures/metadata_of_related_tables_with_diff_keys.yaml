@@ -1,0 +1,26 @@
+tdm_models:
+  source: "./path/to/tdm_models.csv"
+
+  keys:
+    tdm_models_pkey:
+      type: "PK"
+      columns:
+        - id
+
+    tdm_models_fkey:
+      type: "FK"
+      columns:
+        - cluster_id
+      references:
+        table: "tdm_clusters"
+        columns:
+          - id
+
+tdm_clusters:
+  source: "./path/to/tdm_clusters.csv"
+
+  keys:
+    tdm_clusters_pkey:
+      type: "PK"
+      columns:
+        - id

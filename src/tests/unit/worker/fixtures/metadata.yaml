@@ -1,0 +1,21 @@
+test_table:
+  train_settings:
+    epochs: 100
+    drop_null: false
+    print_report: false
+    row_limit: 800
+    batch_size: 2000
+
+  infer_settings:
+    size: 200
+    run_parallel: True
+    random_seed: 2
+    print_report: true
+    batch_size: 200
+
+  source: ./path/to/test_table.csv
+  keys:
+    pk_id:
+      type: "PK"
+      columns:
+        - Id
