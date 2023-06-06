@@ -32,6 +32,8 @@ class Worker:
         """
         Update the metadata for training or inference process if a metadata file wasn't provided
         """
+        if "source" in self.settings.keys():
+            del self.settings["source"]
         if self.type == "train":
             metadata[self.table_name]["train_settings"].update(self.settings)
         elif self.type == "infer":
@@ -42,6 +44,8 @@ class Worker:
         """
         Update the metadata for training or inference process if a metadata file was provided
         """
+        if "source" in self.settings.keys():
+            del self.settings["source"]
         if self.type == "train":
             for table in metadata.keys():
                 metadata[table]["train_settings"].update({
@@ -63,8 +67,6 @@ class Worker:
         """
         metadata = MetadataLoader(self.metadata_path).load_data() if self.metadata_path else None
         source = self.settings.get("source")
-        if "source" in self.settings.keys():
-            del self.settings["source"]
         # Set a metadata for training or infer process if a metadata file wasn't provided
         if self.table_name:
             metadata = {
