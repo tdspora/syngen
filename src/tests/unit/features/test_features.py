@@ -57,8 +57,6 @@ test_data = [
                 "2022-07-07T15:16:01.795Z'",
                 "2023-07-07T15:16:01.795Z'"]}, "%Y-%m-%d"),
         ]
-
-
 @pytest.mark.parametrize("data, expected_date_format", test_data)
 def test_validate_date_format(data, expected_date_format, rp_logger):
     rp_logger.info("Validating date format with data: %s and expected date format: %s", data, expected_date_format)

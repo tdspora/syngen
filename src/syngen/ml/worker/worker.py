@@ -12,67 +12,57 @@ class Worker:
     """
     Class for preparing training and infer settings, metadata for training and infer process
     """
-    table_name: str
+    table_name: Optional[str]
     metadata_path: Optional[str]
     settings: Dict
     log_level: str
+    type: str
     train_strategy = TrainStrategy()
     infer_strategy = InferStrategy()
+    training_settings = dict()
+    infer_settings = dict()
     metadata = None
     divided = []
 
     def __post_init__(self):
-        self.metadata_loader = MetadataLoader(self.metadata_path)
-        self.metadata = self.metadata_loader.load_data() if self.metadata_path else None
+        self.metadata = self.fetch_metadata()
 
-    def _extract_setting(self, params, setting):
+    def fetch_metadata(self) -> Dict[str, str]:
         """
-        Extract the value of the certain setting
+        Fetch the metadata for training or infer process
         """
-        return params.get(setting) if params.get(setting) is not None else self.settings.get(setting)
-
-    def __parse_train_settings(self, config: Dict):
-        """
-        Parse the settings for training process
-        :param config: settings for training process declared in metadata.yaml file
-        """
-        train_settings = config.get("train_settings", {})
-
-        epochs = self._extract_setting(train_settings, setting="epochs")
-        drop_null = self._extract_setting(train_settings, setting="drop_null")
-        row_limit = self._extract_setting(train_settings, setting="row_limit")
-        print_report = self._extract_setting(train_settings, setting="print_report")
-        batch_size = self._extract_setting(train_settings, setting="batch_size")
-
-        return {
-            "table_name": self.table_name,
-            "epochs": epochs,
-            "drop_null": drop_null,
-            "row_limit": row_limit,
-            "print_report": print_report,
-            "batch_size": batch_size
-        }
-
-    def __parse_infer_settings(self, config: Dict):
-        """
-        Parse the settings for infer process
-        :param config: settings for infer process declared in metadata.yaml file
-        """
-        infer_settings = config.get("infer_settings", {})
-
-        size = self._extract_setting(infer_settings, "size")
-        run_parallel = self._extract_setting(infer_settings, "run_parallel")
-        random_seed = self._extract_setting(infer_settings, "random_seed")
-        batch_size = self._extract_setting(infer_settings, "batch_size")
-        print_report = self._extract_setting(infer_settings, "print_report")
-
-        return {
-            "size": size,
-            "run_parallel": run_parallel,
-            "random_seed": random_seed,
-            "batch_size": batch_size,
-            "print_report": print_report
-        }
+        metadata = MetadataLoader(self.metadata_path).load_data() if self.metadata_path else None
+        source = self.settings.get("source")
+        if "source" in self.settings.keys():
+            del self.settings["source"]
+        # Set a metadata for training or infer process if a metadata file wasn't provided
+        if self.table_name:
+            metadata = {
+                self.table_name: {
+                    "train_settings": {},
+                    "infer_settings": {},
+                    "keys": {},
+                    "source": source
+                }
+            }
+            if self.type == "train":
+                metadata[self.table_name]["train_settings"] = self.settings
+            elif self.type == "infer":
+                metadata[self.table_name]["infer_settings"] = self.settings
+        # Update a metadata for training or infer process if a metadata file was provided
+        elif metadata and self.type == "train":
+            for table in metadata.keys():
+                metadata[table]["train_settings"].update({
+                    setting: value for setting, value in self.settings.items()
+                    if setting not in metadata[table]["train_settings"]
+                })
+        elif metadata and self.type == "infer":
+            for key in metadata.keys():
+                metadata[key]["infer_settings"].update({
+                    setting: value for setting, value in self.settings.items()
+                    if setting not in metadata[key]["infer_settings"]
+                })
+        return metadata
 
     @staticmethod
     def _get_tables_without_keys(config_of_tables: Dict) -> List[str]:
@@ -88,9 +78,10 @@ class Worker:
     @staticmethod
     def _get_tables(config: Dict, key_type: str):
         """
-        Return the list of related tables regarding the type of key - 'primary key', 'foreign key'
+        Return the list of related tables regarding the type of key -
+        'primary key', 'foreign key', 'unique key'
         :param config: configuration of related tables declared in metadata.yaml file
-        :param key_type: type of key either 'primary key' ('PK') or 'foreign key' ('FK')
+        :param key_type: type of key either 'primary key' ('PK'), 'foreign key' ('FK'), 'unique key' ('UQ')
         """
         try:
             tables = [table_name for table_name, config in config.items()
@@ -106,8 +97,7 @@ class Worker:
 
     def _prepare_metadata_for_process(self, **kwargs):
         """
-        Return the list of related tables for training or infer process,
-        configuration of related tables
+        Return the list of tables for training or infer process, the configuration of tables
 
         type_of_process can be "train", "infer" or "all" for the Enterprise version
         """
@@ -142,37 +132,35 @@ class Worker:
                 config.pop(table)
         return config
 
-    def __train_chain_of_tables_with_generation(
+    def __train_tables(
             self,
             metadata_for_training: Tuple[List, Dict],
             metadata_for_inference: Tuple[List, Dict]
     ):
         """
-        Run training process for the list of related tables
-        :param metadata_for_training: the tuple included the list of related tables and metadata for training process
-        :param metadata_for_inference: the tuple included the list of related tables and metadata for inference process
+        Run training process for the list of tables
+        :param metadata_for_training: the tuple included the list of tables and metadata for training process
+        :param metadata_for_inference: the tuple included the list of tables and metadata for inference process
         """
         chain_for_tables_for_training, config_of_metadata_for_training = metadata_for_training
         chain_for_tables_for_inference, config_of_metadata_for_inference = metadata_for_inference
 
         for table in chain_for_tables_for_training:
             config_of_table = config_of_metadata_for_training[table]
-            source = config_of_table.get("source", None)
-            if source is None:
-                raise AttributeError(
-                    f"The source of table - {table} is mandatory parameter. "
-                    f"It seems that the information of source for training is absent. "
-                    f"Please provide the information of source in metadata file."
-                )
-            train_settings = self.__parse_train_settings(config_of_table)
-            self.__train_table(
+            source = config_of_table["source"]
+            train_settings = config_of_table["train_settings"]
+            custom_logger.info(f"Training process of the table - {table} has started.")
+
+            self.train_strategy.run(
+                metadata=self.metadata,
                 source=source,
-                epochs=train_settings.get("epochs"),
-                drop_null=train_settings.get("drop_null"),
-                row_limit=train_settings.get("row_limit"),
+                epochs=train_settings["epochs"],
+                drop_null=train_settings["drop_null"],
+                row_limit=train_settings["row_limit"],
                 table_name=table,
-                print_report=train_settings.get("print_report"),
-                batch_size=train_settings.get("batch_size")
+                metadata_path=self.metadata_path,
+                print_report=train_settings["print_report"],
+                batch_size=train_settings["batch_size"]
             )
         generation_of_reports = any(
             [
@@ -184,7 +172,7 @@ class Worker:
         if generation_of_reports:
             for table in chain_for_tables_for_inference:
                 config_of_table = config_of_metadata_for_inference[table]
-                train_settings = self.__parse_train_settings(config_of_table)
+                train_settings = config_of_table["train_settings"]
                 print_report = train_settings.get("print_report")
                 both_keys = table in self.divided
 
@@ -197,16 +185,16 @@ class Worker:
                     both_keys=both_keys
                 )
 
-    def __infer_chain_of_tables(self, tables: List, config_of_tables: Dict):
+    def __infer_tables(self, tables: List, config_of_tables: Dict):
         """
-        Run infer process for the list of related tables
-        :param tables: the list of related tables for infer process
-        :param config_of_tables: configuration of related tables declared in metadata.yaml file
+        Run infer process for the list of tables
+        :param tables: the list of tables for infer process
+        :param config_of_tables: configuration of tables declared in metadata file
         """
         for table in tables:
             both_keys = table in self.divided
             config_of_table = config_of_tables[table]
-            infer_settings = self.__parse_infer_settings(config_of_table)
+            infer_settings = config_of_table["infer_settings"]
             self.__infer_table(
                 size=infer_settings.get("size"),
                 table_name=table,
@@ -217,65 +205,24 @@ class Worker:
                 both_keys=both_keys
             )
 
-    def __train_table_with_generation(self):
-        """
-        Run training process for a single table
-        """
-        self.__train_table()
-
-        if self.settings.get("print_report"):
-            self.__infer_table(
-                run_parallel=False,
-                batch_size=1000,
-                random_seed=1
-            )
-
-    def __train_table(self, **kwargs):
-        table = self.table_name if self.table_name else kwargs.get("table_name")
-        source = self._extract_setting(kwargs, setting="source")
-        epochs = self._extract_setting(kwargs, setting="epochs")
-        drop_null = self._extract_setting(kwargs, setting="drop_null")
-        row_limit = self._extract_setting(kwargs, setting="row_limit")
-        print_report = self._extract_setting(kwargs, setting="print_report")
-        batch_size = self._extract_setting(kwargs, setting="batch_size")
-
-        custom_logger.info(f"Training process of the table - {table} has started.")
-
-        self.train_strategy.run(
-            metadata=self.metadata,
-            source=source,
-            epochs=epochs,
-            drop_null=drop_null,
-            row_limit=row_limit,
-            table_name=table,
-            metadata_path=self.metadata_path,
-            print_report=print_report,
-            batch_size=batch_size
-        )
-
     def __infer_table(self, **kwargs):
         """
         Run infer process for a single table
         """
         table = self.table_name if self.table_name is not None else kwargs.get("table_name")
-        size = self._extract_setting(kwargs, setting="size")
-        run_parallel = self._extract_setting(kwargs, setting="run_parallel")
-        batch_size = self._extract_setting(kwargs, setting="batch_size")
-        random_seed = self._extract_setting(kwargs, setting="random_seed")
         both_keys = table in self.divided
-        print_report = self._extract_setting(kwargs, setting="print_report")
 
         custom_logger.info(f"Infer process of the table - {table} has started")
 
         self.infer_strategy.run(
             metadata=self.metadata,
-            size=size,
+            size=kwargs.get("size"),
             table_name=table,
             metadata_path=self.metadata_path,
-            run_parallel=run_parallel,
-            batch_size=batch_size,
-            random_seed=random_seed,
-            print_report=print_report,
+            run_parallel=kwargs.get("run_parallel"),
+            batch_size=kwargs.get("batch_size"),
+            random_seed=kwargs.get("random_seed"),
+            print_report=kwargs.get("print_report"),
             log_level=self.log_level,
             both_keys=both_keys
         )
@@ -291,26 +238,18 @@ class Worker:
 
     def launch_train(self):
         """
-        Launch training process either for a single table or for related tables
+        Launch training process either for a single table or for several tables
         """
-        if self.metadata_path is not None:
-            metadata_for_training = self._prepare_metadata_for_process()
-            metadata_for_inference = self._prepare_metadata_for_process(type_of_process="infer")
-            self.__train_chain_of_tables_with_generation(metadata_for_training, metadata_for_inference)
-            self._generate_reports()
-        elif self.table_name is not None:
-            self.__train_table_with_generation()
-            self._generate_reports()
+        metadata_for_training = self._prepare_metadata_for_process()
+        metadata_for_inference = self._prepare_metadata_for_process(type_of_process="infer")
+        self.__train_tables(metadata_for_training, metadata_for_inference)
+        self._generate_reports()
 
     def launch_infer(self):
         """
-        Launch infer process either for a single table or for related tables
+        Launch infer process either for a single table or for several tables
         """
-        if self.metadata_path is not None:
-            chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
-            self.metadata = config_of_tables
-            self.__infer_chain_of_tables(chain_of_tables, config_of_tables)
-            self._generate_reports()
-        if self.table_name is not None:
-            self.__infer_table()
-            self._generate_reports()
+        chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
+        self.metadata = config_of_tables
+        self.__infer_tables(chain_of_tables, config_of_tables)
+        self._generate_reports()

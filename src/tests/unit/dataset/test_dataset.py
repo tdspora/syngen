@@ -5,6 +5,8 @@ import pandavro as pdx
 
 from syngen.ml.vae.models.dataset import Dataset
 
+from tests.conftest import SUCCESSFUL_MESSAGE
+
 
 CSV_SCHEMA = {"fields": {}, "format": "CSV"}
 
@@ -25,7 +27,8 @@ AVRO_SCHEMA = {
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns.csv",
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.csv"
 ])
-def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_table):
+def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_table, rp_logger):
+    rp_logger.info("Test the process of the detection of UUID columns in the table in csv format")
     df = pd.read_csv(path_to_test_table)
     dataset = Dataset(
         df=df,
@@ -40,13 +43,16 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
     assert dataset.uuid_columns_types == {
         "UUIDv1": 1, "UUIDv2": 2, "UUIDv3": 3, "UUIDv4": 4, "UUIDv5": 5, "ULID": "ulid"
     }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
 
 @pytest.mark.parametrize(
     "path_to_test_table", [
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns.avro",
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.avro"
 ])
-def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test_table):
+def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test_table, rp_logger):
+    rp_logger.info("Test the process of the detection of UUID columns in the table in avro format")
     df = pdx.from_avro(path_to_test_table)
     dataset = Dataset(
         df=df,
@@ -61,4 +67,4 @@ def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test
     assert dataset.uuid_columns_types == {
         "UUIDv1": 1, "UUIDv2": 2, "UUIDv3": 3, "UUIDv4": 4, "UUIDv5": 5, "ULID": "ulid"
     }
-
+    rp_logger.info(SUCCESSFUL_MESSAGE)
