@@ -26,7 +26,7 @@ class Worker:
         self.metadata = self.__fetch_metadata()
 
 
-    def _update_metadata_for_table(self, metadata: Dict) -> Dict[str, str]:
+    def _update_metadata_for_table(self, metadata: Dict) -> Dict:
         """
         Update the metadata for training or inference process if a metadata file wasn't provided
         """
@@ -38,7 +38,7 @@ class Worker:
             metadata[self.table_name]["infer_settings"].update(self.settings)
         return metadata
 
-    def _update_metadata_for_tables(self, metadata: Dict) -> Dict[str, str]:
+    def _update_metadata_for_tables(self, metadata: Dict) -> Dict:
         """
         Update the metadata for training or inference process if a metadata file was provided
         """
