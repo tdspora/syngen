@@ -36,7 +36,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./Dockerfile.ml-training
+          file: ./ml-training.dockerfile
           push: true
           tags: ${{ steps.docker_meta_train.outputs.tags }}
           labels: ${{ steps.docker_meta_train.outputs.labels }}
@@ -47,7 +47,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./Dockerfile.ml-inference
+          file: ./ml-inference.dockerfile
           push: true
           tags: ${{ steps.docker_meta_infer.outputs.tags }}
           labels: ${{ steps.docker_meta_infer.outputs.labels }}

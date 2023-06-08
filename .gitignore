@@ -31,6 +31,7 @@ coverage.xml
 .venv
 env/
 venv/
+testenv_3.9/
 ENV/
 env.bak/
 venv.bak/
@@ -38,6 +39,7 @@ venv.bak/
 # Data source for trainings
 data/
 model_artifacts/
+metadata/
 
 
 pytest*.xml
