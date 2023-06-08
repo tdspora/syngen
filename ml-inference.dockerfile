@@ -3,8 +3,8 @@ FROM ubuntu:20.04
 # Update package manager (apt-get)
 # and install (with the yes flag `-y`)
 # Python and Pip
-RUN apt update \
-    && apt install -y build-essential checkinstall\
+RUN apt-get update \
+    && apt-get install -y build-essential checkinstall\
     && apt-get install -y wget \
     && apt-get -y upgrade
 RUN cd /opt/ \
