@@ -1,0 +1,17 @@
+* text=auto
+*.py    eol=lf
+*.html   eol=lf
+*.yaml   eol=lf
+*.yml   eol=lf
+*.txt   eol=lf
+*.md   eol=lf
+*.ini   eol=lf
+*.cfg   eol=lf
+*.toml   eol=lf
+*.in  eol=lf
+*.dockerfile  eol=lf
+*.sh   eol=lf
+*.ipynb   eol=lf
+*.csv  eol=lf
+*.avro eol=lf
+*.json eol=lf

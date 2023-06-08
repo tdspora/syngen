@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM ubuntu:20.04
 
 # Update package manager (apt-get)
@@ -8,11 +10,11 @@ RUN apt update \
     && apt-get install -y wget \
     && apt-get -y upgrade
 RUN cd /opt/ \
-    && wget https://www.python.org/ftp/python/3.8.3/Python-3.8.3.tgz \
-    && tar xzf Python-3.8.3.tgz \
-    && cd Python-3.8.3 \
+    && wget https://www.python.org/ftp/python/3.8.9/Python-3.8.9.tgz \
+    && tar xzf Python-3.8.9.tgz \
+    && cd Python-3.8.9 \
     && apt-get install -y python3-pip \
-    && pip install --upgrade pip==21.2.4;
+    && pip install --upgrade pip==23.1.2;
 
 WORKDIR src
 
