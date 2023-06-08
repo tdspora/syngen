@@ -295,7 +295,7 @@ class VAEWrapper(BaseWrapper):
             loss = sum(self.vae.losses)
 
         self.optimizer.minimize(
-            loss=loss, var_list=[self.vae.trainable_weights], tape=tape
+            loss=loss, var_list=self.vae.trainable_weights, tape=tape
         )
         self.loss_metric(loss)
         return loss
