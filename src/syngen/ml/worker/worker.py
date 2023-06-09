@@ -46,9 +46,15 @@ class Worker:
         """
         if "source" in self.settings.keys():
             del self.settings["source"]
+        global_train_settings = metadata.get("global").get("train_settings", {})
+        global_infer_settings = metadata.get("global").get("infer_settings", {})
         if self.type == "train":
             for table in metadata.keys():
                 train_settings = metadata[table]["train_settings"]
+                train_settings.update({
+                    setting: value for setting, value in global_train_settings.items()
+                    if setting not in train_settings
+                })
                 train_settings.update({
                     setting: value for setting, value in self.settings.items()
                     if setting not in train_settings
@@ -57,6 +63,10 @@ class Worker:
         elif self.type == "infer":
             for key in metadata.keys():
                 infer_settings = metadata[key]["infer_settings"]
+                infer_settings.update({
+                    setting: value for setting, value in global_infer_settings.items()
+                    if setting not in infer_settings
+                })
                 infer_settings.update({
                     setting: value for setting, value in self.settings.items()
                     if setting not in infer_settings
