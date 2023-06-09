@@ -199,11 +199,17 @@ class YAMLLoader(BaseDataLoader):
     @staticmethod
     def replace_none_values_of_metadata_settings(parameters, metadata: dict):
         """
-        Replace None values for parameters
-        in the metadata
+        Replace None values for parameters in the metadata
         """
         metadata["global"] = dict() if metadata.get("global") is None else metadata.get("global")
+        if metadata["global"]:
+            metadata["global"]["train_settings"] = dict() if metadata["global"].get("train_settings") is None \
+                else metadata["global"].get("train_settings")
+            metadata["global"]["infer_settings"] = dict() if metadata["global"].get("infer_settings") is None \
+                else metadata["global"].get("infer_settings")
         for table in metadata.keys():
+            if table == "global":
+                continue
             for parameter in parameters:
                 if metadata.get(table).get(parameter) is None:
                     metadata[table][parameter] = {}

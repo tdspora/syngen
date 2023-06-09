@@ -94,7 +94,7 @@ def test_init_worker_with_metadata(rp_logger):
                    "with provided metadata during a training process")
     worker = Worker(
         table_name=None,
-        metadata_path=r"./tests/unit/worker/fixtures/metadata.yaml",
+        metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -110,7 +110,6 @@ def test_init_worker_with_metadata(rp_logger):
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "test_table": {
-            "source": "./path/to/test_table.csv",
             "train_settings": {
                 "epochs": 100,
                 "drop_null": False,
@@ -125,10 +124,11 @@ def test_init_worker_with_metadata(rp_logger):
                 "print_report": True,
                 "batch_size": 200
             },
+            "source": "./path/to/test_table.csv",
             "keys": {
                 "pk_id": {
-                    "columns": ["Id"],
-                    "type": "PK"
+                    "type": "PK",
+                    "columns": ["Id"]
                 }
             }
         }
@@ -177,6 +177,74 @@ def test_init_worker_with_empty_settings_in_metadata(rp_logger):
                     "type": "PK"
                 }
             }
+        }
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
+    """
+    Test the initialization of 'Worker' class during a training process
+    with metadata contained global settings
+    """
+    rp_logger.info("Test the initialization of the instance of 'Worker' class during training process"
+                   "with provided metadata contained global settings")
+    worker = Worker(
+        table_name=None,
+        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        settings={
+            "source": None,
+            "epochs": 20,
+            "drop_null": True,
+            "row_limit": 1000,
+            "batch_size": 1000,
+            "print_report": True
+        },
+        log_level="INFO",
+        type="train"
+    )
+    assert isinstance(worker.train_strategy, TrainStrategy) is True
+    assert isinstance(worker.infer_strategy, InferStrategy) is True
+    assert worker.metadata == {
+        "pk_test": {
+            "train_settings": {
+                "row_limit": 800,
+                "epochs": 5,
+                "drop_null": True,
+                "batch_size": 1000,
+                "print_report": True
+            },
+            "infer_settings": {
+                "print_report": False
+            },
+            "source": "./path/to/pk_test.csv",
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            }
+        },
+        "fk_test": {
+            "source": "./path/to/fk_test.csv",
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["Id"],
+                    "references": {
+                        "table": "pk_test",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "train_settings": {
+                "epochs": 5,
+                "drop_null": True,
+                "row_limit": 500,
+                "batch_size": 1000,
+                "print_report": True
+            },
+            "infer_settings": {}
         }
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
