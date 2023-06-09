@@ -90,14 +90,14 @@ def launch_train(
         "drop_null": drop_null,
         "row_limit": row_limit,
         "batch_size": batch_size,
-        "print_report": print_report,
-        "log_level": log_level
+        "print_report": print_report
     }
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
         settings=settings,
-        log_level=log_level
+        log_level=log_level,
+        type="train"
     )
     worker.launch_train()
 
