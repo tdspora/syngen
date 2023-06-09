@@ -33,9 +33,11 @@ class Worker:
         if "source" in self.settings.keys():
             del self.settings["source"]
         if self.type == "train":
-            metadata[self.table_name]["train_settings"].update(self.settings)
+            train_settings = metadata[self.table_name]["train_settings"]
+            train_settings.update(self.settings)
         elif self.type == "infer":
-            metadata[self.table_name]["infer_settings"].update(self.settings)
+            infer_settings = metadata[self.table_name]["infer_settings"]
+            infer_settings.update(self.settings)
         return metadata
 
     def _update_metadata_for_tables(self, metadata: Dict) -> Dict:
@@ -46,16 +48,18 @@ class Worker:
             del self.settings["source"]
         if self.type == "train":
             for table in metadata.keys():
-                metadata[table]["train_settings"].update({
+                train_settings = metadata[table]["train_settings"]
+                train_settings.update({
                     setting: value for setting, value in self.settings.items()
-                    if setting not in metadata[table]["train_settings"]
+                    if setting not in train_settings
                 })
             return metadata
         elif self.type == "infer":
             for key in metadata.keys():
-                metadata[key]["infer_settings"].update({
+                infer_settings = metadata[key]["infer_settings"]
+                infer_settings.update({
                     setting: value for setting, value in self.settings.items()
-                    if setting not in metadata[key]["infer_settings"]
+                    if setting not in infer_settings
                 })
             return metadata
 
