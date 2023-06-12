@@ -250,6 +250,74 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger):
+    """
+    Test the initialization of 'Worker' class during an inference process
+    with metadata contained global settings
+    """
+    rp_logger.info("Test the initialization of the instance of 'Worker' class during inference process"
+                   "with provided metadata contained global settings")
+    worker = Worker(
+        table_name=None,
+        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        settings={
+            "size": 200,
+            "run_parallel": False,
+            "batch_size": 200,
+            "print_report": False,
+            "random_seed": 5
+        },
+        log_level="INFO",
+        type="infer"
+    )
+    assert isinstance(worker.train_strategy, TrainStrategy) is True
+    assert isinstance(worker.infer_strategy, InferStrategy) is True
+    assert worker.metadata == {
+        "pk_test": {
+            "train_settings": {
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "print_report": False,
+                "size": 1000,
+                "run_parallel": True,
+                "batch_size": 200,
+                "random_seed": 5
+            },
+            "source": "./path/to/pk_test.csv",
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            }
+        },
+        "fk_test": {
+            "source": "./path/to/fk_test.csv",
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["Id"],
+                    "references": {
+                        "table": "pk_test",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "train_settings": {},
+            "infer_settings": {
+                "size": 1000,
+                "run_parallel": True,
+                "print_report": True,
+                "batch_size": 200,
+                "random_seed": 5
+            }
+        }
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp_logger):
@@ -790,6 +858,125 @@ def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports,
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
+@patch.object(Worker, "_generate_reports", return_value=None)
+@patch.object(Worker, "_Worker__train_tables", return_value=None)
+def test_launch_train_with_metadata_contained_global_settings(mock_train_tables, mock_generate_reports, rp_logger):
+    """
+    Test that 'launch_train' method calls all necessary methods
+    in case the metadata file was provided, and it contains global settings
+    """
+    rp_logger.info("Test that 'launch_train' method calls all necessary methods "
+                   "in case the metadata file was provided, and it contains global settings")
+    worker = Worker(
+        table_name=None,
+        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        settings={
+            "source": None,
+            "epochs": 20,
+            "drop_null": True,
+            "row_limit": 1000,
+            "batch_size": 1000,
+            "print_report": True
+        },
+        log_level="INFO",
+        type="train"
+    )
+    worker.launch_train()
+    mock_train_tables.assert_called_once_with(
+        (["pk_test", "fk_test"],
+         {
+             "pk_test": {
+                 "train_settings": {
+                     "row_limit": 800,
+                     "epochs": 5,
+                     "drop_null": True,
+                     "batch_size": 1000,
+                     "print_report": True
+                 },
+                 "infer_settings": {
+                     "print_report": False
+                 },
+                 "source": "./path/to/pk_test.csv",
+                 "keys": {
+                     "pk_id": {
+                         "type": "PK",
+                         "columns": ["Id"]
+                     }
+                 }
+             },
+             "fk_test": {
+                 "source": "./path/to/fk_test.csv",
+                 "keys": {
+                     "fk_id": {
+                         "type": 'FK',
+                         "columns": ['Id'],
+                         "references": {
+                             "table": "pk_test",
+                             "columns": ["Id"]
+                         }
+                     }
+                 },
+                 "train_settings": {
+                     "epochs": 5,
+                     "drop_null": True,
+                     "row_limit": 500,
+                     "batch_size": 1000,
+                     "print_report": True
+                 },
+                 "infer_settings": {}
+             }
+         }
+         ),
+        (["pk_test", "fk_test"],
+         {
+             "pk_test": {
+                 "train_settings": {
+                     "row_limit": 800,
+                     "epochs": 5,
+                     "drop_null": True,
+                     "batch_size": 1000,
+                     "print_report": True
+                 },
+                 "infer_settings": {
+                     "print_report": False
+                 },
+                 "source": "./path/to/pk_test.csv",
+                 "keys": {
+                     "pk_id": {
+                         "type": "PK",
+                         "columns": ["Id"]
+                     }
+                 }
+             },
+             "fk_test": {
+                 "source": "./path/to/fk_test.csv",
+                 "keys": {
+                     "fk_id": {
+                         "type": "FK",
+                         "columns": ["Id"],
+                         "references": {
+                             "table": "pk_test",
+                             "columns": ["Id"]
+                         }
+                     }
+                 },
+                 "train_settings": {
+                     "epochs": 5,
+                     "drop_null": True,
+                     "row_limit": 500,
+                     "batch_size": 1000,
+                     "print_report": True
+                 },
+                 "infer_settings": {}
+             }
+         }
+         )
+    )
+    mock_generate_reports.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata(mock_infer_tables, mock_generate_reports, rp_logger):
@@ -1048,3 +1235,76 @@ def test_launch_infer_without_metadata(mock_infer_tables, mock_generate_reports,
     )
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "_generate_reports", return_value=None)
+@patch.object(Worker, "_Worker__infer_tables", return_value=None)
+def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables, mock_generate_reports, rp_logger):
+    """
+    Test that 'launch_infer' method calls all necessary methods
+    in case the metadata file was provided, and it contains global settings
+    """
+    rp_logger.info("Test that 'launch_infer' method calls all necessary methods "
+                   "in case the metadata file was provided, and it contains global settings")
+    worker = Worker(
+        table_name=None,
+        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        settings={
+            "size": 300,
+            "run_parallel": True,
+            "random_seed": 3,
+            "print_report": True,
+            "batch_size": 300
+        },
+        log_level="INFO",
+        type="infer"
+    )
+    worker.launch_infer()
+    mock_infer_tables.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        {
+            "pk_test": {
+                "train_settings": {
+                    "row_limit": 800
+                },
+                "infer_settings": {
+                    "print_report": False,
+                    "size": 1000,
+                    "run_parallel": True,
+                    "random_seed": 3,
+                    "batch_size": 300
+                },
+                "source": "./path/to/pk_test.csv",
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "fk_test": {
+                "source": "./path/to/fk_test.csv",
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {
+                            "table": "pk_test",
+                            "columns": ["Id"]
+                        }
+                    }
+                },
+                "train_settings": {},
+                "infer_settings": {
+                    "size": 1000,
+                    "run_parallel": True,
+                    "print_report": True,
+                    "random_seed": 3,
+                    "batch_size": 300
+                }
+            }
+        }
+    )
+    mock_generate_reports.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
