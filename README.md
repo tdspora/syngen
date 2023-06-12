@@ -35,10 +35,10 @@ Here is a quick example:
 
 ```bash
 pip install syngen
-train --source ./example-data/housing.csv –-table_name Housing
+train --source ./examples/example-data/housing.csv –-table_name Housing
 infer --table_name Housing
 ```
-As the example you can use the dataset <i>"Housing"</i> in [example-data/housing.csv](example-data/housing.csv).
+As the example you can use the dataset <i>"Housing"</i> in [examples/example-data/housing.csv](examples/example-data/housing.csv).
 In this example, our real-world data is <a href="https://www.kaggle.com/datasets/camnugent/california-housing-prices" target="_blank">"Housing"</a> from Kaggle.
 
 ## Features
@@ -257,7 +257,7 @@ ORDER:                                      # Table name. Required parameter
 ```
 <i>Note:</i>In the section <i>"global"</i> you can specify training and inference settings for all tables. If the same settings are specified for a specific table, they will override the global settings.<br>
 
-<i>You can find the example of metadata file in [example-metadata/housing_metadata.yaml](example-metadata/housing_metadata.yaml)</i><br>
+<i>You can find the example of metadata file in [examples/example-metadata/housing_metadata.yaml](examples/example-metadata/housing_metadata.yaml)</i><br>
 
 By providing the necessary information through a metadata file, you can initiate training and inference processes using the following commands:
 
@@ -268,8 +268,8 @@ infer --metadata_path=PATH_TO_YAML_METADATA_FILE
 Here is a quick example:
 
 ```bash
-train --metadata_path="./example-metadata/housing_metadata.yaml"
-infer --metadata_path="./example-metadata/housing_metadata.yaml"
+train --metadata_path="./examples/example-metadata/housing_metadata.yaml"
+infer --metadata_path="./examples/example-metadata/housing_metadata.yaml"
 ```
 
 If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.<br>
