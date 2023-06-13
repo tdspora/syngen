@@ -203,16 +203,15 @@ class YAMLLoader(BaseDataLoader):
         """
         metadata["global"] = dict() if metadata.get("global") is None else metadata.get("global")
         if metadata["global"]:
-            metadata["global"]["train_settings"] = dict() if metadata["global"].get("train_settings") is None \
-                else metadata["global"].get("train_settings")
-            metadata["global"]["infer_settings"] = dict() if metadata["global"].get("infer_settings") is None \
-                else metadata["global"].get("infer_settings")
-        for table in metadata.keys():
-            if table == "global":
+            for settings in metadata["global"].keys():
+                metadata["global"][settings] = dict() if metadata["global"].get(settings) is None \
+                        else metadata["global"].get(settings)
+        for key in metadata.keys():
+            if key == "global":
                 continue
             for parameter in parameters:
-                if metadata.get(table).get(parameter) is None:
-                    metadata[table][parameter] = {}
+                if metadata.get(key).get(parameter) is None:
+                    metadata[key][parameter] = {}
         return metadata
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
