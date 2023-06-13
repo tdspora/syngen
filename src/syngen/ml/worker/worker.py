@@ -40,16 +40,28 @@ class Worker:
             infer_settings.update(self.settings)
         return metadata
 
-    def _update_metadata_for_tables(self, metadata: Dict) -> Dict:
+    from typing import Dict, Any
+
+
+    @staticmethod
+    def _update_table_settings(table_settings: Dict[str, Any], settings_to_update: Dict[str, Any]) -> None:
+        """
+        Update the table settings with the provided settings that are not already defined
+        """
+        for setting, value in settings_to_update.items():
+            if setting not in table_settings:
+                table_settings[setting] = value
+
+    def _update_metadata_for_tables(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
         Update the metadata for training or inference process if a metadata file was provided
         """
         self.settings.pop("source", None)
         global_train_settings = metadata.get("global", {}).get("train_settings", {})
         global_infer_settings = metadata.get("global", {}).get("infer_settings", {})
-        del metadata["global"]
+        metadata.pop("global", None)
 
-        for table in metadata.keys():
+        for table, table_metadata in metadata.items():
             if self.type == "train":
                 settings_key = "train_settings"
                 global_settings = global_train_settings
@@ -59,25 +71,10 @@ class Worker:
             else:
                 continue
 
-            table_settings = metadata[table][settings_key]
+            table_settings = table_metadata[settings_key]
 
-            # Update the table settings with global settings that are not already defined
-            table_settings.update(
-                {
-                    setting: value
-                    for setting, value in global_settings.items()
-                    if setting not in table_settings
-                }
-            )
-
-            # Update the table settings with specific settings that are not already defined
-            table_settings.update(
-                {
-                    setting: value
-                    for setting, value in self.settings.items()
-                    if setting not in table_settings
-                }
-            )
+            self._update_table_settings(table_settings, global_settings)
+            self._update_table_settings(table_settings, self.settings)
 
         return metadata
 
