@@ -101,6 +101,11 @@ def launch_train(
     )
     worker.launch_train()
 
+def preprocess_data():
+    if os.path.exists("/src/model_artifacts/script.py"):
+        os.system("python3 /src/model_artifacts/script.py")
+
 
 if __name__ == "__main__":
+    preprocess_data()
     launch_train()
