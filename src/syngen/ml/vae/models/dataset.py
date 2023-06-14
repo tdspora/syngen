@@ -47,6 +47,7 @@ class Dataset:
 
     def __post_init__(self):
         self._predefine_fields()
+        self.__prepare_dir()
         self._set_metadata()
 
     def _predefine_fields(self):
@@ -57,9 +58,8 @@ class Dataset:
         self.null_num_column_names = list()
         self.zero_num_column_names = list()
         self.nan_labels_dict = dict()
-        self._prepare_dir()
 
-    def _prepare_dir(self):
+    def __prepare_dir(self):
         os.makedirs(self.fk_kde_path, exist_ok=True)
 
     def __set_pk_key(self, config_of_keys: Dict):
