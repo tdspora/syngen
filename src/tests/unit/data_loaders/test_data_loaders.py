@@ -283,6 +283,7 @@ def test_load_metadata_in_yaml_format(rp_logger):
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     metadata = test_metadata_loader.load_data()
     assert metadata == {
+        "global": {},
         "pk_test": {
             "train_settings": {
                 "drop_null": False,
@@ -302,7 +303,7 @@ def test_load_metadata_in_yaml_format(rp_logger):
                     "type": "PK"
                 }
             },
-            "source": "..\\data\\pk_test.csv"
+            "source": r"..\data\pk_test.csv"
         }
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -316,6 +317,7 @@ def test_load_metadata_in_yml_format(rp_logger):
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     metadata = test_metadata_loader.load_data()
     assert metadata == {
+        "global": {},
         "pk_test": {
             "train_settings": {
                 "drop_null": False,
@@ -335,7 +337,7 @@ def test_load_metadata_in_yml_format(rp_logger):
                     "type": "PK"
                 }
             },
-            "source": "..\\data\\pk_test.csv"
+            "source": r"..\data\pk_test.csv"
         }
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -453,10 +455,11 @@ def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     metadata = test_metadata_loader.load_data()
     assert metadata == {
+        "global": {},
         "pk_test": {
             "train_settings": {},
             "infer_settings": {},
-            "source": "..\\data\\pk_test.csv",
+            "source": r"..\data\pk_test.csv",
             "keys": {
                 "pk_id": {
                     "type": "PK",

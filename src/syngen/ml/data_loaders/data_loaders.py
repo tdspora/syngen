@@ -11,7 +11,7 @@ from yaml import Loader
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
 
-from syngen.ml.validation_schema import validate_schema, configuration_schema
+from syngen.ml.validation_schema import validate_schema
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.custom_logger import custom_logger
@@ -191,7 +191,7 @@ class YAMLLoader(BaseDataLoader):
     def load_data(self, metadata_path: str) -> dict:
         with open(metadata_path, "r", encoding="utf-8") as metadata_file:
             metadata = yaml.load(metadata_file, Loader=Loader)
-            validate_schema(configuration_schema, metadata)
+            validate_schema(metadata)
             parameters = ["train_settings", "infer_settings", "keys"]
             metadata = self.replace_none_values_of_metadata_settings(parameters, metadata)
         return metadata
@@ -199,13 +199,19 @@ class YAMLLoader(BaseDataLoader):
     @staticmethod
     def replace_none_values_of_metadata_settings(parameters, metadata: dict):
         """
-        Replace None values for parameters
-        in the metadata
+        Replace None values for parameters in the metadata
         """
-        for table in metadata.keys():
+        metadata["global"] = dict() if metadata.get("global") is None else metadata.get("global")
+        if metadata["global"]:
+            for settings in metadata["global"].keys():
+                metadata["global"][settings] = dict() if metadata["global"].get(settings) is None \
+                        else metadata["global"].get(settings)
+        for key in metadata.keys():
+            if key == "global":
+                continue
             for parameter in parameters:
-                if metadata.get(table).get(parameter) is None:
-                    metadata[table][parameter] = {}
+                if metadata.get(key).get(parameter) is None:
+                    metadata[key][parameter] = {}
         return metadata
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):

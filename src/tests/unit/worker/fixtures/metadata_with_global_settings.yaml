@@ -1,0 +1,35 @@
+global:
+  train_settings:
+    epochs: 5
+    drop_null: true
+    row_limit: 500
+  infer_settings:
+    size: 1000
+    run_parallel: True
+    print_report: True
+
+pk_test:
+  train_settings:
+    row_limit: 800
+
+  infer_settings:
+    print_report: False
+
+  source: ./path/to/pk_test.csv
+  keys:
+    pk_id:
+      type: "PK"
+      columns:
+        - Id
+
+fk_test:
+  source: ./path/to/fk_test.csv
+  keys:
+    fk_id:
+      type: "FK"
+      columns:
+        - Id
+      references:
+        table: pk_test
+        columns:
+          - Id

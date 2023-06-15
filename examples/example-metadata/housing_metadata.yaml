@@ -1,3 +1,16 @@
+global:                                 # In this section you can specify training and inference settings which will be set for all tables
+  train_settings:
+    epochs: 2
+    drop_null: true
+    row_limit: 1800
+    print_report: true
+
+  infer_settings:
+    size: 100
+    run_parallel: false
+    random_seed: 10
+    print_report: true
+
 housing_properties:                       # Use table name here
   train_settings:                         # Settings for training process
     epochs: 8                             # Number of epochs
@@ -11,7 +24,7 @@ housing_properties:                       # Use table name here
     random_seed: 10                       # Ensure reproducible tables generation
     print_report: true                    # Turn on or turn off generation of the report
 
-  source: "./example-data/housing_properties.csv"# Supported formats include cloud storage locations, local files
+  source: "./examples/example-data/housing_properties.csv"# Supported formats include cloud storage locations, local files
   keys:                                   # Keys of the table
     households_pk:                        # Name of a key
       type: "PK"                          # Type of key
@@ -34,7 +47,7 @@ housing_conditions:
     random_seed: 10
     print_report: true
 
-  source: "./example-data/housing_conditions.csv"
+  source: "./examples/example-data/housing_conditions.csv"
   keys:
     households_fk:
       type: "FK"

@@ -35,10 +35,10 @@ Here is a quick example:
 
 ```bash
 pip install syngen
-train --source ./example-data/housing.csv –-table_name Housing
+train --source ./examples/example-data/housing.csv –-table_name Housing
 infer --table_name Housing
 ```
-As the example you can use the dataset <i>"Housing"</i> in [example-data/housing.csv](example-data/housing.csv).
+As the example you can use the dataset <i>"Housing"</i> in [examples/example-data/housing.csv](examples/example-data/housing.csv).
 In this example, our real-world data is <a href="https://www.kaggle.com/datasets/camnugent/california-housing-prices" target="_blank">"Housing"</a> from Kaggle.
 
 ## Features
@@ -152,95 +152,112 @@ they will be ignored in the CLI call.
 In this case, the tables will be generated independently.
 
 The yaml metadata file should match the following template:
+```yaml
+global:                                     # Global settings. Optional parameter. In this section you can specify training and inference settings which will be set for all tables
+  train_settings:                           # Settings for training process. Optional parameter
+    epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
+    drop_null: False                        # Drop rows with NULL values. Optional parameter
+    row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
+    batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
+    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    
+  infer_settings:                           # Settings for infer process. Optional parameter
+    size: 100                               # Size for generated data. Optional parameter
+    run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
+    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    batch_size: None                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
+    random_seed: None                       # If specified, generates a reproducible result. Optional parameter
 
-    CUSTOMER:                                       # Table name. Required parameter
-        source: "./files/customer.csv"              # Supported formats include local files in CSV, Avro formats. Required parameter
+CUSTOMER:                                   # Table name. Required parameter
+  source: "./files/customer.csv"            # Supported formats include local files in CSV, Avro formats. Required parameter
                  
-        train_settings:                             # Settings for training process. Optional parameter
-            epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
-            drop_null: False                        # Drop rows with NULL values. Optional parameter
-            row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
-            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-            print_report: False                     # Turn on or turn off generation of the report. Optional parameter
-            column_types:
-                categorical:                        # Force listed columns to have categorical type (use dictionary of values). Optional parameter
-                    - gender
-                    - marital_status
+  train_settings:                           # Settings for training process. Optional parameter
+    epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
+    drop_null: False                        # Drop rows with NULL values. Optional parameter
+    row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
+    batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
+    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    column_types:
+      categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
+        - gender
+        - marital_status
                  
-        infer_settings:                             # Settings for infer process. Optional parameter
-            size: 100                               # Size for generated data. Optional parameter
-            run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-            print_report: False                     # Turn on or turn off generation of the report. Optional parameter
-            batch_size: None                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
-            random_seed: None                       # If specified, generates a reproducible result. Optional parameter
-        keys:                                       # Keys of the table. Optional parameter
-            PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
-                type: "PK"                          # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
-                columns:                            # Array of column names
-                    - customer_id
+  infer_settings:                           # Settings for infer process. Optional parameter
+    size: 100                               # Size for generated data. Optional parameter
+    run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
+    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    batch_size: None                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
+    random_seed: None                       # If specified, generates a reproducible result. Optional parameter
+  keys:                                     # Keys of the table. Optional parameter
+    PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
+      type: "PK"                            # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
+      columns:                              # Array of column names
+        - customer_id
      
-            UQ1:                                    # Name of a key
-                type: "UQ"                          # One or many unique keys
-                columns:
-                    - e_mail
+    UQ1:                                    # Name of a key
+      type: "UQ"                            # One or many unique keys
+      columns:
+        - e_mail
      
-            FK1:                                    # One or many foreign keys
-                type: "FK"
-                columns:                            # Array of columns in the current table
-                    - e_mail
-                    - alias
-                references:
-                    table: "PROFILE"                # Name of the parent table
-                    columns:                        # Array of columns in the parent table
-                        - e_mail
-                        - alias
+    FK1:                                    # One or many foreign keys
+      type: "FK"
+      columns:                              # Array of columns in the current table
+        - e_mail
+        - alias
+      references:
+        table: "PROFILE"                    # Name of the parent table
+        columns:                            # Array of columns in the parent table
+          - e_mail
+          - alias
        
-            FK2:
-                type: "FK"
-                columns:
-                    - address_id
-                references:
-                    table: "ADDRESS"
-                    columns:
-                        - address_id
+    FK2:
+      type: "FK"
+      columns:
+        - address_id
+      references:
+        table: "ADDRESS"
+        columns:
+          - address_id
 
      
-    ORDER:                                          # Table name. Required parameter
-        source: "./files/order.csv"                 # Supported formats include local files in CSV, Avro formats. Required parameter
+ORDER:                                      # Table name. Required parameter
+  source: "./files/order.csv"               # Supported formats include local files in CSV, Avro formats. Required parameter
      
-        train_settings:                             # Settings for training process. Optional parameter
-            epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
-            drop_null: False                        # Drop rows with NULL values. Optional parameter
-            row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
-            batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-            print_report: False                     # Turn on or turn off generation of the report. Optional parameter
-            column_types:
-                categorical:                        # Force listed columns to have categorical type (use dictionary of values). Optional parameter
-                    - gender
-                    - marital_status
+  train_settings:                           # Settings for training process. Optional parameter
+    epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
+    drop_null: False                        # Drop rows with NULL values. Optional parameter
+    row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
+    batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
+    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    column_types:
+    categorical:                            # Force listed columns to have categorical type (use dictionary of values). Optional parameter
+      - gender
+      - marital_status
      
-        infer_settings:                             # Settings for infer process. Optional parameter
-            size: 100                               # Size for generated data. Optional parameter
-            run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-            print_report: False                     # Turn on or turn off generation of the report. Optional parameter
-            batch_size: None                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
-            random_seed: None                       # If specified, generates a reproducible result. Optional parameter
-        keys:                                       # Keys of the table. Optional parameter
-            pk_order_id:
-                type: "PK"
-                columns:
-                    - order_id
+    infer_settings:                         # Settings for infer process. Optional parameter
+      size: 100                             # Size for generated data. Optional parameter
+      run_parallel: False                   # Turn on or turn off parallel training process. Optional parameter
+      print_report: False                   # Turn on or turn off generation of the report. Optional parameter
+      batch_size: None                      # If specified, the generation is split into batches. This can save the RAM. Optional parameter
+      random_seed: None                     # If specified, generates a reproducible result. Optional parameter
+    keys:                                   # Keys of the table. Optional parameter
+      pk_order_id:
+        type: "PK"
+        columns:
+          - order_id
      
-            FK1:
-                type: "FK"
-                columns:
-                    - customer_id
-                references:
-                    table: "CUSTOMER"
-                    columns:
-                        - customer_id
+      FK1:
+        type: "FK"
+        columns:
+          - customer_id
+        references:
+          table: "CUSTOMER"
+          columns:
+            - customer_id
+```
+<i>Note:</i>In the section <i>"global"</i> you can specify training and inference settings for all tables. If the same settings are specified for a specific table, they will override the global settings.<br>
 
-<i>You can find the example of metadata file in [example-metadata/housing_metadata.yaml](example-metadata/housing_metadata.yaml)</i><br>
+<i>You can find the example of metadata file in [examples/example-metadata/housing_metadata.yaml](examples/example-metadata/housing_metadata.yaml)</i><br>
 
 By providing the necessary information through a metadata file, you can initiate training and inference processes using the following commands:
 
@@ -251,8 +268,8 @@ infer --metadata_path=PATH_TO_YAML_METADATA_FILE
 Here is a quick example:
 
 ```bash
-train --metadata_path="./example-metadata/housing_metadata.yaml"
-infer --metadata_path="./example-metadata/housing_metadata.yaml"
+train --metadata_path="./examples/example-metadata/housing_metadata.yaml"
+infer --metadata_path="./examples/example-metadata/housing_metadata.yaml"
 ```
 
 If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.<br>
