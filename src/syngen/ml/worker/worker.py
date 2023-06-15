@@ -40,28 +40,43 @@ class Worker:
             infer_settings.update(self.settings)
         return metadata
 
-    def _update_metadata_for_tables(self, metadata: Dict) -> Dict:
+    from typing import Dict, Any
+
+
+    @staticmethod
+    def _update_table_settings(table_settings: Dict[str, Any], settings_to_update: Dict[str, Any]) -> None:
+        """
+        Update the table settings with the provided settings that are not already defined
+        """
+        for setting, value in settings_to_update.items():
+            if setting not in table_settings:
+                table_settings[setting] = value
+
+    def _update_metadata_for_tables(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
         Update the metadata for training or inference process if a metadata file was provided
         """
-        if "source" in self.settings.keys():
-            del self.settings["source"]
-        if self.type == "train":
-            for table in metadata.keys():
-                train_settings = metadata[table]["train_settings"]
-                train_settings.update({
-                    setting: value for setting, value in self.settings.items()
-                    if setting not in train_settings
-                })
-            return metadata
-        elif self.type == "infer":
-            for key in metadata.keys():
-                infer_settings = metadata[key]["infer_settings"]
-                infer_settings.update({
-                    setting: value for setting, value in self.settings.items()
-                    if setting not in infer_settings
-                })
-            return metadata
+        self.settings.pop("source", None)
+        global_train_settings = metadata.get("global", {}).get("train_settings", {})
+        global_infer_settings = metadata.get("global", {}).get("infer_settings", {})
+        metadata.pop("global", None)
+
+        for table, table_metadata in metadata.items():
+            if self.type == "train":
+                settings_key = "train_settings"
+                global_settings = global_train_settings
+            elif self.type == "infer":
+                settings_key = "infer_settings"
+                global_settings = global_infer_settings
+            else:
+                continue
+
+            table_settings = table_metadata[settings_key]
+
+            self._update_table_settings(table_settings, global_settings)
+            self._update_table_settings(table_settings, self.settings)
+
+        return metadata
 
     def __fetch_metadata(self) -> Dict[str, str]:
         """

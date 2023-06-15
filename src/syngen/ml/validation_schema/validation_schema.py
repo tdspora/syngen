@@ -5,7 +5,10 @@ from schema import Schema, Optional, And, Or, SchemaError
 from syngen.ml.custom_logger import custom_logger
 
 
-def keys_schema(types_of_keys: List[str]):
+def build_keys_schema(types_of_keys: List[str]):
+    """
+    Build the schema for the field 'keys' in metadata file
+    """
     schema = {
         str: {
             "type": Or(*types_of_keys),
@@ -19,45 +22,55 @@ def keys_schema(types_of_keys: List[str]):
         schema[str][Optional("references")] = {"table": str, "columns": [str]}
     return schema
 
-configuration_schema = Schema({
-    str: {
-        Optional("train_settings"): Or(
-            {
-                Optional("epochs"): And(int, lambda n: n >= 1),
-                Optional("drop_null"): bool,
-                Optional("row_limit"): And(int, lambda n: n >= 1),
-                Optional("batch_size"): And(int, lambda n: n >= 1),
-                Optional("print_report"): bool,
-                Optional("column_types"): {
-                    Optional("categorical"): [str]
-                }
-            },
-            None
-        ),
-        Optional("infer_settings"): Or(
-            {
-                Optional("size"): And(int, lambda n: n >= 1),
-                Optional("run_parallel"): bool,
-                Optional("batch_size"): And(int, lambda n: n >= 1),
-                Optional("random_seed"): And(int, lambda n: n >= 0),
-                Optional("print_report"): bool
-            },
-            None
-        ),
-        "source": str,
-        Optional("keys"): Or(keys_schema(types_of_keys=["FK", "PK", "UQ"]), None)
+
+def build_configuration_schema() -> Schema:
+    """
+    Build the configuration_schema for validation of metadata file
+    """
+    training_settings = {
+        Optional("epochs"): And(int, lambda n: n >= 1),
+        Optional("drop_null"): bool,
+        Optional("row_limit"): And(int, lambda n: n >= 1),
+        Optional("batch_size"): And(int, lambda n: n >= 1),
+        Optional("print_report"): bool,
     }
-})
+    infer_settings = {
+        Optional("size"): And(int, lambda n: n >= 1),
+        Optional("run_parallel"): bool,
+        Optional("batch_size"): And(int, lambda n: n >= 1),
+        Optional("random_seed"): And(int, lambda n: n >= 0),
+        Optional("print_report"): bool
+    }
+    config_schema = Schema({
+        Optional("global"): {
+            Optional("train_settings"): Or(training_settings, None),
+            Optional("infer_settings"): Or(infer_settings, None),
+        },
+        str: {
+            Optional("train_settings"): Or(
+                {
+                    **training_settings,
+                    Optional("column_types"): {
+                        Optional("categorical"): [str]
+                    }
+                },
+                None
+            ),
+            Optional("infer_settings"): Or(infer_settings, None),
+            "source": str,
+            Optional("keys"): Or(build_keys_schema(types_of_keys=["FK", "PK", "UQ"]), None),
+        }
+    })
+
+    return config_schema
 
 
-def validate_schema(configuration_schema: Schema, metadata: Dict):
+def validate_schema(metadata: Dict):
     """
     Validate the metadata file regarding the configuration_schema
-    :param configuration_schema: Schema
-    :param metadata: Dict
     """
     try:
-        configuration_schema.validate(metadata)
+        build_configuration_schema().validate(metadata)
         custom_logger.info("The schema of metadata file is valid")
     except SchemaError as err:
         custom_logger.error(
