@@ -217,7 +217,7 @@ class Dataset:
             custom_logger.warning(
                 f"The column '{column}' was excluded from the list of categorical columns "
                 f"as far as this column was set as the {key_type} of the table - '{self.table_name}'")
-            self.categ_columns.remove(column)
+            self.categ_columns.discard(column)
 
     def _check_if_not_key_column(self):
         """
