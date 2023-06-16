@@ -108,7 +108,7 @@ class Dataset:
         }
         self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
         fk_columns_lists = [val['columns'] for val in self.foreign_keys_mapping.values()]
-        self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
+        self.fk_columns = {col for fk_cols in fk_columns_lists for col in fk_cols}
 
         if self.foreign_keys_list:
             custom_logger.info(f"The following foreign keys were set: {self.foreign_keys_list}")
@@ -155,7 +155,7 @@ class Dataset:
             self.uq_columns = []
             self.foreign_keys_mapping = {}
             self.foreign_keys_list = []
-            self.fk_columns = []
+            self.fk_columns = set()
 
     def _set_metadata(self):
         self.__set_metadata(self.metadata, self.table_name)
@@ -650,12 +650,10 @@ class Dataset:
         """
         Drop columns in dataframe which defined as foreign key
         """
-        for fk in self.foreign_keys_list:
-            fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
-            for fk_column in fk_columns:
-                self.df = self.df.drop(fk_column, axis=1)
-                custom_logger.debug(f"The column - '{fk_column}' of foreign key '{fk}' dropped from training "
-                             f"and will be sampled from the PK table")
+        for fk_column in self.fk_columns:
+            self.df = self.df.drop(fk_column, axis=1)
+            custom_logger.debug(f"The column - '{fk_column}' dropped from the training process as it is defined as FK column "
+                                f"and will be sampled from the PK table")
 
     def __sample_only_joined_rows(self, fk):
         references = self.foreign_keys_mapping.get(fk).get("references")
