@@ -108,7 +108,7 @@ class Dataset:
         }
         self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
         fk_columns_lists = [val['columns'] for val in self.foreign_keys_mapping.values()]
-        self.fk_columns = {col for fk_cols in fk_columns_lists for col in fk_cols}
+        self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
 
         if self.foreign_keys_list:
             custom_logger.info(f"The following foreign keys were set: {self.foreign_keys_list}")
@@ -155,7 +155,7 @@ class Dataset:
             self.uq_columns = []
             self.foreign_keys_mapping = {}
             self.foreign_keys_list = []
-            self.fk_columns = set()
+            self.fk_columns = []
 
     def _set_metadata(self):
         self.__set_metadata(self.metadata, self.table_name)
@@ -646,11 +646,11 @@ class Dataset:
                 kde = gaussian_kde(fk_column_values + noise_to_prevent_singularity)
                 self._save_kde_artifacts(kde=kde, fk_kde_path=self.fk_kde_path, fk_column=fk_column)
 
-    def __drop_fk_columns(self):
+    def _drop_fk_columns(self):
         """
         Drop columns in dataframe which defined as foreign key
         """
-        for fk_column in self.fk_columns:
+        for fk_column in set(self.fk_columns):
             self.df = self.df.drop(fk_column, axis=1)
             custom_logger.debug(f"The column - '{fk_column}' dropped from the training process as it is defined as FK column "
                                 f"and will be sampled from the PK table")
@@ -766,7 +766,7 @@ class Dataset:
         if self.foreign_keys_list:
             self._assign_fk_feature()
             self._preprocess_fk_params()
-            self.__drop_fk_columns()
+            self._drop_fk_columns()
 
         self.primary_keys_mapping.update(self.unique_keys_mapping)
         pk_uq_keys_mapping = self.primary_keys_mapping
