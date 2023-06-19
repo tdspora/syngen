@@ -646,16 +646,14 @@ class Dataset:
                 kde = gaussian_kde(fk_column_values + noise_to_prevent_singularity)
                 self._save_kde_artifacts(kde=kde, fk_kde_path=self.fk_kde_path, fk_column=fk_column)
 
-    def __drop_fk_columns(self):
+    def _drop_fk_columns(self):
         """
         Drop columns in dataframe which defined as foreign key
         """
-        for fk in self.foreign_keys_list:
-            fk_columns = self.foreign_keys_mapping.get(fk).get("columns")
-            for fk_column in fk_columns:
-                self.df = self.df.drop(fk_column, axis=1)
-                custom_logger.debug(f"The column - '{fk_column}' of foreign key '{fk}' dropped from training "
-                             f"and will be sampled from the PK table")
+        for fk_column in set(self.fk_columns):
+            self.df = self.df.drop(fk_column, axis=1)
+            custom_logger.debug(f"The column - '{fk_column}' dropped from the training process as it is defined as FK column "
+                                f"and will be sampled from the PK table")
 
     def __sample_only_joined_rows(self, fk):
         references = self.foreign_keys_mapping.get(fk).get("references")
@@ -768,7 +766,7 @@ class Dataset:
         if self.foreign_keys_list:
             self._assign_fk_feature()
             self._preprocess_fk_params()
-            self.__drop_fk_columns()
+            self._drop_fk_columns()
 
         self.primary_keys_mapping.update(self.unique_keys_mapping)
         pk_uq_keys_mapping = self.primary_keys_mapping
