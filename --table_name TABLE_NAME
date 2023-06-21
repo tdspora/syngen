@@ -1,0 +1,4 @@
+
+This will train a model and save the model artifacts to disk.
+
+To generate with defaults parameters data simply call:

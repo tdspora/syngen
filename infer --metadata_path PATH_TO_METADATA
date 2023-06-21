@@ -1,0 +1,24 @@
+
+The parameters which you can set up for generation process:
+
+- <i>size</i> - the desired number of rows to generate
+- <i>table_name</i> – required parameter for inference of single table, the name of the table, same as in training
+- <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 5000 rows)
+- <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
+- <i>random_seed</i> – if specified, generates a reproducible result
+- <i>print_report</i> – whether to generate accuracy and sampling reports. Please note that the sampling report is generated only if the row_limit parameter is set.
+- <i>metadata_path</i> – a path to metadata file
+
+Requirements for parameters of generation process:
+* <i>size</i> - data type - integer, must be equal to or more than 1, default value is 100
+* <i>table_name</i> - data type - string
+* <i>run_parallel</i> - data type - boolean, default value is False
+* <i>batch_size</i> - data type - integer, must be equal to or more than 1
+* <i>random_seed</i> - data type - integer, must be equal to or more than 0
+* <i>print_report</i> - data type - boolean, default value is False
+* <i>metadata_path</i> - data type - string
+
+The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI 
+will be ignored.
+
+<i>Note:</i> If you want to set the logging level, you can use the parameter <i>log_level</i> in the CLI call:

@@ -1,0 +1,9 @@
+As the example you can use the dataset <i>"Housing"</i> in [examples/example-data/housing.csv](examples/example-data/housing.csv).
+In this example, our real-world data is <a href="https://www.kaggle.com/datasets/camnugent/california-housing-prices" target="_blank">"Housing"</a> from Kaggle.
+
+## Features
+
+### Training
+
+You can add flexibility to the training and inference processes using additional hyperparameters.<br>
+For training of single table call:

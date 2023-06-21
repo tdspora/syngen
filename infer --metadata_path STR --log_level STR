@@ -1,0 +1,15 @@
+
+where <i>log_level</i> might be one of the following values: <i>DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
+
+
+### Linked tables generation
+
+To generate one or more tables, you might provide metadata in yaml format. By providing information about the relationships 
+between tables via metadata, it becomes possible to manage complex relationships across any number of tables. 
+You can also specify additional parameters needed for training and inference in the metadata file and in this case, 
+they will be ignored in the CLI call.
+
+<i>Note:</i> By using metadata file, you can also generate tables with absent relationships. 
+In this case, the tables will be generated independently.
+
+The yaml metadata file should match the following template:

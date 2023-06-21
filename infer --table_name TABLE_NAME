@@ -1,0 +1,5 @@
+
+<i>Please notice that the name should match the one you used in the training process.</i><br>
+This will create a csv file with the synthetic table in <i>./model_artifacts/tmp_store/TABLE_NAME/merged_infer_TABLE_NAME.csv</i>.<br>
+
+Here is a quick example:
