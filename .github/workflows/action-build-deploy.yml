@@ -1,22 +1,26 @@
-name: Build & Deploy
+name: Build, Deploy & Docker
 on: [push]
 jobs:
-  PyPI-syngen-build:
+  build-deploy-docker:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
+
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
+
       - name: Install dependencies
         run: |
           sudo apt install python3.8-venv -y
           python -m pip install --upgrade pip
           pip install flake8 pytest build
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
       - name: Lint with flake8
         run: |
          # stop the build if there are Python syntax errors or undefined names
@@ -29,44 +33,50 @@ jobs:
       - name: Build Package
         run: |
           python3 -m build .
+
       - name: Publish package
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_TOKEN }} # For testing purposes: use secrets.PYPI_TEST_TOKEN
-#          repository_url: https://test.pypi.org/legacy/ # For testing purposes
           print_hash: true
           verbose: true
+
       - name: Login to Docker Hub
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/login-action@v1
         with:
           username: tdspora
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}        
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
       - name: Set up Docker Buildx
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/setup-buildx-action@v1
+
+      - name: Get latest GitHub tag
+        id: latest_tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "Latest tag: $LATEST_TAG"
+          echo "::set-output name=latest_tag::$LATEST_TAG"
 
       - name: Docker meta (Training)
         id: docker_meta_train
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: crazy-max/ghaction-docker-meta@v1
         with:
           images: tdspora/syngen-train
-          tag-custom: latest
+          tag-custom: ${{ github.ref == 'refs/heads/main' && steps.latest_tag.outputs.latest_tag || '' }}
           tag-semver: |
             {{raw}}
+
       - name: Docker meta (Inference)
         id: docker_meta_infer
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: crazy-max/ghaction-docker-meta@v1
         with:
           images: tdspora/syngen-infer
-          tag-custom: latest
+          tag-custom: ${{ github.ref == 'refs/heads/main' && steps.latest_tag.outputs.latest_tag || '' }}
           tag-semver: |
             {{raw}}
+
       - name: Build and push (Training)
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -76,8 +86,8 @@ jobs:
           labels: ${{ steps.docker_meta_train.outputs.labels }}
           cache-from: type=registry,ref=tdspora/syngen-train:buildcache
           cache-to: type=registry,ref=tdspora/syngen-train:buildcache,mode=max
+
       - name: Build and push (Inference)
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: docker/build-push-action@v2
         with:
           context: .
