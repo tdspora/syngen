@@ -111,9 +111,7 @@ class VAEWrapper(BaseWrapper):
         self.latent_components = latent_components
         self.metadata = metadata
         self.table_name = table_name
-        self.vae_resources_path = paths["state_path"]
-        self.dataset_pickle_path = paths["dataset_pickle_path"]
-        self.fk_kde_path = paths["fk_kde_path"]
+        self.paths = paths
 
     def __post__init__(self):
         if self.process == "train":
@@ -122,16 +120,16 @@ class VAEWrapper(BaseWrapper):
                 schema=self.schema,
                 metadata=self.metadata,
                 table_name=self.table_name,
-                fk_kde_path=self.fk_kde_path
+                paths=self.paths
             )
         elif self.process == "infer":
-            self.dataset = fetch_dataset(self.dataset_pickle_path)
+            self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
 
     def _save_dataset(self):
         """
         Save dataset object on the disk
         """
-        with open(self.dataset_pickle_path, "wb") as f:
+        with open(self.paths["dataset_pickle_path"], "wb") as f:
             f.write(pickle.dumps(self.dataset))
 
     def _pipeline(self):
@@ -198,7 +196,7 @@ class VAEWrapper(BaseWrapper):
         columns_subset: List[str] = None,  # TODO columns_subset does not work
     ):
         self._pipeline()
-        if not check_if_features_assigned(self.dataset_pickle_path):
+        if not check_if_features_assigned(self.paths["dataset_pickle_path"]):
             return
         self._init_model()
 
@@ -232,7 +230,7 @@ class VAEWrapper(BaseWrapper):
         prev_total_loss = float("inf")
         es_min_delta = 0.005
         es_patience = 10
-        pth = Path(self.vae_resources_path)
+        pth = Path(self.paths["state_path"])
 
         for epoch in range(epochs):
             num_batches = 0.0
