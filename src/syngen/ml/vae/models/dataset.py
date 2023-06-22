@@ -45,6 +45,8 @@ class Dataset:
     null_num_column_names: List = field(init=False)
     zero_num_column_names: List = field(init=False)
     nan_labels_dict: Dict = field(init=False)
+    uuid_columns: Set = field(init=False)
+    uuid_columns_types: Dict = field(init=False)
     dropped_columns: Set = field(init=False)
 
     def __post_init__(self):
@@ -60,6 +62,8 @@ class Dataset:
         self.null_num_column_names = list()
         self.zero_num_column_names = list()
         self.nan_labels_dict = dict()
+        self.uuid_columns = set()
+        self.uuid_columns_types = {}
         self.dropped_columns = fetch_training_config(self.paths["train_config_pickle_path"]).dropped_columns
 
     def __prepare_dir(self):
@@ -372,8 +376,6 @@ class Dataset:
 
         data_subset = self._select_str_columns(df)
 
-        self.uuid_columns = set()
-        self.uuid_columns_types = {}
         if not data_subset.empty:
             data_subset = data_subset.apply(self._is_valid_uuid)
             self.uuid_columns_types = dict(data_subset[data_subset.isin([1, 2, 3, 4, 5, "ulid"])])
