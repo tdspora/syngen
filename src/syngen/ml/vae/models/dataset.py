@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, Set
 from dataclasses import dataclass, field
 import pickle
 from uuid import UUID
@@ -28,6 +28,7 @@ from syngen.ml.utils import (
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.custom_logger import custom_logger
+from syngen.ml.utils import fetch_training_config
 
 
 @dataclass
@@ -36,7 +37,7 @@ class Dataset:
     schema: Optional[Dict]
     metadata: Dict
     table_name: str
-    fk_kde_path: str
+    paths: Dict
     features: Dict = field(init=False)
     columns: Dict = field(init=False)
     is_fitted: bool = field(init=False)
@@ -44,6 +45,7 @@ class Dataset:
     null_num_column_names: List = field(init=False)
     zero_num_column_names: List = field(init=False)
     nan_labels_dict: Dict = field(init=False)
+    dropped_columns: Set = field(init=False)
 
     def __post_init__(self):
         self._predefine_fields()
@@ -58,9 +60,10 @@ class Dataset:
         self.null_num_column_names = list()
         self.zero_num_column_names = list()
         self.nan_labels_dict = dict()
+        self.dropped_columns = fetch_training_config(self.paths["train_config_pickle_path"]).dropped_columns
 
     def __prepare_dir(self):
-        os.makedirs(self.fk_kde_path, exist_ok=True)
+        os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
@@ -106,6 +109,18 @@ class Dataset:
             key: value for (key, value) in config_of_keys.items()
             if config_of_keys.get(key).get("type") == "FK"
         }
+        dropped_fk_keys_mapping = {
+            key: value for (key, value) in config_of_keys.items()
+            if config_of_keys.get(key).get("type") == "FK" and any([column for column in value.get("columns") if column in self.dropped_columns])
+        }
+        dropped_fk_keys = set(dropped_fk_keys_mapping.keys())
+        if dropped_fk_keys:
+            custom_logger.info(
+                f"The following foreign keys were dropped: {dropped_fk_keys} "
+                f"as they contain empty columns: {self.dropped_columns}"
+            )
+        for key in dropped_fk_keys:
+            self.foreign_keys_mapping.pop(key, None)
         self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
         fk_columns_lists = [val['columns'] for val in self.foreign_keys_mapping.values()]
         self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
@@ -134,7 +149,7 @@ class Dataset:
         for pk, pk_type in self.pk_uq_keys_types.items():
             if pk_type is str:
                 mapper = {k: n for n, k in enumerate(self.df[pk])}
-                with open(f"{self.fk_kde_path}{pk}_mapper.pkl", "wb") as file:
+                with open(f"{self.paths['fk_kde_path']}{pk}_mapper.pkl", "wb") as file:
                     pickle.dump(mapper, file)
 
     def __set_metadata(self, metadata: dict, table_name: str):
@@ -633,7 +648,7 @@ class Dataset:
                 correspondent_pk_col = self.foreign_keys_mapping[fk]["references"]["columns"][0]
                 if fk_column_values.dtype in (pd.StringDtype(), "object"):
                     mapper = self._fetch_mapper(
-                        fk_kde_path=self.fk_kde_path,
+                        fk_kde_path=self.paths["fk_kde_path"],
                         table_name=self.table_name,
                         pk_table=correspondent_pk_table,
                         pk_column=correspondent_pk_col,
@@ -644,7 +659,7 @@ class Dataset:
                     fk_column_values = fk_column_values.map(mapper)
                 noise_to_prevent_singularity = np.random.normal(0, 0.0001, len(fk_column_values))
                 kde = gaussian_kde(fk_column_values + noise_to_prevent_singularity)
-                self._save_kde_artifacts(kde=kde, fk_kde_path=self.fk_kde_path, fk_column=fk_column)
+                self._save_kde_artifacts(kde=kde, fk_kde_path=self.paths["fk_kde_path"], fk_column=fk_column)
 
     def _drop_fk_columns(self):
         """
