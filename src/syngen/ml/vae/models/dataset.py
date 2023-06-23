@@ -105,27 +105,32 @@ class Dataset:
         if not self.unique_keys_list:
             custom_logger.info("No unique keys were set.")
 
+    def _filter_dropped_keys(self, config_of_keys: Dict, type_of_key: str) -> Tuple[Dict, Set]:
+        """
+        Filter out keys that contain empty columns
+        """
+        filtered_keys = {}
+        dropped_keys = set()
+
+        for key, value in config_of_keys.items():
+            if value.get("type") == type_of_key:
+                if any(column for column in value.get("columns") if column in self.dropped_columns):
+                    dropped_keys.add(key)
+                else:
+                    filtered_keys[key] = value
+
+        return filtered_keys, dropped_keys
+
     def __set_fk_keys(self, config_of_keys: Dict):
         """
         Set up foreign keys for the table
         """
-        self.foreign_keys_mapping = {
-            key: value for (key, value) in config_of_keys.items()
-            if config_of_keys.get(key).get("type") == "FK"
-        }
-        dropped_fk_keys_mapping = {
-            key: value for (key, value) in config_of_keys.items()
-            if config_of_keys.get(key).get("type") == "FK" and
-               any([column for column in value.get("columns") if column in self.dropped_columns])
-        }
-        dropped_fk_keys = set(dropped_fk_keys_mapping.keys())
+        self.foreign_keys_mapping, dropped_fk_keys = self._filter_dropped_keys(config_of_keys, "FK")
         if dropped_fk_keys:
             custom_logger.info(
                 f"The following foreign keys were dropped: {', '.join(dropped_fk_keys)} "
                 f"as they contain empty columns: {self.dropped_columns}"
             )
-        for key in dropped_fk_keys:
-            self.foreign_keys_mapping.pop(key, None)
         self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
         fk_columns_lists = [val['columns'] for val in self.foreign_keys_mapping.values()]
         self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
