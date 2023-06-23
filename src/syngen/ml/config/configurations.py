@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set
+from typing import Optional, Dict, Tuple, Set, List
 import os
 
 import pandas as pd
@@ -25,6 +25,8 @@ class TrainConfig:
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
     slugify_table_name: str = field(init=False)
+    columns: List = field(init=False)
+    dropped_columns: Set = field(init=False)
 
     def __post_init__(self):
         self.paths = self._set_paths()
@@ -32,6 +34,9 @@ class TrainConfig:
 
     def preprocess_data(self):
         data, self.schema = self._extract_data()
+        data = self._remove_empty_columns(data)
+        self._mark_removed_columns(data)
+        self.columns = list(data.columns)
         self._prepare_data(data)
         self._set_batch_size()
 
@@ -67,43 +72,38 @@ class TrainConfig:
         """
         return DataLoader(self.source).load_data()
 
-    @staticmethod
-    def _remove_empty_columns(data: pd.DataFrame) -> Tuple[pd.DataFrame, Set]:
+    def _remove_empty_columns(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Remove completely empty columns from dataframe
         """
         data_columns = set(data.columns)
         data = data.dropna(how="all", axis=1)
 
-        dropped_cols = data_columns - set(data.columns)
-        if len(dropped_cols) > 0:
-            custom_logger.info(f"Empty columns - {', '.join(dropped_cols)} were removed")
-        return data, dropped_cols
+        self.dropped_columns = data_columns - set(data.columns)
+        if len(self.dropped_columns) > 0:
+            custom_logger.info(f"Empty columns - {', '.join(self.dropped_columns)} were removed")
+        return data
 
-    @staticmethod
-    def _mark_removed_columns(data: pd.DataFrame, schema: Optional[Dict], dropped_columns: Set) -> Dict:
+    def _mark_removed_columns(self, data: pd.DataFrame):
         """
         Mark removed columns in the schema
         """
-        if schema.get("format") == "CSV":
-            schema["fields"] = dict()
-            schema["fields"] = {
+        if self.schema.get("format") == "CSV":
+            self.schema["fields"] = dict()
+            self.schema["fields"] = {
                 column: "removed"
-                for column in dropped_columns
+                for column in self.dropped_columns
             }
         else:
-            for column, data_type in schema.get("fields", {}).items():
+            for column, data_type in self.schema.get("fields", {}).items():
                 if column not in data.columns:
-                    schema["fields"][column] = "removed"
-        return schema
+                    self.schema["fields"][column] = "removed"
 
     def _extract_data(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Extract data and schema necessary for training process
         """
         data, schema = self._load_source()
-        data, dropped_columns = self._remove_empty_columns(data)
-        schema = self._mark_removed_columns(data, schema, dropped_columns)
         return data, schema
 
     def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -141,7 +141,7 @@ class TrainConfig:
 
     def _prepare_data(self, data: pd.DataFrame):
         """
-        Preprocess and save data necessary for training process
+        Preprocess and save the data necessary for the training process
         """
         data = self._preprocess_data(data)
         self._save_input_data(data)

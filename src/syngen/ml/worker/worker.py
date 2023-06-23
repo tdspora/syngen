@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from copy import deepcopy
 
@@ -39,8 +39,6 @@ class Worker:
             infer_settings = metadata[self.table_name]["infer_settings"]
             infer_settings.update(self.settings)
         return metadata
-
-    from typing import Dict, Any
 
 
     @staticmethod
