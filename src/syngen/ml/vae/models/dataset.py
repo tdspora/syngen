@@ -126,14 +126,15 @@ class Dataset:
         Set up foreign keys for the table
         """
         self.foreign_keys_mapping, dropped_fk_keys = self._filter_dropped_keys(config_of_keys, "FK")
-        if dropped_fk_keys:
-            custom_logger.info(
-                f"The following foreign keys were dropped: {', '.join(dropped_fk_keys)} "
-                f"as they contain empty columns: {self.dropped_columns}"
-            )
         self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
         fk_columns_lists = [val['columns'] for val in self.foreign_keys_mapping.values()]
         self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
+
+        if dropped_fk_keys:
+            custom_logger.info(
+                f"The following foreign keys were dropped: {', '.join(dropped_fk_keys)} "
+                f"as they contain empty columns: {', '.join(self.dropped_columns.union(self.fk_columns))}"
+            )
 
         if self.foreign_keys_list:
             custom_logger.info(f"The following foreign keys were set: {', '.join(self.foreign_keys_list)}")
