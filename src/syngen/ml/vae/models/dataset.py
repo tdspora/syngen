@@ -115,12 +115,13 @@ class Dataset:
         }
         dropped_fk_keys_mapping = {
             key: value for (key, value) in config_of_keys.items()
-            if config_of_keys.get(key).get("type") == "FK" and any([column for column in value.get("columns") if column in self.dropped_columns])
+            if config_of_keys.get(key).get("type") == "FK" and
+               any([column for column in value.get("columns") if column in self.dropped_columns])
         }
         dropped_fk_keys = set(dropped_fk_keys_mapping.keys())
         if dropped_fk_keys:
             custom_logger.info(
-                f"The following foreign keys were dropped: {dropped_fk_keys} "
+                f"The following foreign keys were dropped: {', '.join(dropped_fk_keys)} "
                 f"as they contain empty columns: {self.dropped_columns}"
             )
         for key in dropped_fk_keys:
@@ -130,7 +131,7 @@ class Dataset:
         self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
 
         if self.foreign_keys_list:
-            custom_logger.info(f"The following foreign keys were set: {self.foreign_keys_list}")
+            custom_logger.info(f"The following foreign keys were set: {', '.join(self.foreign_keys_list)}")
         if not self.foreign_keys_list:
             custom_logger.info("No foreign keys were set.")
 
