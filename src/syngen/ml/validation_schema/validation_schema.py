@@ -1,79 +1,77 @@
-from typing import Dict, List
-
-from schema import Schema, Optional, And, Or, SchemaError
+from typing import Dict
+from marshmallow import Schema, fields, validate, ValidationError, validates_schema
 
 from syngen.ml.custom_logger import custom_logger
 
 
-def build_keys_schema(types_of_keys: List[str]):
-    """
-    Build the schema for the field 'keys' in metadata file
-    """
-    schema = {
-        str: {
-            "type": Or(*types_of_keys),
-            "columns": [str],
-            Optional("joined_sample"): bool
-        }
-    }
-    if schema[str]["type"] == "FK":
-        schema[str]["references"] = {"table": str, "columns": [str]}
-    else:
-        schema[str][Optional("references")] = {"table": str, "columns": [str]}
-    return schema
+class ReferenceSchema(Schema):
+    table = fields.String()
+    columns = fields.List(fields.String())
 
 
-def build_configuration_schema() -> Schema:
-    """
-    Build the configuration_schema for validation of metadata file
-    """
-    training_settings = {
-        Optional("epochs"): And(int, lambda n: n >= 1),
-        Optional("drop_null"): bool,
-        Optional("row_limit"): And(int, lambda n: n >= 1),
-        Optional("batch_size"): And(int, lambda n: n >= 1),
-        Optional("print_report"): bool,
-    }
-    infer_settings = {
-        Optional("size"): And(int, lambda n: n >= 1),
-        Optional("run_parallel"): bool,
-        Optional("batch_size"): And(int, lambda n: n >= 1),
-        Optional("random_seed"): And(int, lambda n: n >= 0),
-        Optional("print_report"): bool
-    }
-    config_schema = Schema({
-        Optional("global"): {
-            Optional("train_settings"): Or(training_settings, None),
-            Optional("infer_settings"): Or(infer_settings, None),
-        },
-        str: {
-            Optional("train_settings"): Or(
-                {
-                    **training_settings,
-                    Optional("column_types"): {
-                        Optional("categorical"): [str]
-                    }
-                },
-                None
-            ),
-            Optional("infer_settings"): Or(infer_settings, None),
-            "source": str,
-            Optional("keys"): Or(build_keys_schema(types_of_keys=["FK", "PK", "UQ"]), None),
-        }
-    })
+class KeysSchema(Schema):
+    type = fields.String(validate=validate.OneOf(["FK", "PK", "UQ"]), required=True)
+    columns = fields.List(fields.String(), required=True)
+    joined_sample = fields.Boolean(required=False)
+    references = fields.Nested(ReferenceSchema, required=False)
 
-    return config_schema
+    @validates_schema
+    def validate_references(self, data, **kwargs):
+        if data["type"] == "FK" and "references" not in data:
+            raise ValidationError("The 'references' field is required when 'type' is 'FK'")
+        if data["type"] != "FK" and "references" in data:
+            raise ValidationError("The 'references' field is only allowed when 'type' is 'FK'")
+
+class TrainingSettingsSchema(Schema):
+    epochs = fields.Integer(validate=validate.Range(min=1), required=False)
+    drop_null = fields.Boolean(required=False)
+    row_limit = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
+    batch_size = fields.Integer(validate=validate.Range(min=1), required=False)
+    print_report = fields.Boolean(required=False)
+
+class ExtendedTrainingSettingsSchema(TrainingSettingsSchema):
+    column_types = fields.Dict(
+        keys=fields.String(validate=validate.OneOf(["categorical"])),
+        values=fields.List(fields.String())
+    )
+
+class InferSettingsSchema(Schema):
+    size = fields.Integer(validate=validate.Range(min=1), required=False)
+    run_parallel = fields.Boolean(required=False)
+    batch_size = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
+    random_seed = fields.Integer(validate=validate.Range(min=0), allow_none=True, required=False)
+    print_report = fields.Boolean(required=False)
+
+
+class GlobalSettingsSchema(Schema):
+    train_settings = fields.Nested(TrainingSettingsSchema, allow_none=True)
+    infer_settings = fields.Nested(InferSettingsSchema, allow_none=True)
+
+
+class ConfigurationSchema(Schema):
+    train_settings = fields.Nested(ExtendedTrainingSettingsSchema, required=False, allow_none=True)
+    infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
+    source = fields.String(required=True)
+    keys = fields.Dict(keys=fields.String(), values=fields.Nested(KeysSchema), required=False, allow_none=True)
 
 
 def validate_schema(metadata: Dict):
     """
-    Validate the metadata file regarding the configuration_schema
+    Validate the metadata file using the ConfigurationSchema
     """
-    try:
-        build_configuration_schema().validate(metadata)
-        custom_logger.info("The schema of metadata file is valid")
-    except SchemaError as err:
-        custom_logger.error(
-            f"It seems that the schema of metadata file isn't valid. "
-            f"The details of validation error - {err}")
-        raise err
+    errors = {}
+    for table_name in metadata.keys():
+        try:
+            if table_name == "global":
+                GlobalSettingsSchema().load(metadata[table_name])
+            else:
+                ConfigurationSchema().load(metadata[table_name])
+        except ValidationError as err:
+            errors[table_name] = err.messages
+        else:
+            custom_logger.info("The metadata file is valid")
+    if errors:
+        custom_logger.error("Validation errors found in the metadata:")
+        for table_name, table_errors in errors.items():
+            custom_logger.error(f"Table - '{table_name}': {table_errors}")
+        raise ValidationError(f"Validation errors found in the metadata. The details are - {errors}")
