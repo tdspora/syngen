@@ -188,3 +188,37 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
                                "'source': ['Missing data for required field.']}, " \
                                "'fk_test': {'source': ['Missing data for required field.']}}"
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+def test_metadata_file_with_invalid_PK_key(rp_logger):
+    rp_logger.info("Test the validation of the metadata file with the invalid PK key")
+    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_PK_key.yaml")
+    with pytest.raises(ValidationError) as error:
+        validate_schema(metadata)
+    assert str(error.value) == "Validation errors found in the metadata. The details are - {" \
+                               "'pk_test': {'keys': defaultdict(<class 'dict'>, {'pk_test_pk_id': {" \
+                               "'value': {'_schema': [\"The 'references' field is only allowed when 'type' is 'FK'\"]}}})}}"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_metadata_file_with_invalid_UQ_key(rp_logger):
+    rp_logger.info("Test the validation of the metadata file with the invalid UQ key")
+    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_UQ_key.yaml")
+    with pytest.raises(ValidationError) as error:
+        validate_schema(metadata)
+    assert str(error.value) == "Validation errors found in the metadata. " \
+                               "The details are - {'fk_test': {'keys': defaultdict(<class 'dict'>, {" \
+                               "'fk_test_uq_name': {'value': {" \
+                               "'_schema': [\"The 'references' field is only allowed when 'type' is 'FK'\"]}}})}}"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_metadata_file_with_invalid_FK_key(rp_logger):
+    rp_logger.info("Test the validation of the metadata file with the invalid FK key")
+    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_FK_key.yaml")
+    with pytest.raises(ValidationError) as error:
+        validate_schema(metadata)
+    assert str(error.value) == "Validation errors found in the metadata. " \
+                               "The details are - {'fk_test': {'keys': defaultdict(<class 'dict'>, {" \
+                               "'fk_test_fk_id': {'value': {" \
+                               "'_schema': [\"The 'references' field is required when 'type' is 'FK'\"]}}})}}"
+    rp_logger.info(SUCCESSFUL_MESSAGE)

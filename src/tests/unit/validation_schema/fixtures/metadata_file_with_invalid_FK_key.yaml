@@ -14,6 +14,7 @@ global:
     print_report: true
 
 pk_test:
+  source: ./data/pk_test.csv
   keys:
     pk_test_pk_id:
       type: "PK"
@@ -34,6 +35,7 @@ fk_test:
     random_seed: 1
     print_report: false
 
+  source: ./data/fk_test.csv
   keys:
     fk_test_pk_id:
       type: "PK"
@@ -47,7 +49,3 @@ fk_test:
       type: "FK"
       columns:
         - Id
-      references:
-        table: pk_test
-        columns:
-          - Id

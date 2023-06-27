@@ -16,7 +16,7 @@ global:
 pk_test:
   source: ./data/pk_test.csv
   keys:
-    pk_test_id:
+    pk_test_pk_id:
       type: "PK"
       columns:
         - Id
@@ -41,7 +41,7 @@ fk_test:
       type: "PK"
       columns:
         - Id
-    fk_test_name:
+    fk_test_uq_name:
       type: "UQ"
       columns:
         - Name
