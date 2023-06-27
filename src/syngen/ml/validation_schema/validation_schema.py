@@ -1,5 +1,6 @@
 from typing import Dict
 import json
+from dataclasses import dataclass
 from marshmallow import Schema, fields, validate, ValidationError, validates_schema
 
 from syngen.ml.custom_logger import custom_logger
@@ -56,24 +57,30 @@ class ConfigurationSchema(Schema):
     keys = fields.Dict(keys=fields.String(), values=fields.Nested(KeysSchema), required=False, allow_none=True)
 
 
-@validates_schema
-def validate_schema(metadata: Dict):
-    """
-    Validate the metadata file
-    """
-    errors = {}
-    for table_name in metadata.keys():
-        try:
-            if table_name == "global":
-                GlobalSettingsSchema().load(metadata[table_name])
+@dataclass
+class ValidationSchema:
+    metadata: Dict
+    global_schema = GlobalSettingsSchema()
+    configuration_schema = ConfigurationSchema()
+
+    @validates_schema
+    def validate_schema(self):
+        """
+        Validate the metadata file
+        """
+        errors = {}
+        for table_name in self.metadata.keys():
+            try:
+                if table_name == "global":
+                    self.global_schema.load(self.metadata[table_name])
+                else:
+                    self.configuration_schema.load(self.metadata[table_name])
+            except ValidationError as err:
+                errors[table_name] = err.messages
             else:
-                ConfigurationSchema().load(metadata[table_name])
-        except ValidationError as err:
-            errors[table_name] = err.messages
-        else:
-            custom_logger.info("The metadata file is valid")
-    if errors:
-        custom_logger.error("Validation error(s) found in the metadata")
-        for section, errors_details in errors.items():
-            custom_logger.error(f"The error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}")
-        raise ValidationError(f"Validation error(s) found in the metadata. The details are - {errors}")
+                custom_logger.info("The metadata file is valid")
+        if errors:
+            custom_logger.error("Validation error(s) found in the metadata")
+            for section, errors_details in errors.items():
+                custom_logger.error(f"The error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}")
+            raise ValidationError(f"Validation error(s) found in the metadata. The details are - {errors}")

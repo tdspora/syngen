@@ -1,8 +1,9 @@
 from unittest.mock import patch, mock_open
 import pytest
+import os
+
 import pandas as pd
 from pandas.testing import assert_frame_equal
-import os
 
 from syngen.ml.data_loaders import (
     DataLoader,
@@ -374,7 +375,7 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     # Mock the open function, yaml.load, and validate_schema
     with patch('builtins.open', mock_open(read_data='data')) as m:
         with patch('yaml.load') as mock_yaml_load:
-            with patch('syngen.ml.validation_schema.validate_schema') as mock_validate_schema:
+            with patch('syngen.ml.validation_schema.ValidationSchema.validate_schema') as mock_validate_schema:
                 mock_yaml_load.return_value = expected_metadata
                 metadata = loader.load_data('tests/unit/data_loaders/fixtures/metadata/metadata.yaml')
 
@@ -415,7 +416,7 @@ def test_load_metadata_by_yaml_loader_in_yml_format(rp_logger):
     # Mock the open function, yaml.load, and validate_schema
     with patch('builtins.open', mock_open(read_data='data')) as m:
         with patch('yaml.load') as mock_yaml_load:
-            with patch('syngen.ml.validation_schema.validate_schema') as mock_validate_schema:
+            with patch('syngen.ml.validation_schema.ValidationSchema.validate_schema') as mock_validate_schema:
                 mock_yaml_load.return_value = expected_metadata
                 metadata = loader.load_data('tests/unit/data_loaders/fixtures/metadata/metadata.yml')
 

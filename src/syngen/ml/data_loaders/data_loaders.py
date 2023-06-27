@@ -11,7 +11,7 @@ from yaml import Loader
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
 
-from syngen.ml.validation_schema import validate_schema
+from syngen.ml.validation_schema import ValidationSchema
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.custom_logger import custom_logger
@@ -191,7 +191,7 @@ class YAMLLoader(BaseDataLoader):
     def load_data(self, metadata_path: str) -> dict:
         with open(metadata_path, "r", encoding="utf-8") as metadata_file:
             metadata = yaml.load(metadata_file, Loader=Loader)
-            validate_schema(metadata)
+            ValidationSchema(metadata).validate_schema()
             parameters = ["train_settings", "infer_settings", "keys"]
             metadata = self.replace_none_values_of_metadata_settings(parameters, metadata)
         return metadata
