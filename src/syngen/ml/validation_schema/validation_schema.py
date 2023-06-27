@@ -59,7 +59,7 @@ class ConfigurationSchema(Schema):
 @validates_schema
 def validate_schema(metadata: Dict):
     """
-    Validate the metadata file using the ConfigurationSchema
+    Validate the metadata file
     """
     errors = {}
     for table_name in metadata.keys():

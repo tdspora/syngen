@@ -75,7 +75,7 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
 ])
 def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, expected_error):
     rp_logger.info("Test the validation of the metadata  with invalid training settings")
-    metadata = load_metadata_file(r"C:\Users\Hanna_Imshenetska\Projects\syngen_open_source\tdm_syngen\src\tests\unit\validation_schema\fixtures\valid_metadata_file.yaml")
+    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml")
     metadata["fk_test"]["train_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         validate_schema(metadata)
