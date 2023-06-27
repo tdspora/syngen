@@ -63,7 +63,6 @@ class ValidationSchema:
     global_schema = GlobalSettingsSchema()
     configuration_schema = ConfigurationSchema()
 
-    @validates_schema
     def validate_schema(self):
         """
         Validate the metadata file
