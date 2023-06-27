@@ -43,31 +43,31 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
 
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
-    ({"epochs": 0}, "Validation errors found in the metadata. "
+    ({"epochs": 0}, "Validation error(s) found in the metadata. "
                     "The details are - {'fk_test': {'train_settings': "
                     "{'epochs': ['Must be greater than or equal to 1.']}}}"),
-    ({"epochs": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"epochs": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                 "The details are - {'fk_test': {'train_settings': "
                                                 "{'epochs': ['Not a valid integer.']}}}"),
-    ({"drop_null": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"drop_null": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                    "The details are - {'fk_test': {'train_settings': {"
                                                    "'drop_null': ['Not a valid boolean.']}}}"),
-    ({"row_limit": 0}, "Validation errors found in the metadata. "
+    ({"row_limit": 0}, "Validation error(s) found in the metadata. "
                        "The details are - {'fk_test': {'train_settings': "
                        "{'row_limit': ['Must be greater than or equal to 1.']}}}"),
-    ({"row_limit": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"row_limit": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                    "The details are - {'fk_test': {'train_settings': "
                                                    "{'row_limit': ['Not a valid integer.']}}}"),
-    ({"batch_size": 0}, "Validation errors found in the metadata. "
+    ({"batch_size": 0}, "Validation error(s) found in the metadata. "
                         "The details are - {'fk_test': {'train_settings': "
                         "{'batch_size': ['Must be greater than or equal to 1.']}}}"),
-    ({"batch_size": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"batch_size": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                     "The details are - {'fk_test': {'train_settings': "
                                                     "{'batch_size': ['Not a valid integer.']}}}"),
-    ({"print_report": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"print_report": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                       "The details are - {'fk_test': {'train_settings': "
                                                       "{'print_report': ['Not a valid boolean.']}}}"),
-    ({"column_types": {"invalid_category": ["column_1", "column_2"]}}, "Validation errors found in the metadata. "
+    ({"column_types": {"invalid_category": ["column_1", "column_2"]}}, "Validation error(s) found in the metadata. "
                                                                        "The details are - {'fk_test': {'train_settings': {"
                                                                        "'column_types': defaultdict(<class 'dict'>, {"
                                                                        "'invalid_type': {'key': ['Must be one of: categorical.']}})}}"
@@ -75,7 +75,7 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
 ])
 def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, expected_error):
     rp_logger.info("Test the validation of the metadata  with invalid training settings")
-    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml")
+    metadata = load_metadata_file(r"C:\Users\Hanna_Imshenetska\Projects\syngen_open_source\tdm_syngen\src\tests\unit\validation_schema\fixtures\valid_metadata_file.yaml")
     metadata["fk_test"]["train_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         validate_schema(metadata)
@@ -84,28 +84,28 @@ def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, 
 
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
-    ({"epochs": 0}, "Validation errors found in the metadata. "
+    ({"epochs": 0}, "Validation error(s) found in the metadata. "
                     "The details are - {'global': {'train_settings': "
                     "{'epochs': ['Must be greater than or equal to 1.']}}}"),
-    ({"epochs": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"epochs": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                 "The details are - {'global': {'train_settings': "
                                                 "{'epochs': ['Not a valid integer.']}}}"),
-    ({"drop_null": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"drop_null": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                    "The details are - {'global': {'train_settings': {"
                                                    "'drop_null': ['Not a valid boolean.']}}}"),
-    ({"row_limit": 0}, "Validation errors found in the metadata. "
+    ({"row_limit": 0}, "Validation error(s) found in the metadata. "
                        "The details are - {'global': {'train_settings': "
                        "{'row_limit': ['Must be greater than or equal to 1.']}}}"),
-    ({"row_limit": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"row_limit": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                    "The details are - {'global': {'train_settings': "
                                                    "{'row_limit': ['Not a valid integer.']}}}"),
-    ({"batch_size": 0}, "Validation errors found in the metadata. "
+    ({"batch_size": 0}, "Validation error(s) found in the metadata. "
                         "The details are - {'global': {'train_settings': "
                         "{'batch_size': ['Must be greater than or equal to 1.']}}}"),
-    ({"batch_size": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"batch_size": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                     "The details are - {'global': {'train_settings': "
                                                     "{'batch_size': ['Not a valid integer.']}}}"),
-    ({"print_report": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"print_report": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                       "The details are - {'global': {'train_settings': "
                                                       "{'print_report': ['Not a valid boolean.']}}}"
     )
@@ -120,22 +120,22 @@ def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
-    ({"size": 0}, "Validation errors found in the metadata. "
+    ({"size": 0}, "Validation error(s) found in the metadata. "
                   "The details are - {'fk_test': {'infer_settings': {"
                   "'size': ['Must be greater than or equal to 1.']}}}"),
-    ({"size": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"size": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                               "The details are - {'fk_test': {'infer_settings': {"
                                               "'size': ['Not a valid integer.']}}}"),
-    ({"run_parallel": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"run_parallel": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                       "The details are - {'fk_test': {'infer_settings': {"
                                                       "'run_parallel': ['Not a valid boolean.']}}}"),
-    ({"random_seed": -1}, "Validation errors found in the metadata. "
+    ({"random_seed": -1}, "Validation error(s) found in the metadata. "
                           "The details are - {'fk_test': {'infer_settings': {"
                           "'random_seed': ['Must be greater than or equal to 0.']}}}"),
-    ({"random_seed": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"random_seed": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                      "The details are - {'fk_test': {'infer_settings': "
                                                      "{'random_seed': ['Not a valid integer.']}}}"),
-    ({"print_report": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"print_report": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                       "The details are - {'fk_test': {'infer_settings': {"
                                                       "'print_report': ['Not a valid boolean.']}}}")
 ])
@@ -150,22 +150,22 @@ def test_metadata_file_with_invalid_infer_settings(rp_logger, wrong_setting, exp
 
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
-    ({"size": 0}, "Validation errors found in the metadata. "
+    ({"size": 0}, "Validation error(s) found in the metadata. "
                   "The details are - {'global': {'infer_settings': {"
                   "'size': ['Must be greater than or equal to 1.']}}}"),
-    ({"size": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"size": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                               "The details are - {'global': {'infer_settings': {"
                                               "'size': ['Not a valid integer.']}}}"),
-    ({"run_parallel": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"run_parallel": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                       "The details are - {'global': {'infer_settings': {"
                                                       "'run_parallel': ['Not a valid boolean.']}}}"),
-    ({"random_seed": -1}, "Validation errors found in the metadata. "
+    ({"random_seed": -1}, "Validation error(s) found in the metadata. "
                           "The details are - {'global': {'infer_settings': {"
                           "'random_seed': ['Must be greater than or equal to 0.']}}}"),
-    ({"random_seed": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"random_seed": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                      "The details are - {'global': {'infer_settings': "
                                                      "{'random_seed': ['Not a valid integer.']}}}"),
-    ({"print_report": "not a valid type of a value"}, "Validation errors found in the metadata. "
+    ({"print_report": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
                                                       "The details are - {'global': {'infer_settings': {"
                                                       "'print_report': ['Not a valid boolean.']}}}")
 ])
@@ -183,7 +183,7 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
     metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_without_required_fields.yaml")
     with pytest.raises(ValidationError) as error:
         validate_schema(metadata)
-    assert str(error.value) == "Validation errors found in the metadata. " \
+    assert str(error.value) == "Validation error(s) found in the metadata. " \
                                "The details are - {'pk_test': {" \
                                "'source': ['Missing data for required field.']}, " \
                                "'fk_test': {'source': ['Missing data for required field.']}}"
@@ -194,7 +194,7 @@ def test_metadata_file_with_invalid_PK_key(rp_logger):
     metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_PK_key.yaml")
     with pytest.raises(ValidationError) as error:
         validate_schema(metadata)
-    assert str(error.value) == "Validation errors found in the metadata. The details are - {" \
+    assert str(error.value) == "Validation error(s) found in the metadata. The details are - {" \
                                "'pk_test': {'keys': defaultdict(<class 'dict'>, {'pk_test_pk_id': {" \
                                "'value': {'_schema': [\"The 'references' field is only allowed when 'type' is 'FK'\"]}}})}}"
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -205,7 +205,7 @@ def test_metadata_file_with_invalid_UQ_key(rp_logger):
     metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_UQ_key.yaml")
     with pytest.raises(ValidationError) as error:
         validate_schema(metadata)
-    assert str(error.value) == "Validation errors found in the metadata. " \
+    assert str(error.value) == "Validation error(s) found in the metadata. " \
                                "The details are - {'fk_test': {'keys': defaultdict(<class 'dict'>, {" \
                                "'fk_test_uq_name': {'value': {" \
                                "'_schema': [\"The 'references' field is only allowed when 'type' is 'FK'\"]}}})}}"
@@ -217,7 +217,7 @@ def test_metadata_file_with_invalid_FK_key(rp_logger):
     metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_FK_key.yaml")
     with pytest.raises(ValidationError) as error:
         validate_schema(metadata)
-    assert str(error.value) == "Validation errors found in the metadata. " \
+    assert str(error.value) == "Validation error(s) found in the metadata. " \
                                "The details are - {'fk_test': {'keys': defaultdict(<class 'dict'>, {" \
                                "'fk_test_fk_id': {'value': {" \
                                "'_schema': [\"The 'references' field is required when 'type' is 'FK'\"]}}})}}"

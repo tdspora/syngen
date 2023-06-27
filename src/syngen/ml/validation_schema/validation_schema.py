@@ -1,4 +1,5 @@
 from typing import Dict
+import json
 from marshmallow import Schema, fields, validate, ValidationError, validates_schema
 
 from syngen.ml.custom_logger import custom_logger
@@ -55,6 +56,7 @@ class ConfigurationSchema(Schema):
     keys = fields.Dict(keys=fields.String(), values=fields.Nested(KeysSchema), required=False, allow_none=True)
 
 
+@validates_schema
 def validate_schema(metadata: Dict):
     """
     Validate the metadata file using the ConfigurationSchema
@@ -71,7 +73,7 @@ def validate_schema(metadata: Dict):
         else:
             custom_logger.info("The metadata file is valid")
     if errors:
-        custom_logger.error("Validation errors found in the metadata:")
-        for table_name, table_errors in errors.items():
-            custom_logger.error(f"Table - '{table_name}': {table_errors}")
-        raise ValidationError(f"Validation errors found in the metadata. The details are - {errors}")
+        custom_logger.error("Validation error(s) found in the metadata")
+        for section, errors_details in errors.items():
+            custom_logger.error(f"The error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}")
+        raise ValidationError(f"Validation error(s) found in the metadata. The details are - {errors}")
