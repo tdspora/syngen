@@ -23,7 +23,7 @@ AVRO_SCHEMA = {
 }
 
 
-def uuid_detection(df, schema, rp_logger):
+def uuid_detection(df, schema):
     with patch.object(Dataset, "__post_init__", lambda x: None):
         mock_dataset = Dataset(
             df=pd.DataFrame(),
@@ -38,7 +38,6 @@ def uuid_detection(df, schema, rp_logger):
     assert mock_dataset.uuid_columns_types == {
         "UUIDv1": 1, "UUIDv2": 2, "UUIDv3": 3, "UUIDv4": 4, "UUIDv5": 5, "ULID": "ulid"
     }
-    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 @pytest.mark.parametrize(
     "path_to_test_table", [
@@ -48,7 +47,8 @@ def uuid_detection(df, schema, rp_logger):
 def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_table, rp_logger):
     rp_logger.info("Test the process of the detection of UUID columns in the table in csv format")
     df = pd.read_csv(path_to_test_table)
-    uuid_detection(df, CSV_SCHEMA, rp_logger)
+    uuid_detection(df, CSV_SCHEMA)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 @pytest.mark.parametrize(
     "path_to_test_table", [
@@ -58,4 +58,5 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
 def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test_table, rp_logger):
     rp_logger.info("Test the process of the detection of UUID columns in the table in avro format")
     df = pdx.from_avro(path_to_test_table)
-    uuid_detection(df, AVRO_SCHEMA, rp_logger)
+    uuid_detection(df, AVRO_SCHEMA)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
