@@ -28,3 +28,4 @@ pytest-reportportal
 reportportal-client
 base32-crockford
 py-ulid
+marshmallow==3.19.*
