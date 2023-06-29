@@ -7,6 +7,8 @@ from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
 from syngen.ml.custom_logger import custom_logger
 
+from syngen.context.context import global_context
+
 @dataclass
 class Worker:
     """
@@ -24,6 +26,7 @@ class Worker:
 
     def __post_init__(self):
         self.metadata = self.__fetch_metadata()
+        global_context(self.metadata)
 
 
     def _update_metadata_for_table(self, metadata: Dict) -> Dict:

@@ -469,3 +469,37 @@ def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
         }
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_pipe_delimited_csv(rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited.csv"
+    rp_logger.info(f"Loading CSV with pipe delimiter {path_source}")
+    data, schema = DataLoader(path_source, { 'sep': '|', 'quoting': 'None' }).load_data()
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_tab_delimited_csv(rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/tab_delimited.csv"
+    rp_logger.info(f"Loading CSV with tab delimiter {path_source}")
+    data, schema = DataLoader(path_source, { 'sep': '\t', 'quoting': 'None' }).load_data()
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_multiline_bad_line_csv(rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/multiline_bad_line_text.csv"
+    rp_logger.info(f"Loading CSV with multiline texts {path_source}")
+    data, schema = DataLoader(path_source, 
+                              { 
+                               'sep': ',',
+                               'quoting': 'all',
+                               'quotechar': '"',
+                               'escapechar': '\\',
+                               'skiprows': 1,
+                               'encoding': 'utf-8',
+                               'on_bad_lines': 'skip'
+                               }
+                              ).load_data()
+    assert data.count().max() == 12
+    rp_logger.info(SUCCESSFUL_MESSAGE)

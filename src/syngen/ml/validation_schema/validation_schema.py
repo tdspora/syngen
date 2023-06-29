@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from schema import Schema, Optional, And, Or, SchemaError
+from schema import Schema, Optional, And, Or, SchemaError, Use
 
 from syngen.ml.custom_logger import custom_logger
 
@@ -41,6 +41,17 @@ def build_configuration_schema() -> Schema:
         Optional("random_seed"): And(int, lambda n: n >= 0),
         Optional("print_report"): bool
     }
+    format_settings = {
+        Optional("sep"):str,
+        Optional("quotechar"):str,
+        Optional("quoting"): And(str, Use(str.lower), lambda s: s in ('minimal', 'all', 'non-numeric', 'none')),
+        Optional("escapechar"): str,
+        Optional("encoding"): str,
+        Optional("header"): bool,
+        Optional("skiprows"):int,
+        Optional("on_bad_lines"): And(str, Use(str.lower), lambda s: s in ('error', 'warn', 'skip')),
+        Optional("engine"):str
+    }
     config_schema = Schema({
         Optional("global"): {
             Optional("train_settings"): Or(training_settings, None),
@@ -58,6 +69,7 @@ def build_configuration_schema() -> Schema:
             ),
             Optional("infer_settings"): Or(infer_settings, None),
             "source": str,
+            Optional("format"): Or(format_settings, None),
             Optional("keys"): Or(build_keys_schema(types_of_keys=["FK", "PK", "UQ"]), None),
         }
     })
