@@ -1,0 +1,19 @@
+# comment to skip
+"id","first_name","last_name","note","gender","ip_address"
+1,Thaddeus,Bandey,"Long text with
+multiple
+lines",Male,38.184.191.63
+2,"Graig, ""Mr.""",Snellman,gsnellman1@omniture.com,Male,
+3,Merrielle,Charrett,Yet more text,Female,184.181.63.225
+4,Julienne,Flecknoe,,Female,242.8.182.107
+5,Chloette,Shearstone,,Female,83.44.144.11
+6,Timmi,Snowsill,Text with ""(double quotes),Female,30.57.197.180
+7,Christye,Tolland,UTF-8 characters here: ЙЦУКйцук ячсм итьб,Female,102.26.178.166
+8,Brande,Billam,None,Female,
+9,Carlynn,Ambrogetti,False,Polygender,56.162.13.110
+10,Josiah,Cristea,,Male,
+11,Mirelle,Joss,"Line 1
+Line 2
+Line 3",Agender,
+"12","Ker""stin","Zavittieri","","Female","55.41.94.82"
+1,2,3,4,5,6,7,8,9,10
