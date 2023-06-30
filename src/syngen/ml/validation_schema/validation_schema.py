@@ -123,15 +123,23 @@ class InferSettingsSchema(Schema):
 
 
 class FormatSettingsSchema(Schema):
-    delimiter = fields.String(required=False)
-    quotechar = fields.String(required=False)
+    delimiter = fields.String(required=False, allow_none=True)
+    quotechar = fields.String(required=False, validate=validate.Length(equal=1))
     quoting = CaseInsensitiveString(required=False, validate=validate.OneOf(["minimal", "all", "non-numeric", "none"]))
-    escapechar = fields.String(required=False)
+    escapechar = fields.String(required=False, validate=validate.Length(equal=1))
     encoding = fields.String(required=False)
-    header = fields.Boolean(required=False)
-    skiprows = fields.Integer(required=False)
+    header = fields.Raw(
+        required=False,
+        allow_none=True,
+        validate=lambda x: isinstance(x, bool) \
+                           or isinstance(x, int) \
+                           or (isinstance(x, str) and x == 'infer') \
+                           or (isinstance(x, list) and all(isinstance(elem, int) for elem in x)))
+    skiprows = fields.Integer(
+        required=False,
+        validate=lambda x: isinstance(x, int) or (isinstance(x, list) and all(isinstance(elem, int) for elem in x)))
     on_bad_lines = CaseInsensitiveString(required=False, validate=validate.OneOf(["error", "warn", "skip"]))
-    engine = fields.String(required=False)
+    engine = fields.String(required=False, validate=validate.OneOf(["c", "python", "pyarrow"]))
 
 
 class GlobalSettingsSchema(Schema):
