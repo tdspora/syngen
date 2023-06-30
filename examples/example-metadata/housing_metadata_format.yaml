@@ -1,0 +1,69 @@
+global:                                 # In this section you can specify training and inference settings which will be set for all tables
+  train_settings:
+    epochs: 2
+    drop_null: true
+    row_limit: 1800
+    print_report: true
+
+  infer_settings:
+    size: 100
+    run_parallel: false
+    random_seed: 10
+    print_report: true
+
+housing_properties:                       # Use table name here
+  train_settings:                         # Settings for training process
+    epochs: 8                             # Number of epochs
+    drop_null: true                       # Drop rows with NULL values
+    row_limit: 1800                       # Limit of rows for training process
+    print_report: true                    # Turn on or turn off generation of the report
+
+  infer_settings:                         # Settings for infer process
+    size: 90                              # Size for generated data
+    run_parallel: false                   # Turn on or turn off parallel training process
+    random_seed: 10                       # Ensure reproducible tables generation
+    print_report: true                    # Turn on or turn off generation of the report
+
+  source: C:\Users\Hanna_Imshenetska\Projects\syngen_open_source\tdm_syngen\examples\example-data\housing_properties.csv # Supported formats include cloud storage locations, local files
+  format:
+    delimiter: ','
+    quotechar: '"'
+    quoting: 'All'
+    escapechar: '"'
+    encoding: 'utf-8'
+    header: 0
+    skiprows: 0
+    on_bad_lines: skip
+
+  keys:                                   # Keys of the table
+    households_pk:                        # Name of a key
+      type: "PK"                          # Type of key
+      columns:                            # Columns related to key
+        - households
+
+housing_conditions:
+  train_settings:
+    epochs: 5
+    drop_null: true
+    row_limit: 1800
+    print_report: true
+    column_types:
+      categorical:                        # Force listed columns to have categorical type (use dictionary of values)
+        - housing_median_age
+
+  infer_settings:
+    size: 90
+    run_parallel: false
+    random_seed: 10
+    print_report: true
+
+  source: C:\Users\Hanna_Imshenetska\Projects\syngen_open_source\tdm_syngen\examples\example-data\housing_conditions.csv
+  keys:
+    households_fk:
+      type: "FK"
+      columns:
+        - households
+      references:
+        table: housing_properties
+        columns:
+          - households

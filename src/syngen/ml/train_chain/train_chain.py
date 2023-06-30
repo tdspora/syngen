@@ -24,6 +24,7 @@ from syngen.ml.utils import (
     generate_uuid
 )
 from syngen.ml.custom_logger import custom_logger
+from syngen.ml.context import get_context
 
 
 class AbstractHandler(ABC):
@@ -403,10 +404,14 @@ class VaeInferHandler(BaseHandler):
             if not is_pk:
                 generated_data = self.generate_keys(prepared_data, self.size, self.metadata, self.table_name)
                 if generated_data is None:
-                    prepared_data.to_csv(self.paths["path_to_merged_infer"], index=False)
+                    DataLoader(self.paths["path_to_merged_infer"]).save_data(
+                        self.paths["path_to_merged_infer"], prepared_data, format=get_context().get_config())
                 else:
-                    generated_data.to_csv(self.paths["path_to_merged_infer"], index=False)
+                    DataLoader(self.paths["path_to_merged_infer"]).save_data(
+                        self.paths["path_to_merged_infer"], generated_data, format=get_context().get_config())
             else:
-                prepared_data.to_csv(self.paths["path_to_merged_infer"], index=False)
+                DataLoader(self.paths["path_to_merged_infer"]).save_data(
+                    self.paths["path_to_merged_infer"], prepared_data, format=get_context().get_config())
         if self.metadata_path is None:
-            prepared_data.to_csv(self.paths["path_to_merged_infer"], index=False)
+            DataLoader(self.paths["path_to_merged_infer"]).save_data(
+                self.paths["path_to_merged_infer"], prepared_data, format=get_context().get_config())

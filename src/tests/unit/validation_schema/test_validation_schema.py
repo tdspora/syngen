@@ -222,3 +222,12 @@ def test_metadata_file_with_invalid_FK_key(rp_logger):
                                "'fk_test_fk_id': {'value': {" \
                                "'_schema': [\"The 'references' field is required when 'type' is 'FK'\"]}}})}}"
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_metadata_file_with_format_options(rp_logger, caplog):
+    rp_logger.info("Test the validation of the metadata file with format options")
+    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_with_format_options.yaml")
+    with caplog.at_level(level="INFO"):
+        ValidationSchema(metadata).validate_schema()
+        assert "The metadata file is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)

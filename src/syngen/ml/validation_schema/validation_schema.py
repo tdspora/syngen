@@ -1,3 +1,6 @@
+from typing import Dict, List
+
+from schema import Schema, Optional, And, Or, SchemaError, Use
 from typing import Dict
 import json
 from dataclasses import dataclass
@@ -6,9 +9,83 @@ from marshmallow import Schema, fields, validate, ValidationError, validates_sch
 from syngen.ml.custom_logger import custom_logger
 
 
+def build_keys_schema(types_of_keys: List[str]):
+    """
+    Build the schema for the field 'keys' in metadata file
+    """
+    schema = {
+        str: {
+            "type": Or(*types_of_keys),
+            "columns": [str],
+            Optional("joined_sample"): bool
+        }
+    }
+    if schema[str]["type"] == "FK":
+        schema[str]["references"] = {"table": str, "columns": [str]}
+    else:
+        schema[str][Optional("references")] = {"table": str, "columns": [str]}
+    return schema
+
+
+def build_configuration_schema() -> Schema:
+    """
+    Build the configuration_schema for validation of metadata file
+    """
+    training_settings = {
+        Optional("epochs"): And(int, lambda n: n >= 1),
+        Optional("drop_null"): bool,
+        Optional("row_limit"): And(int, lambda n: n >= 1),
+        Optional("batch_size"): And(int, lambda n: n >= 1),
+        Optional("print_report"): bool,
+    }
+    infer_settings = {
+        Optional("size"): And(int, lambda n: n >= 1),
+        Optional("run_parallel"): bool,
+        Optional("batch_size"): And(int, lambda n: n >= 1),
+        Optional("random_seed"): And(int, lambda n: n >= 0),
+        Optional("print_report"): bool
+    }
+    format_settings = {
+        Optional("sep"):str,
+        Optional("quotechar"):str,
+        Optional("quoting"): And(str, Use(str.lower), lambda s: s in ('minimal', 'all', 'non-numeric', 'none')),
+        Optional("escapechar"): str,
+        Optional("encoding"): str,
+        Optional("header"): bool,
+        Optional("skiprows"):int,
+        Optional("on_bad_lines"): And(str, Use(str.lower), lambda s: s in ('error', 'warn', 'skip')),
+        Optional("engine"):str
+    }
+    config_schema = Schema({
+        Optional("global"): {
+            Optional("train_settings"): Or(training_settings, None),
+            Optional("infer_settings"): Or(infer_settings, None),
+        },
+        str: {
+            Optional("train_settings"): Or(
+                {
+                    **training_settings,
+                    Optional("column_types"): {
+                        Optional("categorical"): [str]
+                    }
+                },
+                None
+            ),
+            Optional("infer_settings"): Or(infer_settings, None),
+            "source": str,
+            Optional("format"): Or(format_settings, None),
+            Optional("keys"): Or(build_keys_schema(types_of_keys=["FK", "PK", "UQ"]), None),
+        }
+    })
+
+    return config_schema
 class ReferenceSchema(Schema):
     table = fields.String()
     columns = fields.List(fields.String())
+
+class CaseInsensitiveString(fields.String):
+    def _deserialize(self, value, attr, data, **kwargs):
+        return value.lower()
 
 
 class KeysSchema(Schema):
@@ -45,6 +122,18 @@ class InferSettingsSchema(Schema):
     print_report = fields.Boolean(required=False)
 
 
+class FormatSettingsSchema(Schema):
+    delimiter = fields.String(required=False)
+    quotechar = fields.String(required=False)
+    quoting = CaseInsensitiveString(required=False, validate=validate.OneOf(["minimal", "all", "non-numeric", "none"]))
+    escapechar = fields.String(required=False)
+    encoding = fields.String(required=False)
+    header = fields.Boolean(required=False)
+    skiprows = fields.Integer(required=False)
+    on_bad_lines = CaseInsensitiveString(required=False, validate=validate.OneOf(["error", "warn", "skip"]))
+    engine = fields.String(required=False)
+
+
 class GlobalSettingsSchema(Schema):
     train_settings = fields.Nested(TrainingSettingsSchema, allow_none=True)
     infer_settings = fields.Nested(InferSettingsSchema, allow_none=True)
@@ -54,6 +143,7 @@ class ConfigurationSchema(Schema):
     train_settings = fields.Nested(ExtendedTrainingSettingsSchema, required=False, allow_none=True)
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
     source = fields.String(required=True)
+    format = fields.Nested(FormatSettingsSchema, required=False, allow_none=True)
     keys = fields.Dict(keys=fields.String(), values=fields.Nested(KeysSchema), required=False, allow_none=True)
 
 
