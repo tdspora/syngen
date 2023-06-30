@@ -135,7 +135,7 @@ class FormatSettingsSchema(Schema):
                            or isinstance(x, int) \
                            or (isinstance(x, str) and x == 'infer') \
                            or (isinstance(x, list) and all(isinstance(elem, int) for elem in x)))
-    skiprows = fields.Integer(
+    skiprows = fields.Raw(
         required=False,
         validate=lambda x: isinstance(x, int) or (isinstance(x, list) and all(isinstance(elem, int) for elem in x)))
     on_bad_lines = CaseInsensitiveString(required=False, validate=validate.OneOf(["error", "warn", "skip"]))
