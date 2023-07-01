@@ -102,9 +102,10 @@ class CSVLoader:
         format_params = kwargs.get("format")
         
         if format_params:
-            params["quoting"] = CSVLoader._get_quoting(format_params.pop("quoting", None))
-            engine = format_params.pop("engine", engine)
             params.update(format_params)
+            quoting = format_params.get("quoting", None)
+            params["quoting"] = CSVLoader._get_quoting(quoting)
+            engine = format_params.pop("engine", engine)
             
         return engine, params
 
@@ -135,14 +136,13 @@ class CSVLoader:
         :param df: The DataFrame to be saved.
         :param kwargs: Additional keyword arguments to be passed to the to_csv method.
         """
-        format_params = kwargs.get("format", {})
+        engine, format_params = CSVLoader._get_csv_params(**kwargs)
         if df is not None:
             # Extract valid parameters
             valid_parameters = inspect.signature(pd.DataFrame.to_csv).parameters
             
             # Filter out any keyword arguments that are not valid parameters
             filtered_kwargs = {k: v for k, v in format_params.items() if k in valid_parameters}
-            filtered_kwargs["quoting"] = CSVLoader._get_quoting(filtered_kwargs.pop("quoting", None))
 
             # Save the DataFrame to a CSV file
             df.to_csv(path, **filtered_kwargs, index=False)

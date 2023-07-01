@@ -185,11 +185,11 @@ class Worker:
         chain_for_tables_for_inference, config_of_metadata_for_inference = metadata_for_inference
 
         for table in chain_for_tables_for_training:
-            with global_context(self.metadata.get(table, {}).get("format", {})):
-                config_of_table = config_of_metadata_for_training[table]
-                source = config_of_table["source"]
-                train_settings = config_of_table["train_settings"]
-                custom_logger.info(f"Training process of the table - {table} has started.")
+            global_context(self.metadata.get(table, {}).get("format", {}))
+            config_of_table = config_of_metadata_for_training[table]
+            source = config_of_table["source"]
+            train_settings = config_of_table["train_settings"]
+            custom_logger.info(f"Training process of the table - {table} has started.")
 
             self.train_strategy.run(
                 metadata=self.metadata,
@@ -211,26 +211,26 @@ class Worker:
         self.metadata = config_of_metadata_for_inference
         if generation_of_reports:
             for table in chain_for_tables_for_inference:
-                with global_context(self.metadata.get(table, {}).get("format", {})):
-                    config_of_table = config_of_metadata_for_inference[table]
-                    train_settings = config_of_table["train_settings"]
-                    print_report = train_settings.get("print_report")
-                    both_keys = table in self.divided
+                global_context(self.metadata.get(table, {}).get("format", {}))
+                config_of_table = config_of_metadata_for_inference[table]
+                train_settings = config_of_table["train_settings"]
+                print_report = train_settings.get("print_report")
+                both_keys = table in self.divided
 
-                    custom_logger.info(f"Infer process of the table - {table} has started")
+                custom_logger.info(f"Infer process of the table - {table} has started")
 
-                    self.infer_strategy.run(
-                        metadata=self.metadata,
-                        size=None,
-                        table_name=table,
-                        metadata_path=self.metadata_path,
-                        run_parallel=False,
-                        batch_size=1000,
-                        random_seed=1,
-                        print_report=print_report,
-                        log_level=self.log_level,
-                        both_keys=both_keys
-                    )
+                self.infer_strategy.run(
+                    metadata=self.metadata,
+                    size=None,
+                    table_name=table,
+                    metadata_path=self.metadata_path,
+                    run_parallel=False,
+                    batch_size=1000,
+                    random_seed=1,
+                    print_report=print_report,
+                    log_level=self.log_level,
+                    both_keys=both_keys
+                )
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
         """
@@ -239,24 +239,24 @@ class Worker:
         :param config_of_tables: configuration of tables declared in metadata file
         """
         for table in tables:
-            with global_context(self.metadata.get(table, {}).get("format", {})):
-                custom_logger.info(f"Infer process of the table - {table} has started")
-                both_keys = table in self.divided
-                config_of_table = config_of_tables[table]
-                infer_settings = config_of_table["infer_settings"]
+            global_context(self.metadata.get(table, {}).get("format", {}))
+            custom_logger.info(f"Infer process of the table - {table} has started")
+            both_keys = table in self.divided
+            config_of_table = config_of_tables[table]
+            infer_settings = config_of_table["infer_settings"]
 
-                self.infer_strategy.run(
-                    metadata=self.metadata,
-                    size=infer_settings["size"],
-                    table_name=table,
-                    metadata_path=self.metadata_path,
-                    run_parallel=infer_settings["run_parallel"],
-                    batch_size=infer_settings["batch_size"],
-                    random_seed=infer_settings["random_seed"],
-                    print_report=infer_settings["print_report"],
-                    log_level=self.log_level,
-                    both_keys=both_keys
-                )
+            self.infer_strategy.run(
+                metadata=self.metadata,
+                size=infer_settings["size"],
+                table_name=table,
+                metadata_path=self.metadata_path,
+                run_parallel=infer_settings["run_parallel"],
+                batch_size=infer_settings["batch_size"],
+                random_seed=infer_settings["random_seed"],
+                print_report=infer_settings["print_report"],
+                log_level=self.log_level,
+                both_keys=both_keys
+            )
 
 
     @staticmethod
