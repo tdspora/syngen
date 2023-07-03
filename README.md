@@ -259,6 +259,7 @@ ORDER:                                      # Table name. Required parameter
     header: infer                           # Row number(s) to use as the column names, and the start of the data. Optional parameter  
     skiprows: None                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter
     on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
+    engine: c                               # Parser engine to use - ["c", "python"]. Optional parameter
     keys:                                   # Keys of the table. Optional parameter
       pk_order_id:
         type: "PK"

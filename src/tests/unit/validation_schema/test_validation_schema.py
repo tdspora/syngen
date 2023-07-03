@@ -219,7 +219,7 @@ def test_metadata_file_with_invalid_global_infer_settings(rp_logger, wrong_setti
                     "'engine': ['Not a valid string.']}}}"),
     ({"engine": "not a valid value"}, "Validation error(s) found in the metadata. "
                                       "The details are - {'fk_test': {'format': {"
-                                      "'engine': ['Must be one of: c, python, pyarrow.']}}}")
+                                      "'engine': ['Must be one of: c, python.']}}}"),
 ])
 def test_metadata_file_with_invalid_format_settings(rp_logger, wrong_setting, expected_error):
     rp_logger.info("Test the validation of the metadata  with format settings")
@@ -274,13 +274,4 @@ def test_metadata_file_with_invalid_FK_key(rp_logger):
                                "The details are - {'fk_test': {'keys': defaultdict(<class 'dict'>, {" \
                                "'fk_test_fk_id': {'value': {" \
                                "'_schema': [\"The 'references' field is required when 'type' is 'FK'\"]}}})}}"
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_metadata_file_with_format_options(rp_logger, caplog):
-    rp_logger.info("Test the validation of the metadata file with format options")
-    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_with_format_options.yaml")
-    with caplog.at_level(level="INFO"):
-        ValidationSchema(metadata).validate_schema()
-        assert "The metadata file is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)

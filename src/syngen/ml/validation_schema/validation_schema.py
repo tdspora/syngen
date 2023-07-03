@@ -65,7 +65,7 @@ class FormatSettingsSchema(Schema):
         required=False,
         validate=lambda x: isinstance(x, int) or (isinstance(x, list) and all(isinstance(elem, int) for elem in x)))
     on_bad_lines = CaseInsensitiveString(required=False, validate=validate.OneOf(["error", "warn", "skip"]))
-    engine = fields.String(required=False, validate=validate.OneOf(["c", "python", "pyarrow"]))
+    engine = fields.String(required=False, validate=validate.OneOf(["c", "python"]))
 
 
 class GlobalSettingsSchema(Schema):
