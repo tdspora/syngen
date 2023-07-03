@@ -180,9 +180,9 @@ def test_metadata_file_with_invalid_global_infer_settings(rp_logger, wrong_setti
 
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
-    ({"delimiter": 0}, "Validation error(s) found in the metadata. "
+    ({"sep": 0}, "Validation error(s) found in the metadata. "
                        "The details are - {'fk_test': {'format': {"
-                       "'delimiter': ['Not a valid string.']}}}"),
+                       "'sep': ['Not a valid string.']}}}"),
     ({"quotechar": 0}, "Validation error(s) found in the metadata. "
                        "The details are - {'fk_test': {'format': {"
                        "'quotechar': ['Not a valid string.']}}}"),

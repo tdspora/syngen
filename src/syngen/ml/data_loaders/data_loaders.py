@@ -9,7 +9,7 @@ import inspect
 import pandas as pd
 import pandavro as pdx
 import yaml
-from yaml import Loader
+from yaml import SafeLoader
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
 
@@ -18,6 +18,11 @@ from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.custom_logger import custom_logger
 from syngen.ml.context import get_context
+
+
+DELIMITERS = {
+    "\\t": "\t"
+}
 
 
 class BaseDataLoader(ABC):
@@ -97,7 +102,7 @@ class CSVLoader:
         return quoting_map.get(quoting.lower(), csv.QUOTE_NONE) if quoting else csv.QUOTE_NONE
 
     @staticmethod
-    def _get_csv_params(engine: str = "c", **kwargs):
+    def _get_csv_params(**kwargs):
         params = {}
         format_params = kwargs.get("format")
         
@@ -105,15 +110,14 @@ class CSVLoader:
             params.update(format_params)
             quoting = format_params.get("quoting", None)
             params["quoting"] = CSVLoader._get_quoting(quoting)
-            engine = format_params.pop("engine", engine)
             
-        return engine, params
+        return params
 
     @staticmethod
     def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, Dict]:
-        engine, params = CSVLoader._get_csv_params(**kwargs)
+        params = CSVLoader._get_csv_params(**kwargs)
         try:
-            df = pd.read_csv(path, engine=engine, **params).apply(trim_string, axis=0)
+            df = pd.read_csv(path, **params).apply(trim_string, axis=0)
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n"\
                       f"The details of the error - {error}.\n" \
@@ -136,13 +140,16 @@ class CSVLoader:
         :param df: The DataFrame to be saved.
         :param kwargs: Additional keyword arguments to be passed to the to_csv method.
         """
-        engine, format_params = CSVLoader._get_csv_params(**kwargs)
+        format_params = CSVLoader._get_csv_params(**kwargs)
         if df is not None:
             # Extract valid parameters
             valid_parameters = inspect.signature(pd.DataFrame.to_csv).parameters
             
             # Filter out any keyword arguments that are not valid parameters
             filtered_kwargs = {k: v for k, v in format_params.items() if k in valid_parameters}
+            for k, v in filtered_kwargs.items():
+                if isinstance(v, str) and v in DELIMITERS.keys():
+                    filtered_kwargs[k] = v.replace(v, DELIMITERS[v])
 
             # Save the DataFrame to a CSV file
             df.to_csv(path, **filtered_kwargs, index=False)
@@ -236,7 +243,7 @@ class YAMLLoader(BaseDataLoader):
     """
     def load_data(self, metadata_path: str) -> dict:
         with open(metadata_path, "r", encoding="utf-8") as metadata_file:
-            metadata = yaml.load(metadata_file, Loader=Loader)
+            metadata = yaml.load(metadata_file, Loader=SafeLoader)
             ValidationSchema(metadata).validate_schema()
             parameters = ["train_settings", "infer_settings", "keys"]
             metadata = self.replace_none_values_of_metadata_settings(parameters, metadata)

@@ -181,6 +181,16 @@ CUSTOMER:                                   # Table name. Required parameter
       categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
         - gender
         - marital_status
+        
+  format:                                   # Settings for reading and writing data in 'csv' format. Optional parameter
+    sep: ','                                # Delimiter to use. Optional parameter
+    quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter
+    quoting: 'All'                          # Control field quoting behavior per constants - ["all", "minimal", "non-numeric", "none"]. Optional parameter
+    escapechar: '"'                         # One-character string used to escape other characters. Optional parameter
+    encoding: 'utf-8'                       # A string representing the encoding to use in the output file. Optional parameter
+    header: 0                               # Row number(s) to use as the column names, and the start of the data. Optional parameter  
+    skiprows: 0                             # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter
+    on_bad_lines: skip                      # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
                  
   infer_settings:                           # Settings for infer process. Optional parameter
     size: 100                               # Size for generated data. Optional parameter

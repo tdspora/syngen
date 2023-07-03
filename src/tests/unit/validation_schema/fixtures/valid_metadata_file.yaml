@@ -29,7 +29,7 @@ fk_test:
     batch_size: 200
 
   format:
-    delimiter: ","
+    sep: ","
     quotechar: '"'
     quoting: "All"
     escapechar: '"'
