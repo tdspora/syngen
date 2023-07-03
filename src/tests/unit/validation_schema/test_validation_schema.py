@@ -178,6 +178,59 @@ def test_metadata_file_with_invalid_global_infer_settings(rp_logger, wrong_setti
     assert str(error.value) == expected_error
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
+@pytest.mark.parametrize("wrong_setting, expected_error", [
+    ({"delimiter": 0}, "Validation error(s) found in the metadata. "
+                       "The details are - {'fk_test': {'format': {"
+                       "'delimiter': ['Not a valid string.']}}}"),
+    ({"quotechar": 0}, "Validation error(s) found in the metadata. "
+                       "The details are - {'fk_test': {'format': {"
+                       "'quotechar': ['Not a valid string.']}}}"),
+    ({"quotechar": "value with more than one character"}, "Validation error(s) found in the metadata. "
+                                                          "The details are - {'fk_test': {'format': {"
+                                                          "'quotechar': ['Length must be 1.']}}}"),
+    ({"quoting": 0}, "Validation error(s) found in the metadata. "
+                     "The details are - {'fk_test': {'format': {"
+                     "'quoting': ['Not a valid string.']}}}"),
+    ({"quoting": "not a valid value"}, "Validation error(s) found in the metadata. "
+                                       "The details are - {'fk_test': {'format': {"
+                                       "'quoting': ['Must be one of: minimal, all, non-numeric, none.']}}}"),
+    ({"escapechar": 0}, "Validation error(s) found in the metadata. "
+                        "The details are - {'fk_test': {'format': {'escapechar': ['Not a valid string.']}}}"),
+    ({"escapechar": "value with more than one character"}, "Validation error(s) found in the metadata. "
+                                                           "The details are - {'fk_test': {'format': {"
+                                                           "'escapechar': ['Length must be 1.']}}}"),
+    ({"encoding": 0}, "Validation error(s) found in the metadata. "
+                      "The details are - {'fk_test': {'format': {"
+                      "'encoding': ['Not a valid string.']}}}"),
+    ({"header": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
+                                                "The details are - {'fk_test': {'format': {"
+                                                "'header': ['Invalid value.']}}}"),
+    ({"skiprows": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
+                                                  "The details are - {'fk_test': {'format': {"
+                                                  "'skiprows': ['Invalid value.']}}}"),
+    ({"on_bad_lines": 0}, "Validation error(s) found in the metadata. "
+                          "The details are - {'fk_test': {'format': {'on_bad_lines': ['Not a valid string.']}}}"),
+    ({"on_bad_lines": "not a valid value"}, "Validation error(s) found in the metadata. "
+                                            "The details are - {'fk_test': {'format': {"
+                                            "'on_bad_lines': ['Must be one of: error, warn, skip.']}}}"),
+    ({"engine": 0}, "Validation error(s) found in the metadata. "
+                    "The details are - {'fk_test': {'format': {"
+                    "'engine': ['Not a valid string.']}}}"),
+    ({"engine": "not a valid value"}, "Validation error(s) found in the metadata. "
+                                      "The details are - {'fk_test': {'format': {"
+                                      "'engine': ['Must be one of: c, python, pyarrow.']}}}")
+])
+def test_metadata_file_with_invalid_format_settings(rp_logger, wrong_setting, expected_error):
+    rp_logger.info("Test the validation of the metadata  with format settings")
+    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml")
+    metadata["fk_test"]["format"].update(wrong_setting)
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(metadata).validate_schema()
+    assert str(error.value) == expected_error
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_metadata_file_with_absent_required_fields(rp_logger):
     rp_logger.info("Test the validation of the metadata file with absent required fields")
     metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_without_required_fields.yaml")

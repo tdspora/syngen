@@ -28,6 +28,16 @@ fk_test:
     print_report: true
     batch_size: 200
 
+  format:
+    delimiter: ","
+    quotechar: '"'
+    quoting: "All"
+    escapechar: '"'
+    encoding: "utf-8"
+    header: 0
+    skiprows: 0
+    on_bad_lines: skip
+
   infer_settings:
     size: 90
     run_parallel: False
