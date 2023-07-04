@@ -100,10 +100,10 @@ class ValidationSchema:
                     self.configuration_schema.load(self.metadata[table_name])
             except ValidationError as err:
                 errors[table_name] = err.messages
-            else:
-                custom_logger.info("The metadata file is valid")
         if errors:
             custom_logger.error("Validation error(s) found in the metadata")
             for section, errors_details in errors.items():
                 custom_logger.error(f"The error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}")
             raise ValidationError(f"Validation error(s) found in the metadata. The details are - {errors}")
+        if not errors:
+            custom_logger.info("The metadata file is valid")
