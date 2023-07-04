@@ -1,0 +1,5 @@
+pk_test:
+  source: ./data/pk_test.csv
+
+fk_test:
+  source: ./data/fk_test.csv

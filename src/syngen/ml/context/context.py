@@ -1,5 +1,4 @@
 from typing import Dict
-from contextlib import contextmanager
 import copy
 
 class Context:
@@ -21,9 +20,7 @@ def get_context() -> Context:
         _config_instance = Context()
     return _config_instance
 
-@contextmanager
-def global_context(metadata: Dict) -> Context:
+
+def global_context(metadata: Dict):
     global_config = get_context()
     global_config.set_config(metadata)
-
-    yield global_config

@@ -1,8 +1,9 @@
 from unittest.mock import patch, mock_open
 import pytest
+import os
+
 import pandas as pd
 from pandas.testing import assert_frame_equal
-import os
 
 from syngen.ml.data_loaders import (
     DataLoader,
@@ -12,6 +13,7 @@ from syngen.ml.data_loaders import (
     MetadataLoader,
     YAMLLoader
 )
+from syngen.ml.context import global_context, get_context
 from tests.conftest import SUCCESSFUL_MESSAGE
 
 
@@ -374,7 +376,7 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     # Mock the open function, yaml.load, and validate_schema
     with patch('builtins.open', mock_open(read_data='data')) as m:
         with patch('yaml.load') as mock_yaml_load:
-            with patch('syngen.ml.validation_schema.validate_schema') as mock_validate_schema:
+            with patch('syngen.ml.validation_schema.ValidationSchema.validate_schema') as mock_validate_schema:
                 mock_yaml_load.return_value = expected_metadata
                 metadata = loader.load_data('tests/unit/data_loaders/fixtures/metadata/metadata.yaml')
 
@@ -415,7 +417,7 @@ def test_load_metadata_by_yaml_loader_in_yml_format(rp_logger):
     # Mock the open function, yaml.load, and validate_schema
     with patch('builtins.open', mock_open(read_data='data')) as m:
         with patch('yaml.load') as mock_yaml_load:
-            with patch('syngen.ml.validation_schema.validate_schema') as mock_validate_schema:
+            with patch('syngen.ml.validation_schema.ValidationSchema.validate_schema') as mock_validate_schema:
                 mock_yaml_load.return_value = expected_metadata
                 metadata = loader.load_data('tests/unit/data_loaders/fixtures/metadata/metadata.yml')
 
@@ -472,34 +474,192 @@ def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
 
 
 def test_load_pipe_delimited_csv(rp_logger):
-    path_source = "tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited.csv"
-    rp_logger.info(f"Loading CSV with pipe delimiter {path_source}")
-    data, schema = DataLoader(path_source, { 'sep': '|', 'quoting': 'None' }).load_data()
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.csv"
+    rp_logger.info(f"Loading CSV with pipe delimiter")
+    global_context({'sep': '|', 'quoting': 'None'})
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_pipe_delimited_csv(test_csv_path, rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.csv"
+    rp_logger.info(f"Saving CSV with pipe delimiter")
+    format_params = {'sep': '|', 'quoting': 'None'}
+    global_context(format_params)
+    data, schema = CSVLoader().load_data(path_source)
+    assert format_params == get_context().get_config()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_semicolon_delimited_csv(rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/semicolon_delimited_text.csv"
+    rp_logger.info(f"Loading CSV with semicolon delimiter")
+    global_context({'sep': ';',  'quoting': 'None'})
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_semicolon_delimited_csv(test_csv_path, rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/semicolon_delimited_text.csv"
+    rp_logger.info(f"Saving CSV with semicolon delimiter")
+    format_settings = {'sep': ';',  'quoting': 'None'}
+    global_context(format_settings)
+    data, schema = CSVLoader().load_data(path_source)
+    assert format_settings == get_context().get_config()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.count().max() == 15
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_tab_delimited_csv(rp_logger):
-    path_source = "tests/unit/data_loaders/fixtures/csv_tables/tab_delimited.csv"
-    rp_logger.info(f"Loading CSV with tab delimiter {path_source}")
-    data, schema = DataLoader(path_source, { 'sep': '\t', 'quoting': 'None' }).load_data()
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.csv"
+    rp_logger.info(f"Loading CSV with tab delimiter")
+    global_context({'sep': '\t', 'quoting': 'None', 'engine': 'python'})
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_tab_delimited_csv(test_csv_path, rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.csv"
+    rp_logger.info(f"Saving CSV with tab delimiter")
+    format_params = {'delimiter': '\t', 'quoting': 'None'}
+    global_context(format_params)
+    data, schema = CSVLoader().load_data(path_source)
+    assert format_params == get_context().get_config()
+    CSVLoader().save_data(test_csv_path, data, format=format_params)
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.count().max() == 15
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_multiline_bad_line_csv(rp_logger):
     path_source = "tests/unit/data_loaders/fixtures/csv_tables/multiline_bad_line_text.csv"
-    rp_logger.info(f"Loading CSV with multiline texts {path_source}")
-    data, schema = DataLoader(path_source, 
-                              { 
-                               'sep': ',',
-                               'quoting': 'all',
-                               'quotechar': '"',
-                               'escapechar': '\\',
-                               'skiprows': 1,
-                               'encoding': 'utf-8',
-                               'on_bad_lines': 'skip'
-                               }
-                              ).load_data()
+    rp_logger.info(f"Loading CSV with multiline texts")
+    global_context({
+        'delimiter': ',',
+        'quoting': 'all',
+        'quotechar': '"',
+        'escapechar': '\\',
+        'skiprows': 1,
+        'encoding': 'utf-8',
+        'on_bad_lines': 'skip'
+    })
+    data, schema = CSVLoader().load_data(path_source)
     assert data.count().max() == 12
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_multiline_bad_line_csv(test_csv_path, rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/multiline_bad_line_text.csv"
+    rp_logger.info(f"Saving CSV with multiline texts")
+    format_settings = {
+        'sep': ',',
+        'quoting': 'all',
+        'quotechar': '"',
+        'escapechar': '\\',
+        'skiprows': 1,
+        'encoding': 'utf-8',
+        'on_bad_lines': 'skip'
+    }
+    global_context(format_settings)
+    data, schema = CSVLoader().load_data(path_source)
+    assert format_settings == get_context().get_config()
+    CSVLoader().save_data(test_csv_path, data, format=format_settings)
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 11
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_double_quoted_csv(rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/double_quoted_text.csv"
+    rp_logger.info(f"Loading CSV with double quoted values")
+    global_context({'sep': ',', 'quotechar': '"'})
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_double_quoted_csv(test_csv_path, rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/double_quoted_text.csv"
+    rp_logger.info(f"Saving CSV with double quoted values")
+    format_settings = {'sep': ',', 'quotechar': '"'}
+    global_context(format_settings)
+    data, schema = CSVLoader().load_data(path_source)
+    assert format_settings == get_context().get_config()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_escaped_quoted_csv(rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/escaped_quoted_text.csv"
+    rp_logger.info(f"Loading CSV with escaped quoted values")
+    global_context({'sep': ',', 'quotechar': '"'})
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_csv_without_header(rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_without_header.csv"
+    rp_logger.info(f"Loading CSV without the header")
+    global_context({'sep': ',', 'header': None, 'encoding': 'ascii'})
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 7
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_csv_without_header(test_csv_path, rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_without_header.csv"
+    rp_logger.info(f"Saving CSV without the header")
+    format_settings = {'sep': ',', 'header': None, 'encoding': 'ascii'}
+    global_context(format_settings)
+    data, schema = CSVLoader().load_data(path_source)
+    assert format_settings == get_context().get_config()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 7
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+def test_load_csv_with_json(rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_contained_nested_structures.csv"
+    rp_logger.info(f"Loading CSV contained the fields with nested structures")
+    global_context({
+        'sep': ',',
+        'quotechar': '"',
+        'quoting': 'non-numeric',
+        'escapechar': '\\',
+        'encoding': 'utf-8',
+        'on_bad_lines': 'skip'
+    })
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 8
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_csv_with_nested_structures(test_csv_path, rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_contained_nested_structures.csv"
+    rp_logger.info(f"Saving CSV contained the fields with nested structures")
+    format_settings = {
+        'sep': ',',
+        'quotechar': '"',
+        'quoting': 'non-numeric',
+        'escapechar': '\\',
+        'encoding': 'utf-8',
+        'on_bad_lines': 'skip'
+    }
+    global_context(format_settings)
+    data, schema = CSVLoader().load_data(path_source)
+    assert format_settings == get_context().get_config()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 8
     rp_logger.info(SUCCESSFUL_MESSAGE)

@@ -4,20 +4,25 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict, Tuple
 import pickle
 import csv
-import copy
 import inspect
 
 import pandas as pd
 import pandavro as pdx
 import yaml
-from yaml import Loader
+from yaml import SafeLoader
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
 
-from syngen.ml.validation_schema import validate_schema
+from syngen.ml.validation_schema import ValidationSchema
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.custom_logger import custom_logger
+from syngen.ml.context import get_context
+
+
+DELIMITERS = {
+    "\\t": "\t"
+}
 
 
 class BaseDataLoader(ABC):
@@ -39,11 +44,10 @@ class DataLoader(BaseDataLoader):
     Base class for loading and saving data either in csv or in avro format
     """
 
-    def __init__(self, path: str, format: Dict = None):
+    def __init__(self, path: str):
         if not path:
             raise ValueError("It seems that the information of source is absent")
         self.path = path
-        self.format = format
         self.file_loader = self.__get_file_loader()
         self.has_existed_path = self.check_if_path_exists()
 
@@ -63,9 +67,9 @@ class DataLoader(BaseDataLoader):
         else:
             raise NotImplementedError(f"File format not supported for extension {path.suffix}")
 
-    def load_data(self) -> Tuple[pd.DataFrame, Dict]:
+    def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         try:
-            df, schema = self.file_loader.load_data(self.path, format=self.format)
+            df, schema = self.file_loader.load_data(self.path, **kwargs)
             if df.shape[0] < 1:
                 raise ValueError("Empty file was provided. Unable to train")
             return df, schema
@@ -77,56 +81,47 @@ class DataLoader(BaseDataLoader):
             raise ValueError(message)
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
-        self.file_loader.save_data(path, df, format=self.format)
+        self.file_loader.save_data(path, df, **kwargs)
 
 
 class CSVLoader:
     """
     Class for loading and saving data in CSV format.
     """
-    
-    RFC_4180 = {
-        'sep': ',',
-        'quotechar': '"',
-        'quoting': csv.QUOTE_MINIMAL,
-        'escapechar': '\\'
-    }
+    def __init__(self):
+        self.format = get_context().get_config()
 
     @staticmethod
     def _get_quoting(quoting: Optional[str]) -> int:
         quoting_map = {
-            'minimal': csv.QUOTE_MINIMAL,
-            'all': csv.QUOTE_ALL,
-            'non-numeric': csv.QUOTE_NONNUMERIC,
-            'none': csv.QUOTE_NONE
+            "minimal": csv.QUOTE_MINIMAL,
+            "all": csv.QUOTE_ALL,
+            "non-numeric": csv.QUOTE_NONNUMERIC,
+            "none": csv.QUOTE_NONE
         }
         return quoting_map.get(quoting.lower(), csv.QUOTE_NONE) if quoting else csv.QUOTE_NONE
 
     @staticmethod
-    def _get_csv_params(engine: str = 'c', **kwargs):
-        params = copy.deepcopy(CSVLoader.RFC_4180)
-        params.update(kwargs)
-        format_params = kwargs.get('format')
+    def _get_csv_params(**kwargs):
+        params = {}
+        format_params = kwargs.get("format")
         
         if format_params:
-            params['quoting'] = CSVLoader._get_quoting(format_params.pop('quoting', None))
-            engine = format_params.pop('engine', engine)
             params.update(format_params)
-        if 'format' in kwargs.keys():
-            params.pop('format')
+            quoting = format_params.get("quoting", None)
+            params["quoting"] = CSVLoader._get_quoting(quoting)
             
-        return engine, params
+        return params
 
     @staticmethod
     def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, Dict]:
-        engine, params = CSVLoader._get_csv_params(**kwargs)
-        
+        params = CSVLoader._get_csv_params(**kwargs)
         try:
-            df = pd.read_csv(path, engine=engine, **params).apply(trim_string, axis=0)
+            df = pd.read_csv(path, **params).apply(trim_string, axis=0)
         except FileNotFoundError as error:
-            message = (f"It seems that the path to the table isn't valid.\n"
-                       f"The details of the error - {error}.\n"
-                       f"Please, check the path to the table")
+            message = f"It seems that the path to the table isn't valid.\n"\
+                      f"The details of the error - {error}.\n" \
+                      f"Please, check the path to the table"
             custom_logger.error(message)
             raise FileNotFoundError(message)
         
@@ -134,7 +129,7 @@ class CSVLoader:
 
 
     def load_data(self, path, **kwargs):
-        return self._load_data(path, **kwargs)
+        return self._load_data(path, format=self.format, **kwargs)
 
     @staticmethod
     def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
@@ -145,13 +140,17 @@ class CSVLoader:
         :param df: The DataFrame to be saved.
         :param kwargs: Additional keyword arguments to be passed to the to_csv method.
         """
+        format_params = CSVLoader._get_csv_params(**kwargs)
         if df is not None:
             # Extract valid parameters
             valid_parameters = inspect.signature(pd.DataFrame.to_csv).parameters
             
             # Filter out any keyword arguments that are not valid parameters
-            filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_parameters}
-            
+            filtered_kwargs = {k: v for k, v in format_params.items() if k in valid_parameters}
+            for k, v in filtered_kwargs.items():
+                if isinstance(v, str) and v in DELIMITERS.keys():
+                    filtered_kwargs[k] = v.replace(v, DELIMITERS[v])
+
             # Save the DataFrame to a CSV file
             df.to_csv(path, **filtered_kwargs, index=False)
         
@@ -169,7 +168,7 @@ class AvroLoader(BaseDataLoader):
     def _load_df(path) -> pd.DataFrame:
         """
         Load data in Avro format
-        :param path: the path to the the file
+        :param path: the path to the file
         :return: dataframe
         """
         return pdx.from_avro(path)
@@ -198,7 +197,7 @@ class AvroLoader(BaseDataLoader):
     @staticmethod
     def save_data(path: str, df: pd.DataFrame, **kwargs):
         if df is not None:
-            pdx.to_avro(path, df, **kwargs)
+            pdx.to_avro(path, df)
 
     @staticmethod
     def _load_schema(f, df) -> Tuple[Dict[str, str], pd.DataFrame]:
@@ -244,8 +243,8 @@ class YAMLLoader(BaseDataLoader):
     """
     def load_data(self, metadata_path: str) -> dict:
         with open(metadata_path, "r", encoding="utf-8") as metadata_file:
-            metadata = yaml.load(metadata_file, Loader=Loader)
-            validate_schema(metadata)
+            metadata = yaml.load(metadata_file, Loader=SafeLoader)
+            ValidationSchema(metadata).validate_schema()
             parameters = ["train_settings", "infer_settings", "keys"]
             metadata = self.replace_none_values_of_metadata_settings(parameters, metadata)
         return metadata

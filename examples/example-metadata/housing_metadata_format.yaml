@@ -24,15 +24,16 @@ housing_properties:                       # Use table name here
     random_seed: 10                       # Ensure reproducible tables generation
     print_report: true                    # Turn on or turn off generation of the report
 
-  source: "./examples/example-data/housing_properties.csv"# Supported formats include cloud storage locations, local files
+  source: ./examples/example-data/housing_properties.csv # Supported formats include cloud storage locations, local files
   format:
-    delimiter: ','
-    quote_char: '"'
+    sep: ','
+    quotechar: '"'
     quoting: 'All'
-    escape_char: '"'
-    encoding: 'utf8'
-    no-header-row: false
-    skip-lines: 0
+    escapechar: '"'
+    encoding: 'utf-8'
+    header: 0
+    skiprows: 0
+    on_bad_lines: skip
 
   keys:                                   # Keys of the table
     households_pk:                        # Name of a key
@@ -56,7 +57,7 @@ housing_conditions:
     random_seed: 10
     print_report: true
 
-  source: "./examples/example-data/housing_conditions.csv"
+  source: ./examples/example-data/housing_conditions.csv
   keys:
     households_fk:
       type: "FK"
