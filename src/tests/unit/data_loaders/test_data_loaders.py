@@ -663,3 +663,32 @@ def test_save_csv_with_nested_structures(test_csv_path, rp_logger):
     data, schema = CSVLoader().load_data(test_csv_path)
     assert data.count().max() == 8
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+
+def test_load_csv_with_triple_colons(rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/multicolon_delimited_text.csv"
+    rp_logger.info(f"Loading CSV contained the fields separated by triple colons")
+    global_context({
+        'sep': ':::',
+        'quotechar': 'None'
+    })
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_csv_with_triple_colons(test_csv_path, rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/multicolon_delimited_text.csv"
+    rp_logger.info(f"Saving CSV contained the fields with triple colons")
+    format_settings = {
+        'sep': ':::',
+        'quotechar': 'None'
+    }
+    global_context(format_settings)
+    data, schema = CSVLoader().load_data(path_source)
+    assert format_settings == get_context().get_config()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)

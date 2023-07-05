@@ -17,7 +17,7 @@ from syngen.ml.validation_schema import ValidationSchema
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.custom_logger import custom_logger
-from syngen.ml.context import get_context
+from syngen.ml.context import get_context, global_context
 
 
 DELIMITERS = {
@@ -99,7 +99,10 @@ class CSVLoader:
             "non-numeric": csv.QUOTE_NONNUMERIC,
             "none": csv.QUOTE_NONE
         }
-        return quoting_map.get(quoting.lower(), csv.QUOTE_NONE) if quoting else csv.QUOTE_NONE
+        if isinstance(quoting, int):
+            return quoting
+        else:
+            return quoting_map.get(quoting.lower(), csv.QUOTE_NONE) if quoting else csv.QUOTE_NONE
 
     @staticmethod
     def _get_csv_params(**kwargs):
@@ -118,6 +121,16 @@ class CSVLoader:
         params = CSVLoader._get_csv_params(**kwargs)
         try:
             df = pd.read_csv(path, **params).apply(trim_string, axis=0)
+            if all([isinstance(column, int) for column in df.columns]):
+                df.rename(
+                    columns={k: f"column_{v}" for k, v in zip(df.columns, list(range(len(df.columns))))},
+                    inplace=True
+                )
+            sep = params.get("sep", ",")
+            if len(sep) > 1:
+                params["sep"] = ","
+            params["skiprows"] = None
+            global_context(params)
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n"\
                       f"The details of the error - {error}.\n" \
@@ -150,6 +163,18 @@ class CSVLoader:
             for k, v in filtered_kwargs.items():
                 if isinstance(v, str) and v in DELIMITERS.keys():
                     filtered_kwargs[k] = v.replace(v, DELIMITERS[v])
+
+            if "header" in filtered_kwargs and filtered_kwargs.get("header", None) is None:
+                filtered_kwargs["header"] = False
+            else:
+                filtered_kwargs["header"] = True
+
+            if "sep" in filtered_kwargs and len(filtered_kwargs.get("sep", None)) > 1:
+                filtered_kwargs["sep"] = ","
+                custom_logger.warning(
+                    "As the length of the value of the parameter 'separator' is more than 1 character,"
+                    "the 'separator' will be set to ',' in accordance with the standard 'RFC 4180'"
+                )
 
             # Save the DataFrame to a CSV file
             df.to_csv(path, **filtered_kwargs, index=False)
