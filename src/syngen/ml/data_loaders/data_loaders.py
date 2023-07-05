@@ -99,7 +99,10 @@ class CSVLoader:
             "non-numeric": csv.QUOTE_NONNUMERIC,
             "none": csv.QUOTE_NONE
         }
-        return quoting_map.get(quoting.lower(), csv.QUOTE_NONE) if quoting else csv.QUOTE_NONE
+        if isinstance(quoting, int):
+            return quoting
+        else:
+            return quoting_map.get(quoting.lower(), csv.QUOTE_NONE) if quoting else csv.QUOTE_NONE
 
     @staticmethod
     def _get_csv_params(**kwargs):
@@ -126,7 +129,8 @@ class CSVLoader:
             sep = params.get("sep", ",")
             if len(sep) > 1:
                 params["sep"] = ","
-                global_context(params)
+            params["skiprows"] = None
+            global_context(params)
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n"\
                       f"The details of the error - {error}.\n" \
