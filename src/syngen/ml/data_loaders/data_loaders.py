@@ -17,7 +17,7 @@ from syngen.ml.validation_schema import ValidationSchema
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.custom_logger import custom_logger
-from syngen.ml.context import get_context
+from syngen.ml.context import get_context, global_context
 
 
 DELIMITERS = {
@@ -123,6 +123,10 @@ class CSVLoader:
                     columns={k: f"column_{v}" for k, v in zip(df.columns, list(range(len(df.columns))))},
                     inplace=True
                 )
+            sep = params.get("sep", ",")
+            if len(sep) > 1:
+                params["sep"] = ","
+                global_context(params)
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n"\
                       f"The details of the error - {error}.\n" \
