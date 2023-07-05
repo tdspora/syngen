@@ -157,7 +157,7 @@ global:                                     # Global settings. Optional paramete
   train_settings:                           # Settings for training process. Optional parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
-    row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
+    row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
     
@@ -165,8 +165,8 @@ global:                                     # Global settings. Optional paramete
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
-    batch_size: None                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
-    random_seed: None                       # If specified, generates a reproducible result. Optional parameter
+    batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
+    random_seed: null                       # If specified, generates a reproducible result. Optional parameter
 
 CUSTOMER:                                   # Table name. Required parameter
   source: "./files/customer.csv"            # Supported formats include local files in CSV, Avro formats. Required parameter
@@ -174,7 +174,7 @@ CUSTOMER:                                   # Table name. Required parameter
   train_settings:                           # Settings for training process. Optional parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
-    row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
+    row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
     column_types:
@@ -187,17 +187,17 @@ CUSTOMER:                                   # Table name. Required parameter
     quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter
     quoting: minimal                        # Control field quoting behavior per constants - ["all", "minimal", "non-numeric", "none"]. Optional parameter
     escapechar: '"'                         # One-character string used to escape other characters. Optional parameter
-    encoding: None                          # A string representing the encoding to use in the output file. Optional parameter
+    encoding: null                          # A string representing the encoding to use in the output file. Optional parameter
     header: infer                           # Row number(s) to use as the column names, and the start of the data. Optional parameter  
-    skiprows: None                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter
+    skiprows: null                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter
     on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
                  
   infer_settings:                           # Settings for infer process. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
-    batch_size: None                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
-    random_seed: None                       # If specified, generates a reproducible result. Optional parameter
+    batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
+    random_seed: null                       # If specified, generates a reproducible result. Optional parameter
   keys:                                     # Keys of the table. Optional parameter
     PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
       type: "PK"                            # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
@@ -236,7 +236,7 @@ ORDER:                                      # Table name. Required parameter
   train_settings:                           # Settings for training process. Optional parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
-    row_limit: None                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
+    row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
     column_types:
@@ -248,16 +248,16 @@ ORDER:                                      # Table name. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
-    batch_size: None                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
-    random_seed: None                       # If specified, generates a reproducible result. Optional parameter
+    batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
+    random_seed: null                       # If specified, generates a reproducible result. Optional parameter
   format:                                   # Settings for reading and writing data in 'csv' format. Optional parameter
     sep: ','                                # Delimiter to use. Optional parameter
     quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter
     quoting: minimal                        # Control field quoting behavior per constants - ["all", "minimal", "non-numeric", "none"]. Optional parameter
     escapechar: '"'                         # One-character string used to escape other characters. Optional parameter
-    encoding: None                          # A string representing the encoding to use in the output file. Optional parameter
+    encoding: null                          # A string representing the encoding to use in the output file. Optional parameter
     header: infer                           # Row number(s) to use as the column names, and the start of the data. Optional parameter  
-    skiprows: None                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter
+    skiprows: null                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter
     on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
     engine: c                               # Parser engine to use - ["c", "python"]. Optional parameter
     keys:                                   # Keys of the table. Optional parameter
