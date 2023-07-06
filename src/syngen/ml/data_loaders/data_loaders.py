@@ -60,8 +60,12 @@ class DataLoader(BaseDataLoader):
         path = Path(self.path)
         if path.suffix == '.avro':
             return AvroLoader()
-        elif path.suffix == '.csv':
+        elif path.suffix in ['.csv', '.txt']:
             return CSVLoader()
+        elif path.suffix == '.tcv':
+            return CSVLoader(sep="\t")
+        elif path.suffix == '.pcv':
+            return CSVLoader(sep="|")
         elif path.suffix == ".pkl":
             return BinaryLoader()
         else:
@@ -88,8 +92,10 @@ class CSVLoader:
     """
     Class for loading and saving data in CSV format.
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.format = get_context().get_config()
+        self.format.update(kwargs)
+        global_context(self.format)
 
     @staticmethod
     def _get_quoting(quoting: Optional[str]) -> int:
