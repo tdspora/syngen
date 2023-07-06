@@ -741,3 +741,77 @@ def test_save_csv_with_triple_colons(test_csv_path, rp_logger):
     data, schema = CSVLoader().load_data(test_csv_path)
     assert data.count().max() == 15
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_text_file(rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.txt"
+    rp_logger.info(f"Loading table with data in '.txt' format")
+    global_context({})
+    assert get_context().get_config() == {}
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_text_file(test_csv_path, rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.txt"
+    rp_logger.info(f"Saving CSV table in '.txt' format")
+    global_context({})
+    data, schema = CSVLoader().load_data(path_source)
+    assert get_context().get_config() == {"skiprows": None}
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_pcv_file(rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.pcv"
+    rp_logger.info(f"Loading table with data in '.pcv' format")
+    global_context({"sep": "|"})
+    assert get_context().get_config() == {"sep": "|"}
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_pcv_file(test_csv_path, rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.pcv"
+    rp_logger.info(f"Saving CSV table in '.pcv' format")
+    global_context({"sep": "|"})
+    data, schema = CSVLoader().load_data(path_source)
+    assert get_context().get_config() == {
+        "sep": "|",
+        "quoting": 3,
+        "skiprows": None
+    }
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_tcv_file(rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.tcv"
+    rp_logger.info(f"Loading table with data in '.tcv' format")
+    global_context({"sep": "\t"})
+    assert get_context().get_config() == {"sep": "\t"}
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_tcv_file(test_csv_path, rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.tcv"
+    rp_logger.info(f"Saving CSV table in '.tcv' format")
+    global_context({"sep": "\t"})
+    data, schema = CSVLoader().load_data(path_source)
+    assert get_context().get_config() == {
+        "sep": "\t",
+        "quoting": 3,
+        "skiprows": None
+    }
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)

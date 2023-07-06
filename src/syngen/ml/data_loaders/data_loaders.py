@@ -63,7 +63,7 @@ class DataLoader(BaseDataLoader):
         elif path.suffix in ['.csv', '.txt']:
             return CSVLoader()
         elif path.suffix == '.tcv':
-            return CSVLoader(sep="/t")
+            return CSVLoader(sep="\t")
         elif path.suffix == '.pcv':
             return CSVLoader(sep="|")
         elif path.suffix == ".pkl":
@@ -95,6 +95,7 @@ class CSVLoader:
     def __init__(self, **kwargs):
         self.format = get_context().get_config()
         self.format.update(kwargs)
+        global_context(self.format)
 
     @staticmethod
     def _get_quoting(quoting: Optional[str]) -> int:
