@@ -766,7 +766,7 @@ def test_save_text_file(test_csv_path, rp_logger):
 
 
 def test_load_pcv_file(rp_logger):
-    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.pcv"
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.psv"
     rp_logger.info(f"Loading table with data in '.pcv' format")
     global_context({"sep": "|"})
     assert get_context().get_config() == {"sep": "|"}
@@ -776,7 +776,7 @@ def test_load_pcv_file(rp_logger):
 
 
 def test_save_pcv_file(test_csv_path, rp_logger):
-    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.pcv"
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.psv"
     rp_logger.info(f"Saving CSV table in '.pcv' format")
     global_context({"sep": "|"})
     data, schema = CSVLoader().load_data(path_source)
@@ -792,7 +792,7 @@ def test_save_pcv_file(test_csv_path, rp_logger):
 
 
 def test_load_tcv_file(rp_logger):
-    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.tcv"
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.tsv"
     rp_logger.info(f"Loading table with data in '.tcv' format")
     global_context({"sep": "\t"})
     assert get_context().get_config() == {"sep": "\t"}
@@ -802,7 +802,7 @@ def test_load_tcv_file(rp_logger):
 
 
 def test_save_tcv_file(test_csv_path, rp_logger):
-    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.tcv"
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.tsv"
     rp_logger.info(f"Saving CSV table in '.tcv' format")
     global_context({"sep": "\t"})
     data, schema = CSVLoader().load_data(path_source)

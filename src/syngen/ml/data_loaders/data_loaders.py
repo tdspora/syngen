@@ -62,9 +62,9 @@ class DataLoader(BaseDataLoader):
             return AvroLoader()
         elif path.suffix in ['.csv', '.txt']:
             return CSVLoader()
-        elif path.suffix == '.tcv':
+        elif path.suffix == '.tsv':
             return CSVLoader(sep="\t")
-        elif path.suffix == '.pcv':
+        elif path.suffix == '.psv':
             return CSVLoader(sep="|")
         elif path.suffix == ".pkl":
             return BinaryLoader()
