@@ -1,5 +1,6 @@
 from abc import abstractmethod
-from typing import List, Dict
+from typing import Dict
+import itertools
 
 import pandas as pd
 import numpy as np
@@ -109,7 +110,7 @@ class Report:
     Singleton metaclass for registration all needed reporters
     """
 
-    __reporters: List[Reporter] = []
+    _reporters: Dict[str, Reporter] = {}
 
     def __new__(cls):
         if not hasattr(cls, "instance"):
@@ -117,26 +118,33 @@ class Report:
         return cls.instance
 
     @classmethod
-    def register_reporter(cls, reporter: Reporter):
+    def register_reporter(cls, table: str, reporter: Reporter):
         """
         Register all needed reporters
         """
-        cls.__reporters.append(reporter)
+        list_of_reporters = cls._reporters.get(table, [])
+        list_of_reporters.append(reporter)
+        cls._reporters[table] = list_of_reporters
 
     @classmethod
     def clear_report(cls):
         """
         Delete unnecessary reporters
         """
-        cls.__reporters.clear()
+        cls._reporters.clear()
 
     @classmethod
     def generate_report(cls):
         """
         Generate all needed reports
         """
-        for reporter in cls.__reporters:
+        list_of_reporters = itertools.chain.from_iterable(cls._reporters.values())
+        for reporter in list_of_reporters:
             reporter.report()
+
+    @property
+    def reporters(self) -> Dict[str, Reporter]:
+        return self._reporters
 
 
 class AccuracyReporter(Reporter):
