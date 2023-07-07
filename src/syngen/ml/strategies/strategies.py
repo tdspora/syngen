@@ -124,7 +124,10 @@ class TrainStrategy(Strategy, ABC):
                 paths=self.config.paths,
                 config=self.config.to_dict()
             )
-            Report().register_reporter(sample_reporter)
+            Report().register_reporter(
+                table=self.config.table_name,
+                reporter=sample_reporter
+            )
 
         return self
 
@@ -201,7 +204,10 @@ class InferStrategy(Strategy):
                 paths=self.config.paths,
                 config=self.config.to_dict()
             )
-            Report().register_reporter(accuracy_reporter)
+            Report().register_reporter(
+                table=self.config.table_name,
+                reporter=accuracy_reporter
+            )
 
         return self
 
