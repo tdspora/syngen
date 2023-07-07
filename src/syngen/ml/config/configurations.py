@@ -14,7 +14,6 @@ class TrainConfig:
     The configuration class to set up the work of train process
     """
     source: Optional[str]
-    destination: Optional[str]
     epochs: int
     drop_null: bool
     row_limit: Optional[int]
@@ -167,8 +166,7 @@ class TrainConfig:
             "fk_kde_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/stat_keys/",
             "original_data_path":
                 f"model_artifacts/tmp_store/{self.slugify_table_name}/input_data_{self.slugify_table_name}.pkl",
-            "path_to_merged_infer": self.destination if self.destination is not None \
-                else f"model_artifacts/tmp_store/{self.slugify_table_name}/merged_infer_{self.slugify_table_name}.csv",
+            "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path": f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
         }
 

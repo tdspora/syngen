@@ -347,7 +347,7 @@ class VaeInferHandler(BaseHandler):
         Set the path to synthetic data of corresponding pk table
         """
         destination_to_pk_table = self.metadata[pk_table].get("destination")
-        pk_path = destination_to_pk_table if destination_to_pk_table is not None else "model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
+        pk_path = destination_to_pk_table if destination_to_pk_table is not None else f"model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
         if not os.path.exists(pk_path):
             raise FileNotFoundError(
                 "The table with a primary key specified in the metadata file does not "

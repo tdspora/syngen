@@ -37,12 +37,14 @@ class TrainingSettingsSchema(Schema):
     print_report = fields.Boolean(required=False)
 
 class ExtendedTrainingSettingsSchema(TrainingSettingsSchema):
+    source = fields.String(required=True)
     column_types = fields.Dict(
         keys=fields.String(validate=validate.OneOf(["categorical"])),
         values=fields.List(fields.String())
     )
 
 class InferSettingsSchema(Schema):
+    destination = fields.String(required=False)
     size = fields.Integer(validate=validate.Range(min=1), required=False)
     run_parallel = fields.Boolean(required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
@@ -82,10 +84,8 @@ class GlobalSettingsSchema(Schema):
 class ConfigurationSchema(Schema):
     train_settings = fields.Nested(ExtendedTrainingSettingsSchema, required=False, allow_none=True)
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
-    source = fields.String(required=True)
     format = fields.Nested(FormatSettingsSchema, required=False, allow_none=True)
     keys = fields.Dict(keys=fields.String(), values=fields.Nested(KeysSchema), required=False, allow_none=True)
-    destination = fields.String(required=False)
 
 
 @dataclass
