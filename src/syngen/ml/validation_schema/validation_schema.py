@@ -85,6 +85,7 @@ class ConfigurationSchema(Schema):
     source = fields.String(required=True)
     format = fields.Nested(FormatSettingsSchema, required=False, allow_none=True)
     keys = fields.Dict(keys=fields.String(), values=fields.Nested(KeysSchema), required=False, allow_none=True)
+    destination = fields.String(required=False)
 
 
 @dataclass

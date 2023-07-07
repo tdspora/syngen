@@ -33,7 +33,7 @@ class Reporter:
 
     def extract_report_data(self):
         original, schema = DataLoader(self.paths["original_data_path"]).load_data()
-        synthetic, schema = DataLoader(self.paths["synthetic_data_path"]).load_data()
+        synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
         return original, synthetic
 
     def fetch_data_types(self):

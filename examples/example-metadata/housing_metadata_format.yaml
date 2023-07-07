@@ -26,11 +26,11 @@ housing_properties:                       # Use table name here
 
   source: ./examples/example-data/housing_properties.csv # Supported formats include cloud storage locations, local files
   format:
-    sep: ','
+    sep: ","
     quotechar: '"'
-    quoting: 'All'
+    quoting: "All"
     escapechar: '"'
-    encoding: 'utf-8'
+    encoding: "utf-8"
     header: 0
     skiprows: 0
     on_bad_lines: skip

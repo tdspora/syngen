@@ -24,7 +24,8 @@ housing_properties:                       # Use table name here
     random_seed: 10                       # Ensure reproducible tables generation
     print_report: true                    # Turn on or turn off generation of the report
 
-  source: "./examples/example-data/housing_properties.csv"# Supported formats include cloud storage locations, local files
+  source: "./examples/example-data/housing_properties.csv"# The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
+  destination: "./examples/generated-data/housing_properties_generated.csv" # The path where the generated data should be stored. Supported formats include local files in CSV, Avro formats. Required parameter
   keys:                                   # Keys of the table
     households_pk:                        # Name of a key
       type: "PK"                          # Type of key
@@ -48,6 +49,7 @@ housing_conditions:
     print_report: true
 
   source: "./examples/example-data/housing_conditions.csv"
+  destination: "./examples/generated-data/housing_conditions_generated.csv"
   keys:
     households_fk:
       type: "FK"

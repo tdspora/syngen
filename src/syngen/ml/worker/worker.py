@@ -185,8 +185,8 @@ class Worker:
         chain_for_tables_for_inference, config_of_metadata_for_inference = metadata_for_inference
 
         for table in chain_for_tables_for_training:
-            global_context(self.metadata.get(table, {}).get("format", {}))
             config_of_table = config_of_metadata_for_training[table]
+            global_context(config_of_table.get("format", {}))
             source = config_of_table["source"]
             train_settings = config_of_table["train_settings"]
             custom_logger.info(f"Training process of the table - {table} has started.")
@@ -211,15 +211,17 @@ class Worker:
         self.metadata = config_of_metadata_for_inference
         if generation_of_reports:
             for table in chain_for_tables_for_inference:
-                global_context(self.metadata.get(table, {}).get("format", {}))
                 config_of_table = config_of_metadata_for_inference[table]
+                global_context(config_of_table.get("format", {}))
                 train_settings = config_of_table["train_settings"]
                 print_report = train_settings.get("print_report")
                 both_keys = table in self.divided
+                destination = config_of_table.get("destination")
 
                 custom_logger.info(f"Infer process of the table - {table} has started")
 
                 self.infer_strategy.run(
+                    destination=destination,
                     metadata=self.metadata,
                     size=None,
                     table_name=table,
@@ -239,13 +241,15 @@ class Worker:
         :param config_of_tables: configuration of tables declared in metadata file
         """
         for table in tables:
-            global_context(self.metadata.get(table, {}).get("format", {}))
+            config_of_table = config_of_tables[table]
+            global_context(config_of_table.get("format", {}))
             custom_logger.info(f"Infer process of the table - {table} has started")
             both_keys = table in self.divided
-            config_of_table = config_of_tables[table]
             infer_settings = config_of_table["infer_settings"]
+            destination = config_of_table.get("destination")
 
             self.infer_strategy.run(
+                destination=destination,
                 metadata=self.metadata,
                 size=infer_settings["size"],
                 table_name=table,

@@ -169,7 +169,8 @@ global:                                     # Global settings. Optional paramete
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
 
 CUSTOMER:                                   # Table name. Required parameter
-  source: "./files/customer.csv"            # Supported formats include local files in CSV, Avro formats. Required parameter
+  source: "./files/customer.csv"            # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
+  destination: "./files/generated_data_customer.csv"# The path where the generated data should be stored. Supported formats include local files in CSV, Avro formats. Required parameter
                  
   train_settings:                           # Settings for training process. Optional parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
@@ -231,7 +232,8 @@ CUSTOMER:                                   # Table name. Required parameter
 
      
 ORDER:                                      # Table name. Required parameter
-  source: "./files/order.csv"               # Supported formats include local files in CSV, Avro formats. Required parameter
+  source: "./files/order.csv"               # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
+  destination: "./files/generated_data_order.csv"# The path where the generated data should be stored. Supported formats include local files in CSV, Avro formats. Required parameter
      
   train_settings:                           # Settings for training process. Optional parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
