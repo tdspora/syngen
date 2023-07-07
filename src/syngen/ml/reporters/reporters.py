@@ -32,7 +32,7 @@ class Reporter:
         self.paths = paths
         self.config = config
 
-    def __extract_report_data(self):
+    def _extract_report_data(self):
         original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
         return original, synthetic
@@ -52,7 +52,7 @@ class Reporter:
         Preprocess original and synthetic data.
         Return original data, synthetic data, float columns, integer columns, categorical columns
         """
-        original, synthetic = self.__extract_report_data()
+        original, synthetic = self._extract_report_data()
         missing_columns = set(original) - set(synthetic)
         for col in missing_columns:
             synthetic[col] = np.nan
@@ -181,7 +181,7 @@ class SampleAccuracyReporter(Reporter):
     Reporter for running accuracy test
     """
 
-    def __extract_report_data(self):
+    def _extract_report_data(self):
         original, schema = DataLoader(self.paths["source_path"]).load_data()
         sampled, schema = DataLoader(self.paths["input_data_path"]).load_data()
         return original, sampled
