@@ -189,11 +189,13 @@ class Worker:
             global_context(config_of_table.get("format", {}))
             source = config_of_table["source"]
             train_settings = config_of_table["train_settings"]
+            destination = config_of_table.get("destination")
             custom_logger.info(f"Training process of the table - {table} has started.")
 
             self.train_strategy.run(
                 metadata=self.metadata,
                 source=source,
+                destination=destination,
                 epochs=train_settings["epochs"],
                 drop_null=train_settings["drop_null"],
                 row_limit=train_settings["row_limit"],
