@@ -77,12 +77,12 @@ class FormatSettingsSchema(Schema):
 
 
 class GlobalSettingsSchema(Schema):
-    train_settings = fields.Nested(TrainingSettingsSchema, allow_none=True)
-    infer_settings = fields.Nested(InferSettingsSchema, allow_none=True)
+    train_settings = fields.Nested(TrainingSettingsSchema, required=False, allow_none=True)
+    infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
 
 
 class ConfigurationSchema(Schema):
-    train_settings = fields.Nested(ExtendedTrainingSettingsSchema, required=False, allow_none=True)
+    train_settings = fields.Nested(ExtendedTrainingSettingsSchema, required=True, allow_none=True)
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
     format = fields.Nested(FormatSettingsSchema, required=False, allow_none=True)
     keys = fields.Dict(keys=fields.String(), values=fields.Nested(KeysSchema), required=False, allow_none=True)

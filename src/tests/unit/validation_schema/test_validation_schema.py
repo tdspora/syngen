@@ -237,9 +237,9 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
     with pytest.raises(ValidationError) as error:
         ValidationSchema(metadata).validate_schema()
     assert str(error.value) == "Validation error(s) found in the metadata. " \
-                               "The details are - {'pk_test': {" \
-                               "'source': ['Missing data for required field.']}, " \
-                               "'fk_test': {'source': ['Missing data for required field.']}}"
+                               "The details are - {'pk_test': {'train_settings': [" \
+                               "'Missing data for required field.']}, 'fk_test': {" \
+                               "'train_settings': {'source': ['Missing data for required field.']}}}"
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 def test_metadata_file_with_invalid_PK_key(rp_logger):

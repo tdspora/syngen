@@ -1,5 +1,6 @@
 test_table:
   train_settings:
+    source: ./path/to/test_table.csv
     epochs: 100
     drop_null: false
     print_report: false
@@ -13,7 +14,6 @@ test_table:
     print_report: true
     batch_size: 200
 
-  source: ./path/to/test_table.csv
   keys:
     pk_id:
       type: "PK"

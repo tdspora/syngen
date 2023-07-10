@@ -14,7 +14,8 @@ global:
     print_report: true
 
 pk_test:
-  source: ./data/pk_test.csv
+  train_settings:
+    source: ./data/pk_test.csv
   keys:
     pk_test_pk_id:
       type: "PK"
@@ -23,6 +24,7 @@ pk_test:
 
 fk_test:
   train_settings:
+    source: ./data/fk_test.csv
     epochs: 10
     drop_null: False
     print_report: true
@@ -45,7 +47,6 @@ fk_test:
     random_seed: 1
     print_report: false
 
-  source: ./data/fk_test.csv
   keys:
     fk_test_pk_id:
       type: "PK"

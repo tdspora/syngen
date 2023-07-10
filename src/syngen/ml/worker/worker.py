@@ -87,10 +87,11 @@ class Worker:
         if self.table_name:
             metadata = {
                 self.table_name: {
-                    "train_settings": {},
+                    "train_settings": {
+                        "source": source,
+                    },
                     "infer_settings": {},
                     "keys": {},
-                    "source": source
                 }
             }
             metadata = self._update_metadata_for_table(metadata)

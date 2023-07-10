@@ -10,12 +10,12 @@ global:
 
 pk_test:
   train_settings:
+    source: ./path/to/pk_test.csv
     row_limit: 800
 
   infer_settings:
     print_report: False
 
-  source: ./path/to/pk_test.csv
   keys:
     pk_id:
       type: "PK"
@@ -23,7 +23,8 @@ pk_test:
         - Id
 
 fk_test:
-  source: ./path/to/fk_test.csv
+  train_settings:
+    source: ./path/to/fk_test.csv
   keys:
     fk_id:
       type: "FK"
