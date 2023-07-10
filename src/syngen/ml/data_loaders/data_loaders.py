@@ -7,6 +7,7 @@ import csv
 import inspect
 
 import pandas as pd
+import pandas.errors
 import pandavro as pdx
 import yaml
 from yaml import SafeLoader
@@ -79,6 +80,11 @@ class DataLoader(BaseDataLoader):
             message = f"It seems that the content of the data in the path - '{self.path}' " \
                       f"doesn't have the encoding UTF-8. The details of the error - {error}.\n" \
                       f"Please, use the data in UTF-8 encoding"
+            custom_logger.error(message)
+            raise ValueError(message)
+        except pandas.errors.EmptyDataError as error:
+            message = f"The empty file was provided. Unable to load data from the path - '{self.path}'. " \
+                      f"The details of the error - {error}"
             custom_logger.error(message)
             raise ValueError(message)
 
