@@ -186,7 +186,7 @@ def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
     with pytest.raises(ValueError):
         with caplog.at_level("ERROR"):
             data_loader.load_data()
-            assert "The empty file was provided. Unable to load data " in caplog.text
+            assert "cannot read header - is it an avro file?" in caplog.text
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -240,9 +240,8 @@ def test_load_data_from_empty_table_in_pickle_format(caplog, rp_logger):
 
     assert isinstance(data_loader.file_loader, BinaryLoader)
 
-    with caplog.at_level("ERROR"):
-        data_loader.load_data()
-        assert "Loading data from local empty table in pickle format" in caplog.text
+    data, schema = data_loader.load_data()
+    assert data == {}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
