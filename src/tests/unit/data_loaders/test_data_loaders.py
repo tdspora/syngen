@@ -235,7 +235,7 @@ def test_load_data_from_table_in_pickle_format(rp_logger):
 
 def test_load_data_from_empty_table_in_pickle_format(caplog, rp_logger):
     rp_logger.info("Loading data from local empty table in pickle format")
-    path = r"C:\Users\Hanna_Imshenetska\Projects\syngen_open_source\tdm_syngen\src\tests\unit\data_loaders\fixtures\pickle_tables\empty_table.pkl"
+    path = "tests/unit/data_loaders/fixtures/pickle_tables/empty_table.pkl"
     data_loader = DataLoader(path)
 
     assert isinstance(data_loader.file_loader, BinaryLoader)
