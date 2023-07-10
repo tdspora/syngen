@@ -99,11 +99,20 @@ class TrainConfig:
                 if column not in data.columns:
                     self.schema["fields"][column] = "removed"
 
+    @staticmethod
+    def _check_if_data_is_empty(data: pd.DataFrame):
+        """
+        Check if the provided data is empty
+        """
+        if data.shape[0] < 1:
+            raise ValueError("Empty file was provided. Unable to train")
+
     def _extract_data(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Extract data and schema necessary for training process
         """
         data, schema = self._load_source()
+        self._check_if_data_is_empty(data)
         return data, schema
 
     def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:

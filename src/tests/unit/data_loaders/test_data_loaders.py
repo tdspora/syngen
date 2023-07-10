@@ -108,17 +108,6 @@ def test_load_data_from_table_in_csv_format(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_load_data_from_empty_table_in_csv_format(caplog, rp_logger):
-    rp_logger.info("Loading data from local empty table in csv format")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/empty_table.csv")
-    assert isinstance(data_loader.file_loader, CSVLoader)
-    with pytest.raises(ValueError):
-        with caplog.at_level("ERROR"):
-            data_loader.load_data()
-        assert "It seems that empty file was provided. Unable to train" in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
 def test_load_data_from_table_in_csv_format_in_not_utf_8(caplog, rp_logger):
     rp_logger.info("Loading data from local table in csv format in not 'utf-8' encoding")
     path = "tests/unit/data_loaders/fixtures/csv_tables/table_in_iso_encoding.csv"
@@ -176,21 +165,6 @@ def test_load_data_from_table_in_avro_format(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
-    rp_logger.info("Loading data from local empty table in avro format")
-    path = "tests/unit/data_loaders/fixtures/avro_tables/empty_table.avro"
-    data_loader = DataLoader(path)
-
-    assert isinstance(data_loader.file_loader, AvroLoader)
-
-    with pytest.raises(ValueError):
-        with caplog.at_level("ERROR"):
-            data_loader.load_data()
-        assert "It seems that empty file was provided. Unable to train" in caplog.text
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
 def test_save_data_in_avro_format(test_avro_path, test_df, rp_logger):
     rp_logger.info("Saving data in avro format locally")
     data_loader = DataLoader(test_avro_path)
@@ -230,20 +204,6 @@ def test_load_data_from_table_in_pickle_format(rp_logger):
 
     assert isinstance(df, pd.DataFrame)
     assert schema is None
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_load_data_from_empty_table_in_pickle_format(caplog, rp_logger):
-    rp_logger.info("Loading data from local empty table in pickle format")
-    path = "tests/unit/data_loaders/fixtures/pickle_tables/empty_table.pkl"
-    data_loader = DataLoader(path)
-
-    assert isinstance(data_loader.file_loader, BinaryLoader)
-
-    with pytest.raises(ValueError):
-        with caplog.at_level("ERROR"):
-            data_loader.load_data()
-        assert "It seems that empty file was provided. Unable to train" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

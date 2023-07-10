@@ -74,8 +74,6 @@ class DataLoader(BaseDataLoader):
     def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         try:
             df, schema = self.file_loader.load_data(self.path, **kwargs)
-            if df.shape[0] < 1:
-                raise ValueError("Empty file was provided. Unable to train")
             return df, schema
         except UnicodeDecodeError as error:
             message = f"It seems that the content of the data in the path - '{self.path}' " \
