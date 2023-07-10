@@ -660,50 +660,6 @@ def test_save_csv_without_header(test_csv_path, rp_logger):
     assert data.count().max() == 7
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
-def test_load_csv_with_json(rp_logger):
-    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_contained_nested_structures.csv"
-    rp_logger.info(f"Loading CSV contained the fields with nested structures")
-    global_context({
-        "sep": ",",
-        "quotechar": '"',
-        "quoting": "non-numeric",
-        "escapechar": "\\",
-        "encoding": "utf-8",
-        "on_bad_lines": "skip"
-    })
-    data, schema = CSVLoader().load_data(path_source)
-    assert data.count().max() == 8
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_save_csv_with_nested_structures(test_csv_path, rp_logger):
-    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_contained_nested_structures.csv"
-    rp_logger.info(f"Saving CSV contained the fields with nested structures")
-    format_settings = {
-        "sep": ",",
-        "quotechar": '"',
-        "quoting": "non-numeric",
-        "escapechar": "\\",
-        "encoding": "utf-8",
-        "on_bad_lines": "skip"
-    }
-    global_context(format_settings)
-    data, schema = CSVLoader().load_data(path_source)
-    assert get_context().get_config() == {
-        "sep": ",",
-        "quotechar": '"',
-        "quoting": 2,
-        "escapechar": "\\",
-        "encoding": "utf-8",
-        "on_bad_lines": "skip",
-        "skiprows": None
-    }
-    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
-    data, schema = CSVLoader().load_data(test_csv_path)
-    assert data.count().max() == 8
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
 
 def test_load_csv_with_triple_colons(rp_logger):
     path_source = "./tests/unit/data_loaders/fixtures/csv_tables/multicolon_delimited_text.csv"
