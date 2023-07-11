@@ -232,7 +232,7 @@ CUSTOMER:                                   # Table name. Required parameter
      
 ORDER:                                      # Table name. Required parameter    
   train_settings:                           # Settings for training process. Optional parameter
-    source: "./files/order.csv"             # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parame
+    source: "./files/order.csv"             # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
