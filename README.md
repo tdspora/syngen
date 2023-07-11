@@ -190,7 +190,7 @@ CUSTOMER:                                   # Table name. Required parameter
     header: infer                           # Row number(s) to use as the column names, and the start of the data. Optional parameter  
     skiprows: null                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter
     on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
-                 
+    engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter             
   infer_settings:                           # Settings for infer process. Optional parameter
     destination: "./files/generated_data_customer.csv"# The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
@@ -259,21 +259,21 @@ ORDER:                                      # Table name. Required parameter
     header: infer                           # Row number(s) to use as the column names, and the start of the data. Optional parameter  
     skiprows: null                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter
     on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
-    engine: c                               # Parser engine to use - ["c", "python"]. Optional parameter
-    keys:                                   # Keys of the table. Optional parameter
-      pk_order_id:
-        type: "PK"
-        columns:
-          - order_id
+    engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter
+  keys:                                     # Keys of the table. Optional parameter
+    pk_order_id:
+      type: "PK"
+      columns:
+        - order_id
      
-      FK1:
-        type: "FK"
+    FK1:
+      type: "FK"
+      columns:
+        - customer_id
+      references:
+        table: "CUSTOMER"
         columns:
           - customer_id
-        references:
-          table: "CUSTOMER"
-          columns:
-            - customer_id
 ```
 <i>Note:</i>In the section <i>"global"</i> you can specify training and inference settings for all tables. If the same settings are specified for a specific table, they will override the global settings.<br>
 

@@ -242,6 +242,7 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
                                "'train_settings': {'source': ['Missing data for required field.']}}}"
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
 def test_metadata_file_with_invalid_PK_key(rp_logger):
     rp_logger.info("Test the validation of the metadata file with the invalid PK key")
     metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_PK_key.yaml")
