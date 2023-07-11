@@ -628,6 +628,24 @@ def test_load_escaped_quoted_csv(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_save_escaped_quoted_csv(test_csv_path, rp_logger):
+    path_source = "tests/unit/data_loaders/fixtures/csv_tables/escaped_quoted_text.csv"
+    rp_logger.info(f"Saving CSV with escaped quoted values")
+    format_settings = {"sep": ",", "quotechar": '"'}
+    global_context(format_settings)
+    data, schema = CSVLoader().load_data(path_source)
+    assert get_context().get_config() == {
+        "sep": ",",
+        "quotechar": '"',
+        "quoting": 3,
+        "skiprows": None
+    }
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_load_csv_without_header(rp_logger):
     path_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_without_header.csv"
     rp_logger.info(f"Loading CSV without the header")
@@ -760,6 +778,37 @@ def test_save_tcv_file(test_csv_path, rp_logger):
     assert get_context().get_config() == {
         "sep": "\t",
         "quoting": 3,
+        "skiprows": None
+    }
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_csv_with_nested_field(rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_contained_nested_field.csv"
+    rp_logger.info(f"Loading CSV with nested field")
+    global_context({
+        "quotechar": '"',
+        "quoting": "minimal"
+    })
+    data, schema = CSVLoader().load_data(path_source)
+    assert data.count().max() == 15
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_csv_with_nested_field(test_csv_path, rp_logger):
+    path_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_contained_nested_field.csv"
+    rp_logger.info(f"Saving CSV with nested field")
+    global_context({
+        "quotechar": '"',
+        "quoting": "minimal"
+    })
+    data, schema = CSVLoader().load_data(path_source)
+    assert get_context().get_config() == {
+        "quotechar": '"',
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())

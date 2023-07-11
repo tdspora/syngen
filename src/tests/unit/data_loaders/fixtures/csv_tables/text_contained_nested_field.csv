@@ -1,0 +1,16 @@
+id,region,application_name,domain_name,configuration
+1,AU-WA,Y-find,devhub.com,"[{},{}]"
+2,GQ-BN,Transcof,twitter.com,[]
+3,VN-30,Bitchip,dailymail.co.uk,[]
+4,IN-WB,Flexidy,networksolutions.com,"[{},{}]"
+5,US-PA,Vagram,ycombinator.com,[{}]
+6,CA-SK,Viva,usatoday.com,"[{},{},{},{}]"
+7,RU-SAR,Andalax,wsj.com,"[{},{},{},{},{}]"
+8,BR-AC,Cardify,nyu.edu,"[{},{}]"
+9,NZ-WGN,Subin,spiegel.de,"[{},{},{}]"
+10,US-MT,Bitwolf,amazon.co.uk,"[{},{},{}]"
+11,MM-03,Prodder,dailymail.co.uk,[{}]
+12,US-ID,Fix San,pinterest.com,[]
+13,US-IL,Zontrax,quantcast.com,"[{},{},{},{},{}]"
+14,US-IN,Keylex,irs.gov,"[{},{}]"
+15,CA-ON,Trippledex,comcast.net,[]
