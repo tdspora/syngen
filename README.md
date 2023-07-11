@@ -169,7 +169,7 @@ global:                                     # Global settings. Optional paramete
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
 
 CUSTOMER:                                   # Table name. Required parameter               
-  train_settings:                           # Settings for training process. Optional parameter
+  train_settings:                           # Settings for training process. Required parameter
     source: "./files/customer.csv"          # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
@@ -231,7 +231,7 @@ CUSTOMER:                                   # Table name. Required parameter
 
      
 ORDER:                                      # Table name. Required parameter    
-  train_settings:                           # Settings for training process. Optional parameter
+  train_settings:                           # Settings for training process. Required parameter
     source: "./files/order.csv"             # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
