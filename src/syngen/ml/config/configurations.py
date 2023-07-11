@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Tuple, Set, List
 import os
+import shutil
 
 import pandas as pd
 
@@ -30,6 +31,7 @@ class TrainConfig:
 
     def __post_init__(self):
         self.paths = self._set_paths()
+        self._remove_existed_artifacts()
         self._prepare_dirs()
 
     def preprocess_data(self):
@@ -56,6 +58,17 @@ class TrainConfig:
         Set up "batch_size" for training process
         """
         self.batch_size = min(self.batch_size, self.row_subset)
+
+    def _remove_existed_artifacts(self):
+        """
+        Remove existed artifacts from previous train process
+        """
+        if os.path.exists(self.paths["resources_path"]):
+            shutil.rmtree(self.paths["resources_path"])
+            custom_logger.info(f"The folder located in the path - '{self.paths['resources_path']}' was removed")
+        if os.path.exists(self.paths["tmp_store_path"]):
+            shutil.rmtree(self.paths["tmp_store_path"])
+            custom_logger.info(f"The folder located in the path - '{self.paths['tmp_store_path']}' was removed")
 
     def _prepare_dirs(self):
         """
@@ -99,11 +112,19 @@ class TrainConfig:
                 if column not in data.columns:
                     self.schema["fields"][column] = "removed"
 
+    def _check_if_data_is_empty(self, data: pd.DataFrame):
+        """
+        Check if the provided data is empty
+        """
+        if data.shape[0] < 1:
+            raise ValueError(f"The empty table was provided. Unable to train the table - '{self.table_name}'")
+
     def _extract_data(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Extract data and schema necessary for training process
         """
         data, schema = self._load_source()
+        self._check_if_data_is_empty(data)
         return data, schema
 
     def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -154,7 +175,8 @@ class TrainConfig:
 
         return {
             "model_artifacts_path": "model_artifacts/",
-            "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}",
+            "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
+            "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/",
             "source_path": self.source,
             "draws_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/draws",
             "input_data_path":
