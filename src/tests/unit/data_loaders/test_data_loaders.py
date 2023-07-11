@@ -242,6 +242,7 @@ def test_load_data_from_empty_table_in_pickle_format(caplog, rp_logger):
 
     data, schema = data_loader.load_data()
     assert data == {}
+    assert schema is None
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
