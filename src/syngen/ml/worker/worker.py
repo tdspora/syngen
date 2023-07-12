@@ -55,7 +55,6 @@ class Worker:
         """
         Update the metadata for training or inference process if a metadata file was provided
         """
-        self.settings.pop("source", None)
         global_train_settings = metadata.get("global", {}).get("train_settings", {})
         global_infer_settings = metadata.get("global", {}).get("infer_settings", {})
         metadata.pop("global", None)
