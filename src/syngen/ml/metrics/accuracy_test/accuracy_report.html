@@ -223,9 +223,6 @@
 			}
 
 			.bivariate-title {
-				overflow-wrap: break-word;
-				hyphens: auto;
-				max-width: 46%;
 				top: 2.5vh;
 				position: relative;
 				margin-bottom: 0 !important;
@@ -308,8 +305,8 @@
 							style="margin-bottom:0px">Training parameters:</div>
 						<ul>
 							{% for training_parameter_key, training_parameter_value in training_config.items() -%}
-							<li>{{training_parameter_key}} = {{training_parameter_value}}</li>
-							{% endfor %}
+						<li>{{training_parameter_key}} = {{training_parameter_value}}</li>
+						{% endfor %}
 
 						</ul>
 					</div>
@@ -318,8 +315,8 @@
 							style="margin-bottom:0px">Inference parameters:</div>
 						<ul>
 							{% for inference_parameter_key, inference_parameter_value in inference_config.items() -%}
-							<li>{{inference_parameter_key}} = {{inference_parameter_value}}</li>
-							{% endfor %}
+						<li>{{inference_parameter_key}} = {{inference_parameter_value}}</li>
+						{% endfor %}
 
 						</ul>
 					</div>
