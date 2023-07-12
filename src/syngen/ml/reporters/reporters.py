@@ -23,12 +23,11 @@ class Reporter:
 
     def __init__(
             self,
-            metadata: Dict[str, str],
+            table_name: str,
             paths: Dict[str, str],
             config: Dict[str, str]
     ):
-        self.metadata = metadata
-        self.table_name = metadata["table_name"]
+        self.table_name = table_name
         self.paths = paths
         self.config = config
 
