@@ -31,8 +31,8 @@ def test_init_worker_for_training_process_with_absent_metadata(rp_logger):
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata =={
         "test_table": {
-            "source": "path/to/source",
             "train_settings": {
+                "source": "path/to/source",
                 "batch_size": 1000,
                 "drop_null": True,
                 "epochs": 20,
@@ -70,8 +70,9 @@ def test_init_worker_for_infer_process_with_absent_metadata(rp_logger):
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata =={
         "test_table": {
-            "source": None,
-            "train_settings": {},
+            "train_settings": {
+                "source": None
+            },
             "infer_settings": {
                 "size": 100,
                 "run_parallel": False,
@@ -111,6 +112,7 @@ def test_init_worker_with_metadata(rp_logger):
     assert worker.metadata == {
         "test_table": {
             "train_settings": {
+                "source": "./path/to/test_table.csv",
                 "epochs": 100,
                 "drop_null": False,
                 "print_report": False,
@@ -124,7 +126,6 @@ def test_init_worker_with_metadata(rp_logger):
                 "print_report": True,
                 "batch_size": 200
             },
-            "source": "./path/to/test_table.csv",
             "keys": {
                 "pk_id": {
                     "type": "PK",
@@ -143,7 +144,7 @@ def test_init_worker_with_empty_settings_in_metadata(rp_logger):
     training and inference settings are empty
     """
     rp_logger.info("Test the initialization of the instance of 'Worker' class with provided metadata "
-                   "in which training and inference settings are empty during a training process")
+                   "in which 'infer_settings', 'keys' are empty during a training process")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata_with_empty_settings.yaml",
@@ -162,8 +163,8 @@ def test_init_worker_with_empty_settings_in_metadata(rp_logger):
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "test_table": {
-            "source": "./path/to/test_table.csv",
             "train_settings": {
+                "source": "./path/to/test_table.csv",
                 "epochs": 20,
                 "drop_null": True,
                 "print_report": True,
@@ -208,6 +209,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
     assert worker.metadata == {
         "pk_test": {
             "train_settings": {
+                "source": "./path/to/pk_test.csv",
                 "row_limit": 800,
                 "epochs": 5,
                 "drop_null": True,
@@ -217,7 +219,6 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
             "infer_settings": {
                 "print_report": False
             },
-            "source": "./path/to/pk_test.csv",
             "keys": {
                 "pk_id": {
                     "type": "PK",
@@ -226,7 +227,6 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
             }
         },
         "fk_test": {
-            "source": "./path/to/fk_test.csv",
             "keys": {
                 "fk_id": {
                     "type": "FK",
@@ -238,6 +238,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
                 }
             },
             "train_settings": {
+                "source": "./path/to/fk_test.csv",
                 "epochs": 5,
                 "drop_null": True,
                 "row_limit": 500,
@@ -275,6 +276,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
     assert worker.metadata == {
         "pk_test": {
             "train_settings": {
+                "source": "./path/to/pk_test.csv",
                 "row_limit": 800
             },
             "infer_settings": {
@@ -284,7 +286,6 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
                 "batch_size": 200,
                 "random_seed": 5
             },
-            "source": "./path/to/pk_test.csv",
             "keys": {
                 "pk_id": {
                     "type": "PK",
@@ -293,7 +294,6 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
             }
         },
         "fk_test": {
-            "source": "./path/to/fk_test.csv",
             "keys": {
                 "fk_id": {
                     "type": "FK",
@@ -304,7 +304,9 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
                     }
                 }
             },
-            "train_settings": {},
+            "train_settings": {
+                "source": "./path/to/fk_test.csv"
+            },
             "infer_settings": {
                 "size": 1000,
                 "run_parallel": True,
@@ -346,6 +348,7 @@ def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp
          {
              "test_table": {
                 "train_settings": {
+                    "source": "./path/to/test_table.csv",
                     "epochs": 100,
                     "drop_null": False,
                     "print_report": False,
@@ -358,7 +361,6 @@ def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp
                     "random_seed": 2,
                     "print_report": True,
                     "batch_size": 200},
-                "source": "./path/to/test_table.csv",
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -372,6 +374,7 @@ def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp
          {
              "test_table": {
                  "train_settings": {
+                     "source": "./path/to/test_table.csv",
                      "epochs": 100,
                      "drop_null": False,
                      "print_report": False,
@@ -385,7 +388,6 @@ def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp
                     "print_report": True,
                     "batch_size": 200
                 },
-                 "source": "./path/to/test_table.csv",
                  "keys": {
                      "pk_id": {
                          "type": "PK",
@@ -430,6 +432,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
             {
                 "pk_test": {
                     "train_settings": {
+                        "source": "./path/to/pk_test.csv",
                         "epochs": 1,
                         "drop_null": False,
                         "row_limit": 800,
@@ -441,7 +444,6 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                         "run_parallel": True,
                         "print_report": True
                     },
-                    "source": "./path/to/pk_test.csv",
                     "keys": {
                         "pk_id": {
                             "type": "PK",
@@ -451,6 +453,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                 },
                 "fk_test": {
                     "train_settings": {
+                        "source": "./path/to/fk_test.csv",
                         "epochs": 5,
                         "drop_null": True,
                         "print_report": True,
@@ -463,7 +466,6 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                         "random_seed": 2,
                         "print_report": False
                     },
-                    "source": "./path/to/fk_test.csv",
                     "keys": {
                         "fk_id": {
                             "type": "FK",
@@ -481,6 +483,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
             {
                 "pk_test": {
                     "train_settings": {
+                        "source": "./path/to/pk_test.csv",
                         "epochs": 1,
                         "drop_null": False,
                         "row_limit": 800,
@@ -493,7 +496,6 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                             "run_parallel": True,
                             "print_report": True
                         },
-                    "source": "./path/to/pk_test.csv",
                     "keys": {
                         "pk_id": {
                             "type": "PK",
@@ -502,6 +504,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                 },
                 "fk_test": {
                     "train_settings": {
+                        "source": "./path/to/fk_test.csv",
                         "epochs": 5,
                         "drop_null": True,
                         "print_report": True,
@@ -514,7 +517,6 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                         "random_seed": 2,
                         "print_report": False
                     },
-                    "source": "./path/to/fk_test.csv",
                     "keys": {
                         "fk_id": {
                             "type": "FK",
@@ -562,6 +564,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
             {
                 "pk_test": {
                     "train_settings": {
+                        "source": "./path/to/pk_test.csv",
                         "epochs": 1,
                         "drop_null": False,
                         "row_limit": 800,
@@ -573,7 +576,6 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                         "run_parallel": True,
                         "print_report": True
                     },
-                    "source": "./path/to/pk_test.csv",
                     "keys": {
                         "pk_id": {
                             "type": "PK",
@@ -583,6 +585,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                 },
                 "fk_test": {
                     "train_settings": {
+                        "source": "./path/to/fk_test.csv",
                         "epochs": 5,
                         "drop_null": True,
                         "print_report": True,
@@ -595,7 +598,6 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                         "random_seed": 2,
                         "print_report": False
                     },
-                    "source": "./path/to/fk_test.csv",
                     "keys": {
                         "fk_id": {
                             "type": "FK",
@@ -613,6 +615,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
             {
                 "pk_test": {
                     "train_settings": {
+                        "source": "./path/to/pk_test.csv",
                         "epochs": 1,
                         "drop_null": False,
                         "row_limit": 800,
@@ -625,7 +628,6 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                             "run_parallel": True,
                             "print_report": True
                         },
-                    "source": "./path/to/pk_test.csv",
                     "keys": {
                         "pk_id": {
                             "type": "PK",
@@ -634,6 +636,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                 },
                 "fk_test": {
                     "train_settings": {
+                        "source": "./path/to/fk_test.csv",
                         "epochs": 5,
                         "drop_null": True,
                         "print_report": True,
@@ -646,7 +649,6 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
                         "random_seed": 2,
                         "print_report": False
                     },
-                    "source": "./path/to/fk_test.csv",
                     "keys": {
                         "fk_id": {
                             "type": "FK",
@@ -692,7 +694,6 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
             ["tdm_models", "tdm_clusters"],
             {
                 "tdm_models": {
-                    "source": "./path/to/tdm_models.csv",
                     "keys": {
                         "tdm_models_pkey": {
                             "type": "PK",
@@ -708,6 +709,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
                         }
                     },
                     "train_settings": {
+                        "source": "./path/to/tdm_models.csv",
                         "epochs": 20,
                         "drop_null": True,
                         "row_limit": 1000,
@@ -717,14 +719,14 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
                     "infer_settings": {}
                 },
                 "tdm_clusters": {
-                    'source': './path/to/tdm_clusters.csv',
-                    'keys': {
-                        'tdm_clusters_pkey': {
-                            'type': 'PK',
-                            'columns':['id']
+                    "keys": {
+                        "tdm_clusters_pkey": {
+                            "type": "PK",
+                            "columns": ["id"]
                         }
                     },
                     "train_settings": {
+                        "source": "./path/to/tdm_clusters.csv",
                         "epochs": 20,
                         "drop_null": True,
                         "row_limit": 1000,
@@ -739,13 +741,13 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
             ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
             {
                 "tdm_clusters": {
-                    "source": "./path/to/tdm_clusters.csv",
                     "keys": {
                         "tdm_clusters_pkey": {
                             "type": "PK",
                             "columns": ["id"]}
                     },
                     "train_settings": {
+                        "source": "./path/to/tdm_clusters.csv",
                         "epochs": 20,
                         "drop_null": True,
                         "row_limit": 1000,
@@ -755,7 +757,6 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
                     "infer_settings": {}
                 },
                 "tdm_models_pk": {
-                    "source": "./path/to/tdm_models.csv",
                     "keys": {
                         "tdm_models_pkey": {
                             "type": "PK",
@@ -763,6 +764,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
                         }
                     },
                     "train_settings": {
+                        "source": "./path/to/tdm_models.csv",
                         "epochs": 20,
                         "drop_null": True,
                         "row_limit": 1000,
@@ -772,7 +774,6 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
                     "infer_settings": {}
                 },
                 "tdm_models_fk": {
-                    "source": "./path/to/tdm_models.csv",
                     "keys": {
                         "tdm_models_fkey": {
                             "type": "FK",
@@ -783,6 +784,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
                         }
                     },
                     "train_settings": {
+                        "source": "./path/to/tdm_models.csv",
                         "epochs": 20,
                         "drop_null": True,
                         "row_limit": 1000,
@@ -828,6 +830,7 @@ def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports,
         {
             "test_table": {
                 "train_settings": {
+                    "source": None,
                     "epochs": 20,
                     "drop_null": True,
                     "row_limit": 1000,
@@ -835,14 +838,14 @@ def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports,
                     "print_report": True
                 },
                 "infer_settings": {},
-                "keys": {},
-                "source": None
+                "keys": {}
             }
         }),
         (["test_table"],
          {
              "test_table": {
                  "train_settings": {
+                     "source": None,
                      "epochs": 20,
                      "drop_null": True,
                      "row_limit": 1000,
@@ -850,8 +853,7 @@ def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports,
                      "print_report": True
                  },
                  "infer_settings": {},
-                 "keys": {},
-                 "source": None
+                 "keys": {}
              }
          })
     )
@@ -888,6 +890,7 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
          {
              "pk_test": {
                  "train_settings": {
+                     "source": "./path/to/pk_test.csv",
                      "row_limit": 800,
                      "epochs": 5,
                      "drop_null": True,
@@ -897,7 +900,6 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
                  "infer_settings": {
                      "print_report": False
                  },
-                 "source": "./path/to/pk_test.csv",
                  "keys": {
                      "pk_id": {
                          "type": "PK",
@@ -906,7 +908,6 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
                  }
              },
              "fk_test": {
-                 "source": "./path/to/fk_test.csv",
                  "keys": {
                      "fk_id": {
                          "type": 'FK',
@@ -918,6 +919,7 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
                      }
                  },
                  "train_settings": {
+                     "source": "./path/to/fk_test.csv",
                      "epochs": 5,
                      "drop_null": True,
                      "row_limit": 500,
@@ -932,6 +934,7 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
          {
              "pk_test": {
                  "train_settings": {
+                     "source": "./path/to/pk_test.csv",
                      "row_limit": 800,
                      "epochs": 5,
                      "drop_null": True,
@@ -941,7 +944,6 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
                  "infer_settings": {
                      "print_report": False
                  },
-                 "source": "./path/to/pk_test.csv",
                  "keys": {
                      "pk_id": {
                          "type": "PK",
@@ -950,7 +952,6 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
                  }
              },
              "fk_test": {
-                 "source": "./path/to/fk_test.csv",
                  "keys": {
                      "fk_id": {
                          "type": "FK",
@@ -962,6 +963,7 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
                      }
                  },
                  "train_settings": {
+                     "source": "./path/to/fk_test.csv",
                      "epochs": 5,
                      "drop_null": True,
                      "row_limit": 500,
@@ -1003,6 +1005,7 @@ def test_launch_infer_with_metadata(mock_infer_tables, mock_generate_reports, rp
         {
             "test_table": {
                 "train_settings": {
+                    "source": "./path/to/test_table.csv",
                     "epochs": 100,
                     "drop_null": False,
                     "print_report": False,
@@ -1016,7 +1019,6 @@ def test_launch_infer_with_metadata(mock_infer_tables, mock_generate_reports, rp
                     "print_report": True,
                     "batch_size": 200
                 },
-                "source": "./path/to/test_table.csv",
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -1057,6 +1059,7 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables, mock_ge
         {
             "pk_test": {
                 "train_settings": {
+                    "source": "./path/to/pk_test.csv",
                     "epochs": 1,
                     "drop_null": False,
                     "row_limit": 800
@@ -1068,7 +1071,6 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables, mock_ge
                     "batch_size": 200,
                     "random_seed": 1
                 },
-                "source": "./path/to/pk_test.csv",
                 "keys": {
                     "pk_id": {
                         "type": "PK", "columns": ["Id"]
@@ -1077,6 +1079,7 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables, mock_ge
             },
             "fk_test": {
                 "train_settings": {
+                    "source": "./path/to/fk_test.csv",
                     "epochs": 5,
                     "drop_null": True,
                     "print_report": True,
@@ -1089,7 +1092,6 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables, mock_ge
                     "print_report": False,
                     "batch_size": 200
                 },
-                "source": "./path/to/fk_test.csv",
                 "keys": {
                     "fk_id": {
                         "type": "FK",
@@ -1134,14 +1136,15 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
         ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
         {
             "tdm_clusters": {
-                "source": "./path/to/tdm_clusters.csv",
                 "keys": {
                     "tdm_clusters_pkey": {
                         "type": "PK",
                         "columns": ["id"]
                     }
                 },
-                "train_settings": {},
+                "train_settings": {
+                    "source": "./path/to/tdm_clusters.csv"
+                },
                 "infer_settings": {
                     "size": 300,
                     "run_parallel": True,
@@ -1151,14 +1154,15 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
                 }
             },
             "tdm_models_pk": {
-                "source": "./path/to/tdm_models.csv",
                 "keys": {
                     "tdm_models_pkey": {
                         "type": "PK",
                         "columns": ["id"]
                     }
                 },
-                "train_settings": {},
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv"
+                },
                 "infer_settings": {
                     "size": 300,
                     "run_parallel": True,
@@ -1168,7 +1172,6 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
                 }
             },
             "tdm_models_fk": {
-                "source": "./path/to/tdm_models.csv",
                 "keys": {
                     "tdm_models_fkey": {
                         "type": "FK",
@@ -1178,7 +1181,9 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
                             "columns": ["id"]}
                     }
                 },
-                "train_settings": {},
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv"
+                },
                 "infer_settings": {
                     "size": 300,
                     "run_parallel": True,
@@ -1220,7 +1225,9 @@ def test_launch_infer_without_metadata(mock_infer_tables, mock_generate_reports,
         ["test_table"],
         {
             "test_table": {
-                "train_settings": {},
+                "train_settings": {
+                    "source": None
+                },
                 "infer_settings": {
                     "size": 200,
                     "run_parallel": True,
@@ -1228,8 +1235,7 @@ def test_launch_infer_without_metadata(mock_infer_tables, mock_generate_reports,
                     "print_report": True,
                     "batch_size": 200
                 },
-                "keys": {},
-                "source": None
+                "keys": {}
             }
         }
     )
@@ -1265,6 +1271,7 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
         {
             "pk_test": {
                 "train_settings": {
+                    "source": "./path/to/pk_test.csv",
                     "row_limit": 800
                 },
                 "infer_settings": {
@@ -1274,7 +1281,6 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
                     "random_seed": 3,
                     "batch_size": 300
                 },
-                "source": "./path/to/pk_test.csv",
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -1283,7 +1289,6 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
                 }
             },
             "fk_test": {
-                "source": "./path/to/fk_test.csv",
                 "keys": {
                     "fk_id": {
                         "type": "FK",
@@ -1294,7 +1299,9 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
                         }
                     }
                 },
-                "train_settings": {},
+                "train_settings": {
+                    "source": "./path/to/fk_test.csv"
+                },
                 "infer_settings": {
                     "size": 1000,
                     "run_parallel": True,
@@ -1307,4 +1314,3 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
     )
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
-

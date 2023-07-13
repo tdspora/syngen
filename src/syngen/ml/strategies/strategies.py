@@ -120,7 +120,7 @@ class TrainStrategy(Strategy, ABC):
     def add_reporters(self, **kwargs):
         if self.config.print_report:
             sample_reporter = SampleAccuracyReporter(
-                metadata={"table_name": self.config.table_name},
+                table_name=self.table_name,
                 paths=self.config.paths,
                 config=self.config.to_dict()
             )
@@ -200,7 +200,7 @@ class InferStrategy(Strategy):
     def add_reporters(self):
         if self.config.print_report:
             accuracy_reporter = AccuracyReporter(
-                metadata={"table_name": self.config.table_name},
+                table_name=self.table_name,
                 paths=self.config.paths,
                 config=self.config.to_dict()
             )
@@ -219,6 +219,7 @@ class InferStrategy(Strategy):
         Launch the infer process
         """
         self.set_config(
+            destination=kwargs["destination"],
             size=kwargs["size"],
             table_name=kwargs["table_name"],
             metadata_path=kwargs["metadata_path"],

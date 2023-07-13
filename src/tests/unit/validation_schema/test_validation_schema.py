@@ -120,6 +120,9 @@ def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
+    ({"destination": 0}, "Validation error(s) found in the metadata. "
+                         "The details are - {'fk_test': {'infer_settings': {"
+                         "'destination': ['Not a valid string.']}}}"),
     ({"size": 0}, "Validation error(s) found in the metadata. "
                   "The details are - {'fk_test': {'infer_settings': {"
                   "'size': ['Must be greater than or equal to 1.']}}}"),
@@ -237,9 +240,9 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
     with pytest.raises(ValidationError) as error:
         ValidationSchema(metadata).validate_schema()
     assert str(error.value) == "Validation error(s) found in the metadata. " \
-                               "The details are - {'pk_test': {" \
-                               "'source': ['Missing data for required field.']}, " \
-                               "'fk_test': {'source': ['Missing data for required field.']}}"
+                               "The details are - {'pk_test': {'train_settings': [" \
+                               "'Missing data for required field.']}, 'fk_test': {" \
+                               "'train_settings': {'source': ['Missing data for required field.']}}}"
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

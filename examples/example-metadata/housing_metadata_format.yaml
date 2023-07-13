@@ -13,24 +13,25 @@ global:                                 # In this section you can specify traini
 
 housing_properties:                       # Use table name here
   train_settings:                         # Settings for training process
+    source: "./examples/example-data/housing_conditions.csv"# The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
     epochs: 8                             # Number of epochs
     drop_null: true                       # Drop rows with NULL values
     row_limit: 1800                       # Limit of rows for training process
     print_report: true                    # Turn on or turn off generation of the report
 
   infer_settings:                         # Settings for infer process
+    destination: "./examples/generated-data/housing_conditions_generated.csv" # The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 90                              # Size for generated data
     run_parallel: false                   # Turn on or turn off parallel training process
     random_seed: 10                       # Ensure reproducible tables generation
     print_report: true                    # Turn on or turn off generation of the report
 
-  source: ./examples/example-data/housing_properties.csv # Supported formats include cloud storage locations, local files
   format:
-    sep: ','
+    sep: ","
     quotechar: '"'
-    quoting: 'All'
+    quoting: "All"
     escapechar: '"'
-    encoding: 'utf-8'
+    encoding: "utf-8"
     header: 0
     skiprows: 0
     on_bad_lines: skip
@@ -43,6 +44,7 @@ housing_properties:                       # Use table name here
 
 housing_conditions:
   train_settings:
+    source: "./examples/example-data/housing_conditions.csv" # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
     epochs: 5
     drop_null: true
     row_limit: 1800
@@ -52,12 +54,12 @@ housing_conditions:
         - housing_median_age
 
   infer_settings:
+    destination: "./examples/generated-data/housing_conditions_generated.csv" # The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 90
     run_parallel: false
     random_seed: 10
     print_report: true
 
-  source: ./examples/example-data/housing_conditions.csv
   keys:
     households_fk:
       type: "FK"

@@ -1,9 +1,9 @@
 test_table:
   train_settings:
+    source: ./path/to/test_table.csv
 
   infer_settings:
 
-  source: ./path/to/test_table.csv
   keys:
     pk_id:
       type: "PK"

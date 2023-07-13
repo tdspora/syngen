@@ -33,8 +33,6 @@ class Worker:
         """
         Update the metadata for training or inference process if a metadata file wasn't provided
         """
-        if "source" in self.settings.keys():
-            del self.settings["source"]
         if self.type == "train":
             train_settings = metadata[self.table_name]["train_settings"]
             train_settings.update(self.settings)
@@ -57,7 +55,6 @@ class Worker:
         """
         Update the metadata for training or inference process if a metadata file was provided
         """
-        self.settings.pop("source", None)
         global_train_settings = metadata.get("global", {}).get("train_settings", {})
         global_infer_settings = metadata.get("global", {}).get("infer_settings", {})
         metadata.pop("global", None)
@@ -89,10 +86,11 @@ class Worker:
         if self.table_name:
             metadata = {
                 self.table_name: {
-                    "train_settings": {},
+                    "train_settings": {
+                        "source": source,
+                    },
                     "infer_settings": {},
                     "keys": {},
-                    "source": source
                 }
             }
             metadata = self._update_metadata_for_table(metadata)
@@ -185,15 +183,14 @@ class Worker:
         chain_for_tables_for_inference, config_of_metadata_for_inference = metadata_for_inference
 
         for table in chain_for_tables_for_training:
-            global_context(self.metadata.get(table, {}).get("format", {}))
             config_of_table = config_of_metadata_for_training[table]
-            source = config_of_table["source"]
+            global_context(config_of_table.get("format", {}))
             train_settings = config_of_table["train_settings"]
             custom_logger.info(f"Training process of the table - {table} has started.")
 
             self.train_strategy.run(
                 metadata=self.metadata,
-                source=source,
+                source=train_settings["source"],
                 epochs=train_settings["epochs"],
                 drop_null=train_settings["drop_null"],
                 row_limit=train_settings["row_limit"],
@@ -211,8 +208,8 @@ class Worker:
         self.metadata = config_of_metadata_for_inference
         if generation_of_reports:
             for table in chain_for_tables_for_inference:
-                global_context(self.metadata.get(table, {}).get("format", {}))
                 config_of_table = config_of_metadata_for_inference[table]
+                global_context(config_of_table.get("format", {}))
                 train_settings = config_of_table["train_settings"]
                 print_report = train_settings.get("print_report")
                 both_keys = table in self.divided
@@ -220,6 +217,7 @@ class Worker:
                 custom_logger.info(f"Infer process of the table - {table} has started")
 
                 self.infer_strategy.run(
+                    destination=None,
                     metadata=self.metadata,
                     size=None,
                     table_name=table,
@@ -239,13 +237,14 @@ class Worker:
         :param config_of_tables: configuration of tables declared in metadata file
         """
         for table in tables:
-            global_context(self.metadata.get(table, {}).get("format", {}))
+            config_of_table = config_of_tables[table]
+            global_context(config_of_table.get("format", {}))
             custom_logger.info(f"Infer process of the table - {table} has started")
             both_keys = table in self.divided
-            config_of_table = config_of_tables[table]
             infer_settings = config_of_table["infer_settings"]
 
             self.infer_strategy.run(
+                destination=infer_settings.get("destination"),
                 metadata=self.metadata,
                 size=infer_settings["size"],
                 table_name=table,

@@ -188,8 +188,7 @@ class TrainConfig:
             "fk_kde_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/stat_keys/",
             "original_data_path":
                 f"model_artifacts/tmp_store/{self.slugify_table_name}/input_data_{self.slugify_table_name}.pkl",
-            "synthetic_data_path":
-                f"model_artifacts/tmp_store/{self.slugify_table_name}/merged_infer_{self.slugify_table_name}.csv",
+            "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path": f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
         }
 
@@ -199,6 +198,7 @@ class InferConfig:
     """
     The configuration class to set up the work of infer process
     """
+    destination: Optional[str]
     size: Optional[int]
     table_name: Optional[str]
     run_parallel: bool
@@ -261,15 +261,15 @@ class InferConfig:
         dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         return {
             "original_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
-            "synthetic_data_path": f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
             "draws_path": f"model_artifacts/tmp_store/{dynamic_name}/draws",
             "input_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
-            "path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
+            "path_to_merged_infer": self.destination if self.destination is not None \
+                else f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
             "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
             "train_config_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
             "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
             "dataset_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
-            "path_to_no_ml": f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
+            "path_to_no_ml": f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl"
         }

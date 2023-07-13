@@ -14,11 +14,11 @@ import dill
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
 from tensorflow.keras.preprocessing.text import Tokenizer
+from slugify import slugify
 
 from syngen.ml.vae import *
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import (
-    slugify_parameters,
     fetch_dataset,
     check_if_features_assigned,
     generate_uuid
@@ -342,13 +342,12 @@ class VaeInferHandler(BaseHandler):
 
         return synth_fk
 
-    @staticmethod
-    @slugify_parameters()
-    def _set_pk_path(pk_table) -> str:
+    def _set_pk_path(self, pk_table) -> str:
         """
         Set the path to synthetic data of corresponding pk table
         """
-        pk_path = f"model_artifacts/tmp_store/{pk_table}/merged_infer_{pk_table}.csv"
+        destination_to_pk_table = self.metadata[pk_table].get("destination")
+        pk_path = destination_to_pk_table if destination_to_pk_table is not None else f"model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
         if not os.path.exists(pk_path):
             raise FileNotFoundError(
                 "The table with a primary key specified in the metadata file does not "
@@ -400,6 +399,7 @@ class VaeInferHandler(BaseHandler):
         prepared_data = self._concat_slices_with_unique_pk(prepared_batches) if len(prepared_batches) > 0 else pd.DataFrame()
 
         is_pk = self._is_pk()
+
         if self.metadata_path is not None:
             if not is_pk:
                 generated_data = self.generate_keys(prepared_data, self.size, self.metadata, self.table_name)

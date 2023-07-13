@@ -168,10 +168,9 @@ global:                                     # Global settings. Optional paramete
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
 
-CUSTOMER:                                   # Table name. Required parameter
-  source: "./files/customer.csv"            # Supported formats include local files in CSV, Avro formats. Required parameter
-                 
-  train_settings:                           # Settings for training process. Optional parameter
+CUSTOMER:                                   # Table name. Required parameter               
+  train_settings:                           # Settings for training process. Required parameter
+    source: "./files/customer.csv"          # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
@@ -193,6 +192,7 @@ CUSTOMER:                                   # Table name. Required parameter
     on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
     engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter             
   infer_settings:                           # Settings for infer process. Optional parameter
+    destination: "./files/generated_data_customer.csv"# The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
@@ -230,10 +230,9 @@ CUSTOMER:                                   # Table name. Required parameter
           - address_id
 
      
-ORDER:                                      # Table name. Required parameter
-  source: "./files/order.csv"               # Supported formats include local files in CSV, Avro formats. Required parameter
-     
-  train_settings:                           # Settings for training process. Optional parameter
+ORDER:                                      # Table name. Required parameter    
+  train_settings:                           # Settings for training process. Required parameter
+    source: "./files/order.csv"             # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
@@ -245,6 +244,7 @@ ORDER:                                      # Table name. Required parameter
       - marital_status
      
   infer_settings:                           # Settings for infer process. Optional parameter
+    destination: "./files/generated_data_order.csv"# The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter

@@ -1,5 +1,6 @@
 pk_test:                                  # Use table name here
   train_settings:                         # Settings for training process
+    source: ../data/pk_test.csv           # Supported formats include cloud storage locations, local files
     epochs: 1                             # Number of epochs
     drop_null: false                      # Drop rows with NULL values
     print_report: false                   # Turn on or turn off generation of the report
@@ -11,7 +12,6 @@ pk_test:                                  # Use table name here
     random_seed: 1                        # Ensure reproducible tables generation
     print_report: true
 
-  source: ..\data\pk_test.csv             # Supported formats include cloud storage locations, local files
   keys:                                   # Keys of the table
     pk_id:                                # Name of a key
       type: "PK"                          # Type of key
