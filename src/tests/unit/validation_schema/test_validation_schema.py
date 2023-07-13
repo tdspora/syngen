@@ -43,6 +43,9 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
 
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
+    ({"source": 0}, "Validation error(s) found in the metadata. "
+                         "The details are - {'fk_test': {'infer_settings': {"
+                         "'destination': ['Not a valid string.']}}}"),
     ({"epochs": 0}, "Validation error(s) found in the metadata. "
                     "The details are - {'fk_test': {'train_settings': "
                     "{'epochs': ['Must be greater than or equal to 1.']}}}"),
