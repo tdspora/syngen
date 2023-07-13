@@ -37,7 +37,7 @@ class TrainingSettingsSchema(Schema):
     print_report = fields.Boolean(required=False)
 
 class ExtendedTrainingSettingsSchema(TrainingSettingsSchema):
-    source = fields.String(required=True)
+    source = fields.String(required=True, allow_none=False)
     column_types = fields.Dict(
         keys=fields.String(validate=validate.OneOf(["categorical"])),
         values=fields.List(fields.String())
@@ -82,7 +82,7 @@ class GlobalSettingsSchema(Schema):
 
 
 class ConfigurationSchema(Schema):
-    train_settings = fields.Nested(ExtendedTrainingSettingsSchema, required=True, allow_none=True)
+    train_settings = fields.Nested(ExtendedTrainingSettingsSchema, required=True, allow_none=False)
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
     format = fields.Nested(FormatSettingsSchema, required=False, allow_none=True)
     keys = fields.Dict(keys=fields.String(), values=fields.Nested(KeysSchema), required=False, allow_none=True)

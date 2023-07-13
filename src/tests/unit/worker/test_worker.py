@@ -1314,4 +1314,3 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
     )
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
-

@@ -120,6 +120,9 @@ def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
+    ({"destination": 0}, "Validation error(s) found in the metadata. "
+                         "The details are - {'fk_test': {'infer_settings': {"
+                         "'destination': ['Not a valid string.']}}}"),
     ({"size": 0}, "Validation error(s) found in the metadata. "
                   "The details are - {'fk_test': {'infer_settings': {"
                   "'size': ['Must be greater than or equal to 1.']}}}"),
