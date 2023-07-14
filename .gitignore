@@ -41,6 +41,5 @@ data/
 model_artifacts/
 metadata/
 
-
 pytest*.xml
 /src/tests/**/text_contained_nested_structures.csv
