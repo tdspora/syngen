@@ -11,6 +11,7 @@ import pandas.errors
 import pandavro as pdx
 import yaml
 from yaml import SafeLoader
+from yaml.scanner import ScannerError
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
 
@@ -19,7 +20,6 @@ from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.custom_logger import custom_logger
 from syngen.ml.context import get_context, global_context
-
 
 DELIMITERS = {
     "\\t": "\t"
@@ -118,12 +118,12 @@ class CSVLoader:
     def _get_csv_params(**kwargs):
         params = {}
         format_params = kwargs.get("format")
-        
+
         if format_params:
             params.update(format_params)
             quoting = format_params.get("quoting", None)
             params["quoting"] = CSVLoader._get_quoting(quoting)
-            
+
         return params
 
     @staticmethod
@@ -142,14 +142,13 @@ class CSVLoader:
             params["skiprows"] = None
             global_context(params)
         except FileNotFoundError as error:
-            message = f"It seems that the path to the table isn't valid.\n"\
+            message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
                       f"Please, check the path to the table"
             custom_logger.error(message)
             raise FileNotFoundError(message)
-        
-        return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
 
+        return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
 
     def load_data(self, path, **kwargs):
         return self._load_data(path, format=self.format, **kwargs)
@@ -158,7 +157,6 @@ class CSVLoader:
     def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
         """
         Save the provided DataFrame to a CSV file.
-        
         :param path: The file path to save the DataFrame.
         :param df: The DataFrame to be saved.
         :param kwargs: Additional keyword arguments to be passed to the to_csv method.
@@ -167,7 +165,7 @@ class CSVLoader:
         if df is not None:
             # Extract valid parameters
             valid_parameters = inspect.signature(pd.DataFrame.to_csv).parameters
-            
+
             # Filter out any keyword arguments that are not valid parameters
             filtered_kwargs = {k: v for k, v in format_params.items() if k in valid_parameters}
             for k, v in filtered_kwargs.items():
@@ -188,7 +186,6 @@ class CSVLoader:
 
             # Save the DataFrame to a CSV file
             df.to_csv(path, **filtered_kwargs, index=False)
-        
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         self._save_data(path, df, **kwargs)
@@ -276,13 +273,31 @@ class YAMLLoader(BaseDataLoader):
     """
     Class for loading and saving data in YAML format
     """
-    def load_data(self, metadata_path: str) -> dict:
-        with open(metadata_path, "r", encoding="utf-8") as metadata_file:
+    _metadata_sections = ["train_settings", "infer_settings", "keys"]
+
+    @staticmethod
+    def _validate_metadata(metadata):
+        """
+        Validate the schema of the metadata file in YAML format
+        """
+        ValidationSchema(metadata).validate_schema()
+
+    def _load_data(self, metadata_file) -> Dict:
+        try:
             metadata = yaml.load(metadata_file, Loader=SafeLoader)
-            ValidationSchema(metadata).validate_schema()
-            parameters = ["train_settings", "infer_settings", "keys"]
-            metadata = self.replace_none_values_of_metadata_settings(parameters, metadata)
-        return metadata
+            self._validate_metadata(metadata)
+            metadata = self.replace_none_values_of_metadata_settings(self._metadata_sections, metadata)
+            return metadata
+        except ScannerError as error:
+            message = f"It seems that the metadata file in YAML format isn't valid.\n" \
+                      f"The details of the error - {str(error)}.\n" \
+                      f"Please check the metadata file in YAML format."
+            custom_logger.error(error)
+            raise ValueError(message)
+
+    def load_data(self, metadata_path: str) -> Dict:
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            return self._load_data(f)
 
     @staticmethod
     def replace_none_values_of_metadata_settings(parameters, metadata: dict):
@@ -293,7 +308,7 @@ class YAMLLoader(BaseDataLoader):
         if metadata["global"]:
             for settings in metadata["global"].keys():
                 metadata["global"][settings] = dict() if metadata["global"].get(settings) is None \
-                        else metadata["global"].get(settings)
+                    else metadata["global"].get(settings)
         for key in metadata.keys():
             if key == "global":
                 continue
