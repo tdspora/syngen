@@ -40,6 +40,7 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
             try:
                 date_for_check = datetime(8557, 7, 20)
                 datetime_object = parse(x, default=date_for_check)
+                # Check if the parsed date contains only the time component. If it does, then skip it.
                 count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
                 continue
