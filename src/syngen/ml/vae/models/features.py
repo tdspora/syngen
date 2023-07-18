@@ -654,21 +654,13 @@ class DateFeature(BaseFeature):
         min_allowed_time_ns = int(-9.2E18)
         unscaled = self.scaler.inverse_transform(data)
         unscaled = chain.from_iterable(unscaled)
-        if self.is_positive:
-            return list(
+        return list(
                 map(
                     lambda l: pd.Timestamp(
-                        abs(min(max_allowed_time_ns, int(l)))
-                    ).strftime(self.date_format),
-                    unscaled,
-                )
-            )
-        else:
-            return list(
-                map(
-                    lambda l: pd.Timestamp(
-                        max(min(max_allowed_time_ns, int(l)), min_allowed_time_ns)
-                    ).strftime(self.date_format),
+                        min(max_allowed_time_ns, int(l))
+                    ).strftime(self.date_format)
+                    if l >= 0
+                    else pd.Timestamp(max(min_allowed_time_ns, int(l))).strftime(self.date_format),
                     unscaled,
                 )
             )

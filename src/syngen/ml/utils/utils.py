@@ -38,8 +38,9 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         count = 0
         for x in x_wo_na.values:
             try:
-                parse(x, fuzzy=fuzzy)
-                count += 1
+                date_for_check = datetime(8557, 7, 20)
+                datetime_object = parse(x, default=date_for_check)
+                count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
                 continue
         if count > len(x_wo_na) * 0.8:
