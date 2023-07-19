@@ -55,10 +55,13 @@ class Dataset:
         self.__prepare_dir()
         self._set_metadata()
 
-    def __getstate__(self):
-        dataset_config = self.__dict__.copy()
-        del dataset_config['df']
-        return dataset_config
+    def __getstate__(self) -> Dict:
+        """
+        Return a dictionary of the dataset's state
+        """
+        dataset_instance = self.__dict__.copy()
+        del dataset_instance["df"]
+        return dataset_instance
 
     def _predefine_fields(self):
         self.features = dict()
