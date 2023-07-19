@@ -48,11 +48,17 @@ class Dataset:
     uuid_columns: Set = field(init=False)
     uuid_columns_types: Dict = field(init=False)
     dropped_columns: Set = field(init=False)
+    order_of_columns: List = field(init=False)
 
     def __post_init__(self):
         self._predefine_fields()
         self.__prepare_dir()
         self._set_metadata()
+
+    def __getstate__(self):
+        dataset_config = self.__dict__.copy()
+        del dataset_config['df']
+        return dataset_config
 
     def _predefine_fields(self):
         self.features = dict()
@@ -65,6 +71,7 @@ class Dataset:
         self.uuid_columns = set()
         self.uuid_columns_types = {}
         self.dropped_columns = fetch_training_config(self.paths["train_config_pickle_path"]).dropped_columns
+        self.order_of_columns = self.df.columns.tolist()
 
     def __prepare_dir(self):
         os.makedirs(self.paths["fk_kde_path"], exist_ok=True)

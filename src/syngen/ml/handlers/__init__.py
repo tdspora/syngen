@@ -1,4 +1,4 @@
-from syngen.ml.train_chain.train_chain import (
+from syngen.ml.handlers.handlers import (
     BaseHandler,
     RootHandler,
     VaeTrainHandler,
