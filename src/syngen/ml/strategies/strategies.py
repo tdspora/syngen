@@ -3,7 +3,7 @@ import os
 import traceback
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-from syngen.ml.train_chain import RootHandler
+from syngen.ml.handlers import RootHandler
 from syngen.ml.reporters import (
     Report,
     AccuracyReporter,
@@ -13,7 +13,7 @@ from syngen.ml.config import (
     TrainConfig,
     InferConfig
 )
-from syngen.ml.train_chain import (
+from syngen.ml.handlers import (
     LongTextsHandler,
     VaeTrainHandler,
     VaeInferHandler

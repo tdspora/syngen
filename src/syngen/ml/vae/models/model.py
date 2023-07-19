@@ -38,7 +38,7 @@ class CVAE:
         self.intermediate_dim = intermediate_dim
         self.batch_size = batch_size
         self.latent_dim = latent_dim
-        self.latent_components = min(latent_components, len(self.dataset.df))
+        self.latent_components = min(latent_components, len(self.dataset.order_of_columns))
         self.model = None
         self.latent_model = None
         self.metrics = {}
