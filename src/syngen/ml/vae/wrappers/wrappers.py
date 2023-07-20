@@ -139,7 +139,6 @@ class VAEWrapper(BaseWrapper):
         self.df = self.dataset.pipeline()
         self._save_dataset()
 
-
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
             if column.endswith("_zero"):
