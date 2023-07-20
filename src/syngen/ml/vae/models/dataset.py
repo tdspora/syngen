@@ -409,7 +409,7 @@ class Dataset:
 
     def _set_empty_columns(self, df: pd.DataFrame, schema: Dict):
         """
-        Set up the list of empty columns which has been dropped from the table
+        Set up the list of empty columns which have been dropped from the table
         """
         self.empty_columns = [column for column in schema["fields"] if schema["fields"][column] == "removed"]
 
