@@ -20,6 +20,8 @@ import pandas as pd
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.custom_logger import custom_logger
+from syngen.ml.utils import fetch_dataset
+
 
 class CVAE:
     """
@@ -215,8 +217,9 @@ class CVAE:
         synthetic_prediction = self.generator_model.predict(latent_sample)
         self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
         pk_uq_keys_mapping = self.dataset.primary_keys_mapping
+        empty_columns = self.dataset.empty_columns
         if pk_uq_keys_mapping:
-            self.__make_pk_uq_unique(pk_uq_keys_mapping)
+            self.__make_pk_uq_unique(pk_uq_keys_mapping, empty_columns)
         return self.inverse_transformed_df
 
     def less_likely_sample(
@@ -244,9 +247,9 @@ class CVAE:
         else:
             return False
 
-    def __make_pk_uq_unique(self, pk_uq_keys_mapping):
+    def __make_pk_uq_unique(self, pk_uq_keys_mapping, empty_columns):
         for key_name, config in pk_uq_keys_mapping.items():
-            key_columns = config.get("columns")
+            key_columns = [column for column in config.get("columns") if column not in empty_columns]
             for column in key_columns:
                 key_type = self.dataset.pk_uq_keys_types[column]
                 if key_type is float or self.__check_pk_numeric_convertability(column, key_type):
