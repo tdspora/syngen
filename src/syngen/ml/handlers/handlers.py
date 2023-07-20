@@ -268,7 +268,6 @@ class VaeInferHandler(BaseHandler):
             synthetic_infer[col] = generated_column
         return synthetic_infer
 
-
     def run_separate(self, params: Tuple):
         custom_logger.setup_log_level(self.log_level)
         i, size = params
@@ -382,6 +381,15 @@ class VaeInferHandler(BaseHandler):
                 generated[fk_column_name] = synth_fk
         return generated
 
+    def _restore_empty_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Restore empty columns in the generated table
+        """
+        empty_columns = fetch_dataset(self.paths["dataset_pickle_path"]).empty_columns
+        empty_df = pd.DataFrame(index=df.index, columns=empty_columns)
+        df = pd.concat([df, empty_df], axis=1)
+        return df
+
     def handle(
             self,
             **kwargs
@@ -397,6 +405,7 @@ class VaeInferHandler(BaseHandler):
         batches = self.split_by_batches(self.size, batch_num)
         prepared_batches = [self.run(batch, self.run_parallel) for batch in batches]
         prepared_data = self._concat_slices_with_unique_pk(prepared_batches) if len(prepared_batches) > 0 else pd.DataFrame()
+        prepared_data = self._restore_empty_columns(prepared_data)
 
         is_pk = self._is_pk()
 
