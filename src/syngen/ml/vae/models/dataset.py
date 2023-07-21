@@ -50,7 +50,7 @@ class Dataset:
     dropped_columns: Set = field(init=False)
     order_of_columns: List = field(init=False)
     empty_columns: Set = field(init=False)
-    non_existed_columns: Set = field(init=False)
+    non_existent_columns: Set = field(init=False)
 
     def __post_init__(self):
         self._predefine_fields()
@@ -88,7 +88,7 @@ class Dataset:
         """
         for key, config in keys_mapping.items():
             columns = config.get("columns", [])
-            non_existent_columns = [column for column in columns if column in self.non_existed_columns]
+            non_existent_columns = [column for column in columns if column in self.non_existent_columns]
 
             if non_existent_columns:
                 custom_logger.warning(
@@ -216,7 +216,7 @@ class Dataset:
 
     def _set_metadata(self):
         self._set_empty_columns()
-        self._set_non_existed_columns()
+        self._set_non_existent_columns()
         self.__set_metadata(self.metadata, self.table_name)
         self.__data_pipeline(self.df, self.schema)
 
@@ -438,20 +438,20 @@ class Dataset:
             if self.schema["fields"][column] == "removed"
         }
 
-    def _set_non_existed_columns(self):
+    def _set_non_existent_columns(self):
         """
         Set up the list of columns which are absent in the table
         """
         table_config = self.metadata.get(self.table_name, {})
 
-        non_existed_columns = {
+        non_existent_columns = {
             column
             for key_config in table_config.get("keys", {}).values()
             for column in key_config.get("columns", [])
             if column not in self.df.columns
         }
 
-        self.non_existed_columns = (self.non_existed_columns | non_existed_columns) - self.empty_columns
+        self.non_existent_columns = (self.non_existent_columns | non_existent_columns) - self.empty_columns
 
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """
