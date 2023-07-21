@@ -75,6 +75,7 @@ def test_save_dataset(rp_logger):
             table_name="mock_table",
             paths={}
         )
+        setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
         fetched_dataset = mock_dataset.__getstate__()
         assert "df" not in fetched_dataset
@@ -97,7 +98,8 @@ def test_save_dataset(rp_logger):
             "foreign_keys_mapping": {},
             "foreign_keys_list": [],
             "fk_columns": [],
-            "empty_columns": [],
+            "empty_columns": set(),
+            "non_existent_columns": set(),
             "uuid_columns_types": {},
             "uuid_columns": set(),
             "binary_columns": set(),
@@ -115,4 +117,35 @@ def test_save_dataset(rp_logger):
             "str_columns": set(),
             "date_columns": set()
         }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_check_non_existent_columns(rp_logger):
+    rp_logger.info("Test the process of checking non-existent columns")
+    df = pd.read_csv("./tests/unit/dataset/fixtures/data.csv")
+    metadata = {
+        "mock_table": {
+            "keys": {
+                "PK": {
+                    "type": "PK",
+                    "columns": ["id", "non_existent_pk_column"]
+                },
+                "UQ": {
+                    "type": "UQ",
+                    "columns": ["first_name", "non_existent_uq_column"]
+                }
+            }
+        }
+    }
+    with patch.object(Dataset, "__post_init__", lambda x: None):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={}
+        )
+        setattr(mock_dataset, "non_existent_columns", set())
+        mock_dataset._set_metadata()
+        assert mock_dataset.non_existent_columns == {"non_existent_pk_column", "non_existent_uq_column"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
