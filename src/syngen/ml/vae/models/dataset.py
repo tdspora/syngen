@@ -49,7 +49,8 @@ class Dataset:
     uuid_columns_types: Dict = field(init=False)
     dropped_columns: Set = field(init=False)
     order_of_columns: List = field(init=False)
-    empty_columns: List = field(init=False)
+    empty_columns: Set = field(init=False)
+    non_existed_columns: Set = field(init=False)
 
     def __post_init__(self):
         self._predefine_fields()
@@ -75,10 +76,25 @@ class Dataset:
         self.uuid_columns = set()
         self.uuid_columns_types = {}
         self.dropped_columns = fetch_training_config(self.paths["train_config_pickle_path"]).dropped_columns
+        self.non_existed_columns = set()
         self.order_of_columns = self.df.columns.tolist()
 
     def __prepare_dir(self):
         os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
+
+    def _check_for_non_existent_columns(self, keys_mapping: Dict, key_type: str):
+        """
+        Check if there are columns in the dataframe that are not in the metadata
+        """
+        for key, config in keys_mapping.items():
+            columns = config.get("columns", [])
+            non_existent_columns = [column for column in columns if column in self.non_existed_columns]
+
+            if non_existent_columns:
+                custom_logger.warning(
+                    f"The column(s) - {', '.join(non_existent_columns)} was excluded from the {key_type} - "
+                    f"'{key}' as far as this column doesn't exist in the table - '{self.table_name}'"
+                )
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
@@ -92,6 +108,8 @@ class Dataset:
         self.primary_key_name = self.primary_keys_list[0] if self.primary_keys_list else None
         pk_columns_lists = [val['columns'] for val in self.primary_keys_mapping.values()]
         self.pk_columns = [col for uq_cols in pk_columns_lists for col in uq_cols]
+
+        self._check_for_non_existent_columns(self.primary_keys_mapping, key_type="PK")
 
         if self.primary_key_name:
             custom_logger.info(f"The primary key name was set: {self.primary_key_name}")
@@ -110,6 +128,7 @@ class Dataset:
         self.unique_keys_list = self.unique_keys_mapping_list if self.unique_keys_mapping_list else []
         uq_columns_lists = [val['columns'] for val in self.unique_keys_mapping.values()]
         self.uq_columns = [col for uq_cols in uq_columns_lists for col in uq_cols]
+        self._check_for_non_existent_columns(self.unique_keys_mapping, key_type="UQ")
 
         if self.unique_keys_list:
             custom_logger.info(f"The unique keys were set: {self.unique_keys_list}")
@@ -147,6 +166,7 @@ class Dataset:
                 f"as they contain empty columns: {', '.join(self.dropped_columns.union(self.fk_columns))}"
             )
 
+        self._check_for_non_existent_columns(self.foreign_keys_mapping, key_type="FK")
         if self.foreign_keys_list:
             custom_logger.info(f"The following foreign keys were set: {', '.join(self.foreign_keys_list)}")
         if not self.foreign_keys_list:
@@ -195,6 +215,8 @@ class Dataset:
             self.fk_columns = []
 
     def _set_metadata(self):
+        self._set_empty_columns()
+        self._set_non_existed_columns()
         self.__set_metadata(self.metadata, self.table_name)
         self.__data_pipeline(self.df, self.schema)
 
@@ -407,11 +429,29 @@ class Dataset:
             get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
             self.binary_columns - self.long_text_columns
 
-    def _set_empty_columns(self, df: pd.DataFrame, schema: Dict):
+    def _set_empty_columns(self):
         """
         Set up the list of empty columns which have been dropped from the table
         """
-        self.empty_columns = [column for column in schema["fields"] if schema["fields"][column] == "removed"]
+        self.empty_columns = {
+            column for column in self.schema["fields"]
+            if self.schema["fields"][column] == "removed"
+        }
+
+    def _set_non_existed_columns(self):
+        """
+        Set up the list of columns which are absent in the table
+        """
+        table_config = self.metadata.get(self.table_name, {})
+
+        non_existed_columns = {
+            column
+            for key_config in table_config.get("keys", {}).values()
+            for column in key_config.get("columns", [])
+            if column not in self.df.columns
+        }
+
+        self.non_existed_columns = (self.non_existed_columns | non_existed_columns) - self.empty_columns
 
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """
@@ -474,7 +514,6 @@ class Dataset:
         self.uuid_columns_types = {k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns}
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
-        self._set_empty_columns(df, schema)
         if schema.get("format") == "CSV":
             self._general_data_pipeline(df, schema)
         elif schema.get("format") == 'Avro':
@@ -489,7 +528,7 @@ class Dataset:
                len(self.binary_columns) + \
                len(self.long_text_columns) + \
                len(self.uuid_columns) == len(df.columns), "According to number of columns with defined types, " \
-                                                               "column types are not identified correctly"
+                                                          "column types are not identified correctly"
 
         custom_logger.debug(
             f"Count of string columns: {len(self.str_columns)}; "
