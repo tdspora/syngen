@@ -82,19 +82,21 @@ class Dataset:
     def __prepare_dir(self):
         os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
 
-    def _check_for_non_existent_columns(self, keys_mapping: Dict, key_type: str):
+    def _check_for_non_existent_columns(self, keys_mapping: Dict, key_type: str) -> Dict:
         """
         Check if there are columns in the dataframe that are not in the metadata
         """
         for key, config in keys_mapping.items():
             columns = config.get("columns", [])
             non_existent_columns = [column for column in columns if column in self.non_existent_columns]
+            config.update({"columns": [column for column in columns if column not in self.non_existent_columns]})
 
             if non_existent_columns:
                 custom_logger.warning(
                     f"The column(s) - {', '.join(non_existent_columns)} was excluded from the {key_type} - "
                     f"'{key}' as far as this column doesn't exist in the table - '{self.table_name}'"
                 )
+        return keys_mapping
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
@@ -104,12 +106,11 @@ class Dataset:
             key: value for (key, value) in config_of_keys.items()
             if config_of_keys.get(key).get("type") == "PK"
         }
+        self.primary_keys_mapping = self._check_for_non_existent_columns(self.primary_keys_mapping, key_type="PK")
         self.primary_keys_list = list(self.primary_keys_mapping.keys())
         self.primary_key_name = self.primary_keys_list[0] if self.primary_keys_list else None
         pk_columns_lists = [val['columns'] for val in self.primary_keys_mapping.values()]
         self.pk_columns = [col for uq_cols in pk_columns_lists for col in uq_cols]
-
-        self._check_for_non_existent_columns(self.primary_keys_mapping, key_type="PK")
 
         if self.primary_key_name:
             custom_logger.info(f"The primary key name was set: {self.primary_key_name}")
@@ -124,11 +125,11 @@ class Dataset:
             key: value for (key, value) in config_of_keys.items()
             if config_of_keys.get(key).get("type") == "UQ"
         }
+        self.unique_keys_mapping = self._check_for_non_existent_columns(self.unique_keys_mapping, key_type="UQ")
         self.unique_keys_mapping_list = list(self.unique_keys_mapping.keys())
         self.unique_keys_list = self.unique_keys_mapping_list if self.unique_keys_mapping_list else []
         uq_columns_lists = [val['columns'] for val in self.unique_keys_mapping.values()]
         self.uq_columns = [col for uq_cols in uq_columns_lists for col in uq_cols]
-        self._check_for_non_existent_columns(self.unique_keys_mapping, key_type="UQ")
 
         if self.unique_keys_list:
             custom_logger.info(f"The unique keys were set: {self.unique_keys_list}")
@@ -156,6 +157,7 @@ class Dataset:
         Set up foreign keys for the table
         """
         self.foreign_keys_mapping, dropped_fk_keys = self._filter_dropped_keys(config_of_keys, "FK")
+        self.foreign_keys_mapping = self._check_for_non_existent_columns(self.foreign_keys_mapping, key_type="FK")
         self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
         fk_columns_lists = [val['columns'] for val in self.foreign_keys_mapping.values()]
         self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
@@ -166,7 +168,6 @@ class Dataset:
                 f"as they contain empty columns: {', '.join(self.dropped_columns.union(self.fk_columns))}"
             )
 
-        self._check_for_non_existent_columns(self.foreign_keys_mapping, key_type="FK")
         if self.foreign_keys_list:
             custom_logger.info(f"The following foreign keys were set: {', '.join(self.foreign_keys_list)}")
         if not self.foreign_keys_list:
