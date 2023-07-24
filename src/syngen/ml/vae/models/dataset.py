@@ -61,7 +61,8 @@ class Dataset:
         Return a dictionary of the dataset's state
         """
         dataset_instance = self.__dict__.copy()
-        del dataset_instance["df"]
+        if "df" in dataset_instance:
+            del dataset_instance["df"]
         return dataset_instance
 
     def _predefine_fields(self):
