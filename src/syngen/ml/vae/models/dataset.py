@@ -82,22 +82,6 @@ class Dataset:
     def __prepare_dir(self):
         os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
 
-    def _check_for_non_existent_columns(self, keys_mapping: Dict, key_type: str) -> Dict:
-        """
-        Check if there are columns in metadata that are not present in the dataframe
-        """
-        for key, config in keys_mapping.items():
-            columns = config.get("columns", [])
-            non_existent_columns = [column for column in columns if column in self.non_existent_columns]
-            config.update({"columns": [column for column in columns if column not in self.non_existent_columns]})
-
-            if non_existent_columns:
-                custom_logger.warning(
-                    f"The column(s) - {', '.join(non_existent_columns)} was excluded from the {key_type} - "
-                    f"'{key}' as far as this column doesn't exist in the table - '{self.table_name}'"
-                )
-        return keys_mapping
-
     def __set_pk_key(self, config_of_keys: Dict):
         """
         Set up primary key for the table
@@ -106,7 +90,6 @@ class Dataset:
             key: value for (key, value) in config_of_keys.items()
             if config_of_keys.get(key).get("type") == "PK"
         }
-        self.primary_keys_mapping = self._check_for_non_existent_columns(self.primary_keys_mapping, key_type="PK")
         self.primary_keys_list = list(self.primary_keys_mapping.keys())
         self.primary_key_name = self.primary_keys_list[0] if self.primary_keys_list else None
         pk_columns_lists = [val['columns'] for val in self.primary_keys_mapping.values()]
@@ -125,7 +108,6 @@ class Dataset:
             key: value for (key, value) in config_of_keys.items()
             if config_of_keys.get(key).get("type") == "UQ"
         }
-        self.unique_keys_mapping = self._check_for_non_existent_columns(self.unique_keys_mapping, key_type="UQ")
         self.unique_keys_mapping_list = list(self.unique_keys_mapping.keys())
         self.unique_keys_list = self.unique_keys_mapping_list if self.unique_keys_mapping_list else []
         uq_columns_lists = [val['columns'] for val in self.unique_keys_mapping.values()]
@@ -157,7 +139,6 @@ class Dataset:
         Set up foreign keys for the table
         """
         self.foreign_keys_mapping, dropped_fk_keys = self._filter_dropped_keys(config_of_keys, "FK")
-        self.foreign_keys_mapping = self._check_for_non_existent_columns(self.foreign_keys_mapping, key_type="FK")
         self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
         fk_columns_lists = [val['columns'] for val in self.foreign_keys_mapping.values()]
         self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
@@ -217,7 +198,9 @@ class Dataset:
 
     def _set_metadata(self):
         self._set_empty_columns()
-        self._set_non_existent_columns()
+        table_config = self.metadata.get(self.table_name, {})
+        self._set_non_existent_columns(table_config)
+        self._update_table_config(table_config)
         self.__set_metadata(self.metadata, self.table_name)
         self.__data_pipeline(self.df, self.schema)
 
@@ -439,12 +422,35 @@ class Dataset:
             if self.schema["fields"][column] == "removed"
         }
 
-    def _set_non_existent_columns(self):
+    def _remove_non_existent_columns(self, columns: list, key: str, key_type: str) -> list:
+        """
+        Remove the columns from the table metadata which are absent in the table
+        """
+        updated_columns = []
+        for column in columns:
+            if column in self.non_existent_columns:
+                custom_logger.warning(
+                    f"The column - '{column}' was excluded from the {key_type} - "
+                    f"'{key}' as far as this column doesn't exist in the table - '{self.table_name}'"
+                )
+            else:
+                updated_columns.append(column)
+        return updated_columns
+
+    def _update_table_config(self, table_config: Dict):
+        """
+        Update the table metadata by removing the columns which are absent in the table
+        but mentioned in the metadata
+        """
+        for key, key_config in table_config.get("keys", {}).items():
+            key_type = key_config.get("type")
+            updated_columns = self._remove_non_existent_columns(key_config.get("columns", []), key, key_type)
+            key_config["columns"] = updated_columns
+
+    def _set_non_existent_columns(self, table_config: Dict):
         """
         Set up the list of columns which are absent in the table
         """
-        table_config = self.metadata.get(self.table_name, {})
-
         non_existent_columns = {
             column
             for key_config in table_config.get("keys", {}).values()
@@ -452,7 +458,7 @@ class Dataset:
             if column not in self.df.columns
         }
 
-        self.non_existent_columns = (self.non_existent_columns | non_existent_columns) - self.empty_columns
+        self.non_existent_columns = non_existent_columns - self.empty_columns
 
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """

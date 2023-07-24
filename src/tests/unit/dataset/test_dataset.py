@@ -128,7 +128,7 @@ def test_check_non_existent_columns(rp_logger):
             "keys": {
                 "PK": {
                     "type": "PK",
-                    "columns": ["id", "non_existent_pk_column"]
+                    "columns": ["id", "non_existent_pk_column", "non_existent_pk_column_2"]
                 },
                 "UQ": {
                     "type": "UQ",
@@ -147,5 +147,20 @@ def test_check_non_existent_columns(rp_logger):
         )
         setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
-        assert mock_dataset.non_existent_columns == {"non_existent_pk_column", "non_existent_uq_column"}
+        assert mock_dataset.non_existent_columns == {
+            "non_existent_pk_column", "non_existent_uq_column", "non_existent_pk_column_2"}
+        assert mock_dataset.metadata == {
+            "mock_table": {
+                "keys": {
+                    "PK": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    },
+                    "UQ": {
+                        "type": "UQ",
+                        "columns": ["first_name"]
+                    }
+                }
+            }
+        }
     rp_logger.info(SUCCESSFUL_MESSAGE)
