@@ -84,7 +84,7 @@ class Dataset:
 
     def _check_for_non_existent_columns(self, keys_mapping: Dict, key_type: str) -> Dict:
         """
-        Check if there are columns in the dataframe that are not in the metadata
+        Check if there are columns in metadata that are not present in the dataframe
         """
         for key, config in keys_mapping.items():
             columns = config.get("columns", [])
