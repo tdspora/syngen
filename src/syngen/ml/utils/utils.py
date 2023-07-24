@@ -134,6 +134,7 @@ def fetch_dataset(dataset_pickle_path: str):
     if hasattr(dataset, "df"):
         dataset.order_of_columns = dataset.df.columns.tolist()
         dataset.empty_columns = dataset.dropped_columns
+        set_non_existent_columns(dataset)
         del dataset.df
         with open(dataset_pickle_path, "wb") as f:
             f.write(pickle.dumps(dataset))
@@ -217,3 +218,19 @@ def fetch_training_config(train_config_pickle_path):
     """
     with open(train_config_pickle_path, "rb") as f:
         return pkl.load(f)
+
+
+def set_non_existent_columns(dataset):
+    """
+    Set up the list of columns which are absent in the table
+    """
+    table_config = dataset.metadata.get(dataset.table_name, {})
+
+    non_existent_columns = {
+        column
+        for key_config in table_config.get("keys", {}).values()
+        for column in key_config.get("columns", [])
+        if column not in dataset.df.columns
+    }
+
+    dataset.non_existent_columns = non_existent_columns - set(dataset.empty_columns)
