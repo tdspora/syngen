@@ -130,7 +130,12 @@ def fetch_dataset(dataset_pickle_path: str):
     Deserialize and return the object of class Dataset
     """
     with open(dataset_pickle_path, "rb") as f:
-        return pickle.loads(f.read())
+        dataset = pickle.loads(f.read())
+        if hasattr(dataset, "df"):
+            dataset.order_of_columns = dataset.df.columns.tolist()
+            del dataset.df
+            dataset.empty_columns = []
+        return dataset
 
 
 def slugify_attribute(**kwargs):
@@ -202,6 +207,7 @@ def check_if_features_assigned(dataset_pickle_path: str):
         custom_logger.info("No features to train VAE on")
         return False
     return True
+
 
 def fetch_training_config(train_config_pickle_path):
     """
