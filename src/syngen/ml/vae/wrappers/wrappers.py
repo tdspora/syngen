@@ -324,8 +324,6 @@ class VAEWrapper(BaseWrapper):
 
     def load_state(self, path: str):
         try:
-            # self.dataset = fetch_dataset(path + "/model_dataset.pkl")
-
             self._init_model()
 
             state = self.model.load_state(path)

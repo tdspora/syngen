@@ -130,7 +130,7 @@ def fetch_dataset(dataset_pickle_path: str):
     Deserialize and return the object of class Dataset
     """
     with open(dataset_pickle_path, "rb") as f:
-        dataset = pickle.load(f)
+        dataset = pickle.loads(f.read())
     if hasattr(dataset, "df"):
         dataset.order_of_columns = dataset.df.columns.tolist()
         dataset.empty_columns = dataset.dropped_columns
