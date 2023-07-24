@@ -131,6 +131,8 @@ def fetch_dataset(dataset_pickle_path: str):
     """
     with open(dataset_pickle_path, "rb") as f:
         dataset = pickle.loads(f.read())
+    # Check if the serialized class has associated dataframe and
+    # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
     if hasattr(dataset, "df"):
         dataset.order_of_columns = dataset.df.columns.tolist()
         dataset.empty_columns = dataset.dropped_columns
