@@ -112,6 +112,8 @@ class VAEWrapper(BaseWrapper):
         self.metadata = metadata
         self.table_name = table_name
         self.paths = paths
+
+    def __post__init__(self):
         if self.process == "train":
             self.dataset = Dataset(
                 df=self.df,
@@ -324,6 +326,9 @@ class VAEWrapper(BaseWrapper):
 
     def load_state(self, path: str):
         try:
+            with open(path + "/model_dataset.pkl", "rb") as f:
+                self.dataset = pickle.loads(f.read())
+
             self._init_model()
 
             state = self.model.load_state(path)
