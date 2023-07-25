@@ -97,7 +97,6 @@ def test_save_dataset(rp_logger):
             "foreign_keys_mapping": {},
             "foreign_keys_list": [],
             "fk_columns": [],
-            "empty_columns": [],
             "uuid_columns_types": {},
             "uuid_columns": set(),
             "binary_columns": set(),

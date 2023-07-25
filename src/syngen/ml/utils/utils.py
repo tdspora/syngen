@@ -135,7 +135,6 @@ def fetch_dataset(dataset_pickle_path: str):
     # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
     if hasattr(dataset, "df"):
         dataset.order_of_columns = dataset.df.columns.tolist()
-        dataset.empty_columns = dataset.dropped_columns
         del dataset.df
         with open(dataset_pickle_path, "wb") as f:
             f.write(pickle.dumps(dataset))

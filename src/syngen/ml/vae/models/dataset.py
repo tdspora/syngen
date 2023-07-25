@@ -49,7 +49,6 @@ class Dataset:
     uuid_columns_types: Dict = field(init=False)
     dropped_columns: Set = field(init=False)
     order_of_columns: List = field(init=False)
-    empty_columns: List = field(init=False)
 
     def __post_init__(self):
         self._predefine_fields()
@@ -408,12 +407,6 @@ class Dataset:
             get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
             self.binary_columns - self.long_text_columns
 
-    def _set_empty_columns(self, df: pd.DataFrame, schema: Dict):
-        """
-        Set up the list of empty columns which have been dropped from the table
-        """
-        self.empty_columns = [column for column in schema["fields"] if schema["fields"][column] == "removed"]
-
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
@@ -475,7 +468,6 @@ class Dataset:
         self.uuid_columns_types = {k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns}
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
-        self._set_empty_columns(df, schema)
         if schema.get("format") == "CSV":
             self._general_data_pipeline(df, schema)
         elif schema.get("format") == 'Avro':

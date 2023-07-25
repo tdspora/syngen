@@ -216,7 +216,7 @@ class CVAE:
         synthetic_prediction = self.generator_model.predict(latent_sample)
         self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
         pk_uq_keys_mapping = self.dataset.primary_keys_mapping
-        empty_columns = self.dataset.empty_columns
+        empty_columns = self.dataset.dropped_columns
         if pk_uq_keys_mapping:
             self.__make_pk_uq_unique(pk_uq_keys_mapping, empty_columns)
         return self.inverse_transformed_df
