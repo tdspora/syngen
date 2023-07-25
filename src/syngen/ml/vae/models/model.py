@@ -20,7 +20,6 @@ import pandas as pd
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.custom_logger import custom_logger
-from syngen.ml.utils import fetch_dataset
 
 
 class CVAE:
