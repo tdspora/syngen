@@ -154,14 +154,14 @@ def define_existent_columns(columns, original_columns):
 def update_dataset(dataset):
     for attr in vars(dataset):
         if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
-            attr_value = getattr(dataset, attr)  # Get the attribute value
-            updated_attr_value = attr_value.copy()  # Create a copy to hold updated values
+            attr_value = getattr(dataset, attr)
+            updated_attr_value = attr_value.copy()
             for key, config in attr_value.items():
                 updated_columns = define_existent_columns(config.get("columns", []), dataset.df.columns)
                 config["columns"] = updated_columns
-                updated_attr_value[key] = config  # Update the config in the copied attribute value
+                updated_attr_value[key] = config
 
-            setattr(dataset, attr, updated_attr_value)  # Update the attribute with the new value
+            setattr(dataset, attr, updated_attr_value)
     return dataset
 
 
