@@ -49,6 +49,7 @@ class Dataset:
     uuid_columns_types: Dict = field(init=False)
     dropped_columns: Set = field(init=False)
     order_of_columns: List = field(init=False)
+    non_existent_columns: Set = field(init=False)
 
     def __post_init__(self):
         self._predefine_fields()
@@ -60,8 +61,12 @@ class Dataset:
         Return a dictionary of the dataset's state
         """
         dataset_instance = self.__dict__.copy()
-        if "df" in dataset_instance:
-            del dataset_instance["df"]
+        attribute_keys_to_remove = ["df", "non_existent_columns"]
+
+        for attr_key in attribute_keys_to_remove:
+            if attr_key in dataset_instance:
+                del dataset_instance[attr_key]
+
         return dataset_instance
 
     def _predefine_fields(self):
@@ -75,6 +80,7 @@ class Dataset:
         self.uuid_columns = set()
         self.uuid_columns_types = {}
         self.dropped_columns = fetch_training_config(self.paths["train_config_pickle_path"]).dropped_columns
+        self.non_existent_columns = set()
         self.order_of_columns = self.df.columns.tolist()
 
     def __prepare_dir(self):
@@ -195,6 +201,9 @@ class Dataset:
             self.fk_columns = []
 
     def _set_metadata(self):
+        table_config = self.metadata.get(self.table_name, {})
+        self._set_non_existent_columns(table_config)
+        self._update_table_config(table_config)
         self.__set_metadata(self.metadata, self.table_name)
         self.__data_pipeline(self.df, self.schema)
 
@@ -407,6 +416,44 @@ class Dataset:
             get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
             self.binary_columns - self.long_text_columns
 
+    def _remove_non_existent_columns(self, columns: list, key: str, key_type: str) -> list:
+        """
+        Remove the columns from the table metadata which are absent in the table
+        """
+        updated_columns = []
+        for column in columns:
+            if column in self.non_existent_columns:
+                custom_logger.warning(
+                    f"The column - '{column}' was excluded from the {key_type} - "
+                    f"'{key}' as far as this column doesn't exist in the table - '{self.table_name}'"
+                )
+            else:
+                updated_columns.append(column)
+        return updated_columns
+
+    def _update_table_config(self, table_config: Dict):
+        """
+        Update the table metadata by removing the columns which are absent in the table
+        but mentioned in the metadata
+        """
+        for key, key_config in table_config.get("keys", {}).items():
+            key_type = key_config.get("type")
+            updated_columns = self._remove_non_existent_columns(key_config.get("columns", []), key, key_type)
+            key_config["columns"] = updated_columns
+
+    def _set_non_existent_columns(self, table_config: Dict):
+        """
+        Set up the list of columns which are absent in the table
+        """
+        non_existent_columns = {
+            column
+            for key_config in table_config.get("keys", {}).values()
+            for column in key_config.get("columns", [])
+            if column not in self.df.columns
+        }
+
+        self.non_existent_columns = non_existent_columns - self.dropped_columns
+
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
@@ -482,7 +529,7 @@ class Dataset:
                len(self.binary_columns) + \
                len(self.long_text_columns) + \
                len(self.uuid_columns) == len(df.columns), "According to number of columns with defined types, " \
-                                                               "column types are not identified correctly"
+                                                          "column types are not identified correctly"
 
         custom_logger.debug(
             f"Count of string columns: {len(self.str_columns)}; "
