@@ -11,6 +11,7 @@ import dill
 import pandas as pd
 from scipy.stats import gaussian_kde
 import tqdm
+from loguru import logger
 
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
@@ -27,7 +28,6 @@ from syngen.ml.utils import (
 )
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_parameters
-from syngen.ml.custom_logger import custom_logger
 from syngen.ml.utils import fetch_training_config
 
 
@@ -94,9 +94,9 @@ class Dataset:
         self.pk_columns = [col for uq_cols in pk_columns_lists for col in uq_cols]
 
         if self.primary_key_name:
-            custom_logger.info(f"The primary key name was set: {self.primary_key_name}")
+            logger.info(f"The primary key name was set: {self.primary_key_name}")
         if self.primary_key_name is None:
-            custom_logger.info("No primary key was set.")
+            logger.info("No primary key was set.")
 
     def __set_uq_keys(self, config_of_keys: Dict):
         """
@@ -112,9 +112,9 @@ class Dataset:
         self.uq_columns = [col for uq_cols in uq_columns_lists for col in uq_cols]
 
         if self.unique_keys_list:
-            custom_logger.info(f"The unique keys were set: {self.unique_keys_list}")
+            logger.info(f"The unique keys were set: {self.unique_keys_list}")
         if not self.unique_keys_list:
-            custom_logger.info("No unique keys were set.")
+            logger.info("No unique keys were set.")
 
     def _filter_dropped_keys(self, config_of_keys: Dict, type_of_key: str) -> Tuple[Dict, Set]:
         """
@@ -142,15 +142,15 @@ class Dataset:
         self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
 
         if dropped_fk_keys:
-            custom_logger.info(
+            logger.info(
                 f"The following foreign keys were dropped: {', '.join(dropped_fk_keys)} "
                 f"as they contain empty columns: {', '.join(self.dropped_columns.union(self.fk_columns))}"
             )
 
         if self.foreign_keys_list:
-            custom_logger.info(f"The following foreign keys were set: {', '.join(self.foreign_keys_list)}")
+            logger.info(f"The following foreign keys were set: {', '.join(self.foreign_keys_list)}")
         if not self.foreign_keys_list:
-            custom_logger.info("No foreign keys were set.")
+            logger.info("No foreign keys were set.")
 
     def __set_types(self, pk_uq_keys_mapping):
         """
@@ -218,7 +218,7 @@ class Dataset:
         for col in list(self.categ_columns):
             if col in removed:
                 self.categ_columns.remove(col)
-                custom_logger.warning(
+                logger.warning(
                     f"The column '{col}' was excluded from the list of categorical columns "
                     f"as far as this column is empty and was removed from the table - '{self.table_name}'"
                 )
@@ -238,7 +238,7 @@ class Dataset:
         self.categ_columns = set([i for i in self.categ_columns if i not in removed_columns])
 
         if removed_columns:
-            custom_logger.warning(
+            logger.warning(
                 f"The columns - {', '.join(removed_columns)} were mentioned as categorical "
                 f"in the metadata of the table - '{self.table_name}'. "
                 f"It seems that the columns are absent in the table - '{self.table_name}'. "
@@ -251,7 +251,7 @@ class Dataset:
         if it relates to certain type of key
         """
         if column in column_list:
-            custom_logger.warning(
+            logger.warning(
                 f"The column '{column}' was excluded from the list of categorical columns "
                 f"as far as this column was set as the {key_type} of the table - '{self.table_name}'")
             self.categ_columns.discard(column)
@@ -290,7 +290,7 @@ class Dataset:
             self.categ_columns = \
                 set(metadata_of_table.get("train_settings", {}).get("column_types", {}).get("categorical", []))
         if self.categ_columns:
-            custom_logger.info(
+            logger.info(
                 f"The columns - {', '.join(self.categ_columns)} were defined as categorical "
                 f"due to the information from the metadata of the table - '{self.table_name}'")
 
@@ -350,7 +350,7 @@ class Dataset:
             self.long_text_columns = set(data_subset.columns)
             self.long_text_columns -= self.categ_columns
             if self.long_text_columns:
-                custom_logger.info(
+                logger.info(
                     f"Please note that the columns - {self.long_text_columns} contain long texts (> 200 symbols). "
                     f"Such texts' handling consumes significant resources and results in poor quality content, "
                     f"therefore this column(-s) will be generated using a simplified statistical approach")
@@ -455,7 +455,7 @@ class Dataset:
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
         in case metadata of the table in Avro format is present
         """
-        custom_logger.info(f"The schema of table - {self.table_name} was received")
+        logger.info(f"The schema of table - {self.table_name} was received")
         self._set_uuid_columns(df)
         self._set_binary_columns(df)
         self._set_categorical_columns(df, schema)
@@ -491,7 +491,7 @@ class Dataset:
                len(self.uuid_columns) == len(df.columns), "According to number of columns with defined types, " \
                                                                "column types are not identified correctly"
 
-        custom_logger.debug(
+        logger.debug(
             f"Count of string columns: {len(self.str_columns)}; "
             + f"Count of float columns: {len(self.float_columns)}; "
             + f"Count of int columns: {len(self.int_columns)}; "
@@ -502,7 +502,7 @@ class Dataset:
             + f"Count of uuid columns: {len(self.uuid_columns)}"
         )
         for column in self.uuid_columns:
-            custom_logger.debug(f"Column '{column}' defined as UUID column")
+            logger.debug(f"Column '{column}' defined as UUID column")
 
     def assign_feature(self, feature, columns):
         name = feature.original_name
@@ -618,7 +618,7 @@ class Dataset:
                 return (feature, feature_zero)
         if isnull_feature.any():
             nan_number = isnull_feature.sum()
-            custom_logger.info(f"Column '{feature}' contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
+            logger.info(f"Column '{feature}' contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
                         f"empty values out of {len(isnull_feature)}. Filling them with {fillna_strategy or 'zero'}.")
             if fillna_strategy == "mean":
                 fillna_value = self.df[feature].mean()
@@ -652,7 +652,7 @@ class Dataset:
                 mapper = pickle.load(file)
             return mapper
         except FileNotFoundError:
-            custom_logger.warning(f"The mapper for the {fk_column} text key is not found. "
+            logger.warning(f"The mapper for the {fk_column} text key is not found. "
                            f"Simple sampling will be used.")
 
     @staticmethod
@@ -664,7 +664,7 @@ class Dataset:
         with open(f"{fk_kde_path}{fk_column}.pkl", "wb") as file:
             dill.dump(kde, file)
 
-        custom_logger.info(f"KDE artifacts saved to {fk_kde_path}{fk_column}.pkl")
+        logger.info(f"KDE artifacts saved to {fk_kde_path}{fk_column}.pkl")
 
     def _preprocess_fk_params(self):
         for fk in self.foreign_keys_list:
@@ -694,8 +694,8 @@ class Dataset:
         """
         for fk_column in set(self.fk_columns):
             self.df = self.df.drop(fk_column, axis=1)
-            custom_logger.debug(f"The column - '{fk_column}' dropped from the training process as it is defined as FK column "
-                                f"and will be sampled from the PK table")
+            logger.debug(f"The column - '{fk_column}' dropped from the training process as it is defined as FK column "
+                         f"and will be sampled from the PK table")
 
     def __sample_only_joined_rows(self, fk):
         references = self.foreign_keys_mapping.get(fk).get("references")
@@ -706,8 +706,8 @@ class Dataset:
 
         drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].values)].index
         if len(drop_index) > 0:
-            custom_logger.info(f"{len(drop_index)} rows were deleted, as they did not have matching primary keys.")
-            custom_logger.info(f"{len(self.df) - len(drop_index)} rows are left in table as input.")
+            logger.info(f"{len(drop_index)} rows were deleted, as they did not have matching primary keys.")
+            logger.info(f"{len(self.df) - len(drop_index)} rows are left in table as input.")
         self.df = self.df.drop(drop_index)
 
     def _assign_char_feature(self, feature):
@@ -721,7 +721,7 @@ class Dataset:
             ),
             feature,
         )
-        custom_logger.debug(f"Column '{feature}' assigned as text based feature")
+        logger.debug(f"Column '{feature}' assigned as text based feature")
 
     def _assign_float_feature(self, feature):
         """
@@ -739,7 +739,7 @@ class Dataset:
             self.assign_feature(
                 ContinuousFeature(feature, column_type=float), feature
             )
-            custom_logger.debug(f"Column '{feature}' assigned as float based feature")
+            logger.debug(f"Column '{feature}' assigned as float based feature")
 
     def _assign_int_feature(self, feature):
         """
@@ -756,7 +756,7 @@ class Dataset:
             self.assign_feature(
                 ContinuousFeature(feature, column_type=int), feature
             )
-            custom_logger.debug(f"Column '{feature}' assigned as int based feature")
+            logger.debug(f"Column '{feature}' assigned as int based feature")
 
     def _assign_categ_feature(self, feature):
         """
@@ -764,7 +764,7 @@ class Dataset:
         """
         feature = self._preprocess_categ_params(feature)
         self.assign_feature(CategoricalFeature(feature), feature)
-        custom_logger.debug(f"Column '{feature}' assigned as categorical based feature")
+        logger.debug(f"Column '{feature}' assigned as categorical based feature")
 
     def _assign_date_feature(self, feature):
         """
@@ -772,11 +772,11 @@ class Dataset:
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
         self.assign_feature(DateFeature(features[0]), features[0])
-        custom_logger.debug(f"Column '{features[0]}' assigned as date feature")
+        logger.debug(f"Column '{features[0]}' assigned as date feature")
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
             self.assign_feature(ContinuousFeature(features[1], column_type=int), features[1])
-            custom_logger.debug(f"Column '{features[1]}' assigned as int feature")
+            logger.debug(f"Column '{features[1]}' assigned as int feature")
 
     def _assign_binary_feature(self, feature):
         """
@@ -784,7 +784,7 @@ class Dataset:
         """
         feature = self._preprocess_categ_params(feature)
         self.assign_feature(BinaryFeature(feature), feature)
-        custom_logger.debug(f"Column '{feature}' assigned as binary feature")
+        logger.debug(f"Column '{feature}' assigned as binary feature")
 
     def _assign_fk_feature(self):
         """

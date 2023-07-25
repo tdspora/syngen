@@ -4,10 +4,11 @@ import os
 import shutil
 
 import pandas as pd
+from loguru import logger
 
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_attribute
-from syngen.ml.custom_logger import custom_logger
+
 
 @dataclass
 class TrainConfig:
@@ -65,10 +66,10 @@ class TrainConfig:
         """
         if os.path.exists(self.paths["resources_path"]):
             shutil.rmtree(self.paths["resources_path"])
-            custom_logger.info(f"The folder located in the path - '{self.paths['resources_path']}' was removed")
+            logger.info(f"The folder located in the path - '{self.paths['resources_path']}' was removed")
         if os.path.exists(self.paths["tmp_store_path"]):
             shutil.rmtree(self.paths["tmp_store_path"])
-            custom_logger.info(f"The folder located in the path - '{self.paths['tmp_store_path']}' was removed")
+            logger.info(f"The folder located in the path - '{self.paths['tmp_store_path']}' was removed")
 
     def _prepare_dirs(self):
         """
@@ -94,7 +95,7 @@ class TrainConfig:
 
         self.dropped_columns = data_columns - set(data.columns)
         if len(self.dropped_columns) > 0:
-            custom_logger.info(f"Empty columns - {', '.join(self.dropped_columns)} were removed")
+            logger.info(f"Empty columns - {', '.join(self.dropped_columns)} were removed")
         return data
 
     def _mark_removed_columns(self, data: pd.DataFrame):
@@ -135,8 +136,8 @@ class TrainConfig:
             if not data.dropna().empty:
                 data = data.dropna()
             else:
-                custom_logger.warning("The specified 'drop_null' argument results in the empty dataframe, "
-                                      "so it will be ignored")
+                logger.warning("The specified 'drop_null' argument results in the empty dataframe, "
+                               "so it will be ignored")
 
         if self.row_limit:
             self.row_subset = min(self.row_limit, len(data))
@@ -144,15 +145,15 @@ class TrainConfig:
             data = data.sample(n=self.row_subset)
 
             if len(data) < 100:
-                custom_logger.warning("The input table is too small to provide any meaningful results. "
-                                      "Please consider 1) disable drop_null argument, 2) provide bigger table")
+                logger.warning("The input table is too small to provide any meaningful results. "
+                               "Please consider 1) disable drop_null argument, 2) provide bigger table")
             elif len(data) < 500:
-                custom_logger.warning(
+                logger.warning(
                     f"The amount of data is {len(data)} rows. It seems that it isn't enough to supply "
                     f"high-quality results. To improve the quality of generated data please consider any of the steps: "
                     f"1) provide a bigger table, 2) disable drop_null argument")
 
-        custom_logger.info(f"The subset of rows was set to {len(data)}")
+        logger.info(f"The subset of rows was set to {len(data)}")
 
         self.row_subset = len(data)
         return data
@@ -234,7 +235,7 @@ class InferConfig:
         """
         if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
             self.print_report = False
-            custom_logger.warning(
+            logger.warning(
                 f"It seems that the path to original data of the table - {self.table_name} doesn't exist. "
                 f"In this case, the accuracy report of the table - {self.table_name} won't be generated. "
                 f"The parameter '--print_report' of the table - {self.table_name} will be set to False\n")

@@ -3,9 +3,10 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import click
+from loguru import logger
 
 from syngen.ml.worker import Worker
-from syngen.ml.custom_logger import custom_logger
+from syngen.ml.utils import set_up_logger
 
 
 @click.command()
@@ -55,20 +56,21 @@ def launch_train(
     -------
 
     """
-    custom_logger.setup_log_level(log_level)
+    os.environ["LOG_LEVEL"] = log_level
+    set_up_logger()
     if not metadata_path and not source and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' and 'source' is absent. "
                              "Please provide either the information of 'metadata_path' or "
                              "the information of 'source' and 'table_name'")
     elif metadata_path and table_name and source:
-        custom_logger.warning("The information of 'metadata_path' was provided. "
+        logger.warning("The information of 'metadata_path' was provided. "
                        "In this case the information of 'table_name' and 'source' will be ignored")
         table_name = None
     elif metadata_path and source:
-        custom_logger.warning("The information of 'metadata_path' was provided. "
+        logger.warning("The information of 'metadata_path' was provided. "
                        "In this case the information of 'source' will be ignored")
     elif metadata_path and table_name:
-        custom_logger.warning("The information of 'metadata_path' was provided. "
+        logger.warning("The information of 'metadata_path' was provided. "
                        "In this case the information of 'table_name' will be ignored")
         table_name = None
     elif source and not table_name:
@@ -79,7 +81,7 @@ def launch_train(
         raise AttributeError("It seems that the information of 'metadata_path' or 'source' is absent. "
                              "Please provide either the information of 'metadata_path' or "
                              "the information of 'source' and 'table_name'")
-    custom_logger.warning(
+    logger.warning(
         "The training process will be executed according to the information mentioned in 'train_settings' "
         "in the metadata file. If appropriate information is absent from the metadata file, then the values "
         "of parameters sent through CLI will be used. Otherwise, the values of parameters will be defaulted"
@@ -100,6 +102,7 @@ def launch_train(
         type="train"
     )
     worker.launch_train()
+
 
 def preprocess_data():
     """

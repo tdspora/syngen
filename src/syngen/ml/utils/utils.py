@@ -1,3 +1,5 @@
+import os
+import sys
 from typing import List, Dict
 from dateutil.parser import parse
 import pickle
@@ -10,8 +12,7 @@ import pickle as pkl
 import uuid
 from ulid import ULID
 import random
-
-from syngen.ml.custom_logger import custom_logger
+from loguru import logger
 
 
 def generate_uuids(version: int, size: int):
@@ -199,9 +200,10 @@ def check_if_features_assigned(dataset_pickle_path: str):
     """
     features = fetch_dataset(dataset_pickle_path).features
     if len(features) == 0:
-        custom_logger.info("No features to train VAE on")
+        logger.info("No features to train VAE on")
         return False
     return True
+
 
 def fetch_training_config(train_config_pickle_path):
     """
@@ -209,3 +211,8 @@ def fetch_training_config(train_config_pickle_path):
     """
     with open(train_config_pickle_path, "rb") as f:
         return pkl.load(f)
+
+
+def set_up_logger():
+    logger.remove()
+    logger.add(sys.stderr, level=os.getenv("LOG_LEVEL"))

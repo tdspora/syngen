@@ -2,12 +2,13 @@ from typing import Dict
 import json
 from dataclasses import dataclass
 from marshmallow import Schema, fields, validate, ValidationError, validates_schema
+from loguru import logger
 
-from syngen.ml.custom_logger import custom_logger
 
 class ReferenceSchema(Schema):
     table = fields.String()
     columns = fields.List(fields.String())
+
 
 class CaseInsensitiveString(fields.String):
     def _deserialize(self, value, attr, data, **kwargs):
@@ -29,6 +30,7 @@ class KeysSchema(Schema):
         if data["type"] != "FK" and "references" in data:
             raise ValidationError("The 'references' field is only allowed when 'type' is 'FK'")
 
+
 class TrainingSettingsSchema(Schema):
     epochs = fields.Integer(validate=validate.Range(min=1), required=False)
     drop_null = fields.Boolean(required=False)
@@ -36,12 +38,14 @@ class TrainingSettingsSchema(Schema):
     batch_size = fields.Integer(validate=validate.Range(min=1), required=False)
     print_report = fields.Boolean(required=False)
 
+
 class ExtendedTrainingSettingsSchema(TrainingSettingsSchema):
     source = fields.String(required=True, allow_none=False)
     column_types = fields.Dict(
         keys=fields.String(validate=validate.OneOf(["categorical"])),
         values=fields.List(fields.String())
     )
+
 
 class InferSettingsSchema(Schema):
     destination = fields.String(required=False)
@@ -108,9 +112,9 @@ class ValidationSchema:
             except ValidationError as err:
                 errors[table_name] = err.messages
         if errors:
-            custom_logger.error("Validation error(s) found in the metadata")
+            logger.error("Validation error(s) found in the metadata")
             for section, errors_details in errors.items():
-                custom_logger.error(f"The error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}")
+                logger.error(f"The error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}")
             raise ValidationError(f"Validation error(s) found in the metadata. The details are - {errors}")
         if not errors:
-            custom_logger.info("The metadata file is valid")
+            logger.info("The metadata file is valid")

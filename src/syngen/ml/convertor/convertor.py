@@ -4,8 +4,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 import numpy as np
-
-from syngen.ml.custom_logger import custom_logger
+from loguru import logger
 
 
 class Convertor(ABC):
@@ -61,6 +60,7 @@ class CSVConvertor(Convertor):
         preprocessed_df = self._preprocess_df(schema, df)
         return schema, preprocessed_df
 
+
 class AvroConvertor(Convertor):
     """
     Class for converting fetched avro schema
@@ -86,7 +86,7 @@ class AvroConvertor(Convertor):
                 fields[column] = "string"
             else:
                 message = f"It seems that the column - '{column}' has unsupported data type - '{data_type}'"
-                custom_logger.error(message)
+                logger.error(message)
                 raise ValueError(message)
         converted_schema["format"] = "Avro"
         preprocessed_df = self._preprocess_df(converted_schema, df)
