@@ -49,7 +49,6 @@ class Dataset:
     uuid_columns_types: Dict = field(init=False)
     dropped_columns: Set = field(init=False)
     order_of_columns: List = field(init=False)
-    empty_columns: Set = field(init=False)
     non_existent_columns: Set = field(init=False)
 
     def __post_init__(self):
@@ -197,7 +196,6 @@ class Dataset:
             self.fk_columns = []
 
     def _set_metadata(self):
-        self._set_empty_columns()
         table_config = self.metadata.get(self.table_name, {})
         self._set_non_existent_columns(table_config)
         self._update_table_config(table_config)
@@ -413,15 +411,6 @@ class Dataset:
             get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
             self.binary_columns - self.long_text_columns
 
-    def _set_empty_columns(self):
-        """
-        Set up the list of empty columns which have been dropped from the table
-        """
-        self.empty_columns = {
-            column for column in self.schema["fields"]
-            if self.schema["fields"][column] == "removed"
-        }
-
     def _remove_non_existent_columns(self, columns: list, key: str, key_type: str) -> list:
         """
         Remove the columns from the table metadata which are absent in the table
@@ -458,7 +447,7 @@ class Dataset:
             if column not in self.df.columns
         }
 
-        self.non_existent_columns = non_existent_columns - self.empty_columns
+        self.non_existent_columns = non_existent_columns - self.dropped_columns
 
     def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
         """

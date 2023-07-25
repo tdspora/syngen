@@ -218,7 +218,7 @@ class CVAE:
         self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
         pk_uq_keys_mapping = self.dataset.primary_keys_mapping
         if pk_uq_keys_mapping:
-            self.__make_pk_uq_unique(pk_uq_keys_mapping, self.dataset.empty_columns)
+            self.__make_pk_uq_unique(pk_uq_keys_mapping, self.dataset.dropped_columns)
         return self.inverse_transformed_df
 
     def less_likely_sample(

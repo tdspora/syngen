@@ -75,6 +75,7 @@ def test_save_dataset(rp_logger):
             table_name="mock_table",
             paths={}
         )
+        setattr(mock_dataset, "dropped_columns", set())
         setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
         fetched_dataset = mock_dataset.__getstate__()
@@ -98,7 +99,7 @@ def test_save_dataset(rp_logger):
             "foreign_keys_mapping": {},
             "foreign_keys_list": [],
             "fk_columns": [],
-            "empty_columns": set(),
+            "dropped_columns": set(),
             "non_existent_columns": set(),
             "uuid_columns_types": {},
             "uuid_columns": set(),
@@ -145,6 +146,7 @@ def test_check_non_existent_columns(rp_logger):
             table_name="mock_table",
             paths={}
         )
+        setattr(mock_dataset, "dropped_columns", set())
         setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
         assert mock_dataset.non_existent_columns == {
