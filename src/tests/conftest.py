@@ -11,6 +11,7 @@ from reportportal_client import RPLogger
 
 SUCCESSFUL_MESSAGE = "The test passed successfully"
 
+
 @pytest.fixture
 def test_csv_path():
     test_path = 'test.csv'

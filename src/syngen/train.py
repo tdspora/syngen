@@ -6,7 +6,7 @@ import click
 from loguru import logger
 
 from syngen.ml.worker import Worker
-from syngen.ml.utils import set_up_logger
+from syngen.ml.utils import setup_logger
 
 
 @click.command()
@@ -56,8 +56,8 @@ def launch_train(
     -------
 
     """
-    os.environ["LOG_LEVEL"] = log_level
-    set_up_logger()
+    os.environ["LOGURU_LEVEL"] = log_level
+    setup_logger()
     if not metadata_path and not source and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' and 'source' is absent. "
                              "Please provide either the information of 'metadata_path' or "

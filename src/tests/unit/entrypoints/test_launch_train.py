@@ -39,6 +39,7 @@ def test_train_table_with_metadata_path(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_source(rp_logger, caplog):
     rp_logger.info("Launch train process through CLI with parameters '--metadata_path' and '--source'")
     with patch.object(Worker, "launch_train", return_value=None) as mock_method:
@@ -57,6 +58,7 @@ def test_train_table_with_metadata_path_and_source(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_table_name(rp_logger, caplog):
     rp_logger.info("Launch train process through CLI with parameters '--metadata_path' and '--table_name'")
     with patch.object(Worker, "launch_train", return_value=None) as mock_method:
@@ -75,6 +77,7 @@ def test_train_table_with_metadata_path_and_table_name(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_table_name_and_source(rp_logger, caplog):
     rp_logger.info("Launch train process through CLI with parameters '--metadata_path', '--table_name' and '--source'")
     with patch.object(Worker, "launch_train", return_value=None) as mock_method:

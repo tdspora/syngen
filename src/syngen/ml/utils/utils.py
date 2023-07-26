@@ -213,6 +213,9 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
-def set_up_logger():
+def setup_logger():
+    """
+    Setup logger with the specified level
+    """
     logger.remove()
-    logger.add(sys.stderr, level=os.getenv("LOG_LEVEL"))
+    logger.add(sys.stderr, level=os.getenv("LOGURU_LEVEL"))

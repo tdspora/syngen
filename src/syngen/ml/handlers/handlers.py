@@ -25,7 +25,7 @@ from syngen.ml.utils import (
     generate_uuid
 )
 from syngen.ml.context import get_context
-from syngen.ml.utils import set_up_logger
+from syngen.ml.utils import setup_logger
 
 
 class AbstractHandler(ABC):
@@ -268,8 +268,8 @@ class VaeInferHandler(BaseHandler):
         return synthetic_infer
 
     def run_separate(self, params: Tuple):
-        os.environ["LOG_LEVEL"] = self.log_level
-        set_up_logger()
+        os.environ["LOGURU_LEVEL"] = self.log_level
+        setup_logger()
         i, size = params
 
         if self.random_seed:
