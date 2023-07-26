@@ -385,7 +385,7 @@ class VaeInferHandler(BaseHandler):
         """
         Restore empty columns in the generated table
         """
-        empty_columns = fetch_dataset(self.paths["dataset_pickle_path"]).empty_columns
+        empty_columns = fetch_dataset(self.paths["dataset_pickle_path"]).dropped_columns
         empty_df = pd.DataFrame(index=df.index, columns=empty_columns)
         df = pd.concat([df, empty_df], axis=1)
         return df

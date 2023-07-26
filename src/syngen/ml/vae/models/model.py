@@ -216,9 +216,8 @@ class CVAE:
         synthetic_prediction = self.generator_model.predict(latent_sample)
         self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
         pk_uq_keys_mapping = self.dataset.primary_keys_mapping
-        empty_columns = self.dataset.empty_columns
         if pk_uq_keys_mapping:
-            self.__make_pk_uq_unique(pk_uq_keys_mapping, empty_columns)
+            self.__make_pk_uq_unique(pk_uq_keys_mapping, self.dataset.dropped_columns)
         return self.inverse_transformed_df
 
     def less_likely_sample(
