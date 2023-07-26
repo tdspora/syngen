@@ -168,9 +168,10 @@ class Dataset:
             for column in key_columns:
                 column_type = \
                     str if column in (
-                        self.str_columns | self.categ_columns | self.date_columns | self.long_text_columns | self.uuid_columns
+                            self.str_columns | self.categ_columns | self.date_columns |
+                            self.long_text_columns | self.uuid_columns
                     ) \
-                    else float
+                        else float
                 self.pk_uq_keys_types[column] = column_type
 
     def __map_text_pk(self):
@@ -423,7 +424,7 @@ class Dataset:
         updated_columns = []
         for column in columns:
             if column in self.non_existent_columns:
-                custom_logger.warning(
+                logger.warning(
                     f"The column - '{column}' was excluded from the {key_type} - "
                     f"'{key}' as far as this column doesn't exist in the table - '{self.table_name}'"
                 )

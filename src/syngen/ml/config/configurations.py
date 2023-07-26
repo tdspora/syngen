@@ -10,7 +10,6 @@ from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_attribute
 
 
-
 @dataclass
 class TrainConfig:
     """
