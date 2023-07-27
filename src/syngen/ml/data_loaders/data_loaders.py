@@ -294,7 +294,7 @@ class YAMLLoader(BaseDataLoader):
             message = f"It seems that the metadata file in YAML format isn't valid.\n" \
                       f"The details of the error - {str(error)}.\n" \
                       f"Please check the metadata file in YAML format."
-            custom_logger.error(error)
+            logger.error(error)
             raise ValueError(message)
 
     def load_data(self, metadata_path: str) -> Dict:
