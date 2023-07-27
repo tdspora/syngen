@@ -16,10 +16,11 @@ from tensorflow.keras.layers import (
 from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
 from syngen.ml.utils import slugify_parameters
-from syngen.ml.custom_logger import custom_logger
+
 
 class CVAE:
     """
@@ -83,7 +84,7 @@ class CVAE:
         if self.is_cond:
             if len(self.cond_inputs) > 1:
                 self.cond_input = concatenate(self.cond_inputs)
-                custom_logger.info(f"Conditioning on {set(self.cond_features)}")
+                logger.info(f"Conditioning on {set(self.cond_features)}")
             else:
                 self.cond_input = self.cond_inputs[0]
             z_cond = concatenate([z, self.cond_input])
@@ -190,18 +191,18 @@ class CVAE:
         return self.model.fit(transformed_data, batch_size=self.batch_size, **kwargs)
 
     def fit_sampler(self, data: pd.DataFrame):
-        custom_logger.info("Fit sampler")
+        logger.info("Fit sampler")
         transformed_data = self.dataset.transform(data)
-        custom_logger.info("Start encoding")
+        logger.info("Start encoding")
         latent_points = self.encoder_model.predict(transformed_data)
 
-        custom_logger.info("Creating BayesianGaussianMixture")
+        logger.info("Creating BayesianGaussianMixture")
         self.latent_model = BayesianGaussianMixture(
             n_components=self.latent_components, n_init=10
         )
-        custom_logger.info("Fitting BayesianGaussianMixture")
+        logger.info("Fitting BayesianGaussianMixture")
         self.latent_model.fit(latent_points)
-        custom_logger.info("Finished fitting BayesianGaussianMixture")
+        logger.info("Finished fitting BayesianGaussianMixture")
 
     def predict(self, data: pd.DataFrame) -> pd.DataFrame:
         transformed_data = self.dataset.transform(data)
@@ -216,7 +217,7 @@ class CVAE:
         self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
         pk_uq_keys_mapping = self.dataset.primary_keys_mapping
         if pk_uq_keys_mapping:
-            self.__make_pk_uq_unique(pk_uq_keys_mapping)
+            self.__make_pk_uq_unique(pk_uq_keys_mapping, self.dataset.dropped_columns)
         return self.inverse_transformed_df
 
     def less_likely_sample(
@@ -244,9 +245,9 @@ class CVAE:
         else:
             return False
 
-    def __make_pk_uq_unique(self, pk_uq_keys_mapping):
+    def __make_pk_uq_unique(self, pk_uq_keys_mapping, empty_columns):
         for key_name, config in pk_uq_keys_mapping.items():
-            key_columns = config.get("columns")
+            key_columns = [column for column in config.get("columns") if column not in empty_columns]
             for column in key_columns:
                 key_type = self.dataset.pk_uq_keys_types[column]
                 if key_type is float or self.__check_pk_numeric_convertability(column, key_type):

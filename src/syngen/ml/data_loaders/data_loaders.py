@@ -14,12 +14,13 @@ from yaml import SafeLoader
 from yaml.scanner import ScannerError
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
+from loguru import logger
 
 from syngen.ml.validation_schema import ValidationSchema
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
-from syngen.ml.custom_logger import custom_logger
 from syngen.ml.context import get_context, global_context
+
 
 DELIMITERS = {
     "\\t": "\t"
@@ -80,12 +81,12 @@ class DataLoader(BaseDataLoader):
             message = f"It seems that the content of the data in the path - '{self.path}' " \
                       f"doesn't have the encoding UTF-8. The details of the error - {error}.\n" \
                       f"Please, use the data in UTF-8 encoding"
-            custom_logger.error(message)
+            logger.error(message)
             raise ValueError(message)
         except pandas.errors.EmptyDataError as error:
             message = f"The empty file was provided. Unable to load data from the path - '{self.path}'. " \
                       f"The details of the error - {error}"
-            custom_logger.error(message)
+            logger.error(message)
             raise ValueError(message)
 
     def save_data(self, path: Optional[str], df: pd.DataFrame, **kwargs):
@@ -146,9 +147,9 @@ class CSVLoader:
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
                       f"Please, check the path to the table"
-            custom_logger.error(message)
+            logger.error(message)
             raise FileNotFoundError(message)
-
+        
         return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
 
     def load_data(self, path, **kwargs):
@@ -180,7 +181,7 @@ class CSVLoader:
 
             if "sep" in filtered_kwargs and len(filtered_kwargs.get("sep", None)) > 1:
                 filtered_kwargs["sep"] = ","
-                custom_logger.warning(
+                logger.warning(
                     "As the length of the value of the parameter 'separator' is more than 1 character,"
                     "the 'separator' will be set to ',' in accordance with the standard 'RFC 4180'"
                 )
@@ -224,7 +225,7 @@ class AvroLoader(BaseDataLoader):
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
                       f"Please, check the path to the table"
-            custom_logger.error(message)
+            logger.error(message)
             raise FileNotFoundError(message)
 
     @staticmethod

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import os
 import traceback
+from loguru import logger
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.handlers import RootHandler
@@ -20,7 +21,7 @@ from syngen.ml.handlers import (
 )
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
-from syngen.ml.custom_logger import custom_logger
+
 
 class Strategy(ABC):
     """
@@ -120,7 +121,7 @@ class TrainStrategy(Strategy, ABC):
     def add_reporters(self, **kwargs):
         if self.config.print_report:
             sample_reporter = SampleAccuracyReporter(
-                table_name=self.table_name,
+                table_name=self.config.table_name,
                 paths=self.config.paths,
                 config=self.config.to_dict()
             )
@@ -157,12 +158,12 @@ class TrainStrategy(Strategy, ABC):
             self.handler.handle()
 
         except Exception as e:
-            custom_logger.info(f"Training of the table - {self.handler.table_name} failed on running stage.")
-            custom_logger.error(e)
-            custom_logger.error(traceback.format_exc())
+            logger.info(f"Training of the table - {self.handler.table_name} failed on running stage.")
+            logger.error(e)
+            logger.error(traceback.format_exc())
             raise
         else:
-            custom_logger.info(f"Training of the table - {self.handler.table_name} was completed")
+            logger.info(f"Training of the table - {self.handler.table_name} was completed")
 
 
 class InferStrategy(Strategy):
@@ -200,7 +201,7 @@ class InferStrategy(Strategy):
     def add_reporters(self):
         if self.config.print_report:
             accuracy_reporter = AccuracyReporter(
-                table_name=self.table_name,
+                table_name=self.config.table_name,
                 paths=self.config.paths,
                 config=self.config.to_dict()
             )
@@ -237,12 +238,12 @@ class InferStrategy(Strategy):
         try:
             self.handler.handle()
         except Exception as e:
-            custom_logger.info(f"Generation of the table - {self.handler.table_name} failed on running stage.")
-            custom_logger.error(e)
-            custom_logger.error(traceback.format_exc())
+            logger.info(f"Generation of the table - {self.handler.table_name} failed on running stage.")
+            logger.error(e)
+            logger.error(traceback.format_exc())
             raise
         else:
-            custom_logger.info(
+            logger.info(
                 f"Synthesis of the table - {self.handler.table_name} was completed. "
                 f"Synthetic data saved in {self.handler.paths['path_to_merged_infer']}"
             )

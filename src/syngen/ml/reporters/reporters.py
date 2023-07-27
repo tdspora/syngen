@@ -4,6 +4,7 @@ import itertools
 
 import pandas as pd
 import numpy as np
+from loguru import logger
 
 from syngen.ml.utils import (
     get_nan_labels,
@@ -13,7 +14,6 @@ from syngen.ml.utils import (
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.metrics.utils import text_to_continuous
-from syngen.ml.custom_logger import custom_logger
 
 
 class Reporter:
@@ -139,6 +139,8 @@ class Report:
         """
         list_of_reporters = itertools.chain.from_iterable(cls._reporters.values())
         for reporter in list_of_reporters:
+            logger.info(f"Generation of {reporter.__class__.report_type} report "
+                        f"for the table - '{reporter.table_name}'")
             reporter.report()
 
     @property
@@ -150,6 +152,7 @@ class AccuracyReporter(Reporter):
     """
     Reporter for running accuracy test
     """
+    report_type = "accuracy"
 
     def report(self):
         """
@@ -169,7 +172,7 @@ class AccuracyReporter(Reporter):
             categ_columns=list(categ_columns),
             date_columns=list(date_columns)
         )
-        custom_logger.info(
+        logger.info(
             f"Corresponding plot pickle files regarding to accuracy test were saved "
             f"to folder '{self.paths['draws_path']}'."
         )
@@ -179,6 +182,7 @@ class SampleAccuracyReporter(Reporter):
     """
     Reporter for running accuracy test
     """
+    report_type = "sample"
 
     def _extract_report_data(self):
         original, schema = DataLoader(self.paths["source_path"]).load_data()
@@ -203,7 +207,7 @@ class SampleAccuracyReporter(Reporter):
             categ_columns=list(categ_columns),
             date_columns=list(date_columns)
         )
-        custom_logger.info(
+        logger.info(
             f"Corresponding plot pickle files regarding to sampled data accuracy test were saved "
             f"to folder {self.paths['draws_path']}."
         )

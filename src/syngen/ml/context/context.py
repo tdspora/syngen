@@ -1,6 +1,7 @@
 from typing import Dict
 import copy
 
+
 class Context:
     def __init__(self):
         self.config = {}
@@ -11,8 +12,10 @@ class Context:
     def get_config(self) -> Dict:
         return self.config
 
+
 # Singleton pattern to ensure there is only one instance of Configuration
 _config_instance: Context = None
+
 
 def get_context() -> Context:
     global _config_instance

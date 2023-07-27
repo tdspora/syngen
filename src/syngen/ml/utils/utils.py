@@ -1,3 +1,5 @@
+import os
+import sys
 from typing import List, Dict
 from dateutil.parser import parse
 import pickle
@@ -10,8 +12,7 @@ import pickle as pkl
 import uuid
 from ulid import ULID
 import random
-
-from syngen.ml.custom_logger import custom_logger
+from loguru import logger
 
 
 def generate_uuids(version: int, size: int):
@@ -130,7 +131,39 @@ def fetch_dataset(dataset_pickle_path: str):
     Deserialize and return the object of class Dataset
     """
     with open(dataset_pickle_path, "rb") as f:
-        return pickle.loads(f.read())
+        dataset = pickle.loads(f.read())
+    # Check if the serialized class has associated dataframe and
+    # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
+    if hasattr(dataset, "df"):
+        dataset = update_dataset(dataset)
+        dataset.order_of_columns = dataset.df.columns.tolist()
+        del dataset.df
+        with open(dataset_pickle_path, "wb") as f:
+            f.write(pickle.dumps(dataset))
+    return dataset
+
+
+def define_existent_columns(columns, original_columns):
+    existent_columns = []
+    for column in columns:
+        if column in original_columns:
+            existent_columns.append(column)
+        continue
+    return existent_columns
+
+
+def update_dataset(dataset):
+    for attr in vars(dataset):
+        if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
+            attr_value = getattr(dataset, attr)
+            updated_attr_value = attr_value.copy()
+            for key, config in attr_value.items():
+                updated_columns = define_existent_columns(config.get("columns", []), dataset.df.columns)
+                config["columns"] = updated_columns
+                updated_attr_value[key] = config
+
+            setattr(dataset, attr, updated_attr_value)
+    return dataset
 
 
 def slugify_attribute(**kwargs):
@@ -199,9 +232,10 @@ def check_if_features_assigned(dataset_pickle_path: str):
     """
     features = fetch_dataset(dataset_pickle_path).features
     if len(features) == 0:
-        custom_logger.info("No features to train VAE on")
+        logger.info("No features to train VAE on")
         return False
     return True
+
 
 def fetch_training_config(train_config_pickle_path):
     """
@@ -209,3 +243,11 @@ def fetch_training_config(train_config_pickle_path):
     """
     with open(train_config_pickle_path, "rb") as f:
         return pkl.load(f)
+
+
+def setup_logger():
+    """
+    Setup logger with the specified level
+    """
+    logger.remove()
+    logger.add(sys.stderr, level=os.getenv("LOGURU_LEVEL"))
