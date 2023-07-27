@@ -543,7 +543,7 @@ class Dataset:
             + f"Count of uuid columns: {len(self.uuid_columns)}"
         )
         for column in self.uuid_columns:
-            logger.debug(f"Column '{column}' defined as UUID column")
+            logger.info(f"Column '{column}' defined as UUID column")
 
     def assign_feature(self, feature, columns):
         name = feature.original_name
@@ -762,7 +762,7 @@ class Dataset:
             ),
             feature,
         )
-        logger.debug(f"Column '{feature}' assigned as text based feature")
+        logger.info(f"Column '{feature}' assigned as text based feature")
 
     def _assign_float_feature(self, feature):
         """
@@ -780,7 +780,7 @@ class Dataset:
             self.assign_feature(
                 ContinuousFeature(feature, column_type=float), feature
             )
-            logger.debug(f"Column '{feature}' assigned as float based feature")
+            logger.info(f"Column '{feature}' assigned as float based feature")
 
     def _assign_int_feature(self, feature):
         """
@@ -797,7 +797,7 @@ class Dataset:
             self.assign_feature(
                 ContinuousFeature(feature, column_type=int), feature
             )
-            logger.debug(f"Column '{feature}' assigned as int based feature")
+            logger.info(f"Column '{feature}' assigned as int based feature")
 
     def _assign_categ_feature(self, feature):
         """
@@ -805,7 +805,7 @@ class Dataset:
         """
         feature = self._preprocess_categ_params(feature)
         self.assign_feature(CategoricalFeature(feature), feature)
-        logger.debug(f"Column '{feature}' assigned as categorical based feature")
+        logger.info(f"Column '{feature}' assigned as categorical based feature")
 
     def _assign_date_feature(self, feature):
         """
@@ -817,7 +817,7 @@ class Dataset:
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
             self.assign_feature(ContinuousFeature(features[1], column_type=int), features[1])
-            logger.debug(f"Column '{features[1]}' assigned as int feature")
+            logger.info(f"Column '{features[1]}' assigned as int feature")
 
     def _assign_binary_feature(self, feature):
         """
@@ -825,7 +825,7 @@ class Dataset:
         """
         feature = self._preprocess_categ_params(feature)
         self.assign_feature(BinaryFeature(feature), feature)
-        logger.debug(f"Column '{feature}' assigned as binary feature")
+        logger.info(f"Column '{feature}' assigned as binary feature")
 
     def _assign_fk_feature(self):
         """
