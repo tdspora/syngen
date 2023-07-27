@@ -1,8 +1,9 @@
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Dict
 from abc import ABC
 from itertools import combinations
 from collections import Counter
 import re
+import random
 
 import tqdm
 from sklearn.cluster import KMeans
@@ -462,14 +463,31 @@ class BivariateMetric(BaseMetric):
         col_values = np.concatenate((original_col_values, synthetic_col_values))
         return np.percentile(col_values, list(range(0, 101, self.num_not_na_ticks)))
 
-    def _get_categorical_ticks(self, col_name: str):
+    def _get_categorical_ticks(self, col_name: str, ticks_count: int = 50):
+        min_ticks = int(ticks_count * 0.2)
+        max_ticks = int(ticks_count * 0.2)
+        other_ticks = ticks_count - min_ticks - max_ticks
+
         categ_ticks = sorted(
             set(
                 set(self.original[col_name].fillna("?"))
                 | set(self.synthetic[col_name].fillna("?"))
             )
         )
-        return categ_ticks
+        # Select the first min_ticks elements
+        selected_min_ticks = categ_ticks[:min_ticks]
+
+        # Select the last max_ticks elements
+        selected_max_ticks = categ_ticks[-max_ticks:]
+
+        # Remove the already selected elements from categ_ticks
+        remaining_ticks = categ_ticks[min_ticks:-max_ticks]
+
+        # Randomly select other_ticks elements from the remaining list
+        selected_other_ticks = random.sample(remaining_ticks, other_ticks) if remaining_ticks else []
+
+        # Return combined all selected ticks
+        return selected_min_ticks + selected_other_ticks + selected_max_ticks
 
     @staticmethod
     def _format_categorical_labels(labels):
@@ -655,6 +673,22 @@ class UnivariateMetric(BaseMetric):
         images.update(uni_categ_images)
         return images
 
+    @staticmethod
+    def _get_ratio_and_labels(ratio_counts, count: int = 30) -> Dict:
+        ratio_counts = Counter(ratio_counts)
+
+        most_least_count = int(count * 0.2)
+        other_items = count - 2 * most_least_count
+
+        most_common_items = ratio_counts.most_common(most_least_count)
+        least_common_items = ratio_counts.most_common()[:-most_least_count - 1:-1]
+        between_items = ratio_counts.most_common()[most_least_count:-most_least_count]
+        selected_between_items = random.sample(between_items, other_items) if between_items else list()
+
+        updated_ratio_counts = dict(most_common_items + selected_between_items + least_common_items)
+
+        return updated_ratio_counts
+
     def __calc_categ(self, column):
         def plot_dist(column_data, sort=True, full_set=None):
             counts = Counter(column_data)
@@ -680,16 +714,20 @@ class UnivariateMetric(BaseMetric):
         full_values_set = set(original_column.values) | set(synthetic_column.values)
 
         original_ratio_counts = plot_dist(original_column, True, full_values_set)
+        original_ratio_counts = self._get_ratio_and_labels(original_ratio_counts)
         original_labels = list(original_ratio_counts.keys())
         original_ratio = list(original_ratio_counts.values())
 
         synthetic_ratio_counts = plot_dist(synthetic_column, False, full_values_set)
-        synthetic_ratio = [synthetic_ratio_counts[label] for label in original_labels]
+        synthetic_ratio = [
+            synthetic_ratio_counts[label] for label in original_labels
+            if synthetic_ratio_counts.get(label) is not None
+        ]
 
         uni_images = {}
 
         if self.plot:
-            fig = plt.figure(figsize=(8, 6.5))
+            fig = plt.figure(figsize=(9.5, 6.5))
 
             width = 0.35
             x = np.arange(len(original_labels))
