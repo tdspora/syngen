@@ -320,7 +320,6 @@ class BivariateMetric(BaseMetric):
         return (heatmap_orig, x_tick_labels_orig, y_tick_labels_orig), \
                (heatmap_synth, x_tick_labels_synth, y_tick_labels_synth)
 
-
     def calculate_all(
         self,
         cont_columns: List[str],
@@ -466,6 +465,9 @@ class BivariateMetric(BaseMetric):
         return np.percentile(col_values, list(range(0, 101, self.num_not_na_ticks)))
 
     def _get_categorical_ticks(self, col_name: str, ticks_count: int = 50):
+        """
+        Select the ticks for a categorical column
+        """
         min_ticks = int(ticks_count * 0.2)
         max_ticks = int(ticks_count * 0.2)
         other_ticks = ticks_count - min_ticks - max_ticks
@@ -488,7 +490,6 @@ class BivariateMetric(BaseMetric):
         # Randomly select other_ticks elements from the remaining list
         selected_other_ticks = random.sample(remaining_ticks, other_ticks) if remaining_ticks else []
 
-        # Return combined all selected ticks
         return selected_min_ticks + selected_other_ticks + selected_max_ticks
 
     @staticmethod
@@ -676,7 +677,10 @@ class UnivariateMetric(BaseMetric):
         return images
 
     @staticmethod
-    def _get_ratio_and_labels(ratio_counts, count: int = 30) -> Dict:
+    def _get_ratio_counts(ratio_counts, count: int = 30) -> Dict:
+        """
+        Select the most common, least common and some random items between them from the ratio_counts
+        """
         ratio_counts = Counter(ratio_counts)
 
         most_least_count = int(count * 0.2)
@@ -716,7 +720,7 @@ class UnivariateMetric(BaseMetric):
         full_values_set = set(original_column.values) | set(synthetic_column.values)
 
         original_ratio_counts = plot_dist(original_column, True, full_values_set)
-        original_ratio_counts = self._get_ratio_and_labels(original_ratio_counts)
+        original_ratio_counts = self._get_ratio_counts(original_ratio_counts)
         original_labels = list(original_ratio_counts.keys())
         original_ratio = list(original_ratio_counts.values())
 
