@@ -3,8 +3,7 @@ import base64
 
 import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
-
-from syngen.ml.custom_logger import custom_logger
+from loguru import logger
 
 
 def encode_categorical_features(dfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
@@ -42,5 +41,5 @@ def transform_to_base64(path):
             encoded_string = base64.b64encode(image_file.read())
         return "data:image/svg+xml;base64," + encoded_string.decode('utf-8')
     except FileNotFoundError:
-        custom_logger.warning(f"No file found at {path}")
+        logger.warning(f"No file found at {path}")
         return ""

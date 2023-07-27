@@ -38,6 +38,7 @@ def test_infer_table_with_metadata_path(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.infer.setup_logger")
 def test_infer_table_with_metadata_path_and_table_name(rp_logger, caplog):
     rp_logger.info("Launch infer process through CLI with parameters '--metadata_path' and '--table_name'")
     with patch.object(Worker, "launch_infer", return_value=None) as mock_method:
@@ -158,6 +159,7 @@ def test_infer_table_with_invalid_batch_size(rp_logger):
         )
         assert result.exit_code == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
 
 def test_infer_table_with_valid_random_seed(rp_logger):
     rp_logger.info(f"Launch infer process through CLI with valid 'random_seed' parameter equals 1")

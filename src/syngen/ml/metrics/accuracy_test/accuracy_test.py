@@ -19,7 +19,6 @@ from syngen.ml.metrics.utils import transform_to_base64
 from syngen.ml.utils import fetch_training_config
 
 
-
 class BaseTest(ABC):
     def __init__(
             self,

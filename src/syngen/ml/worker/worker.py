@@ -1,11 +1,11 @@
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from copy import deepcopy
+from loguru import logger
 
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
-from syngen.ml.custom_logger import custom_logger
 
 from syngen.ml.context.context import global_context
 
@@ -27,7 +27,6 @@ class Worker:
 
     def __post_init__(self):
         self.metadata = self.__fetch_metadata()
-
 
     def _update_metadata_for_table(self, metadata: Dict) -> Dict:
         """
@@ -186,7 +185,7 @@ class Worker:
             config_of_table = config_of_metadata_for_training[table]
             global_context(config_of_table.get("format", {}))
             train_settings = config_of_table["train_settings"]
-            custom_logger.info(f"Training process of the table - {table} has started.")
+            logger.info(f"Training process of the table - {table} has started.")
 
             self.train_strategy.run(
                 metadata=self.metadata,
@@ -214,7 +213,7 @@ class Worker:
                 print_report = train_settings.get("print_report")
                 both_keys = table in self.divided
 
-                custom_logger.info(f"Infer process of the table - {table} has started")
+                logger.info(f"Infer process of the table - {table} has started")
 
                 self.infer_strategy.run(
                     destination=None,
@@ -239,7 +238,7 @@ class Worker:
         for table in tables:
             config_of_table = config_of_tables[table]
             global_context(config_of_table.get("format", {}))
-            custom_logger.info(f"Infer process of the table - {table} has started")
+            logger.info(f"Infer process of the table - {table} has started")
             both_keys = table in self.divided
             infer_settings = config_of_table["infer_settings"]
 
@@ -256,7 +255,6 @@ class Worker:
                 log_level=self.log_level,
                 both_keys=both_keys
             )
-
 
     @staticmethod
     def _generate_reports():

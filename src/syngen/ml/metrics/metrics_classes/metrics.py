@@ -18,13 +18,13 @@ import pandas as pd
 import scipy.stats as st
 import seaborn as sns
 from slugify import slugify
+from loguru import logger
 
 from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
     convert_to_time
 )
-from syngen.ml.custom_logger import custom_logger
 
 
 class BaseMetric(ABC):
@@ -99,7 +99,7 @@ class JensenShannonDistance(BaseMetric):
             heatmap.shape[0], -1
         )
         heatmap_median = np.nanmedian(heatmap_no_diag)  # ignores nan when calculating median
-        custom_logger.info("Median of Jensen Shannon Distance heatmap is {0:.4f}".format(heatmap_median))
+        logger.info("Median of Jensen Shannon Distance heatmap is {0:.4f}".format(heatmap_median))
         return heatmap_median
 
     def _calculate_pair_continuous_vs_continuous(self, first_column, second_column):
@@ -793,8 +793,8 @@ class UnivariateMetric(BaseMetric):
                 plt.savefig(path_to_image, bbox_inches="tight", format="svg")
                 uni_images[column] = path_to_image
         if print_nan:
-            custom_logger.info(f"Number of original NaN values in {column}: {original_nan_count}")
-            custom_logger.info(f"Number of synthetic NaN values in {column}: {synthetic_nan_count}")
+            logger.info(f"Number of original NaN values in {column}: {original_nan_count}")
+            logger.info(f"Number of synthetic NaN values in {column}: {synthetic_nan_count}")
         return uni_images
 
 
@@ -832,7 +832,7 @@ class Clustering(BaseMetric):
             keys=["original", "synthetic"]
         ).dropna().reset_index()
         if len(self.merged) == 0:
-            custom_logger.warning("No clustering metric will be formed due to empty DataFrame")
+            logger.warning("No clustering metric will be formed due to empty DataFrame")
             return None
         self.__preprocess_data()
         optimal_clust_num = self.__automated_elbow()
@@ -843,7 +843,7 @@ class Clustering(BaseMetric):
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
         self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
-        custom_logger.info("Mean clusters homogeneity is {0:.4f}".format(self.mean_score.values[0]))
+        logger.info("Mean clusters homogeneity is {0:.4f}".format(self.mean_score.values[0]))
 
         if self.plot:
             plt.clf()
@@ -971,7 +971,7 @@ class Utility(BaseMetric):
 
         if self.plot:
             if result.empty:
-                custom_logger.info("No data to provide utility barplot")
+                logger.info("No data to provide utility barplot")
             else:
                 plt.clf()
                 sns.set(font_scale=3)
@@ -1003,15 +1003,15 @@ class Utility(BaseMetric):
                 plt.savefig(f"{self.draws_path}/utility_barplot.svg", bbox_inches="tight", format="svg")
 
         if best_binary is not None:
-            custom_logger.info(
+            logger.info(
                 f"The ratio of synthetic binary accuracy to original is {round(score_binary/synth_score_binary, 3)}. "
                 f"The model considers the {best_binary} column as a target and other columns as predictors")
         if best_categ is not None:
-            custom_logger.info(
+            logger.info(
                 f"The ratio of synthetic multiclass accuracy to original is {round(score_categ / synth_score_categ, 3)}. "
                 f"The model considers the {best_categ} column as a target and other columns as predictors")
         if best_regres is not None:
-            custom_logger.info(
+            logger.info(
                 f"The ratio of synthetic regression accuracy to original is {round(score_regres / synth_regres_score, 3)}. "
                 f"The model considers the {best_regres} column as a target and other columns as predictors")
 
@@ -1043,8 +1043,8 @@ class Utility(BaseMetric):
             original = StandardScaler().fit_transform(original)
             model_y = self.original[col].values[:int(original.shape[0] * 0.8)]
             if len(set(model_y)) < 2:
-                custom_logger.info(f"Column {col} has less than 2 classes as target. "
-                                   f"It will not be used in metric that measures regression results.")
+                logger.info(f"Column {col} has less than 2 classes as target. "
+                            f"It will not be used in metric that measures regression results.")
                 continue
 
             model = model_object.fit(
@@ -1063,8 +1063,8 @@ class Utility(BaseMetric):
 
         if best_score > -1:
             if best_score < 0.6:
-                custom_logger.info(f"The best score for all possible {task_type} models for the original data is "
-                                   f"{best_score}, which is below 0.6. The utility metric is unreliable")
+                logger.info(f"The best score for all possible {task_type} models for the original data is "
+                            f"{best_score}, which is below 0.6. The utility metric is unreliable")
             synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
             synthetic = StandardScaler().fit_transform(synthetic)
             synthetic_score = self.__get_accuracy_score(
