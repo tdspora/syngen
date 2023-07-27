@@ -327,14 +327,16 @@ class BivariateMetric(BaseMetric):
         categ_columns: List[str],
         date_columns: Optional[List[str]],
         num_not_na_cont_ticks: int = 10,
+        max_num_combinations: int = 100,
     ):
         self.date_columns = date_columns if date_columns else []
         self.num_not_na_ticks = num_not_na_cont_ticks
         all_columns = set(cont_columns) | set(categ_columns)
-        column_pairs = list(combinations(all_columns, 2))
+        all_column_pairs = list(combinations(all_columns, 2))
+        column_pairs = random.sample(all_column_pairs, min(max_num_combinations, len(all_column_pairs)))
         bi_imgs = {}
         for i, (first_col, second_col) in tqdm.tqdm(iterable=enumerate(column_pairs),
-                                                    desc="Generating images...",
+                                                    desc="Generating bivariate distributions...",
                                                     total=len(column_pairs)):
             fig, self._axes = plt.subplots(1, 2, figsize=(30, 15), gridspec_kw={'width_ratios': [7, 8.7]})
             if first_col in cont_columns:
