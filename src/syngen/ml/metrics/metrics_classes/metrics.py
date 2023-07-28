@@ -488,7 +488,7 @@ class BivariateMetric(BaseMetric):
         remaining_ticks = categ_ticks[min_ticks:-max_ticks]
 
         # Randomly select other_ticks elements from the remaining list
-        selected_other_ticks = random.sample(remaining_ticks, other_ticks) if remaining_ticks else []
+        selected_other_ticks = random.sample(remaining_ticks, min(other_ticks, len(remaining_ticks)))
 
         return selected_min_ticks + selected_other_ticks + selected_max_ticks
 
@@ -689,7 +689,7 @@ class UnivariateMetric(BaseMetric):
         most_common_items = ratio_counts.most_common(most_least_count)
         least_common_items = ratio_counts.most_common()[:-most_least_count - 1:-1]
         between_items = ratio_counts.most_common()[most_least_count:-most_least_count]
-        selected_between_items = random.sample(between_items, other_items) if between_items else list()
+        selected_between_items = random.sample(between_items, min(other_items, len(between_items)))
 
         updated_ratio_counts = dict(most_common_items + selected_between_items + least_common_items)
 
