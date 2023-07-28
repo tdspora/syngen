@@ -330,7 +330,9 @@ class BivariateMetric(BaseMetric):
     ):
         self.date_columns = date_columns if date_columns else []
         self.num_not_na_ticks = num_not_na_cont_ticks
-        all_columns = set(cont_columns) | set(categ_columns)
+        fetched_columns = set(cont_columns) | set(categ_columns)
+        excluded_cols = {col for col in fetched_columns if col.endswith(("_word_count", "_char_len"))}
+        all_columns = fetched_columns - excluded_cols
         all_column_pairs = list(combinations(all_columns, 2))
         column_pairs = random.sample(all_column_pairs, min(max_num_combinations, len(all_column_pairs)))
         bi_imgs = {}
@@ -667,6 +669,10 @@ class UnivariateMetric(BaseMetric):
         print_nan: bool = False
     ):
         cont_columns = list(cont_columns)
+        excluded_cols = {col for col in cont_columns if "word_count" if col.endswith("_word_count")}
+        cont_columns = set(cont_columns) - excluded_cols
+        excluded_cols = {col for col in categ_columns if "word_count" if col.endswith("_word_count")}
+        categ_columns = set(categ_columns) - excluded_cols
         images = {}
         uni_categ_images = {}
         for col in cont_columns:
