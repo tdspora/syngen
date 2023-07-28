@@ -669,9 +669,10 @@ class UnivariateMetric(BaseMetric):
         print_nan: bool = False
     ):
         cont_columns = list(cont_columns)
-        excluded_columns = {col for col in categ_columns if "word_count" if col.endswith("_word_count")}
-        cont_columns = set(cont_columns) - excluded_columns
-        categ_columns = set(categ_columns) - excluded_columns
+        excluded_cols = {col for col in cont_columns if "word_count" if col.endswith("_word_count")}
+        cont_columns = set(cont_columns) - excluded_cols
+        excluded_cols = {col for col in categ_columns if "word_count" if col.endswith("_word_count")}
+        categ_columns = set(categ_columns) - excluded_cols
         images = {}
         uni_categ_images = {}
         for col in cont_columns:
