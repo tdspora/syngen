@@ -449,7 +449,7 @@ class BivariateMetric(BaseMetric):
         heatmap, x_tick_labels, y_tick_labels = heatmap_data
         x_tick_labels = self.__format_float_tick_labels(x_tick_labels)
         y_tick_labels = self.__format_float_tick_labels(y_tick_labels)
-        sns.heatmap(
+        ax = sns.heatmap(
             heatmap,
             xticklabels=x_tick_labels,
             yticklabels=y_tick_labels,
@@ -459,6 +459,9 @@ class BivariateMetric(BaseMetric):
             cmap=self.cmap,
             cbar=cbar
         )
+        if cbar:
+            cbar = ax.collections[0].colorbar
+            cbar.ax.tick_params(axis="y", labelsize=20)
 
     def _get_continuous_ticks(self, col_name: str):
         original_col_values = self.original[col_name].dropna().values
