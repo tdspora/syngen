@@ -330,7 +330,9 @@ class BivariateMetric(BaseMetric):
     ):
         self.date_columns = date_columns if date_columns else []
         self.num_not_na_ticks = num_not_na_cont_ticks
-        all_columns = set(cont_columns) | set(categ_columns)
+        fetched_columns = set(cont_columns) | set(categ_columns)
+        excluded_cols = {col for col in fetched_columns if col.endswith(("_word_count", "_char_len"))}
+        all_columns = fetched_columns - excluded_cols
         all_column_pairs = list(combinations(all_columns, 2))
         column_pairs = random.sample(all_column_pairs, min(max_num_combinations, len(all_column_pairs)))
         bi_imgs = {}
@@ -447,7 +449,7 @@ class BivariateMetric(BaseMetric):
         heatmap, x_tick_labels, y_tick_labels = heatmap_data
         x_tick_labels = self.__format_float_tick_labels(x_tick_labels)
         y_tick_labels = self.__format_float_tick_labels(y_tick_labels)
-        sns.heatmap(
+        ax = sns.heatmap(
             heatmap,
             xticklabels=x_tick_labels,
             yticklabels=y_tick_labels,
@@ -457,6 +459,9 @@ class BivariateMetric(BaseMetric):
             cmap=self.cmap,
             cbar=cbar
         )
+        if cbar:
+            cbar = ax.collections[0].colorbar
+            cbar.ax.tick_params(axis="y", labelsize=20)
 
     def _get_continuous_ticks(self, col_name: str):
         original_col_values = self.original[col_name].dropna().values
@@ -667,6 +672,10 @@ class UnivariateMetric(BaseMetric):
         print_nan: bool = False
     ):
         cont_columns = list(cont_columns)
+        excluded_cols = {col for col in cont_columns if "word_count" if col.endswith("_word_count")}
+        cont_columns = set(cont_columns) - excluded_cols
+        excluded_cols = {col for col in categ_columns if "word_count" if col.endswith("_word_count")}
+        categ_columns = set(categ_columns) - excluded_cols
         images = {}
         uni_categ_images = {}
         for col in cont_columns:
