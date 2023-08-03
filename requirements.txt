@@ -1,5 +1,3 @@
-attr
-attrs==21.4.*
 category_encoders==2.5.*
 click
 ipython==8.4.*
@@ -16,11 +14,9 @@ scipy==1.7.*
 seaborn==0.11.*
 tensorflow==2.12.*
 tqdm==4.64.*
-protobuf==4.23.*
 PyYAML==6.*
 MarkupSafe==2.0.1
 Jinja2
-schema
 avro
 python-slugify[unidecode]>=7.0.0
 pytest
