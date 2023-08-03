@@ -66,10 +66,10 @@ class TrainConfig:
         """
         if os.path.exists(self.paths["resources_path"]):
             shutil.rmtree(self.paths["resources_path"])
-            logger.info(f"The artifacts located in the path - '{self.paths['resources_path']}' was removed")
+            logger.info(f"The artifacts located in the path - '{self.paths['resources_path']}' were removed")
         if os.path.exists(self.paths["tmp_store_path"]):
             shutil.rmtree(self.paths["tmp_store_path"])
-            logger.info(f"The artifacts located in the path - '{self.paths['tmp_store_path']}' was removed")
+            logger.info(f"The artifacts located in the path - '{self.paths['tmp_store_path']}' were removed")
 
     def _prepare_dirs(self):
         """
