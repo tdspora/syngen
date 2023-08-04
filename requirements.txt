@@ -1,7 +1,7 @@
 category_encoders==2.5.*
 click
 ipython==8.4.*
-keras==2.12.*
+keras<2.14,>=2.13.1
 lazy==1.4
 loguru
 matplotlib==3.5.*
@@ -12,7 +12,7 @@ pathos==0.2.*
 scikit_learn==1.1.*
 scipy==1.7.*
 seaborn==0.11.*
-tensorflow==2.12.*
+tensorflow==2.13.*
 tqdm==4.64.*
 PyYAML==6.*
 MarkupSafe==2.0.1
