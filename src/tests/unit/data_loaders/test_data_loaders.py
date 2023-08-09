@@ -608,7 +608,7 @@ def test_save_double_quoted_csv(test_csv_path, rp_logger):
     assert get_context().get_config() == {
         "sep": ",",
         "quotechar": '"',
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
@@ -620,7 +620,7 @@ def test_save_double_quoted_csv(test_csv_path, rp_logger):
 def test_load_escaped_quoted_csv(rp_logger):
     path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/escaped_quoted_text.csv"
     rp_logger.info(f"Loading CSV with escaped quoted values")
-    global_context({"sep": ",", "quotechar": '"'})
+    global_context({"sep": ",", "quotechar": '"', "escapechar": "\\"})
     data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -635,7 +635,7 @@ def test_save_escaped_quoted_csv(test_csv_path, rp_logger):
     assert get_context().get_config() == {
         "sep": ",",
         "quotechar": '"',
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
@@ -707,7 +707,7 @@ def test_save_csv_with_triple_colons(test_csv_path, rp_logger):
     data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": ",",
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
@@ -756,7 +756,7 @@ def test_save_pcv_file(test_csv_path, rp_logger):
     data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": "|",
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
@@ -782,7 +782,7 @@ def test_save_tcv_file(test_csv_path, rp_logger):
     data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": "\t",
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
