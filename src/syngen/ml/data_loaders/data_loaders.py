@@ -112,7 +112,7 @@ class CSVLoader:
         if isinstance(quoting, int):
             return quoting
         else:
-            return quoting_map.get(quoting.lower(), csv.QUOTE_NONE) if quoting else csv.QUOTE_NONE
+            return quoting_map.get(quoting.lower(), csv.QUOTE_NONE) if quoting else csv.QUOTE_MINIMAL
 
     @staticmethod
     def _get_csv_params(**kwargs):
