@@ -443,7 +443,7 @@ class Dataset:
             updated_columns = self._remove_non_existent_columns(table_metadata[key].get("columns", []), key, key_type)
             table_metadata[key]["columns"] = updated_columns
             if not table_metadata[key]["columns"]:
-                logger.warning(f"The key {key} has no non-empty columns, it will be removed from the table's metadata")
+                logger.warning(f"All columns in the key {key} are empty, so it will be removed from the table's metadata")
                 table_metadata[key].pop(key, None)
                 self.metadata[self.table_name]["keys"].pop(key, None)
 
