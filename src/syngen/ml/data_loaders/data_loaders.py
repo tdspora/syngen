@@ -15,7 +15,7 @@ from avro.datafile import DataFileReader
 from avro.io import DatumReader
 from loguru import logger
 
-from syngen.ml.validation_schema import ValidationSchema,SUPPORTED_EXCEL_EXTENSIONS
+from syngen.ml.validation_schema import ValidationSchema, SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.context import get_context, global_context
