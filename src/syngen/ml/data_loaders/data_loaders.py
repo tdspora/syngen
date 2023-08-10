@@ -324,7 +324,7 @@ class ExcelLoader:
         self.format = get_context().get_config()
         self.sheet_name = self.format.get("sheet_name", 0)
 
-    def load_data(self, path: str) -> Tuple[pd.DataFrame, Dict]:
+    def _load_data(self, path: str) -> Tuple[pd.DataFrame, Dict]:
         """
         Load data in Excel format
         """
@@ -342,8 +342,14 @@ class ExcelLoader:
             logger.error(message)
             raise FileNotFoundError(message)
 
+    def load_data(self, path):
+        return self._load_data(path)
+
+    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
+        self._save_data(path, df)
+
     @staticmethod
-    def save_data(path: str, df: pd.DataFrame, **kwargs):
+    def _save_data(path: str, df: pd.DataFrame):
         """
         Save provided data frame in Excel format
         """
