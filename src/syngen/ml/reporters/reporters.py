@@ -46,6 +46,14 @@ class Reporter:
         )
         return types
 
+    @staticmethod
+    def convert(x):
+        try:
+            ts = pd.Timestamp(x).value
+        except pd.errors.OutOfBoundsDatetime:
+            ts = pd.Timestamp.max.value
+        return ts
+
     def preprocess_data(self):
         """
         Preprocess original and synthetic data.
@@ -71,10 +79,10 @@ class Reporter:
         ]]
         for date_col in date_columns:
             original[date_col] = list(
-                map(lambda d: pd.Timestamp(d).value, original[date_col])
+                map(lambda d: self.convert(d), original[date_col])
             )
             synthetic[date_col] = list(
-                map(lambda d: pd.Timestamp(d).value, synthetic[date_col])
+                map(lambda d: self.convert(d), synthetic[date_col])
             )
 
         int_columns = date_columns | int_columns
