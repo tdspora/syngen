@@ -15,7 +15,7 @@ from avro.datafile import DataFileReader
 from avro.io import DatumReader
 from loguru import logger
 
-from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.validation_schema import ValidationSchema,SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.context import get_context, global_context
@@ -69,6 +69,8 @@ class DataLoader(BaseDataLoader):
             return CSVLoader(sep="|")
         elif path.suffix == ".pkl":
             return BinaryLoader()
+        elif path.suffix in SUPPORTED_EXCEL_EXTENSIONS:
+            return ExcelLoader()
         else:
             raise NotImplementedError(f"File format not supported for extension {path.suffix}")
 
@@ -208,15 +210,10 @@ class AvroLoader(BaseDataLoader):
 
     def load_data(self, path: str, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
-        Load data in Avro format from AWS S3, Azure Storage or locally
-
-        :param
-        path:
-        str which should be in the next format for the connection to AWS S3: "s3://path/to/bucket"
-        str which should be in the next format for the connection to Azure Storage: "azure://{container_name}/{blob_name}"
+        Load data in Avro format
         """
         try:
-            with open(path, 'rb') as f:
+            with open(path, "rb") as f:
                 df = self._load_df(f)
                 schema, preprocessed_df = self._load_schema(f, df)
                 return preprocessed_df, schema
@@ -317,3 +314,38 @@ class BinaryLoader(BaseDataLoader):
     def save_data(self, path: str, data, **kwargs):
         with open(path, "wb") as f:
             pickle.dump(data, f)
+
+
+class ExcelLoader:
+    """
+    Class for loading and saving data in Excel format
+    """
+    def __init__(self):
+        self.format = get_context().get_config()
+        self.sheet_name = self.format.get("sheet_name", 0)
+
+    def load_data(self, path: str) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Load data in Excel format
+        """
+        try:
+            df = pd.read_excel(path, sheet_name=self.sheet_name)
+            if isinstance(self.sheet_name, list) or self.sheet_name is None:
+                dfs = [df for sheet_name, df in df.items()]
+                df = pd.concat(dfs, ignore_index=True)
+            global_context({})
+            return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
+        except FileNotFoundError as error:
+            message = f"It seems that the path to the table isn't valid.\n" \
+                      f"The details of the error - {error}.\n" \
+                      f"Please, check the path to the table"
+            logger.error(message)
+            raise FileNotFoundError(message)
+
+    @staticmethod
+    def save_data(path: str, df: pd.DataFrame):
+        """
+        Save provided data frame in Excel format
+        """
+        if df is not None:
+            df.to_excel(path, index=False)
