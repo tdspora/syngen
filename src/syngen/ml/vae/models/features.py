@@ -23,7 +23,7 @@ from tensorflow.keras.layers import (
     TimeDistributed
 )
 
-from syngen.ml.utils import slugify_parameters, inverse_dict
+from syngen.ml.utils import slugify_parameters, inverse_dict, convert
 
 
 class BaseFeature:
@@ -634,7 +634,7 @@ class DateFeature(BaseFeature):
     def fit(self, data):
         self.date_format = self.__validate_format(data)
         data = chain.from_iterable(data.values)
-        data = pd.DataFrame(list(map(lambda d: pd.Timestamp(d).value, data)))
+        data = pd.DataFrame(list(map(lambda d: convert(d), data)))
         self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
         normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
         data = np.array(data).reshape(-1, 1)
@@ -645,7 +645,7 @@ class DateFeature(BaseFeature):
 
     def transform(self, data):
         data = chain.from_iterable(data.values)
-        data = list(map(lambda d: pd.Timestamp(d).value, data))
+        data = list(map(lambda d: convert(d), data))
         data = np.array(data).reshape(-1, 1)
         return self.scaler.transform(data)
 

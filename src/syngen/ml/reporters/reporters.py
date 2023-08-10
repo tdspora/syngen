@@ -9,7 +9,8 @@ from loguru import logger
 from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
-    fetch_dataset
+    fetch_dataset,
+    convert
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader
@@ -71,10 +72,10 @@ class Reporter:
         ]]
         for date_col in date_columns:
             original[date_col] = list(
-                map(lambda d: pd.Timestamp(d).value, original[date_col])
+                map(lambda d: convert(d), original[date_col])
             )
             synthetic[date_col] = list(
-                map(lambda d: pd.Timestamp(d).value, synthetic[date_col])
+                map(lambda d: convert(d), synthetic[date_col])
             )
 
         int_columns = date_columns | int_columns

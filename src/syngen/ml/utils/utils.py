@@ -15,6 +15,14 @@ import random
 from loguru import logger
 
 
+def convert(x):
+    try:
+        ts = pd.Timestamp(x).value
+    except pd.errors.OutOfBoundsDatetime:
+        ts = pd.Timestamp.max.value
+    return ts
+
+
 def generate_uuids(version: int, size: int):
     ulid = ULID()
     generated_uuid_column = []

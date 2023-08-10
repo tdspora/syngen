@@ -15,5 +15,6 @@ from syngen.ml.utils.utils import (
     fetch_training_config,
     generate_uuid,
     generate_uuids,
-    setup_logger
+    setup_logger,
+    convert
 )
