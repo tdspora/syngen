@@ -609,7 +609,7 @@ def test_save_double_quoted_csv(test_csv_path, rp_logger):
     assert get_context().get_config() == {
         "sep": ",",
         "quotechar": '"',
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
@@ -636,7 +636,7 @@ def test_save_escaped_quoted_csv(test_csv_path, rp_logger):
     assert get_context().get_config() == {
         "sep": ",",
         "quotechar": '"',
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
@@ -708,7 +708,7 @@ def test_save_csv_with_triple_colons(test_csv_path, rp_logger):
     data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": ",",
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
@@ -757,7 +757,7 @@ def test_save_pcv_file(test_csv_path, rp_logger):
     data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": "|",
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
@@ -783,7 +783,7 @@ def test_save_tcv_file(test_csv_path, rp_logger):
     data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": "\t",
-        "quoting": 3,
+        "quoting": 0,
         "skiprows": None
     }
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
@@ -820,6 +820,37 @@ def test_save_csv_with_nested_field(test_csv_path, rp_logger):
     CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
     data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 5)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_csv_with_double_pipe_delimited_text(rp_logger):
+    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/double_pipe_delimited_text.csv"
+    rp_logger.info(f"Loading CSV with double pipe delimited text")
+    global_context({
+        "sep": "\|\|"
+    })
+    data, schema = CSVLoader().load_data(path_to_source)
+    assert data.shape == (15, 6)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_csv_with_double_pipe_delimited_text(test_csv_path, rp_logger):
+    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/double_pipe_delimited_text.csv"
+    rp_logger.info(f"Saving CSV contained the fields with double pipe delimited text")
+    format_settings = {
+        "sep": "\|\|"
+    }
+    global_context(format_settings)
+    data, schema = CSVLoader().load_data(path_to_source)
+    assert get_context().get_config() == {
+        "sep": ",",
+        "quoting": 0,
+        "skiprows": None
+    }
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    global_context(format_settings)
+    data, schema = CSVLoader(sep=",").load_data(test_csv_path)
+    assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
