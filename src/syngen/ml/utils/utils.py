@@ -16,11 +16,14 @@ from loguru import logger
 
 
 def convert(x):
-    try:
-        ts = pd.Timestamp(x).value
-    except pd.errors.OutOfBoundsDatetime:
-        ts = pd.Timestamp.max.value
-    return ts
+    x = parse(x)
+    if x <= datetime.strptime('1677-09-22', "%Y-%m-%d"):
+        date = pd.Timestamp.min.value
+    elif x >= datetime.strptime("2262-04-10", "%Y-%m-%d"):
+        date = pd.Timestamp.max.value
+    else:
+        date = pd.Timestamp(x).value
+    return date
 
 
 def generate_uuids(version: int, size: int):
