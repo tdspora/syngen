@@ -115,7 +115,7 @@ def test_load_data_from_table_in_csv_format_in_not_utf_8(caplog, rp_logger):
     data_loader = DataLoader(path)
     assert isinstance(data_loader.file_loader, CSVLoader)
 
-    with pytest.raises(ValueError) as error:
+    with pytest.raises(UnicodeDecodeError) as error:
         with caplog.at_level("ERROR"):
             data_loader.load_data()
             assert f"It seems that the content of the data in the path - '{path}' " \
@@ -128,7 +128,7 @@ def test_load_data_from_empty_table_in_csv_format(caplog, rp_logger):
     rp_logger.info("Loading data from local empty table in csv format")
     data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/empty_table.csv")
     assert isinstance(data_loader.file_loader, CSVLoader)
-    with pytest.raises(ValueError):
+    with pytest.raises(pd.errors.EmptyDataError):
         with caplog.at_level("ERROR"):
             data_loader.load_data()
             assert "The empty file was provided. Unable to load data " in caplog.text
@@ -938,6 +938,16 @@ def test_load_data_from_table_in_excel_format_from_2_sheets_of_2_sheets(rp_logge
     ) is None
 
     assert isinstance(df, pd.DataFrame)
+    assert schema == {"fields": {}, "format": "CSV"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_data_from_empty_excel_table(rp_logger, caplog):
+    rp_logger.info("Loading data from local empty Excel table in '.xlsx' format")
+    data_loader = DataLoader("./tests/unit/data_loaders/fixtures/excel_tables/empty_table.xlsx")
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    data, schema = data_loader.load_data()
+    assert data.empty is True
     assert schema == {"fields": {}, "format": "CSV"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

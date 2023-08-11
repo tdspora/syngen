@@ -83,13 +83,13 @@ class DataLoader(BaseDataLoader):
             message = f"It seems that the content of the data in the path - '{self.path}' " \
                       f"doesn't have the encoding UTF-8. The details of the error - {error}.\n" \
                       f"Please, use the data in UTF-8 encoding"
-            logger.error(message)
-            raise ValueError(message)
+            logger.error(message, error)
+            raise error
         except pandas.errors.EmptyDataError as error:
             message = f"The empty file was provided. Unable to load data from the path - '{self.path}'. " \
                       f"The details of the error - {error}"
-            logger.error(message)
-            raise ValueError(message)
+            logger.error(message, error)
+            raise error
 
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         self.file_loader.save_data(path, df, **kwargs)
