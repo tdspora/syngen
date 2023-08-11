@@ -942,7 +942,7 @@ def test_load_data_from_table_in_excel_format_from_2_sheets_of_2_sheets(rp_logge
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_save_metadata_in_excel_format(test_xls_path, test_df, rp_logger):
+def test_save_excel_table_in_xlx_format(test_xls_path, test_df, rp_logger):
     rp_logger.info("Saving the data to Excel table in '.xls' format")
     data_loader = DataLoader(test_xls_path)
     data_loader.save_data(test_xls_path, test_df)
@@ -956,7 +956,7 @@ def test_save_metadata_in_excel_format(test_xls_path, test_df, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_save_metadata_in_excel_format_2(test_xlsx_path, test_df, rp_logger):
+def test_save_excel_table_in_xlsx_format(test_xlsx_path, test_df, rp_logger):
     rp_logger.info("Saving the data to Excel table in '.xlsx' format")
     data_loader = DataLoader(test_xlsx_path)
     data_loader.save_data(test_xlsx_path, test_df)
