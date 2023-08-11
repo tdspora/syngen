@@ -19,6 +19,7 @@ from syngen.ml.validation_schema import ValidationSchema, SUPPORTED_EXCEL_EXTENS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.context import get_context, global_context
+from syngen.ml.validation_schema import ExcelFormatSettingsSchema, CSVFormatSettingsSchema
 
 
 DELIMITERS = {
@@ -101,7 +102,10 @@ class CSVLoader:
     def __init__(self, **kwargs):
         self.format = get_context().get_config()
         self.format.update(kwargs)
-        global_context(self.format)
+        self.format = {
+            k: v for k, v in self.format.items()
+            if k in CSVFormatSettingsSchema._declared_fields.keys()
+        }
 
     @staticmethod
     def _get_quoting(quoting: Optional[str]) -> int:
@@ -323,6 +327,10 @@ class ExcelLoader:
     def __init__(self):
         self.format = get_context().get_config()
         self.sheet_name = self.format.get("sheet_name", 0)
+        self.format = {
+            k: v for k, v in self.format.items()
+            if k in ExcelFormatSettingsSchema._declared_fields.keys()
+        }
 
     def _load_data(self, path: str) -> Tuple[pd.DataFrame, Dict]:
         """
