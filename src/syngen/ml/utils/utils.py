@@ -17,6 +17,8 @@ from loguru import logger
 
 
 def datetime_to_timestamp(dt):
+    max_allowed_time_ms = 253402214400
+    min_allowed_time_ms = -62135596800
     try:
         dt = parser.parse(dt).replace(tzinfo=None)
         delta = dt - datetime(1970, 1, 1)
@@ -24,9 +26,9 @@ def datetime_to_timestamp(dt):
     except parser._parser.ParserError as e:
         year = re.match("\d+", e.args[0][5:]).group(0)
         if int(year) > 9999:
-            return 253402214400.0
+            return max_allowed_time_ms
         elif int(year) < 1:
-            return 978307200.0
+            return min_allowed_time_ms
 
 
 def timestamp_to_datetime(timestamp):
@@ -79,7 +81,7 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         for x in x_wo_na.values:
             try:
                 date_for_check = datetime(8557, 7, 20)
-                datetime_object = parse(x, default=date_for_check)
+                datetime_object = parser.parse(x, default=date_for_check)
                 # Check if the parsed date contains only the time component. If it does, then skip it.
                 count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
