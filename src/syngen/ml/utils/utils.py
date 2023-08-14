@@ -17,7 +17,7 @@ from loguru import logger
 
 def datetime_to_timestamp(dt):
     # Calculate the difference between the input datetime and the UNIX epoch in seconds
-    dt = parse(dt)
+    dt = parse(dt).replace(tzinfo=None)
     delta = dt - datetime(1970, 1, 1)
     return delta.total_seconds()
 
