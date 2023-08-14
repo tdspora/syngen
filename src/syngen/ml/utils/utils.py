@@ -1,7 +1,8 @@
 import os
 import sys
+import re
 from typing import List, Dict
-from dateutil.parser import parse
+from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
 
@@ -16,10 +17,16 @@ from loguru import logger
 
 
 def datetime_to_timestamp(dt):
-    # Calculate the difference between the input datetime and the UNIX epoch in seconds
-    dt = parse(dt).replace(tzinfo=None)
-    delta = dt - datetime(1970, 1, 1)
-    return delta.total_seconds()
+    try:
+        dt = parser.parse(dt).replace(tzinfo=None)
+        delta = dt - datetime(1970, 1, 1)
+        return delta.total_seconds()
+    except parser._parser.ParserError as e:
+        year = re.match("\d+", e.args[0][5:]).group(0)
+        if int(year) > 9999:
+            return 253402214400.0
+        elif int(year) < 1:
+            return 978307200.0
 
 
 def timestamp_to_datetime(timestamp):

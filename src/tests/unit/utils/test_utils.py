@@ -5,6 +5,8 @@ from datetime import datetime
 from syngen.ml.utils import (
     slugify_attribute,
     slugify_parameters,
+    datetime_to_timestamp,
+    timestamp_to_datetime
 )
 
 from tests.conftest import SUCCESSFUL_MESSAGE
@@ -46,3 +48,34 @@ def test_slugify_parameters(parameter, expected_parameter, rp_logger):
     assert dummy_function(name=parameter), expected_parameter
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
+def test_datetime_to_timestamp():
+    test_cases = [
+        ("0001-01-01", -62135596800.0),
+        ("1970-01-01", 0),
+        ("2000-01-01", 946684800),
+        ("2023-01-01", 1672527600.0),
+        #("2023-01-01 00:00:00", 1672527600.0),
+        #("2023-01-01 00:00:00.000000", 1672527600.0),
+        #("2023-01-01 00:00:00.000000+00:00", 1672527600.0),
+        ("9999-12-31", 253402214400.0),
+        ("10000-12-31", 253402214400.0)
+]
+
+    for date_time, expected_timestamp in test_cases:
+        calculated_timestamp = datetime_to_timestamp(date_time)
+        assert int(calculated_timestamp) == int(expected_timestamp)
+
+
+def test_timestamp_to_datetime():
+    test_cases = [
+        (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0)),
+        (0, datetime(1970, 1, 1, 0, 0)),
+        (946684800, datetime(2000, 1, 1)),
+        (253402214400.0, datetime(9999, 12, 31, 23, 59, 59, 999999)),
+        (253402537600.0, datetime(9999, 12, 31, 23, 59, 59, 999999))
+    ]
+
+    for timestamp, expected_datetime in test_cases:
+        calculated_datetime = timestamp_to_datetime(timestamp)
+        assert calculated_datetime == expected_datetime
