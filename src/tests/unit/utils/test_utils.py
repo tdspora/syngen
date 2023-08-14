@@ -5,7 +5,6 @@ from datetime import datetime
 from syngen.ml.utils import (
     slugify_attribute,
     slugify_parameters,
-    convert_to_time
 )
 
 from tests.conftest import SUCCESSFUL_MESSAGE
@@ -47,14 +46,3 @@ def test_slugify_parameters(parameter, expected_parameter, rp_logger):
     assert dummy_function(name=parameter), expected_parameter
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
-
-@pytest.mark.parametrize("timestamp, expected_timestamp", [
-    (1e18, datetime(2001, 9, 9, 1, 46, 40)),
-    (0, datetime(1970, 1, 1, 0, 0)),
-    (-1e18, datetime(1938, 4, 24, 22, 13, 20))
-]
-)
-def test_convert_to_time(timestamp, expected_timestamp, rp_logger):
-    rp_logger.info(f"Converting timestamp - {timestamp} to datetime")
-    assert convert_to_time(timestamp) == expected_timestamp
-    rp_logger.info(SUCCESSFUL_MESSAGE)
