@@ -171,8 +171,6 @@ class VaeTrainHandler(BaseHandler):
             f"Train model with parameters: epochs={self.epochs}, row_subset={self.row_subset}, "
             f"drop_null={self.drop_null}, batch_size={self.batch_size}")
 
-        self.model.prepare_dataset()
-
         self.model.fit_on_df(
             data,
             epochs=self.epochs,
@@ -345,8 +343,9 @@ class VaeInferHandler(BaseHandler):
         """
         Set the path to synthetic data of corresponding pk table
         """
-        destination_to_pk_table = self.metadata[pk_table].get("destination")
-        pk_path = destination_to_pk_table if destination_to_pk_table is not None else f"model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
+        destination_to_pk_table = self.metadata[pk_table].get("infer_settings", {}).get("destination")
+        pk_path = destination_to_pk_table if destination_to_pk_table is not None \
+            else f"model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
         if not os.path.exists(pk_path):
             raise FileNotFoundError(
                 "The table with a primary key specified in the metadata file does not "

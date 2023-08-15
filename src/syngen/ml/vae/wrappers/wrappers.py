@@ -18,7 +18,8 @@ from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
 from syngen.ml.utils import (
     fetch_dataset,
-    check_if_features_assigned
+    check_if_features_assigned,
+    define_existent_columns
 )
 
 warnings.filterwarnings("ignore")
@@ -112,8 +113,6 @@ class VAEWrapper(BaseWrapper):
         self.metadata = metadata
         self.table_name = table_name
         self.paths = paths
-
-    def __post__init__(self):
         if self.process == "train":
             self.dataset = Dataset(
                 df=self.df,
@@ -124,6 +123,27 @@ class VAEWrapper(BaseWrapper):
             )
         elif self.process == "infer":
             self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+            self._update_dataset()
+            self._save_dataset()
+
+    def _update_dataset(self):
+        # Check if the serialized class has associated dataframe and
+        # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
+        self.dataset.paths = self.paths
+        if hasattr(self.dataset, "df"):
+            self.dataset.order_of_columns = self.dataset.df.columns.tolist()
+            del self.dataset.df
+            for attr in vars(self.dataset):
+                if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
+                    attr_value = getattr(self.dataset, attr)
+                    updated_attr_value = attr_value.copy()
+                    for key, config in attr_value.items():
+                        updated_columns = define_existent_columns(config.get("columns", []), self.dataset.df.columns)
+                        config["columns"] = updated_columns
+                        updated_attr_value[key] = config
+
+                    setattr(self.dataset, attr, updated_attr_value)
+        self._save_dataset()
 
     def _save_dataset(self):
         """
@@ -183,10 +203,6 @@ class VAEWrapper(BaseWrapper):
     @abstractmethod
     def _init_model(self):
         pass
-
-    def prepare_dataset(self):
-        self.__post__init__()
-        self._save_dataset()
 
     def fit_on_df(
         self,

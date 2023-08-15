@@ -16,5 +16,6 @@ from syngen.ml.utils.utils import (
     generate_uuid,
     generate_uuids,
     setup_logger,
-    convert
+    convert,
+    define_existent_columns
 )
