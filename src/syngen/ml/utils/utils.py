@@ -1,7 +1,8 @@
 import os
 import sys
+import re
 from typing import List, Dict
-from dateutil.parser import parse
+from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
 
@@ -15,15 +16,44 @@ import random
 from loguru import logger
 
 
-def convert(x):
-    x = parse(x)
-    if x <= datetime.strptime('1677-09-22', "%Y-%m-%d"):
-        date = pd.Timestamp.min.value
-    elif x >= datetime.strptime("2262-04-10", "%Y-%m-%d"):
-        date = pd.Timestamp.max.value
-    else:
-        date = pd.Timestamp(x).value
-    return date
+def datetime_to_timestamp(dt):
+    max_allowed_time_ms = 253402214400
+    min_allowed_time_ms = -62135596800
+    try:
+        dt = parser.parse(dt).replace(tzinfo=None)
+        delta = dt - datetime(1970, 1, 1)
+        return delta.total_seconds()
+    except parser._parser.ParserError as e:
+        year = re.match("\d+", e.args[0][5:]).group(0)
+        if int(year) > 9999:
+            return max_allowed_time_ms
+        elif int(year) < 1:
+            return min_allowed_time_ms
+
+
+def timestamp_to_datetime(timestamp):
+    # Calculate the number of seconds in the UNIX epoch and the number of seconds left
+    max_allowed_time_ms = 253402214400
+    min_allowed_time_ms = -62135596800
+
+    if timestamp >= max_allowed_time_ms:
+        return datetime(9999, 12, 31, 23, 59, 59, 999999)
+    elif timestamp <= min_allowed_time_ms:
+        return datetime(1, 1, 1, 0, 0, 0, 0)
+
+    seconds_since_epoch = int(timestamp)
+    remaining_seconds = timestamp - seconds_since_epoch
+
+    # Calculate the datetime for the UNIX epoch (January 1, 1970)
+    epoch_datetime = datetime(1970, 1, 1)
+
+    # Calculate the timedelta for the number of seconds in the UNIX epoch
+    epoch_timedelta = timedelta(seconds=seconds_since_epoch)
+
+    # Add the timedelta to the epoch datetime, and add the remaining fraction of a second
+    result_datetime = epoch_datetime + epoch_timedelta + timedelta(seconds=remaining_seconds)
+
+    return result_datetime
 
 
 def generate_uuids(version: int, size: int):
@@ -51,7 +81,7 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         for x in x_wo_na.values:
             try:
                 date_for_check = datetime(8557, 7, 20)
-                datetime_object = parse(x, default=date_for_check)
+                datetime_object = parser.parse(x, default=date_for_check)
                 # Check if the parsed date contains only the time component. If it does, then skip it.
                 count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
@@ -224,17 +254,6 @@ def trim_string(col):
         return col.str.slice(stop=10 * 1024)
     else:
         return col
-
-
-def convert_to_time(timestamp):
-    """
-    Convert timestamp to datetime
-    """
-    timestamp = int(timestamp * 1e-9)
-    if timestamp < 0:
-        return datetime(1970, 1, 1) + timedelta(seconds=timestamp)
-    else:
-        return datetime.utcfromtimestamp(timestamp)
 
 
 def check_if_features_assigned(dataset_pickle_path: str):
