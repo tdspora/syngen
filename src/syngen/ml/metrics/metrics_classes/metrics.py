@@ -24,7 +24,7 @@ from loguru import logger
 from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
-    convert_to_time
+    timestamp_to_datetime
 )
 
 
@@ -312,11 +312,11 @@ class BivariateMetric(BaseMetric):
         heatmap_orig, x_tick_labels_orig, y_tick_labels_orig = heatmap_orig_data
         heatmap_synth, x_tick_labels_synth, y_tick_labels_synth = heatmap_synthetic_data
         if axis == "y":
-            y_tick_labels_orig = [convert_to_time(i) for i in y_tick_labels_orig]
-            y_tick_labels_synth = [convert_to_time(i) for i in y_tick_labels_synth]
+            y_tick_labels_orig = [timestamp_to_datetime(i) for i in y_tick_labels_orig]
+            y_tick_labels_synth = [timestamp_to_datetime(i) for i in y_tick_labels_synth]
         else:
-            x_tick_labels_orig = [convert_to_time(i) for i in x_tick_labels_orig]
-            x_tick_labels_synth = [convert_to_time(i) for i in x_tick_labels_synth]
+            x_tick_labels_orig = [timestamp_to_datetime(i) for i in x_tick_labels_orig]
+            x_tick_labels_synth = [timestamp_to_datetime(i) for i in x_tick_labels_synth]
         return (heatmap_orig, x_tick_labels_orig, y_tick_labels_orig), \
                (heatmap_synth, x_tick_labels_synth, y_tick_labels_synth)
 
@@ -838,8 +838,9 @@ class UnivariateMetric(BaseMetric):
             if isdate:
                 lower_x, upper_x = ax.dataLim._points[:, 0]
                 len_x_labels = len(ax.get_xticklabels())
+
                 x_ticks = np.linspace(lower_x, upper_x, len_x_labels)
-                x_ticks = [convert_to_time(i) for i in x_ticks]
+                x_ticks = [timestamp_to_datetime(i) for i in x_ticks]
                 ax.set_xticklabels(x_ticks, rotation=45, ha="right")
             if self.draws_path:
                 path_to_image = f"{self.draws_path}/univariate_{slugify(column)}.svg"
