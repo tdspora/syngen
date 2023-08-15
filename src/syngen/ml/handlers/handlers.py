@@ -182,7 +182,11 @@ class VaeTrainHandler(BaseHandler):
         self.model.save_state(self.paths["state_path"])
         logger.info("Finished VAE training")
 
+    def __prepare_dir(self):
+        os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
+
     def handle(self, data: pd.DataFrame, **kwargs):
+        self.__prepare_dir()
         self.__fit_model(data)
         return super().handle(data, **kwargs)
 

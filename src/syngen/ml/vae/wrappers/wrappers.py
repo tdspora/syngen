@@ -143,7 +143,6 @@ class VAEWrapper(BaseWrapper):
                         updated_attr_value[key] = config
 
                     setattr(self.dataset, attr, updated_attr_value)
-        self._save_dataset()
 
     def _save_dataset(self):
         """
