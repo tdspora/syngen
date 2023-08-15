@@ -16,5 +16,6 @@ from syngen.ml.utils.utils import (
     generate_uuids,
     setup_logger,
     datetime_to_timestamp,
-    timestamp_to_datetime
+    timestamp_to_datetime,
+    define_existent_columns
 )

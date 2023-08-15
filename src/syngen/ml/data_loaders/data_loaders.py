@@ -88,8 +88,9 @@ class DataLoader(BaseDataLoader):
             logger.error(message)
             raise ValueError(message)
 
-    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
-        self.file_loader.save_data(path, df, **kwargs)
+    def save_data(self, path: Optional[str], df: pd.DataFrame, **kwargs):
+        if df is not None:
+            self.file_loader.save_data(path, df, **kwargs)
 
 
 class CSVLoader:
@@ -216,7 +217,7 @@ class AvroLoader(BaseDataLoader):
         str which should be in the next format for the connection to Azure Storage: "azure://{container_name}/{blob_name}"
         """
         try:
-            with open(path, 'rb') as f:
+            with open(path, "rb") as f:
                 df = self._load_df(f)
                 schema, preprocessed_df = self._load_schema(f, df)
                 return preprocessed_df, schema
