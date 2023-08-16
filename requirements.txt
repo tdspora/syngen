@@ -25,3 +25,6 @@ reportportal-client
 base32-crockford
 py-ulid
 marshmallow==3.19.*
+xlrd
+xlwt
+openpyxl
