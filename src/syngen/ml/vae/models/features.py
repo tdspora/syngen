@@ -23,7 +23,12 @@ from tensorflow.keras.layers import (
     TimeDistributed
 )
 
-from syngen.ml.utils import slugify_parameters, inverse_dict, convert
+from syngen.ml.utils import (
+    slugify_parameters,
+    inverse_dict,
+    datetime_to_timestamp,
+    timestamp_to_datetime
+)
 
 
 class BaseFeature:
@@ -589,7 +594,6 @@ class DateFeature(BaseFeature):
         elif isinstance(decoder_layers, int):
             decoder_layers = (decoder_layers,)
 
-        # TODO: teset features
         if weight_randomizer is None or (
             isinstance(weight_randomizer, bool) and not weight_randomizer
         ):
@@ -616,10 +620,11 @@ class DateFeature(BaseFeature):
         MM/DD/YY, DD/MM/YY, YY/MM/DD, MM-DD-YY, DD-MM-YY
 
         """
-        pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+|" \
+        pattern = r"\s{0,1}\d+[-/\\:\.]\s{0,1}\d+[-/\\:\.]\s{0,1}\d+|" \
                   r"[A-Z][a-z]+ \d{1,2} \d{4}|" \
                   r"[A-Z][a-z]+ \d{1,2}, \d{4}|" \
-                  r"\d{2} [A-Z][a-z]+ \d{4}"
+                  r"\d{2} [A-Z][a-z]+ \d{4}|" \
+                  r"\d{4}[-/\\]\d{1,2}"
         types = []
         sample = date_text.dropna().sample(100, replace=len(date_text) <= 100).values
         for i in sample:
@@ -633,35 +638,26 @@ class DateFeature(BaseFeature):
 
     def fit(self, data):
         self.date_format = self.__validate_format(data)
-        data = chain.from_iterable(data.values)
-        data = pd.DataFrame(list(map(lambda d: convert(d), data)))
-        self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
-        normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
-        data = np.array(data).reshape(-1, 1)
+        self.data = chain.from_iterable(data.values)
+        self.data = pd.DataFrame(list(map(lambda d: datetime_to_timestamp(d), self.data)))
+        self.is_positive = (self.data >= 0).sum().item() >= len(self.data) * 0.99
+        normality = shapiro(self.data.sample(n=min(len(self.data), 500))).pvalue
+        self.data = np.array(self.data).reshape(-1, 1)
 
         self.scaler = StandardScaler() if normality >= 0.05 else MinMaxScaler()
-        self.scaler.fit(data)
-        self.input_dimension = data.shape[1]
+        self.scaler.fit(self.data)
+        self.input_dimension = self.data.shape[1]
 
     def transform(self, data):
-        data = chain.from_iterable(data.values)
-        data = list(map(lambda d: convert(d), data))
-        data = np.array(data).reshape(-1, 1)
-        return self.scaler.transform(data)
+        return self.scaler.transform(self.data)
 
     def inverse_transform(self, data):
-        max_allowed_time_ns = int(9.2E18)
-        min_allowed_time_ns = int(-9.2E18)
         unscaled = self.scaler.inverse_transform(data)
         unscaled = chain.from_iterable(unscaled)
         return list(
                 map(
-                    lambda l: pd.Timestamp(
-                        min(max_allowed_time_ns, int(l))
-                    ).strftime(self.date_format)
-                    if l >= 0
-                    else pd.Timestamp(max(min_allowed_time_ns, int(l))).strftime(self.date_format),
-                    unscaled,
+                    lambda l: timestamp_to_datetime(int(l)).strftime(self.date_format),
+                    unscaled
                 )
             )
 

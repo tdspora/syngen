@@ -1,7 +1,8 @@
 import os
 import sys
+import re
 from typing import List, Dict
-from dateutil.parser import parse
+from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
 
@@ -15,12 +16,44 @@ import random
 from loguru import logger
 
 
-def convert(x):
+def datetime_to_timestamp(dt):
+    max_allowed_time_ms = 253402214400
+    min_allowed_time_ms = -62135596800
     try:
-        ts = pd.Timestamp(x).value
-    except pd.errors.OutOfBoundsDatetime:
-        ts = pd.Timestamp.max.value
-    return ts
+        dt = parser.parse(dt).replace(tzinfo=None)
+        delta = dt - datetime(1970, 1, 1)
+        return delta.total_seconds()
+    except parser._parser.ParserError as e:
+        year = re.match("\d+", e.args[0][5:]).group(0)
+        if int(year) > 9999:
+            return max_allowed_time_ms
+        elif int(year) < 1:
+            return min_allowed_time_ms
+
+
+def timestamp_to_datetime(timestamp):
+    # Calculate the number of seconds in the UNIX epoch and the number of seconds left
+    max_allowed_time_ms = 253402214400
+    min_allowed_time_ms = -62135596800
+
+    if timestamp >= max_allowed_time_ms:
+        return datetime(9999, 12, 31, 23, 59, 59, 999999)
+    elif timestamp <= min_allowed_time_ms:
+        return datetime(1, 1, 1, 0, 0, 0, 0)
+
+    seconds_since_epoch = int(timestamp)
+    remaining_seconds = timestamp - seconds_since_epoch
+
+    # Calculate the datetime for the UNIX epoch (January 1, 1970)
+    epoch_datetime = datetime(1970, 1, 1)
+
+    # Calculate the timedelta for the number of seconds in the UNIX epoch
+    epoch_timedelta = timedelta(seconds=seconds_since_epoch)
+
+    # Add the timedelta to the epoch datetime, and add the remaining fraction of a second
+    result_datetime = epoch_datetime + epoch_timedelta + timedelta(seconds=remaining_seconds)
+
+    return result_datetime
 
 
 def generate_uuids(version: int, size: int):
@@ -48,7 +81,7 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         for x in x_wo_na.values:
             try:
                 date_for_check = datetime(8557, 7, 20)
-                datetime_object = parse(x, default=date_for_check)
+                datetime_object = parser.parse(x, default=date_for_check)
                 # Check if the parsed date contains only the time component. If it does, then skip it.
                 count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
@@ -140,14 +173,6 @@ def fetch_dataset(dataset_pickle_path: str):
     """
     with open(dataset_pickle_path, "rb") as f:
         dataset = pickle.loads(f.read())
-    # Check if the serialized class has associated dataframe and
-    # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
-    if hasattr(dataset, "df"):
-        dataset = update_dataset(dataset)
-        dataset.order_of_columns = dataset.df.columns.tolist()
-        del dataset.df
-        with open(dataset_pickle_path, "wb") as f:
-            f.write(pickle.dumps(dataset))
     return dataset
 
 
@@ -158,20 +183,6 @@ def define_existent_columns(columns, original_columns):
             existent_columns.append(column)
         continue
     return existent_columns
-
-
-def update_dataset(dataset):
-    for attr in vars(dataset):
-        if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
-            attr_value = getattr(dataset, attr)
-            updated_attr_value = attr_value.copy()
-            for key, config in attr_value.items():
-                updated_columns = define_existent_columns(config.get("columns", []), dataset.df.columns)
-                config["columns"] = updated_columns
-                updated_attr_value[key] = config
-
-            setattr(dataset, attr, updated_attr_value)
-    return dataset
 
 
 def slugify_attribute(**kwargs):
@@ -221,17 +232,6 @@ def trim_string(col):
         return col.str.slice(stop=10 * 1024)
     else:
         return col
-
-
-def convert_to_time(timestamp):
-    """
-    Convert timestamp to datetime
-    """
-    timestamp = int(timestamp * 1e-9)
-    if timestamp < 0:
-        return datetime(1970, 1, 1) + timedelta(seconds=timestamp)
-    else:
-        return datetime.utcfromtimestamp(timestamp)
 
 
 def check_if_features_assigned(dataset_pickle_path: str):

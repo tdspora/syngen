@@ -91,8 +91,9 @@ class DataLoader(BaseDataLoader):
             logger.error(message, error)
             raise error
 
-    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
-        self.file_loader.save_data(path, df, **kwargs)
+    def save_data(self, path: Optional[str], df: pd.DataFrame, **kwargs):
+        if df is not None:
+            self.file_loader.save_data(path, df, **kwargs)
 
 
 class CSVLoader:
