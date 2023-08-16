@@ -348,7 +348,7 @@ class ExcelLoader:
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
                       f"Please, check the path to the table"
-            logger.error(message)
+            logger.error(message, error)
             raise error
 
     def load_data(self, path):
