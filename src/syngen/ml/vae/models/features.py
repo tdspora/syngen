@@ -620,10 +620,11 @@ class DateFeature(BaseFeature):
         MM/DD/YY, DD/MM/YY, YY/MM/DD, MM-DD-YY, DD-MM-YY
 
         """
-        pattern = r"\s{0,1}\d+[-/\\:]\s{0,1}\d+[-/\\:]\s{0,1}\d+|" \
+        pattern = r"\s{0,1}\d+[-/\\:\.]\s{0,1}\d+[-/\\:\.]\s{0,1}\d+|" \
                   r"[A-Z][a-z]+ \d{1,2} \d{4}|" \
                   r"[A-Z][a-z]+ \d{1,2}, \d{4}|" \
-                  r"\d{2} [A-Z][a-z]+ \d{4}"
+                  r"\d{2} [A-Z][a-z]+ \d{4}|" \
+                  r"\d{4}[-/\\]\d{1,2}"
         types = []
         sample = date_text.dropna().sample(100, replace=len(date_text) <= 100).values
         for i in sample:
