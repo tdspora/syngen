@@ -349,7 +349,7 @@ class ExcelLoader:
                       f"The details of the error - {error}.\n" \
                       f"Please, check the path to the table"
             logger.error(message)
-            raise FileNotFoundError(message)
+            raise error
 
     def load_data(self, path):
         return self._load_data(path)
