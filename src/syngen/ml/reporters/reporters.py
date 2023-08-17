@@ -9,8 +9,7 @@ from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
     fetch_dataset,
-    datetime_to_timestamp,
-    timestamp_to_datetime
+    datetime_to_timestamp
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader

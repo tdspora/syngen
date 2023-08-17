@@ -11,7 +11,8 @@ from syngen.ml.data_loaders import (
     AvroLoader,
     BinaryLoader,
     MetadataLoader,
-    YAMLLoader
+    YAMLLoader,
+    ExcelLoader
 )
 from syngen.ml.context import global_context, get_context
 from tests.conftest import SUCCESSFUL_MESSAGE
@@ -114,7 +115,7 @@ def test_load_data_from_table_in_csv_format_in_not_utf_8(caplog, rp_logger):
     data_loader = DataLoader(path)
     assert isinstance(data_loader.file_loader, CSVLoader)
 
-    with pytest.raises(ValueError) as error:
+    with pytest.raises(UnicodeDecodeError) as error:
         with caplog.at_level("ERROR"):
             data_loader.load_data()
             assert f"It seems that the content of the data in the path - '{path}' " \
@@ -127,7 +128,7 @@ def test_load_data_from_empty_table_in_csv_format(caplog, rp_logger):
     rp_logger.info("Loading data from local empty table in csv format")
     data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/empty_table.csv")
     assert isinstance(data_loader.file_loader, CSVLoader)
-    with pytest.raises(ValueError):
+    with pytest.raises(pd.errors.EmptyDataError):
         with caplog.at_level("ERROR"):
             data_loader.load_data()
             assert "The empty file was provided. Unable to load data " in caplog.text
@@ -821,6 +822,7 @@ def test_save_csv_with_nested_field(test_csv_path, rp_logger):
     assert data.shape == (15, 5)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
 def test_load_csv_with_double_pipe_delimited_text(rp_logger):
     path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/double_pipe_delimited_text.csv"
     rp_logger.info(f"Loading CSV with double pipe delimited text")
@@ -849,4 +851,130 @@ def test_save_csv_with_double_pipe_delimited_text(test_csv_path, rp_logger):
     global_context(format_settings)
     data, schema = CSVLoader(sep=",").load_data(test_csv_path)
     assert data.shape == (15, 6)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialize_data_loader_for_local_excel_table_with_existed_path(rp_logger):
+    rp_logger.info("Initializing the instance of the class DataLoader for local Excel table with existed path")
+    test_data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xlsx")
+    assert test_data_loader.path == "tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xlsx"
+    assert test_data_loader.has_existed_path is True
+    assert isinstance(test_data_loader.file_loader, ExcelLoader)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialize_data_loader_for_local_excel_table_with_not_existed_path(rp_logger):
+    rp_logger.info("Initializing the instance of the class DataLoader for local Excel table with invalid path")
+    test_data_loader = DataLoader("path/to/table.xlsx")
+    assert test_data_loader.path == "path/to/table.xlsx"
+    assert test_data_loader.has_existed_path is False
+    assert isinstance(test_data_loader.file_loader, ExcelLoader)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("path_to_table", [
+    "tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xls",
+    "tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xlsx"
+])
+def test_load_data_from_table_in_excel_format(path_to_table, rp_logger):
+    rp_logger.info("Loading data from local Excel tables in '.xls', '.xlsx' format")
+    data_loader = DataLoader(path_to_table)
+    df, schema = data_loader.load_data()
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert assert_frame_equal(
+        df, pd.DataFrame(
+            {
+                "gender": [0, 1, 0, 1],
+                "height": [157.18518021548246, 166.7731072622863, 162.91821942384928, 173.51448996432848],
+                "id": [925, 84, 821, 383]
+            }
+        )
+    ) is None
+
+    assert isinstance(df, pd.DataFrame)
+    assert schema == {"fields": {}, "format": "CSV"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_data_from_table_in_excel_format_from_1_sheet_of_2_sheets(rp_logger):
+    rp_logger.info("Loading data from local Excel table in '.xls' format from the certain sheet")
+    global_context({
+        "sheet_name": "TestName"
+    })
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_sheets.xls")
+    df, schema = data_loader.load_data()
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert assert_frame_equal(
+        df, pd.DataFrame(
+            {
+                "gender": [0, 1, 0, 1],
+                "height": [157.1852, 166.7731, 162.9182, 173.5145],
+                "id": [925, 84, 821, 383]
+            }
+        )
+    ) is None
+
+    assert isinstance(df, pd.DataFrame)
+    assert schema == {"fields": {}, "format": "CSV"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_data_from_table_in_excel_format_from_2_sheets_of_2_sheets(rp_logger):
+    rp_logger.info("Loading data from local Excel table in '.xlsx' format that contains 2 non-empty sheets")
+    global_context({
+        "sheet_name": None
+    })
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_nonempty_sheets.xlsx")
+    df, schema = data_loader.load_data()
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert assert_frame_equal(
+        df, pd.DataFrame(
+            {
+                "gender": [0, 1, 0, 1],
+                "height": [162.9182, 173.5145, 157.1852, 166.7731],
+                "id": [821, 383, 925, 84]
+            }
+        )
+    ) is None
+
+    assert isinstance(df, pd.DataFrame)
+    assert schema == {"fields": {}, "format": "CSV"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_data_from_empty_excel_table(rp_logger, caplog):
+    rp_logger.info("Loading data from local empty Excel table in '.xlsx' format")
+    data_loader = DataLoader("./tests/unit/data_loaders/fixtures/excel_tables/empty_table.xlsx")
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    data, schema = data_loader.load_data()
+    assert data.empty is True
+    assert schema == {"fields": {}, "format": "CSV"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_excel_table_in_xlx_format(test_xls_path, test_df, rp_logger):
+    rp_logger.info("Saving the data to Excel table in '.xls' format")
+    data_loader = DataLoader(test_xls_path)
+    data_loader.save_data(test_xls_path, test_df)
+
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert os.path.exists(test_xls_path) is True
+
+    loaded_df, schema = data_loader.load_data()
+    pd.testing.assert_frame_equal(loaded_df, test_df)
+    assert schema == {"fields": {}, "format": "CSV"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_excel_table_in_xlsx_format(test_xlsx_path, test_df, rp_logger):
+    rp_logger.info("Saving the data to Excel table in '.xlsx' format")
+    data_loader = DataLoader(test_xlsx_path)
+    data_loader.save_data(test_xlsx_path, test_df)
+
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert os.path.exists(test_xlsx_path) is True
+
+    loaded_df, schema = data_loader.load_data()
+    pd.testing.assert_frame_equal(loaded_df, test_df)
+    assert schema == {"fields": {}, "format": "CSV"}
     rp_logger.info(SUCCESSFUL_MESSAGE)

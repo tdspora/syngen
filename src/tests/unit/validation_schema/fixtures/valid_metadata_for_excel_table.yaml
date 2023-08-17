@@ -1,0 +1,25 @@
+global:
+  train_settings:                         # Settings for training process
+    epochs: 10
+    drop_null: False
+    row_limit: 500
+    print_report: false
+    batch_size: 100
+
+  infer_settings:                         # Settings for infer process
+    size: 300
+    run_parallel: False
+    batch_size: 100
+    random_seed: 5
+    print_report: true
+
+pk_test:
+  train_settings:
+    source: ./data/pk_test.xls
+  keys:
+    pk_test_pk_id:
+      type: "PK"
+      columns:
+        - Id
+  format:
+    sheet_name: 0
