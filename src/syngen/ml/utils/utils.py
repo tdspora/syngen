@@ -19,6 +19,8 @@ from loguru import logger
 def datetime_to_timestamp(dt):
     max_allowed_time_ms = 253402214400
     min_allowed_time_ms = -62135596800
+    if pd.isnull(dt):
+        return np.nan
     try:
         dt = parser.parse(dt).replace(tzinfo=None)
         delta = dt - datetime(1970, 1, 1)
@@ -35,6 +37,8 @@ def timestamp_to_datetime(timestamp):
     # Calculate the number of seconds in the UNIX epoch and the number of seconds left
     max_allowed_time_ms = 253402214400
     min_allowed_time_ms = -62135596800
+    if pd.isnull(timestamp):
+        return np.nan
 
     if timestamp >= max_allowed_time_ms:
         return datetime(9999, 12, 31, 23, 59, 59, 999999)
