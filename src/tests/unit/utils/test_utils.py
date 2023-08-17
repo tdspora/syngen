@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock
 from datetime import datetime
+import numpy as np
 
 from syngen.ml.utils import (
     slugify_attribute,
@@ -59,12 +60,16 @@ def test_datetime_to_timestamp():
         ("2023-01-01 00:00:00.000000", 1672531200.0),
         ("2023-01-01 00:00:00.000000+00:00", 1672531200.0),
         ("9999-12-31", 253402214400.0),
-        ("10000-12-31", 253402214400.0)
+        ("10000-12-31", 253402214400.0),
+        (np.nan, np.nan)
 ]
 
     for date_time, expected_timestamp in test_cases:
         calculated_timestamp = datetime_to_timestamp(date_time)
-        assert int(calculated_timestamp) == int(expected_timestamp)
+        if np.isnan(expected_timestamp):
+            assert np.isnan(calculated_timestamp)
+        else:
+            assert int(calculated_timestamp) == int(expected_timestamp)
 
 
 def test_timestamp_to_datetime():
@@ -73,9 +78,13 @@ def test_timestamp_to_datetime():
         (0, datetime(1970, 1, 1, 0, 0)),
         (946684800, datetime(2000, 1, 1)),
         (253402214400.0, datetime(9999, 12, 31, 23, 59, 59, 999999)),
-        (253402537600.0, datetime(9999, 12, 31, 23, 59, 59, 999999))
+        (253402537600.0, datetime(9999, 12, 31, 23, 59, 59, 999999)),
+        (np.nan, np.nan)
     ]
 
     for timestamp, expected_datetime in test_cases:
         calculated_datetime = timestamp_to_datetime(timestamp)
-        assert calculated_datetime == expected_datetime
+        if isinstance(expected_datetime, float) and np.isnan(expected_datetime):
+            assert np.isnan(calculated_datetime)
+        else:
+            assert calculated_datetime == expected_datetime
