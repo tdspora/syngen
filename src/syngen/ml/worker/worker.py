@@ -226,7 +226,8 @@ class Worker:
                     random_seed=1,
                     print_report=print_report,
                     log_level=self.log_level,
-                    both_keys=both_keys
+                    both_keys=both_keys,
+                    type=self.type
                 )
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
@@ -253,7 +254,8 @@ class Worker:
                 random_seed=infer_settings["random_seed"],
                 print_report=infer_settings["print_report"],
                 log_level=self.log_level,
-                both_keys=both_keys
+                both_keys=both_keys,
+                type=self.type
             )
 
     @staticmethod

@@ -201,6 +201,7 @@ class VaeInferHandler(BaseHandler):
     print_report: bool
     wrapper_name: str
     log_level: str
+    type_of_process: str
     random_seed_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)
     has_vae: bool = field(init=False)
@@ -347,15 +348,23 @@ class VaeInferHandler(BaseHandler):
         """
         Set the path to synthetic data of corresponding pk table
         """
-        destination_to_pk_table = self.paths["path_to_merged_infer"].replace(slugify(table_name), slugify(pk_table)) \
-            if self.paths["path_to_merged_infer"].startswith(f"model_artifacts/tmp_store/{slugify(table_name)}") \
-            else self.metadata[pk_table].get("infer_settings", {}).get("destination")
+        destination_to_pk_table = None
+        if self.type_of_process == "infer":
+            infer_settings = self.metadata[pk_table].get("infer_settings", {})
+            destination_to_pk_table = infer_settings.get("destination")
+
+            if destination_to_pk_table is None:
+                destination_to_pk_table = f"model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
+
+        if self.type_of_process == "train":
+            destination_to_pk_table = self.paths["path_to_merged_infer"].replace(slugify(table_name), slugify(pk_table))
         if not os.path.exists(destination_to_pk_table):
             raise FileNotFoundError(
                 "The table with a primary key specified in the metadata file does not "
                 "exist or is not trained. Ensure that the metadata contains the "
                 "name of referenced table with a primary key in the foreign key declaration section."
             )
+
         return destination_to_pk_table
 
     def generate_keys(self, generated, size, metadata, table_name):
