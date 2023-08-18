@@ -427,10 +427,10 @@ class BivariateMetric(BaseMetric):
 
     @staticmethod
     def __format_float_tick_labels(labels: List) -> List:
-        if any([isinstance(i, float) for i in labels]) and (max(labels) > 1e5 or min(labels) < 1e-03):
+        if all([isinstance(i, float) for i in labels]) and (max(labels) > 1e5 or min(labels) < 1e-03):
             labels = [f"{label:.4e}" for label in labels]
             return labels
-        if any([isinstance(i, float) for i in labels]):
+        if all([isinstance(i, float) for i in labels]):
             labels = [f"{round(i, 4)}" for i in labels]
             return labels
         else:
