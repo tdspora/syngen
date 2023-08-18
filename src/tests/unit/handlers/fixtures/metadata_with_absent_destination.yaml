@@ -1,0 +1,22 @@
+parent_table:                             # Use table name here
+  train_settings:                         # Settings for training process
+    source: ../data/parent_table.csv      # Supported formats include cloud storage locations, local files
+
+  keys:                                   # Keys of the table
+    pk_id:                                # Name of a key
+      type: "PK"                          # Type of key
+      columns:                            # Columns related to key
+        - Id
+
+child_table:                              # Use table name here
+  train_settings:                         # Settings for training process
+    source: ../data/child_table.csv       # Supported formats include cloud storage locations, local files
+
+  infer_settings:                         # Settings for infer process
+    destination: ../data/child_table_generated.csv # Supported formats include cloud storage locations, local files
+
+  keys:                                   # Keys of the table
+    pk_id:                                # Name of a key
+      type: "PK"                          # Type of key
+      columns:                            # Columns related to key
+        - Id

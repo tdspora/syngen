@@ -418,7 +418,7 @@ def test_load_metadata_by_yaml_loader_in_yml_format(rp_logger):
         with patch('yaml.load') as mock_yaml_load:
             with patch('syngen.ml.validation_schema.ValidationSchema.validate_schema') as mock_validate_schema:
                 mock_yaml_load.return_value = expected_metadata
-                metadata = loader.load_data('tests/unit/data_loaders/fixtures/metadata/metadata.yml')
+                metadata = loader.load_data('tests/unit/data_loaders/fixtures/metadata/metadata_with_absent_destination.yaml')
 
                 mock_validate_schema.assert_called_once()
                 assert metadata == expected_metadata
