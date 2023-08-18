@@ -1093,6 +1093,10 @@ class Utility(BaseMetric):
         for i, col in tqdm.tqdm(iterable=enumerate(targets),
                                 desc="Calculating utility metric...",
                                 total=len(targets)):
+            if self.original.shape[1] < 2:
+                logger.info("There is only one column in the dataset. "
+                            "It will not be used in utility metric.")
+                continue
             original = pd.get_dummies(self.original.drop(col, axis=1))
             original = StandardScaler().fit_transform(original)
             model_y = self.original[col].values[:int(original.shape[0] * 0.8)]
