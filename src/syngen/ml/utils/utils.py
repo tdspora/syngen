@@ -258,16 +258,30 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
-def custom_sink(record):
-    filter_keywords = ["Synthesis", "Training"]
+def create_success_log_file(type_of_process: str):
+    """
+    Create the file for storing the logs of main processes
+    """
     os.makedirs("model_artifacts/tmp_store", exist_ok=True)
+    file_path = os.path.join(
+        "model_artifacts/tmp_store",
+        f"success_logs_{type_of_process}_{slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))}.log"
+    )
+    os.environ["SUCCESS_LOG_FILE"] = file_path
 
-    if any(keyword in record.record["message"] for keyword in filter_keywords):
-        with open("model_artifacts/tmp_store/success_logs.log", "a") as log_file:
-            log_file.write(record + "\n")
+
+def custom_sink(record):
+    """
+    Filter the logs and write main of them to the log file
+    """
+    filter_keywords = ["Synthesis", "Training", "Generation"]
+
+    with open(os.getenv("SUCCESS_LOG_FILE"), "a") as log_file:
+        if any(keyword in record.record["message"] for keyword in filter_keywords):
+            log_file.write(record.record["message"] + "\n")
             sys.stderr.write(record + "\n")
-    else:
-        sys.stderr.write(record + "\n")
+        else:
+            sys.stderr.write(record + "\n")
 
 
 def setup_logger():

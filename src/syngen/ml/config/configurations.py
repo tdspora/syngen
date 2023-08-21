@@ -190,8 +190,7 @@ class TrainConfig:
             "original_data_path":
                 f"model_artifacts/tmp_store/{self.slugify_table_name}/input_data_{self.slugify_table_name}.pkl",
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/merged_infer_{self.slugify_table_name}.csv",
-            "no_ml_state_path": f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
-            "log_path": f"model_artifacts/tmp_store/success_logs.log",
+            "no_ml_state_path": f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
         }
 
 
@@ -273,6 +272,5 @@ class InferConfig:
             "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
             "dataset_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
-            "path_to_no_ml": f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
-            "log_path": f"model_artifacts/tmp_store/success_logs.log",
+            "path_to_no_ml": f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl"
         }
