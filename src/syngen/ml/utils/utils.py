@@ -258,9 +258,21 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
+def custom_sink(record):
+    filter_keywords = ["Synthesis", "Training"]
+    os.makedirs("model_artifacts/tmp_store", exist_ok=True)
+
+    if any(keyword in record.record["message"] for keyword in filter_keywords):
+        with open("model_artifacts/tmp_store/success_logs.log", "a") as log_file:
+            log_file.write(record + "\n")
+            sys.stderr.write(record + "\n")
+    else:
+        sys.stderr.write(record + "\n")
+
+
 def setup_logger():
     """
     Setup logger with the specified level
     """
     logger.remove()
-    logger.add(sys.stderr, level=os.getenv("LOGURU_LEVEL"))
+    logger.add(custom_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
