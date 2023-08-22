@@ -279,9 +279,9 @@ def custom_sink(record):
     with open(os.getenv("SUCCESS_LOG_FILE"), "a") as log_file:
         if any(keyword in record.record["message"] for keyword in filter_keywords):
             log_file.write(record.record["message"] + "\n")
-            sys.stderr.write(record + "\n")
+            sys.stderr.write(record)
         else:
-            sys.stderr.write(record + "\n")
+            sys.stderr.write(record)
 
 
 def setup_logger():
