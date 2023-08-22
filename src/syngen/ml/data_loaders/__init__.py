@@ -5,5 +5,6 @@ from syngen.ml.data_loaders.data_loaders import (
     MetadataLoader,
     YAMLLoader,
     BaseDataLoader,
-    BinaryLoader
+    BinaryLoader,
+    ExcelLoader
 )

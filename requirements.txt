@@ -1,9 +1,7 @@
-attr
-attrs==21.4.*
 category_encoders==2.5.*
 click
 ipython==8.4.*
-keras==2.12.*
+keras<2.14,>=2.13.1
 lazy==1.4
 loguru
 matplotlib==3.5.*
@@ -14,13 +12,11 @@ pathos==0.2.*
 scikit_learn==1.1.*
 scipy==1.7.*
 seaborn==0.11.*
-tensorflow==2.12.*
+tensorflow==2.13.*
 tqdm==4.64.*
-protobuf==4.23.*
 PyYAML==6.*
 MarkupSafe==2.0.1
 Jinja2
-schema
 avro
 python-slugify[unidecode]>=7.0.0
 pytest
@@ -29,3 +25,6 @@ reportportal-client
 base32-crockford
 py-ulid
 marshmallow==3.19.*
+xlrd
+xlwt
+openpyxl

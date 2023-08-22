@@ -53,7 +53,6 @@ class Dataset:
 
     def __post_init__(self):
         self._predefine_fields()
-        self.__prepare_dir()
         self._set_metadata()
 
     def __getstate__(self) -> Dict:
@@ -82,9 +81,6 @@ class Dataset:
         self.dropped_columns = fetch_training_config(self.paths["train_config_pickle_path"]).dropped_columns
         self.non_existent_columns = set()
         self.order_of_columns = self.df.columns.tolist()
-
-    def __prepare_dir(self):
-        os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
@@ -437,10 +433,15 @@ class Dataset:
         Update the table metadata by removing the columns which are absent in the table
         but mentioned in the metadata
         """
-        for key, key_config in table_config.get("keys", {}).items():
-            key_type = key_config.get("type")
-            updated_columns = self._remove_non_existent_columns(key_config.get("columns", []), key, key_type)
-            key_config["columns"] = updated_columns
+        table_metadata = table_config.get("keys", {})
+        for key in list(table_metadata.keys()):
+            key_type = table_metadata[key].get("type")
+            updated_columns = self._remove_non_existent_columns(table_metadata[key].get("columns", []), key, key_type)
+            table_metadata[key]["columns"] = updated_columns
+            if not table_metadata[key]["columns"]:
+                logger.warning(f"All columns in the key {key} are empty, so it will be removed from the table's metadata")
+                table_metadata[key].pop(key, None)
+                self.metadata[self.table_name]["keys"].pop(key, None)
 
     def _set_non_existent_columns(self, table_config: Dict):
         """

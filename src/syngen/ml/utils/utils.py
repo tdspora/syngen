@@ -1,7 +1,8 @@
 import os
 import sys
+import re
 from typing import List, Dict
-from dateutil.parser import parse
+from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
 
@@ -13,6 +14,51 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
+
+
+def datetime_to_timestamp(dt):
+    max_allowed_time_ms = 253402214400
+    min_allowed_time_ms = -62135596800
+    if pd.isnull(dt):
+        return np.nan
+    try:
+        dt = parser.parse(dt).replace(tzinfo=None)
+        delta = dt - datetime(1970, 1, 1)
+        return delta.total_seconds()
+    except parser._parser.ParserError as e:
+        year = re.match("\d+", e.args[0][5:]).group(0)
+        if int(year) > 9999:
+            return max_allowed_time_ms
+        elif int(year) < 1:
+            return min_allowed_time_ms
+
+
+def timestamp_to_datetime(timestamp):
+    # Calculate the number of seconds in the UNIX epoch and the number of seconds left
+    max_allowed_time_ms = 253402214400
+    min_allowed_time_ms = -62135596800
+
+    if pd.isnull(timestamp):
+        return np.nan
+
+    if timestamp >= max_allowed_time_ms:
+        return datetime(9999, 12, 31, 23, 59, 59, 999999)
+    elif timestamp <= min_allowed_time_ms:
+        return datetime(1, 1, 1, 0, 0, 0, 0)
+
+    seconds_since_epoch = int(timestamp)
+    remaining_seconds = timestamp - seconds_since_epoch
+
+    # Calculate the datetime for the UNIX epoch (January 1, 1970)
+    epoch_datetime = datetime(1970, 1, 1)
+
+    # Calculate the timedelta for the number of seconds in the UNIX epoch
+    epoch_timedelta = timedelta(seconds=seconds_since_epoch)
+
+    # Add the timedelta to the epoch datetime, and add the remaining fraction of a second
+    result_datetime = epoch_datetime + epoch_timedelta + timedelta(seconds=remaining_seconds)
+
+    return result_datetime
 
 
 def generate_uuids(version: int, size: int):
@@ -40,7 +86,7 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         for x in x_wo_na.values:
             try:
                 date_for_check = datetime(8557, 7, 20)
-                datetime_object = parse(x, default=date_for_check)
+                datetime_object = parser.parse(x, default=date_for_check)
                 # Check if the parsed date contains only the time component. If it does, then skip it.
                 count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
@@ -132,14 +178,6 @@ def fetch_dataset(dataset_pickle_path: str):
     """
     with open(dataset_pickle_path, "rb") as f:
         dataset = pickle.loads(f.read())
-    # Check if the serialized class has associated dataframe and
-    # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
-    if hasattr(dataset, "df"):
-        dataset = update_dataset(dataset)
-        dataset.order_of_columns = dataset.df.columns.tolist()
-        del dataset.df
-        with open(dataset_pickle_path, "wb") as f:
-            f.write(pickle.dumps(dataset))
     return dataset
 
 
@@ -150,20 +188,6 @@ def define_existent_columns(columns, original_columns):
             existent_columns.append(column)
         continue
     return existent_columns
-
-
-def update_dataset(dataset):
-    for attr in vars(dataset):
-        if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
-            attr_value = getattr(dataset, attr)
-            updated_attr_value = attr_value.copy()
-            for key, config in attr_value.items():
-                updated_columns = define_existent_columns(config.get("columns", []), dataset.df.columns)
-                config["columns"] = updated_columns
-                updated_attr_value[key] = config
-
-            setattr(dataset, attr, updated_attr_value)
-    return dataset
 
 
 def slugify_attribute(**kwargs):
@@ -215,17 +239,6 @@ def trim_string(col):
         return col
 
 
-def convert_to_time(timestamp):
-    """
-    Convert timestamp to datetime
-    """
-    timestamp = int(timestamp * 1e-9)
-    if timestamp < 0:
-        return datetime(1970, 1, 1) + timedelta(seconds=timestamp)
-    else:
-        return datetime.utcfromtimestamp(timestamp)
-
-
 def check_if_features_assigned(dataset_pickle_path: str):
     """
     Check if features are assigned in the dataset
@@ -245,9 +258,35 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
+def create_success_log_file(type_of_process: str):
+    """
+    Create the file for storing the logs of main processes
+    """
+    os.makedirs("model_artifacts/tmp_store", exist_ok=True)
+    file_path = os.path.join(
+        "model_artifacts/tmp_store",
+        f"success_logs_{type_of_process}_{slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))}.log"
+    )
+    os.environ["SUCCESS_LOG_FILE"] = file_path
+
+
+def custom_sink(record):
+    """
+    Filter the logs and write main of them to the log file
+    """
+    filter_keywords = ["Synthesis", "Training", "Generation"]
+
+    with open(os.getenv("SUCCESS_LOG_FILE"), "a") as log_file:
+        if any(keyword in record.record["message"] for keyword in filter_keywords):
+            log_file.write(record.record["message"] + "\n")
+            sys.stderr.write(record)
+        else:
+            sys.stderr.write(record)
+
+
 def setup_logger():
     """
     Setup logger with the specified level
     """
     logger.remove()
-    logger.add(sys.stderr, level=os.getenv("LOGURU_LEVEL"))
+    logger.add(custom_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))

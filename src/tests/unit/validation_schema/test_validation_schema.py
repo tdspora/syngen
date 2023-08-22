@@ -15,9 +15,20 @@ def load_metadata_file(metadata_path) -> Dict:
         metadata = yaml.load(metadata_file, Loader=Loader)
     return metadata
 
+
 def test_valid_metadata_file(rp_logger, caplog):
     rp_logger.info("Test the validation of the valid metadata file")
     metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml")
+    with caplog.at_level(level="INFO"):
+        ValidationSchema(metadata).validate_schema()
+        assert "The metadata file is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_valid_metadata_file_with_source_contained_path_to_excel_table(rp_logger, caplog):
+    rp_logger.info("Test the validation of the valid metadata file contained "
+                   "the parameter 'source' which is the path to excel table")
+    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/valid_metadata_for_excel_table.yaml")
     with caplog.at_level(level="INFO"):
         ValidationSchema(metadata).validate_schema()
         assert "The metadata file is valid" in caplog.text
@@ -122,6 +133,7 @@ def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, 
     assert str(error.value) == expected_error
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
 @pytest.mark.parametrize("wrong_setting, expected_error", [
     ({"destination": 0}, "Validation error(s) found in the metadata. "
                          "The details are - {'fk_test': {'infer_settings': {"
@@ -187,50 +199,77 @@ def test_metadata_file_with_invalid_global_infer_settings(rp_logger, wrong_setti
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
     ({"sep": 0}, "Validation error(s) found in the metadata. "
-                       "The details are - {'fk_test': {'format': {"
-                       "'sep': ['Not a valid string.']}}}"),
+                 "The details are - {'fk_test': {'sep': ['Not a valid string.']}}"),
     ({"quotechar": 0}, "Validation error(s) found in the metadata. "
-                       "The details are - {'fk_test': {'format': {"
-                       "'quotechar': ['Not a valid string.']}}}"),
+                       "The details are - {'fk_test': {'quotechar': ['Not a valid string.']}}"),
     ({"quotechar": "value with more than one character"}, "Validation error(s) found in the metadata. "
-                                                          "The details are - {'fk_test': {'format': {"
-                                                          "'quotechar': ['Length must be 1.']}}}"),
+                                                          "The details are - {'fk_test': {'quotechar': ["
+                                                          "'Length must be 1.']}}"),
     ({"quoting": 0}, "Validation error(s) found in the metadata. "
-                     "The details are - {'fk_test': {'format': {"
-                     "'quoting': ['Not a valid string.']}}}"),
+                     "The details are - {'fk_test': {'quoting': ['Not a valid string.']}}"),
     ({"quoting": "not a valid value"}, "Validation error(s) found in the metadata. "
-                                       "The details are - {'fk_test': {'format': {"
-                                       "'quoting': ['Must be one of: minimal, all, non-numeric, none.']}}}"),
+                                       "The details are - {'fk_test': {'quoting': ["
+                                       "'Must be one of: minimal, all, non-numeric, none.']}}"),
     ({"escapechar": 0}, "Validation error(s) found in the metadata. "
-                        "The details are - {'fk_test': {'format': {'escapechar': ['Not a valid string.']}}}"),
+                        "The details are - {'fk_test': {'escapechar': ['Not a valid string.']}}"),
     ({"escapechar": "value with more than one character"}, "Validation error(s) found in the metadata. "
-                                                           "The details are - {'fk_test': {'format': {"
-                                                           "'escapechar': ['Length must be 1.']}}}"),
+                                                           "The details are - {'fk_test': {'escapechar': ["
+                                                           "'Length must be 1.']}}"),
     ({"encoding": 0}, "Validation error(s) found in the metadata. "
-                      "The details are - {'fk_test': {'format': {"
-                      "'encoding': ['Not a valid string.']}}}"),
+                      "The details are - {'fk_test': {'encoding': ['Not a valid string.']}}"),
     ({"header": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
-                                                "The details are - {'fk_test': {'format': {"
-                                                "'header': ['Invalid value.']}}}"),
+                                                "The details are - {'fk_test': {"
+                                                "'header': ['Invalid value.']}}"),
     ({"skiprows": "not a valid type of a value"}, "Validation error(s) found in the metadata. "
-                                                  "The details are - {'fk_test': {'format': {"
-                                                  "'skiprows': ['Invalid value.']}}}"),
+                                                  "The details are - {'fk_test': {"
+                                                  "'skiprows': ['Invalid value.']}}"),
     ({"on_bad_lines": 0}, "Validation error(s) found in the metadata. "
-                          "The details are - {'fk_test': {'format': {'on_bad_lines': ['Not a valid string.']}}}"),
+                          "The details are - {'fk_test': {'on_bad_lines': ['Not a valid string.']}}"),
     ({"on_bad_lines": "not a valid value"}, "Validation error(s) found in the metadata. "
-                                            "The details are - {'fk_test': {'format': {"
-                                            "'on_bad_lines': ['Must be one of: error, warn, skip.']}}}"),
+                                            "The details are - {'fk_test': {'on_bad_lines': ["
+                                            "'Must be one of: error, warn, skip.']}}"),
     ({"engine": 0}, "Validation error(s) found in the metadata. "
-                    "The details are - {'fk_test': {'format': {"
-                    "'engine': ['Not a valid string.']}}}"),
+                    "The details are - {'fk_test': {'engine': ['Not a valid string.']}}"),
     ({"engine": "not a valid value"}, "Validation error(s) found in the metadata. "
-                                      "The details are - {'fk_test': {'format': {"
-                                      "'engine': ['Must be one of: c, python.']}}}"),
+                                      "The details are - {'fk_test': {'engine': ["
+                                      "'Must be one of: c, python.']}}"),
+    ({"sheet_name": 0}, "Validation error(s) found in the metadata. "
+                        "The details are - {'fk_test': {'sheet_name': ['Unknown field.']}}")
 ])
-def test_metadata_file_with_invalid_format_settings(rp_logger, wrong_setting, expected_error):
-    rp_logger.info("Test the validation of the metadata  with format settings")
+def test_metadata_file_with_invalid_format_settings_for_csv_table(rp_logger, wrong_setting, expected_error):
+    rp_logger.info("Test the validation of the metadata with format settings set to CSV file")
     metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml")
     metadata["fk_test"]["format"].update(wrong_setting)
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(metadata).validate_schema()
+    assert str(error.value) == expected_error
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("wrong_setting, expected_error", [
+    ({"sep": ","}, "Validation error(s) found in the metadata. "
+                   "The details are - {'pk_test': {'sep': ['Unknown field.']}}"),
+    ({"quotechar": '"'}, "Validation error(s) found in the metadata. "
+                         "The details are - {'pk_test': {'quotechar': ['Unknown field.']}}"),
+    ({"quoting": "non-numeric"}, "Validation error(s) found in the metadata. "
+                                 "The details are - {'pk_test': {'quoting': ['Unknown field.']}}"),
+    ({"escapechar": "\\"}, "Validation error(s) found in the metadata. "
+                           "The details are - {'pk_test': {'escapechar': ['Unknown field.']}}"),
+    ({"encoding": "ascii"}, "Validation error(s) found in the metadata. "
+                            "The details are - {'pk_test': {'encoding': ['Unknown field.']}}"),
+    ({"header": 0}, "Validation error(s) found in the metadata. "
+                    "The details are - {'pk_test': {'header': ['Unknown field.']}}"),
+    ({"skiprows": 0}, "Validation error(s) found in the metadata. "
+                      "The details are - {'pk_test': {'skiprows': ['Unknown field.']}}"),
+    ({"on_bad_lines": "skip"}, "Validation error(s) found in the metadata. "
+                               "The details are - {'pk_test': {'on_bad_lines': ['Unknown field.']}}"),
+    ({"engine": "python"}, "Validation error(s) found in the metadata. "
+                           "The details are - {'pk_test': {'engine': ['Unknown field.']}}")
+])
+def test_metadata_file_with_invalid_format_settings_for_excel_table(rp_logger, wrong_setting, expected_error):
+    rp_logger.info("Test the validation of the metadata with format settings set to Excel table")
+    metadata = load_metadata_file("./tests/unit/validation_schema/fixtures/valid_metadata_for_excel_table.yaml")
+    metadata["pk_test"]["format"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         ValidationSchema(metadata).validate_schema()
     assert str(error.value) == expected_error

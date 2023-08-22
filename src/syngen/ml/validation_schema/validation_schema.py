@@ -1,8 +1,13 @@
 from typing import Dict
 import json
 from dataclasses import dataclass
-from marshmallow import Schema, fields, validate, ValidationError, validates_schema
+from pathlib import Path
+
+from marshmallow import Schema, fields, validate, ValidationError, validates_schema, post_load
 from loguru import logger
+
+
+SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
 
 
 class ReferenceSchema(Schema):
@@ -56,7 +61,7 @@ class InferSettingsSchema(Schema):
     print_report = fields.Boolean(required=False)
 
 
-class FormatSettingsSchema(Schema):
+class CSVFormatSettingsSchema(Schema):
     sep = fields.String(required=False, allow_none=True)
     quotechar = fields.String(required=False, validate=validate.Length(equal=1))
     quoting = CaseInsensitiveString(required=False, validate=validate.OneOf(["minimal", "all", "non-numeric", "none"]))
@@ -65,19 +70,29 @@ class FormatSettingsSchema(Schema):
     header = fields.Raw(
         required=False,
         allow_none=True,
-        validate=lambda x: isinstance(x, int) \
-                           or x is None \
-                           or (isinstance(x, str) and x == 'infer') \
+        validate=lambda x: isinstance(x, int)
+                           or x is None
+                           or (isinstance(x, str) and x == 'infer')
                            or (isinstance(x, list) and all(isinstance(elem, int) for elem in x))
     )
     skiprows = fields.Raw(
         required=False,
         allow_none=True,
-        validate=lambda x: isinstance(x, int) \
-                           or x is None \
+        validate=lambda x: isinstance(x, int)
+                           or x is None
                            or (isinstance(x, list) and all(isinstance(elem, int) for elem in x)))
     on_bad_lines = CaseInsensitiveString(required=False, validate=validate.OneOf(["error", "warn", "skip"]))
     engine = fields.String(required=False, validate=validate.OneOf(["c", "python"]))
+
+
+class ExcelFormatSettingsSchema(Schema):
+    sheet_name = fields.Raw(
+        required=False,
+        allow_none=True,
+        validate=lambda x: isinstance(x, int)
+                           or x is None
+                           or isinstance(x, str)
+                           or (isinstance(x, list) and all(isinstance(elem, (int, str)) for elem in x)))
 
 
 class GlobalSettingsSchema(Schema):
@@ -88,8 +103,22 @@ class GlobalSettingsSchema(Schema):
 class ConfigurationSchema(Schema):
     train_settings = fields.Nested(ExtendedTrainingSettingsSchema, required=True, allow_none=False)
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
-    format = fields.Nested(FormatSettingsSchema, required=False, allow_none=True)
+    format = fields.Raw(required=False, allow_none=True)
     keys = fields.Dict(keys=fields.String(), values=fields.Nested(KeysSchema), required=False, allow_none=True)
+
+    @staticmethod
+    def get_format_schema(source):
+        if Path(source).suffix == ".csv":
+            return CSVFormatSettingsSchema
+        if Path(source).suffix in SUPPORTED_EXCEL_EXTENSIONS:
+            return ExcelFormatSettingsSchema
+
+    @post_load
+    def process_format_field(self, data, **kwargs):
+        format_schema = self.get_format_schema(data.get("train_settings", {}).get("source", ""))
+        if format_schema is not None and data.get("format") is not None:
+            data["format"] = format_schema().load(data["format"])
+        return data
 
 
 @dataclass

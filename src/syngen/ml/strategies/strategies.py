@@ -178,7 +178,7 @@ class InferStrategy(Strategy):
         self.config = configuration
         return self
 
-    def add_handler(self):
+    def add_handler(self, type_of_process: str):
         """
         Set up the handler which used in infer process
         """
@@ -194,7 +194,8 @@ class InferStrategy(Strategy):
             batch_size=self.config.batch_size,
             run_parallel=self.config.run_parallel,
             print_report=self.config.print_report,
-            log_level=self.config.log_level
+            log_level=self.config.log_level,
+            type_of_process=type_of_process
         )
         return self
 
@@ -233,7 +234,7 @@ class InferStrategy(Strategy):
         ).\
             add_reporters(). \
             set_metadata(kwargs["metadata"]).\
-            add_handler()
+            add_handler(type_of_process=kwargs["type"])
 
         try:
             self.handler.handle()

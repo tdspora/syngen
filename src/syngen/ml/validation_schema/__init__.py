@@ -1,9 +1,11 @@
 from syngen.ml.validation_schema.validation_schema import (
     TrainingSettingsSchema,
     InferSettingsSchema,
-    FormatSettingsSchema,
+    CSVFormatSettingsSchema,
+    ExcelFormatSettingsSchema,
     GlobalSettingsSchema,
     ConfigurationSchema,
     KeysSchema,
-    ValidationSchema
+    ValidationSchema,
+    SUPPORTED_EXCEL_EXTENSIONS
 )
