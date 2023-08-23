@@ -268,8 +268,8 @@ class MetadataLoader(BaseDataLoader):
     def load_data(self) -> dict:
         return self.metadata_loader.load_data(self.metadata_path)
 
-    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
-        self.metadata_loader.save_data(path, df, **kwargs)
+    def save_data(self, path: str, metadata: Dict, **kwargs):
+        self.metadata_loader.save_data(path, metadata, **kwargs)
 
 
 class YAMLLoader(BaseDataLoader):
@@ -320,7 +320,7 @@ class YAMLLoader(BaseDataLoader):
                     metadata[key][parameter] = {}
         return metadata
 
-    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
+    def save_data(self, path: str, metadata: Dict, **kwargs):
         raise NotImplementedError("Saving YAML files is not supported")
 
 
