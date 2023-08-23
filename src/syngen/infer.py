@@ -62,7 +62,7 @@ def launch_infer(
         logger.warning("The information of 'metadata_path' was provided. "
                        "In this case the information of 'table_name' will be ignored")
         table_name = None
-    logger.warning(
+    logger.info(
         "The inference process will be executed according to the information mentioned in 'infer_settings' "
         "in the metadata file. If appropriate information is absent from the metadata file, then the values "
         "of parameters sent through CLI will be used. Otherwise, the values of parameters will be defaulted"
