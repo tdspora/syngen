@@ -79,6 +79,33 @@ def test_df():
     )
 
 
+@pytest.fixture
+def test_metadata_file():
+    return {
+        "pk_test": {
+            "train_settings": {
+                "source": "..\\data\\pk_test.csv",
+                "drop_null": False,
+                "epochs": 1,
+                "print_report": False,
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "print_report": True,
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100
+            },
+            "keys": {
+                "pk_id": {
+                    "columns": ["Id"],
+                    "type": "PK"
+                }
+            }
+        }
+    }
+
+
 @pytest.fixture(scope="session")
 def rp_logger():
     logger = logging.getLogger(__name__)

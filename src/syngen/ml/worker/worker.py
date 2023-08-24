@@ -2,6 +2,8 @@ from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from copy import deepcopy
 from loguru import logger
+from slugify import slugify
+import os
 
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
@@ -39,7 +41,6 @@ class Worker:
             infer_settings = metadata[self.table_name]["infer_settings"]
             infer_settings.update(self.settings)
         return metadata
-
 
     @staticmethod
     def _update_table_settings(table_settings: Dict[str, Any], settings_to_update: Dict[str, Any]) -> None:
@@ -198,6 +199,8 @@ class Worker:
                 print_report=train_settings["print_report"],
                 batch_size=train_settings["batch_size"]
             )
+            self._write_success_message(slugify(table))
+            self._save_metadata_file()
         generation_of_reports = any(
             [
                 config.get("train_settings", {}).get("print_report", False)
@@ -265,6 +268,20 @@ class Worker:
         """
         Report().generate_report()
         Report().clear_report()
+
+    @staticmethod
+    def _write_success_message(table_name: str):
+        """
+        Write success message to the '.success' file
+        """
+        with open(f"model_artifacts/resources/{table_name}/message.success", "w") as f:
+            f.write("SUCCESS")
+
+    def _save_metadata_file(self):
+        if self.metadata_path:
+            os.makedirs("model_artifacts/metadata", exist_ok=True)
+            metadata_file_name = os.path.basename(self.metadata_path)
+            MetadataLoader(self.metadata_path).save_data(f"model_artifacts/metadata/{metadata_file_name}", self.metadata)
 
     def launch_train(self):
         """

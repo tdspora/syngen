@@ -345,8 +345,11 @@ def test_load_metadata_in_yml_format(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
-    rp_logger.info("Loading metadata by yaml loader in yaml format")
+@patch("syngen.ml.data_loaders.YAMLLoader._check_referential_integrity")
+@patch("syngen.ml.data_loaders.YAMLLoader._validate_metadata")
+def test_load_metadata_by_yaml_loader_in_yaml_format_with_validation(
+        mock_validate_metadata, mock_check_referential_integrity, rp_logger):
+    rp_logger.info("Loading metadata by yaml loader in yaml format with validation")
     loader = YAMLLoader()
 
     expected_metadata = {
@@ -376,17 +379,19 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     # Mock the open function, yaml.load, and validate_schema
     with patch('builtins.open', mock_open(read_data='data')) as m:
         with patch('yaml.load') as mock_yaml_load:
-            with patch('syngen.ml.validation_schema.ValidationSchema.validate_schema') as mock_validate_schema:
-                mock_yaml_load.return_value = expected_metadata
-                metadata = loader.load_data('tests/unit/data_loaders/fixtures/metadata/metadata.yaml')
+            mock_yaml_load.return_value = expected_metadata
+            metadata = loader.load_data('tests/unit/data_loaders/fixtures/metadata/metadata.yaml', validation=True)
 
-                mock_validate_schema.assert_called_once()
-                assert metadata == expected_metadata
+            mock_validate_metadata.assert_called_once()
+            mock_check_referential_integrity.assert_called_once()
+            assert metadata == expected_metadata
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_load_metadata_by_yaml_loader_in_yml_format(rp_logger):
-    rp_logger.info("Loading metadata by yaml loader in yml format")
+@patch("syngen.ml.data_loaders.YAMLLoader._check_referential_integrity")
+@patch("syngen.ml.data_loaders.YAMLLoader._validate_metadata")
+def test_load_metadata_by_yaml_loader_in_yml_format_with_validation(mock_validate_metadata, mock_check_referential_integrity, rp_logger):
+    rp_logger.info("Loading metadata by yaml loader in yml format with validation")
     loader = YAMLLoader()
 
     expected_metadata = {
@@ -416,34 +421,169 @@ def test_load_metadata_by_yaml_loader_in_yml_format(rp_logger):
     # Mock the open function, yaml.load, and validate_schema
     with patch('builtins.open', mock_open(read_data='data')) as m:
         with patch('yaml.load') as mock_yaml_load:
-            with patch('syngen.ml.validation_schema.ValidationSchema.validate_schema') as mock_validate_schema:
-                mock_yaml_load.return_value = expected_metadata
-                metadata = loader.load_data('tests/unit/data_loaders/fixtures/metadata/metadata_with_absent_destination.yaml')
+            mock_yaml_load.return_value = expected_metadata
+            metadata = loader.load_data(
+                'tests/unit/data_loaders/fixtures/metadata/metadata_with_absent_destination.yaml',
+                validation=True
+            )
 
-                mock_validate_schema.assert_called_once()
-                assert metadata == expected_metadata
+            mock_validate_metadata.assert_called_once()
+            mock_check_referential_integrity.assert_called_once()
+            assert metadata == expected_metadata
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_save_metadata_in_yaml_format(test_yaml_path, test_df, rp_logger):
+@patch("syngen.ml.data_loaders.YAMLLoader._check_referential_integrity")
+@patch("syngen.ml.data_loaders.YAMLLoader._validate_metadata")
+def test_load_metadata_by_yaml_loader_in_yaml_format_without_validation(
+        mock_validate_metadata, mock_check_referential_integrity, rp_logger):
+    rp_logger.info("Loading metadata by yaml loader in yaml format without validation")
+    loader = YAMLLoader()
+
+    expected_metadata = {
+        "pk_test": {
+            "train_settings": {
+                "source": "../data/pk_test.csv",
+                "drop_null": False,
+                "epochs": 1,
+                "print_report": False,
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "print_report": True,
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100
+            },
+            "keys": {
+                "pk_id": {
+                    "columns": ["Id"],
+                    "type": "PK"
+                }
+            }
+        }
+    }
+
+    # Mock the open function, yaml.load, and validate_schema
+    with patch('builtins.open', mock_open(read_data='data')) as m:
+        with patch('yaml.load') as mock_yaml_load:
+            mock_yaml_load.return_value = expected_metadata
+            metadata = loader.load_data(r'C:\Users\Hanna_Imshenetska\Projects\syngen\syngen\src\tests\unit\data_loaders\fixtures\metadata\metadata.yaml', validation=False)
+
+            assert mock_validate_metadata.call_count == 0
+            assert mock_check_referential_integrity.call_count == 0
+            assert metadata == expected_metadata
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.data_loaders.YAMLLoader._check_referential_integrity")
+@patch("syngen.ml.data_loaders.YAMLLoader._validate_metadata")
+def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(mock_validate_metadata, mock_check_referential_integrity, rp_logger):
+    rp_logger.info("Loading metadata by yaml loader in yml format without validation")
+    loader = YAMLLoader()
+
+    expected_metadata = {
+        "pk_test": {
+            "train_settings": {
+                "drop_null": False,
+                "epochs": 1,
+                "print_report": False,
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "print_report": True,
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100
+            },
+            "keys": {
+                "pk_id": {
+                    "columns": ["Id"],
+                    "type": "PK"
+                }
+            },
+            "source": "..\\data\\pk_test.csv"
+        }
+    }
+
+    # Mock the open function, yaml.load, and validate_schema
+    with patch('builtins.open', mock_open(read_data='data')) as m:
+        with patch('yaml.load') as mock_yaml_load:
+            mock_yaml_load.return_value = expected_metadata
+            metadata = loader.load_data(
+                'tests/unit/data_loaders/fixtures/metadata/metadata_with_absent_destination.yaml',
+                validation=False
+            )
+
+            assert mock_validate_metadata.call_count == 0
+            assert mock_check_referential_integrity.call_count == 0
+            assert metadata == expected_metadata
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_metadata_in_yaml_format(test_yaml_path, test_metadata_file, rp_logger):
     rp_logger.info("Saving metadata in yaml format")
     metadata_loader = MetadataLoader(test_yaml_path)
     assert isinstance(metadata_loader.metadata_loader, YAMLLoader)
 
-    with pytest.raises(NotImplementedError) as error:
-        metadata_loader.save_data(test_yaml_path, test_df)
-        assert str(error) == "Saving YAML files is not supported"
+    metadata_loader.save_data(test_yaml_path, test_metadata_file)
+    assert metadata_loader.load_data() == {
+        "global": {},
+        "pk_test": {
+            "train_settings": {
+                "source": "..\\data\\pk_test.csv",
+                "drop_null": False,
+                "epochs": 1,
+                "print_report": False,
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "print_report": True,
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100
+            },
+            "keys": {
+                "pk_id": {
+                    "columns": ["Id"],
+                    "type": "PK"
+                }
+            }
+        }
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_save_metadata_in_yml_format(test_yml_path, test_df, rp_logger):
+def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logger):
     rp_logger.info("Saving metadata in yml format")
     metadata_loader = MetadataLoader(test_yml_path)
     assert isinstance(metadata_loader.metadata_loader, YAMLLoader)
 
-    with pytest.raises(NotImplementedError) as error:
-        metadata_loader.save_data(test_yml_path, test_df)
-        assert str(error) == "Saving YAML files is not supported"
+    metadata_loader.save_data(test_yml_path, test_metadata_file)
+    assert metadata_loader.load_data() == {
+        "global": {},
+        "pk_test": {
+            "train_settings": {
+                "source": "..\\data\\pk_test.csv",
+                "drop_null": False,
+                "epochs": 1,
+                "print_report": False,
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "print_report": True,
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100
+            },
+            "keys": {
+                "pk_id": {
+                    "columns": ["Id"],
+                    "type": "PK"
+                }
+            }
+        }
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
