@@ -146,6 +146,9 @@ class VAEWrapper(BaseWrapper):
             self.__update_attributes()
 
     def __update_attributes(self):
+        """
+        Update attributes of the dataset object
+        """
         for attr in vars(self.dataset):
             if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
                 attr_value = getattr(self.dataset, attr)
