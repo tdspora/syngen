@@ -130,19 +130,32 @@ class VAEWrapper(BaseWrapper):
         # Check if the serialized class has associated dataframe and
         # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
         self.dataset.paths = self.paths
+        attributes_to_remove = []
+
         if hasattr(self.dataset, "df"):
             self.dataset.order_of_columns = self.dataset.df.columns.tolist()
-            del self.dataset.df
-            for attr in vars(self.dataset):
-                if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
-                    attr_value = getattr(self.dataset, attr)
-                    updated_attr_value = attr_value.copy()
-                    for key, config in attr_value.items():
-                        updated_columns = define_existent_columns(config.get("columns", []), self.dataset.df.columns)
-                        config["columns"] = updated_columns
-                        updated_attr_value[key] = config
+            attributes_to_remove.append("df")
 
-                    setattr(self.dataset, attr, updated_attr_value)
+        if hasattr(self.dataset, "metadata"):
+            attributes_to_remove.append("metadata")
+
+        if attributes_to_remove:
+            for attr in attributes_to_remove:
+                delattr(self.dataset, attr)
+
+            self.__update_attributes()
+
+    def __update_attributes(self):
+        for attr in vars(self.dataset):
+            if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
+                attr_value = getattr(self.dataset, attr)
+                updated_attr_value = attr_value.copy()
+                for key, config in attr_value.items():
+                    updated_columns = define_existent_columns(config.get("columns", []), self.dataset.df.columns)
+                    config["columns"] = updated_columns
+                    updated_attr_value[key] = config
+
+                setattr(self.dataset, attr, updated_attr_value)
 
     def _save_dataset(self):
         """
