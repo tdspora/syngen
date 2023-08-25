@@ -258,14 +258,21 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
-def create_success_log_file(type_of_process: str):
+def create_success_log_file(type_of_process: str, table_name: str, metadata_path: str):
     """
     Create the file for storing the logs of main processes
     """
+    unique_name = str()
+    if table_name:
+        unique_name = table_name
+    if metadata_path:
+        # unique_name, _ = os.path.splitext(os.path.basename(metadata_path))
+        unique_name = os.path.basename(metadata_path)
     os.makedirs("model_artifacts/tmp_store", exist_ok=True)
+    file_name = f"success_logs_{type_of_process}_{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}.log"
     file_path = os.path.join(
         "model_artifacts/tmp_store",
-        f"success_logs_{type_of_process}_{slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))}.log"
+        slugify(file_name)
     )
     os.environ["SUCCESS_LOG_FILE"] = file_path
 

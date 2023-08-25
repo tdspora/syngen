@@ -158,9 +158,11 @@ class TrainStrategy(Strategy, ABC):
             self.handler.handle()
 
         except Exception as e:
-            logger.info(f"Training of the table - {self.handler.table_name} failed on running stage.")
-            logger.error(e)
-            logger.error(traceback.format_exc())
+            logger.error(
+                f"Training of the table - {self.handler.table_name} failed on running stage.",
+                e,
+                traceback.format_exc()
+            )
             raise
         else:
             logger.info(f"Training of the table - {self.handler.table_name} was completed")
@@ -239,9 +241,11 @@ class InferStrategy(Strategy):
         try:
             self.handler.handle()
         except Exception as e:
-            logger.info(f"Generation of the table - {self.handler.table_name} failed on running stage.")
-            logger.error(e)
-            logger.error(traceback.format_exc())
+            logger.error(
+                f"Generation of the table - {self.handler.table_name} failed on running stage.",
+                e,
+                traceback.format_exc()
+            )
             raise
         else:
             logger.info(
