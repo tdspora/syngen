@@ -139,29 +139,27 @@ class TrainStrategy(Strategy, ABC):
         """
         Launch the training process
         """
-        self.set_config(
-            source=kwargs["source"],
-            epochs=kwargs["epochs"],
-            drop_null=kwargs["drop_null"],
-            row_limit=kwargs["row_limit"],
-            table_name=kwargs["table_name"],
-            metadata_path=kwargs["metadata_path"],
-            print_report=kwargs["print_report"],
-            batch_size=kwargs["batch_size"]
-        )
-
-        self.add_reporters().\
-            set_metadata(kwargs["metadata"]).\
-            add_handler()
-
         try:
-            self.handler.handle()
+            self.set_config(
+                source=kwargs["source"],
+                epochs=kwargs["epochs"],
+                drop_null=kwargs["drop_null"],
+                row_limit=kwargs["row_limit"],
+                table_name=kwargs["table_name"],
+                metadata_path=kwargs["metadata_path"],
+                print_report=kwargs["print_report"],
+                batch_size=kwargs["batch_size"]
+            )
 
+            self.add_reporters().\
+                set_metadata(kwargs["metadata"]).\
+                add_handler()
+            self.handler.handle()
         except Exception as e:
             logger.error(
-                f"Training of the table - {self.handler.table_name} failed on running stage.",
-                e,
-                traceback.format_exc()
+                f"Training of the table - {self.handler.table_name} failed on running stage.\n"
+                f"The details of the error - {str(e)}\n"
+                f"The traceback of the error - {traceback.format_exc()}"
             )
             raise
         else:
@@ -222,29 +220,28 @@ class InferStrategy(Strategy):
         """
         Launch the infer process
         """
-        self.set_config(
-            destination=kwargs["destination"],
-            size=kwargs["size"],
-            table_name=kwargs["table_name"],
-            metadata_path=kwargs["metadata_path"],
-            run_parallel=kwargs["run_parallel"],
-            batch_size=kwargs["batch_size"],
-            random_seed=kwargs["random_seed"],
-            print_report=kwargs["print_report"],
-            log_level=kwargs["log_level"],
-            both_keys=kwargs["both_keys"],
-        ).\
-            add_reporters(). \
-            set_metadata(kwargs["metadata"]).\
-            add_handler(type_of_process=kwargs["type"])
-
         try:
+            self.set_config(
+                destination=kwargs["destination"],
+                size=kwargs["size"],
+                table_name=kwargs["table_name"],
+                metadata_path=kwargs["metadata_path"],
+                run_parallel=kwargs["run_parallel"],
+                batch_size=kwargs["batch_size"],
+                random_seed=kwargs["random_seed"],
+                print_report=kwargs["print_report"],
+                log_level=kwargs["log_level"],
+                both_keys=kwargs["both_keys"],
+            ).\
+                add_reporters().\
+                set_metadata(kwargs["metadata"]).\
+                add_handler(type_of_process=kwargs["type"])
             self.handler.handle()
         except Exception as e:
             logger.error(
-                f"Generation of the table - {self.handler.table_name} failed on running stage.",
-                e,
-                traceback.format_exc()
+                f"Generation of the table - {self.handler.table_name} failed on running stage.\n"
+                f"The details of the error - {str(e)}\n"
+                f"The traceback of the error - {traceback.format_exc()}"
             )
             raise
         else:
