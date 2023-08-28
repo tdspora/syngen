@@ -79,7 +79,7 @@ class Dataset:
         self.uuid_columns_types = {}
         self.dropped_columns = fetch_training_config(self.paths["train_config_pickle_path"]).dropped_columns
         self.non_existent_columns = set()
-        self.order_of_columns = self.df.columns.tolist()
+        self.order_of_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
