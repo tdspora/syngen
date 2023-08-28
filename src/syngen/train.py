@@ -57,7 +57,7 @@ def launch_train(
 
     """
     os.environ["LOGURU_LEVEL"] = log_level
-    create_success_log_file(type_of_process="train")
+    create_success_log_file(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
     setup_logger()
     if not metadata_path and not source and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' and 'source' is absent. "
