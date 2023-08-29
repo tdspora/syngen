@@ -258,7 +258,7 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
-def create_success_log_file(type_of_process: str, table_name: str, metadata_path: str):
+def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
     """
     Create the file for storing the logs of main processes
     """
