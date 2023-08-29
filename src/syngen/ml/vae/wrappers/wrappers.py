@@ -132,9 +132,10 @@ class VAEWrapper(BaseWrapper):
         # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
         self.dataset.paths = self.paths
         attributes_to_remove = []
+        existed_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
 
         if hasattr(self.dataset, "df"):
-            self.dataset.order_of_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
+            self.dataset.order_of_columns = existed_columns
             attributes_to_remove.append("df")
 
         if hasattr(self.dataset, "metadata"):
@@ -144,9 +145,9 @@ class VAEWrapper(BaseWrapper):
             for attr in attributes_to_remove:
                 delattr(self.dataset, attr)
 
-            self.__update_attributes()
+            self.__update_attributes(existed_columns)
 
-    def __update_attributes(self):
+    def __update_attributes(self, existed_columns: List[str]):
         """
         Update attributes of the dataset object
         """
@@ -155,7 +156,7 @@ class VAEWrapper(BaseWrapper):
                 attr_value = getattr(self.dataset, attr)
                 updated_attr_value = attr_value.copy()
                 for key, config in attr_value.items():
-                    updated_columns = define_existent_columns(config.get("columns", []), self.dataset.df.columns)
+                    updated_columns = define_existent_columns(config.get("columns", []), existed_columns)
                     config["columns"] = updated_columns
                     updated_attr_value[key] = config
 
