@@ -18,6 +18,7 @@ from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
 from syngen.ml.utils import (
     fetch_dataset,
+    fetch_training_config,
     check_if_features_assigned,
     define_existent_columns
 )
@@ -133,7 +134,7 @@ class VAEWrapper(BaseWrapper):
         attributes_to_remove = []
 
         if hasattr(self.dataset, "df"):
-            self.dataset.order_of_columns = self.dataset.df.columns.tolist()
+            self.dataset.order_of_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
             attributes_to_remove.append("df")
 
         if hasattr(self.dataset, "metadata"):
