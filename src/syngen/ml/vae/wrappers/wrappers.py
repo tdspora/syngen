@@ -114,6 +114,8 @@ class VAEWrapper(BaseWrapper):
         self.metadata = metadata
         self.table_name = table_name
         self.paths = paths
+
+    def __post_init__(self):
         if self.process == "train":
             self.dataset = Dataset(
                 df=self.df,
@@ -173,6 +175,7 @@ class VAEWrapper(BaseWrapper):
         """
         Launch the pipeline in the dataset
         """
+        self.__post_init__()
         self.df = self.dataset.pipeline()
         self._save_dataset()
 
