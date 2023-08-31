@@ -344,7 +344,7 @@ class VaeInferHandler(BaseHandler):
 
         return synth_fk
 
-    def _set_pk_path(self, pk_table, table_name) -> str:
+    def _get_pk_path(self, pk_table, table_name) -> str:
         """
         Set the path to synthetic data of corresponding pk table
         """
@@ -376,7 +376,7 @@ class VaeInferHandler(BaseHandler):
             if config_of_keys.get(key).get("type") == "FK":
                 fk_column_name = config_of_keys.get(key).get("columns")[0]
                 pk_table = config_of_keys.get(key).get("references").get("table")
-                pk_path = self._set_pk_path(pk_table=pk_table, table_name=table_name)
+                pk_path = self._get_pk_path(pk_table=pk_table, table_name=table_name)
                 pk_table_data, pk_table_schema = DataLoader(pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")

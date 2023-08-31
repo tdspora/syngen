@@ -15,10 +15,8 @@ from yaml.scanner import ScannerError
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
 from loguru import logger
-from marshmallow import ValidationError
-from slugify import slugify
 
-from syngen.ml.validation_schema import ValidationSchema, SUPPORTED_EXCEL_EXTENSIONS
+from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.context import get_context, global_context
@@ -267,7 +265,7 @@ class MetadataLoader(BaseDataLoader):
             else:
                 raise NotImplementedError("The format of metadata isn't supported")
 
-    def load_data(self, validation=True) -> dict:
+    def load_data(self, validation) -> dict:
         return self.metadata_loader.load_data(self.metadata_path, validation)
 
     def save_data(self, path: str, metadata: Dict, **kwargs):
@@ -280,19 +278,9 @@ class YAMLLoader(BaseDataLoader):
     """
     _metadata_sections = ["train_settings", "infer_settings", "keys"]
 
-    @staticmethod
-    def _validate_metadata(metadata):
-        """
-        Validate the schema of the metadata file in YAML format
-        """
-        ValidationSchema(metadata).validate_schema()
-
-    def _load_data(self, metadata_file, validation: bool) -> Dict:
+    def _load_data(self, metadata_file) -> Dict:
         try:
             metadata = yaml.load(metadata_file, Loader=SafeLoader)
-            if validation:
-                self._validate_metadata(metadata)
-                self._check_referential_integrity(metadata)
             metadata = self.replace_none_values_of_metadata_settings(self._metadata_sections, metadata)
             return metadata
         except ScannerError as error:
@@ -304,7 +292,7 @@ class YAMLLoader(BaseDataLoader):
 
     def load_data(self, metadata_path: str, validation) -> Dict:
         with open(metadata_path, "r", encoding="utf-8") as f:
-            return self._load_data(f, validation)
+            return self._load_data(f)
 
     @staticmethod
     def replace_none_values_of_metadata_settings(parameters, metadata: dict):
@@ -323,54 +311,6 @@ class YAMLLoader(BaseDataLoader):
                 if metadata.get(key).get(parameter) is None:
                     metadata[key][parameter] = {}
         return metadata
-
-    @staticmethod
-    def _validate_pk_columns(pk_key, fk_key):
-        """
-        Validate the primary key columns
-        """
-        return len(pk_key.get("columns", [])) == len(fk_key["references"]["columns"])
-
-    def _find_pk_table_in_metadata_files(self, pk_table, fk_key):
-        """
-        Find the primary key table in the metadata files
-        stored in 'model_artifacts/metadata' directory
-        """
-        path_to_metadata_storage = "model_artifacts/metadata"
-        for file in os.listdir(path_to_metadata_storage):
-            metadata = MetadataLoader(os.path.join(path_to_metadata_storage, file)).load_data(validation=False)
-            if pk_table not in metadata:
-                continue
-
-            pk_table_keys = metadata[pk_table].get("keys", {})
-            for key, config in pk_table_keys.items():
-                if config["type"] == "PK":
-                    if self._validate_pk_columns(pk_key=config, fk_key=fk_key) \
-                            and os.path.exists(f"model_artifacts/resources/{slugify(pk_table)}/message.success"):
-                        return True
-                else:
-                    continue
-        return False
-
-    def _check_referential_integrity(self, metadata):
-        """
-        Check if the references are valid
-        """
-        for table_name, table_metadata in metadata.items():
-            if table_name == "global":
-                continue
-            metadata_keys = table_metadata.get("keys") \
-                if "keys" in table_metadata and table_metadata.get("keys") is not None \
-                else {}
-            for key_name, key_data in metadata_keys.items():
-                if key_data["type"] != "FK":
-                    continue
-
-                fk_key = key_data
-                pk_table = key_data["references"]["table"]
-
-                if pk_table not in metadata and not self._find_pk_table_in_metadata_files(pk_table, fk_key):
-                    raise ValidationError(f"The referenced table \"{pk_table}\" is not found")
 
     def save_data(self, path: str, metadata: Dict, **kwargs):
         with open(path, "w") as f:

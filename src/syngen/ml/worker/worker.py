@@ -8,6 +8,7 @@ import os
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
+from syngen.ml.config import Validator
 
 from syngen.ml.context.context import global_context
 
@@ -21,23 +22,27 @@ class Worker:
     metadata_path: Optional[str]
     settings: Dict
     log_level: str
-    type: str
+    type_of_process: str
     train_strategy = TrainStrategy()
     infer_strategy = InferStrategy()
     metadata = None
     divided = []
 
     def __post_init__(self):
-        self.metadata = self.__fetch_metadata()
+        os.makedirs("model_artifacts/metadata", exist_ok=True)
+        self.metadata = self._fetch_metadata()
+        validator = Validator(self.metadata, self.type_of_process)
+        validator.run()
+        self.merged_metadata = validator.merged_metadata
 
     def _update_metadata_for_table(self, metadata: Dict) -> Dict:
         """
         Update the metadata for training or inference process if a metadata file wasn't provided
         """
-        if self.type == "train":
+        if self.type_of_process == "train":
             train_settings = metadata[self.table_name]["train_settings"]
             train_settings.update(self.settings)
-        elif self.type == "infer":
+        elif self.type_of_process == "infer":
             infer_settings = metadata[self.table_name]["infer_settings"]
             infer_settings.update(self.settings)
         return metadata
@@ -60,10 +65,10 @@ class Worker:
         metadata.pop("global", None)
 
         for table, table_metadata in metadata.items():
-            if self.type == "train":
+            if self.type_of_process == "train":
                 settings_key = "train_settings"
                 global_settings = global_train_settings
-            elif self.type == "infer":
+            elif self.type_of_process == "infer":
                 settings_key = "infer_settings"
                 global_settings = global_infer_settings
             else:
@@ -76,11 +81,11 @@ class Worker:
 
         return metadata
 
-    def __fetch_metadata(self) -> Dict[str, str]:
+    def _fetch_metadata(self) -> Dict[str, str]:
         """
         Fetch the metadata for training or infer process
         """
-        metadata = MetadataLoader(self.metadata_path).load_data() if self.metadata_path else None
+        metadata = MetadataLoader(self.metadata_path).load_data(validation=True) if self.metadata_path else None
         source = self.settings.get("source")
         # Set a metadata for training or infer process if a metadata file wasn't provided
         if self.table_name:
@@ -146,6 +151,11 @@ class Worker:
         uq_tables = self._get_tables(config_of_tables, "UQ")
         fk_tables = self._get_tables(config_of_tables, "FK")
         chain_of_tables = list(dict.fromkeys([*tables_without_keys, *pk_tables, *uq_tables, *fk_tables]))
+
+        config_of_tables = {
+            **config_of_tables,
+            **{k: v for k, v in self.merged_metadata.items() if k not in config_of_tables}
+        }
 
         return chain_of_tables, config_of_tables
 
@@ -230,7 +240,7 @@ class Worker:
                     print_report=print_report,
                     log_level=self.log_level,
                     both_keys=both_keys,
-                    type=self.type
+                    type=self.type_of_process
                 )
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
@@ -258,7 +268,7 @@ class Worker:
                 print_report=infer_settings["print_report"],
                 log_level=self.log_level,
                 both_keys=both_keys,
-                type=self.type
+                type=self.type_of_process
             )
 
     @staticmethod

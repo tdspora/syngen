@@ -100,7 +100,7 @@ def launch_train(
         metadata_path=metadata_path,
         settings=settings,
         log_level=log_level,
-        type="train"
+        type_of_process="train"
     )
     worker.launch_train()
 
