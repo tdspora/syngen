@@ -212,7 +212,8 @@ class VaeInferHandler(BaseHandler):
             seed(self.random_seed)
         self.random_seeds_list = list()
         self.vae = None
-        self.has_vae = len(fetch_dataset(self.paths["dataset_pickle_path"]).features) > 0
+        self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        self.has_vae = len(self.dataset.features) > 0
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
     @staticmethod
@@ -292,10 +293,9 @@ class VaeInferHandler(BaseHandler):
         if self.has_no_ml:
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
 
-        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
-        uuid_columns = dataset.uuid_columns
+        uuid_columns = self.dataset.uuid_columns
         if uuid_columns:
-            synthetic_infer = generate_uuid(size, dataset, uuid_columns, synthetic_infer)
+            synthetic_infer = generate_uuid(size, self.dataset, uuid_columns, synthetic_infer)
 
         return synthetic_infer
 
@@ -397,7 +397,7 @@ class VaeInferHandler(BaseHandler):
         """
         Restore empty columns in the generated table
         """
-        empty_columns = fetch_dataset(self.paths["dataset_pickle_path"]).dropped_columns
+        empty_columns = self.dataset.dropped_columns
         empty_df = pd.DataFrame(index=df.index, columns=empty_columns)
         df = pd.concat([df, empty_df], axis=1)
         return df
@@ -424,6 +424,7 @@ class VaeInferHandler(BaseHandler):
         if self.metadata_path is not None:
             if not is_pk:
                 generated_data = self.generate_keys(prepared_data, self.size, self.metadata, self.table_name)
+                generated_data = generated_data[self.dataset.order_of_columns]
                 if generated_data is None:
                     DataLoader(self.paths["path_to_merged_infer"]).save_data(
                         self.paths["path_to_merged_infer"], prepared_data, format=get_context().get_config())
@@ -434,5 +435,6 @@ class VaeInferHandler(BaseHandler):
                 DataLoader(self.paths["path_to_merged_infer"]).save_data(
                     self.paths["path_to_merged_infer"], prepared_data, format=get_context().get_config())
         if self.metadata_path is None:
+            prepared_data = prepared_data[self.dataset.order_of_columns]
             DataLoader(self.paths["path_to_merged_infer"]).save_data(
                 self.paths["path_to_merged_infer"], prepared_data, format=get_context().get_config())
