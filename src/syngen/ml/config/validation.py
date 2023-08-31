@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from marshmallow import ValidationError
 from slugify import slugify
 from loguru import logger
-from syngen.ml.data_loaders import MetadataLoader, DataLoader
+from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.validation_schema import ValidationSchema
 
 
