@@ -258,35 +258,47 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
-def create_success_log_file(type_of_process: str):
+def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
     """
     Create the file for storing the logs of main processes
     """
+    unique_name = str()
+    if table_name:
+        unique_name = table_name
+    if metadata_path:
+        unique_name = os.path.basename(metadata_path)
     os.makedirs("model_artifacts/tmp_store", exist_ok=True)
+    file_name_without_extension = f"logs_{type_of_process}_{unique_name}_" \
+                                  f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}"
     file_path = os.path.join(
         "model_artifacts/tmp_store",
-        f"success_logs_{type_of_process}_{slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))}.log"
+        f"{slugify(file_name_without_extension)}.log"
     )
     os.environ["SUCCESS_LOG_FILE"] = file_path
 
 
-def custom_sink(record):
+def file_sink(record):
     """
-    Filter the logs and write main of them to the log file
+    Save logs with level 'INFO' and above to the log file
     """
-    filter_keywords = ["Synthesis", "Training", "Generation"]
-
     with open(os.getenv("SUCCESS_LOG_FILE"), "a") as log_file:
-        if any(keyword in record.record["message"] for keyword in filter_keywords):
-            log_file.write(record.record["message"] + "\n")
-            sys.stderr.write(record)
-        else:
-            sys.stderr.write(record)
+        log_message = record.record["message"] + "\n"
+        log_file.write(log_message)
+
+
+def console_sink(record):
+    """
+    Redirect logs to the console
+    """
+    sys.stderr.write(record)
 
 
 def setup_logger():
     """
-    Setup logger with the specified level
+    Set up logger with the specified level.
+    Log the messages with level 'INFO' and above to the log file,
+    redirect the messages to stderr with the level set in the environment variable "LOGURU_LEVEL".
     """
     logger.remove()
-    logger.add(custom_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
+    logger.add(console_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
+    logger.add(file_sink, level="INFO")

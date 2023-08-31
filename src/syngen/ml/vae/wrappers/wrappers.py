@@ -18,6 +18,7 @@ from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
 from syngen.ml.utils import (
     fetch_dataset,
+    fetch_training_config,
     check_if_features_assigned,
     define_existent_columns
 )
@@ -113,6 +114,8 @@ class VAEWrapper(BaseWrapper):
         self.metadata = metadata
         self.table_name = table_name
         self.paths = paths
+
+    def __post_init__(self):
         if self.process == "train":
             self.dataset = Dataset(
                 df=self.df,
@@ -130,19 +133,36 @@ class VAEWrapper(BaseWrapper):
         # Check if the serialized class has associated dataframe and
         # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
         self.dataset.paths = self.paths
-        if hasattr(self.dataset, "df"):
-            self.dataset.order_of_columns = self.dataset.df.columns.tolist()
-            del self.dataset.df
-            for attr in vars(self.dataset):
-                if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
-                    attr_value = getattr(self.dataset, attr)
-                    updated_attr_value = attr_value.copy()
-                    for key, config in attr_value.items():
-                        updated_columns = define_existent_columns(config.get("columns", []), self.dataset.df.columns)
-                        config["columns"] = updated_columns
-                        updated_attr_value[key] = config
+        attributes_to_remove = []
+        existed_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
 
-                    setattr(self.dataset, attr, updated_attr_value)
+        if hasattr(self.dataset, "df"):
+            self.dataset.order_of_columns = existed_columns
+            attributes_to_remove.append("df")
+
+        if hasattr(self.dataset, "metadata"):
+            attributes_to_remove.append("metadata")
+
+        if attributes_to_remove:
+            for attr in attributes_to_remove:
+                delattr(self.dataset, attr)
+
+            self.__update_attributes(existed_columns)
+
+    def __update_attributes(self, existed_columns: List[str]):
+        """
+        Update attributes of the dataset object
+        """
+        for attr in vars(self.dataset):
+            if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
+                attr_value = getattr(self.dataset, attr)
+                updated_attr_value = attr_value.copy()
+                for key, config in attr_value.items():
+                    updated_columns = define_existent_columns(config.get("columns", []), existed_columns)
+                    config["columns"] = updated_columns
+                    updated_attr_value[key] = config
+
+                setattr(self.dataset, attr, updated_attr_value)
 
     def _save_dataset(self):
         """
@@ -155,6 +175,7 @@ class VAEWrapper(BaseWrapper):
         """
         Launch the pipeline in the dataset
         """
+        self.__post_init__()
         self.df = self.dataset.pipeline()
         self._save_dataset()
 

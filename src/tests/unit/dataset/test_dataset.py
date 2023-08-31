@@ -85,7 +85,6 @@ def test_save_dataset(rp_logger):
                 "fields": {},
                 "format": "CSV"
             },
-            "metadata": {},
             "table_name": "mock_table",
             "paths": {},
             "primary_keys_mapping": {},

@@ -4,7 +4,6 @@ import pickle
 from uuid import UUID
 from datetime import datetime
 import base32_crockford
-import os
 
 import numpy as np
 import dill
@@ -60,7 +59,7 @@ class Dataset:
         Return a dictionary of the dataset's state
         """
         dataset_instance = self.__dict__.copy()
-        attribute_keys_to_remove = ["df", "non_existent_columns"]
+        attribute_keys_to_remove = ["df", "metadata", "non_existent_columns"]
 
         for attr_key in attribute_keys_to_remove:
             if attr_key in dataset_instance:
@@ -80,7 +79,7 @@ class Dataset:
         self.uuid_columns_types = {}
         self.dropped_columns = fetch_training_config(self.paths["train_config_pickle_path"]).dropped_columns
         self.non_existent_columns = set()
-        self.order_of_columns = self.df.columns.tolist()
+        self.order_of_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
