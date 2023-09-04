@@ -157,13 +157,13 @@ class TrainStrategy(Strategy, ABC):
             self.handler.handle()
         except Exception as e:
             logger.error(
-                f"Training of the table - {self.handler.table_name} failed on running stage.\n"
+                f"Training of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
                 f"The details of the error - {str(e)}\n"
                 f"The traceback of the error - {traceback.format_exc()}"
             )
             raise
         else:
-            logger.info(f"Training of the table - {self.handler.table_name} was completed")
+            logger.info(f"Training of the table - {kwargs['table_name']} was completed")
 
 
 class InferStrategy(Strategy):
@@ -239,13 +239,13 @@ class InferStrategy(Strategy):
             self.handler.handle()
         except Exception as e:
             logger.error(
-                f"Generation of the table - {self.handler.table_name} failed on running stage.\n"
+                f"Generation of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
                 f"The details of the error - {str(e)}\n"
                 f"The traceback of the error - {traceback.format_exc()}"
             )
             raise
         else:
             logger.info(
-                f"Synthesis of the table - {self.handler.table_name} was completed. "
+                f"Synthesis of the table - {kwargs['table_name']} was completed. "
                 f"Synthetic data saved in {self.handler.paths['path_to_merged_infer']}"
             )
