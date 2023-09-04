@@ -25,7 +25,7 @@ def test_init_worker_for_training_process_with_absent_metadata(rp_logger):
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
@@ -64,7 +64,7 @@ def test_init_worker_for_infer_process_with_absent_metadata(rp_logger):
             "random_seed": 1
         },
         log_level="INFO",
-        type="infer"
+        type_of_process="infer"
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
@@ -105,7 +105,7 @@ def test_init_worker_with_metadata(rp_logger):
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
@@ -157,7 +157,7 @@ def test_init_worker_with_empty_settings_in_metadata(rp_logger):
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
@@ -202,7 +202,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
@@ -269,7 +269,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
             "random_seed": 5
         },
         log_level="INFO",
-        type="infer"
+        type_of_process="infer"
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
@@ -319,7 +319,6 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp_logger):
@@ -340,7 +339,7 @@ def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -423,7 +422,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -555,7 +554,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -665,6 +664,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_tables, mock_generate_reports, rp_logger):
@@ -686,7 +686,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -760,7 +760,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
                     "keys": {
                         "tdm_models_pkey": {
                             "type": "PK",
-                            "columns":["id"]
+                            "columns": ["id"]
                         }
                     },
                     "train_settings": {
@@ -800,7 +800,6 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports, rp_logger):
@@ -822,7 +821,7 @@ def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports,
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -882,7 +881,7 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
             "print_report": True
         },
         log_level="INFO",
-        type="train"
+        type_of_process="train"
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -997,7 +996,7 @@ def test_launch_infer_with_metadata(mock_infer_tables, mock_generate_reports, rp
             "batch_size": 200
         },
         log_level="INFO",
-        type="infer"
+        type_of_process="infer"
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1051,7 +1050,7 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables, mock_ge
             "random_seed": 1
         },
         log_level="INFO",
-        type="infer"
+        type_of_process="infer"
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1129,7 +1128,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
             "random_seed": 1
         },
         log_level="INFO",
-        type="infer"
+        type_of_process="infer"
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1218,7 +1217,7 @@ def test_launch_infer_without_metadata(mock_infer_tables, mock_generate_reports,
             "batch_size": 200
         },
         log_level="INFO",
-        type="infer"
+        type_of_process="infer"
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1263,7 +1262,7 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
             "batch_size": 300
         },
         log_level="INFO",
-        type="infer"
+        type_of_process="infer"
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(

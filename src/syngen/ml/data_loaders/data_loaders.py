@@ -265,8 +265,8 @@ class MetadataLoader(BaseDataLoader):
             else:
                 raise NotImplementedError("The format of metadata isn't supported")
 
-    def load_data(self, validation) -> dict:
-        return self.metadata_loader.load_data(self.metadata_path, validation)
+    def load_data(self) -> dict:
+        return self.metadata_loader.load_data(self.metadata_path)
 
     def save_data(self, path: str, metadata: Dict, **kwargs):
         self.metadata_loader.save_data(path, metadata, **kwargs)
@@ -290,7 +290,7 @@ class YAMLLoader(BaseDataLoader):
             logger.error(error)
             raise ValueError(message)
 
-    def load_data(self, metadata_path: str, validation) -> Dict:
+    def load_data(self, metadata_path: str) -> Dict:
         with open(metadata_path, "r", encoding="utf-8") as f:
             return self._load_data(f)
 

@@ -1,6 +1,6 @@
 from typing import Dict
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from marshmallow import ValidationError
 from slugify import slugify
@@ -17,7 +17,7 @@ class Validator:
     """
     metadata: Dict
     type_of_process: str
-    merged_metadata: Dict = None
+    merged_metadata: Dict = field(default_factory=dict)
 
     def _check_referential_integrity(self, metadata):
         """
@@ -36,15 +36,13 @@ class Validator:
                 fk_name = key_name
                 fk_config = key_data
                 parent_table = key_data["references"]["table"]
-
-                parent_metadata = self._find_parent_metadata(parent_table=parent_table)
-                self.merged_metadata = self._merge_metadata(metadata=self.metadata, parent_metadata=parent_metadata)
                 if self._validate_metadata(
                     pk_table=parent_table,
                     fk_name=fk_name,
                     fk_config=fk_config
                 ) is False:
                     raise ValidationError(f"The referenced table \"{parent_table}\" is not found")
+                return parent_table
 
     @staticmethod
     def _merge_metadata(metadata, parent_metadata) -> Dict:
@@ -52,8 +50,8 @@ class Validator:
         Merge the metadata contained the parent table and
         the metadata contained the child table
         """
-        merged_metadata = metadata.copy()
-        merged_metadata.update(parent_metadata)
+        merged_metadata = parent_metadata.copy()
+        merged_metadata.update(metadata)
         return merged_metadata
 
     def _validate_metadata(self, pk_table, fk_name, fk_config):
@@ -69,6 +67,7 @@ class Validator:
 
                 elif self.type_of_process == "infer":
                     return self._validate_pk_columns(pk_name=key, pk_config=config, fk_name=fk_name, fk_config=fk_config) \
+                        and self._check_existence_of_success_file(pk_table) \
                         and self._check_existence_of_generated_data(pk_table)
             else:
                 continue
@@ -113,10 +112,11 @@ class Validator:
         """
         path_to_metadata_storage = "model_artifacts/metadata"
         for file in os.listdir(path_to_metadata_storage):
-            metadata = MetadataLoader(os.path.join(path_to_metadata_storage, file)).load_data(validation=False)
+            metadata = MetadataLoader(os.path.join(path_to_metadata_storage, file)).load_data()
             if parent_table not in metadata:
                 continue
             else:
+                metadata.pop("global", None)
                 return metadata
         return {}
 
@@ -124,5 +124,7 @@ class Validator:
         """
         Run the validation process
         """
-        self._check_referential_integrity(metadata=self.metadata)
+        parent_table = self._check_referential_integrity(metadata=self.metadata)
+        parent_metadata = self._find_parent_metadata(parent_table=parent_table)
+        self.merged_metadata = self._merge_metadata(metadata=self.metadata, parent_metadata=parent_metadata)
         ValidationSchema(metadata=self.merged_metadata).validate_schema()

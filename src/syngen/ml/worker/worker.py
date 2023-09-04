@@ -31,21 +31,21 @@ class Worker:
     def __post_init__(self):
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self._fetch_metadata()
+        self._update_metadata()
         validator = Validator(self.metadata, self.type_of_process)
         validator.run()
         self.merged_metadata = validator.merged_metadata
 
-    def _update_metadata_for_table(self, metadata: Dict) -> Dict:
+    def _update_metadata_for_table(self):
         """
         Update the metadata for training or inference process if a metadata file wasn't provided
         """
         if self.type_of_process == "train":
-            train_settings = metadata[self.table_name]["train_settings"]
+            train_settings = self.metadata[self.table_name]["train_settings"]
             train_settings.update(self.settings)
         elif self.type_of_process == "infer":
-            infer_settings = metadata[self.table_name]["infer_settings"]
+            infer_settings = self.metadata[self.table_name]["infer_settings"]
             infer_settings.update(self.settings)
-        return metadata
 
     @staticmethod
     def _update_table_settings(table_settings: Dict[str, Any], settings_to_update: Dict[str, Any]) -> None:
@@ -56,15 +56,15 @@ class Worker:
             if setting not in table_settings:
                 table_settings[setting] = value
 
-    def _update_metadata_for_tables(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def _update_metadata_for_tables(self):
         """
         Update the metadata for training or inference process if a metadata file was provided
         """
-        global_train_settings = metadata.get("global", {}).get("train_settings", {})
-        global_infer_settings = metadata.get("global", {}).get("infer_settings", {})
-        metadata.pop("global", None)
+        global_train_settings = self.metadata.get("global", {}).get("train_settings", {})
+        global_infer_settings = self.metadata.get("global", {}).get("infer_settings", {})
+        self.metadata.pop("global", None)
 
-        for table, table_metadata in metadata.items():
+        for table, table_metadata in self.metadata.items():
             if self.type_of_process == "train":
                 settings_key = "train_settings"
                 global_settings = global_train_settings
@@ -79,16 +79,22 @@ class Worker:
             self._update_table_settings(table_settings, global_settings)
             self._update_table_settings(table_settings, self.settings)
 
-        return metadata
+    def _update_metadata(self) -> None:
+        if self.metadata_path:
+            self._update_metadata_for_tables()
+        if self.table_name:
+            self._update_metadata_for_table()
 
     def _fetch_metadata(self) -> Dict[str, str]:
         """
         Fetch the metadata for training or infer process
         """
-        metadata = MetadataLoader(self.metadata_path).load_data(validation=True) if self.metadata_path else None
-        source = self.settings.get("source")
-        # Set a metadata for training or infer process if a metadata file wasn't provided
+        if self.metadata_path:
+            metadata = MetadataLoader(self.metadata_path).load_data()
+            return metadata
         if self.table_name:
+            source = self.settings.get("source")
+            # Set a metadata for training or infer process if a metadata file wasn't provided
             metadata = {
                 self.table_name: {
                     "train_settings": {
@@ -98,13 +104,7 @@ class Worker:
                     "keys": {},
                 }
             }
-            metadata = self._update_metadata_for_table(metadata)
             return metadata
-        # Update a metadata for training or infer process if a metadata file was provided
-        if self.metadata_path:
-            metadata = self._update_metadata_for_tables(metadata)
-            return metadata
-        return metadata
 
     @staticmethod
     def _get_tables_without_keys(config_of_tables: Dict) -> List[str]:
@@ -143,25 +143,30 @@ class Worker:
 
         type_of_process can be "train", "infer" or "all" for the Enterprise version
         """
-        config_of_tables = deepcopy(self.metadata)
-        tables_without_keys = self._get_tables_without_keys(config_of_tables)
+        config_of_tables = deepcopy(self.merged_metadata)
         if kwargs.get("type_of_process") in ("infer", "all"):
             config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
+        tables_without_keys = self._get_tables_without_keys(config_of_tables)
         pk_tables = self._get_tables(config_of_tables, "PK")
         uq_tables = self._get_tables(config_of_tables, "UQ")
         fk_tables = self._get_tables(config_of_tables, "FK")
         chain_of_tables = list(dict.fromkeys([*tables_without_keys, *pk_tables, *uq_tables, *fk_tables]))
 
         config_of_tables = {
-            **config_of_tables,
-            **{k: v for k, v in self.merged_metadata.items() if k not in config_of_tables}
+            **self.metadata,
+            **{k: v for k, v in config_of_tables.items() if k not in self.metadata}
         }
+        chain_of_tables = [
+            table for table in chain_of_tables
+            if f"{table}_pk" not in chain_of_tables
+               or f"{table}_fk" not in chain_of_tables
+        ]
 
         return chain_of_tables, config_of_tables
 
     def _split_pk_fk_metadata(self, config, tables):
         for table in tables:
-            types_of_keys = [value["type"] for key, value in config[table]["keys"].items()]
+            types_of_keys = [value["type"] for key, value in config[table].get("keys", {}).items()]
             if "PK" in types_of_keys and "FK" in types_of_keys:
                 self.divided += [table+"_pk", table+"_fk"]
                 pk_uq_part = {key: value for key, value in config[table]["keys"].items() if value["type"] in ["PK", "UQ"]}
@@ -199,7 +204,7 @@ class Worker:
             logger.info(f"Training process of the table - {table} has started.")
 
             self.train_strategy.run(
-                metadata=self.metadata,
+                metadata=self.merged_metadata,
                 source=train_settings["source"],
                 epochs=train_settings["epochs"],
                 drop_null=train_settings["drop_null"],
@@ -307,6 +312,5 @@ class Worker:
         Launch infer process either for a single table or for several tables
         """
         chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
-        self.metadata = config_of_tables
         self.__infer_tables(chain_of_tables, config_of_tables)
         self._generate_reports()
