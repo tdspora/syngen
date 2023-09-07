@@ -5,7 +5,3 @@ test_table:
   infer_settings:
 
   keys:
-    pk_id:
-      type: "PK"
-      columns:
-        - Id

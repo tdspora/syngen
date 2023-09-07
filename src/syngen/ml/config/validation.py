@@ -18,12 +18,14 @@ class Validator:
     metadata: Dict
     type_of_process: str
     merged_metadata: Dict = field(default_factory=dict)
+    mapping: Dict = field(default_factory=dict)
 
-    def _check_referential_integrity(self, metadata):
+    def _define_mapping(self):
         """
-        Check if the references are valid
+        Define the mapping for the child tables
+        contained the information of the parent table
         """
-        for table_name, table_metadata in metadata.items():
+        for table_name, table_metadata in self.metadata.items():
             if table_name == "global":
                 continue
             metadata_keys = table_metadata.get("keys") \
@@ -33,98 +35,119 @@ class Validator:
                 if key_data["type"] != "FK":
                     continue
 
-                fk_name = key_name
-                fk_config = key_data
-                parent_table = key_data["references"]["table"]
-                if self._validate_metadata(
-                    pk_table=parent_table,
-                    fk_name=fk_name,
-                    fk_config=fk_config
-                ) is False:
-                    raise ValidationError(f"The referenced table \"{parent_table}\" is not found")
-                return parent_table
+                self.mapping[key_name] = {
+                    "child_table": table_name,
+                    "child_columns": key_data["columns"],
+                    "parent_table": key_data["references"]["table"],
+                    "parent_columns": key_data["references"]["columns"]
+                }
 
-    @staticmethod
-    def _merge_metadata(metadata, parent_metadata) -> Dict:
-        """
-        Merge the metadata contained the parent table and
-        the metadata contained the child table
-        """
-        merged_metadata = parent_metadata.copy()
-        merged_metadata.update(metadata)
-        return merged_metadata
-
-    def _validate_metadata(self, pk_table, fk_name, fk_config):
+    def _validate_metadata(self, table_name: str):
         """
         Validate the metadata
         """
-        pk_table_keys = self.merged_metadata[pk_table].get("keys", {})
-        for key, config in pk_table_keys.items():
-            if config["type"] in ["PK", "UQ"]:
-                if self.type_of_process == "train":
-                    return self._validate_pk_columns(pk_name=key, pk_config=config, fk_name=fk_name, fk_config=fk_config) \
-                        and self._check_existence_of_success_file(pk_table)
-
-                elif self.type_of_process == "infer":
-                    return self._validate_pk_columns(pk_name=key, pk_config=config, fk_name=fk_name, fk_config=fk_config) \
-                        and self._check_existence_of_success_file(pk_table) \
-                        and self._check_existence_of_generated_data(pk_table)
+        metadata_of_the_table = self.merged_metadata[table_name]
+        table_keys = metadata_of_the_table.get("keys", {})
+        print_report = metadata_of_the_table.get("train_settings", {}).get("print_report", False)
+        result = True
+        for key, config in table_keys.items():
+            if config["type"] == "FK":
+                parent_table = self.mapping[key]["parent_table"]
+                if parent_table not in self.metadata:
+                    if self.type_of_process == "infer" or (self.type_of_process == "train" and print_report is True):
+                        result = self._validate_referential_integrity(fk_name=key,
+                                                                      fk_config=config,
+                                                                      parent_config=self.merged_metadata[parent_table]) \
+                                 and self._check_existence_of_success_file(parent_table) \
+                                 and self._check_existence_of_generated_data(parent_table)
+                    elif self.type_of_process == "train":
+                        result = self._validate_referential_integrity(fk_name=key,
+                                                                      fk_config=config,
+                                                                      parent_config=self.merged_metadata[parent_table]) \
+                                 and self._check_existence_of_success_file(parent_table)
+                elif parent_table in self.metadata:
+                    result = self._validate_referential_integrity(fk_name=key,
+                                                                  fk_config=config,
+                                                                  parent_config=self.merged_metadata[parent_table])
             else:
                 continue
+        if result is False:
+            message = f"The validation of the metadata of the table - '{table_name}' failed"
+            logger.error(message)
+            raise ValidationError(message)
 
     @staticmethod
-    def _validate_pk_columns(pk_name, pk_config, fk_name, fk_config) -> bool:
+    def _validate_referential_integrity(fk_name: str, fk_config: Dict, parent_config: Dict) -> bool:
         """
-        Validate the primary key columns
+        Validate the equality of the number of columns in the primary key and the foreign key
         """
-        result = len(pk_config.get("columns", [])) == len(fk_config["references"]["columns"])
+        result = any([config["columns"] == fk_config["references"]["columns"]
+                      for config in parent_config.get("keys", {}).values()])
         if result is False:
             logger.error(
-                f"The number of columns in the primary key - \"{pk_name}\" "
-                f"and foreign key - \"{fk_name}\" is different")
+                f"The primary key columns associated with the columns of the foreign key - '{fk_name}' is not the same"
+            )
         return result
 
     @staticmethod
-    def _check_existence_of_success_file(pk_table: str) -> bool:
+    def _check_existence_of_success_file(parent_table: str) -> bool:
         """
-        Check if the success file of the certain table exists.
+        Check if the success file of the certain parent table exists.
         The success file is created after the successful execution of the training process of the certain table.
         """
-        path_to_success_file = os.path.exists(f"model_artifacts/resources/{slugify(pk_table)}/message.success")
+        path_to_success_file = os.path.exists(f"model_artifacts/resources/{slugify(parent_table)}/message.success")
         if os.path.exists(path_to_success_file):
             return True
-        logger.error(f"The table \"{pk_table}\" hasn't been trained completely. Please, retrain this table first")
-        return False
+        else:
+            logger.error(
+                f"The table - '{parent_table}' hasn't been trained completely. Please, retrain this table first"
+            )
+            return False
 
-    def _check_existence_of_generated_data(self, pk_table: str) -> bool:
-        destination = self.merged_metadata[pk_table].get("infer_settings", {}).get("destination")
+    def _check_existence_of_generated_data(self, parent_table: str) -> bool:
+        """
+        Check if the generated data of the certain parent table exists.
+        The generated data is created after the successful execution of the inference process of the certain table.
+        """
+        destination = self.merged_metadata[parent_table].get("infer_settings", {}).get("destination")
         if destination is None:
-            destination = f"model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
+            destination = f"model_artifacts/tmp_store/{slugify(parent_table)}/merged_infer_{slugify(parent_table)}.csv"
         if os.path.exists(destination):
             return True
+        logger.error(f"The generated data of the table - '{parent_table}' hasn't been generated. "
+                     f"Please, generate the data related to the table '{parent_table}' first")
         return False
 
-    @staticmethod
-    def _find_parent_metadata(parent_table) -> Dict:
+    def _merge_metadata(self):
         """
         Find the parent metadata contained the parent table
-        in the metadata files stored in 'model_artifacts/metadata' directory
+        in the metadata files stored in 'model_artifacts/metadata' directory,
+        and merge it with the metadata of the child table
         """
-        path_to_metadata_storage = "model_artifacts/metadata"
-        for file in os.listdir(path_to_metadata_storage):
-            metadata = MetadataLoader(os.path.join(path_to_metadata_storage, file)).load_data()
-            if parent_table not in metadata:
+        self.merged_metadata = self.metadata.copy()
+        for key_name, config in self.mapping.items():
+            parent_table = config.get("parent_table")
+            if parent_table in self.metadata:
                 continue
-            else:
-                metadata.pop("global", None)
-                return metadata
-        return {}
+            path_to_metadata_storage = "model_artifacts/metadata"
+            for file in os.listdir(path_to_metadata_storage):
+                metadata = MetadataLoader(os.path.join(path_to_metadata_storage, file)).load_data()
+                if parent_table not in metadata:
+                    continue
+                self.merged_metadata.update(metadata)
+                logger.info(f"The metadata located in the path - '{path_to_metadata_storage}' has been merged "
+                            f"with the current metadata as it contains the information of the parent table - "
+                            f"'{parent_table}'")
 
     def run(self):
         """
         Run the validation process
         """
-        parent_table = self._check_referential_integrity(metadata=self.metadata)
-        parent_metadata = self._find_parent_metadata(parent_table=parent_table)
-        self.merged_metadata = self._merge_metadata(metadata=self.metadata, parent_metadata=parent_metadata)
+        self._define_mapping()
+        self._merge_metadata()
         ValidationSchema(metadata=self.merged_metadata).validate_schema()
+        self.merged_metadata.pop("global", None)
+        self.metadata.pop("global", None)
+        for table_name in self.merged_metadata.keys():
+            self._validate_metadata(table_name)
+        logger.info("The validation of the metadata has been passed successfully")

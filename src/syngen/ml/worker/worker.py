@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
@@ -26,12 +26,19 @@ class Worker:
     train_strategy = TrainStrategy()
     infer_strategy = InferStrategy()
     metadata = None
-    divided = []
+    divided: List = field(default_factory=list)
+    merged_metadata: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self._fetch_metadata()
         self._update_metadata()
+        self._validate_metadata()
+
+    def _validate_metadata(self):
+        """
+        Validate the metadata, set the merged metadata
+        """
         validator = Validator(self.metadata, self.type_of_process)
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -62,10 +69,11 @@ class Worker:
         """
         global_train_settings = self.metadata.get("global", {}).get("train_settings", {})
         global_infer_settings = self.metadata.get("global", {}).get("infer_settings", {})
-        self.metadata.pop("global", None)
 
         for table, table_metadata in self.metadata.items():
-            if self.type_of_process == "train":
+            if table == "global":
+                continue
+            elif self.type_of_process == "train":
                 settings_key = "train_settings"
                 global_settings = global_train_settings
             elif self.type_of_process == "infer":
@@ -85,7 +93,7 @@ class Worker:
         if self.table_name:
             self._update_metadata_for_table()
 
-    def _fetch_metadata(self) -> Dict[str, str]:
+    def _fetch_metadata(self) -> Dict:
         """
         Fetch the metadata for training or infer process
         """
@@ -93,7 +101,7 @@ class Worker:
             metadata = MetadataLoader(self.metadata_path).load_data()
             return metadata
         if self.table_name:
-            source = self.settings.get("source")
+            source = self.settings.get("source", "absent")
             # Set a metadata for training or infer process if a metadata file wasn't provided
             metadata = {
                 self.table_name: {
@@ -157,11 +165,10 @@ class Worker:
             **{k: v for k, v in config_of_tables.items() if k not in self.metadata}
         }
         chain_of_tables = [
-            table for table in chain_of_tables
-            if f"{table}_pk" not in chain_of_tables
-               or f"{table}_fk" not in chain_of_tables
+            i for i in chain_of_tables
+            for j in self.metadata
+            if j in i
         ]
-
         return chain_of_tables, config_of_tables
 
     def _split_pk_fk_metadata(self, config, tables):
@@ -204,7 +211,7 @@ class Worker:
             logger.info(f"Training process of the table - {table} has started.")
 
             self.train_strategy.run(
-                metadata=self.merged_metadata,
+                metadata=config_of_metadata_for_training,
                 source=train_settings["source"],
                 epochs=train_settings["epochs"],
                 drop_null=train_settings["drop_null"],
@@ -222,7 +229,6 @@ class Worker:
                 for table, config in config_of_metadata_for_training.items()
             ]
         )
-        self.metadata = config_of_metadata_for_inference
         if generation_of_reports:
             for table in chain_for_tables_for_inference:
                 config_of_table = config_of_metadata_for_inference[table]
@@ -235,7 +241,7 @@ class Worker:
 
                 self.infer_strategy.run(
                     destination=None,
-                    metadata=self.metadata,
+                    metadata=config_of_metadata_for_inference,
                     size=None,
                     table_name=table,
                     metadata_path=self.metadata_path,
@@ -263,7 +269,7 @@ class Worker:
 
             self.infer_strategy.run(
                 destination=infer_settings.get("destination"),
-                metadata=self.metadata,
+                metadata=config_of_tables,
                 size=infer_settings["size"],
                 table_name=table,
                 metadata_path=self.metadata_path,

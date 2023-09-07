@@ -1,18 +1,23 @@
 from unittest.mock import patch
 
 from syngen.ml.worker import Worker
+from syngen.ml.config import Validator
 from syngen.ml.strategies.strategies import TrainStrategy, InferStrategy
 
 from tests.conftest import SUCCESSFUL_MESSAGE
 
 
-def test_init_worker_for_training_process_with_absent_metadata(rp_logger):
+@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_validate_referential_integrity")
+def test_init_worker_for_training_process_with_absent_metadata(mock_validate_referential_integrity,
+                                                               mock_check_existence_of_success_file,
+                                                               rp_logger):
     """
-    Test the initialization of 'Worker' class with absent metadata
-    during a training process
+    Test the initialization of 'Worker' class with the absent metadata
+    during the training process
     """
     rp_logger.info("Test the initialization of the instance of 'Worker' class "
-                   "with the absent metadata during a training process")
+                   "with the absent metadata during the training process")
     worker = Worker(
         table_name="test_table",
         metadata_path=None,
@@ -29,7 +34,7 @@ def test_init_worker_for_training_process_with_absent_metadata(rp_logger):
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
-    assert worker.metadata =={
+    assert worker.metadata == {
         "test_table": {
             "train_settings": {
                 "source": "path/to/source",
@@ -43,16 +48,38 @@ def test_init_worker_for_training_process_with_absent_metadata(rp_logger):
             "keys": {}
         }
     }
+    assert worker.merged_metadata == {
+        "test_table": {
+            "train_settings": {
+                "source": "path/to/source",
+                "batch_size": 1000,
+                "drop_null": True,
+                "epochs": 20,
+                "print_report": True,
+                "row_limit": 1000
+            },
+            "infer_settings": {},
+            "keys": {}
+        }
+    }
+    mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_init_worker_for_infer_process_with_absent_metadata(rp_logger):
+@patch.object(Validator, "_check_existence_of_generated_data")
+@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_validate_referential_integrity")
+def test_init_worker_for_infer_process_with_absent_metadata(mock_validate_referential_integrity,
+                                                            mock_check_existence_of_success_file,
+                                                            mock_check_existence_of_generated_data,
+                                                            rp_logger):
     """
-    Test the initialization of 'Worker' class with absent metadata
-    during an inference process
+    Test the initialization of 'Worker' class with the absent metadata
+    during the inference process
     """
     rp_logger.info("Test the initialization of the instance of 'Worker' class "
-                   "with the absent metadata during an inference process")
+                   "with the absent metadata during the inference process")
     worker = Worker(
         table_name="test_table",
         metadata_path=None,
@@ -71,7 +98,7 @@ def test_init_worker_for_infer_process_with_absent_metadata(rp_logger):
     assert worker.metadata =={
         "test_table": {
             "train_settings": {
-                "source": None
+                "source": "absent"
             },
             "infer_settings": {
                 "size": 100,
@@ -83,16 +110,40 @@ def test_init_worker_for_infer_process_with_absent_metadata(rp_logger):
             "keys": {}
         }
     }
+    assert worker.merged_metadata == {
+        "test_table": {
+            "train_settings": {
+                "source": "absent"
+            },
+            "infer_settings": {
+                "size": 100,
+                "run_parallel": False,
+                "batch_size": 100,
+                "print_report": False,
+                "random_seed": 1
+            },
+            "keys": {}
+        }
+    }
+    mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_success_file.assert_not_called()
+    mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_init_worker_with_metadata(rp_logger):
+@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_validate_referential_integrity")
+def test_init_worker_with_metadata(mock_validate_referential_integrity,
+                                   mock_check_existence_of_success_file,
+                                   rp_logger):
     """
-    Test the initialization of 'Worker' class with metadata
-    during a training process
+    Test the initialization of 'Worker' class with the metadata
+    contained the information of one table with only the primary key
+    during the training process
     """
     rp_logger.info("Test the initialization of the instance of 'Worker' class "
-                   "with provided metadata during a training process")
+                   "with provided metadata contained the information of one table"
+                   "with only the primary key during the training process")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
@@ -134,17 +185,49 @@ def test_init_worker_with_metadata(rp_logger):
             }
         }
     }
+    assert worker.merged_metadata == {
+        "test_table": {
+            "train_settings": {
+                "source": "./path/to/test_table.csv",
+                "epochs": 100,
+                "drop_null": False,
+                "print_report": False,
+                "row_limit": 800,
+                "batch_size": 2000
+            },
+            "infer_settings": {
+                "size": 200,
+                "run_parallel": True,
+                "random_seed": 2,
+                "print_report": True,
+                "batch_size": 200
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            }
+        }
+    }
+    mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_init_worker_with_empty_settings_in_metadata(rp_logger):
+@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_validate_referential_integrity")
+def test_init_worker_with_empty_settings_in_metadata(mock_validate_referential_integrity,
+                                                     mock_check_existence_of_success_file,
+                                                     rp_logger):
     """
-    Test the initialization during a training process
-    of 'Worker' class with metadata in which
-    training and inference settings are empty
+    Test the initialization during the training process
+    of 'Worker' class with metadata contained the information of one table
+    in which the training, inference, keys settings are empty
     """
     rp_logger.info("Test the initialization of the instance of 'Worker' class with provided metadata "
-                   "in which 'infer_settings', 'keys' are empty during a training process")
+                   "contained the information of one table in which 'train_settings', 'infer_settings', and "
+                   "'keys' are empty during the training process")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata_with_empty_settings.yaml",
@@ -172,24 +255,36 @@ def test_init_worker_with_empty_settings_in_metadata(rp_logger):
                 "batch_size": 1000
             },
             "infer_settings": {},
-            "keys": {
-                "pk_id": {
-                    "columns": ["Id"],
-                    "type": "PK"
-                }
+            "keys": {}
             }
         }
-    }
+    assert worker.merged_metadata == {
+        "test_table": {
+            "train_settings": {
+                "source": "./path/to/test_table.csv",
+                "epochs": 20,
+                "drop_null": True,
+                "print_report": True,
+                "row_limit": 1000,
+                "batch_size": 1000
+            },
+            "infer_settings": {},
+            "keys": {}
+            }
+        }
+    mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
+@patch.object(Validator, "_validate_referential_integrity", return_value=True)
+def test_init_worker_for_training_with_metadata_with_global_settings(mock_validate_referential_integrity, rp_logger):
     """
-    Test the initialization of 'Worker' class during a training process
-    with metadata contained global settings
+    Test the initialization of 'Worker' class during the training process
+    with the metadata contained related tables and global settings
     """
-    rp_logger.info("Test the initialization of the instance of 'Worker' class during training process"
-                   "with provided metadata contained global settings")
+    rp_logger.info("Test the initialization of the instance of 'Worker' class during the training process"
+                   "with provided metadata contained related tables and global settings")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
@@ -248,16 +343,60 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
             "infer_settings": {}
         }
     }
+    assert worker.merged_metadata == {
+        "pk_test": {
+            "train_settings": {
+                "source": "./path/to/pk_test.csv",
+                "row_limit": 800,
+                "epochs": 5,
+                "drop_null": True,
+                "batch_size": 1000,
+                "print_report": True
+            },
+            "infer_settings": {
+                "print_report": False
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            }
+        },
+        "fk_test": {
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["Id"],
+                    "references": {
+                        "table": "pk_test",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "train_settings": {
+                "source": "./path/to/fk_test.csv",
+                "epochs": 5,
+                "drop_null": True,
+                "row_limit": 500,
+                "batch_size": 1000,
+                "print_report": True
+            },
+            "infer_settings": {}
+        }
+    }
+    mock_validate_referential_integrity.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger):
+@patch.object(Validator, "_validate_referential_integrity", return_value=True)
+def test_init_worker_for_inference_with_metadata_with_global_settings(mock_validate_referential_integrity, rp_logger):
     """
     Test the initialization of 'Worker' class during an inference process
-    with metadata contained global settings
+    with metadata contained the information of related tables with the global settings
     """
-    rp_logger.info("Test the initialization of the instance of 'Worker' class during inference process"
-                   "with provided metadata contained global settings")
+    rp_logger.info("Test the initialization of the instance of 'Worker' class during the inference process"
+                   "with provided metadata contained the information of related tables with global settings")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
@@ -316,17 +455,68 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
             }
         }
     }
+    assert worker.merged_metadata == {
+        "pk_test": {
+            "train_settings": {
+                "source": "./path/to/pk_test.csv",
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "print_report": False,
+                "size": 1000,
+                "run_parallel": True,
+                "batch_size": 200,
+                "random_seed": 5
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            }
+        },
+        "fk_test": {
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["Id"],
+                    "references": {
+                        "table": "pk_test",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "train_settings": {
+                "source": "./path/to/fk_test.csv"
+            },
+            "infer_settings": {
+                "size": 1000,
+                "run_parallel": True,
+                "print_report": True,
+                "batch_size": 200,
+                "random_seed": 5
+            }
+        }
+    }
+    mock_validate_referential_integrity.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp_logger):
+def test_launch_train_with_metadata(mock_train_tables,
+                                    mock_generate_reports,
+                                    mock_validate_referential_integrity,
+                                    rp_logger):
     """
-    Test that 'launch_train' method calls all necessary methods in case the metadata file was provided
+    Test that 'launch_train' method calls all necessary methods
+    in case the metadata file contained the information of one table
+    with only the primary key was provided
     """
     rp_logger.info("Test that 'launch_train' method calls all necessary methods "
-                   "in case the metadata file was provided")
+                   "in case the metadata file contained the information of one table "
+                   "with only the primary key was provided")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
@@ -380,7 +570,7 @@ def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp
                      "row_limit": 800,
                      "batch_size": 2000
                  },
-                'infer_settings': {
+                "infer_settings": {
                     "size": 200,
                     "run_parallel": True,
                     "random_seed": 2,
@@ -397,13 +587,18 @@ def test_launch_train_with_metadata(mock_train_tables, mock_generate_reports, rp
          }
          )
     )
+    mock_validate_referential_integrity.assert_not_called()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_generate_reports, rp_logger):
+def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
+                                                      mock_generate_reports,
+                                                      mock_validate_referential_integrity,
+                                                      rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
     in case the metadata file of related tables was provided
@@ -529,151 +724,24 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_ge
             }
         )
     )
+    mock_validate_referential_integrity.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_with_metadata_of_related_tables(mock_train_tables, mock_generate_reports, rp_logger):
+def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_tables,
+                                                                     mock_generate_reports,
+                                                                     mock_validate_referential_integrity,
+                                                                     rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
-    in case the metadata file of related tables was provided
+    by providing the metadata file of related tables in which the table contains several different keys
     """
-    rp_logger.info("Test that 'launch_train' method calls all necessary methods in case "
-                   "the metadata file of related tables was provided")
-    worker = Worker(
-        table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables.yaml",
-        settings={
-            "source": None,
-            "epochs": 20,
-            "drop_null": True,
-            "row_limit": 1000,
-            "batch_size": 1000,
-            "print_report": True
-        },
-        log_level="INFO",
-        type_of_process="train"
-    )
-    worker.launch_train()
-    mock_train_tables.assert_called_once_with(
-        (
-            ["pk_test", "fk_test"],
-            {
-                "pk_test": {
-                    "train_settings": {
-                        "source": "./path/to/pk_test.csv",
-                        "epochs": 1,
-                        "drop_null": False,
-                        "row_limit": 800,
-                        "batch_size": 1000,
-                        "print_report": True
-                    },
-                    "infer_settings": {
-                        "size": 200,
-                        "run_parallel": True,
-                        "print_report": True
-                    },
-                    "keys": {
-                        "pk_id": {
-                            "type": "PK",
-                            "columns": ["Id"]
-                        }
-                    }
-                },
-                "fk_test": {
-                    "train_settings": {
-                        "source": "./path/to/fk_test.csv",
-                        "epochs": 5,
-                        "drop_null": True,
-                        "print_report": True,
-                        "row_limit": 600,
-                        "batch_size": 1000
-                    },
-                    "infer_settings": {
-                        "size": 90,
-                        "run_parallel": True,
-                        "random_seed": 2,
-                        "print_report": False
-                    },
-                    "keys": {
-                        "fk_id": {
-                            "type": "FK",
-                            "columns":["Id"],
-                            "references": {
-                                "table": "pk_test",
-                                "columns": ["Id"]}
-                        }
-                    }
-                }
-            }
-        ),
-        (
-            ["pk_test", "fk_test"],
-            {
-                "pk_test": {
-                    "train_settings": {
-                        "source": "./path/to/pk_test.csv",
-                        "epochs": 1,
-                        "drop_null": False,
-                        "row_limit": 800,
-                        "batch_size": 1000,
-                        "print_report": True
-                    },
-                    "infer_settings":
-                        {
-                            "size": 200,
-                            "run_parallel": True,
-                            "print_report": True
-                        },
-                    "keys": {
-                        "pk_id": {
-                            "type": "PK",
-                            "columns": ["Id"]}
-                    }
-                },
-                "fk_test": {
-                    "train_settings": {
-                        "source": "./path/to/fk_test.csv",
-                        "epochs": 5,
-                        "drop_null": True,
-                        "print_report": True,
-                        "row_limit": 600,
-                        "batch_size": 1000
-                    },
-                    "infer_settings": {
-                        "size": 90,
-                        "run_parallel": True,
-                        "random_seed": 2,
-                        "print_report": False
-                    },
-                    "keys": {
-                        "fk_id": {
-                            "type": "FK",
-                            "columns": ["Id"],
-                            "references": {
-                                "table": "pk_test",
-                                "columns": ["Id"]}
-                        }
-                    }
-                }
-            }
-        )
-    )
-    mock_generate_reports.assert_called_once()
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch.object(Worker, "_generate_reports", return_value=None)
-@patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_tables, mock_generate_reports, rp_logger):
-    """
-    Test that 'launch_train' method calls all necessary methods
-    in case the metadata file of related tables in which the table might contain several different keys was provided
-    """
-    rp_logger.info("Test that 'launch_train' method calls all necessary methods in case "
-                   "the metadata file of related tables was provided")
+    rp_logger.info("Test that 'launch_train' method calls all necessary methods by providing "
+                   "the metadata file of related tables in which the table contains several different keys")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
@@ -689,120 +757,148 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
         type_of_process="train"
     )
     worker.launch_train()
-    mock_train_tables.assert_called_once_with(
-        (
-            ["tdm_models", "tdm_clusters"],
-            {
-                "tdm_models": {
-                    "keys": {
-                        "tdm_models_pkey": {
-                            "type": "PK",
-                            "columns": ["id"]
-                        },
-                        "tdm_models_fkey": {
-                            "type": "FK",
-                            "columns": ["cluster_id"],
-                            "references": {
-                                "table": "tdm_clusters",
-                                "columns": ["id"]
-                            }
-                        }
-                    },
-                    "train_settings": {
-                        "source": "./path/to/tdm_models.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True
-                    },
-                    "infer_settings": {}
+    mock_train_tables.assert_called_once_with((
+        ["tdm_models", "tdm_clusters"],
+        {
+            "tdm_models": {
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
                 },
-                "tdm_clusters": {
-                    "keys": {
-                        "tdm_clusters_pkey": {
-                            "type": "PK",
+                "keys": {
+                    "tdm_models_pkey": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    },
+                    "tdm_models_fkey": {
+                        "type": "FK",
+                        "columns": ["cluster_id"],
+                        "references": {
+                            "table": "tdm_clusters",
                             "columns": ["id"]
                         }
-                    },
-                    "train_settings": {
-                        "source": "./path/to/tdm_clusters.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True
-                    },
-                    "infer_settings": {}
-                }
+                    }
+                },
+                "infer_settings": {}
+            },
+            "tdm_clusters": {
+                "train_settings": {
+                    "source": "./path/to/tdm_clusters.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "keys": {
+                    "tdm_clusters_pkey": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    }
+                },
+                "infer_settings": {}
             }
-        ),
-        (
-            ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
-            {
-                "tdm_clusters": {
-                    "keys": {
-                        "tdm_clusters_pkey": {
-                            "type": "PK",
-                            "columns": ["id"]}
-                    },
-                    "train_settings": {
-                        "source": "./path/to/tdm_clusters.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True
-                    },
-                    "infer_settings": {}
-                },
-                "tdm_models_pk": {
-                    "keys": {
-                        "tdm_models_pkey": {
-                            "type": "PK",
-                            "columns": ["id"]
-                        }
-                    },
-                    "train_settings": {
-                        "source": "./path/to/tdm_models.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True
-                    },
-                    "infer_settings": {}
-                },
-                "tdm_models_fk": {
-                    "keys": {
-                        "tdm_models_fkey": {
-                            "type": "FK",
-                            "columns": ["cluster_id"],
-                            "references": {
-                                "table": "tdm_clusters",
-                                "columns": ["id"]}
-                        }
-                    },
-                    "train_settings": {
-                        "source": "./path/to/tdm_models.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True
-                    },
-                    "infer_settings": {}
-                }
-            }
-        )
-    )
+        }),
+        (["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
+         {
+             "tdm_models": {
+                 "train_settings": {
+                     "source": "./path/to/tdm_models.csv",
+                     "epochs": 20,
+                     "drop_null": True,
+                     "row_limit": 1000,
+                     "batch_size": 1000,
+                     "print_report": True
+                 },
+                 "keys": {
+                     "tdm_models_pkey": {
+                         "type": "PK",
+                         "columns": ["id"]
+                     },
+                     "tdm_models_fkey": {
+                         "type": "FK",
+                         "columns": ["cluster_id"],
+                         "references": {
+                             "table": "tdm_clusters",
+                             "columns": ["id"]
+                         }
+                     }
+                 },
+                 "infer_settings": {}
+             },
+             "tdm_clusters": {
+                 "train_settings": {
+                     "source": "./path/to/tdm_clusters.csv",
+                     "epochs": 20,
+                     "drop_null": True,
+                     "row_limit": 1000,
+                     "batch_size": 1000,
+                     "print_report": True
+                 },
+                 "keys": {
+                     "tdm_clusters_pkey": {
+                         "type": "PK",
+                         "columns": ["id"]
+                     }
+                 },
+                 "infer_settings": {}
+             },
+             "tdm_models_pk": {
+                 "train_settings": {
+                     "source": "./path/to/tdm_models.csv",
+                     "epochs": 20,
+                     "drop_null": True,
+                     "row_limit": 1000,
+                     "batch_size": 1000,
+                     "print_report": True
+                 },
+                 "keys": {
+                     "tdm_models_pkey": {
+                         "type": "PK",
+                         "columns": ["id"]
+                     }
+                 },
+                 "infer_settings": {}
+             },
+             "tdm_models_fk": {
+                 "train_settings": {
+                     "source": "./path/to/tdm_models.csv",
+                     "epochs": 20,
+                     "drop_null": True,
+                     "row_limit": 1000,
+                     "batch_size": 1000,
+                     "print_report": True
+                 },
+                 "keys": {
+                     "tdm_models_fkey": {
+                         "type": "FK",
+                         "columns": ["cluster_id"],
+                         "references": {
+                             "table": "tdm_clusters",
+                             "columns": ["id"]
+                         }
+                     }
+                 },
+                 "infer_settings": {}
+             }
+         }
+         ))
+    mock_validate_referential_integrity.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports, rp_logger):
+def test_launch_train_without_metadata(mock_train_tables,
+                                       mock_generate_reports,
+                                       mock_validate_referential_integrity,
+                                       rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
     in case the metadata file wasn't provided and training process was launched through CLI
@@ -813,7 +909,7 @@ def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports,
         table_name="test_table",
         metadata_path=None,
         settings={
-            "source": None,
+            "source": "./path/to/source",
             "epochs": 20,
             "drop_null": True,
             "row_limit": 1000,
@@ -829,7 +925,7 @@ def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports,
         {
             "test_table": {
                 "train_settings": {
-                    "source": None,
+                    "source": "./path/to/source",
                     "epochs": 20,
                     "drop_null": True,
                     "row_limit": 1000,
@@ -844,7 +940,7 @@ def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports,
          {
              "test_table": {
                  "train_settings": {
-                     "source": None,
+                     "source": "./path/to/source",
                      "epochs": 20,
                      "drop_null": True,
                      "row_limit": 1000,
@@ -856,19 +952,25 @@ def test_launch_train_without_metadata(mock_train_tables, mock_generate_reports,
              }
          })
     )
+    mock_validate_referential_integrity.assert_not_called()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_with_metadata_contained_global_settings(mock_train_tables, mock_generate_reports, rp_logger):
+def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
+                                                              mock_generate_reports,
+                                                              mock_validate_referential_integrity,
+                                                              rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
-    in case the metadata file was provided, and it contains global settings
+    in case the metadata file of related tables was provided, and it contains global settings
     """
     rp_logger.info("Test that 'launch_train' method calls all necessary methods "
-                   "in case the metadata file was provided, and it contains global settings")
+                   "in case the metadata file of related tables was provided, "
+                   "and it contains global settings")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
@@ -909,8 +1011,8 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
              "fk_test": {
                  "keys": {
                      "fk_id": {
-                         "type": 'FK',
-                         "columns": ['Id'],
+                         "type": "FK",
+                         "columns": ["Id"],
                          "references": {
                              "table": "pk_test",
                              "columns": ["Id"]
@@ -974,17 +1076,24 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
          }
          )
     )
+    mock_validate_referential_integrity.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata(mock_infer_tables, mock_generate_reports, rp_logger):
+def test_launch_infer_with_metadata(mock_infer_tables,
+                                    mock_generate_reports,
+                                    mock_validate_referential_integrity,
+                                    rp_logger):
     """
-    Test that 'launch_infer' method calls all necessary methods in case the metadata file was provided
+    Test that 'launch_infer' method calls all necessary methods
+    in case the metadata file of one table with only the primary key was provided
     """
-    rp_logger.info("Test that 'launch_infer' method calls all necessary methods in case the metadata file was provided")
+    rp_logger.info("Test that 'launch_infer' method calls all necessary methods "
+                   "in case the metadata file of one table with only the primary key was provided")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
@@ -1026,13 +1135,18 @@ def test_launch_infer_with_metadata(mock_infer_tables, mock_generate_reports, rp
             }
         }
     )
+    mock_validate_referential_integrity.assert_not_called()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables, mock_generate_reports, rp_logger):
+def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
+                                                      mock_generate_reports,
+                                                      mock_validate_referential_integrity,
+                                                      rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
     in case the metadata file of related tables was provided
@@ -1105,18 +1219,23 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables, mock_ge
         }
     )
     mock_generate_reports.assert_called_once()
+    mock_validate_referential_integrity.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_tables, mock_generate_reports, rp_logger):
+def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_tables, mock_generate_reports,
+                                                                     mock_validate_referential_integrity,
+                                                                     rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
-    in case the metadata file of related tables in which the table might contain several different keys was provided
+    by providing the metadata file of related tables in which
+    the table contains several different keys was provided
     """
-    rp_logger.info("Test that 'launch_infer' method calls all necessary methods in case "
-                   "the metadata file of related tables was provided")
+    rp_logger.info("Test that 'launch_infer' method calls all necessary methods by providing the metadata file "
+                   "of related tables in which the table contains several different keys was provided")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
@@ -1134,15 +1253,41 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
     mock_infer_tables.assert_called_once_with(
         ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
         {
+            "tdm_models": {
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv"
+                },
+                "keys": {
+                    "tdm_models_pkey": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    },
+                    "tdm_models_fkey": {
+                        "type": "FK",
+                        "columns": ["cluster_id"],
+                        "references": {
+                            "table": "tdm_clusters",
+                            "columns": ["id"]
+                        }
+                    }
+                },
+                "infer_settings": {
+                    "size": 300,
+                    "run_parallel": True,
+                    "print_report": True,
+                    "batch_size": 200,
+                    "random_seed": 1
+                }
+            },
             "tdm_clusters": {
+                "train_settings": {
+                    "source": "./path/to/tdm_clusters.csv"
+                },
                 "keys": {
                     "tdm_clusters_pkey": {
                         "type": "PK",
                         "columns": ["id"]
                     }
-                },
-                "train_settings": {
-                    "source": "./path/to/tdm_clusters.csv"
                 },
                 "infer_settings": {
                     "size": 300,
@@ -1153,14 +1298,14 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
                 }
             },
             "tdm_models_pk": {
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv"
+                },
                 "keys": {
                     "tdm_models_pkey": {
                         "type": "PK",
                         "columns": ["id"]
                     }
-                },
-                "train_settings": {
-                    "source": "./path/to/tdm_models.csv"
                 },
                 "infer_settings": {
                     "size": 300,
@@ -1171,17 +1316,18 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
                 }
             },
             "tdm_models_fk": {
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv"
+                },
                 "keys": {
                     "tdm_models_fkey": {
                         "type": "FK",
                         "columns": ["cluster_id"],
                         "references": {
                             "table": "tdm_clusters",
-                            "columns": ["id"]}
+                            "columns": ["id"]
+                        }
                     }
-                },
-                "train_settings": {
-                    "source": "./path/to/tdm_models.csv"
                 },
                 "infer_settings": {
                     "size": 300,
@@ -1193,19 +1339,24 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
             }
         }
     )
+    mock_validate_referential_integrity.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_without_metadata(mock_infer_tables, mock_generate_reports, rp_logger):
+def test_launch_infer_without_metadata(mock_infer_tables,
+                                       mock_generate_reports,
+                                       mock_validate_referential_integrity,
+                                       rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
-    in case the metadata file wasn't provided and inference process was launched through CLI
+    in case the metadata file wasn't provided and the inference process was launched through CLI
     """
     rp_logger.info("Test that 'launch_infer' method calls all necessary methods "
-                   "in case the metadata file wasn't provided and inference process was launched through CLI")
+                   "in case the metadata file wasn't provided and the inference process was launched through CLI")
     worker = Worker(
         table_name="test_table",
         metadata_path=None,
@@ -1225,7 +1376,7 @@ def test_launch_infer_without_metadata(mock_infer_tables, mock_generate_reports,
         {
             "test_table": {
                 "train_settings": {
-                    "source": None
+                    "source": "absent"
                 },
                 "infer_settings": {
                     "size": 200,
@@ -1238,19 +1389,24 @@ def test_launch_infer_without_metadata(mock_infer_tables, mock_generate_reports,
             }
         }
     )
+    mock_validate_referential_integrity.assert_not_called()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables, mock_generate_reports, rp_logger):
+def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables, mock_generate_reports,
+                                                              mock_validate_referential_integrity,
+                                                              rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
-    in case the metadata file was provided, and it contains global settings
+    in case the metadata file of related tables was provided, and it contains global settings
     """
     rp_logger.info("Test that 'launch_infer' method calls all necessary methods "
-                   "in case the metadata file was provided, and it contains global settings")
+                   "in case the metadata file of related tables was provided, "
+                   "and it contains global settings")
     worker = Worker(
         table_name=None,
         metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
@@ -1265,6 +1421,7 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
         type_of_process="infer"
     )
     worker.launch_infer()
+    mock_validate_referential_integrity.assert_called_once()
     mock_infer_tables.assert_called_once_with(
         ["pk_test", "fk_test"],
         {
