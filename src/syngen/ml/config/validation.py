@@ -22,8 +22,8 @@ class Validator:
 
     def _define_mapping(self):
         """
-        Define the mapping for the child tables
-        contained the information of the parent table
+        Define the mapping contained the information of the foreign keys
+        defined in the metadata
         """
         for table_name, table_metadata in self.metadata.items():
             if table_name == "global":
@@ -51,24 +51,22 @@ class Validator:
         print_report = metadata_of_the_table.get("train_settings", {}).get("print_report", False)
         result = True
         for key, config in table_keys.items():
-            if config["type"] == "FK":
-                parent_table = self.mapping[key]["parent_table"]
-                if parent_table not in self.metadata:
-                    if self.type_of_process == "infer" or (self.type_of_process == "train" and print_report is True):
-                        result = self._validate_referential_integrity(fk_name=key,
-                                                                      fk_config=config,
-                                                                      parent_config=self.merged_metadata[parent_table]) \
-                                 and self._check_existence_of_success_file(parent_table) \
-                                 and self._check_existence_of_generated_data(parent_table)
-                    elif self.type_of_process == "train":
-                        result = self._validate_referential_integrity(fk_name=key,
-                                                                      fk_config=config,
-                                                                      parent_config=self.merged_metadata[parent_table]) \
-                                 and self._check_existence_of_success_file(parent_table)
-                elif parent_table in self.metadata:
-                    result = self._validate_referential_integrity(fk_name=key,
-                                                                  fk_config=config,
-                                                                  parent_config=self.merged_metadata[parent_table])
+            if config["type"] != "FK":
+                continue
+            check_referential_integrity = self._validate_referential_integrity(
+                fk_name=key, fk_config=config, parent_config=self.merged_metadata[self.mapping[key]["parent_table"]]
+            )
+            parent_table = self.mapping[key]["parent_table"]
+            if parent_table in self.metadata:
+                result = check_referential_integrity
+            elif parent_table not in self.metadata:
+                if self.type_of_process == "infer" or (self.type_of_process == "train" and print_report is True):
+                    result = check_referential_integrity \
+                             and self._check_existence_of_success_file(parent_table) \
+                             and self._check_existence_of_generated_data(parent_table)
+                elif self.type_of_process == "train":
+                    result = check_referential_integrity \
+                             and self._check_existence_of_success_file(parent_table)
             else:
                 continue
         if result is False:
