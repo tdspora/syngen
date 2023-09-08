@@ -8,8 +8,10 @@ from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity")
 def test_init_worker_for_training_process_with_absent_metadata(mock_validate_referential_integrity,
+                                                               mock_check_existence_of_source,
                                                                mock_check_existence_of_success_file,
                                                                rp_logger):
     """
@@ -63,16 +65,19 @@ def test_init_worker_for_training_process_with_absent_metadata(mock_validate_ref
         }
     }
     mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_source.assert_called()
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_destination", return_value=True)
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 def test_init_worker_for_infer_process_with_absent_metadata(mock_validate_referential_integrity,
                                                             mock_check_existence_of_success_file,
                                                             mock_check_existence_of_generated_data,
+                                                            mock_existence_of_destination,
                                                             rp_logger):
     """
     Test the initialization of 'Worker' class with the absent metadata
@@ -127,14 +132,17 @@ def test_init_worker_for_infer_process_with_absent_metadata(mock_validate_refere
     }
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
+    mock_existence_of_destination.assert_called()
     mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 def test_init_worker_with_metadata(mock_validate_referential_integrity,
                                    mock_check_existence_of_success_file,
+                                   mock_check_existence_of_source,
                                    rp_logger):
     """
     Test the initialization of 'Worker' class with the metadata
@@ -212,13 +220,16 @@ def test_init_worker_with_metadata(mock_validate_referential_integrity,
     }
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
+    mock_check_existence_of_source.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 def test_init_worker_with_empty_settings_in_metadata(mock_validate_referential_integrity,
                                                      mock_check_existence_of_success_file,
+                                                     mock_check_existence_of_source,
                                                      rp_logger):
     """
     Test the initialization during the training process
@@ -273,12 +284,16 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validate_referential_i
             }
         }
     mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_source.assert_called_once()
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity", return_value=True)
-def test_init_worker_for_training_with_metadata_with_global_settings(mock_validate_referential_integrity, rp_logger):
+def test_init_worker_for_training_with_metadata_with_global_settings(mock_validate_referential_integrity,
+                                                                     mock_check_existence_of_source,
+                                                                     rp_logger):
     """
     Test the initialization of 'Worker' class during the training process
     with the metadata contained related tables and global settings
@@ -386,11 +401,15 @@ def test_init_worker_for_training_with_metadata_with_global_settings(mock_valida
         }
     }
     mock_validate_referential_integrity.assert_called_once()
+    assert mock_check_existence_of_source.call_count == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_destination", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity", return_value=True)
-def test_init_worker_for_inference_with_metadata_with_global_settings(mock_validate_referential_integrity, rp_logger):
+def test_init_worker_for_inference_with_metadata_with_global_settings(mock_validate_referential_integrity,
+                                                                      mock_check_existence_of_destination,
+                                                                      rp_logger):
     """
     Test the initialization of 'Worker' class during an inference process
     with metadata contained the information of related tables with the global settings
@@ -499,15 +518,18 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(mock_valid
         }
     }
     mock_validate_referential_integrity.assert_called_once()
+    assert mock_check_existence_of_destination.call_count == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata(mock_train_tables,
                                     mock_generate_reports,
                                     mock_validate_referential_integrity,
+                                    mock_check_existence_of_source,
                                     rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -588,16 +610,19 @@ def test_launch_train_with_metadata(mock_train_tables,
          )
     )
     mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_source.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
                                                       mock_generate_reports,
                                                       mock_validate_referential_integrity,
+                                                      mock_check_existence_of_source,
                                                       rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -725,16 +750,19 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
         )
     )
     mock_validate_referential_integrity.assert_called_once()
+    assert mock_check_existence_of_source.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_tables,
                                                                      mock_generate_reports,
                                                                      mock_validate_referential_integrity,
+                                                                     mock_check_existence_of_source,
                                                                      rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -888,16 +916,19 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
          }
          ))
     mock_validate_referential_integrity.assert_called_once()
+    assert mock_check_existence_of_source.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_without_metadata(mock_train_tables,
                                        mock_generate_reports,
                                        mock_validate_referential_integrity,
+                                       mock_check_existence_of_source,
                                        rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -953,16 +984,19 @@ def test_launch_train_without_metadata(mock_train_tables,
          })
     )
     mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_source.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
                                                               mock_generate_reports,
                                                               mock_validate_referential_integrity,
+                                                              mock_check_existence_of_source,
                                                               rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -1077,16 +1111,19 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
          )
     )
     mock_validate_referential_integrity.assert_called_once()
+    assert mock_check_existence_of_source.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_destination", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata(mock_infer_tables,
                                     mock_generate_reports,
                                     mock_validate_referential_integrity,
+                                    mock_check_existence_of_destination,
                                     rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1136,16 +1173,19 @@ def test_launch_infer_with_metadata(mock_infer_tables,
         }
     )
     mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_destination.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_destination", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
                                                       mock_generate_reports,
                                                       mock_validate_referential_integrity,
+                                                      mock_check_existence_of_destination,
                                                       rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1220,14 +1260,17 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
     )
     mock_generate_reports.assert_called_once()
     mock_validate_referential_integrity.assert_called_once()
+    assert mock_check_existence_of_destination.call_count == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_destination", return_value=True)
 @patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_tables, mock_generate_reports,
                                                                      mock_validate_referential_integrity,
+                                                                     mock_check_existence_of_destination,
                                                                      rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1340,16 +1383,19 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
         }
     )
     mock_validate_referential_integrity.assert_called_once()
+    assert mock_check_existence_of_destination.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_without_metadata(mock_infer_tables,
                                        mock_generate_reports,
                                        mock_validate_referential_integrity,
+                                       mock_check_existence_of_destination,
                                        rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1390,15 +1436,18 @@ def test_launch_infer_without_metadata(mock_infer_tables,
         }
     )
     mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_destination.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables, mock_generate_reports,
                                                               mock_validate_referential_integrity,
+                                                              mock_check_existence_of_destination,
                                                               rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1422,6 +1471,7 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
     )
     worker.launch_infer()
     mock_validate_referential_integrity.assert_called_once()
+    assert mock_check_existence_of_destination.call_count == 2
     mock_infer_tables.assert_called_once_with(
         ["pk_test", "fk_test"],
         {
