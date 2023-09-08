@@ -74,14 +74,14 @@ class Validator:
         the referenced columns of the foreign key
         """
         result = any([config["columns"] == fk_config["references"]["columns"]
-                      for config in parent_config.get("keys", {}).values()])
+                      for config in parent_config.get("keys", {}).values()
+                      if config["type"] in ["PK", "UK"]])
         if result is False:
             message = f"The primary key columns associated with the columns of " \
                       f"the foreign key - '{fk_name}' is not the same"
-            logger.error(message)
             self.errors["validate referential integrity"][fk_name] = message
 
-    def _check_existence_of_success_file(self, parent_table: str) -> bool:
+    def _check_existence_of_success_file(self, parent_table: str):
         """
         Check if the success file of the certain parent table exists.
         The success file is created after the successful execution of the training process of the certain table.
@@ -89,9 +89,7 @@ class Validator:
         path_to_success_file = os.path.exists(f"model_artifacts/resources/{slugify(parent_table)}/message.success")
         if not os.path.exists(path_to_success_file):
             message = f"The table - '{parent_table}' hasn't been trained completely. Please, retrain this table first"
-            logger.error(message)
             self.errors["check existence of the success file"][parent_table] = message
-            return False
 
     def _check_existence_of_generated_data(self, parent_table: str):
         """
@@ -104,7 +102,6 @@ class Validator:
         if not os.path.exists(destination):
             message = f"The generated data of the table - '{parent_table}' hasn't been generated. " \
                       f"Please, generate the data related to the table '{parent_table}' first"
-            logger.error(message)
             self.errors["check existence of the generated data"][parent_table] = message
 
     def _check_existence_of_source(self, table_name: str):
@@ -112,9 +109,8 @@ class Validator:
         Check if the source of the certain table exists
         """
         if not os.path.exists(self.merged_metadata[table_name]["train_settings"]["source"]):
-            message = f"It seems that the path to the source of the table - '{table_name}' aren't correct. " \
+            message = f"It seems that the path to the source of the table - '{table_name}' isn't correct. " \
                       f"Please, check the path to the source of the table - '{table_name}'"
-            logger.error(message)
             self.errors["check existence of the source"][table_name] = message
 
     def _check_existence_of_destination(self, table_name: str):
@@ -125,7 +121,6 @@ class Validator:
         if destination is not None and not os.path.exists(os.path.dirname(destination)):
             message = f"It seems that the directory path for storing the generated data of table '{table_name}' " \
                       f"isn't correct. Please, verify the destination path"
-            logger.error(message)
             self.errors["check existence of the destination"][table_name] = message
 
     def _merge_metadata(self):
@@ -164,14 +159,13 @@ class Validator:
             elif self.type_of_process == "infer":
                 self._check_existence_of_destination(table_name)
             self._validate_metadata(table_name)
+        error_logs = []
+        for section, errors_details in self.errors.items():
+            error_log = f"\"{section}\": {json.dumps(errors_details, indent=4)}"
+            error_logs.append(error_log)
         if self.errors:
-            message = f"The validation of the metadata has been failed."
-            section = str()
-            errors_details = dict()
-            for section, errors_details in self.errors.items():
-                logger.error(f"The error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}")
-            if self.errors:
-                raise ValidationError(
-                    f"{message}\nThe error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}"
-                )
+            message = f"The validation of the metadata has been failed. " \
+                      f"The error(s) found in - \n{', '.join(error_logs)}"
+            logger.error(message)
+            raise ValidationError(message)
         logger.info("The validation of the metadata has been passed successfully")
