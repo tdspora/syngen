@@ -124,6 +124,7 @@ class ConfigurationSchema(Schema):
 @dataclass
 class ValidationSchema:
     metadata: Dict
+    metadata_path: str
     global_schema = GlobalSettingsSchema()
     configuration_schema = ConfigurationSchema()
 
@@ -141,10 +142,11 @@ class ValidationSchema:
             except ValidationError as err:
                 errors[table_name] = err.messages
         if errors:
-            message = "Validation error(s) found in the schema of the metadata file"
+            message = f"Validation error(s) found in the schema of the metadata file " \
+                      f"located at the path - '{self.metadata_path}'"
             logger.error(message)
             for section, errors_details in errors.items():
                 logger.error(f"The error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}")
             raise ValidationError(f"{message}. The details are - {errors}")
         if not errors:
-            logger.info("The schema of the metadata file is valid")
+            logger.debug(f"The schema of the metadata file located at the path - '{self.metadata_path}' is valid")

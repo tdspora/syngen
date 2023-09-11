@@ -18,6 +18,7 @@ class Validator:
     Class for validating the metadata
     """
     metadata: Dict
+    metadata_path: str
     type_of_process: str
     merged_metadata: Dict = field(default_factory=dict)
     mapping: Dict = field(default_factory=dict)
@@ -136,9 +137,11 @@ class Validator:
                 continue
             path_to_metadata_storage = "model_artifacts/metadata"
             for file in os.listdir(path_to_metadata_storage):
-                metadata = MetadataLoader(os.path.join(path_to_metadata_storage, file)).load_data()
+                path_to_metadata_file = os.path.join(path_to_metadata_storage, file)
+                metadata = MetadataLoader(path_to_metadata_file).load_data()
                 if parent_table not in metadata:
                     continue
+                ValidationSchema(metadata=metadata, metadata_path=path_to_metadata_file).validate_schema()
                 self.merged_metadata.update(metadata)
                 logger.info(f"The metadata located in the path - '{path_to_metadata_storage}' has been merged "
                             f"with the current metadata as it contains the information of the parent table - "
@@ -148,7 +151,7 @@ class Validator:
         """
         Run the validation process
         """
-        ValidationSchema(metadata=self.metadata).validate_schema()
+        ValidationSchema(metadata=self.metadata, metadata_path=self.metadata_path).validate_schema()
         self._define_mapping()
         self._merge_metadata()
         self.merged_metadata.pop("global", None)

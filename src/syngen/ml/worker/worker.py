@@ -39,7 +39,11 @@ class Worker:
         """
         Validate the metadata, set the merged metadata
         """
-        validator = Validator(self.metadata, self.type_of_process)
+        validator = Validator(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            type_of_process=self.type_of_process
+        )
         validator.run()
         self.merged_metadata = validator.merged_metadata
 

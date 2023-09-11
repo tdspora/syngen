@@ -1,8 +1,10 @@
 import pytest
 import os
 import logging
+import shutil
 
 from loguru import logger
+import yaml
 from _pytest.logging import LogCaptureFixture
 
 import pandas as pd
@@ -77,6 +79,38 @@ def test_df():
             "id": [925, 84, 821, 383]
         }
     )
+
+
+@pytest.fixture
+def test_metadata_storage():
+    os.makedirs("model_artifacts", exist_ok=True)
+    path_to_metadata_storage = "model_artifacts/metadata"
+    os.makedirs(path_to_metadata_storage, exist_ok=True)
+    with open(f"{path_to_metadata_storage}/parent_metadata.yaml", "w") as f:
+        yaml.dump({
+            "table_a": {
+                "train_settings": {
+                    "source": "path/to/table_a.csv",
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "destination": "path/to/generated_table_a.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    },
+                    "uq_id": {
+                        "type": "UQ",
+                        "columns": ["name"]
+                    }
+                }
+            },
+        }, f)
+    yield path_to_metadata_storage
+    if os.path.exists(path_to_metadata_storage):
+        shutil.rmtree("model_artifacts")
 
 
 @pytest.fixture
