@@ -107,6 +107,21 @@ def test_metadata_storage():
                     }
                 }
             },
+            "table_d": {
+                "train_settings": {
+                    "source": "path/to/table_a.csv",
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "destination": "path/to/generated_table_a.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["another_id"]
+                    },
+                }
+            },
         }, f)
     yield path_to_metadata_storage
     if os.path.exists(path_to_metadata_storage):

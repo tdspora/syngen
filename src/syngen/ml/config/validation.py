@@ -124,6 +124,14 @@ class Validator:
                       f"isn't correct. Please, verify the destination path"
             self.errors["check existence of the destination"][table_name] = message
 
+    def _check_merged_metadata(self, parent_table: str):
+        if parent_table not in self.merged_metadata:
+            message = f"The metadata of the parent table - '{parent_table}' hasn't been found. Please, check " \
+                      f"whether the information of the parent table - '{parent_table}' exists in the current " \
+                      f"metadata file or in the metadata files stored in 'model_artifacts/metadata' directory"
+            logger.error(message)
+            raise ValidationError(message)
+
     def _merge_metadata(self):
         """
         Find the parent metadata contained the parent table
@@ -146,6 +154,7 @@ class Validator:
                 logger.info(f"The metadata located in the path - '{path_to_metadata_storage}' has been merged "
                             f"with the current metadata as it contains the information of the parent table - "
                             f"'{parent_table}'")
+            self._check_merged_metadata(parent_table)
 
     def run(self):
         """
