@@ -86,7 +86,7 @@ def test_metadata_storage():
     os.makedirs("model_artifacts", exist_ok=True)
     path_to_metadata_storage = "model_artifacts/metadata"
     os.makedirs(path_to_metadata_storage, exist_ok=True)
-    with open(f"{path_to_metadata_storage}/parent_metadata.yaml", "w") as f:
+    with open(f"{path_to_metadata_storage}/metadata_of_table_a.yaml", "w") as f:
         yaml.dump({
             "table_a": {
                 "train_settings": {
@@ -107,13 +107,17 @@ def test_metadata_storage():
                     }
                 }
             },
+        }, f)
+
+    with open(f"{path_to_metadata_storage}/metadata_of_table_d.yaml", "w") as f:
+        yaml.dump({
             "table_d": {
                 "train_settings": {
-                    "source": "path/to/table_a.csv",
+                    "source": "path/to/table_d.csv",
                     "print_report": True
                 },
                 "infer_settings": {
-                    "destination": "path/to/generated_table_a.csv"
+                    "destination": "path/to/generated_table_d.csv"
                 },
                 "keys": {
                     "pk_id": {

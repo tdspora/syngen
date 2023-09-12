@@ -50,7 +50,7 @@ class Validator:
         """
         Validate the metadata
         """
-        metadata_of_the_table = self.merged_metadata[table_name]
+        metadata_of_the_table = self.metadata[table_name]
         table_keys = metadata_of_the_table.get("keys", {})
         print_report = metadata_of_the_table.get("train_settings", {}).get("print_report", False)
         for key, config in table_keys.items():
@@ -76,7 +76,7 @@ class Validator:
         """
         result = any([config["columns"] == fk_config["references"]["columns"]
                       for config in parent_config.get("keys", {}).values()
-                      if config["type"] in ["PK", "UK"]])
+                      if config["type"] in ["PK", "UQ"]])
         if result is False:
             message = f"The primary key columns associated with the columns of " \
                       f"the foreign key - '{fk_name}' is not the same"
@@ -87,8 +87,7 @@ class Validator:
         Check if the success file of the certain parent table exists.
         The success file is created after the successful execution of the training process of the certain table.
         """
-        path_to_success_file = os.path.exists(f"model_artifacts/resources/{slugify(parent_table)}/message.success")
-        if not os.path.exists(path_to_success_file):
+        if not os.path.exists(f"model_artifacts/resources/{slugify(parent_table)}/message.success"):
             message = f"The table - '{parent_table}' hasn't been trained completely. Please, retrain this table first"
             self.errors["check existence of the success file"][parent_table] = message
 
@@ -170,6 +169,7 @@ class Validator:
                 self._check_existence_of_source(table_name)
             elif self.type_of_process == "infer":
                 self._check_existence_of_destination(table_name)
+        for table_name in self.metadata.keys():
             self._validate_metadata(table_name)
         error_logs = []
         for section, errors_details in self.errors.items():

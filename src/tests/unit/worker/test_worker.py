@@ -7,12 +7,8 @@ from syngen.ml.strategies.strategies import TrainStrategy, InferStrategy
 from tests.conftest import SUCCESSFUL_MESSAGE
 
 
-@patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity")
-def test_init_worker_for_training_process_with_absent_metadata(mock_validate_referential_integrity,
-                                                               mock_check_existence_of_source,
-                                                               mock_check_existence_of_success_file,
+@patch.object(Validator, "run")
+def test_init_worker_for_training_process_with_absent_metadata(mock_validator_run,
                                                                rp_logger):
     """
     Test the initialization of 'Worker' class with the absent metadata
@@ -21,10 +17,10 @@ def test_init_worker_for_training_process_with_absent_metadata(mock_validate_ref
     rp_logger.info("Test the initialization of the instance of 'Worker' class "
                    "with the absent metadata during the training process")
     worker = Worker(
-        table_name="test_table",
+        table_name="table",
         metadata_path=None,
         settings={
-            "source": "path/to/source",
+            "source": "path/to/source.csv",
             "epochs": 20,
             "drop_null": True,
             "row_limit": 1000,
@@ -37,9 +33,9 @@ def test_init_worker_for_training_process_with_absent_metadata(mock_validate_ref
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
-        "test_table": {
+        "table": {
             "train_settings": {
-                "source": "path/to/source",
+                "source": "path/to/source.csv",
                 "batch_size": 1000,
                 "drop_null": True,
                 "epochs": 20,
@@ -50,34 +46,12 @@ def test_init_worker_for_training_process_with_absent_metadata(mock_validate_ref
             "keys": {}
         }
     }
-    assert worker.merged_metadata == {
-        "test_table": {
-            "train_settings": {
-                "source": "path/to/source",
-                "batch_size": 1000,
-                "drop_null": True,
-                "epochs": 20,
-                "print_report": True,
-                "row_limit": 1000
-            },
-            "infer_settings": {},
-            "keys": {}
-        }
-    }
-    mock_validate_referential_integrity.assert_not_called()
-    mock_check_existence_of_source.assert_called()
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_destination", return_value=True)
-@patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_validate_referential_integrity")
-def test_init_worker_for_infer_process_with_absent_metadata(mock_validate_referential_integrity,
-                                                            mock_check_existence_of_success_file,
-                                                            mock_check_existence_of_generated_data,
-                                                            mock_existence_of_destination,
+@patch.object(Validator, "run")
+def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run,
                                                             rp_logger):
     """
     Test the initialization of 'Worker' class with the absent metadata
@@ -115,34 +89,12 @@ def test_init_worker_for_infer_process_with_absent_metadata(mock_validate_refere
             "keys": {}
         }
     }
-    assert worker.merged_metadata == {
-        "test_table": {
-            "train_settings": {
-                "source": "absent"
-            },
-            "infer_settings": {
-                "size": 100,
-                "run_parallel": False,
-                "batch_size": 100,
-                "print_report": False,
-                "random_seed": 1
-            },
-            "keys": {}
-        }
-    }
-    mock_validate_referential_integrity.assert_not_called()
-    mock_check_existence_of_success_file.assert_not_called()
-    mock_existence_of_destination.assert_called()
-    mock_check_existence_of_generated_data.assert_not_called()
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
-@patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_validate_referential_integrity")
-def test_init_worker_with_metadata(mock_validate_referential_integrity,
-                                   mock_check_existence_of_success_file,
-                                   mock_check_existence_of_source,
+@patch.object(Validator, "run")
+def test_init_worker_with_metadata(mock_validator_run,
                                    rp_logger):
     """
     Test the initialization of 'Worker' class with the metadata
@@ -169,6 +121,7 @@ def test_init_worker_with_metadata(mock_validate_referential_integrity,
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
+        "global": {},
         "test_table": {
             "train_settings": {
                 "source": "./path/to/test_table.csv",
@@ -193,43 +146,12 @@ def test_init_worker_with_metadata(mock_validate_referential_integrity,
             }
         }
     }
-    assert worker.merged_metadata == {
-        "test_table": {
-            "train_settings": {
-                "source": "./path/to/test_table.csv",
-                "epochs": 100,
-                "drop_null": False,
-                "print_report": False,
-                "row_limit": 800,
-                "batch_size": 2000
-            },
-            "infer_settings": {
-                "size": 200,
-                "run_parallel": True,
-                "random_seed": 2,
-                "print_report": True,
-                "batch_size": 200
-            },
-            "keys": {
-                "pk_id": {
-                    "type": "PK",
-                    "columns": ["Id"]
-                }
-            }
-        }
-    }
-    mock_validate_referential_integrity.assert_not_called()
-    mock_check_existence_of_success_file.assert_not_called()
-    mock_check_existence_of_source.assert_called_once()
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
-@patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_validate_referential_integrity")
-def test_init_worker_with_empty_settings_in_metadata(mock_validate_referential_integrity,
-                                                     mock_check_existence_of_success_file,
-                                                     mock_check_existence_of_source,
+@patch.object(Validator, "run")
+def test_init_worker_with_empty_settings_in_metadata(mock_validator_run,
                                                      rp_logger):
     """
     Test the initialization during the training process
@@ -256,6 +178,7 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validate_referential_i
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
+        "global": {},
         "test_table": {
             "train_settings": {
                 "source": "./path/to/test_table.csv",
@@ -269,30 +192,12 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validate_referential_i
             "keys": {}
             }
         }
-    assert worker.merged_metadata == {
-        "test_table": {
-            "train_settings": {
-                "source": "./path/to/test_table.csv",
-                "epochs": 20,
-                "drop_null": True,
-                "print_report": True,
-                "row_limit": 1000,
-                "batch_size": 1000
-            },
-            "infer_settings": {},
-            "keys": {}
-            }
-        }
-    mock_validate_referential_integrity.assert_not_called()
-    mock_check_existence_of_source.assert_called_once()
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity", return_value=True)
-def test_init_worker_for_training_with_metadata_with_global_settings(mock_validate_referential_integrity,
-                                                                     mock_check_existence_of_source,
+@patch.object(Validator, "run")
+def test_init_worker_for_training_with_metadata_with_global_settings(mock_validator_run,
                                                                      rp_logger):
     """
     Test the initialization of 'Worker' class during the training process
@@ -317,6 +222,18 @@ def test_init_worker_for_training_with_metadata_with_global_settings(mock_valida
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
+        "global": {
+            "train_settings": {
+                "drop_null": True,
+                "epochs": 5,
+                "row_limit": 500
+            },
+            "infer_settings": {
+                "print_report": True,
+                "run_parallel": True,
+                "size": 1000
+            }
+        },
         "pk_test": {
             "train_settings": {
                 "source": "./path/to/pk_test.csv",
@@ -358,57 +275,12 @@ def test_init_worker_for_training_with_metadata_with_global_settings(mock_valida
             "infer_settings": {}
         }
     }
-    assert worker.merged_metadata == {
-        "pk_test": {
-            "train_settings": {
-                "source": "./path/to/pk_test.csv",
-                "row_limit": 800,
-                "epochs": 5,
-                "drop_null": True,
-                "batch_size": 1000,
-                "print_report": True
-            },
-            "infer_settings": {
-                "print_report": False
-            },
-            "keys": {
-                "pk_id": {
-                    "type": "PK",
-                    "columns": ["Id"]
-                }
-            }
-        },
-        "fk_test": {
-            "keys": {
-                "fk_id": {
-                    "type": "FK",
-                    "columns": ["Id"],
-                    "references": {
-                        "table": "pk_test",
-                        "columns": ["Id"]
-                    }
-                }
-            },
-            "train_settings": {
-                "source": "./path/to/fk_test.csv",
-                "epochs": 5,
-                "drop_null": True,
-                "row_limit": 500,
-                "batch_size": 1000,
-                "print_report": True
-            },
-            "infer_settings": {}
-        }
-    }
-    mock_validate_referential_integrity.assert_called_once()
-    assert mock_check_existence_of_source.call_count == 2
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_destination", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity", return_value=True)
-def test_init_worker_for_inference_with_metadata_with_global_settings(mock_validate_referential_integrity,
-                                                                      mock_check_existence_of_destination,
+@patch.object(Validator, "run")
+def test_init_worker_for_inference_with_metadata_with_global_settings(mock_validator_run,
                                                                       rp_logger):
     """
     Test the initialization of 'Worker' class during an inference process
@@ -432,6 +304,18 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(mock_valid
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
+        "global": {
+            "train_settings": {
+                "drop_null": True,
+                "epochs": 5,
+                "row_limit": 500
+            },
+            "infer_settings": {
+                "print_report": True,
+                "run_parallel": True,
+                "size": 1000
+            }
+        },
         "pk_test": {
             "train_settings": {
                 "source": "./path/to/pk_test.csv",
@@ -474,62 +358,18 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(mock_valid
             }
         }
     }
-    assert worker.merged_metadata == {
-        "pk_test": {
-            "train_settings": {
-                "source": "./path/to/pk_test.csv",
-                "row_limit": 800
-            },
-            "infer_settings": {
-                "print_report": False,
-                "size": 1000,
-                "run_parallel": True,
-                "batch_size": 200,
-                "random_seed": 5
-            },
-            "keys": {
-                "pk_id": {
-                    "type": "PK",
-                    "columns": ["Id"]
-                }
-            }
-        },
-        "fk_test": {
-            "keys": {
-                "fk_id": {
-                    "type": "FK",
-                    "columns": ["Id"],
-                    "references": {
-                        "table": "pk_test",
-                        "columns": ["Id"]
-                    }
-                }
-            },
-            "train_settings": {
-                "source": "./path/to/fk_test.csv"
-            },
-            "infer_settings": {
-                "size": 1000,
-                "run_parallel": True,
-                "print_report": True,
-                "batch_size": 200,
-                "random_seed": 5
-            }
-        }
-    }
-    mock_validate_referential_integrity.assert_called_once()
-    assert mock_check_existence_of_destination.call_count == 2
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata(mock_train_tables,
                                     mock_generate_reports,
-                                    mock_validate_referential_integrity,
                                     mock_check_existence_of_source,
+                                    mock_validate_metadata,
                                     rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -609,20 +449,20 @@ def test_launch_train_with_metadata(mock_train_tables,
          }
          )
     )
-    mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_source.assert_called_once()
+    mock_validate_metadata.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity", return_value=True)
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
                                                       mock_generate_reports,
-                                                      mock_validate_referential_integrity,
                                                       mock_check_existence_of_source,
+                                                      mock_validate_metadata,
                                                       rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -749,20 +589,20 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
             }
         )
     )
-    mock_validate_referential_integrity.assert_called_once()
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_validate_metadata.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity", return_value=True)
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_tables,
                                                                      mock_generate_reports,
-                                                                     mock_validate_referential_integrity,
                                                                      mock_check_existence_of_source,
+                                                                     mock_validate_metadata,
                                                                      rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -915,20 +755,20 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
              }
          }
          ))
-    mock_validate_referential_integrity.assert_called_once()
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_validate_metadata.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_without_metadata(mock_train_tables,
                                        mock_generate_reports,
-                                       mock_validate_referential_integrity,
                                        mock_check_existence_of_source,
+                                       mock_validate_metadata,
                                        rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -983,20 +823,20 @@ def test_launch_train_without_metadata(mock_train_tables,
              }
          })
     )
-    mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_source.assert_called_once()
+    mock_validate_metadata.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity", return_value=True)
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
                                                               mock_generate_reports,
-                                                              mock_validate_referential_integrity,
                                                               mock_check_existence_of_source,
+                                                              mock_validate_metadata,
                                                               rp_logger):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -1110,20 +950,20 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
          }
          )
     )
-    mock_validate_referential_integrity.assert_called_once()
+    assert mock_validate_metadata.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_destination", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata(mock_infer_tables,
                                     mock_generate_reports,
-                                    mock_validate_referential_integrity,
                                     mock_check_existence_of_destination,
+                                    mock_validate_metadata,
                                     rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1172,20 +1012,20 @@ def test_launch_infer_with_metadata(mock_infer_tables,
             }
         }
     )
-    mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_destination.assert_called_once()
+    mock_validate_metadata.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_destination", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity", return_value=True)
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
                                                       mock_generate_reports,
-                                                      mock_validate_referential_integrity,
                                                       mock_check_existence_of_destination,
+                                                      mock_validate_metadata,
                                                       rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1258,19 +1098,20 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
             }
         }
     )
-    mock_generate_reports.assert_called_once()
-    mock_validate_referential_integrity.assert_called_once()
     assert mock_check_existence_of_destination.call_count == 2
+    assert mock_validate_metadata.call_count == 2
+    mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_destination", return_value=True)
-@patch.object(Validator, "_validate_referential_integrity", return_value=True)
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_tables, mock_generate_reports,
-                                                                     mock_validate_referential_integrity,
+def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_tables,
+                                                                     mock_generate_reports,
                                                                      mock_check_existence_of_destination,
+                                                                     mock_validate_metadata,
                                                                      rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1382,20 +1223,20 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
             }
         }
     )
-    mock_validate_referential_integrity.assert_called_once()
     assert mock_check_existence_of_destination.call_count == 2
+    assert mock_validate_metadata.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-@patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_without_metadata(mock_infer_tables,
                                        mock_generate_reports,
-                                       mock_validate_referential_integrity,
                                        mock_check_existence_of_destination,
+                                       mock_validate_metadata,
                                        rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1435,19 +1276,20 @@ def test_launch_infer_without_metadata(mock_infer_tables,
             }
         }
     )
-    mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_destination.assert_called_once()
+    mock_validate_metadata.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-@patch.object(Validator, "_validate_referential_integrity", return_value=True)
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables, mock_generate_reports,
-                                                              mock_validate_referential_integrity,
+def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
+                                                              mock_generate_reports,
                                                               mock_check_existence_of_destination,
+                                                              mock_validate_metadata,
                                                               rp_logger):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1470,8 +1312,6 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
         type_of_process="infer"
     )
     worker.launch_infer()
-    mock_validate_referential_integrity.assert_called_once()
-    assert mock_check_existence_of_destination.call_count == 2
     mock_infer_tables.assert_called_once_with(
         ["pk_test", "fk_test"],
         {
@@ -1518,5 +1358,7 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
             }
         }
     )
+    assert mock_check_existence_of_destination.call_count == 2
+    assert mock_validate_metadata.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
