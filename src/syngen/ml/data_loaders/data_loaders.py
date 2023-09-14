@@ -22,7 +22,6 @@ from syngen.ml.utils import trim_string
 from syngen.ml.context import get_context, global_context
 from syngen.ml.validation_schema import ExcelFormatSettingsSchema, CSVFormatSettingsSchema
 
-
 DELIMITERS = {
     "\\t": "\t"
 }
@@ -51,17 +50,17 @@ class DataLoader(BaseDataLoader):
         if not path:
             raise ValueError("It seems that the information of source is absent")
         self.path = path
-        self.file_loader = self.__get_file_loader()
+        self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
         self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
 
     def __check_if_path_exists(self, type_of_path="source"):
-        if (type_of_path == "source" and os.path.exists(self.path))\
+        if (type_of_path == "source" and os.path.exists(self.path)) \
                 or (type_of_path == "destination" and os.path.exists(os.path.dirname(self.path))):
             return True
         return False
 
-    def __get_file_loader(self):
+    def _get_file_loader(self):
         path = Path(self.path)
         if path.suffix == ".avro":
             return AvroLoader()
@@ -157,7 +156,7 @@ class CSVLoader:
                       f"Please, check the path to the table"
             logger.error(message)
             raise FileNotFoundError(message)
-        
+
         return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
 
     def load_data(self, path, **kwargs):
