@@ -102,6 +102,7 @@ class CSVLoader:
     """
     Class for loading and saving data in CSV format.
     """
+
     def __init__(self, **kwargs):
         self.format = get_context().get_config()
         self.format.update(kwargs)
@@ -254,6 +255,7 @@ class MetadataLoader(BaseDataLoader):
     """
     Metadata class for loading and saving metadata in YAML format
     """
+
     def __init__(self, metadata_path: str):
         self.metadata_path = metadata_path
         self.metadata_loader = self.get_metadata_loader()
@@ -326,15 +328,21 @@ class BinaryLoader(BaseDataLoader):
     """
     Class for loading and saving data using byte stream
     """
+    @staticmethod
+    def _load_data(f) -> Tuple[pd.DataFrame, None]:
+        return pickle.load(f), None
 
     def load_data(self, path: str, **kwargs) -> Tuple[pd.DataFrame, None]:
         with open(path, "rb") as f:
-            data = pickle.load(f)
-        return data, None
+            return self._load_data(f)
+
+    @staticmethod
+    def _save_data(data, f):
+        pickle.dump(data, f)
 
     def save_data(self, path: str, data, **kwargs):
         with open(path, "wb") as f:
-            pickle.dump(data, f)
+            self._save_data(data, f)
 
 
 class ExcelLoader:
