@@ -13,7 +13,6 @@ from syngen.ml.validation_schema import ValidationSchema
 
 @dataclass
 class Validator:
-
     """
     Class for validating the metadata
     """
@@ -24,7 +23,15 @@ class Validator:
     merged_metadata: Dict = field(default_factory=dict)
     mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
-    validation_schema = ValidationSchema.__name__
+
+    def __launch_validation_of_schema(self, metadata: Dict, metadata_path: str):
+        """
+        Launch the validation of the schema of the metadata
+        """
+        return ValidationSchema(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path
+        ).validate_schema()
 
     def _define_mapping(self):
         """
@@ -57,7 +64,9 @@ class Validator:
             if config["type"] not in self.type_of_fk_keys:
                 continue
             self._validate_referential_integrity(
-                fk_name=key, fk_config=config, parent_config=self.merged_metadata[self.mapping[key]["parent_table"]]
+                fk_name=key,
+                fk_config=config,
+                parent_config=self.merged_metadata[self.mapping[key]["parent_table"]]
             )
             parent_table = self.mapping[key]["parent_table"]
             if parent_table not in self.metadata:
@@ -148,9 +157,7 @@ class Validator:
                 metadata = MetadataLoader(path_to_metadata_file).load_data()
                 if parent_table not in metadata:
                     continue
-                globals()[self.validation_schema](
-                    metadata=metadata, metadata_path=path_to_metadata_file
-                ).validate_schema()
+                self.__launch_validation_of_schema(metadata=metadata, metadata_path=path_to_metadata_file)
                 self.merged_metadata.update(metadata)
                 logger.info(f"The metadata located in the path - '{path_to_metadata_storage}' has been merged "
                             f"with the current metadata as it contains the information of the parent table - "
@@ -161,7 +168,7 @@ class Validator:
         """
         Run the validation process
         """
-        globals()[self.validation_schema](metadata=self.metadata, metadata_path=self.metadata_path).validate_schema()
+        self.__launch_validation_of_schema(metadata=self.metadata, metadata_path=self.metadata_path)
         self._define_mapping()
         self._merge_metadata()
         self.merged_metadata.pop("global", None)
