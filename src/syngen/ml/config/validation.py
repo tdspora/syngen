@@ -24,7 +24,7 @@ class Validator:
     mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
 
-    def __launch_validation_of_schema(self, metadata: Dict, metadata_path: str):
+    def _launch_validation_of_schema(self, metadata: Dict, metadata_path: str):
         """
         Launch the validation of the schema of the metadata
         """
@@ -157,7 +157,7 @@ class Validator:
                 metadata = MetadataLoader(path_to_metadata_file).load_data()
                 if parent_table not in metadata:
                     continue
-                self.__launch_validation_of_schema(metadata=metadata, metadata_path=path_to_metadata_file)
+                self._launch_validation_of_schema(metadata=metadata, metadata_path=path_to_metadata_file)
                 self.merged_metadata.update(metadata)
                 logger.info(f"The metadata located in the path - '{path_to_metadata_storage}' has been merged "
                             f"with the current metadata as it contains the information of the parent table - "
@@ -168,7 +168,7 @@ class Validator:
         """
         Run the validation process
         """
-        self.__launch_validation_of_schema(metadata=self.metadata, metadata_path=self.metadata_path)
+        self._launch_validation_of_schema(metadata=self.metadata, metadata_path=self.metadata_path)
         self._define_mapping()
         self._merge_metadata()
         self.merged_metadata.pop("global", None)
