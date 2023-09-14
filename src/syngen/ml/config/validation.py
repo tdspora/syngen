@@ -7,7 +7,7 @@ from collections import defaultdict
 from marshmallow import ValidationError
 from slugify import slugify
 from loguru import logger
-from syngen.ml.data_loaders import MetadataLoader
+from syngen.ml.data_loaders import MetadataLoader, DataLoader
 from syngen.ml.validation_schema import ValidationSchema
 
 
@@ -20,9 +20,11 @@ class Validator:
     metadata: Dict
     metadata_path: str
     type_of_process: str
+    type_of_fk_keys = ["FK"]
     merged_metadata: Dict = field(default_factory=dict)
     mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
+    validation_schema = ValidationSchema.__name__
 
     def _define_mapping(self):
         """
@@ -36,12 +38,10 @@ class Validator:
                 if "keys" in table_metadata and table_metadata.get("keys") is not None \
                 else {}
             for key_name, key_data in metadata_keys.items():
-                if key_data["type"] != "FK":
+                if key_data["type"] not in self.type_of_fk_keys:
                     continue
 
                 self.mapping[key_name] = {
-                    "child_table": table_name,
-                    "child_columns": key_data["columns"],
                     "parent_table": key_data["references"]["table"],
                     "parent_columns": key_data["references"]["columns"]
                 }
@@ -54,7 +54,7 @@ class Validator:
         table_keys = metadata_of_the_table.get("keys", {})
         print_report = metadata_of_the_table.get("train_settings", {}).get("print_report", False)
         for key, config in table_keys.items():
-            if config["type"] != "FK":
+            if config["type"] not in self.type_of_fk_keys:
                 continue
             self._validate_referential_integrity(
                 fk_name=key, fk_config=config, parent_config=self.merged_metadata[self.mapping[key]["parent_table"]]
@@ -63,7 +63,7 @@ class Validator:
             if parent_table not in self.metadata:
                 if self.type_of_process == "infer" or (self.type_of_process == "train" and print_report is True):
                     self._check_existence_of_success_file(parent_table)
-                    self._check_existence_of_generated_data(parent_table)
+                    self.__check_existence_of_generated_data(parent_table)
                 elif self.type_of_process == "train":
                     self._check_existence_of_success_file(parent_table)
             else:
@@ -91,7 +91,7 @@ class Validator:
             message = f"The table - '{parent_table}' hasn't been trained completely. Please, retrain this table first"
             self.errors["check existence of the success file"][parent_table] = message
 
-    def _check_existence_of_generated_data(self, parent_table: str):
+    def __check_existence_of_generated_data(self, parent_table: str):
         """
         Check if the generated data of the certain parent table exists.
         The generated data is created after the successful execution of the inference process of the certain table.
@@ -99,26 +99,26 @@ class Validator:
         destination = self.merged_metadata[parent_table].get("infer_settings", {}).get("destination")
         if destination is None:
             destination = f"model_artifacts/tmp_store/{slugify(parent_table)}/merged_infer_{slugify(parent_table)}.csv"
-        if not os.path.exists(destination):
+        if not DataLoader(destination).has_existed_path:
             message = f"The generated data of the table - '{parent_table}' hasn't been generated. " \
                       f"Please, generate the data related to the table '{parent_table}' first"
             self.errors["check existence of the generated data"][parent_table] = message
 
-    def _check_existence_of_source(self, table_name: str):
+    def __check_existence_of_source(self, table_name: str):
         """
         Check if the source of the certain table exists
         """
-        if not os.path.exists(self.merged_metadata[table_name]["train_settings"]["source"]):
+        if not DataLoader(self.merged_metadata[table_name]["train_settings"]["source"]).has_existed_path:
             message = f"It seems that the path to the source of the table - '{table_name}' isn't correct. " \
                       f"Please, check the path to the source of the table - '{table_name}'"
             self.errors["check existence of the source"][table_name] = message
 
-    def _check_existence_of_destination(self, table_name: str):
+    def __check_existence_of_destination(self, table_name: str):
         """
         Check if the destination of the certain table exists
         """
         destination = self.merged_metadata[table_name].get("infer_settings", {}).get("destination")
-        if destination is not None and not os.path.exists(os.path.dirname(destination)):
+        if destination is not None and not DataLoader(destination).has_existed_destination:
             message = f"It seems that the directory path for storing the generated data of table '{table_name}' " \
                       f"isn't correct. Please, verify the destination path"
             self.errors["check existence of the destination"][table_name] = message
@@ -148,7 +148,9 @@ class Validator:
                 metadata = MetadataLoader(path_to_metadata_file).load_data()
                 if parent_table not in metadata:
                     continue
-                ValidationSchema(metadata=metadata, metadata_path=path_to_metadata_file).validate_schema()
+                globals()[self.validation_schema](
+                    metadata=metadata, metadata_path=path_to_metadata_file
+                ).validate_schema()
                 self.merged_metadata.update(metadata)
                 logger.info(f"The metadata located in the path - '{path_to_metadata_storage}' has been merged "
                             f"with the current metadata as it contains the information of the parent table - "
@@ -159,16 +161,16 @@ class Validator:
         """
         Run the validation process
         """
-        ValidationSchema(metadata=self.metadata, metadata_path=self.metadata_path).validate_schema()
+        globals()[self.validation_schema](metadata=self.metadata, metadata_path=self.metadata_path).validate_schema()
         self._define_mapping()
         self._merge_metadata()
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train":
-                self._check_existence_of_source(table_name)
+                self.__check_existence_of_source(table_name)
             elif self.type_of_process == "infer":
-                self._check_existence_of_destination(table_name)
+                self.__check_existence_of_destination(table_name)
         for table_name in self.metadata.keys():
             self._validate_metadata(table_name)
         error_logs = []

@@ -10,7 +10,7 @@ FAKE_METADATA_PATH = "path/to/metadata.yaml"
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_metadata_of_one_table_without_fk_key(mock_check_existence_of_source,
                                                        mock_validate_referential_integrity,
                                                        mock_check_existence_of_success_file,
@@ -44,7 +44,7 @@ def test_validate_metadata_of_one_table_without_fk_key(mock_check_existence_of_s
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence_of_source,
                                                             mock_validate_referential_integrity,
                                                             mock_check_existence_of_success_file,
@@ -96,7 +96,7 @@ def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of_source,
                                                          mock_validate_referential_integrity,
                                                          mock_check_existence_of_success_file,
@@ -145,8 +145,6 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
     validator.run()
     assert validator.mapping == {
         "fk_id": {
-            "child_columns": ["id"],
-            "child_table": "table_b",
             "parent_columns": ["id"],
             "parent_table": "table_a"
         }
@@ -159,7 +157,7 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_existence_of_source,
                                                                  mock_validate_referential_integrity,
                                                                  mock_check_existence_of_success_file,
@@ -215,14 +213,10 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
     validator.run()
     assert validator.mapping == {
         "fk_1": {
-            "child_columns": ["id"],
-            "child_table": "table_b",
             "parent_columns": ["id"],
             "parent_table": "table_a"
         },
         "fk_2": {
-            "child_columns": ["name"],
-            "child_table": "table_b",
             "parent_columns": ["name"],
             "parent_table": "table_a"
         }
@@ -233,9 +227,9 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
     mock_check_existence_of_success_file.assert_not_called()
 
 
-@patch.object(Validator, "_check_existence_of_generated_data")
+@patch.object(Validator, "_Validator__check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_Validator__check_existence_of_destination")
 @patch.object(Validator, "_validate_referential_integrity")
 def test_validate_metadata_of_one_table_without_fk_key(mock_validate_referential_integrity,
                                                        mock_check_existence_of_destination,
@@ -271,10 +265,10 @@ def test_validate_metadata_of_one_table_without_fk_key(mock_validate_referential
     mock_check_existence_of_generated_data.assert_not_called()
 
 
-@patch.object(Validator, "_check_existence_of_generated_data")
+@patch.object(Validator, "_Validator__check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_Validator__check_existence_of_destination")
 def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence_of_destination,
                                                             mock_validate_referential_integrity,
                                                             mock_check_existence_of_success_file,
@@ -330,10 +324,10 @@ def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence
     mock_check_existence_of_success_file.assert_not_called()
 
 
-@patch.object(Validator, "_check_existence_of_generated_data")
+@patch.object(Validator, "_Validator__check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_Validator__check_existence_of_destination")
 def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of_destination,
                                                          mock_validate_referential_integrity,
                                                          mock_check_existence_of_success_file,
@@ -386,8 +380,6 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
     validator.run()
     assert validator.mapping == {
         "fk_id": {
-            "child_columns": ["id"],
-            "child_table": "table_b",
             "parent_columns": ["id"],
             "parent_table": "table_a"
         }
@@ -399,10 +391,10 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
     mock_check_existence_of_generated_data.assert_not_called()
 
 
-@patch.object(Validator, "_check_existence_of_generated_data")
+@patch.object(Validator, "_Validator__check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_Validator__check_existence_of_destination")
 def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_existence_of_destination,
                                                                  mock_validate_referential_integrity,
                                                                  mock_check_existence_of_success_file,
@@ -462,14 +454,10 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
     validator.run()
     assert validator.mapping == {
         "fk_1": {
-            "child_columns": ["id"],
-            "child_table": "table_b",
             "parent_columns": ["id"],
             "parent_table": "table_a"
         },
         "fk_2": {
-            "child_columns": ["name"],
-            "child_table": "table_b",
             "parent_columns": ["name"],
             "parent_table": "table_a"
         }
@@ -483,7 +471,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_print_report(
         mock_check_existence_of_source,
         mock_validate_referential_integrity,
@@ -520,8 +508,6 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     validator.run()
     assert validator.mapping == {
         "fk_key": {
-            "child_columns": ["id"],
-            "child_table": "table_b",
             "parent_columns": ["id"],
             "parent_table": "table_a"
         }
@@ -568,10 +554,10 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     mock_check_existence_of_success_file.assert_called_once()
 
 
-@patch.object(Validator, "_check_existence_of_generated_data")
+@patch.object(Validator, "_Validator__check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_print_report(
         mock_check_existence_of_source,
         mock_validate_referential_integrity,
@@ -609,8 +595,6 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_pri
     validator.run()
     assert validator.mapping == {
         "fk_key": {
-            "child_columns": ["id"],
-            "child_table": "table_b",
             "parent_columns": ["id"],
             "parent_table": "table_a"
         }
@@ -658,10 +642,10 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_pri
     mock_check_existence_of_generated_data.assert_called_once()
 
 
-@patch.object(Validator, "_check_existence_of_generated_data")
+@patch.object(Validator, "_Validator__check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_Validator__check_existence_of_destination")
 def test_validate_incomplete_metadata_in_infer_process(mock_check_existence_of_destination,
                                                        mock_validate_referential_integrity,
                                                        mock_check_existence_of_success_file,
@@ -697,8 +681,6 @@ def test_validate_incomplete_metadata_in_infer_process(mock_check_existence_of_d
     validator.run()
     assert validator.mapping == {
         "fk_key": {
-            "child_columns": ["id"],
-            "child_table": "table_b",
             "parent_columns": ["id"],
             "parent_table": "table_a"
         }
@@ -780,7 +762,7 @@ def test_validate_metadata_with_not_existent_source(mock_validate_referential_in
             assert message in caplog.text
 
 
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_storage(
         mock_check_existence_of_source,
         test_metadata_storage,
@@ -816,8 +798,6 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
             mock_check_existence_of_source.assert_called_once()
             assert validator.mapping == {
                 "fk_key": {
-                    "child_columns": ["id"],
-                    "child_table": "table_b",
                     "parent_columns": ["id"],
                     "parent_table": "table_a"
                 }
@@ -830,7 +810,7 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_incomplete_metadata_with_wrong_referential_integrity(
         mock_check_existence_of_source,
         mock_check_existence_of_success_file,
@@ -870,8 +850,6 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
             validator.run()
             assert validator.mapping == {
                 "fk_key": {
-                    "child_columns": ["id"],
-                    "child_table": "table_b",
                     "parent_columns": ["id"],
                     "parent_table": "table_d"
                 }
@@ -919,7 +897,7 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
 
 
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_in_train_process(
         mock_check_existence_of_source,
         mock_validate_referential_integrity,
@@ -959,8 +937,6 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
             validator.run()
             assert validator.mapping == {
                 "fk_key": {
-                    "child_columns": ["id"],
-                    "child_table": "table_b",
                     "parent_columns": ["id"],
                     "parent_table": "table_a"
                 }
@@ -1049,7 +1025,7 @@ def test_validate_metadata_with_not_existent_destination(mock_validate_referenti
 
 
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_Validator__check_existence_of_destination")
 def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_in_infer_process(
         mock_check_existence_of_destination,
         mock_validate_referential_integrity,
@@ -1091,8 +1067,6 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
             mock_validate_referential_integrity.assert_called_once()
             assert validator.mapping == {
                 "fk_key": {
-                    "child_columns": ["id"],
-                    "child_table": "table_b",
                     "parent_columns": ["id"],
                     "parent_table": "table_a"
                 }
@@ -1142,7 +1116,7 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
 
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_Validator__check_existence_of_destination")
 def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_infer_process(
         mock_check_existence_of_destination,
         mock_check_existence_of_success_file,
@@ -1188,8 +1162,6 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
             assert mock_check_existence_of_destination.call_count == 2
             assert validator.mapping == {
                 "fk_key": {
-                    "child_columns": ["id"],
-                    "child_table": "table_b",
                     "parent_columns": ["id"],
                     "parent_table": "table_a"
                 }
@@ -1241,9 +1213,9 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
 
 
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_Validator__check_existence_of_destination")
 @patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_Validator__check_existence_of_source")
 def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_train_process_with_print_report(
         mock_check_existence_of_source,
         mock_check_existence_of_success_file,
@@ -1292,8 +1264,6 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_t
             assert mock_check_existence_of_destination.call_count == 2
             assert validator.mapping == {
                 "fk_key": {
-                    "child_columns": ["id"],
-                    "child_table": "table_b",
                     "parent_columns": ["id"],
                     "parent_table": "table_a"
                 }

@@ -52,22 +52,24 @@ class DataLoader(BaseDataLoader):
             raise ValueError("It seems that the information of source is absent")
         self.path = path
         self.file_loader = self.__get_file_loader()
-        self.has_existed_path = self.check_if_path_exists()
+        self.has_existed_path = self.__check_if_path_exists()
+        self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
 
-    def check_if_path_exists(self):
-        if os.path.exists(self.path):
+    def __check_if_path_exists(self, type_of_path="source"):
+        if (type_of_path == "source" and os.path.exists(self.path))\
+                or (type_of_path == "destination" and os.path.exists(os.path.dirname(self.path))):
             return True
         return False
 
     def __get_file_loader(self):
         path = Path(self.path)
-        if path.suffix == '.avro':
+        if path.suffix == ".avro":
             return AvroLoader()
-        elif path.suffix in ['.csv', '.txt']:
+        elif path.suffix in [".csv", ".txt"]:
             return CSVLoader()
-        elif path.suffix == '.tsv':
+        elif path.suffix == ".tsv":
             return CSVLoader(sep="\t")
-        elif path.suffix == '.psv':
+        elif path.suffix == ".psv":
             return CSVLoader(sep="|")
         elif path.suffix == ".pkl":
             return BinaryLoader()
@@ -260,7 +262,7 @@ class MetadataLoader(BaseDataLoader):
     def get_metadata_loader(self):
         if self.metadata_path is not None:
             path = Path(self.metadata_path)
-            if path.suffix in ['.yaml', '.yml']:
+            if path.suffix in [".yaml", ".yml"]:
                 return YAMLLoader()
             else:
                 raise NotImplementedError("The format of metadata isn't supported")
@@ -314,7 +316,11 @@ class YAMLLoader(BaseDataLoader):
 
     def save_data(self, path: str, metadata: Dict, **kwargs):
         with open(path, "w") as f:
-            yaml.dump(metadata, f)
+            self._save_data(metadata, f)
+
+    @staticmethod
+    def _save_data(metadata: Dict, f):
+        yaml.dump(metadata, f)
 
 
 class BinaryLoader(BaseDataLoader):

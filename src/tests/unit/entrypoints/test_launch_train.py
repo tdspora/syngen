@@ -11,7 +11,7 @@ PATH_TO_METADATA = "./tests/unit/entrypoints/fixtures/metadata.yaml"
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_source_and_table_name(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info("Launch train process through CLI with parameters '--source' and '--table_name'")
     runner = CliRunner()
@@ -28,7 +28,7 @@ def test_train_table_with_source_and_table_name(mock_post_init, mock_launch_trai
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_metadata_path(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info("Launch train process through CLI with parameters '--metadata_path'")
     runner = CliRunner()
@@ -44,7 +44,7 @@ def test_train_table_with_metadata_path(mock_post_init, mock_launch_train, rp_lo
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_source(mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog):
     rp_logger.info("Launch train process through CLI with parameters '--metadata_path' and '--source'")
@@ -65,7 +65,7 @@ def test_train_table_with_metadata_path_and_source(mock_logger, mock_post_init, 
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_table_name(mock_logger,
                                                        mock_post_init,
@@ -89,7 +89,7 @@ def test_train_table_with_metadata_path_and_table_name(mock_logger,
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_table_name_and_source(mock_logger,
                                                                   mock_post_init,
@@ -162,7 +162,7 @@ def test_train_table_without_parameters(rp_logger):
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_epochs(mock_post_init, mock_launch_train, monkeypatch, rp_logger):
     rp_logger.info("Launch train process through CLI with valid 'epochs' parameter")
     runner = CliRunner()
@@ -194,7 +194,7 @@ def test_train_table_with_invalid_epochs(monkeypatch, rp_logger):
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_drop_null(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(f"Launch train process through CLI with valid 'drop_null' parameter equals 'True'")
     runner = CliRunner()
@@ -226,7 +226,7 @@ def test_train_table_with_invalid_drop_null(rp_logger):
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_row_limit(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(f"Launch train process through CLI with valid 'row_limit' parameter equals 100")
     runner = CliRunner()
@@ -258,7 +258,7 @@ def test_train_table_with_invalid_row_limit(rp_logger):
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_print_report(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(f"Launch train process through CLI with valid 'print_report' parameter equals True")
     runner = CliRunner()
@@ -290,7 +290,7 @@ def test_train_table_with_invalid_print_report(rp_logger):
 
 
 @patch.object(Worker, "launch_train")
-@patch.object(Worker, "__post_init__")
+@patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_batch_size(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(f"Launch train process through CLI with valid 'batch_size' parameter equals 100")
     runner = CliRunner()

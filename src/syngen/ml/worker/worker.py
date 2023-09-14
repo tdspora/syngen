@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
+from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
@@ -13,29 +13,29 @@ from syngen.ml.config import Validator
 from syngen.ml.context.context import global_context
 
 
-@dataclass
+@define
 class Worker:
     """
     Class for preparing training and infer settings, metadata for training and infer process
     """
-    table_name: Optional[str]
-    metadata_path: Optional[str]
-    settings: Dict
-    log_level: str
-    type_of_process: str
+    table_name: Optional[str] = field(kw_only=True)
+    metadata_path: Optional[str] = field(kw_only=True)
+    settings: Dict = field(kw_only=True)
+    log_level: str = field(kw_only=True)
+    type_of_process: str = field(kw_only=True)
     train_strategy = TrainStrategy()
     infer_strategy = InferStrategy()
-    metadata = None
-    divided: List = field(default_factory=list)
-    merged_metadata: Dict = field(default_factory=dict)
+    metadata: Optional[Dict] = None
+    divided: List = field(default=list())
+    merged_metadata: Dict = field(default=dict())
 
-    def __post_init__(self):
+    def __attrs_post_init__(self):
         os.makedirs("model_artifacts/metadata", exist_ok=True)
-        self.metadata = self._fetch_metadata()
+        self.metadata = self.__fetch_metadata()
         self._update_metadata()
-        self._validate_metadata()
+        self.__validate_metadata()
 
-    def _validate_metadata(self):
+    def __validate_metadata(self):
         """
         Validate the metadata, set the merged metadata
         """
@@ -97,7 +97,7 @@ class Worker:
         if self.table_name:
             self._update_metadata_for_table()
 
-    def _fetch_metadata(self) -> Dict:
+    def __fetch_metadata(self) -> Dict:
         """
         Fetch the metadata for training or infer process
         """
