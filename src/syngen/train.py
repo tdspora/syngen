@@ -6,7 +6,8 @@ import click
 from loguru import logger
 
 from syngen.ml.worker import Worker
-from syngen.ml.utils import setup_logger
+from syngen.ml.utils import setup_logger, create_log_file
+from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
 
 
 @click.command()
@@ -57,6 +58,7 @@ def launch_train(
 
     """
     os.environ["LOGURU_LEVEL"] = log_level
+    create_log_file(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
     setup_logger()
     if not metadata_path and not source and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' and 'source' is absent. "
@@ -81,7 +83,7 @@ def launch_train(
         raise AttributeError("It seems that the information of 'metadata_path' or 'source' is absent. "
                              "Please provide either the information of 'metadata_path' or "
                              "the information of 'source' and 'table_name'")
-    logger.warning(
+    logger.info(
         "The training process will be executed according to the information mentioned in 'train_settings' "
         "in the metadata file. If appropriate information is absent from the metadata file, then the values "
         "of parameters sent through CLI will be used. Otherwise, the values of parameters will be defaulted"
@@ -102,6 +104,24 @@ def launch_train(
         type="train"
     )
     worker.launch_train()
+
+
+def set_mlflow(exp_name: str = None):
+    try:
+        response = os.system("ping -c 1 " + os.environ.get("MLFLOW_TRACKING_URI")[7:-6])
+        if response == 0:
+            tracker = MlflowTracker(exp_name, True)
+        else:
+            tracker = MlflowTracker(exp_name, False)
+            logger.warning("MLFlow server is not reachable, so the tracking will not be performed")
+        tracker.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+        tracker.create_experiment(
+            exp_name,
+            artifact_location=os.environ.get("MLFLOW_ARTIFACTS_DESTINATION", "/mlflow")
+        )
+        tracker.set_experiment(exp_name)
+    except Exception as e:
+        logger.warning(f"MLFlow server is not reachable. {e}")
 
 
 def preprocess_data():

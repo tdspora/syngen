@@ -17,6 +17,7 @@ from syngen.ml.metrics import (
 )
 from syngen.ml.metrics.utils import transform_to_base64
 from syngen.ml.utils import fetch_training_config
+from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
 
 
 class BaseTest(ABC):
@@ -91,9 +92,23 @@ class AccuracyTest(BaseTest):
 
         uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"])
         bi_images = bivariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"])
-        correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+        corr_result = correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
         clustering_result = "%.4f" % clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
         utility_result = utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+
+        tracker = MlflowTracker()
+        tracker.start_run(
+            run_name=f"{self.table_name} | INFER",
+            tags={"process": "infer", "table_name": self.table_name}
+        )
+        tracker.log_metrics(
+            {
+                "Utility_avg": utility_result["Synth to orig ratio"].mean(),
+                "Clustering": float(clustering_result),
+                "Accuracy": float(acc_median),
+                "Correlation": corr_result
+            }
+        )
 
         # Generate html report
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
@@ -124,5 +139,9 @@ class AccuracyTest(BaseTest):
 
         with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w', encoding="utf-8") as f:
             f.write(html)
-
+        try:
+            tracker.log_artifact(f"{self.paths['draws_path']}/accuracy_report.html")
+        except PermissionError:
+            pass
+        tracker.end_run()
         self._remove_artifacts()
