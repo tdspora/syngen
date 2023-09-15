@@ -201,6 +201,7 @@ class VaeInferHandler(BaseHandler):
     print_report: bool
     wrapper_name: str
     log_level: str
+    type_of_process: str
     random_seed_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)
     has_vae: bool = field(init=False)
@@ -211,7 +212,8 @@ class VaeInferHandler(BaseHandler):
             seed(self.random_seed)
         self.random_seeds_list = list()
         self.vae = None
-        self.has_vae = len(fetch_dataset(self.paths["dataset_pickle_path"]).features) > 0
+        self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        self.has_vae = len(self.dataset.features) > 0
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
     @staticmethod
@@ -291,10 +293,9 @@ class VaeInferHandler(BaseHandler):
         if self.has_no_ml:
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
 
-        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
-        uuid_columns = dataset.uuid_columns
+        uuid_columns = self.dataset.uuid_columns
         if uuid_columns:
-            synthetic_infer = generate_uuid(size, dataset, uuid_columns, synthetic_infer)
+            synthetic_infer = generate_uuid(size, self.dataset, uuid_columns, synthetic_infer)
 
         return synthetic_infer
 
@@ -343,20 +344,28 @@ class VaeInferHandler(BaseHandler):
 
         return synth_fk
 
-    def _set_pk_path(self, pk_table) -> str:
+    def _set_pk_path(self, pk_table, table_name) -> str:
         """
         Set the path to synthetic data of corresponding pk table
         """
-        destination_to_pk_table = self.metadata[pk_table].get("infer_settings", {}).get("destination")
-        pk_path = destination_to_pk_table if destination_to_pk_table is not None \
-            else f"model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
-        if not os.path.exists(pk_path):
+        destination_to_pk_table = None
+        if self.type_of_process == "infer":
+            infer_settings = self.metadata[pk_table].get("infer_settings", {})
+            destination_to_pk_table = infer_settings.get("destination")
+
+            if destination_to_pk_table is None:
+                destination_to_pk_table = f"model_artifacts/tmp_store/{slugify(pk_table)}/merged_infer_{slugify(pk_table)}.csv"
+
+        if self.type_of_process == "train":
+            destination_to_pk_table = self.paths["path_to_merged_infer"].replace(slugify(table_name), slugify(pk_table))
+        if not os.path.exists(destination_to_pk_table):
             raise FileNotFoundError(
                 "The table with a primary key specified in the metadata file does not "
                 "exist or is not trained. Ensure that the metadata contains the "
                 "name of referenced table with a primary key in the foreign key declaration section."
             )
-        return pk_path
+
+        return destination_to_pk_table
 
     def generate_keys(self, generated, size, metadata, table_name):
         metadata_of_table = metadata.get(table_name)
@@ -367,7 +376,7 @@ class VaeInferHandler(BaseHandler):
             if config_of_keys.get(key).get("type") == "FK":
                 fk_column_name = config_of_keys.get(key).get("columns")[0]
                 pk_table = config_of_keys.get(key).get("references").get("table")
-                pk_path = self._set_pk_path(pk_table=pk_table)
+                pk_path = self._set_pk_path(pk_table=pk_table, table_name=table_name)
                 pk_table_data, pk_table_schema = DataLoader(pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
@@ -388,7 +397,7 @@ class VaeInferHandler(BaseHandler):
         """
         Restore empty columns in the generated table
         """
-        empty_columns = fetch_dataset(self.paths["dataset_pickle_path"]).dropped_columns
+        empty_columns = self.dataset.dropped_columns
         empty_df = pd.DataFrame(index=df.index, columns=empty_columns)
         df = pd.concat([df, empty_df], axis=1)
         return df
@@ -415,6 +424,7 @@ class VaeInferHandler(BaseHandler):
         if self.metadata_path is not None:
             if not is_pk:
                 generated_data = self.generate_keys(prepared_data, self.size, self.metadata, self.table_name)
+                generated_data = generated_data[self.dataset.order_of_columns]
                 if generated_data is None:
                     DataLoader(self.paths["path_to_merged_infer"]).save_data(
                         self.paths["path_to_merged_infer"], prepared_data, format=get_context().get_config())
@@ -425,5 +435,6 @@ class VaeInferHandler(BaseHandler):
                 DataLoader(self.paths["path_to_merged_infer"]).save_data(
                     self.paths["path_to_merged_infer"], prepared_data, format=get_context().get_config())
         if self.metadata_path is None:
+            prepared_data = prepared_data[self.dataset.order_of_columns]
             DataLoader(self.paths["path_to_merged_infer"]).save_data(
                 self.paths["path_to_merged_infer"], prepared_data, format=get_context().get_config())

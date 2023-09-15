@@ -37,9 +37,9 @@ class TrainConfig:
 
     def preprocess_data(self):
         data, self.schema = self._extract_data()
+        self.columns = list(data.columns)
         data = self._remove_empty_columns(data)
         self._mark_removed_columns(data)
-        self.columns = list(data.columns)
         self._prepare_data(data)
         self._set_batch_size()
 
@@ -264,8 +264,8 @@ class InferConfig:
             "original_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
             "draws_path": f"model_artifacts/tmp_store/{dynamic_name}/draws",
             "input_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
-            "path_to_merged_infer": self.destination if self.destination is not None \
-                else f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
+            "path_to_merged_infer": self.destination if self.destination is not None
+            else f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
             "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
             "train_config_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",

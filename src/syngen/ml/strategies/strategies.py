@@ -139,31 +139,31 @@ class TrainStrategy(Strategy, ABC):
         """
         Launch the training process
         """
-        self.set_config(
-            source=kwargs["source"],
-            epochs=kwargs["epochs"],
-            drop_null=kwargs["drop_null"],
-            row_limit=kwargs["row_limit"],
-            table_name=kwargs["table_name"],
-            metadata_path=kwargs["metadata_path"],
-            print_report=kwargs["print_report"],
-            batch_size=kwargs["batch_size"]
-        )
-
-        self.add_reporters().\
-            set_metadata(kwargs["metadata"]).\
-            add_handler()
-
         try:
-            self.handler.handle()
+            self.set_config(
+                source=kwargs["source"],
+                epochs=kwargs["epochs"],
+                drop_null=kwargs["drop_null"],
+                row_limit=kwargs["row_limit"],
+                table_name=kwargs["table_name"],
+                metadata_path=kwargs["metadata_path"],
+                print_report=kwargs["print_report"],
+                batch_size=kwargs["batch_size"]
+            )
 
+            self.add_reporters().\
+                set_metadata(kwargs["metadata"]).\
+                add_handler()
+            self.handler.handle()
         except Exception as e:
-            logger.info(f"Training of the table - {self.handler.table_name} failed on running stage.")
-            logger.error(e)
-            logger.error(traceback.format_exc())
+            logger.error(
+                f"Training of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
+                f"The details of the error - {str(e)}\n"
+                f"The traceback of the error - {traceback.format_exc()}"
+            )
             raise
         else:
-            logger.info(f"Training of the table - {self.handler.table_name} was completed")
+            logger.info(f"Training of the table - {kwargs['table_name']} was completed")
 
 
 class InferStrategy(Strategy):
@@ -178,7 +178,7 @@ class InferStrategy(Strategy):
         self.config = configuration
         return self
 
-    def add_handler(self):
+    def add_handler(self, type_of_process: str):
         """
         Set up the handler which used in infer process
         """
@@ -194,7 +194,8 @@ class InferStrategy(Strategy):
             batch_size=self.config.batch_size,
             run_parallel=self.config.run_parallel,
             print_report=self.config.print_report,
-            log_level=self.config.log_level
+            log_level=self.config.log_level,
+            type_of_process=type_of_process
         )
         return self
 
@@ -219,31 +220,32 @@ class InferStrategy(Strategy):
         """
         Launch the infer process
         """
-        self.set_config(
-            destination=kwargs["destination"],
-            size=kwargs["size"],
-            table_name=kwargs["table_name"],
-            metadata_path=kwargs["metadata_path"],
-            run_parallel=kwargs["run_parallel"],
-            batch_size=kwargs["batch_size"],
-            random_seed=kwargs["random_seed"],
-            print_report=kwargs["print_report"],
-            log_level=kwargs["log_level"],
-            both_keys=kwargs["both_keys"],
-        ).\
-            add_reporters(). \
-            set_metadata(kwargs["metadata"]).\
-            add_handler()
-
         try:
+            self.set_config(
+                destination=kwargs["destination"],
+                size=kwargs["size"],
+                table_name=kwargs["table_name"],
+                metadata_path=kwargs["metadata_path"],
+                run_parallel=kwargs["run_parallel"],
+                batch_size=kwargs["batch_size"],
+                random_seed=kwargs["random_seed"],
+                print_report=kwargs["print_report"],
+                log_level=kwargs["log_level"],
+                both_keys=kwargs["both_keys"],
+            ).\
+                add_reporters().\
+                set_metadata(kwargs["metadata"]).\
+                add_handler(type_of_process=kwargs["type"])
             self.handler.handle()
         except Exception as e:
-            logger.info(f"Generation of the table - {self.handler.table_name} failed on running stage.")
-            logger.error(e)
-            logger.error(traceback.format_exc())
+            logger.error(
+                f"Generation of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
+                f"The details of the error - {str(e)}\n"
+                f"The traceback of the error - {traceback.format_exc()}"
+            )
             raise
         else:
             logger.info(
-                f"Synthesis of the table - {self.handler.table_name} was completed. "
+                f"Synthesis of the table - {kwargs['table_name']} was completed. "
                 f"Synthetic data saved in {self.handler.paths['path_to_merged_infer']}"
             )

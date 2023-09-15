@@ -17,5 +17,6 @@ from syngen.ml.utils.utils import (
     setup_logger,
     datetime_to_timestamp,
     timestamp_to_datetime,
-    define_existent_columns
+    define_existent_columns,
+    create_log_file
 )
