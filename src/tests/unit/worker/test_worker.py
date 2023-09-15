@@ -363,7 +363,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(mock_valid
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_source")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata(mock_train_tables,
@@ -456,7 +456,7 @@ def test_launch_train_with_metadata(mock_train_tables,
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_source")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
@@ -596,7 +596,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_source")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_tables,
@@ -762,7 +762,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_source")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_without_metadata(mock_train_tables,
@@ -830,7 +830,7 @@ def test_launch_train_without_metadata(mock_train_tables,
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_source")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
@@ -957,7 +957,7 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata(mock_infer_tables,
@@ -1019,7 +1019,7 @@ def test_launch_infer_with_metadata(mock_infer_tables,
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
@@ -1105,7 +1105,7 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_tables,
@@ -1230,7 +1230,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_without_metadata(mock_infer_tables,
@@ -1283,7 +1283,7 @@ def test_launch_infer_without_metadata(mock_infer_tables,
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_Validator__check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,

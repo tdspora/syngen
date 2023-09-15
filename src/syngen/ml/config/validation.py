@@ -72,7 +72,7 @@ class Validator:
             if parent_table not in self.metadata:
                 if self.type_of_process == "infer" or (self.type_of_process == "train" and print_report is True):
                     self._check_existence_of_success_file(parent_table)
-                    self.__check_existence_of_generated_data(parent_table)
+                    self._check_existence_of_generated_data(parent_table)
                 elif self.type_of_process == "train":
                     self._check_existence_of_success_file(parent_table)
             else:
@@ -100,7 +100,7 @@ class Validator:
             message = f"The table - '{parent_table}' hasn't been trained completely. Please, retrain this table first"
             self.errors["check existence of the success file"][parent_table] = message
 
-    def __check_existence_of_generated_data(self, parent_table: str):
+    def _check_existence_of_generated_data(self, parent_table: str):
         """
         Check if the generated data of the certain parent table exists.
         The generated data is created after the successful execution of the inference process of the certain table.
@@ -113,7 +113,7 @@ class Validator:
                       f"Please, generate the data related to the table '{parent_table}' first"
             self.errors["check existence of the generated data"][parent_table] = message
 
-    def __check_existence_of_source(self, table_name: str):
+    def _check_existence_of_source(self, table_name: str):
         """
         Check if the source of the certain table exists
         """
@@ -122,7 +122,7 @@ class Validator:
                       f"Please, check the path to the source of the table - '{table_name}'"
             self.errors["check existence of the source"][table_name] = message
 
-    def __check_existence_of_destination(self, table_name: str):
+    def _check_existence_of_destination(self, table_name: str):
         """
         Check if the destination of the certain table exists
         """
@@ -175,9 +175,9 @@ class Validator:
         self.metadata.pop("global", None)
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train":
-                self.__check_existence_of_source(table_name)
+                self._check_existence_of_source(table_name)
             elif self.type_of_process == "infer":
-                self.__check_existence_of_destination(table_name)
+                self._check_existence_of_destination(table_name)
         for table_name in self.metadata.keys():
             self._validate_metadata(table_name)
         error_logs = []
