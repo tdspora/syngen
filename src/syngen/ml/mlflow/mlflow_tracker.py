@@ -3,7 +3,10 @@ from typing import Optional, Dict, Any
 
 
 class MlflowTracker:
-
+    """
+    A singleton class for tracking the MLflow experiments.
+    All methods are derived from the MLflow API, however a check for the active state is added.
+    """
     _instance = None
 
     def __new__(cls, experiment_name=None, is_active=False):
@@ -12,6 +15,7 @@ class MlflowTracker:
             cls._instance.experiment_name = experiment_name
             cls._instance.is_active = is_active
         return cls._instance
+
 
     def log_metric(self, key: str, value: float, step: Optional[int] = None):
         if self.is_active:
@@ -30,9 +34,7 @@ class MlflowTracker:
         tags: Optional[Dict[str, Any]] = None,
         description: Optional[str] = None
     ):
-        print("START RUN IS RUNNNING")
         if self.is_active:
-            print("IT IS ACTIVE")
             mlflow.start_run(run_id, experiment_id, run_name, nested, tags, description)
 
     def end_run(self):
@@ -64,6 +66,10 @@ class MlflowTracker:
             experiment_name: str = None,
             experiment_id: str = None,
     ):
+        """
+        Set the experiment for tracking.
+        If the experiment name is not provided, the last experiment will be used.
+        """
         if self.is_active:
             metadata_name = experiment_name[:-20]  # strip datetime
             last_matching = mlflow.search_experiments(filter_string=f"name LIKE '{metadata_name}%'")[0]

@@ -15,6 +15,8 @@ from ulid import ULID
 import random
 from loguru import logger
 
+from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
+
 
 def datetime_to_timestamp(dt):
     max_allowed_time_ms = 253402214400
@@ -258,23 +260,52 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
-def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
-    """
-    Create the file for storing the logs of main processes
-    """
+def fetch_unique_root(table_name: str, metadata_path: str):
     unique_name = str()
     if table_name:
         unique_name = table_name
     if metadata_path:
         unique_name = os.path.basename(metadata_path)
+    return f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+
+def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
+    """
+    Create the file for storing the logs of main processes
+    """
     os.makedirs("model_artifacts/tmp_store", exist_ok=True)
-    file_name_without_extension = f"logs_{type_of_process}_{unique_name}_" \
-                                  f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}"
+    unique_root = fetch_unique_root(table_name, metadata_path)
+    file_name_without_extension = f"logs_{type_of_process}_{unique_root}"
     file_path = os.path.join(
         "model_artifacts/tmp_store",
         f"{slugify(file_name_without_extension)}.log"
     )
     os.environ["SUCCESS_LOG_FILE"] = file_path
+
+
+def set_mlflow_exp_name(table_name: str, metadata_path: str):
+    name = fetch_unique_root(table_name, metadata_path)
+    os.environ["MLFLOW_EXPERIMENT_NAME"] = name
+
+
+def set_mlflow(type_of_process: str):
+    exp_name = os.environ["MLFLOW_EXPERIMENT_NAME"]
+    try:
+        response = os.system("ping -c 1 " + os.environ.get("MLFLOW_TRACKING_URI")[7:-6])
+        if response == 0:
+            tracker = MlflowTracker(exp_name, True)
+        else:
+            tracker = MlflowTracker(exp_name, False)
+            logger.warning("MLFlow server is not reachable, so the tracking will not be performed")
+        tracker.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+        if type_of_process == "train":
+            tracker.create_experiment(
+                exp_name,
+                artifact_location=os.environ.get("MLFLOW_ARTIFACTS_DESTINATION", "/mlflow")
+            )
+        tracker.set_experiment(exp_name)
+    except Exception as e:
+        logger.warning(f"MLFlow server is not reachable. {e}")
 
 
 def file_sink(record):

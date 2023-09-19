@@ -3,11 +3,9 @@ from typing import Optional
 
 import click
 from loguru import logger
-from datetime import datetime
 
 from syngen.ml.worker import Worker
-from syngen.ml.utils import setup_logger, create_log_file
-from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
+from syngen.ml.utils import setup_logger, create_log_file, set_mlflow, set_mlflow_exp_name
 
 
 @click.command()
@@ -55,6 +53,8 @@ def launch_infer(
     """
     os.environ["LOGURU_LEVEL"] = log_level
     create_log_file(type_of_process="infer", table_name=table_name, metadata_path=metadata_path)
+    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
+    set_mlflow("infer")
     setup_logger()
     if not metadata_path and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' is absent. "
@@ -83,23 +83,8 @@ def launch_infer(
         log_level=log_level,
         type="infer"
     )
-    mlflow_exp_name = f"exp at {datetime.today().strftime('%Y-%m-%d %H:%M:%S')}" if table_name else \
-        f"{metadata_path.split('/')[-1].split('.')[0]}_{datetime.today().strftime('%Y-%m-%d %H:%M:%S')}"
-    set_mlflow(mlflow_exp_name)
-    worker.launch_infer()
 
-def set_mlflow(exp_name: str = None):
-    try:
-        response = os.system("ping -c 1 " + os.environ.get("MLFLOW_TRACKING_URI")[7:-6])
-        if response == 0:
-            tracker = MlflowTracker(exp_name, True)
-        else:
-            tracker = MlflowTracker(exp_name, False)
-            logger.warning("MLFlow server is not reachable, so the tracking will not be performed")
-        tracker.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
-        tracker.set_experiment(exp_name)
-    except Exception as e:
-        logger.warning(f"MLFlow server is not reachable. {e}")
+    worker.launch_infer()
 
 
 if __name__ == "__main__":

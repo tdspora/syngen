@@ -28,6 +28,7 @@ class Worker:
     def __post_init__(self):
         self.metadata = self.__fetch_metadata()
 
+
     def _update_metadata_for_table(self, metadata: Dict) -> Dict:
         """
         Update the metadata for training or inference process if a metadata file wasn't provided

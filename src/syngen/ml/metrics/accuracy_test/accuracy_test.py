@@ -85,6 +85,27 @@ class AccuracyTest(BaseTest):
         acc = JensenShannonDistance(self.original, self.synthetic, True, self.draws_path)
         return univariate, bivariate, correlations, clustering, utility, acc
 
+    def log_report_to_mlflow(self, path):
+        try:
+            self.tracker.log_artifact(path)
+        except PermissionError:
+            pass
+
+    def track_metrics(self, utility_result, clustering_result, acc_median, corr_result):
+        self.tracker = MlflowTracker()
+        self.tracker.start_run(
+            run_name=f"{self.table_name} | INFER",
+            tags={"process": "infer", "table_name": self.table_name}
+        )
+        self.tracker.log_metrics(
+            {
+                "Utility_avg": utility_result["Synth to orig ratio"].mean(),
+                "Clustering": float(clustering_result),
+                "Accuracy": float(acc_median),
+                "Correlation": corr_result
+            }
+        )
+
     def report(self, **kwargs):
         univariate, bivariate, correlations, clustering, utility, acc = self.__prepare_before_report()
         acc.calculate_all(kwargs["categ_columns"])
@@ -96,19 +117,7 @@ class AccuracyTest(BaseTest):
         clustering_result = "%.4f" % clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
         utility_result = utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
 
-        tracker = MlflowTracker()
-        tracker.start_run(
-            run_name=f"{self.table_name} | INFER",
-            tags={"process": "infer", "table_name": self.table_name}
-        )
-        tracker.log_metrics(
-            {
-                "Utility_avg": utility_result["Synth to orig ratio"].mean(),
-                "Clustering": float(clustering_result),
-                "Accuracy": float(acc_median),
-                "Correlation": corr_result
-            }
-        )
+        self.track_metrics(utility_result, clustering_result, acc_median, corr_result)
 
         # Generate html report
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
@@ -139,9 +148,6 @@ class AccuracyTest(BaseTest):
 
         with open(f"{self.paths['draws_path']}/accuracy_report.html", 'w', encoding="utf-8") as f:
             f.write(html)
-        try:
-            tracker.log_artifact(f"{self.paths['draws_path']}/accuracy_report.html")
-        except PermissionError:
-            pass
-        tracker.end_run()
+        self.log_report_to_mlflow(f"{self.paths['draws_path']}/accuracy_report.html")
+        self.tracker.end_run()
         self._remove_artifacts()

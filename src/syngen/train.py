@@ -6,8 +6,7 @@ import click
 from loguru import logger
 
 from syngen.ml.worker import Worker
-from syngen.ml.utils import setup_logger, create_log_file
-from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
+from syngen.ml.utils import setup_logger, create_log_file, set_mlflow, set_mlflow_exp_name
 
 
 @click.command()
@@ -59,6 +58,8 @@ def launch_train(
     """
     os.environ["LOGURU_LEVEL"] = log_level
     create_log_file(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
+    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
+    set_mlflow("train")
     setup_logger()
     if not metadata_path and not source and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' and 'source' is absent. "
@@ -103,25 +104,8 @@ def launch_train(
         log_level=log_level,
         type="train"
     )
+
     worker.launch_train()
-
-
-def set_mlflow(exp_name: str = None):
-    try:
-        response = os.system("ping -c 1 " + os.environ.get("MLFLOW_TRACKING_URI")[7:-6])
-        if response == 0:
-            tracker = MlflowTracker(exp_name, True)
-        else:
-            tracker = MlflowTracker(exp_name, False)
-            logger.warning("MLFlow server is not reachable, so the tracking will not be performed")
-        tracker.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
-        tracker.create_experiment(
-            exp_name,
-            artifact_location=os.environ.get("MLFLOW_ARTIFACTS_DESTINATION", "/mlflow")
-        )
-        tracker.set_experiment(exp_name)
-    except Exception as e:
-        logger.warning(f"MLFlow server is not reachable. {e}")
 
 
 def preprocess_data():
