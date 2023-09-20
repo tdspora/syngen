@@ -290,8 +290,10 @@ def set_mlflow_exp_name(table_name: str, metadata_path: str):
 
 def set_mlflow(type_of_process: str):
     exp_name = os.environ["MLFLOW_EXPERIMENT_NAME"]
+    ip_pattern = "(\d{1,3}\.){3}\d{1,3}"
     try:
-        response = os.system("ping -c 1 " + os.environ.get("MLFLOW_TRACKING_URI")[7:-6])
+        ip = re.search(ip_pattern, os.environ.get("MLFLOW_TRACKING_URI")).group(0)
+        response = os.system("ping -c 1 " + ip)
         if response == 0:
             tracker = MlflowTracker(exp_name, True)
         else:

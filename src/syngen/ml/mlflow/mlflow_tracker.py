@@ -1,4 +1,5 @@
 import mlflow
+import re
 from typing import Optional, Dict, Any
 
 
@@ -71,7 +72,10 @@ class MlflowTracker:
         If the experiment name is not provided, the last experiment will be used.
         """
         if self.is_active:
-            metadata_name = experiment_name[:-20]  # strip datetime
+            if re.search("\d{4}-\d+-\d+\s\d+:\d+:\d+", experiment_name):
+                metadata_name = experiment_name[:-20]  # strip datetime
+            else:
+                metadata_name = experiment_name
             last_matching = mlflow.search_experiments(filter_string=f"name LIKE '{metadata_name}%'")[0]
             matching_name = last_matching.name
             mlflow.set_experiment(matching_name, experiment_id)
