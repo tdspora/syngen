@@ -59,8 +59,6 @@ class MlflowTracker:
     ):
         if self.is_active:
             mlflow.create_experiment(name, artifact_location, tags)
-            with open("model_artifacts/mlflow_info.txt", "w+") as file:
-                file.write(name)
 
     def set_experiment(
             self,

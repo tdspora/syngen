@@ -355,6 +355,14 @@ docker run --rm -e LOGURU_LEVEL=INFO \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
+#### MLflow monitoring
+Set the `MLFLOW_TRACKING_URI` environment variable to the desired MLflow tracking server, for instance:
+http://172.12.82.33:5000/. You can also set `MLFLOW_ARTIFACTS_DESTINATION` environment variable to the desired path 
+(including cloud path), where the artifacts should be stored. When using Docker, ensure the environmental variable is set before building the images.
+
+Provided environmental variables will allow to track the training process and store the artifacts in the desired location.
+You can access the MLflow UI by navigating to the provided URL in your browser.
+
 ## Contribution
 
 We welcome contributions from the community to help us improve and maintain our public GitHub repository. We appreciate any feedback, bug reports, or feature requests, and we encourage developers to submit fixes or new features using issues.

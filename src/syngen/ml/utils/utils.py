@@ -261,6 +261,9 @@ def fetch_training_config(train_config_pickle_path):
 
 
 def fetch_unique_root(table_name: str, metadata_path: str):
+    """
+    Construct the unique constant substring for use in the name of the experiment and log file
+    """
     unique_name = str()
     if table_name:
         unique_name = table_name
