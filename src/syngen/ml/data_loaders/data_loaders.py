@@ -16,12 +16,11 @@ from avro.datafile import DataFileReader
 from avro.io import DatumReader
 from loguru import logger
 
-from syngen.ml.validation_schema import ValidationSchema, SUPPORTED_EXCEL_EXTENSIONS
+from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.context import get_context, global_context
 from syngen.ml.validation_schema import ExcelFormatSettingsSchema, CSVFormatSettingsSchema
-
 
 DELIMITERS = {
     "\\t": "\t"
@@ -51,23 +50,25 @@ class DataLoader(BaseDataLoader):
         if not path:
             raise ValueError("It seems that the information of source is absent")
         self.path = path
-        self.file_loader = self.__get_file_loader()
-        self.has_existed_path = self.check_if_path_exists()
+        self.file_loader = self._get_file_loader()
+        self.has_existed_path = self.__check_if_path_exists()
+        self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
 
-    def check_if_path_exists(self):
-        if os.path.exists(self.path):
+    def __check_if_path_exists(self, type_of_path="source"):
+        if (type_of_path == "source" and os.path.exists(self.path)) \
+                or (type_of_path == "destination" and os.path.exists(os.path.dirname(self.path))):
             return True
         return False
 
-    def __get_file_loader(self):
+    def _get_file_loader(self):
         path = Path(self.path)
-        if path.suffix == '.avro':
+        if path.suffix == ".avro":
             return AvroLoader()
-        elif path.suffix in ['.csv', '.txt']:
+        elif path.suffix in [".csv", ".txt"]:
             return CSVLoader()
-        elif path.suffix == '.tsv':
+        elif path.suffix == ".tsv":
             return CSVLoader(sep="\t")
-        elif path.suffix == '.psv':
+        elif path.suffix == ".psv":
             return CSVLoader(sep="|")
         elif path.suffix == ".pkl":
             return BinaryLoader()
@@ -101,6 +102,7 @@ class CSVLoader:
     """
     Class for loading and saving data in CSV format.
     """
+
     def __init__(self, **kwargs):
         self.format = get_context().get_config()
         self.format.update(kwargs)
@@ -155,7 +157,7 @@ class CSVLoader:
                       f"Please, check the path to the table"
             logger.error(message)
             raise FileNotFoundError(message)
-        
+
         return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
 
     def load_data(self, path, **kwargs):
@@ -253,6 +255,7 @@ class MetadataLoader(BaseDataLoader):
     """
     Metadata class for loading and saving metadata in YAML format
     """
+
     def __init__(self, metadata_path: str):
         self.metadata_path = metadata_path
         self.metadata_loader = self.get_metadata_loader()
@@ -260,7 +263,7 @@ class MetadataLoader(BaseDataLoader):
     def get_metadata_loader(self):
         if self.metadata_path is not None:
             path = Path(self.metadata_path)
-            if path.suffix in ['.yaml', '.yml']:
+            if path.suffix in [".yaml", ".yml"]:
                 return YAMLLoader()
             else:
                 raise NotImplementedError("The format of metadata isn't supported")
@@ -278,17 +281,9 @@ class YAMLLoader(BaseDataLoader):
     """
     _metadata_sections = ["train_settings", "infer_settings", "keys"]
 
-    @staticmethod
-    def _validate_metadata(metadata):
-        """
-        Validate the schema of the metadata file in YAML format
-        """
-        ValidationSchema(metadata).validate_schema()
-
     def _load_data(self, metadata_file) -> Dict:
         try:
             metadata = yaml.load(metadata_file, Loader=SafeLoader)
-            self._validate_metadata(metadata)
             metadata = self.replace_none_values_of_metadata_settings(self._metadata_sections, metadata)
             return metadata
         except ScannerError as error:
@@ -321,22 +316,33 @@ class YAMLLoader(BaseDataLoader):
         return metadata
 
     def save_data(self, path: str, metadata: Dict, **kwargs):
-        raise NotImplementedError("Saving YAML files is not supported")
+        with open(path, "w") as f:
+            self._save_data(metadata, f)
+
+    @staticmethod
+    def _save_data(metadata: Dict, f):
+        yaml.dump(metadata, f)
 
 
 class BinaryLoader(BaseDataLoader):
     """
     Class for loading and saving data using byte stream
     """
+    @staticmethod
+    def _load_data(f) -> Tuple[pd.DataFrame, None]:
+        return pickle.load(f), None
 
-    def load_data(self, path: str, **kwargs) -> Tuple[pd.DataFrame, None]:
+    def load_data(self, path: str) -> Tuple[pd.DataFrame, None]:
         with open(path, "rb") as f:
-            data = pickle.load(f)
-        return data, None
+            return self._load_data(f)
+
+    @staticmethod
+    def _save_data(data, f):
+        pickle.dump(data, f)
 
     def save_data(self, path: str, data, **kwargs):
         with open(path, "wb") as f:
-            pickle.dump(data, f)
+            self._save_data(data, f)
 
 
 class ExcelLoader:

@@ -139,9 +139,9 @@ class Report:
         """
         list_of_reporters = itertools.chain.from_iterable(cls._reporters.values())
         for reporter in list_of_reporters:
-            logger.info(f"Generation of {reporter.__class__.report_type} report "
-                        f"for the table - '{reporter.table_name}'")
             reporter.report()
+            logger.info(f"The {reporter.__class__.report_type} report "
+                        f"of the table - '{reporter.table_name}' has been generated")
 
     @property
     def reporters(self) -> Dict[str, Reporter]:

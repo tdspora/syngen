@@ -31,7 +31,7 @@ class TrainConfig:
     dropped_columns: Set = field(init=False)
 
     def __post_init__(self):
-        self.paths = self._set_paths()
+        self.paths = self._get_paths()
         self._remove_existed_artifacts()
         self._prepare_dirs()
 
@@ -76,9 +76,8 @@ class TrainConfig:
         Create main directories for saving original, synthetic data and model artifacts
         """
         os.makedirs(self.paths["model_artifacts_path"], exist_ok=True)
-        tmp_store_path = self.paths["tmp_store_path"]
         os.makedirs(self.paths["state_path"], exist_ok=True)
-        os.makedirs(tmp_store_path, exist_ok=True)
+        os.makedirs(self.paths["tmp_store_path"], exist_ok=True)
 
     def _load_source(self) -> Tuple[pd.DataFrame, Dict]:
         """
@@ -169,7 +168,7 @@ class TrainConfig:
         self._save_input_data(data)
 
     @slugify_attribute(table_name="slugify_table_name")
-    def _set_paths(self) -> Dict:
+    def _get_paths(self) -> Dict:
         """
         Create the paths which used in training process
         """
@@ -212,7 +211,7 @@ class InferConfig:
     slugify_table_name: str = field(init=False)
 
     def __post_init__(self):
-        self.paths = self._set_paths()
+        self.paths = self._get_paths()
         self._set_up_reporting()
         self._set_up_size()
         self._set_up_batch_size()
@@ -255,7 +254,7 @@ class InferConfig:
         self.batch_size = min(self.batch_size, self.size) if self.batch_size is not None else self.size
 
     @slugify_attribute(table_name="slugify_table_name")
-    def _set_paths(self) -> Dict:
+    def _get_paths(self) -> Dict:
         """
         Create the paths which used in inference process
         """
