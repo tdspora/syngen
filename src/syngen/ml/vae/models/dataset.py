@@ -775,6 +775,7 @@ class Dataset:
         if len(features) == 2 and features[1].endswith('_zero'):
             self.zero_num_column_names.append(features[1])
         if len(features) == 3:
+            self.null_num_column_names.append(features[1])
             self.zero_num_column_names.append(features[2])
         for feature in features:
             self.assign_feature(
@@ -787,17 +788,20 @@ class Dataset:
         Assign int based feature to int columns
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
-        if len(features) == 2 and features[1].endswith("_null"):
-            self.null_num_column_names.append(features[1])
-        if len(features) == 2 and features[1].endswith('_zero'):
-            self.zero_num_column_names.append(features[1])
-        if len(features) == 3:
-            self.zero_num_column_names.append(features[2])
-        for feature in features:
-            self.assign_feature(
-                ContinuousFeature(feature, column_type=int), feature
-            )
-            logger.info(f"Column '{feature}' assigned as int based feature")
+        self.assign_feature(
+            ContinuousFeature(features[0], column_type=int), features[0]
+        )
+        logger.info(f"Column '{features[0]}' assigned as int based feature")
+        if len(features) > 1:
+            for feature in features[1:]:
+                if feature.endswith("_null"):
+                    self.null_num_column_names.append(feature)
+                if feature.endswith('_zero'):
+                    self.zero_num_column_names.append(feature)
+                self.assign_feature(
+                    ContinuousFeature(feature, column_type=float), feature
+                )
+                logger.info(f"Column '{feature}' assigned as float based feature")
 
     def _assign_categ_feature(self, feature):
         """
@@ -816,8 +820,8 @@ class Dataset:
         logger.info(f"Column '{features[0]}' assigned as date feature")
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
-            self.assign_feature(ContinuousFeature(features[1], column_type=int), features[1])
-            logger.info(f"Column '{features[1]}' assigned as int feature")
+            self.assign_feature(ContinuousFeature(features[1]), features[1])
+            logger.info(f"Column '{features[1]}' assigned as float feature")
 
     def _assign_binary_feature(self, feature):
         """
