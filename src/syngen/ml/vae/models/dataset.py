@@ -862,8 +862,6 @@ class Dataset:
             self.__map_text_pk()
 
         for column in self.df.columns:
-            if column.endswith("_null"):
-                self._assign_binary_feature(column)
             if column in self.str_columns:
                 self._assign_char_feature(column)
             elif column in self.float_columns:
