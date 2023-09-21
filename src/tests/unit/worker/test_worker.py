@@ -381,7 +381,7 @@ def test_launch_train_with_metadata(mock_train_tables,
                    "with only the primary key was provided")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
+        metadata_path=r"C:\Users\Hanna_Imshenetska\Projects\syngen\syngen\src\tests\unit\worker\fixtures\metadata.yaml",
         settings={
             "source": None,
             "epochs": 20,

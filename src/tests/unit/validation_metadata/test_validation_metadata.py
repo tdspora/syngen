@@ -4,6 +4,7 @@ import pytest
 
 from marshmallow import ValidationError
 from syngen.ml.config.validation import Validator
+from tests.conftest import SUCCESSFUL_MESSAGE
 
 FAKE_METADATA_PATH = "path/to/metadata.yaml"
 
@@ -40,6 +41,7 @@ def test_validate_metadata_of_one_table_without_fk_key(mock_check_existence_of_s
     mock_check_existence_of_source.assert_called_once()
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
@@ -92,6 +94,7 @@ def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence
     assert mock_check_existence_of_source.call_count == 2
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
@@ -153,6 +156,7 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
     assert mock_check_existence_of_source.call_count == 2
     assert mock_validate_referential_integrity.call_count == 1
     mock_check_existence_of_success_file.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
@@ -225,6 +229,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
     assert mock_check_existence_of_source.call_count == 2
     assert mock_validate_referential_integrity.call_count == 2
     mock_check_existence_of_success_file.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
@@ -263,6 +268,7 @@ def test_validate_metadata_of_one_table_without_fk_key(mock_validate_referential
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
     mock_check_existence_of_generated_data.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
@@ -322,6 +328,7 @@ def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence
     mock_check_existence_of_success_file.assert_not_called()
     mock_check_existence_of_generated_data.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
@@ -389,6 +396,7 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
     assert mock_validate_referential_integrity.call_count == 1
     mock_check_existence_of_success_file.assert_not_called()
     mock_check_existence_of_generated_data.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
@@ -467,6 +475,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
     assert mock_validate_referential_integrity.call_count == 2
     mock_check_existence_of_success_file.assert_not_called()
     mock_check_existence_of_generated_data.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
@@ -552,6 +561,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     assert mock_check_existence_of_source.call_count == 2
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
@@ -640,6 +650,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_pri
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
     mock_check_existence_of_generated_data.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
@@ -725,6 +736,7 @@ def test_validate_incomplete_metadata_in_infer_process(mock_check_existence_of_d
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
     mock_check_existence_of_generated_data.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_validate_referential_integrity")
@@ -760,6 +772,7 @@ def test_validate_metadata_with_not_existent_source(mock_validate_referential_in
                       "to the source of the table - 'test_table'\"}"
             assert str(error.value) == message
             assert message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_source")
@@ -807,6 +820,7 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
                       "metadata file or in the metadata files stored in 'model_artifacts/metadata' directory"
             assert str(error.value) == message
             assert message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
@@ -894,6 +908,7 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
                       "of the foreign key - 'fk_key' is not the same\"}"
             assert str(error.value) == message
             assert message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_validate_referential_integrity")
@@ -984,6 +999,7 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
                       "hasn't been trained completely. Please, retrain this table first\"}"
             assert str(error.value) == message
             assert message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_validate_referential_integrity")
@@ -1022,24 +1038,27 @@ def test_validate_metadata_with_not_existent_destination(mock_validate_referenti
                       "the generated data of table 'test_table' isn't correct. Please, verify the destination path\"}"
             assert str(error.value) == message
             assert message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_destination")
-def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_in_infer_process(
-        mock_check_existence_of_destination,
+@patch.object(Validator, "_check_existence_of_source")
+def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_in_train_process(
+        mock_check_existence_of_source,
         mock_validate_referential_integrity,
+        mock_check_existence_of_success_file,
         test_metadata_storage,
         caplog,
         rp_logger
 ):
     """
     Test the validation of the incomplete metadata of one table contained the foreign key
-    used in the inference process. The information of the parent table is present in the metadata storage,
+    used in the training process. The information of the parent table is present in the metadata storage,
     but the parent table hasn't been trained previously that's why the success file of the parent table is absent
     """
     rp_logger.info("Test the validation of the incomplete metadata of one table contained the foreign key "
-                   "used in the inference process. The information of the parent table is present "
+                   "used in the training process. The information of the parent table is present "
                    "in the metadata storage, but the parent table hasn't been trained previously "
                    "that's why the success file of the parent table is absent")
     metadata = {
@@ -1061,10 +1080,11 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
         }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            validator = Validator(metadata=metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+            validator = Validator(metadata=metadata, type_of_process="infer", metadata_path=FAKE_METADATA_PATH)
             validator.run()
-            assert mock_check_existence_of_destination.call_count == 2
+            assert mock_check_existence_of_source.call_count == 2
             mock_validate_referential_integrity.assert_called_once()
+            mock_check_existence_of_success_file.assert_called_once()
             assert validator.mapping == {
                 "fk_key": {
                     "parent_columns": ["id"],
@@ -1112,14 +1132,15 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
                       "hasn't been trained completely. Please, retrain this table first\"}"
             assert str(error.value) == message
             assert message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_destination")
 def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_infer_process(
         mock_check_existence_of_destination,
-        mock_check_existence_of_success_file,
+        mock_check_existence_of_generated_data,
         mock_validate_referential_integrity,
         test_metadata_storage,
         caplog,
@@ -1204,22 +1225,23 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
             }
             assert mock_check_existence_of_destination.call_count == 2
             mock_validate_referential_integrity.assert_called_once()
-            mock_check_existence_of_success_file.assert_called_once()
+            mock_check_existence_of_generated_data.assert_called_once()
             message = "The validation of the metadata has been failed. The error(s) found in - \"check existence " \
                       "of the generated data\": {\"table_a\": \"The generated data of the table - 'table_a' " \
                       "hasn't been generated. Please, generate the data related to the table 'table_a' first\"}"
             assert str(error.value) == message
             assert message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_train_process_with_print_report(
         mock_check_existence_of_source,
         mock_check_existence_of_success_file,
-        mock_check_existence_of_destination,
+        mock_check_existence_of_generated_data,
         mock_validate_referential_integrity,
         test_metadata_storage,
         caplog,
@@ -1261,7 +1283,6 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_t
                 metadata_path=FAKE_METADATA_PATH
             )
             validator.run()
-            assert mock_check_existence_of_destination.call_count == 2
             assert validator.mapping == {
                 "fk_key": {
                     "parent_columns": ["id"],
@@ -1305,7 +1326,7 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_t
                 }
             }
             assert mock_check_existence_of_source.call_count == 2
-            assert mock_check_existence_of_destination.call_count == 2
+            assert mock_check_existence_of_generated_data.assert_called_once()
             mock_check_existence_of_success_file.assert_called_once()
             mock_validate_referential_integrity.assert_called_once()
             message = "The validation of the metadata has been failed. The error(s) found in - \"check existence " \
@@ -1313,3 +1334,4 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_t
                       "hasn't been generated. Please, generate the data related to the table 'table_a' first\"}"
             assert str(error.value) == message
             assert message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
