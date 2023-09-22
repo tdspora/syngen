@@ -917,7 +917,6 @@ def test_save_csv_with_na_values(test_csv_path, rp_logger):
     global_context(format_settings)
     data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
-        "na_rep": "-",
         "na_values": ["-", "Missing", "NaN"],
         "quoting": 0,
         "skiprows": None

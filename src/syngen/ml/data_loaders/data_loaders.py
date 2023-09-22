@@ -150,8 +150,6 @@ class CSVLoader:
             if len(sep) > 1:
                 params["sep"] = ","
             params["skiprows"] = None
-            if params.get("na_values", []):
-                params["na_rep"] = params["na_values"][0]
             global_context(params)
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \
@@ -194,6 +192,12 @@ class CSVLoader:
                 logger.warning(
                     "As the length of the value of the parameter 'separator' is more than 1 character,"
                     "the 'separator' will be set to ',' in accordance with the standard 'RFC 4180'"
+                )
+            if "na_values" in format_params and format_params.get("na_values", []):
+                filtered_kwargs["na_rep"] = format_params["na_values"][0]
+                logger.warning(
+                    "As the value of the parameter 'na_values' is not empty, the 'na_rep' will be set to "
+                    "the first value of the parameter 'na_values'"
                 )
 
             # Save the DataFrame to a CSV file
