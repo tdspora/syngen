@@ -150,6 +150,8 @@ class CSVLoader:
             if len(sep) > 1:
                 params["sep"] = ","
             params["skiprows"] = None
+            if params.get("na_values", []):
+                params["na_rep"] = params["na_values"][0]
             global_context(params)
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \

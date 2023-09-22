@@ -624,6 +624,7 @@ class DateFeature(BaseFeature):
                   r"[A-Z][a-z]+ \d{1,2} \d{4}|" \
                   r"[A-Z][a-z]+ \d{1,2}, \d{4}|" \
                   r"\d{2} [A-Z][a-z]+ \d{4}|" \
+                  r"\d{2}[-][A-Z][a-z]+[-]\d{2}|" \
                   r"\d{4}[-/\\]\d{1,2}"
         types = []
         sample = date_text.dropna().sample(100, replace=len(date_text) <= 100).values

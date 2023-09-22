@@ -66,12 +66,11 @@ class CSVFormatSettingsSchema(Schema):
     quotechar = fields.String(required=False, validate=validate.Length(equal=1))
     quoting = CaseInsensitiveString(required=False, validate=validate.OneOf(["minimal", "all", "non-numeric", "none"]))
     escapechar = fields.String(required=False, validate=validate.Length(equal=1))
-    encoding = fields.String(required=False)
+    encoding = fields.String(required=False, allow_none=True)
     header = fields.Raw(
         required=False,
         allow_none=True,
         validate=lambda x: isinstance(x, int)
-                           or x is None
                            or (isinstance(x, str) and x == 'infer')
                            or (isinstance(x, list) and all(isinstance(elem, int) for elem in x))
     )
@@ -79,10 +78,10 @@ class CSVFormatSettingsSchema(Schema):
         required=False,
         allow_none=True,
         validate=lambda x: isinstance(x, int)
-                           or x is None
                            or (isinstance(x, list) and all(isinstance(elem, int) for elem in x)))
     on_bad_lines = CaseInsensitiveString(required=False, validate=validate.OneOf(["error", "warn", "skip"]))
-    engine = fields.String(required=False, validate=validate.OneOf(["c", "python"]))
+    engine = fields.String(required=False, allow_none=True, validate=validate.OneOf(["c", "python"]))
+    na_values = fields.List(fields.String(), required=False, allow_none=True)
 
 
 class ExcelFormatSettingsSchema(Schema):
