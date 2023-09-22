@@ -907,7 +907,7 @@ def test_load_csv_with_na_values(rp_logger):
 
 
 def test_save_csv_with_na_values(test_csv_path, rp_logger):
-    path_to_source = r"C:\Users\Hanna_Imshenetska\Projects\syngen\syngen\src\tests\unit\data_loaders\fixtures\csv_tables\table_with_na_values.csv"
+    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/table_with_na_values.csv"
     rp_logger.info("Saving CSV contained NA values")
     format_settings = {
         "na_values": ["-", "Missing", "NaN"],
