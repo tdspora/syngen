@@ -181,16 +181,18 @@ CUSTOMER:                                   # Table name. Required parameter
         - gender
         - marital_status
         
-  format:                                   # Settings for reading and writing data in 'csv' format. Optional parameter
-    sep: ','                                # Delimiter to use. Optional parameter
-    quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter
-    quoting: minimal                        # Control field quoting behavior per constants - ["all", "minimal", "non-numeric", "none"]. Optional parameter
-    escapechar: '"'                         # One-character string used to escape other characters. Optional parameter
-    encoding: null                          # A string representing the encoding to use in the output file. Optional parameter
-    header: infer                           # Row number(s) to use as the column names, and the start of the data. Optional parameter  
-    skiprows: null                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter
-    on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
-    engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter             
+  format:                                   # Settings for reading and writing data in 'csv', 'psv', 'tsv', 'txt', 'xls', 'xlsx' format. Optional parameter
+    sep: ','                                # Delimiter to use. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
+    quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
+    quoting: minimal                        # Control field quoting behavior per constants - ["all", "minimal", "non-numeric", "none"]. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
+    escapechar: '"'                         # One-character string used to escape other characters. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
+    encoding: null                          # A string representing the encoding to use in the output file. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
+    header: infer                           # Row number(s) to use as the column names, and the start of the data. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats 
+    skiprows: null                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
+    on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
+    engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
+    na_values: null                         # Additional strings to recognize as NA/NaN. The first value of the array will be used to replace NA/NaN values. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
+    sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter. Applicable for 'xls', 'xlsx' formats
   infer_settings:                           # Settings for infer process. Optional parameter
     destination: "./files/generated_data_customer.csv"# The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
