@@ -171,7 +171,7 @@ class Validator:
         Check if the columns of the certain key exist in the source table
         """
         metadata_of_table = self.metadata[table_name]
-        existed_columns = DataLoader(metadata_of_table["train_settings"]["source"]).head_object()
+        existed_columns = DataLoader(metadata_of_table["train_settings"]["source"]).get_columns()
         for key, config_of_key in metadata_of_table.get("keys", {}).items():
             if all([column in existed_columns for column in config_of_key["columns"]]):
                 continue
