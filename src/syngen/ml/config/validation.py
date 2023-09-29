@@ -87,8 +87,8 @@ class Validator:
                       for config in parent_config.get("keys", {}).values()
                       if config["type"] in ["PK", "UQ"]])
         if result is False:
-            message = f"The primary key columns associated with the columns of " \
-                      f"the foreign key - '{fk_name}' is not the same"
+            message = f"The columns of primary or unique key associated with the columns of " \
+                      f"the {fk_config['type']} - '{fk_name}' is not the same"
             self.errors["validate referential integrity"][fk_name] = message
 
     def _check_existence_of_success_file(self, parent_table: str):
@@ -113,7 +113,7 @@ class Validator:
                       f"Please, generate the data related to the table '{parent_table}' first"
             self.errors["check existence of the generated data"][parent_table] = message
 
-    def _check_existence_of_source(self, table_name: str):
+    def _check_existence_of_source(self, table_name: str) -> bool:
         """
         Check if the source of the certain table exists
         """
@@ -121,6 +121,8 @@ class Validator:
             message = f"It seems that the path to the source of the table - '{table_name}' isn't correct. " \
                       f"Please, check the path to the source of the table - '{table_name}'"
             self.errors["check existence of the source"][table_name] = message
+            return False
+        return True
 
     def _check_existence_of_destination(self, table_name: str):
         """
@@ -164,6 +166,30 @@ class Validator:
                             f"'{parent_table}'")
             self._check_merged_metadata(parent_table)
 
+    def _check_key_columns(self, table_name: str):
+        """
+        Check if the columns of the certain key exist in the source table
+        """
+        metadata_of_table = self.metadata[table_name]
+        existed_columns = DataLoader(metadata_of_table["train_settings"]["source"]).head_object()
+        for key, config_of_key in metadata_of_table.get("keys", {}).items():
+            if all([column in existed_columns for column in config_of_key["columns"]]):
+                continue
+            else:
+                message = f"The columns of the {config_of_key['type']} '{key}' - " \
+                          f"{', '.join(list(set(config_of_key['columns']).difference(set(existed_columns))))} " \
+                          f"don't exist in the source of the table - '{table_name}'"
+                self.errors["check existence of the key columns in 'columns'"][key] = message
+
+            if config_of_key["type"] == "FK" \
+                    and all([column in existed_columns for column in config_of_key["references"]["columns"]]):
+                continue
+            else:
+                message = f"The columns of the {config_of_key['type']} '{key}' - " \
+                          f"{', '.join(list(set(config_of_key['columns']).difference(set(existed_columns))))} " \
+                          f"don't exist in the source of the table - '{table_name}'"
+                self.errors["check existence of the key columns in 'references.columns'"][key] = message
+
     def run(self):
         """
         Run the validation process
@@ -175,7 +201,8 @@ class Validator:
         self.metadata.pop("global", None)
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train":
-                self._check_existence_of_source(table_name)
+                if self._check_existence_of_source(table_name):
+                    self._check_key_columns(table_name)
             elif self.type_of_process == "infer":
                 self._check_existence_of_destination(table_name)
         for table_name in self.metadata.keys():

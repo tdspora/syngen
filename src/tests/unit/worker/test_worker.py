@@ -381,7 +381,7 @@ def test_launch_train_with_metadata(mock_train_tables,
                    "with only the primary key was provided")
     worker = Worker(
         table_name=None,
-        metadata_path=r"C:\Users\Hanna_Imshenetska\Projects\syngen\syngen\src\tests\unit\worker\fixtures\metadata.yaml",
+        metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -432,13 +432,13 @@ def test_launch_train_with_metadata(mock_train_tables,
                      "row_limit": 800,
                      "batch_size": 2000
                  },
-                "infer_settings": {
+                 "infer_settings": {
                     "size": 200,
                     "run_parallel": True,
                     "random_seed": 2,
                     "print_report": True,
                     "batch_size": 200
-                },
+                 },
                  "keys": {
                      "pk_id": {
                          "type": "PK",

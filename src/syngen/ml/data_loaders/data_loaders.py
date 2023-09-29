@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, List
 import pickle
 import csv
 import inspect
@@ -97,6 +97,9 @@ class DataLoader(BaseDataLoader):
         if df is not None:
             self.file_loader.save_data(path, df, **kwargs)
 
+    def head_object(self) -> List[str]:
+        return self.file_loader.head_object(self.path)
+
 
 class CSVLoader:
     """
@@ -162,6 +165,23 @@ class CSVLoader:
 
     def load_data(self, path, **kwargs):
         return self._load_data(path, format=self.format, **kwargs)
+
+    def head_object(self, path: str) -> List[str]:
+        return self._head_object(path)
+
+    @staticmethod
+    def _head_object(path) -> List[str]:
+        """
+        Get the column names of the table located in the path
+        """
+        try:
+            head_df = pd.read_csv(path, nrows=0)
+            return list(head_df.columns)
+        except pd.errors.EmptyDataError as error:
+            logger.error(
+                f"The empty file was provided. Unable to train this table located in the path - '{path}'"
+            )
+            raise error
 
     @staticmethod
     def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
@@ -255,6 +275,17 @@ class AvroLoader(BaseDataLoader):
         convertor = AvroConvertor(schema, df)
         schema, preprocessed_df = convertor.converted_schema, convertor.preprocessed_df
         return schema, preprocessed_df
+
+    def _head_object(self, path) -> List[str]:
+        """
+        Get the column names of the table located in the path
+        """
+        with open(path, "rb") as f:
+            df = self._load_df(f)
+            return list(df.columns)
+
+    def head_object(self, path: str) -> List[str]:
+        return self._head_object(path)
 
 
 class MetadataLoader(BaseDataLoader):
