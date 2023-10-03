@@ -1,5 +1,4 @@
 from unittest.mock import patch
-
 import pytest
 
 from marshmallow import ValidationError
@@ -11,16 +10,22 @@ FAKE_METADATA_PATH = "path/to/metadata.yaml"
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
-def test_validate_metadata_of_one_table_without_fk_key(mock_check_existence_of_source,
-                                                       mock_validate_referential_integrity,
-                                                       mock_check_existence_of_success_file,
-                                                       rp_logger):
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
+def test_validate_metadata_of_one_table_without_fk_key(
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        mock_validate_referential_integrity,
+        mock_check_existence_of_success_file,
+        rp_logger
+):
     """
     Test the validation of the metadata of one table contained only the primary key used in the training process
     """
-    rp_logger.info("Test the validation of the metadata of one table contained the primary key "
-                   "used in the training process")
+    rp_logger.info(
+        "Test the validation of the metadata of one table contained the primary key "
+        "used in the training process"
+    )
     test_metadata = {
             "test_table": {
                 "train_settings": {
@@ -34,11 +39,16 @@ def test_validate_metadata_of_one_table_without_fk_key(mock_check_existence_of_s
                 }
             }
         }
-    validator = Validator(metadata=test_metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
     mock_check_existence_of_source.assert_called_once()
+    mock_check_key_columns.assert_called_once()
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -46,19 +56,24 @@ def test_validate_metadata_of_one_table_without_fk_key(mock_check_existence_of_s
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
-def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence_of_source,
-                                                            mock_validate_referential_integrity,
-                                                            mock_check_existence_of_success_file,
-                                                            rp_logger):
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
+def test_validate_metadata_of_related_tables_without_fk_key(
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        mock_validate_referential_integrity,
+        mock_check_existence_of_success_file,
+        rp_logger
+):
     """
     Test the validation of the metadata of related tables
     contained only the primary key and the unique key
     used in the training process
     """
-    rp_logger.info("Test the validation of the metadata of related tables "
-                   "contained only the primary key and the unique key "
-                   "used in the training process")
+    rp_logger.info(
+        "Test the validation of the metadata of related tables "
+        "contained only the primary key and the unique key used in the training process"
+    )
     test_metadata = {
             "table_a": {
                 "train_settings": {
@@ -87,31 +102,123 @@ def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence
                 }
             }
         }
-    validator = Validator(metadata=test_metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_check_key_column_in_pk(rp_logger):
+    """
+    Test that the column of the primary key exists in the source table
+    """
+    rp_logger.info(
+        "Test that the column of the primary key exists in the source table"
+    )
+    test_metadata = {
+            "table_a": {
+                "train_settings": {
+                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    }
+                }
+            }
+        }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    validator.run()
+    assert validator.mapping == {}
+    assert validator.merged_metadata == test_metadata
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_check_key_column_in_fk(rp_logger):
+    """
+    Test that the column of the foreign key exists in the parent table
+    """
+    rp_logger.info(
+        "Test that the column of the foreign key exists in the parent table"
+    )
+    test_metadata = {
+        "table_a": {
+            "train_settings": {
+                "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        },
+        "table_b": {
+            "train_settings": {
+                "source": "./tests/unit/data_loaders/fixtures/csv_tables/child_table_with_data.csv"
+            },
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["Id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                },
+            }
+        }
+    }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    validator.run()
+    assert validator.mapping == {
+        "fk_id": {
+            "parent_columns": ["id"],
+            "parent_table": "table_a"
+        }
+    }
+    assert validator.merged_metadata == test_metadata
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
-def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of_source,
-                                                         mock_validate_referential_integrity,
-                                                         mock_check_existence_of_success_file,
-                                                         rp_logger):
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
+def test_validate_metadata_of_related_tables_with_fk_key(
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        mock_validate_referential_integrity,
+        mock_check_existence_of_success_file,
+        rp_logger
+):
     """
     Test the validation of the metadata of related tables
     contained the primary key and the foreign key
     used in the training process
     """
-    rp_logger.info("Test the validation of the metadata of related tables "
-                   "contained only the primary key and the foreign key "
-                   "used in the training process")
+    rp_logger.info(
+        "Test the validation of the metadata of related tables "
+        "contained only the primary key and the foreign key used in the training process"
+    )
     test_metadata = {
             "table_a": {
                 "train_settings": {
@@ -144,7 +251,11 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
                 }
             }
         }
-    validator = Validator(metadata=test_metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -154,6 +265,7 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
     }
     assert validator.merged_metadata == test_metadata
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
     assert mock_validate_referential_integrity.call_count == 1
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -161,18 +273,24 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_existence_of_source")
-def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_existence_of_source,
-                                                                 mock_validate_referential_integrity,
-                                                                 mock_check_existence_of_success_file,
-                                                                 rp_logger):
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source", return_value=True)
+def test_validate_metadata_of_related_tables_with_several_fk_key(
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        mock_validate_referential_integrity,
+        mock_check_existence_of_success_file,
+        rp_logger
+):
     """
     Test the validation of the metadata of related tables
     contained several foreign keys
     used in the training process
     """
-    rp_logger.info("Test the validation of the metadata of related tables contained several foreign keys "
-                   "used in the training process")
+    rp_logger.info(
+        "Test the validation of the metadata of related tables contained several foreign keys "
+        "used in the training process"
+    )
     test_metadata = {
             "table_a": {
                 "train_settings": {
@@ -213,7 +331,11 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
                 }
             }
         }
-    validator = Validator(metadata=test_metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -227,6 +349,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
     }
     assert validator.merged_metadata == test_metadata
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
     assert mock_validate_referential_integrity.call_count == 2
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -236,17 +359,21 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_validate_referential_integrity")
-def test_validate_metadata_of_one_table_without_fk_key(mock_validate_referential_integrity,
-                                                       mock_check_existence_of_destination,
-                                                       mock_check_existence_of_success_file,
-                                                       mock_check_existence_of_generated_data,
-                                                       rp_logger):
+def test_validate_metadata_of_one_table_without_fk_key(
+        mock_validate_referential_integrity,
+        mock_check_existence_of_destination,
+        mock_check_existence_of_success_file,
+        mock_check_existence_of_generated_data,
+        rp_logger
+):
     """
     Test the validation of the metadata of one table
     contained the primary key used in the inference process
     """
-    rp_logger.info("Test the validation of the metadata of one table contained the primary key "
-                   "used in the inference process")
+    rp_logger.info(
+        "Test the validation of the metadata of one table contained the primary key "
+        "used in the inference process"
+    )
     test_metadata = {
             "test_table": {
                 "train_settings": {
@@ -260,7 +387,11 @@ def test_validate_metadata_of_one_table_without_fk_key(mock_validate_referential
                 }
             }
         }
-    validator = Validator(metadata=test_metadata, type_of_process="infer", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="infer",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -275,19 +406,22 @@ def test_validate_metadata_of_one_table_without_fk_key(mock_validate_referential
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
-def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence_of_destination,
-                                                            mock_validate_referential_integrity,
-                                                            mock_check_existence_of_success_file,
-                                                            mock_check_existence_of_generated_data,
-                                                            rp_logger):
+def test_validate_metadata_of_related_tables_without_fk_key(
+        mock_check_existence_of_destination,
+        mock_validate_referential_integrity,
+        mock_check_existence_of_success_file,
+        mock_check_existence_of_generated_data,
+        rp_logger
+):
     """
     Test the validation of the metadata of related tables
     contained only the primary key and the unique key
     used in the inference process
     """
-    rp_logger.info("Test the validation of the metadata of related tables "
-                   "contained only the primary key and the unique key "
-                   "used in the inference process")
+    rp_logger.info(
+        "Test the validation of the metadata of related tables "
+        "contained only the primary key and the unique key used in the inference process"
+    )
     test_metadata = {
             "table_a": {
                 "train_settings": {
@@ -319,7 +453,11 @@ def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence
                 }
             }
         }
-    validator = Validator(metadata=test_metadata, type_of_process="infer", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="infer",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -335,19 +473,22 @@ def test_validate_metadata_of_related_tables_without_fk_key(mock_check_existence
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
-def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of_destination,
-                                                         mock_validate_referential_integrity,
-                                                         mock_check_existence_of_success_file,
-                                                         mock_check_existence_of_generated_data,
-                                                         rp_logger):
+def test_validate_metadata_of_related_tables_with_fk_key(
+        mock_check_existence_of_destination,
+        mock_validate_referential_integrity,
+        mock_check_existence_of_success_file,
+        mock_check_existence_of_generated_data,
+        rp_logger
+):
     """
     Test the validation of the metadata of related tables
     contained the primary key and the foreign key
     used in the inference process
     """
-    rp_logger.info("Test the validation of the metadata of related tables "
-                   "contained only the primary key and the foreign key "
-                   "used in the inference process")
+    rp_logger.info(
+        "Test the validation of the metadata of related tables "
+        "contained only the primary key and the foreign key used in the inference process"
+    )
     test_metadata = {
             "table_a": {
                 "train_settings": {
@@ -383,7 +524,11 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
                 }
             }
         }
-    validator = Validator(metadata=test_metadata, type_of_process="infer", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="infer",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -403,18 +548,22 @@ def test_validate_metadata_of_related_tables_with_fk_key(mock_check_existence_of
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
-def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_existence_of_destination,
-                                                                 mock_validate_referential_integrity,
-                                                                 mock_check_existence_of_success_file,
-                                                                 mock_check_existence_of_generated_data,
-                                                                 rp_logger):
+def test_validate_metadata_of_related_tables_with_several_fk_key(
+        mock_check_existence_of_destination,
+        mock_validate_referential_integrity,
+        mock_check_existence_of_success_file,
+        mock_check_existence_of_generated_data,
+        rp_logger
+):
     """
     Test the validation of the metadata of related tables
     contained several foreign keys
     used in the inference process
     """
-    rp_logger.info("Test the validation of the metadata of related tables contained several foreign keys "
-                   "used in the inference process")
+    rp_logger.info(
+        "Test the validation of the metadata of related tables contained several foreign keys "
+        "used in the inference process"
+    )
     test_metadata = {
             "table_a": {
                 "train_settings": {
@@ -458,7 +607,11 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
                 }
             }
         }
-    validator = Validator(metadata=test_metadata, type_of_process="infer", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="infer",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -480,9 +633,11 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(mock_check_exis
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_print_report(
         mock_check_existence_of_source,
+        mock_check_key_columns,
         mock_validate_referential_integrity,
         mock_check_existence_of_success_file,
         test_metadata_storage,
@@ -492,9 +647,11 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     contained the foreign key but not contained the information of the parent table.
     It's used in the training process with the parameter 'print_report' set to False
     """
-    rp_logger.info("Test the validation of the incomplete metadata of one table "
-                   "contained the foreign key but not contained the information of the parent table. "
-                   "It used in the training process with the parameter 'print_report' set to False")
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table "
+        "contained the foreign key but not contained the information of the parent table. "
+        "It used in the training process with the parameter 'print_report' set to False"
+    )
     metadata = {
             "table_b": {
                 "train_settings": {
@@ -513,7 +670,11 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
                 }
             }
         }
-    validator = Validator(metadata=metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -559,6 +720,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
         }
     }
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -567,9 +729,11 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_print_report(
         mock_check_existence_of_source,
+        mock_check_key_columns,
         mock_validate_referential_integrity,
         mock_check_existence_of_success_file,
         mock_check_existence_of_generated_data,
@@ -580,9 +744,11 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_pri
     contained the foreign key but not contained the information of the parent table.
     It's used in the training process with the parameter 'print_report' set to True
     """
-    rp_logger.info("Test the validation of the incomplete metadata of one table "
-                   "contained the foreign key but not contained the information of the parent table. "
-                   "It used in the training process with the parameter 'print_report' set to True")
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table "
+        "contained the foreign key but not contained the information of the parent table. "
+        "It used in the training process with the parameter 'print_report' set to True"
+    )
     metadata = {
             "table_b": {
                 "train_settings": {
@@ -601,7 +767,11 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_pri
                 }
             }
         }
-    validator = Validator(metadata=metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -647,6 +817,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_pri
         }
     }
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
     mock_check_existence_of_generated_data.assert_called_once()
@@ -657,20 +828,24 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_pri
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
-def test_validate_incomplete_metadata_in_infer_process(mock_check_existence_of_destination,
-                                                       mock_validate_referential_integrity,
-                                                       mock_check_existence_of_success_file,
-                                                       mock_check_existence_of_generated_data,
-                                                       test_metadata_storage,
-                                                       rp_logger):
+def test_validate_incomplete_metadata_in_infer_process(
+        mock_check_existence_of_destination,
+        mock_validate_referential_integrity,
+        mock_check_existence_of_success_file,
+        mock_check_existence_of_generated_data,
+        test_metadata_storage,
+        rp_logger
+):
     """
     Test the validation of the incomplete metadata of one table
     contained the foreign key but not contained the information of the parent table.
     It's used in the inference process
     """
-    rp_logger.info("Test the validation of the incomplete metadata of one table "
-                   "contained the foreign key but not contained the information of the parent table. "
-                   "It used in the inference process")
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table "
+        "contained the foreign key but not contained the information of the parent table. "
+        "It used in the inference process"
+    )
     metadata = {
             "table_b": {
                 "train_settings": {
@@ -688,7 +863,11 @@ def test_validate_incomplete_metadata_in_infer_process(mock_check_existence_of_d
                 }
             }
         }
-    validator = Validator(metadata=metadata, type_of_process="infer", metadata_path=FAKE_METADATA_PATH)
+    validator = Validator(
+        metadata=metadata,
+        type_of_process="infer",
+        metadata_path=FAKE_METADATA_PATH
+    )
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -745,7 +924,9 @@ def test_validate_metadata_with_not_existent_source(mock_validate_referential_in
     Test the validation of the metadata of one table.
     The source of the table is not existent.
     """
-    rp_logger.info("Test the validation of the metadata of one table. The source of the table is not existent.")
+    rp_logger.info(
+        "Test the validation of the metadata of one table. The source of the table is not existent."
+    )
     test_metadata = {
             "test_table": {
                 "train_settings": {
@@ -761,23 +942,31 @@ def test_validate_metadata_with_not_existent_source(mock_validate_referential_in
         }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            validator = Validator(metadata=test_metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+            validator = Validator(
+                metadata=test_metadata,
+                type_of_process="train",
+                metadata_path=FAKE_METADATA_PATH
+            )
             validator.run()
             assert validator.mapping == {}
             assert validator.merged_metadata == test_metadata
             mock_validate_referential_integrity.assert_called_once()
-            message = "The validation of the metadata has been failed. The error(s) found in - " \
-                      "\"check existence of the source\": {\"test_table\": \"It seems that the path " \
-                      "to the source of the table - 'test_table' isn't correct. Please, check the path " \
-                      "to the source of the table - 'test_table'\"}"
+            message = (
+                "The validation of the metadata has been failed. The error(s) found in - "
+                "\"check existence of the source\": {\"test_table\": \"It seems that the path "
+                "to the source of the table - 'test_table' isn't correct. Please, check the path "
+                "to the source of the table - 'test_table'\"}"
+            )
             assert str(error.value) == message
             assert message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_storage(
         mock_check_existence_of_source,
+        mock_check_key_columns,
         test_metadata_storage,
         caplog,
         rp_logger):
@@ -785,8 +974,10 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
     Test the validation of the incomplete metadata of one table contained the foreign key.
     The information of the parent table is absent in the metadata storage.
     """
-    rp_logger.info("Test the validation of the incomplete metadata of one table contained the foreign key. "
-                   "The information of the parent table is absent in the metadata storage.")
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table contained the foreign key. "
+        "The information of the parent table is absent in the metadata storage."
+    )
     metadata = {
             "table_b": {
                 "train_settings": {
@@ -806,27 +997,36 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
         }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            validator = Validator(metadata=metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+            validator = Validator(
+                metadata=metadata,
+                type_of_process="train",
+                metadata_path=FAKE_METADATA_PATH
+            )
             validator.run()
             mock_check_existence_of_source.assert_called_once()
+            mock_check_key_columns.assert_called_once()
             assert validator.mapping == {
                 "fk_key": {
                     "parent_columns": ["id"],
                     "parent_table": "table_a"
                 }
             }
-            message = "The metadata of the parent table - 'table_c' hasn't been found. Please, check " \
-                      "whether the information of the parent table - '{parent_table}' exists in the current " \
-                      "metadata file or in the metadata files stored in 'model_artifacts/metadata' directory"
+            message = (
+                "The metadata of the parent table - 'table_c' hasn't been found. Please, check "
+                "whether the information of the parent table - '{parent_table}' exists in the current "
+                "metadata file or in the metadata files stored in 'model_artifacts/metadata' directory"
+            )
             assert str(error.value) == message
             assert message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_with_wrong_referential_integrity(
         mock_check_existence_of_source,
+        mock_check_key_columns,
         mock_check_existence_of_success_file,
         test_metadata_storage,
         caplog,
@@ -837,10 +1037,12 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
     contains the PK which contains the list of columns which not correspond to the list of the columns
     of the FK.
     """
-    rp_logger.info("Test the validation of the incomplete metadata of one table contained the foreign key. "
-                   "The information of the parent table is present in the metadata storage, but the parent table "
-                   "contains the PK which contains the list of columns which not correspond to the list of the "
-                   "columns of the FK")
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table contained the foreign key. "
+        "The information of the parent table is present in the metadata storage, but the parent table "
+        "contains the PK which contains the list of columns which not correspond to the list of the "
+        "columns of the FK"
+    )
     metadata = {
             "table_b": {
                 "train_settings": {
@@ -860,7 +1062,11 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
         }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            validator = Validator(metadata=metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+            validator = Validator(
+                metadata=metadata,
+                type_of_process="train",
+                metadata_path=FAKE_METADATA_PATH
+            )
             validator.run()
             assert validator.mapping == {
                 "fk_key": {
@@ -901,11 +1107,14 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
                 }
             }
             assert mock_check_existence_of_source.call_count == 2
+            assert mock_check_key_columns.call_count == 2
             mock_check_existence_of_success_file.assert_called_once()
-            message = "The validation of the metadata has been failed. " \
-                      "The error(s) found in - \"validate referential integrity\": " \
-                      "{\"fk_key\": \"The primary key columns associated with the columns " \
-                      "of the foreign key - 'fk_key' is not the same\"}"
+            message = (
+                "The validation of the metadata has been failed. "
+                "The error(s) found in - \"validate referential integrity\": "
+                "{\"fk_key\": \"The primary key columns associated with the columns "
+                "of the foreign key - 'fk_key' is not the same\"}"
+            )
             assert str(error.value) == message
             assert message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -921,14 +1130,17 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
         rp_logger
 ):
     """
-    Test the validation of the incomplete metadata of one table contained the foreign key used in the training process.
+    Test the validation of the incomplete metadata of one table contained the foreign key
+    used in the training process.
     The information of the parent table is present in the metadata storage, but the parent table
     hasn't been trained previously that's why the success file of the parent table is absent
     """
-    rp_logger.info("Test the validation of the incomplete metadata of one table contained the foreign key "
-                   "used in the training process. The information of the parent table is present "
-                   "in the metadata storage, but the parent table hasn't been trained previously "
-                   "that's why the success file of the parent table is absent")
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table contained the foreign key "
+        "used in the training process. The information of the parent table is present "
+        "in the metadata storage, but the parent table hasn't been trained previously "
+        "that's why the success file of the parent table is absent"
+    )
     metadata = {
             "table_b": {
                 "train_settings": {
@@ -948,7 +1160,11 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
         }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            validator = Validator(metadata=metadata, type_of_process="train", metadata_path=FAKE_METADATA_PATH)
+            validator = Validator(
+                metadata=metadata,
+                type_of_process="train",
+                metadata_path=FAKE_METADATA_PATH
+            )
             validator.run()
             assert validator.mapping == {
                 "fk_key": {
@@ -994,9 +1210,11 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
             }
             assert mock_check_existence_of_source.call_count == 2
             mock_validate_referential_integrity.assert_called_once()
-            message = "The validation of the metadata has been failed. The error(s) found in - " \
-                      "\"check existence of the success file\": {\"table_a\": \"The table - 'table_a'" \
-                      "hasn't been trained completely. Please, retrain this table first\"}"
+            message = (
+                "The validation of the metadata has been failed. The error(s) found in - "
+                "\"check existence of the success file\": {\"table_a\": \"The table - 'table_a'"
+                "hasn't been trained completely. Please, retrain this table first\"}"
+            )
             assert str(error.value) == message
             assert message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1008,8 +1226,10 @@ def test_validate_metadata_with_not_existent_destination(mock_validate_referenti
     Test the validation of the metadata of one table used in the inference process.
     The destination for the generated data is not existent.
     """
-    rp_logger.info("Test the validation of the metadata of one table used in the inference process. "
-                   "The destination of the table is not existent.")
+    rp_logger.info(
+        "Test the validation of the metadata of one table used in the inference process. "
+        "The destination of the table is not existent."
+    )
     test_metadata = {
             "test_table": {
                 "train_settings": {
@@ -1028,14 +1248,20 @@ def test_validate_metadata_with_not_existent_destination(mock_validate_referenti
         }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            validator = Validator(metadata=test_metadata, type_of_process="infer", metadata_path=FAKE_METADATA_PATH)
+            validator = Validator(
+                metadata=test_metadata,
+                type_of_process="infer",
+                metadata_path=FAKE_METADATA_PATH
+            )
             validator.run()
             assert validator.mapping == {}
             assert validator.merged_metadata == test_metadata
             mock_validate_referential_integrity.assert_called_once()
-            message = "The validation of the metadata has been failed. The error(s) found in - \"check existence " \
-                      "of the destination\": {\"test_table\": \"It seems that the directory path for storing " \
-                      "the generated data of table 'test_table' isn't correct. Please, verify the destination path\"}"
+            message = (
+                "The validation of the metadata has been failed. The error(s) found in - \"check existence "
+                "of the destination\": {\"test_table\": \"It seems that the directory path for storing "
+                "the generated data of table 'test_table' isn't correct. Please, verify the destination path\"}"
+            )
             assert str(error.value) == message
             assert message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1057,10 +1283,12 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
     used in the training process. The information of the parent table is present in the metadata storage,
     but the parent table hasn't been trained previously that's why the success file of the parent table is absent
     """
-    rp_logger.info("Test the validation of the incomplete metadata of one table contained the foreign key "
-                   "used in the training process. The information of the parent table is present "
-                   "in the metadata storage, but the parent table hasn't been trained previously "
-                   "that's why the success file of the parent table is absent")
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table contained the foreign key "
+        "used in the training process. The information of the parent table is present "
+        "in the metadata storage, but the parent table hasn't been trained previously "
+        "that's why the success file of the parent table is absent"
+    )
     metadata = {
             "table_b": {
                 "train_settings": {
@@ -1080,7 +1308,11 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
         }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            validator = Validator(metadata=metadata, type_of_process="infer", metadata_path=FAKE_METADATA_PATH)
+            validator = Validator(
+                metadata=metadata,
+                type_of_process="infer",
+                metadata_path=FAKE_METADATA_PATH
+            )
             validator.run()
             assert mock_check_existence_of_source.call_count == 2
             mock_validate_referential_integrity.assert_called_once()
@@ -1127,9 +1359,11 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
                     }
                 }
             }
-            message = "The validation of the metadata has been failed. The error(s) found in - " \
-                      "\"check existence of the success file\": {\"table_a\": \"The table - 'table_a'" \
-                      "hasn't been trained completely. Please, retrain this table first\"}"
+            message = (
+                "The validation of the metadata has been failed. The error(s) found in - "
+                "\"check existence of the success file\": {\"table_a\": \"The table - 'table_a'"
+                "hasn't been trained completely. Please, retrain this table first\"}"
+            )
             assert str(error.value) == message
             assert message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1151,10 +1385,12 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
     used in the inference process. The information of the parent table is present in the metadata storage,
     but the generated data of the parent table hasn't been generated previously
     """
-    rp_logger.info("Test the validation of the incomplete metadata of one table contained the foreign key"
-                   "used in the inference process. The information of the parent table is present "
-                   "in the metadata storage, but the generated data of the parent table hasn't been "
-                   "generated previously")
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table contained the foreign key "
+        "used in the inference process. The information of the parent table is present "
+        "in the metadata storage, but the generated data of the parent table hasn't been "
+        "generated previously"
+    )
     metadata = {
             "table_b": {
                 "train_settings": {
@@ -1226,9 +1462,11 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
             assert mock_check_existence_of_destination.call_count == 2
             mock_validate_referential_integrity.assert_called_once()
             mock_check_existence_of_generated_data.assert_called_once()
-            message = "The validation of the metadata has been failed. The error(s) found in - \"check existence " \
-                      "of the generated data\": {\"table_a\": \"The generated data of the table - 'table_a' " \
-                      "hasn't been generated. Please, generate the data related to the table 'table_a' first\"}"
+            message = (
+                "The validation of the metadata has been failed. The error(s) found in - \"check existence "
+                "of the generated data\": {\"table_a\": \"The generated data of the table - 'table_a' "
+                "hasn't been generated. Please, generate the data related to the table 'table_a' first\"}"
+            )
             assert str(error.value) == message
             assert message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1253,10 +1491,12 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_t
     The information of the parent table is present in the metadata storage,
     but the generated data of the parent table hasn't been generated previously
     """
-    rp_logger.info("Test the validation of the incomplete metadata of one table contained the foreign key"
-                   "used in the training process with the parameter 'print_report' set to True. "
-                   "The information of the parent table is present in the metadata storage, "
-                   "but the generated data of the parent table hasn't been generated previously")
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table contained the foreign key "
+        "used in the training process with the parameter 'print_report' set to True. "
+        "The information of the parent table is present in the metadata storage, "
+        "but the generated data of the parent table hasn't been generated previously"
+    )
     metadata = {
             "table_b": {
                 "train_settings": {
@@ -1329,9 +1569,101 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_t
             assert mock_check_existence_of_generated_data.assert_called_once()
             mock_check_existence_of_success_file.assert_called_once()
             mock_validate_referential_integrity.assert_called_once()
-            message = "The validation of the metadata has been failed. The error(s) found in - \"check existence " \
-                      "of the generated data\": {\"table_a\": \"The generated data of the table - 'table_a' " \
-                      "hasn't been generated. Please, generate the data related to the table 'table_a' first\"}"
+            message = (
+                "The validation of the metadata has been failed. The error(s) found in - \"check existence "
+                "of the generated data\": {\"table_a\": \"The generated data of the table - 'table_a' "
+                "hasn't been generated. Please, generate the data related to the table 'table_a' first\"}"
+            )
             assert str(error.value) == message
             assert message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_check_not_existent_key_column_in_pk(rp_logger):
+    """
+    Test that the column of the primary key doesn't exist in the source table
+    """
+    rp_logger.info(
+        "Test that the column of the primary key doesn't exist in the source table"
+    )
+    test_metadata = {
+            "table_a": {
+                "train_settings": {
+                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["non-existent column"]
+                    }
+                }
+            }
+        }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    with pytest.raises(ValidationError) as error:
+        validator.run()
+        assert validator.mapping == {}
+        assert validator.merged_metadata == test_metadata
+        assert str(error.value) == (
+            "The validation of the metadata has been failed. The error(s) found in - \n"
+            "\"check existence of the key columns in \'columns\'\": {\n    \"pk_id\": \"The columns "
+            "of the PK \'pk_id\' - non-existent column don\'t exist in the source of the table - \'table_a\'\"\n}"
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_check_not_existent_key_column_in_fk(rp_logger):
+    """
+    Test that the column of the foreign key doesn't exist in the child table
+    """
+    rp_logger.info(
+        "Test that the column of the foreign key doesn't exist in the child table"
+    )
+    test_metadata = {
+            "table_a": {
+                "train_settings": {
+                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    }
+                }
+            },
+            "table_b": {
+                "train_settings": {
+                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/child_table_with_data.csv"
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["non-existent column"],
+                        "references": {
+                            "table": "table_a",
+                            "columns": ["id"]
+                        }
+                    }
+                }
+            }
+        }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    with pytest.raises(ValidationError) as error:
+        validator.run()
+        assert validator.mapping == {}
+        assert validator.merged_metadata == test_metadata
+        assert str(error.value) == (
+            "The validation of the metadata has been failed. "
+            "The error(s) found in - \n\"check existence of the key columns in \'columns\'\": {"
+            "\n    \"fk_id\": \"The columns of the FK \'fk_id\' - non-existent column don\'t exist "
+            "in the source of the table - \'table_b\'\"\n}"
+        )
     rp_logger.info(SUCCESSFUL_MESSAGE)

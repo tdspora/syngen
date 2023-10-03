@@ -8,14 +8,17 @@ from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_training_process_with_absent_metadata(mock_validator_run,
-                                                               rp_logger):
+def test_init_worker_for_training_process_with_absent_metadata(
+        mock_validator_run, rp_logger
+):
     """
     Test the initialization of 'Worker' class with the absent metadata
     during the training process
     """
-    rp_logger.info("Test the initialization of the instance of 'Worker' class "
-                   "with the absent metadata during the training process")
+    rp_logger.info(
+        "Test the initialization of the instance of 'Worker' class "
+        "with the absent metadata during the training process"
+    )
     worker = Worker(
         table_name="table",
         metadata_path=None,
@@ -51,14 +54,17 @@ def test_init_worker_for_training_process_with_absent_metadata(mock_validator_ru
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run,
-                                                            rp_logger):
+def test_init_worker_for_infer_process_with_absent_metadata(
+        mock_validator_run, rp_logger
+):
     """
     Test the initialization of 'Worker' class with the absent metadata
     during the inference process
     """
-    rp_logger.info("Test the initialization of the instance of 'Worker' class "
-                   "with the absent metadata during the inference process")
+    rp_logger.info(
+        "Test the initialization of the instance of 'Worker' class "
+        "with the absent metadata during the inference process"
+    )
     worker = Worker(
         table_name="test_table",
         metadata_path=None,
@@ -94,19 +100,20 @@ def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run,
 
 
 @patch.object(Validator, "run")
-def test_init_worker_with_metadata(mock_validator_run,
-                                   rp_logger):
+def test_init_worker_with_metadata(mock_validator_run, rp_logger):
     """
     Test the initialization of 'Worker' class with the metadata
     contained the information of one table with only the primary key
     during the training process
     """
-    rp_logger.info("Test the initialization of the instance of 'Worker' class "
-                   "with provided metadata contained the information of one table"
-                   "with only the primary key during the training process")
+    rp_logger.info(
+        "Test the initialization of the instance of 'Worker' class "
+        "with provided metadata contained the information of one table "
+        "with only the primary key during the training process"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -151,19 +158,20 @@ def test_init_worker_with_metadata(mock_validator_run,
 
 
 @patch.object(Validator, "run")
-def test_init_worker_with_empty_settings_in_metadata(mock_validator_run,
-                                                     rp_logger):
+def test_init_worker_with_empty_settings_in_metadata(mock_validator_run, rp_logger):
     """
     Test the initialization during the training process
     of 'Worker' class with metadata contained the information of one table
     in which the training, inference, keys settings are empty
     """
-    rp_logger.info("Test the initialization of the instance of 'Worker' class with provided metadata "
-                   "contained the information of one table in which 'train_settings', 'infer_settings', and "
-                   "'keys' are empty during the training process")
+    rp_logger.info(
+        "Test the initialization of the instance of 'Worker' class with provided metadata "
+        "contained the information of one table in which 'train_settings', 'infer_settings', and "
+        "'keys' are empty during the training process"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_empty_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_empty_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -197,17 +205,20 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validator_run,
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_training_with_metadata_with_global_settings(mock_validator_run,
-                                                                     rp_logger):
+def test_init_worker_for_training_with_metadata_with_global_settings(
+        mock_validator_run, rp_logger
+):
     """
     Test the initialization of 'Worker' class during the training process
     with the metadata contained related tables and global settings
     """
-    rp_logger.info("Test the initialization of the instance of 'Worker' class during the training process"
-                   "with provided metadata contained related tables and global settings")
+    rp_logger.info(
+        "Test the initialization of the instance of 'Worker' class during the training process "
+        "with provided metadata contained related tables and global settings"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -280,17 +291,20 @@ def test_init_worker_for_training_with_metadata_with_global_settings(mock_valida
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_inference_with_metadata_with_global_settings(mock_validator_run,
-                                                                      rp_logger):
+def test_init_worker_for_inference_with_metadata_with_global_settings(
+        mock_validator_run, rp_logger
+):
     """
     Test the initialization of 'Worker' class during an inference process
     with metadata contained the information of related tables with the global settings
     """
-    rp_logger.info("Test the initialization of the instance of 'Worker' class during the inference process"
-                   "with provided metadata contained the information of related tables with global settings")
+    rp_logger.info(
+        "Test the initialization of the instance of 'Worker' class during the inference process "
+        "with provided metadata contained the information of related tables with global settings"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "size": 200,
             "run_parallel": False,
@@ -363,25 +377,31 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(mock_valid
 
 
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_with_metadata(mock_train_tables,
-                                    mock_generate_reports,
-                                    mock_check_existence_of_source,
-                                    mock_validate_metadata,
-                                    rp_logger):
+def test_launch_train_with_metadata(
+        mock_train_tables,
+        mock_generate_reports,
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_train' method calls all necessary methods
     in case the metadata file contained the information of one table
     with only the primary key was provided
     """
-    rp_logger.info("Test that 'launch_train' method calls all necessary methods "
-                   "in case the metadata file contained the information of one table "
-                   "with only the primary key was provided")
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "in case the metadata file contained the information of one table "
+        "with only the primary key was provided"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -450,29 +470,36 @@ def test_launch_train_with_metadata(mock_train_tables,
          )
     )
     mock_check_existence_of_source.assert_called_once()
+    mock_check_key_columns.assert_called_once()
     mock_validate_metadata.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
-                                                      mock_generate_reports,
-                                                      mock_check_existence_of_source,
-                                                      mock_validate_metadata,
-                                                      rp_logger):
+def test_launch_train_with_metadata_of_related_tables(
+        mock_train_tables,
+        mock_generate_reports,
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_train' method calls all necessary methods
     in case the metadata file of related tables was provided
     """
-    rp_logger.info("Test that 'launch_train' method calls all necessary methods in case "
-                   "the metadata file of related tables was provided")
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods in case "
+        "the metadata file of related tables was provided"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -531,7 +558,8 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
                             "columns":["Id"],
                             "references": {
                                 "table": "pk_test",
-                                "columns": ["Id"]}
+                                "columns": ["Id"]
+                            }
                         }
                     }
                 }
@@ -558,7 +586,8 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
                     "keys": {
                         "pk_id": {
                             "type": "PK",
-                            "columns": ["Id"]}
+                            "columns": ["Id"]
+                        }
                     }
                 },
                 "fk_test": {
@@ -590,29 +619,36 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
         )
     )
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_tables,
-                                                                     mock_generate_reports,
-                                                                     mock_check_existence_of_source,
-                                                                     mock_validate_metadata,
-                                                                     rp_logger):
+def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
+        mock_train_tables,
+        mock_generate_reports,
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_train' method calls all necessary methods
     by providing the metadata file of related tables in which the table contains several different keys
     """
-    rp_logger.info("Test that 'launch_train' method calls all necessary methods by providing "
-                   "the metadata file of related tables in which the table contains several different keys")
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods by providing "
+        "the metadata file of related tables in which the table contains several different keys"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -756,31 +792,38 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
          }
          ))
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_without_metadata(mock_train_tables,
-                                       mock_generate_reports,
-                                       mock_check_existence_of_source,
-                                       mock_validate_metadata,
-                                       rp_logger):
+def test_launch_train_without_metadata(
+        mock_train_tables,
+        mock_generate_reports,
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_train' method calls all necessary methods
     in case the metadata file wasn't provided and training process was launched through CLI
     """
-    rp_logger.info("Test that 'launch_train' method calls all necessary methods "
-                   "in case the metadata file wasn't provided and a training process was launched through CLI")
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "in case the metadata file wasn't provided and a training process was launched through CLI"
+    )
     worker = Worker(
         table_name="test_table",
         metadata_path=None,
         settings={
-            "source": "./path/to/source",
+            "source": "./path/to/source.csv",
             "epochs": 20,
             "drop_null": True,
             "row_limit": 1000,
@@ -796,7 +839,7 @@ def test_launch_train_without_metadata(mock_train_tables,
         {
             "test_table": {
                 "train_settings": {
-                    "source": "./path/to/source",
+                    "source": "./path/to/source.csv",
                     "epochs": 20,
                     "drop_null": True,
                     "row_limit": 1000,
@@ -811,7 +854,7 @@ def test_launch_train_without_metadata(mock_train_tables,
          {
              "test_table": {
                  "train_settings": {
-                     "source": "./path/to/source",
+                     "source": "./path/to/source.csv",
                      "epochs": 20,
                      "drop_null": True,
                      "row_limit": 1000,
@@ -824,30 +867,37 @@ def test_launch_train_without_metadata(mock_train_tables,
          })
     )
     mock_check_existence_of_source.assert_called_once()
+    mock_check_key_columns.assert_called_once()
     mock_validate_metadata.assert_called_once()
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
-                                                              mock_generate_reports,
-                                                              mock_check_existence_of_source,
-                                                              mock_validate_metadata,
-                                                              rp_logger):
+def test_launch_train_with_metadata_contained_global_settings(
+        mock_train_tables,
+        mock_generate_reports,
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_train' method calls all necessary methods
     in case the metadata file of related tables was provided, and it contains global settings
     """
-    rp_logger.info("Test that 'launch_train' method calls all necessary methods "
-                   "in case the metadata file of related tables was provided, "
-                   "and it contains global settings")
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "in case the metadata file of related tables was provided, "
+        "and it contains global settings"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -952,6 +1002,7 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
     )
     assert mock_validate_metadata.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
     mock_generate_reports.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -960,20 +1011,24 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata(mock_infer_tables,
-                                    mock_generate_reports,
-                                    mock_check_existence_of_destination,
-                                    mock_validate_metadata,
-                                    rp_logger):
+def test_launch_infer_with_metadata(
+        mock_infer_tables,
+        mock_generate_reports,
+        mock_check_existence_of_destination,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_infer' method calls all necessary methods
     in case the metadata file of one table with only the primary key was provided
     """
-    rp_logger.info("Test that 'launch_infer' method calls all necessary methods "
-                   "in case the metadata file of one table with only the primary key was provided")
+    rp_logger.info(
+        "Test that 'launch_infer' method calls all necessary methods "
+        "in case the metadata file of one table with only the primary key was provided"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata.yaml",
         settings={
             "size": 200,
             "run_parallel": True,
@@ -1022,20 +1077,24 @@ def test_launch_infer_with_metadata(mock_infer_tables,
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
-                                                      mock_generate_reports,
-                                                      mock_check_existence_of_destination,
-                                                      mock_validate_metadata,
-                                                      rp_logger):
+def test_launch_infer_with_metadata_of_related_tables(
+        mock_infer_tables,
+        mock_generate_reports,
+        mock_check_existence_of_destination,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_infer' method calls all necessary methods
     in case the metadata file of related tables was provided
     """
-    rp_logger.info("Test that 'launch_infer' method calls all necessary methods in case "
-                   "the metadata file of related tables was provided")
+    rp_logger.info(
+        "Test that 'launch_infer' method calls all necessary methods in case "
+        "the metadata file of related tables was provided"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables.yaml",
         settings={
             "size": 300,
             "run_parallel": True,
@@ -1108,21 +1167,25 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_tables,
-                                                                     mock_generate_reports,
-                                                                     mock_check_existence_of_destination,
-                                                                     mock_validate_metadata,
-                                                                     rp_logger):
+def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
+        mock_infer_tables,
+        mock_generate_reports,
+        mock_check_existence_of_destination,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_infer' method calls all necessary methods
     by providing the metadata file of related tables in which
     the table contains several different keys was provided
     """
-    rp_logger.info("Test that 'launch_infer' method calls all necessary methods by providing the metadata file "
-                   "of related tables in which the table contains several different keys was provided")
+    rp_logger.info(
+        "Test that 'launch_infer' method calls all necessary methods by providing the metadata file "
+        "of related tables in which the table contains several different keys was provided"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
         settings={
             "size": 300,
             "run_parallel": True,
@@ -1233,17 +1296,21 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_without_metadata(mock_infer_tables,
-                                       mock_generate_reports,
-                                       mock_check_existence_of_destination,
-                                       mock_validate_metadata,
-                                       rp_logger):
+def test_launch_infer_without_metadata(
+        mock_infer_tables,
+        mock_generate_reports,
+        mock_check_existence_of_destination,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_infer' method calls all necessary methods
     in case the metadata file wasn't provided and the inference process was launched through CLI
     """
-    rp_logger.info("Test that 'launch_infer' method calls all necessary methods "
-                   "in case the metadata file wasn't provided and the inference process was launched through CLI")
+    rp_logger.info(
+        "Test that 'launch_infer' method calls all necessary methods "
+        "in case the metadata file wasn't provided and the inference process was launched through CLI"
+    )
     worker = Worker(
         table_name="test_table",
         metadata_path=None,
@@ -1286,21 +1353,25 @@ def test_launch_infer_without_metadata(mock_infer_tables,
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
-def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
-                                                              mock_generate_reports,
-                                                              mock_check_existence_of_destination,
-                                                              mock_validate_metadata,
-                                                              rp_logger):
+def test_launch_infer_with_metadata_contained_global_settings(
+        mock_infer_tables,
+        mock_generate_reports,
+        mock_check_existence_of_destination,
+        mock_validate_metadata,
+        rp_logger
+):
     """
     Test that 'launch_infer' method calls all necessary methods
     in case the metadata file of related tables was provided, and it contains global settings
     """
-    rp_logger.info("Test that 'launch_infer' method calls all necessary methods "
-                   "in case the metadata file of related tables was provided, "
-                   "and it contains global settings")
+    rp_logger.info(
+        "Test that 'launch_infer' method calls all necessary methods "
+        "in case the metadata file of related tables was provided, "
+        "and it contains global settings"
+    )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "size": 300,
             "run_parallel": True,

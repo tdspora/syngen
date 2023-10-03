@@ -216,8 +216,9 @@ class CSVLoader:
             if "na_values" in format_params and format_params.get("na_values", []):
                 filtered_kwargs["na_rep"] = format_params["na_values"][0]
                 logger.warning(
-                    "As the value of the parameter 'na_values' is not empty, the 'na_rep' will be set to "
-                    "the first value of the parameter 'na_values'"
+                    "Since the 'na_values' parameter is not empty, "
+                    "the missing values will be filled with "
+                    "the first value from the 'na_values' parameter"
                 )
 
             # Save the DataFrame to a CSV file

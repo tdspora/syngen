@@ -1,0 +1,19 @@
+table_a:
+  train_settings:
+    source: path/to/table_a.csv
+  keys:
+    pk_id:
+      type: PK
+      columns:
+        - Id
+
+table_b:
+  train_settings:
+    source: path/to/table_b.csv
+  keys:
+    fk_id:
+      type: FK
+      references:
+        table: table_a
+        columns:
+          - Id

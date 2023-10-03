@@ -87,8 +87,10 @@ class Validator:
                       for config in parent_config.get("keys", {}).values()
                       if config["type"] in ["PK", "UQ"]])
         if result is False:
-            message = f"The columns of primary or unique key associated with the columns of " \
-                      f"the {fk_config['type']} - '{fk_name}' is not the same"
+            message = (
+                f"The columns of primary or unique key associated with the columns of "
+                f"the {fk_config['type']} - '{fk_name}' aren't the same"
+            )
             self.errors["validate referential integrity"][fk_name] = message
 
     def _check_existence_of_success_file(self, parent_table: str):
@@ -109,8 +111,10 @@ class Validator:
         if destination is None:
             destination = f"model_artifacts/tmp_store/{slugify(parent_table)}/merged_infer_{slugify(parent_table)}.csv"
         if not DataLoader(destination).has_existed_path:
-            message = f"The generated data of the table - '{parent_table}' hasn't been generated. " \
-                      f"Please, generate the data related to the table '{parent_table}' first"
+            message = (
+                f"The generated data of the table - '{parent_table}' hasn't been generated. "
+                f"Please, generate the data related to the table '{parent_table}' first"
+            )
             self.errors["check existence of the generated data"][parent_table] = message
 
     def _check_existence_of_source(self, table_name: str) -> bool:
@@ -118,8 +122,10 @@ class Validator:
         Check if the source of the certain table exists
         """
         if not DataLoader(self.merged_metadata[table_name]["train_settings"]["source"]).has_existed_path:
-            message = f"It seems that the path to the source of the table - '{table_name}' isn't correct. " \
-                      f"Please, check the path to the source of the table - '{table_name}'"
+            message = (
+                f"It seems that the path to the source of the table - '{table_name}' isn't correct. "
+                f"Please, check the path to the source of the table - '{table_name}'"
+            )
             self.errors["check existence of the source"][table_name] = message
             return False
         return True
@@ -130,15 +136,19 @@ class Validator:
         """
         destination = self.merged_metadata[table_name].get("infer_settings", {}).get("destination")
         if destination is not None and not DataLoader(destination).has_existed_destination:
-            message = f"It seems that the directory path for storing the generated data of table '{table_name}' " \
-                      f"isn't correct. Please, verify the destination path"
+            message = (
+                f"It seems that the directory path for storing the generated data of table '{table_name}' "
+                f"isn't correct. Please, verify the destination path"
+            )
             self.errors["check existence of the destination"][table_name] = message
 
     def _check_merged_metadata(self, parent_table: str):
         if parent_table not in self.merged_metadata:
-            message = f"The metadata of the parent table - '{parent_table}' hasn't been found. Please, check " \
-                      f"whether the information of the parent table - '{parent_table}' exists in the current " \
-                      f"metadata file or in the metadata files stored in 'model_artifacts/metadata' directory"
+            message = (
+                f"The metadata of the parent table - '{parent_table}' hasn't been found. Please, check "
+                f"whether the information of the parent table - '{parent_table}' exists in the current "
+                f"metadata file or in the metadata files stored in 'model_artifacts/metadata' directory"
+            )
             logger.error(message)
             raise ValidationError(message)
 
@@ -161,9 +171,11 @@ class Validator:
                     continue
                 self._launch_validation_of_schema(metadata=metadata, metadata_path=path_to_metadata_file)
                 self.merged_metadata.update(metadata)
-                logger.info(f"The metadata located in the path - '{path_to_metadata_storage}' has been merged "
-                            f"with the current metadata as it contains the information of the parent table - "
-                            f"'{parent_table}'")
+                logger.info(
+                    f"The metadata located in the path - '{path_to_metadata_storage}' has been merged "
+                    f"with the current metadata as it contains the information of the parent table - "
+                    f"'{parent_table}'"
+                )
             self._check_merged_metadata(parent_table)
 
     def _check_key_columns(self, table_name: str):
@@ -176,19 +188,12 @@ class Validator:
             if all([column in existed_columns for column in config_of_key["columns"]]):
                 continue
             else:
-                message = f"The columns of the {config_of_key['type']} '{key}' - " \
-                          f"{', '.join(list(set(config_of_key['columns']).difference(set(existed_columns))))} " \
-                          f"don't exist in the source of the table - '{table_name}'"
+                message = (
+                    f"The columns of the {config_of_key['type']} '{key}' - " 
+                    f"{', '.join(list(set(config_of_key['columns']).difference(set(existed_columns))))} "
+                    f"don't exist in the source of the table - '{table_name}'"
+                )
                 self.errors["check existence of the key columns in 'columns'"][key] = message
-
-            if config_of_key["type"] == "FK" \
-                    and all([column in existed_columns for column in config_of_key["references"]["columns"]]):
-                continue
-            else:
-                message = f"The columns of the {config_of_key['type']} '{key}' - " \
-                          f"{', '.join(list(set(config_of_key['columns']).difference(set(existed_columns))))} " \
-                          f"don't exist in the source of the table - '{table_name}'"
-                self.errors["check existence of the key columns in 'references.columns'"][key] = message
 
     def run(self):
         """
@@ -212,8 +217,10 @@ class Validator:
             error_log = f"\"{section}\": {json.dumps(errors_details, indent=4)}"
             error_logs.append(error_log)
         if self.errors:
-            message = f"The validation of the metadata has been failed. " \
-                      f"The error(s) found in - \n{', '.join(error_logs)}"
+            message = (
+                f"The validation of the metadata has been failed. "
+                f"The error(s) found in - \n{', '.join(error_logs)}"
+            )
             logger.error(message)
             raise ValidationError(message)
         logger.info("The validation of the metadata has been passed successfully")

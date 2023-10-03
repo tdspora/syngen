@@ -80,7 +80,7 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
                                                                        "'train_settings': {'column_types': "
                                                                        "defaultdict(<class 'dict'>, {'invalid_type': {"
                                                                        "'key': ['Must be one of: categorical.']}})}}"
-     )
+    )
 ])
 def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, expected_error):
     rp_logger.info("Test the validation of the schema of the metadata  with invalid training settings")
@@ -110,8 +110,7 @@ def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, 
     ({"batch_size": "not a valid type of a value"}, "The details are - {'global': {'train_settings': "
                                                     "{'batch_size': ['Not a valid integer.']}}}"),
     ({"print_report": "not a valid type of a value"}, "The details are - {'global': {'train_settings': "
-                                                      "{'print_report': ['Not a valid boolean.']}}}"
-    )
+                                                      "{'print_report': ['Not a valid boolean.']}}}")
 ])
 def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, expected_error):
     rp_logger.info("Test the validation of the schema of the metadata with invalid global training settings")
@@ -291,3 +290,64 @@ def test_metadata_file_with_invalid_FK_key(rp_logger):
                                "'fk_test_fk_id': {'value': {" \
                                "'_schema': [\"The 'references' field is required when 'type' is 'FK'\"]}}})}}"
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("path_to_metadata, expected_error", [
+    (
+            "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_absent_pk_columns.yaml",
+            "The details are - {'table_a': {'keys': defaultdict(<class 'dict'>, {'pk_id': {'value': {'columns': ["
+            "'Field may not be null.']}}})}}"
+    ),
+    (
+            "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_absent_fk_columns.yaml",
+            "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {'fk_id': {'value': {'columns': ["
+            "'Missing data for required field.']}}})}}"
+    ),
+    (
+            "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_absent_ref_table.yaml",
+            "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {'fk_id': {'value': {'references': {"
+            "'table': ['Missing data for required field.']}}}})}}"
+    ),
+    (
+            "./tests/unit/validation_schema/fixtures/metadata_of_related_tables_with_absent_ref_columns.yaml",
+            "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {'fk_id': {'value': {'references': {"
+            "'columns': ['Missing data for required field.']}}}})}}"
+    ),
+    (
+            "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_duplicated_pk_columns.yaml",
+            "The details are - {\'table_a\': {\'keys\': defaultdict(<class \'dict\'>, {\'pk_id\': {\'value\': {"
+            "\'_schema\': [\"The \'columns\' field must contain unique values\"]}}})}}"
+    ),
+    (
+            "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_duplicated_fk_columns.yaml",
+            "The details are - {\'table_b\': {\'keys\': defaultdict(<class \'dict\'>, {\'fk_id\': {\'value\': {"
+            "\'_schema\': [\"The \'columns\' field must contain unique values\"]}}})}}"
+    ),
+    (
+            "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_absent_uq_columns.yaml",
+            "The details are - {'table_a': {'keys': defaultdict(<class 'dict'>, {'pk_id': {'value': {"
+            "'columns': ['Field may not be null.']}}})}}"
+    ),
+    (
+            "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_duplicated_uq_columns.yaml",
+            "The details are - {\'table_a\': {\'keys\': defaultdict(<class \'dict\'>, {\'uq_id\': {\'value\': {"
+            "\'_schema\': [\"The \'columns\' field must contain unique values\"]}}})}}"
+    ),
+    (
+            "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_diff_length_of_columns.yaml",
+            "The details are - {\'table_b\': {\'keys\': defaultdict(<class \'dict\'>, {\'fk_id\': {\'value\': {"
+            "\'_schema\': [\"The \'columns\' field must have the same length as \'references.columns\'\"]}}})}}"
+    )
+])
+def test_validation_schema_of_keys(rp_logger, path_to_metadata, expected_error):
+    rp_logger.info("Test the validation of the schema of the metadata file with invalid section 'keys'")
+    metadata = load_metadata_file(path_to_metadata)
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(
+            metadata=metadata,
+            metadata_path=path_to_metadata
+        ).validate_schema()
+    assert str(error.value) == (
+        f"Validation error(s) found in the schema of the metadata file located at the path - "
+        f"'{path_to_metadata}'. {expected_error}"
+    )
