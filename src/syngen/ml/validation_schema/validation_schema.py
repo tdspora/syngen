@@ -152,11 +152,10 @@ class ValidationSchema:
             except ValidationError as err:
                 errors[table_name] = err.messages
         if errors:
-            message = f"Validation error(s) found in the schema of the metadata file " \
-                      f"located at the path - '{self.metadata_path}'"
+            message = "Validation error(s) found in the schema of the metadata"
             logger.error(message)
             for section, errors_details in errors.items():
                 logger.error(f"The error(s) found in - \"{section}\": {json.dumps(errors_details, indent=4)}")
             raise ValidationError(f"{message}. The details are - {errors}")
         if not errors:
-            logger.debug(f"The schema of the metadata file located at the path - '{self.metadata_path}' is valid")
+            logger.debug("The schema of the metadata is valid")
