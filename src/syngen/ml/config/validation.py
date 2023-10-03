@@ -190,7 +190,7 @@ class Validator:
             else:
                 message = (
                     f"The columns of the {config_of_key['type']} '{key}' - " 
-                    f"{', '.join(list(set(config_of_key['columns']).difference(set(existed_columns))))} "
+                    f"{', '.join([f'{col!r}' for col in set(config_of_key['columns']).difference(set(existed_columns))])} "
                     f"don't exist in the source of the table - '{table_name}'"
                 )
                 self.errors["check existence of the key columns in 'columns'"][key] = message

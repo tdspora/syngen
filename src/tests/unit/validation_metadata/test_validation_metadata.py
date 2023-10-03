@@ -1610,8 +1610,8 @@ def test_check_not_existent_key_column_in_pk(rp_logger):
         assert validator.merged_metadata == test_metadata
         assert str(error.value) == (
             "The validation of the metadata has been failed. The error(s) found in - \n"
-            "\"check existence of the key columns in \'columns\'\": {\n    \"pk_id\": \"The columns "
-            "of the PK \'pk_id\' - non-existent column don\'t exist in the source of the table - \'table_a\'\"\n}"
+            "\"check existence of the key columns in 'columns'\": {\n    \"pk_id\": \"The columns "
+            "of the PK 'pk_id' - 'non-existent column' don\'t exist in the source of the table - 'table_a'\"\n}"
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1662,8 +1662,8 @@ def test_check_not_existent_key_column_in_fk(rp_logger):
         assert validator.merged_metadata == test_metadata
         assert str(error.value) == (
             "The validation of the metadata has been failed. "
-            "The error(s) found in - \n\"check existence of the key columns in \'columns\'\": {"
-            "\n    \"fk_id\": \"The columns of the FK \'fk_id\' - non-existent column don\'t exist "
+            "The error(s) found in - \n\"check existence of the key columns in 'columns'\": {"
+            "\n    \"fk_id\": \"The columns of the FK 'fk_id' - 'non-existent column' don\'t exist "
             "in the source of the table - \'table_b\'\"\n}"
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
