@@ -32,9 +32,14 @@ class KeysSchema(Schema):
     @validates_schema
     def validate_references(self, data, **kwargs):
         if data["type"] in self.fk_types and "references" not in data:
-            raise ValidationError("The 'references' field is required when 'type' is 'FK'")
+            raise ValidationError(
+                f"The 'references' field is required when 'type' is "
+                f"{' or '.join([f'{fk_type!r}' for fk_type in self.fk_types])}")
         if data["type"] not in self.fk_types and "references" in data:
-            raise ValidationError("The 'references' field is only allowed when 'type' is 'FK'")
+            raise ValidationError(
+                f"The 'references' field is only allowed when 'type' is "
+                f"{' or '.join([f'{fk_type!r}' for fk_type in self.fk_types])}"
+            )
         if data["type"] in self.fk_types and not data["references"]["columns"]:
             raise ValidationError("The 'references.columns' field must not be empty")
         if len(data["columns"]) != len(set(data["columns"])):
