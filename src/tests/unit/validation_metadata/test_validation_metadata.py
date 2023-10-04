@@ -1616,6 +1616,43 @@ def test_check_not_existent_key_column_in_pk(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_check_not_existent_key_column_in_uq(rp_logger):
+    """
+    Test that the column of the unique key doesn't exist in the source table
+    """
+    rp_logger.info(
+        "Test that the column of the unique key doesn't exist in the source table"
+    )
+    test_metadata = {
+            "table_a": {
+                "train_settings": {
+                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                },
+                "keys": {
+                    "uq_id": {
+                        "type": "UQ",
+                        "columns": ["non-existent column"]
+                    }
+                }
+            }
+        }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    with pytest.raises(ValidationError) as error:
+        validator.run()
+        assert validator.mapping == {}
+        assert validator.merged_metadata == test_metadata
+        assert str(error.value) == (
+            "The validation of the metadata has been failed. The error(s) found in - \n"
+            "\"check existence of the key columns in 'columns'\": {\n    \"uq_id\": \"The columns "
+            "of the UQ 'uq_id' - 'non-existent column' don\'t exist in the source of the table - 'table_a'\"\n}"
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_check_not_existent_key_column_in_fk(rp_logger):
     """
     Test that the column of the foreign key doesn't exist in the child table
