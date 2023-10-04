@@ -179,7 +179,8 @@ class CSVLoader:
             return list(head_df.columns)
         except pd.errors.EmptyDataError as error:
             logger.error(
-                f"The empty file was provided. Unable to train this table located in the path - '{path}'"
+                f"The empty file was provided. Unable to train this table located in the path - '{path}'. "
+                f"The details of the error - {error}"
             )
             raise error
 
@@ -287,9 +288,16 @@ class AvroLoader(BaseDataLoader):
         """
         Get the column names of the table located in the path
         """
-        with open(path, "rb") as f:
-            df = self._load_df(f)
-            return list(df.columns)
+        try:
+            with open(path, "rb") as f:
+                df = self._load_df(f)
+                return list(df.columns)
+        except ValueError as error:
+            logger.error(
+                f"The empty file was provided. Unable to train this table located in the path - '{path}'. "
+                f"The details of the error - {error}"
+            )
+            raise error
 
     def get_columns(self, path: str) -> List[str]:
         return self._get_columns(path)
@@ -432,3 +440,14 @@ class ExcelLoader:
         """
         if df is not None:
             df.to_excel(path, index=False)
+
+    def get_columns(self, path: str) -> List[str]:
+        return self._get_columns(path)
+
+    @staticmethod
+    def _get_columns(path) -> List[str]:
+        """
+        Get the column names of the table located in the path
+        """
+        head_df = pd.read_excel(path, nrows=0)
+        return list(head_df.columns)
