@@ -321,28 +321,28 @@ def test_metadata_file_with_invalid_FK_key(rp_logger):
 @pytest.mark.parametrize("path_to_metadata, expected_error", [
     (
             "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_absent_pk_columns.yaml",
-            "The details are - {'table_a': {'keys': defaultdict(<class 'dict'>, {'pk_id': {'value': {'columns': ["
-            "'Field may not be null.']}}})}}"
+            "The details are - {'table_a': {'keys': defaultdict(<class 'dict'>, {"
+            "'pk_id': {'value': {'columns': ['Field may not be null.']}}})}}"
     ),
     (
             "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_absent_fk_columns.yaml",
-            "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {'fk_id': {'value': {'columns': ["
-            "'Missing data for required field.']}}})}}"
+            "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {"
+            "'fk_id': {'value': {'columns': ['Missing data for required field.']}}})}}"
     ),
     (
             "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_absent_ref_table.yaml",
-            "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {'fk_id': {'value': {'references': {"
-            "'table': ['Missing data for required field.']}}}})}}"
+            "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {"
+            "'fk_id': {'value': {'references': {'table': ['Missing data for required field.']}}}})}}"
     ),
     (
             "./tests/unit/validation_schema/fixtures/metadata_of_related_tables_with_absent_ref_columns.yaml",
-            "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {'fk_id': {'value': {'references': {"
-            "'columns': ['Missing data for required field.']}}}})}}"
+            "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {"
+            "'fk_id': {'value': {'references': {'columns': ['Missing data for required field.']}}}})}}"
     ),
     (
             "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_duplicated_pk_columns.yaml",
-            "The details are - {\'table_a\': {\'keys\': defaultdict(<class \'dict\'>, {\'pk_id\': {\'value\': {"
-            "\'_schema\': [\"The \'columns\' field must contain unique values\"]}}})}}"
+            "The details are - {\'table_a\': {\'keys\': defaultdict(<class \'dict\'>, {"
+            "\'pk_id\': {\'value\': {\'_schema\': [\"The \'columns\' field must contain unique values\"]}}})}}"
     ),
     (
             "./tests/unit/validation_schema/fixtures/metadata_file_of_related_tables_with_duplicated_fk_columns.yaml",
