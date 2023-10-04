@@ -4,6 +4,7 @@ import os
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
+from avro.errors import InvalidAvroBinaryEncoding
 
 from syngen.ml.data_loaders import (
     DataLoader,
@@ -225,7 +226,7 @@ def test_get_columns_from_empty_table_in_avro_format(caplog, rp_logger):
     rp_logger.info("Get the list of the columns from the empty table in avro format")
     data_loader = DataLoader("tests/unit/data_loaders/fixtures/avro_tables/empty_table.avro")
     assert isinstance(data_loader.file_loader, AvroLoader)
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidAvroBinaryEncoding):
         with caplog.at_level("ERROR"):
             data_loader.get_columns()
             assert "The empty file was provided. Unable to train this table" in caplog.text

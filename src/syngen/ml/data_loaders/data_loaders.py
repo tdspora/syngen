@@ -14,6 +14,7 @@ from yaml import SafeLoader
 from yaml.scanner import ScannerError
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
+from avro.errors import InvalidAvroBinaryEncoding
 from loguru import logger
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
@@ -243,15 +244,15 @@ class AvroLoader(BaseDataLoader):
         """
         return pdx.from_avro(path)
 
-    def load_data(self, path: str, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+    def load_data(self, path: str, **kwargs) -> Tuple[pd.DataFrame, Dict[str, str]]:
         """
         Load data in Avro format
         """
         try:
             with open(path, "rb") as f:
                 df = self._load_df(f)
-                schema, preprocessed_df = self._load_schema(f, df)
-                return preprocessed_df, schema
+                schema = self._load_schema(f)
+                return self._preprocess_schema_and_df(schema, df)
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
@@ -271,18 +272,27 @@ class AvroLoader(BaseDataLoader):
         self._save_df(path, df)
 
     @staticmethod
-    def _load_schema(f, df) -> Tuple[Dict[str, str], pd.DataFrame]:
+    def _load_schema(f) -> Dict[str, str]:
         """
-        Load schema of the metadata of the table in Avro format and preprocess dataframe
+        Load schema of the metadata of the table in Avro format
         :param f: object of the class 'smart_open.Reader'
         :return: dictionary where key is the name of the column, value is the data type of the column
         """
         reader = DataFileReader(f, DatumReader())
-        meta = eval(reader.meta['avro.schema'].decode())
+        meta = eval(reader.meta["avro.schema"].decode())
         schema = {field["name"]: field["type"] for field in meta.get("fields", {})}
+        return schema
+
+    @staticmethod
+    def _preprocess_schema_and_df(
+            schema: Dict[str, str],
+            df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, str]]:
+        """
+        Preprocess schema and dataframe
+        """
         convertor = AvroConvertor(schema, df)
         schema, preprocessed_df = convertor.converted_schema, convertor.preprocessed_df
-        return schema, preprocessed_df
+        return preprocessed_df, schema
 
     def _get_columns(self, path) -> List[str]:
         """
@@ -290,9 +300,9 @@ class AvroLoader(BaseDataLoader):
         """
         try:
             with open(path, "rb") as f:
-                df = self._load_df(f)
-                return list(df.columns)
-        except ValueError as error:
+                schema = self._load_schema(f)
+                return list(schema.keys())
+        except InvalidAvroBinaryEncoding as error:
             logger.error(
                 f"The empty file was provided. Unable to train this table located in the path - '{path}'. "
                 f"The details of the error - {error}"
