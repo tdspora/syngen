@@ -259,9 +259,15 @@ class AvroLoader(BaseDataLoader):
             raise FileNotFoundError(message)
 
     @staticmethod
-    def save_data(path: str, df: pd.DataFrame, **kwargs):
+    def _save_df(path: str, df: pd.DataFrame):
+        """
+        Save data in Avro Format
+        """
         if df is not None:
             pdx.to_avro(path, df)
+
+    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
+        self._save_df(path, df)
 
     @staticmethod
     def _load_schema(f, df) -> Tuple[Dict[str, str], pd.DataFrame]:
