@@ -377,7 +377,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
@@ -477,7 +477,7 @@ def test_launch_train_with_metadata(
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
@@ -626,7 +626,7 @@ def test_launch_train_with_metadata_of_related_tables(
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
@@ -799,7 +799,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
@@ -874,7 +874,7 @@ def test_launch_train_without_metadata(
 
 
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)

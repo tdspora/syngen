@@ -10,7 +10,7 @@ FAKE_METADATA_PATH = "path/to/metadata.yaml"
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source", return_value=True)
 def test_validate_metadata_of_one_table_without_fk_key(
         mock_check_existence_of_source,
@@ -56,7 +56,7 @@ def test_validate_metadata_of_one_table_without_fk_key(
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source", return_value=True)
 def test_validate_metadata_of_related_tables_without_fk_key(
         mock_check_existence_of_source,
@@ -201,7 +201,7 @@ def test_check_key_column_in_fk(rp_logger):
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source", return_value=True)
 def test_validate_metadata_of_related_tables_with_fk_key(
         mock_check_existence_of_source,
@@ -273,7 +273,7 @@ def test_validate_metadata_of_related_tables_with_fk_key(
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source", return_value=True)
 def test_validate_metadata_of_related_tables_with_several_fk_key(
         mock_check_existence_of_source,
@@ -633,7 +633,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key(
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_print_report(
         mock_check_existence_of_source,
@@ -729,7 +729,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_print_report(
         mock_check_existence_of_source,
@@ -962,7 +962,7 @@ def test_validate_metadata_with_not_existent_source(mock_validate_referential_in
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_storage(
         mock_check_existence_of_source,
@@ -1022,7 +1022,7 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_Validator__check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_with_wrong_referential_integrity(
         mock_check_existence_of_source,
