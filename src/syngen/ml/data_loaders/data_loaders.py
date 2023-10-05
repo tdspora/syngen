@@ -294,23 +294,24 @@ class AvroLoader(BaseDataLoader):
         schema, preprocessed_df = convertor.converted_schema, convertor.preprocessed_df
         return preprocessed_df, schema
 
-    def _get_columns(self, path) -> List[str]:
+    def _get_columns(self, f) -> List[str]:
         """
         Get the column names of the table located in the path
         """
+        schema = self._load_schema(f)
+        return list(schema.keys())
+
+    def get_columns(self, path: str) -> List[str]:
         try:
             with open(path, "rb") as f:
-                schema = self._load_schema(f)
-                return list(schema.keys())
+                return self._get_columns(f)
         except InvalidAvroBinaryEncoding as error:
             logger.error(
-                f"The empty file was provided. Unable to train this table located in the path - '{path}'. "
+                f"The empty file was provided. Unable to train this table "
+                f"located in the path - '{path}'. "
                 f"The details of the error - {error}"
             )
             raise error
-
-    def get_columns(self, path: str) -> List[str]:
-        return self._get_columns(path)
 
 
 class MetadataLoader(BaseDataLoader):
