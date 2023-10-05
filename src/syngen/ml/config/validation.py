@@ -178,7 +178,7 @@ class Validator:
                 )
             self._check_merged_metadata(parent_table)
 
-    def _check_key_columns(self, metadata_of_table, table_name: str, existed_columns: List[str]):
+    def _check_existence_of_columns(self, metadata_of_table, table_name: str, existed_columns: List[str]):
         """
         Check if the columns of the certain key exist in the source table
         """
@@ -197,14 +197,14 @@ class Validator:
                 )
                 self.errors["check existence of the key columns in 'columns'"][key] = message
 
-    def __check_key_columns(self, table_name: str):
+    def _check_key_columns(self, table_name: str):
         """
         Fetch the list of the columns of the source table and
         check whether the columns of the certain key exist in the source table
         """
         metadata_of_table = self.metadata[table_name]
         existed_columns = DataLoader(metadata_of_table["train_settings"]["source"]).get_columns()
-        self._check_key_columns(metadata_of_table, table_name, existed_columns)
+        self._check_existence_of_columns(metadata_of_table, table_name, existed_columns)
 
     def run(self):
         """
@@ -218,7 +218,7 @@ class Validator:
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train":
                 if self._check_existence_of_source(table_name):
-                    self.__check_key_columns(table_name)
+                    self._check_key_columns(table_name)
             elif self.type_of_process == "infer":
                 self._check_existence_of_destination(table_name)
         for table_name in self.metadata.keys():
