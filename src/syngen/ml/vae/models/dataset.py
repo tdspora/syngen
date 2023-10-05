@@ -614,7 +614,6 @@ class Dataset:
         return data
 
     def _preprocess_str_params(self, feature: str) -> Tuple[int, int]:
-        self.df[feature] = self.df[feature].fillna("")
         max_len = int(self.df[feature].apply(lambda line: len(line)).max())
         rnn_units = 16
         if 1 <= max_len < 7:
@@ -665,6 +664,8 @@ class Dataset:
                 fillna_value = self.df[feature].mean()
             elif fillna_strategy == "mode":
                 fillna_value = self.df[feature].dropna().mode().sample(1).values[0]
+            elif fillna_strategy == "text":
+                fillna_value = ""
             else:
                 fillna_value = 0
 
@@ -755,14 +756,26 @@ class Dataset:
         """
         Assign text based feature to text columns
         """
-        max_len, rnn_units = self._preprocess_str_params(feature)
+        features = self._preprocess_nan_cols(feature, fillna_strategy="text")
+        max_len, rnn_units = self._preprocess_str_params(features[0])
         self.assign_feature(
             CharBasedTextFeature(
-                feature, text_max_len=max_len, rnn_units=rnn_units
+                features[0], text_max_len=max_len, rnn_units=rnn_units
             ),
-            feature,
+            features[0],
         )
-        logger.info(f"Column '{feature}' assigned as text based feature")
+        logger.info(f"Column '{features[0]}' assigned as text based feature")
+
+        if len(features) > 1:
+            for feature in features[1:]:
+                if feature.endswith("_null"):
+                    self.null_num_column_names.append(feature)
+                if feature.endswith('_zero'):
+                    self.zero_num_column_names.append(feature)
+                self.assign_feature(
+                    ContinuousFeature(feature, column_type=float), feature
+                )
+                logger.info(f"Column '{feature}' assigned as float based feature")
 
     def _assign_float_feature(self, feature):
         """
