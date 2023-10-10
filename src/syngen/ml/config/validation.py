@@ -188,7 +188,7 @@ class Validator:
             else:
                 non_existed_columns = [
                     f'{col!r}'
-                    for col in set(config_of_key['columns']).difference(set(existed_columns))
+                    for col in set(config_of_key["columns"]).difference(set(existed_columns))
                 ]
                 message = (
                     f"The columns of the {config_of_key['type']} '{key}' - " 
@@ -197,14 +197,45 @@ class Validator:
                 )
                 self.errors["check existence of the key columns in 'columns'"][key] = message
 
+    def _check_references_columns(self, table_name, metadata_of_table):
+        """
+        Check if the columns of the certain key exist in the referenced table
+        """
+        for key, config_of_key in metadata_of_table.get("keys", {}).items():
+            if config_of_key["type"] in self.type_of_fk_keys:
+                referenced_columns = config_of_key["references"]["columns"]
+                referenced_table = config_of_key["references"]["table"]
+                existed_columns = self._fetch_existed_columns(self.merged_metadata[referenced_table])
+                if all([column in existed_columns for column in referenced_columns]):
+                    continue
+                else:
+                    non_existed_columns = [
+                        f'{col!r}'
+                        for col in set(referenced_columns).difference(set(existed_columns))
+                    ]
+                    message = (
+                        f"The 'referenced.columns' of the {config_of_key['type']} '{key}' - "
+                        f"{', '.join(non_existed_columns)} "
+                        f"don't exist in the referenced table - '{table_name}'"
+                    )
+                    self.errors["check existence of the key columns in 'referenced.columns'"][key] = message
+
+    @staticmethod
+    def _fetch_existed_columns(metadata_of_table) -> List[str]:
+        """
+        Fetch the list of the columns of the source table
+        """
+        return DataLoader(metadata_of_table["train_settings"]["source"]).get_columns()
+
     def _check_key_columns(self, table_name: str):
         """
         Fetch the list of the columns of the source table and
         check whether the columns of the certain key exist in the source table
         """
-        metadata_of_table = self.metadata[table_name]
-        existed_columns = DataLoader(metadata_of_table["train_settings"]["source"]).get_columns()
+        metadata_of_table = self.merged_metadata[table_name]
+        existed_columns = self._fetch_existed_columns(metadata_of_table)
         self._check_existence_of_columns(metadata_of_table, table_name, existed_columns)
+        self._check_references_columns(table_name, metadata_of_table)
 
     def run(self):
         """

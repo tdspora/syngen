@@ -1704,3 +1704,110 @@ def test_check_not_existent_key_column_in_fk(rp_logger):
             "in the source of the table - \'table_b\'\"\n}"
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_check_not_existent_referenced_table_in_fk(test_metadata_storage, rp_logger):
+    """
+    Test that the referenced table of the foreign key doesn't exist in the metadata
+    """
+    rp_logger.info(
+        "Test that the table of the foreign key doesn't exist in the metadata"
+    )
+    test_metadata = {
+            "table_a": {
+                "train_settings": {
+                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    }
+                }
+            },
+            "table_b": {
+                "train_settings": {
+                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/child_table_with_data.csv"
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["non-existent column"],
+                        "references": {
+                            "table": "non-existent table",
+                            "columns": ["id"]
+                        }
+                    }
+                }
+            }
+        }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    with pytest.raises(ValidationError) as error:
+        validator.run()
+        assert validator.mapping == {}
+        assert validator.merged_metadata == test_metadata
+        assert str(error.value) == (
+            "The metadata of the parent table - 'non-existent table' hasn't been found. "
+            "Please, check whether the information of the parent table - 'non-existent table' "
+            "exists in the current metadata file or in the metadata files stored in "
+            "'model_artifacts/metadata' directory"
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_check_not_existent_referenced_columns_in_fk(rp_logger):
+    """
+    Test that the referenced columns of the foreign key doesn't exist in the parent table
+    """
+    rp_logger.info(
+        "Test that the referenced columns of the foreign key doesn't exist in the parent table"
+    )
+    test_metadata = {
+            "table_a": {
+                "train_settings": {
+                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    }
+                }
+            },
+            "table_b": {
+                "train_settings": {
+                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/child_table_with_data.csv"
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["id"],
+                        "references": {
+                            "table": "table_a",
+                            "columns": ["non-existent column"]
+                        }
+                    }
+                }
+            }
+        }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    with pytest.raises(ValidationError) as error:
+        validator.run()
+        assert validator.mapping == {}
+        assert validator.merged_metadata == test_metadata
+        assert str(error.value) == (
+            "The validation of the metadata has been failed. The error(s) found in - \n"
+            "\"check existence of the key columns in 'referenced.columns'\": {\n    \"fk_id\": "
+            "\"The 'referenced.columns' of the FK 'fk_id' - 'non-existent column' don't exist "
+            "in the referenced table - 'table_b'\"}"
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
