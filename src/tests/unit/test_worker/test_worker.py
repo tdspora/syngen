@@ -106,7 +106,7 @@ def test_init_worker_with_metadata(mock_validator_run,
                    "with only the primary key during the training process")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -163,7 +163,7 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validator_run,
                    "'keys' are empty during the training process")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_empty_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_empty_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -207,7 +207,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(mock_valida
                    "with provided metadata contained related tables and global settings")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -290,7 +290,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(mock_valid
                    "with provided metadata contained the information of related tables with global settings")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "size": 200,
             "run_parallel": False,
@@ -381,7 +381,7 @@ def test_launch_train_with_metadata(mock_train_tables,
                    "with only the primary key was provided")
     worker = Worker(
         table_name=None,
-        metadata_path=r"C:\Users\Hanna_Imshenetska\Projects\syngen\syngen\src\tests\unit\worker\fixtures\metadata.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -472,7 +472,7 @@ def test_launch_train_with_metadata_of_related_tables(mock_train_tables,
                    "the metadata file of related tables was provided")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -612,7 +612,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(mock_train_
                    "the metadata file of related tables in which the table contains several different keys")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -847,7 +847,7 @@ def test_launch_train_with_metadata_contained_global_settings(mock_train_tables,
                    "and it contains global settings")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -973,7 +973,7 @@ def test_launch_infer_with_metadata(mock_infer_tables,
                    "in case the metadata file of one table with only the primary key was provided")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata.yaml",
         settings={
             "size": 200,
             "run_parallel": True,
@@ -1035,7 +1035,7 @@ def test_launch_infer_with_metadata_of_related_tables(mock_infer_tables,
                    "the metadata file of related tables was provided")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables.yaml",
         settings={
             "size": 300,
             "run_parallel": True,
@@ -1122,7 +1122,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(mock_infer_
                    "of related tables in which the table contains several different keys was provided")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
         settings={
             "size": 300,
             "run_parallel": True,
@@ -1300,7 +1300,7 @@ def test_launch_infer_with_metadata_contained_global_settings(mock_infer_tables,
                    "and it contains global settings")
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "size": 300,
             "run_parallel": True,

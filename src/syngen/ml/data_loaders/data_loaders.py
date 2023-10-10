@@ -193,7 +193,7 @@ class CSVLoader:
                     "As the length of the value of the parameter 'separator' is more than 1 character,"
                     "the 'separator' will be set to ',' in accordance with the standard 'RFC 4180'"
                 )
-            if "na_values" in format_params and format_params.get("na_values", []):
+            if "na_values" in format_params and format_params.get("na_values", []) and df.isnull().values.any():
                 filtered_kwargs["na_rep"] = format_params["na_values"][0]
                 logger.warning(
                     "As the value of the parameter 'na_values' is not empty, the 'na_rep' will be set to "
