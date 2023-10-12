@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, List
 import pickle
 import csv
 import inspect
@@ -14,6 +14,7 @@ from yaml import SafeLoader
 from yaml.scanner import ScannerError
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
+from avro.errors import InvalidAvroBinaryEncoding
 from loguru import logger
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
@@ -97,6 +98,9 @@ class DataLoader(BaseDataLoader):
         if df is not None:
             self.file_loader.save_data(path, df, **kwargs)
 
+    def get_columns(self) -> List[str]:
+        return self.file_loader.get_columns(self.path)
+
 
 class CSVLoader:
     """
@@ -163,6 +167,24 @@ class CSVLoader:
     def load_data(self, path, **kwargs):
         return self._load_data(path, format=self.format, **kwargs)
 
+    def get_columns(self, path: str) -> List[str]:
+        return self._get_columns(path)
+
+    @staticmethod
+    def _get_columns(path) -> List[str]:
+        """
+        Get the column names of the table located in the path
+        """
+        try:
+            head_df = pd.read_csv(path, nrows=0)
+            return list(head_df.columns)
+        except pd.errors.EmptyDataError as error:
+            logger.error(
+                f"The empty file was provided. Unable to train this table located in the path - '{path}'. "
+                f"The details of the error - {error}"
+            )
+            raise error
+
     @staticmethod
     def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
         """
@@ -196,8 +218,9 @@ class CSVLoader:
             if "na_values" in format_params and format_params.get("na_values", []):
                 filtered_kwargs["na_rep"] = format_params["na_values"][0]
                 logger.warning(
-                    "As the value of the parameter 'na_values' is not empty, the 'na_rep' will be set to "
-                    "the first value of the parameter 'na_values'"
+                    "Since the 'na_values' parameter is not empty, "
+                    "the missing values will be filled with "
+                    "the first value from the 'na_values' parameter"
                 )
 
             # Save the DataFrame to a CSV file
@@ -221,15 +244,15 @@ class AvroLoader(BaseDataLoader):
         """
         return pdx.from_avro(path)
 
-    def load_data(self, path: str, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+    def load_data(self, path: str, **kwargs) -> Tuple[pd.DataFrame, Dict[str, str]]:
         """
         Load data in Avro format
         """
         try:
             with open(path, "rb") as f:
                 df = self._load_df(f)
-                schema, preprocessed_df = self._load_schema(f, df)
-                return preprocessed_df, schema
+                schema = self._load_schema(f)
+                return self._preprocess_schema_and_df(schema, df)
         except FileNotFoundError as error:
             message = f"It seems that the path to the table isn't valid.\n" \
                       f"The details of the error - {error}.\n" \
@@ -238,23 +261,57 @@ class AvroLoader(BaseDataLoader):
             raise FileNotFoundError(message)
 
     @staticmethod
-    def save_data(path: str, df: pd.DataFrame, **kwargs):
+    def _save_df(path: str, df: pd.DataFrame):
+        """
+        Save data in Avro Format
+        """
         if df is not None:
             pdx.to_avro(path, df)
 
+    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
+        self._save_df(path, df)
+
     @staticmethod
-    def _load_schema(f, df) -> Tuple[Dict[str, str], pd.DataFrame]:
+    def _load_schema(f) -> Dict[str, str]:
         """
-        Load schema of the metadata of the table in Avro format and preprocess dataframe
+        Load schema of the metadata of the table in Avro format
         :param f: object of the class 'smart_open.Reader'
         :return: dictionary where key is the name of the column, value is the data type of the column
         """
         reader = DataFileReader(f, DatumReader())
-        meta = eval(reader.meta['avro.schema'].decode())
+        meta = eval(reader.meta["avro.schema"].decode())
         schema = {field["name"]: field["type"] for field in meta.get("fields", {})}
+        return schema
+
+    @staticmethod
+    def _preprocess_schema_and_df(
+            schema: Dict[str, str],
+            df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, str]]:
+        """
+        Preprocess schema and dataframe
+        """
         convertor = AvroConvertor(schema, df)
         schema, preprocessed_df = convertor.converted_schema, convertor.preprocessed_df
-        return schema, preprocessed_df
+        return preprocessed_df, schema
+
+    def _get_columns(self, f) -> List[str]:
+        """
+        Get the column names of the table located in the path
+        """
+        schema = self._load_schema(f)
+        return list(schema.keys())
+
+    def get_columns(self, path: str) -> List[str]:
+        try:
+            with open(path, "rb") as f:
+                return self._get_columns(f)
+        except InvalidAvroBinaryEncoding as error:
+            logger.error(
+                f"The empty file was provided. Unable to train this table "
+                f"located in the path - '{path}'. "
+                f"The details of the error - {error}"
+            )
+            raise error
 
 
 class MetadataLoader(BaseDataLoader):
@@ -394,3 +451,14 @@ class ExcelLoader:
         """
         if df is not None:
             df.to_excel(path, index=False)
+
+    def get_columns(self, path: str) -> List[str]:
+        return self._get_columns(path)
+
+    @staticmethod
+    def _get_columns(path) -> List[str]:
+        """
+        Get the column names of the table located in the path
+        """
+        head_df = pd.read_excel(path, nrows=0)
+        return list(head_df.columns)
