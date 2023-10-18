@@ -218,7 +218,9 @@ class VAEWrapper(BaseWrapper):
         for column_name, nan_label in self.dataset.nan_labels_dict.items():
             if nan_label is None:
                 nan_label = np.nan
-            df[column_name] = df[column_name].fillna(np.nan) if nan_label is None else df[column_name].fillna(nan_label)
+            if column_name in df.select_dtypes(int).columns:
+                df[column_name] = df[column_name].astype("object")
+            df[column_name] = df[column_name].fillna(nan_label)
         return df
 
     @abstractmethod

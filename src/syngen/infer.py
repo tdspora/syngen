@@ -81,7 +81,7 @@ def launch_infer(
         metadata_path=metadata_path,
         settings=settings,
         log_level=log_level,
-        type="infer"
+        type_of_process="infer"
     )
 
     worker.launch_infer()

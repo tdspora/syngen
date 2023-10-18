@@ -71,7 +71,11 @@ test_data = [
             ({"Date": [
                 "8448-05-17 05:51:56",
                 "9999-12-31 05:22:15",
-                "0001-01-01 08:59:23"]}, "%Y-%m-%d")
+                "0001-01-01 08:59:23"]}, "%Y-%m-%d"),
+            ({"Date": [
+                "14-May-59",
+                "31-Dec-99",
+                "05-Jun-89"]}, "%d-%m-%Y")
         ]
 @pytest.mark.parametrize("data, expected_date_format", test_data)
 def test_validate_date_format(data, expected_date_format, rp_logger):

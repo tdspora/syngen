@@ -14,7 +14,7 @@ from syngen.ml.data_loaders import MetadataLoader
     ("tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
      "model_artifacts/tmp_store/parent-table/merged_infer_parent-table.csv", "infer"),
 ])
-def test_set_pk_path(mock_os_path_exists, path_to_metadata, expected_path, type_of_process):
+def test_get_pk_path(mock_os_path_exists, path_to_metadata, expected_path, type_of_process):
     """
     Test set_pk method
     """
@@ -34,4 +34,4 @@ def test_set_pk_path(mock_os_path_exists, path_to_metadata, expected_path, type_
             log_level="INFO",
             type_of_process=type_of_process
         )
-        assert handler._set_pk_path("parent_table", "child_table") == expected_path
+        assert handler._get_pk_path("parent_table", "child_table") == expected_path
