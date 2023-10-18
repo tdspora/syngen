@@ -17,7 +17,6 @@ class MlflowTracker:
             cls._instance.is_active = is_active
         return cls._instance
 
-
     def log_metric(self, key: str, value: float, step: Optional[int] = None):
         if self.is_active:
             mlflow.log_metric(key, value, step)
