@@ -29,3 +29,4 @@ marshmallow==3.19.*
 xlrd
 xlwt
 openpyxl
+mlflow
