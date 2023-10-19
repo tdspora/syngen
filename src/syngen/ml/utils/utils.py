@@ -5,6 +5,7 @@ from typing import List, Dict
 from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
+import requests
 
 import pandas as pd
 import numpy as np
@@ -291,13 +292,25 @@ def set_mlflow_exp_name(table_name: str, metadata_path: str):
     os.environ["MLFLOW_EXPERIMENT_NAME"] = name
 
 
+def check_mlflow_server(server_url):
+    try:
+        response = requests.get(server_url)
+        # If the response was successful, no Exception will be raised
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as http_err:
+        logger.warning(f'HTTP error occurred: {http_err}')
+    except Exception as err:
+        logger.warning(f'Other error occurred: {err}')
+    else:
+        logger.info('MLFlow server is up and running.')
+        return True
+
+
 def set_mlflow(type_of_process: str):
     exp_name = os.environ["MLFLOW_EXPERIMENT_NAME"]
-    ip_pattern = "(\d{1,3}\.){3}\d{1,3}"
     try:
-        ip = re.search(ip_pattern, os.environ.get("MLFLOW_TRACKING_URI")).group(0)
-        response = os.system("ping -c 1 " + ip)
-        if response == 0:
+        response = check_mlflow_server(os.environ.get("MLFLOW_TRACKING_URI"))
+        if response:
             tracker = MlflowTracker(exp_name, True)
         else:
             tracker = MlflowTracker(exp_name, False)
