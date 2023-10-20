@@ -29,5 +29,5 @@ marshmallow==3.19.*
 xlrd
 xlwt
 openpyxl
-mlflow
+mlflow==2.7.1
 boto3
