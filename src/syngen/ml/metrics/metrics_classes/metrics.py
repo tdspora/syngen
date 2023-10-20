@@ -286,6 +286,7 @@ class Correlations(BaseMetric):
 
             heatmap.figure.tight_layout()
             plt.savefig(f"{self.draws_path}/correlations_heatmap.svg", bbox_inches="tight", format="svg")
+        return np.median(self.corr_score)
 
     @staticmethod
     def __calculate_correlations(data):
@@ -936,7 +937,7 @@ class Clustering(BaseMetric):
         }
         max_clusters = min(10, len(self.merged_transformed))
         for i in range(2, max_clusters):
-            clusters = KMeans(n_clusters=i).fit(self.merged_transformed)
+            clusters = KMeans(n_clusters=i, random_state=10).fit(self.merged_transformed)
             metric = clusters.inertia_
             result_table["cluster_num"].append(i)
             result_table["metric"].append(metric)
@@ -954,7 +955,7 @@ class Clustering(BaseMetric):
         self.merged_transformed = scaler.fit_transform(self.merged_transformed)
 
     def __calculate_clusters(self, n):
-        clusters = KMeans(n_clusters=n).fit(self.merged_transformed)
+        clusters = KMeans(n_clusters=n, random_state=10).fit(self.merged_transformed)
         labels = clusters.labels_
         rows_labels = pd.DataFrame({"origin": self.merged["level_0"], "cluster": labels})
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
@@ -1135,7 +1136,7 @@ class Utility(BaseMetric):
     def __create_binary_class_models(self, binary_targets):
         from sklearn.linear_model import LogisticRegression
         best_target, score, synthetic_score = self.__model_process(
-            LogisticRegression(),
+            LogisticRegression(random_state=10),
             binary_targets,
             "binary classification"
         )
@@ -1144,7 +1145,7 @@ class Utility(BaseMetric):
     def __create_multi_class_models(self, multiclass_targets):
         from sklearn.ensemble import GradientBoostingClassifier
         best_target, score, synthetic_score = self.__model_process(
-            GradientBoostingClassifier(),
+            GradientBoostingClassifier(random_state=10),
             multiclass_targets,
             "multiclass classification"
         )
@@ -1153,7 +1154,7 @@ class Utility(BaseMetric):
     def __create_regression_models(self, cont_targets):
         from sklearn.ensemble import GradientBoostingRegressor
         best_target, score, synthetic_score = self.__model_process(
-            GradientBoostingRegressor(),
+            GradientBoostingRegressor(random_state=10),
             cont_targets,
             "regression"
         )
