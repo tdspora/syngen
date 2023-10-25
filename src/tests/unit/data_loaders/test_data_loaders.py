@@ -4,6 +4,7 @@ import os
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
+from avro.errors import InvalidAvroBinaryEncoding
 
 from syngen.ml.data_loaders import (
     DataLoader,
@@ -135,6 +136,26 @@ def test_load_data_from_empty_table_in_csv_format(caplog, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_get_columns_from_table_in_csv_format(rp_logger):
+    rp_logger.info("Get the list of the columns from the table in CSV format")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv")
+    columns = data_loader.get_columns()
+    assert isinstance(data_loader.file_loader, CSVLoader)
+    assert columns == ["gender", "height", "id"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_columns_from_empty_table_in_csv_format(caplog, rp_logger):
+    rp_logger.info("Get the list of the columns from the empty table in csv format")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/empty_table.csv")
+    assert isinstance(data_loader.file_loader, CSVLoader)
+    with pytest.raises(pd.errors.EmptyDataError):
+        with caplog.at_level("ERROR"):
+            data_loader.get_columns()
+            assert "The empty file was provided. Unable to train this table" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_save_data_in_csv_format(test_csv_path, test_df, rp_logger):
     rp_logger.info("Saving data in csv format locally")
     data_loader = DataLoader(test_csv_path)
@@ -189,6 +210,26 @@ def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
             data_loader.load_data()
             assert "cannot read header - is it an avro file?" in caplog.text
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_columns_from_table_in_avro_format(rp_logger):
+    rp_logger.info("Get the list of the columns from the table in avro format")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/avro_tables/table_with_data.avro")
+    columns = data_loader.get_columns()
+    assert isinstance(data_loader.file_loader, AvroLoader)
+    assert columns == ["gender", "height", "id"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_columns_from_empty_table_in_avro_format(caplog, rp_logger):
+    rp_logger.info("Get the list of the columns from the empty table in avro format")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/avro_tables/empty_table.avro")
+    assert isinstance(data_loader.file_loader, AvroLoader)
+    with pytest.raises(InvalidAvroBinaryEncoding):
+        with caplog.at_level("ERROR"):
+            data_loader.get_columns()
+            assert "The empty file was provided. Unable to train this table" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1023,6 +1064,32 @@ def test_load_data_from_empty_excel_table(rp_logger, caplog):
     data, schema = data_loader.load_data()
     assert data.empty is True
     assert schema == {"fields": {}, "format": "CSV"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_column_from_table_in_xlsx_format(rp_logger):
+    rp_logger.info("Get the list of the columns from the table in '.xlsx' format")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xlsx")
+    columns = data_loader.get_columns()
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert columns == ["gender", "height", "id"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_column_from_table_in_xls_format(rp_logger):
+    rp_logger.info("Get the list of the columns from the table in '.xls' format")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xls")
+    columns = data_loader.get_columns()
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert columns == ["gender", "height", "id"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_columns_from_empty_excel_table(caplog, rp_logger):
+    rp_logger.info("Get the list of the columns from the empty table in '.xlsx' format")
+    data_loader = DataLoader("./tests/unit/data_loaders/fixtures/excel_tables/empty_table.xlsx")
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert data_loader.get_columns() == []
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

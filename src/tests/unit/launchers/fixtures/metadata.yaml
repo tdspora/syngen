@@ -1,6 +1,6 @@
 test_table:                               # Use table name here
   train_settings:                         # Settings for training process.
-    source: ./tests/unit/entrypoints/metadata.yaml # Supported formats include cloud storage locations, local files
+    source: ./tests/unit/launchers/metadata.yaml # Supported formats include cloud storage locations, local files
     epochs: 8                             # Number of epochs
     drop_null: false                      # Drop rows with NULL values
     print_report: true                    # Turn on or turn off generation of the report

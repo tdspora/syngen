@@ -194,7 +194,7 @@ CUSTOMER:                                   # Table name. Required parameter
     na_values: null                         # Additional strings to recognize as NA/NaN. The first value of the array will be used to replace NA/NaN values. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
     sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter. Applicable for 'xls', 'xlsx' formats
   infer_settings:                           # Settings for infer process. Optional parameter
-    destination: "./files/generated_data_customer.csv"# The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
+    destination: "./files/generated_data_customer.csv" # The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
@@ -246,7 +246,7 @@ ORDER:                                      # Table name. Required parameter
       - marital_status
      
   infer_settings:                           # Settings for infer process. Optional parameter
-    destination: "./files/generated_data_order.csv"# The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
+    destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
@@ -356,6 +356,14 @@ docker run --rm -e LOGURU_LEVEL=INFO \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
+
+#### MLflow monitoring
+Set the `MLFLOW_TRACKING_URI` environment variable to the desired MLflow tracking server, for instance:
+http://172.12.82.33:5000/. You can also set `MLFLOW_ARTIFACTS_DESTINATION` environment variable to the desired path 
+(including cloud path), where the artifacts should be stored. When using Docker, ensure the environmental variable is set before building the images.
+
+Provided environmental variables will allow to track the training process and store the artifacts in the desired location.
+You can access the MLflow UI by navigating to the provided URL in your browser.
 
 ## Contribution
 

@@ -5,7 +5,7 @@ import click
 from loguru import logger
 
 from syngen.ml.worker import Worker
-from syngen.ml.utils import setup_logger, create_log_file
+from syngen.ml.utils import setup_logger, create_log_file, set_mlflow, set_mlflow_exp_name
 
 
 @click.command()
@@ -53,6 +53,8 @@ def launch_infer(
     """
     os.environ["LOGURU_LEVEL"] = log_level
     create_log_file(type_of_process="infer", table_name=table_name, metadata_path=metadata_path)
+    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
+    set_mlflow("infer")
     setup_logger()
     if not metadata_path and not table_name:
         raise AttributeError("It seems that the information of 'metadata_path' or 'table_name' is absent. "
@@ -81,6 +83,7 @@ def launch_infer(
         log_level=log_level,
         type_of_process="infer"
     )
+
     worker.launch_infer()
 
 
