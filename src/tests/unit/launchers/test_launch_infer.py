@@ -7,7 +7,7 @@ from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 TABLE_NAME = "test_table"
-PATH_TO_METADATA = "./tests/unit/entrypoints/fixtures/metadata.yaml"
+PATH_TO_METADATA = "./tests/unit/launchers/fixtures/metadata.yaml"
 
 
 @patch.object(Worker, "launch_infer")
