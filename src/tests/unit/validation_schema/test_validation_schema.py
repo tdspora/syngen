@@ -267,9 +267,10 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_invalid_PK_key(rp_logger):
+def test_metadata_file_with_invalid_PK_key_contained_references_section(rp_logger):
     rp_logger.info(
-        "Test the validation of the schema of the metadata file with the invalid PK key"
+        "Test the validation of the schema of the metadata file with the invalid PK "
+        "which contained 'references' section"
     )
     path_to_metadata = "./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_PK_key.yaml"
     metadata = load_metadata_file(path_to_metadata)
@@ -284,9 +285,10 @@ def test_metadata_file_with_invalid_PK_key(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_invalid_UQ_key(rp_logger):
+def test_metadata_file_with_invalid_UQ_key_contained_references_section(rp_logger):
     rp_logger.info(
-        "Test the validation of the schema of the metadata file with the invalid UQ key"
+        "Test the validation of the schema of the metadata file with the invalid UQ "
+        "contained 'references' section"
     )
     path_to_metadata = "./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_UQ_key.yaml"
     metadata = load_metadata_file(path_to_metadata)
@@ -301,9 +303,10 @@ def test_metadata_file_with_invalid_UQ_key(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_invalid_FK_key(rp_logger):
+def test_metadata_file_with_invalid_FK_key_without_references_section(rp_logger):
     rp_logger.info(
-        "Test the validation of the schema of the metadata file with the invalid FK key"
+        "Test the validation of the schema of the metadata file with the invalid FK "
+        "which doesn't contain 'references' section"
     )
     path_to_metadata = "./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_FK_key.yaml"
     metadata = load_metadata_file(path_to_metadata)

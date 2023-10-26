@@ -22,8 +22,9 @@ class CaseInsensitiveString(fields.String):
 
 
 class KeysSchema(Schema):
+    pk_types = ["PK", "UQ"]
     fk_types = ["FK"]
-    type_of_keys = ["FK", "PK", "UQ"]
+    type_of_keys = [*pk_types, *fk_types]
     type = fields.String(validate=validate.OneOf(type_of_keys), required=True)
     columns = fields.List(fields.String(), required=True, allow_none=False)
     joined_sample = fields.Boolean(required=False)
@@ -31,9 +32,17 @@ class KeysSchema(Schema):
 
     @validates_schema
     def validate_references(self, data, **kwargs):
+        if not data["columns"]:
+            raise ValidationError(
+                "The 'columns' field must not be empty"
+            )
         if data["type"] in self.fk_types and "references" not in data:
             raise ValidationError(
                 f"The 'references' field is required when 'type' is "
+                f"{' or '.join([f'{fk_type!r}' for fk_type in self.fk_types])}")
+        if data["type"] in self.fk_types and "references" in data and not data["references"]:
+            raise ValidationError(
+                f"The 'references' field must not be empty when 'type' is "
                 f"{' or '.join([f'{fk_type!r}' for fk_type in self.fk_types])}")
         if data["type"] not in self.fk_types and "references" in data:
             raise ValidationError(
