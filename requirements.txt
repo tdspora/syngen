@@ -31,5 +31,5 @@ xlwt
 openpyxl
 mlflow==2.7.1
 boto3
-Werkzeug==2.2.3
+Werkzeug==3.0.1
 setuptools==65.5.1
