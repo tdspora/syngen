@@ -29,7 +29,7 @@ def datetime_to_timestamp(dt):
         delta = dt - datetime(1970, 1, 1)
         return delta.total_seconds()
     except parser._parser.ParserError as e:
-        year = re.match("\d+", e.args[0][5:]).group(0)
+        year = re.match(r"\d+", e.args[0][5:]).group(0)
         if int(year) > 9999:
             return max_allowed_time_ms
         elif int(year) < 1:
@@ -69,7 +69,9 @@ def generate_uuids(version: int, size: int):
     generated_uuid_column = []
     for i in range(size):
         if version != "ulid":
-            generated_uuid_column.append(uuid.UUID(int=random.getrandbits(128), version=int(version)))
+            generated_uuid_column.append(
+                uuid.UUID(int=random.getrandbits(128), version=int(version))
+            )
         else:
             generated_uuid_column.append(ulid.generate())
     return generated_uuid_column
@@ -90,7 +92,8 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
             try:
                 date_for_check = datetime(8557, 7, 20)
                 datetime_object = parser.parse(x, default=date_for_check)
-                # Check if the parsed date contains only the time component. If it does, then skip it.
+                # Check if the parsed date contains only the time component.
+                # If it does, then skip it.
                 count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
                 continue
@@ -129,11 +132,7 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
                 float_val = float(val)
             except (TypeError, ValueError):
                 str_values.append(val)
-        if (
-                (float_val is not None)
-                and (not np.isnan(float_val))
-                and len(str_values) == 1
-        ):
+        if (float_val is not None) and (not np.isnan(float_val)) and len(str_values) == 1:
             nan_label = str_values[0]
             columns_nan_labels[column] = nan_label
 
@@ -141,7 +140,9 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
 
 
 def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFrame:
-    """Replace str nan labels in float/int columns with actual np.nan and casting the column to float type.
+    """
+    Replace str nan labels in float/int columns with actual np.nan
+    and casting the column to float type.
 
     Args:
         df (pd.DataFrame): table data
@@ -198,6 +199,7 @@ def slugify_attribute(**kwargs):
     Slugify the value of the attribute of the instance
     and set it to the new attribute
     """
+
     def wrapper(function):
         def inner_wrapper(*args):
             object_, *other = args
@@ -206,7 +208,9 @@ def slugify_attribute(**kwargs):
                 value_of_new_attribute = slugify(fetched_attribute)
                 object_.__setattr__(new_attribute, value_of_new_attribute)
             return function(*args)
+
         return inner_wrapper
+
     return wrapper
 
 
@@ -214,6 +218,7 @@ def slugify_parameters(exclude_params=()):
     """
     Slugify the values of parameters, excluding specified parameters
     """
+
     def wrapper(function):
         def inner_wrapper(**kwargs):
             updated_kwargs = {}
@@ -223,6 +228,7 @@ def slugify_parameters(exclude_params=()):
                 else:
                     updated_kwargs[key] = slugify(value)
             return function(**updated_kwargs)
+
         return inner_wrapper
 
     return wrapper
@@ -281,8 +287,7 @@ def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
     unique_root = fetch_unique_root(table_name, metadata_path)
     file_name_without_extension = f"logs_{type_of_process}_{unique_root}"
     file_path = os.path.join(
-        "model_artifacts/tmp_store",
-        f"{slugify(file_name_without_extension)}.log"
+        "model_artifacts/tmp_store", f"{slugify(file_name_without_extension)}.log"
     )
     os.environ["SUCCESS_LOG_FILE"] = file_path
 
@@ -298,11 +303,11 @@ def check_mlflow_server(server_url):
         # If the response was successful, no Exception will be raised
         response.raise_for_status()
     except requests.exceptions.HTTPError as http_err:
-        logger.warning(f'HTTP error occurred: {http_err}')
+        logger.warning(f"HTTP error occurred: {http_err}")
     except Exception as err:
-        logger.warning(f'Other error occurred: {err}')
+        logger.warning(f"Other error occurred: {err}")
     else:
-        logger.info('MLFlow server is up and running.')
+        logger.info("MLFlow server is up and running.")
         return True
 
 
@@ -319,7 +324,7 @@ def set_mlflow(type_of_process: str):
         if type_of_process == "train":
             tracker.create_experiment(
                 exp_name,
-                artifact_location=os.environ.get("MLFLOW_ARTIFACTS_DESTINATION", "/mlflow")
+                artifact_location=os.environ.get("MLFLOW_ARTIFACTS_DESTINATION", "/mlflow"),
             )
         tracker.set_experiment(exp_name)
     except Exception as e:

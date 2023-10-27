@@ -12,12 +12,12 @@ from syngen.ml.metrics.utils import transform_to_base64
 
 class SampleAccuracyTest(BaseTest):
     def __init__(
-            self,
-            original: pd.DataFrame,
-            sampled: pd.DataFrame,
-            paths: dict,
-            table_name: str,
-            train_config: Dict
+        self,
+        original: pd.DataFrame,
+        sampled: pd.DataFrame,
+        paths: dict,
+        table_name: str,
+        train_config: Dict,
     ):
         super().__init__(original, sampled, paths, table_name, train_config)
         self.draws_path = f"{self.paths['draws_path']}/sample_accuracy"
@@ -37,14 +37,19 @@ class SampleAccuracyTest(BaseTest):
 
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()
-        uni_images = univariate.calculate_all(kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"])
+        uni_images = univariate.calculate_all(
+            kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
+        )
 
         # Generate html report
-        with open(f"{os.path.dirname(os.path.realpath(__file__))}/sample_report_template.html") as file_:
+        with open(
+            f"{os.path.dirname(os.path.realpath(__file__))}/sample_report_template.html"
+        ) as file_:
             template = jinja2.Template(file_.read())
 
         uni_images = {
-            title: transform_to_base64(path) for title, path in uni_images.items()
+            title: transform_to_base64(path)
+            for title, path in uni_images.items()
             if "word_count" not in title
         }
 
@@ -52,10 +57,14 @@ class SampleAccuracyTest(BaseTest):
             uni_imgs=uni_images,
             table_name=self.table_name,
             config=self.config,
-            time=datetime.now().strftime("%H:%M:%S %d/%m/%Y")
+            time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
         )
 
-        with open(f"{self.paths['draws_path']}/sample_accuracy_report.html", 'w', encoding="utf-8") as f:
+        with open(
+            f"{self.paths['draws_path']}/sample_accuracy_report.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(html)
 
         self._remove_artifacts()

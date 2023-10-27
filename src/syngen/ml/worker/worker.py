@@ -18,6 +18,7 @@ class Worker:
     """
     Class for preparing training and infer settings, metadata for training and infer process
     """
+
     table_name: Optional[str] = field(kw_only=True)
     metadata_path: Optional[str] = field(kw_only=True)
     settings: Dict = field(kw_only=True)
@@ -42,7 +43,7 @@ class Worker:
         validator = Validator(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
-            type_of_process=self.type_of_process
+            type_of_process=self.type_of_process,
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -59,7 +60,9 @@ class Worker:
             infer_settings.update(self.settings)
 
     @staticmethod
-    def _update_table_settings(table_settings: Dict[str, Any], settings_to_update: Dict[str, Any]) -> None:
+    def _update_table_settings(
+        table_settings: Dict[str, Any], settings_to_update: Dict[str, Any]
+    ) -> None:
         """
         Update the table settings with the provided settings that are not already defined
         """
@@ -135,12 +138,16 @@ class Worker:
         Return the list of related tables regarding the type of key -
         'primary key', 'foreign key', 'unique key'
         :param config: configuration of related tables declared in metadata.yaml file
-        :param key_type: type of key either 'primary key' ('PK'), 'foreign key' ('FK'), 'unique key' ('UQ')
+        :param key_type:
+        type of key either 'primary key' ('PK'), 'foreign key' ('FK'), 'unique key' ('UQ')
         """
         try:
-            tables = [table_name for table_name, config in config.items()
-                      for key in config["keys"]
-                      if config["keys"][key]["type"] == key_type]
+            tables = [
+                table_name
+                for table_name, config in config.items()
+                for key in config["keys"]
+                if config["keys"][key]["type"] == key_type
+            ]
             return list(dict.fromkeys(tables))
         except KeyError:
             raise KeyError(
@@ -157,31 +164,39 @@ class Worker:
         """
         config_of_tables = deepcopy(self.merged_metadata)
         if kwargs.get("type_of_process") in ("infer", "all"):
-            config_of_tables = self._split_pk_fk_metadata(config_of_tables, list(config_of_tables.keys()))
+            config_of_tables = self._split_pk_fk_metadata(
+                config_of_tables, list(config_of_tables.keys())
+            )
         tables_without_keys = self._get_tables_without_keys(config_of_tables)
         pk_tables = self._get_tables(config_of_tables, "PK")
         uq_tables = self._get_tables(config_of_tables, "UQ")
         fk_tables = self._get_tables(config_of_tables, "FK")
-        chain_of_tables = list(dict.fromkeys([*tables_without_keys, *pk_tables, *uq_tables, *fk_tables]))
+        chain_of_tables = list(
+            dict.fromkeys([*tables_without_keys, *pk_tables, *uq_tables, *fk_tables])
+        )
 
         config_of_tables = {
             **self.metadata,
-            **{k: v for k, v in config_of_tables.items() if k not in self.metadata}
+            **{k: v for k, v in config_of_tables.items() if k not in self.metadata},
         }
-        chain_of_tables = [
-            i for i in chain_of_tables
-            for j in self.metadata
-            if j in i
-        ]
+        chain_of_tables = [i for i in chain_of_tables for j in self.metadata if j in i]
         return chain_of_tables, config_of_tables
 
     def _split_pk_fk_metadata(self, config, tables):
         for table in tables:
             types_of_keys = [value["type"] for key, value in config[table].get("keys", {}).items()]
             if "PK" in types_of_keys and "FK" in types_of_keys:
-                self.divided += [table+"_pk", table+"_fk"]
-                pk_uq_part = {key: value for key, value in config[table]["keys"].items() if value["type"] in ["PK", "UQ"]}
-                fk_part = {key: value for key, value in config[table]["keys"].items() if value["type"] == "FK"}
+                self.divided += [table + "_pk", table + "_fk"]
+                pk_uq_part = {
+                    key: value
+                    for key, value in config[table]["keys"].items()
+                    if value["type"] in ["PK", "UQ"]
+                }
+                fk_part = {
+                    key: value
+                    for key, value in config[table]["keys"].items()
+                    if value["type"] == "FK"
+                }
 
                 # Do this to create a new object instead of a reference
                 as_pk_meta = {k: v for k, v in config[table].items()}
@@ -196,17 +211,25 @@ class Worker:
         return config
 
     def __train_tables(
-            self,
-            metadata_for_training: Tuple[List, Dict],
-            metadata_for_inference: Tuple[List, Dict]
+        self,
+        metadata_for_training: Tuple[List, Dict],
+        metadata_for_inference: Tuple[List, Dict],
     ):
         """
         Run training process for the list of tables
-        :param metadata_for_training: the tuple included the list of tables and metadata for training process
-        :param metadata_for_inference: the tuple included the list of tables and metadata for inference process
+        :param metadata_for_training:
+        the tuple included the list of tables and metadata for training process
+        :param metadata_for_inference:
+        the tuple included the list of tables and metadata for inference process
         """
-        chain_for_tables_for_training, config_of_metadata_for_training = metadata_for_training
-        chain_for_tables_for_inference, config_of_metadata_for_inference = metadata_for_inference
+        (
+            chain_for_tables_for_training,
+            config_of_metadata_for_training,
+        ) = metadata_for_training
+        (
+            chain_for_tables_for_inference,
+            config_of_metadata_for_inference,
+        ) = metadata_for_inference
 
         for table in chain_for_tables_for_training:
             config_of_table = config_of_metadata_for_training[table]
@@ -223,7 +246,7 @@ class Worker:
                 table_name=table,
                 metadata_path=self.metadata_path,
                 print_report=train_settings["print_report"],
-                batch_size=train_settings["batch_size"]
+                batch_size=train_settings["batch_size"],
             )
             self._write_success_message(slugify(table))
             self._save_metadata_file()
@@ -255,7 +278,7 @@ class Worker:
                     print_report=print_report,
                     log_level=self.log_level,
                     both_keys=both_keys,
-                    type=self.type_of_process
+                    type=self.type_of_process,
                 )
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
@@ -283,7 +306,7 @@ class Worker:
                 print_report=infer_settings["print_report"],
                 log_level=self.log_level,
                 both_keys=both_keys,
-                type=self.type_of_process
+                type=self.type_of_process,
             )
 
     @staticmethod
@@ -306,7 +329,9 @@ class Worker:
         if self.metadata_path:
             os.makedirs("model_artifacts/metadata", exist_ok=True)
             metadata_file_name = os.path.basename(self.metadata_path)
-            MetadataLoader(self.metadata_path).save_data(f"model_artifacts/metadata/{metadata_file_name}", self.metadata)
+            MetadataLoader(self.metadata_path).save_data(
+                f"model_artifacts/metadata/{metadata_file_name}", self.metadata
+            )
 
     def launch_train(self):
         """
@@ -321,6 +346,8 @@ class Worker:
         """
         Launch infer process either for a single table or for several tables
         """
-        chain_of_tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
+        chain_of_tables, config_of_tables = self._prepare_metadata_for_process(
+            type_of_process="infer"
+        )
         self.__infer_tables(chain_of_tables, config_of_tables)
         self._generate_reports()

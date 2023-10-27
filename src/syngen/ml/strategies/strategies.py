@@ -2,32 +2,24 @@ from abc import ABC, abstractmethod
 import os
 import traceback
 from loguru import logger
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.handlers import RootHandler
-from syngen.ml.reporters import (
-    Report,
-    AccuracyReporter,
-    SampleAccuracyReporter
-)
-from syngen.ml.config import (
-    TrainConfig,
-    InferConfig
-)
-from syngen.ml.handlers import (
-    LongTextsHandler,
-    VaeTrainHandler,
-    VaeInferHandler
-)
+from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
+from syngen.ml.config import TrainConfig, InferConfig
+from syngen.ml.handlers import LongTextsHandler, VaeTrainHandler, VaeInferHandler
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
 from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
+
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 
 class Strategy(ABC):
     """
     Abstract class for the strategies of training or infer process
     """
+
     def __init__(self):
         self.handler = None
         self.config = None
@@ -69,10 +61,10 @@ class TrainStrategy(Strategy, ABC):
     """
     Class of the strategies of training process
     """
+
     def _save_training_config(self):
         BinaryLoader().save_data(
-            path=self.config.paths["train_config_pickle_path"],
-            data=self.config
+            path=self.config.paths["train_config_pickle_path"], data=self.config
         )
 
     def set_config(self, **kwargs):
@@ -92,7 +84,7 @@ class TrainStrategy(Strategy, ABC):
         root_handler = RootHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
-            paths=self.config.paths
+            paths=self.config.paths,
         )
 
         vae_handler = VaeTrainHandler(
@@ -104,14 +96,14 @@ class TrainStrategy(Strategy, ABC):
             epochs=self.config.epochs,
             row_subset=self.config.row_subset,
             drop_null=self.config.drop_null,
-            batch_size=self.config.batch_size
+            batch_size=self.config.batch_size,
         )
 
         long_text_handler = LongTextsHandler(
             metadata=self.metadata,
             table_name=self.config.table_name,
             schema=self.config.schema,
-            paths=self.config.paths
+            paths=self.config.paths,
         )
 
         root_handler.set_next(vae_handler).set_next(long_text_handler)
@@ -124,19 +116,13 @@ class TrainStrategy(Strategy, ABC):
             sample_reporter = SampleAccuracyReporter(
                 table_name=self.config.table_name,
                 paths=self.config.paths,
-                config=self.config.to_dict()
+                config=self.config.to_dict(),
             )
-            Report().register_reporter(
-                table=self.config.table_name,
-                reporter=sample_reporter
-            )
+            Report().register_reporter(table=self.config.table_name, reporter=sample_reporter)
 
         return self
 
-    def run(
-            self,
-            **kwargs
-    ):
+    def run(self, **kwargs):
         """
         Launch the training process
         """
@@ -149,14 +135,12 @@ class TrainStrategy(Strategy, ABC):
                 table_name=kwargs["table_name"],
                 metadata_path=kwargs["metadata_path"],
                 print_report=kwargs["print_report"],
-                batch_size=kwargs["batch_size"]
+                batch_size=kwargs["batch_size"],
             )
             tracker = MlflowTracker()
             tracker.start_run(run_name=f"{kwargs['table_name']} | TRAIN")
 
-            self.add_reporters().\
-                set_metadata(kwargs["metadata"]).\
-                add_handler()
+            self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()
             self.handler.handle()
         except Exception as e:
             logger.error(
@@ -173,6 +157,7 @@ class InferStrategy(Strategy):
     """
     Class of the strategies of infer process
     """
+
     def set_config(self, **kwargs):
         """
         Set up the configuration for infer process
@@ -198,7 +183,7 @@ class InferStrategy(Strategy):
             run_parallel=self.config.run_parallel,
             print_report=self.config.print_report,
             log_level=self.config.log_level,
-            type_of_process=type_of_process
+            type_of_process=type_of_process,
         )
         return self
 
@@ -207,19 +192,13 @@ class InferStrategy(Strategy):
             accuracy_reporter = AccuracyReporter(
                 table_name=self.config.table_name,
                 paths=self.config.paths,
-                config=self.config.to_dict()
+                config=self.config.to_dict(),
             )
-            Report().register_reporter(
-                table=self.config.table_name,
-                reporter=accuracy_reporter
-            )
+            Report().register_reporter(table=self.config.table_name, reporter=accuracy_reporter)
 
         return self
 
-    def run(
-            self,
-            **kwargs
-    ):
+    def run(self, **kwargs):
         """
         Launch the infer process
         """
@@ -235,10 +214,9 @@ class InferStrategy(Strategy):
                 print_report=kwargs["print_report"],
                 log_level=kwargs["log_level"],
                 both_keys=kwargs["both_keys"],
-            ).\
-                add_reporters().\
-                set_metadata(kwargs["metadata"]).\
-                add_handler(type_of_process=kwargs["type"])
+            ).add_reporters().set_metadata(kwargs["metadata"]).add_handler(
+                type_of_process=kwargs["type"]
+            )
             self.handler.handle()
         except Exception as e:
             logger.error(

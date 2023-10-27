@@ -27,9 +27,9 @@ class SampleLayer(Layer):
 
     def call(self, layer_inputs, **kwargs):
         if len(layer_inputs) != 2:
-            raise Exception('input layers must be a list: mean and stddev')
+            raise Exception("input layers must be a list: mean and stddev")
         if len(K.int_shape(layer_inputs[0])) != 2 or len(K.int_shape(layer_inputs[1])) != 2:
-            raise Exception('input shape is not a vector [batchSize, latentSize]')
+            raise Exception("input shape is not a vector [batchSize, latentSize]")
 
         mean = layer_inputs[0]
         log_var = layer_inputs[1]
@@ -44,7 +44,7 @@ class SampleLayer(Layer):
 
         latent_loss = K.reshape(latent_loss, [1, 1])
 
-        epsilon = K.random_normal(shape=(batch, dim), mean=0., stddev=1.)
+        epsilon = K.random_normal(shape=(batch, dim), mean=0.0, stddev=1.0)
         layer_output = mean + K.exp(0.5 * log_var) * epsilon
 
         self.add_loss(losses=[latent_loss], inputs=[layer_inputs])
@@ -57,8 +57,8 @@ class SampleLayer(Layer):
     @property
     def get_config(self):
         config = {
-            'gamma': self.gamma,
-            'capacity': self.max_capacity,
+            "gamma": self.gamma,
+            "capacity": self.max_capacity,
         }
         base_config: Dict = super(SampleLayer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

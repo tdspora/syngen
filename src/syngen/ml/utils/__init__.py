@@ -1,6 +1,5 @@
-from syngen.ml.utils.utils import (
+from syngen.ml.utils.utils import (  # noqa: F401;
     get_date_columns,
-    get_nan_labels,
     nan_labels_to_float,
     get_tmp_df,
     fillnan,
@@ -20,5 +19,5 @@ from syngen.ml.utils.utils import (
     define_existent_columns,
     create_log_file,
     set_mlflow,
-    set_mlflow_exp_name
+    set_mlflow_exp_name,
 )

@@ -23,7 +23,7 @@ from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
     get_tmp_df,
-    get_date_columns
+    get_date_columns,
 )
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_parameters
@@ -77,21 +77,26 @@ class Dataset:
         self.nan_labels_dict = dict()
         self.uuid_columns = set()
         self.uuid_columns_types = {}
-        self.dropped_columns = fetch_training_config(self.paths["train_config_pickle_path"]).dropped_columns
+        self.dropped_columns = fetch_training_config(
+            self.paths["train_config_pickle_path"]
+        ).dropped_columns
         self.non_existent_columns = set()
-        self.order_of_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
+        self.order_of_columns = fetch_training_config(
+            self.paths["train_config_pickle_path"]
+        ).columns
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
         Set up primary key for the table
         """
         self.primary_keys_mapping = {
-            key: value for (key, value) in config_of_keys.items()
+            key: value
+            for (key, value) in config_of_keys.items()
             if config_of_keys.get(key).get("type") == "PK"
         }
         self.primary_keys_list = list(self.primary_keys_mapping.keys())
         self.primary_key_name = self.primary_keys_list[0] if self.primary_keys_list else None
-        pk_columns_lists = [val['columns'] for val in self.primary_keys_mapping.values()]
+        pk_columns_lists = [val["columns"] for val in self.primary_keys_mapping.values()]
         self.pk_columns = [col for uq_cols in pk_columns_lists for col in uq_cols]
 
         if self.primary_key_name:
@@ -104,12 +109,15 @@ class Dataset:
         Set up unique keys for the table
         """
         self.unique_keys_mapping = {
-            key: value for (key, value) in config_of_keys.items()
+            key: value
+            for (key, value) in config_of_keys.items()
             if config_of_keys.get(key).get("type") == "UQ"
         }
         self.unique_keys_mapping_list = list(self.unique_keys_mapping.keys())
-        self.unique_keys_list = self.unique_keys_mapping_list if self.unique_keys_mapping_list else []
-        uq_columns_lists = [val['columns'] for val in self.unique_keys_mapping.values()]
+        self.unique_keys_list = (
+            self.unique_keys_mapping_list if self.unique_keys_mapping_list else []
+        )
+        uq_columns_lists = [val["columns"] for val in self.unique_keys_mapping.values()]
         self.uq_columns = [col for uq_cols in uq_columns_lists for col in uq_cols]
 
         if self.unique_keys_list:
@@ -126,7 +134,9 @@ class Dataset:
 
         for key, value in config_of_keys.items():
             if value.get("type") == type_of_key:
-                if any(column for column in value.get("columns") if column in self.dropped_columns):
+                if any(
+                    column for column in value.get("columns") if column in self.dropped_columns
+                ):
                     dropped_keys.add(key)
                 else:
                     filtered_keys[key] = value
@@ -137,19 +147,24 @@ class Dataset:
         """
         Set up foreign keys for the table
         """
-        self.foreign_keys_mapping, dropped_fk_keys = self._filter_dropped_keys(config_of_keys, "FK")
+        self.foreign_keys_mapping, dropped_fk_keys = self._filter_dropped_keys(
+            config_of_keys, "FK"
+        )
         self.foreign_keys_list = list(self.foreign_keys_mapping.keys())
-        fk_columns_lists = [val['columns'] for val in self.foreign_keys_mapping.values()]
+        fk_columns_lists = [val["columns"] for val in self.foreign_keys_mapping.values()]
         self.fk_columns = [col for fk_cols in fk_columns_lists for col in fk_cols]
 
         if dropped_fk_keys:
             logger.info(
                 f"The following foreign keys were dropped: {', '.join(dropped_fk_keys)} "
-                f"as they contain empty columns: {', '.join(self.dropped_columns.union(self.fk_columns))}"
+                f"as they contain empty columns: "
+                f"{', '.join(self.dropped_columns.union(self.fk_columns))}"
             )
 
         if self.foreign_keys_list:
-            logger.info(f"The following foreign keys were set: {', '.join(self.foreign_keys_list)}")
+            logger.info(
+                f"The following foreign keys were set: {', '.join(self.foreign_keys_list)}"
+            )
         if not self.foreign_keys_list:
             logger.info("No foreign keys were set.")
 
@@ -161,12 +176,18 @@ class Dataset:
         for key_name, config in pk_uq_keys_mapping.items():
             key_columns = config.get("columns")
             for column in key_columns:
-                column_type = \
-                    str if column in (
-                            self.str_columns | self.categ_columns | self.date_columns |
-                            self.long_text_columns | self.uuid_columns
-                    ) \
-                        else float
+                column_type = (
+                    str
+                    if column
+                    in (
+                        self.str_columns
+                        | self.categ_columns
+                        | self.date_columns
+                        | self.long_text_columns
+                        | self.uuid_columns
+                    )
+                    else float
+                )
                 self.pk_uq_keys_types[column] = column_type
 
     def __map_text_pk(self):
@@ -209,7 +230,8 @@ class Dataset:
         Synchronize the schema of the table with dataframe
         """
         schema["fields"] = {
-            column: data_type for column, data_type in schema.get("fields").items()
+            column: data_type
+            for column, data_type in schema.get("fields").items()
             if column in df.columns
         }
         return schema
@@ -219,13 +241,16 @@ class Dataset:
         Exclude the column from the list of categorical columns
         if it was removed previously as empty column
         """
-        removed = [col for col, data_type in schema.get("fields", {}).items() if data_type == "removed"]
+        removed = [
+            col for col, data_type in schema.get("fields", {}).items() if data_type == "removed"
+        ]
         for col in list(self.categ_columns):
             if col in removed:
                 self.categ_columns.remove(col)
                 logger.warning(
                     f"The column '{col}' was excluded from the list of categorical columns "
-                    f"as far as this column is empty and was removed from the table - '{self.table_name}'"
+                    f"as far as this column is empty and was removed from the table - "
+                    f"'{self.table_name}'"
                 )
             continue
 
@@ -258,7 +283,9 @@ class Dataset:
         if column in column_list:
             logger.warning(
                 f"The column '{column}' was excluded from the list of categorical columns "
-                f"as far as this column was set as the {key_type} of the table - '{self.table_name}'")
+                f"as far as this column was set as the {key_type} of the table - "
+                f"'{self.table_name}'"
+            )
             self.categ_columns.discard(column)
 
     def _check_if_not_key_column(self):
@@ -277,10 +304,7 @@ class Dataset:
         """
 
         self.binary_columns = set(
-            [
-                col for col in self.binary_columns
-                if col not in self.categ_columns
-            ]
+            [col for col in self.binary_columns if col not in self.categ_columns]
         )
 
     def _fetch_categorical_columns(self):
@@ -292,12 +316,16 @@ class Dataset:
         self.categ_columns = set()
 
         if metadata_of_table is not None:
-            self.categ_columns = \
-                set(metadata_of_table.get("train_settings", {}).get("column_types", {}).get("categorical", []))
+            self.categ_columns = set(
+                metadata_of_table.get("train_settings", {})
+                .get("column_types", {})
+                .get("categorical", [])
+            )
         if self.categ_columns:
             logger.info(
                 f"The columns - {', '.join(self.categ_columns)} were defined as categorical "
-                f"due to the information from the metadata of the table - '{self.table_name}'")
+                f"due to the information from the metadata of the table - '{self.table_name}'"
+            )
 
     def _check_if_column_categorical(self, schema: Dict):
         if self.categ_columns:
@@ -310,7 +338,9 @@ class Dataset:
         """
         Set up the list of binary columns based on the count of unique values in the column
         """
-        self.binary_columns = set([col for col in df.columns if df[col].fillna("?").nunique() == 2])
+        self.binary_columns = set(
+            [col for col in df.columns if df[col].fillna("?").nunique() == 2]
+        )
 
     def _define_categorical_columns(self, df):
         """
@@ -318,7 +348,8 @@ class Dataset:
         """
         defined_columns = set(
             [
-                col for col in df.columns
+                col
+                for col in df.columns
                 if df[col].dropna().nunique() <= 50 and col not in self.binary_columns
             ]
         )
@@ -329,7 +360,8 @@ class Dataset:
             data_subset = df.select_dtypes(include=[pd.StringDtype(), "object"])
         else:
             text_columns = [
-                col for col, data_type in self.schema.get("fields", {}).items()
+                col
+                for col, data_type in self.schema.get("fields", {}).items()
                 if data_type == "string"
             ]
             data_subset = df[text_columns]
@@ -351,14 +383,19 @@ class Dataset:
 
         self.long_text_columns = set()
         if not data_subset.empty:
-            data_subset = data_subset.loc[:, data_subset.apply(lambda x: (x.str.len() > 200).any())]
+            data_subset = data_subset.loc[
+                :, data_subset.apply(lambda x: (x.str.len() > 200).any())
+            ]
             self.long_text_columns = set(data_subset.columns)
             self.long_text_columns -= self.categ_columns
             if self.long_text_columns:
                 logger.info(
-                    f"Please note that the columns - {self.long_text_columns} contain long texts (> 200 symbols). "
-                    f"Such texts' handling consumes significant resources and results in poor quality content, "
-                    f"therefore this column(-s) will be generated using a simplified statistical approach")
+                    f"Please note that the columns - {self.long_text_columns} contain "
+                    f"long texts (> 200 symbols). Such texts' handling consumes "
+                    f"significant resources and results in poor quality content, "
+                    f"therefore this column(-s) will be generated using "
+                    f"a simplified statistical approach"
+                )
 
     @staticmethod
     def _is_valid_ulid(uuid):
@@ -371,7 +408,7 @@ class Dataset:
             ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
             datetime.fromtimestamp(ulid_timestamp_int / 1000.0)
             return "ulid"
-        except:
+        except Exception:
             return
 
     def _is_valid_uuid(self, x):
@@ -408,9 +445,12 @@ class Dataset:
         """
         Set up the list of date columns
         """
-        self.date_columns = \
-            get_date_columns(df, list(self.str_columns)) - self.categ_columns - \
-            self.binary_columns - self.long_text_columns
+        self.date_columns = (
+            get_date_columns(df, list(self.str_columns))
+            - self.categ_columns
+            - self.binary_columns
+            - self.long_text_columns
+        )
 
     def _remove_non_existent_columns(self, columns: list, key: str, key_type: str) -> list:
         """
@@ -421,7 +461,8 @@ class Dataset:
             if column in self.non_existent_columns:
                 logger.warning(
                     f"The column - '{column}' was excluded from the {key_type} - "
-                    f"'{key}' as far as this column doesn't exist in the table - '{self.table_name}'"
+                    f"'{key}' as far as this column doesn't exist in the table - "
+                    f"'{self.table_name}'"
                 )
             else:
                 updated_columns.append(column)
@@ -435,10 +476,15 @@ class Dataset:
         table_metadata = table_config.get("keys", {})
         for key in list(table_metadata.keys()):
             key_type = table_metadata[key].get("type")
-            updated_columns = self._remove_non_existent_columns(table_metadata[key].get("columns", []), key, key_type)
+            updated_columns = self._remove_non_existent_columns(
+                table_metadata[key].get("columns", []), key, key_type
+            )
             table_metadata[key]["columns"] = updated_columns
             if not table_metadata[key]["columns"]:
-                logger.warning(f"All columns in the key {key} are empty, so it will be removed from the table's metadata")
+                logger.warning(
+                    f"All columns in the key {key} are empty, "
+                    f"so it will be removed from the table's metadata"
+                )
                 table_metadata[key].pop(key, None)
                 self.metadata[self.table_name]["keys"].pop(key, None)
 
@@ -455,7 +501,9 @@ class Dataset:
 
         self.non_existent_columns = non_existent_columns - self.dropped_columns
 
-    def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True):
+    def _general_data_pipeline(
+        self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True
+    ):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
         in case metadata of the table is absent
@@ -481,16 +529,28 @@ class Dataset:
             if all(x.is_integer() for x in tmp_df[col]):
                 float_to_int_cols.add(col)
 
-        self.int_columns = (self.int_columns | float_to_int_cols) - (self.categ_columns | self.binary_columns)
-        self.float_columns = self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
-        self.str_columns = \
-            set(tmp_df.columns) - self.float_columns - self.categ_columns - \
-            self.int_columns - self.binary_columns - self.long_text_columns - self.uuid_columns
+        self.int_columns = (self.int_columns | float_to_int_cols) - (
+            self.categ_columns | self.binary_columns
+        )
+        self.float_columns = (
+            self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
+        )
+        self.str_columns = (
+            set(tmp_df.columns)
+            - self.float_columns
+            - self.categ_columns
+            - self.int_columns
+            - self.binary_columns
+            - self.long_text_columns
+            - self.uuid_columns
+        )
         self.categ_columns -= self.long_text_columns
         self._set_date_columns(df)
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
-        self.uuid_columns_types = {k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns}
+        self.uuid_columns_types = {
+            k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
+        }
 
     def _avro_data_pipeline(self, df, schema):
         """
@@ -502,35 +562,49 @@ class Dataset:
         self._set_binary_columns(df)
         self._set_categorical_columns(df, schema)
         self._set_long_text_columns(df)
-        self.int_columns = set(column for column, data_type in schema.items() if data_type == 'int')
+        self.int_columns = set(
+            column for column, data_type in schema.items() if data_type == "int"
+        )
         self.int_columns = self.int_columns - self.categ_columns - self.binary_columns
-        self.float_columns = set(column for column, data_type in schema.items() if data_type == 'float')
+        self.float_columns = set(
+            column for column, data_type in schema.items() if data_type == "float"
+        )
         self.float_columns = self.float_columns - self.categ_columns - self.binary_columns
-        self.str_columns = set(column for column, data_type in schema.items() if data_type == 'string')
+        self.str_columns = set(
+            column for column, data_type in schema.items() if data_type == "string"
+        )
         self.categ_columns -= self.long_text_columns
-        self.str_columns = self.str_columns - self.categ_columns - self.binary_columns \
-                           - self.long_text_columns - self.uuid_columns
+        self.str_columns = (
+            self.str_columns
+            - self.categ_columns
+            - self.binary_columns
+            - self.long_text_columns
+            - self.uuid_columns
+        )
         self._set_date_columns(df)
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
-        self.uuid_columns_types = {k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns}
+        self.uuid_columns_types = {
+            k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
+        }
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
         if schema.get("format") == "CSV":
             self._general_data_pipeline(df, schema)
-        elif schema.get("format") == 'Avro':
+        elif schema.get("format") == "Avro":
             schema = self._update_schema(schema, df)
             self._avro_data_pipeline(df, schema.get("fields"))
 
-        assert len(self.str_columns) + \
-               len(self.float_columns) + \
-               len(self.int_columns) + \
-               len(self.date_columns) + \
-               len(self.categ_columns) + \
-               len(self.binary_columns) + \
-               len(self.long_text_columns) + \
-               len(self.uuid_columns) == len(df.columns), "According to number of columns with defined types, " \
-                                                          "column types are not identified correctly"
+        assert len(self.str_columns) + len(self.float_columns) + len(self.int_columns) + len(
+            self.date_columns
+        ) + len(self.categ_columns) + len(self.binary_columns) + len(self.long_text_columns) + len(
+            self.uuid_columns
+        ) == len(
+            df.columns
+        ), (
+            "According to number of columns with defined types, "
+            "column types are not identified correctly"
+        )
 
         logger.debug(
             f"Count of string columns: {len(self.str_columns)}; "
@@ -589,7 +663,9 @@ class Dataset:
         return self.transform(data)
 
     def _check_count_features(self, data):
-        return (len(data) == len(self.features)) or (len(data) + len(self.fk_columns) == len(self.features))
+        return (len(data) == len(self.features)) or (
+            len(data) + len(self.fk_columns) == len(self.features)
+        )
 
     def inverse_transform(self, data, excluded_features=set()):
         inverse_transformed_data = list()
@@ -599,14 +675,13 @@ class Dataset:
         assert self._check_count_features(data)
 
         for transformed_data, (name, feature) in tqdm.tqdm(
-                iterable=zip(data, self.features.items()),
-                desc="Generation of the data...",
-                total=len(data)):
+            iterable=zip(data, self.features.items()),
+            desc="Generation of the data...",
+            total=len(data),
+        ):
             if name not in excluded_features and name not in self.fk_columns:
                 column_names.extend(self.columns[name])
-                inverse_transformed_data.append(
-                    feature.inverse_transform(transformed_data)
-                )
+                inverse_transformed_data.append(feature.inverse_transform(transformed_data))
 
         stacked_data = np.column_stack(inverse_transformed_data)
         data = pd.DataFrame(stacked_data, columns=column_names)
@@ -630,7 +705,7 @@ class Dataset:
         return max_len, rnn_units
 
     def _preprocess_nan_cols(
-            self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
+        self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3
     ) -> tuple:
         """Fill NaN values in numeric column with some value according to strategy.
         Fill NaN values in string columns can only work in 'mode' strategy.
@@ -646,20 +721,24 @@ class Dataset:
                                              Note: string columns only work with 'mode'.
 
         Returns:
-            tuple: Tuple that consists of either feature name or both feature name and new null feature name.
+            tuple: Tuple that consists of either feature name or both feature name
+            and new null feature name.
         """
         isnull_feature = pd.isnull(self.df[feature])
-        many_zeros_feature = ((self.df[feature] == 0).sum() / (len(self.df[feature])) >
-                              zero_cutoff)
+        many_zeros_feature = (self.df[feature] == 0).sum() / (len(self.df[feature])) > zero_cutoff
         if many_zeros_feature:
-            feature_zero = feature + '_zero'
+            feature_zero = feature + "_zero"
             self.df[feature_zero] = self.df[feature].apply(lambda x: 0 if x == 0 else 1)
             if not isnull_feature.any():
                 return (feature, feature_zero)
         if isnull_feature.any():
             nan_number = isnull_feature.sum()
-            logger.info(f"Column '{feature}' contains {nan_number} ({round(nan_number * 100 / len(isnull_feature))}%) "
-                        f"empty values out of {len(isnull_feature)}. Filling them with {fillna_strategy or 'zero'}.")
+            logger.info(
+                f"Column '{feature}' contains {nan_number} "
+                f"({round(nan_number * 100 / len(isnull_feature))}%) "
+                f"empty values out of {len(isnull_feature)}. "
+                f"Filling them with {fillna_strategy or 'zero'}."
+            )
             if fillna_strategy == "mean":
                 fillna_value = self.df[feature].mean()
             elif fillna_strategy == "mode":
@@ -690,12 +769,17 @@ class Dataset:
         Fetch the mapper for foreign key in data type - 'string'
         """
         try:
-            with open(f"{fk_kde_path.replace(table_name, pk_table)}{pk_column}_mapper.pkl", "rb") as file:
+            with open(
+                f"{fk_kde_path.replace(table_name, pk_table)}{pk_column}_mapper.pkl",
+                "rb",
+            ) as file:
                 mapper = pickle.load(file)
             return mapper
         except FileNotFoundError:
-            logger.warning(f"The mapper for the {fk_column} text key is not found. "
-                           f"Simple sampling will be used.")
+            logger.warning(
+                f"The mapper for the {fk_column} text key is not found. "
+                f"Simple sampling will be used."
+            )
 
     @staticmethod
     @slugify_parameters(exclude_params=("kde", "fk_kde_path"))
@@ -721,14 +805,16 @@ class Dataset:
                         table_name=self.table_name,
                         pk_table=correspondent_pk_table,
                         pk_column=correspondent_pk_col,
-                        fk_column=fk_column
+                        fk_column=fk_column,
                     )
                     if mapper is None:
                         continue
                     fk_column_values = fk_column_values.map(mapper)
                 noise_to_prevent_singularity = np.random.normal(0, 0.0001, len(fk_column_values))
                 kde = gaussian_kde(fk_column_values + noise_to_prevent_singularity)
-                self._save_kde_artifacts(kde=kde, fk_kde_path=self.paths["fk_kde_path"], fk_column=fk_column)
+                self._save_kde_artifacts(
+                    kde=kde, fk_kde_path=self.paths["fk_kde_path"], fk_column=fk_column
+                )
 
     def _drop_fk_columns(self):
         """
@@ -736,19 +822,24 @@ class Dataset:
         """
         for fk_column in set(self.fk_columns):
             self.df = self.df.drop(fk_column, axis=1)
-            logger.debug(f"The column - '{fk_column}' dropped from the training process as it is defined as FK column "
-                         f"and will be sampled from the PK table")
+            logger.debug(
+                f"The column - '{fk_column}' dropped from the training process "
+                f"as it is defined as FK column and will be sampled from the PK table"
+            )
 
     def __sample_only_joined_rows(self, fk):
         references = self.foreign_keys_mapping.get(fk).get("references")
         pk_table = references.get("table")
-        pk_table_data, schema = \
-            DataLoader(f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv").load_data()
+        pk_table_data, schema = DataLoader(
+            f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv"
+        ).load_data()
         pk_column_label = references.get("columns")[0]
 
         drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].values)].index
         if len(drop_index) > 0:
-            logger.info(f"{len(drop_index)} rows were deleted, as they did not have matching primary keys.")
+            logger.info(
+                f"{len(drop_index)} rows were deleted, as they did not have matching primary keys."
+            )
             logger.info(f"{len(self.df) - len(drop_index)} rows are left in table as input.")
         self.df = self.df.drop(drop_index)
 
@@ -759,9 +850,7 @@ class Dataset:
         features = self._preprocess_nan_cols(feature, fillna_strategy="text")
         max_len, rnn_units = self._preprocess_str_params(features[0])
         self.assign_feature(
-            CharBasedTextFeature(
-                features[0], text_max_len=max_len, rnn_units=rnn_units
-            ),
+            CharBasedTextFeature(features[0], text_max_len=max_len, rnn_units=rnn_units),
             features[0],
         )
         logger.info(f"Column '{features[0]}' assigned as text based feature")
@@ -770,11 +859,9 @@ class Dataset:
             for feature in features[1:]:
                 if feature.endswith("_null"):
                     self.null_num_column_names.append(feature)
-                if feature.endswith('_zero'):
+                if feature.endswith("_zero"):
                     self.zero_num_column_names.append(feature)
-                self.assign_feature(
-                    ContinuousFeature(feature, column_type=float), feature
-                )
+                self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
                 logger.info(f"Column '{feature}' assigned as float based feature")
 
     def _assign_float_feature(self, feature):
@@ -785,15 +872,13 @@ class Dataset:
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
         if len(features) == 2 and features[1].endswith("_null"):
             self.null_num_column_names.append(features[1])
-        if len(features) == 2 and features[1].endswith('_zero'):
+        if len(features) == 2 and features[1].endswith("_zero"):
             self.zero_num_column_names.append(features[1])
         if len(features) == 3:
             self.null_num_column_names.append(features[1])
             self.zero_num_column_names.append(features[2])
         for feature in features:
-            self.assign_feature(
-                ContinuousFeature(feature, column_type=float), feature
-            )
+            self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
             logger.info(f"Column '{feature}' assigned as float based feature")
 
     def _assign_int_feature(self, feature):
@@ -801,19 +886,15 @@ class Dataset:
         Assign int based feature to int columns
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="mean")
-        self.assign_feature(
-            ContinuousFeature(features[0], column_type=int), features[0]
-        )
+        self.assign_feature(ContinuousFeature(features[0], column_type=int), features[0])
         logger.info(f"Column '{features[0]}' assigned as int based feature")
         if len(features) > 1:
             for feature in features[1:]:
                 if feature.endswith("_null"):
                     self.null_num_column_names.append(feature)
-                if feature.endswith('_zero'):
+                if feature.endswith("_zero"):
                     self.zero_num_column_names.append(feature)
-                self.assign_feature(
-                    ContinuousFeature(feature, column_type=float), feature
-                )
+                self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
                 logger.info(f"Column '{feature}' assigned as float based feature")
 
     def _assign_categ_feature(self, feature):

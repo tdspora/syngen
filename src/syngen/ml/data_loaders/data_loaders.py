@@ -21,11 +21,12 @@ from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string
 from syngen.ml.context import get_context, global_context
-from syngen.ml.validation_schema import ExcelFormatSettingsSchema, CSVFormatSettingsSchema
+from syngen.ml.validation_schema import (
+    ExcelFormatSettingsSchema,
+    CSVFormatSettingsSchema,
+)
 
-DELIMITERS = {
-    "\\t": "\t"
-}
+DELIMITERS = {"\\t": "\t"}
 
 
 class BaseDataLoader(ABC):
@@ -56,8 +57,9 @@ class DataLoader(BaseDataLoader):
         self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
 
     def __check_if_path_exists(self, type_of_path="source"):
-        if (type_of_path == "source" and os.path.exists(self.path)) \
-                or (type_of_path == "destination" and os.path.exists(os.path.dirname(self.path))):
+        if (type_of_path == "source" and os.path.exists(self.path)) or (
+            type_of_path == "destination" and os.path.exists(os.path.dirname(self.path))
+        ):
             return True
         return False
 
@@ -83,14 +85,18 @@ class DataLoader(BaseDataLoader):
             df, schema = self.file_loader.load_data(self.path, **kwargs)
             return df, schema
         except UnicodeDecodeError as error:
-            message = f"It seems that the content of the data in the path - '{self.path}' " \
-                      f"doesn't have the encoding UTF-8. The details of the error - {error}.\n" \
-                      f"Please, use the data in UTF-8 encoding"
+            message = (
+                f"It seems that the content of the data in the path - '{self.path}' "
+                f"doesn't have the encoding UTF-8. The details of the error - {error}.\n"
+                f"Please, use the data in UTF-8 encoding"
+            )
             logger.error(message, error)
             raise error
         except pandas.errors.EmptyDataError as error:
-            message = f"The empty file was provided. Unable to load data from the path - '{self.path}'. " \
-                      f"The details of the error - {error}"
+            message = (
+                f"The empty file was provided. Unable to load data from the path - '{self.path}'. "
+                f"The details of the error - {error}"
+            )
             logger.error(message, error)
             raise error
 
@@ -111,7 +117,8 @@ class CSVLoader:
         self.format = get_context().get_config()
         self.format.update(kwargs)
         self.format = {
-            k: v for k, v in self.format.items()
+            k: v
+            for k, v in self.format.items()
             if k in CSVFormatSettingsSchema._declared_fields.keys()
         }
 
@@ -121,12 +128,16 @@ class CSVLoader:
             "minimal": csv.QUOTE_MINIMAL,
             "all": csv.QUOTE_ALL,
             "non-numeric": csv.QUOTE_NONNUMERIC,
-            "none": csv.QUOTE_NONE
+            "none": csv.QUOTE_NONE,
         }
         if isinstance(quoting, int):
             return quoting
         else:
-            return quoting_map.get(quoting.lower(), csv.QUOTE_MINIMAL) if quoting else csv.QUOTE_MINIMAL
+            return (
+                quoting_map.get(quoting.lower(), csv.QUOTE_MINIMAL)
+                if quoting
+                else csv.QUOTE_MINIMAL
+            )
 
     @staticmethod
     def _get_csv_params(**kwargs):
@@ -147,8 +158,10 @@ class CSVLoader:
             df = pd.read_csv(path, **params).apply(trim_string, axis=0)
             if all([isinstance(column, int) for column in df.columns]):
                 df.rename(
-                    columns={k: f"column_{v}" for k, v in zip(df.columns, list(range(len(df.columns))))},
-                    inplace=True
+                    columns={
+                        k: f"column_{v}" for k, v in zip(df.columns, list(range(len(df.columns))))
+                    },
+                    inplace=True,
                 )
             sep = params.get("sep", ",")
             if len(sep) > 1:
@@ -156,9 +169,11 @@ class CSVLoader:
             params["skiprows"] = None
             global_context(params)
         except FileNotFoundError as error:
-            message = f"It seems that the path to the table isn't valid.\n" \
-                      f"The details of the error - {error}.\n" \
-                      f"Please, check the path to the table"
+            message = (
+                f"It seems that the path to the table isn't valid.\n"
+                f"The details of the error - {error}.\n"
+                f"Please, check the path to the table"
+            )
             logger.error(message)
             raise FileNotFoundError(message)
 
@@ -180,8 +195,8 @@ class CSVLoader:
             return list(head_df.columns)
         except pd.errors.EmptyDataError as error:
             logger.error(
-                f"The empty file was provided. Unable to train this table located in the path - '{path}'. "
-                f"The details of the error - {error}"
+                f"The empty file was provided. Unable to train this table located "
+                f"in the path - '{path}'. The details of the error - {error}"
             )
             raise error
 
@@ -212,10 +227,15 @@ class CSVLoader:
             if "sep" in filtered_kwargs and len(filtered_kwargs.get("sep", None)) > 1:
                 filtered_kwargs["sep"] = ","
                 logger.warning(
-                    "As the length of the value of the parameter 'separator' is more than 1 character,"
-                    "the 'separator' will be set to ',' in accordance with the standard 'RFC 4180'"
+                    "As the length of the value of the parameter 'separator' is more than "
+                    "1 character, the 'separator' will be set to ',' in accordance with "
+                    "the standard 'RFC 4180'"
                 )
-            if "na_values" in format_params and format_params.get("na_values", []) and df.isnull().values.any():
+            if (
+                "na_values" in format_params
+                and format_params.get("na_values", [])
+                and df.isnull().values.any()
+            ):
                 filtered_kwargs["na_rep"] = format_params["na_values"][0]
                 logger.warning(
                     "Since the 'na_values' parameter is not empty, "
@@ -254,9 +274,11 @@ class AvroLoader(BaseDataLoader):
                 schema = self._load_schema(f)
                 return self._preprocess_schema_and_df(schema, df)
         except FileNotFoundError as error:
-            message = f"It seems that the path to the table isn't valid.\n" \
-                      f"The details of the error - {error}.\n" \
-                      f"Please, check the path to the table"
+            message = (
+                f"It seems that the path to the table isn't valid.\n"
+                f"The details of the error - {error}.\n"
+                f"Please, check the path to the table"
+            )
             logger.error(message)
             raise FileNotFoundError(message)
 
@@ -276,7 +298,8 @@ class AvroLoader(BaseDataLoader):
         """
         Load schema of the metadata of the table in Avro format
         :param f: object of the class 'smart_open.Reader'
-        :return: dictionary where key is the name of the column, value is the data type of the column
+        :return: dictionary where key is the name of the column,
+        value is the data type of the column
         """
         reader = DataFileReader(f, DatumReader())
         meta = eval(reader.meta["avro.schema"].decode())
@@ -285,8 +308,8 @@ class AvroLoader(BaseDataLoader):
 
     @staticmethod
     def _preprocess_schema_and_df(
-            schema: Dict[str, str],
-            df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, str]]:
+        schema: Dict[str, str], df: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, Dict[str, str]]:
         """
         Preprocess schema and dataframe
         """
@@ -342,17 +365,22 @@ class YAMLLoader(BaseDataLoader):
     """
     Class for loading and saving data in YAML format
     """
+
     _metadata_sections = ["train_settings", "infer_settings", "keys"]
 
     def _load_data(self, metadata_file) -> Dict:
         try:
             metadata = yaml.load(metadata_file, Loader=SafeLoader)
-            metadata = self.replace_none_values_of_metadata_settings(self._metadata_sections, metadata)
+            metadata = self.replace_none_values_of_metadata_settings(
+                self._metadata_sections, metadata
+            )
             return metadata
         except ScannerError as error:
-            message = f"It seems that the metadata file in YAML format isn't valid.\n" \
-                      f"The details of the error - {str(error)}.\n" \
-                      f"Please check the metadata file in YAML format."
+            message = (
+                f"It seems that the metadata file in YAML format isn't valid.\n"
+                f"The details of the error - {str(error)}.\n"
+                f"Please check the metadata file in YAML format."
+            )
             logger.error(error)
             raise ValueError(message)
 
@@ -368,8 +396,11 @@ class YAMLLoader(BaseDataLoader):
         metadata["global"] = dict() if metadata.get("global") is None else metadata.get("global")
         if metadata["global"]:
             for settings in metadata["global"].keys():
-                metadata["global"][settings] = dict() if metadata["global"].get(settings) is None \
+                metadata["global"][settings] = (
+                    dict()
+                    if metadata["global"].get(settings) is None
                     else metadata["global"].get(settings)
+                )
         for key in metadata.keys():
             if key == "global":
                 continue
@@ -391,6 +422,7 @@ class BinaryLoader(BaseDataLoader):
     """
     Class for loading and saving data using byte stream
     """
+
     @staticmethod
     def _load_data(f) -> Tuple[pd.DataFrame, None]:
         return pickle.load(f), None
@@ -412,11 +444,13 @@ class ExcelLoader:
     """
     Class for loading and saving data in Excel format
     """
+
     def __init__(self):
         self.format = get_context().get_config()
         self.sheet_name = self.format.get("sheet_name", 0)
         self.format = {
-            k: v for k, v in self.format.items()
+            k: v
+            for k, v in self.format.items()
             if k in ExcelFormatSettingsSchema._declared_fields.keys()
         }
 
@@ -432,9 +466,11 @@ class ExcelLoader:
             global_context({})
             return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
         except FileNotFoundError as error:
-            message = f"It seems that the path to the table isn't valid.\n" \
-                      f"The details of the error - {error}.\n" \
-                      f"Please, check the path to the table"
+            message = (
+                f"It seems that the path to the table isn't valid.\n"
+                f"The details of the error - {error}.\n"
+                f"Please, check the path to the table"
+            )
             logger.error(message, error)
             raise error
 

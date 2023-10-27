@@ -20,14 +20,14 @@ from tensorflow.keras.layers import (
     LSTM,
     Layer,
     RepeatVector,
-    TimeDistributed
+    TimeDistributed,
 )
 
 from syngen.ml.utils import (
     slugify_parameters,
     inverse_dict,
     datetime_to_timestamp,
-    timestamp_to_datetime
+    timestamp_to_datetime,
 )
 
 
@@ -38,6 +38,7 @@ class BaseFeature:
     What is more, each feature class contains modules for the neural network (NN), including
     corresponding input, encoder, decoder, and loss
     """
+
     def __init__(self, name):
         self.name: str = self._reset_name(name=name)
         self.original_name: str = name
@@ -104,6 +105,7 @@ class BinaryFeature(BaseFeature):
     """
     A class to process binary features, i.e. features containing only two unique values
     """
+
     def __init__(self, name: str):
         super().__init__(name=name)
 
@@ -150,6 +152,7 @@ class ContinuousFeature(BaseFeature):
     """
     A class to process the continuous numeric features, including floats and integers
     """
+
     def __init__(
         self,
         name: str,
@@ -189,7 +192,9 @@ class ContinuousFeature(BaseFeature):
 
     def inverse_transform(self, data: np.ndarray) -> np.ndarray:
         reverse_transformed = self.scaler.inverse_transform(data)
-        reverse_transformed = np.abs(reverse_transformed) if self.is_positive else reverse_transformed
+        reverse_transformed = (
+            np.abs(reverse_transformed) if self.is_positive else reverse_transformed
+        )
         return (
             reverse_transformed
             if self.column_type is float
@@ -217,9 +222,7 @@ class ContinuousFeature(BaseFeature):
                 decoder_layers.append(Layer)
 
         decoder_layers.append(
-            Dense(
-                self.input_dimension, activation="linear", name="%s_linear" % self.name
-            )
+            Dense(self.input_dimension, activation="linear", name="%s_linear" % self.name)
         )
 
         return decoder_layers
@@ -253,13 +256,13 @@ class CategoricalFeature(BaseFeature):
     """
     A class to process categorical values, i.e. values with 2 < unique_values < 50
     """
+
     def __init__(
         self,
         name: str,
         decoder_layers: Union[None, tuple, int] = (60,),
         weight_randomizer: Union[None, bool, tuple] = None,
     ):
-
         if decoder_layers is None:
             decoder_layers = ()
         elif isinstance(decoder_layers, int):
@@ -275,9 +278,7 @@ class CategoricalFeature(BaseFeature):
             weight_randomizer = (0, 1)
 
         super().__init__(name="_".join(name.split()))
-        self.one_hot_encoder = ce.OneHotEncoder(
-            return_df=False, handle_unknown="ignore"
-        )
+        self.one_hot_encoder = ce.OneHotEncoder(return_df=False, handle_unknown="ignore")
         self.decoder = None
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
@@ -309,9 +310,7 @@ class CategoricalFeature(BaseFeature):
 
     @lazy
     def input(self) -> tf.Tensor:
-        self.idx_input = Input(
-            shape=(self.input_dimension,), name="input_%s" % self.name
-        )
+        self.idx_input = Input(shape=(self.input_dimension,), name="input_%s" % self.name)
 
         return self.idx_input
 
@@ -363,15 +362,14 @@ class CategoricalFeature(BaseFeature):
         high = self.weight_randomizer[1]
         random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
 
-        return random_weight * tf.keras.losses.categorical_crossentropy(
-            self.input, self.decoder
-        )
+        return random_weight * tf.keras.losses.categorical_crossentropy(self.input, self.decoder)
 
 
 class CharBasedTextFeature(BaseFeature):
     """
     A class to process the text features
     """
+
     def __init__(
         self,
         name: str,
@@ -402,7 +400,6 @@ class CharBasedTextFeature(BaseFeature):
         self.tokenizer = tokenizer
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
-
         if len(data.columns) > 1:
             raise Exception("CharBasedTextFeature can work only with one text column")
 
@@ -428,13 +425,15 @@ class CharBasedTextFeature(BaseFeature):
         top_p: float = 0,
         filter_value: int = -1e8,
     ):
-        """Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
+        """
+        Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
         https://gist.github.com/thomwolf/1a5a29f6962089e871b94cbd09daf317
         https://github.com/ari-holtzman/degen
         Args:
             logits: logits distribution shape (..., vocabulary size)
-            top_k: >0 keep only top k tokens with highest probability (top-k filtering).
-            top_p: >0.0 keep the top tokens with cumulative probability >= top_p (nucleus filtering).
+            top_k: >0 keep only top k tokens with the highest probability (top-k filtering).
+            top_p: >0.0 keep the top tokens with cumulative probability >= top_p
+            (nucleus filtering).
             filter_value: value to replace small values with.
         """
 
@@ -468,9 +467,7 @@ class CharBasedTextFeature(BaseFeature):
             sorted_indices_to_remove = cumulative_probs >= top_p
 
             # Shift the indices to the right to keep also the first token above the threshold
-            zeros_for_shift = tf.zeros(
-                [tf.shape(sorted_indices_to_remove)[0], 1], dtype=tf.bool
-            )
+            zeros_for_shift = tf.zeros([tf.shape(sorted_indices_to_remove)[0], 1], dtype=tf.bool)
             sorted_indices_to_remove = tf.concat(
                 (zeros_for_shift, sorted_indices_to_remove[:, :-1]), axis=1
             )
@@ -478,7 +475,8 @@ class CharBasedTextFeature(BaseFeature):
             # sorted_indices - ids of columns to replace
             # line in sorted_indices corresponds to line in sorted_indices_to_remove
 
-            # indices are row and column coordinates like [[0, 5], ... [0, 2], [1, 7], ..., [1, 6], ...]
+            # indices are row and column coordinates like
+            # [[0, 5], ... [0, 2], [1, 7], ..., [1, 6], ...]
             row_numbers = tf.reshape(
                 tf.repeat(tf.range(sorted_indices.shape[0]), sorted_indices.shape[1]),
                 [sorted_indices.shape[0] * sorted_indices.shape[1]],
@@ -512,9 +510,7 @@ class CharBasedTextFeature(BaseFeature):
         out = []
         for batch in data:
             # batch shape (self.text_max_len, self.vocab_size)
-            logits = self.top_k_top_p_filtering(
-                tf.convert_to_tensor(batch), top_p=top_p
-            )
+            logits = self.top_k_top_p_filtering(tf.convert_to_tensor(batch), top_p=top_p)
             probs = tf.nn.softmax(logits, axis=-1).numpy().astype(float)
             probs /= probs.sum(axis=1)[:, None]
             multinomial_samples = np.apply_along_axis(
@@ -539,9 +535,7 @@ class CharBasedTextFeature(BaseFeature):
 
     @lazy
     def encoder(self) -> tf.Tensor:
-        rnn_encoder_layer = Bidirectional(
-            self.rnn_unit(self.rnn_units, return_sequences=False)
-        )
+        rnn_encoder_layer = Bidirectional(self.rnn_unit(self.rnn_units, return_sequences=False))
 
         rnn_econder = rnn_encoder_layer(self.input)
         return rnn_econder
@@ -552,9 +546,7 @@ class CharBasedTextFeature(BaseFeature):
 
         decoder_layers.append(RepeatVector(self.text_max_len))
         decoder_layers.append(self.rnn_unit(self.rnn_units, return_sequences=True))
-        decoder_layers.append(
-            TimeDistributed(Dense(self.vocab_size, activation="linear"))
-        )
+        decoder_layers.append(TimeDistributed(Dense(self.vocab_size, activation="linear")))
 
         return decoder_layers
 
@@ -577,9 +569,7 @@ class CharBasedTextFeature(BaseFeature):
             Exception("Decoder isn't created")
 
         return self.weight * K.mean(
-            tf.nn.softmax_cross_entropy_with_logits(
-                labels=self.input, logits=self.decoder
-            )
+            tf.nn.softmax_cross_entropy_with_logits(labels=self.input, logits=self.decoder)
         )
 
 
@@ -587,8 +577,8 @@ class DateFeature(BaseFeature):
     """
     A class to process datetime features
     """
-    def __init__(self, name, decoder_layers=(60,), weight_randomizer=None):
 
+    def __init__(self, name, decoder_layers=(60,), weight_randomizer=None):
         if decoder_layers is None:
             decoder_layers = ()
         elif isinstance(decoder_layers, int):
@@ -620,12 +610,14 @@ class DateFeature(BaseFeature):
         MM/DD/YY, DD/MM/YY, YY/MM/DD, MM-DD-YY, DD-MM-YY
 
         """
-        pattern = r"\s{0,1}\d+[-/\\:\.]\s{0,1}\d+[-/\\:\.]\s{0,1}\d+|" \
-                  r"[A-Z][a-z]+ \d{1,2} \d{4}|" \
-                  r"[A-Z][a-z]+ \d{1,2}, \d{4}|" \
-                  r"\d{2} [A-Z][a-z]+ \d{4}|" \
-                  r"\d{2}[-][A-Z][a-z]+[-]\d{2}|" \
-                  r"\d{4}[-/\\]\d{1,2}"
+        pattern = (
+            r"\s{0,1}\d+[-/\\:\.]\s{0,1}\d+[-/\\:\.]\s{0,1}\d+|"
+            r"[A-Z][a-z]+ \d{1,2} \d{4}|"
+            r"[A-Z][a-z]+ \d{1,2}, \d{4}|"
+            r"\d{2} [A-Z][a-z]+ \d{4}|"
+            r"\d{2}[-][A-Z][a-z]+[-]\d{2}|"
+            r"\d{4}[-/\\]\d{1,2}"
+        )
         types = []
         sample = date_text.dropna().sample(100, replace=len(date_text) <= 100).values
         for i in sample:
@@ -656,17 +648,15 @@ class DateFeature(BaseFeature):
         unscaled = self.scaler.inverse_transform(data)
         unscaled = chain.from_iterable(unscaled)
         return list(
-                map(
-                    lambda l: timestamp_to_datetime(int(l)).strftime(self.date_format),
-                    unscaled
-                )
+            map(
+                lambda t: timestamp_to_datetime(int(t)).strftime(self.date_format),
+                unscaled,
             )
+        )
 
     @lazy
     def input(self):
-        return Input(
-            shape=(self.input_dimension,), name="input_%s" % self.name, dtype="float64"
-        )
+        return Input(shape=(self.input_dimension,), name="input_%s" % self.name, dtype="float64")
 
     @lazy
     def encoder(self):

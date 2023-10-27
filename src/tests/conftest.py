@@ -16,7 +16,7 @@ SUCCESSFUL_MESSAGE = "The test passed successfully"
 
 @pytest.fixture
 def test_csv_path():
-    test_path = 'test.csv'
+    test_path = "test.csv"
     yield test_path
     if os.path.exists(test_path):
         os.remove(test_path)
@@ -24,7 +24,7 @@ def test_csv_path():
 
 @pytest.fixture
 def test_avro_path():
-    test_path = 'test.avro'
+    test_path = "test.avro"
     yield test_path
     if os.path.exists(test_path):
         os.remove(test_path)
@@ -32,7 +32,7 @@ def test_avro_path():
 
 @pytest.fixture
 def test_pickle_path():
-    test_path = 'test.pkl'
+    test_path = "test.pkl"
     yield test_path
     if os.path.exists(test_path):
         os.remove(test_path)
@@ -40,7 +40,7 @@ def test_pickle_path():
 
 @pytest.fixture
 def test_yaml_path():
-    test_path = 'test.yaml'
+    test_path = "test.yaml"
     yield test_path
     if os.path.exists(test_path):
         os.remove(test_path)
@@ -48,7 +48,7 @@ def test_yaml_path():
 
 @pytest.fixture
 def test_yml_path():
-    test_path = 'test.yml'
+    test_path = "test.yml"
     yield test_path
     if os.path.exists(test_path):
         os.remove(test_path)
@@ -56,7 +56,7 @@ def test_yml_path():
 
 @pytest.fixture
 def test_xls_path():
-    test_path = 'test.xls'
+    test_path = "test.xls"
     yield test_path
     if os.path.exists(test_path):
         os.remove(test_path)
@@ -64,7 +64,7 @@ def test_xls_path():
 
 @pytest.fixture
 def test_xlsx_path():
-    test_path = 'test.xlsx'
+    test_path = "test.xlsx"
     yield test_path
     if os.path.exists(test_path):
         os.remove(test_path)
@@ -75,8 +75,13 @@ def test_df():
     return pd.DataFrame(
         {
             "gender": [0, 1, 0, 1],
-            "height": [157.18518021548246, 166.7731072622863, 162.91821942384928, 173.51448996432848],
-            "id": [925, 84, 821, 383]
+            "height": [
+                157.18518021548246,
+                166.7731072622863,
+                162.91821942384928,
+                173.51448996432848,
+            ],
+            "id": [925, 84, 821, 383],
         }
     )
 
@@ -87,46 +92,39 @@ def test_metadata_storage():
     path_to_metadata_storage = "model_artifacts/metadata"
     os.makedirs(path_to_metadata_storage, exist_ok=True)
     with open(f"{path_to_metadata_storage}/metadata_of_table_a.yaml", "w") as f:
-        yaml.dump({
-            "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv",
-                    "print_report": True
-                },
-                "infer_settings": {
-                    "destination": "path/to/generated_table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
+        yaml.dump(
+            {
+                "table_a": {
+                    "train_settings": {
+                        "source": "path/to/table_a.csv",
+                        "print_report": True,
                     },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
-                }
+                    "infer_settings": {"destination": "path/to/generated_table_a.csv"},
+                    "keys": {
+                        "pk_id": {"type": "PK", "columns": ["id"]},
+                        "uq_id": {"type": "UQ", "columns": ["name"]},
+                    },
+                },
             },
-        }, f)
+            f,
+        )
 
     with open(f"{path_to_metadata_storage}/metadata_of_table_d.yaml", "w") as f:
-        yaml.dump({
-            "table_d": {
-                "train_settings": {
-                    "source": "path/to/table_d.csv",
-                    "print_report": True
-                },
-                "infer_settings": {
-                    "destination": "path/to/generated_table_d.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["another_id"]
+        yaml.dump(
+            {
+                "table_d": {
+                    "train_settings": {
+                        "source": "path/to/table_d.csv",
+                        "print_report": True,
                     },
-                }
+                    "infer_settings": {"destination": "path/to/generated_table_d.csv"},
+                    "keys": {
+                        "pk_id": {"type": "PK", "columns": ["another_id"]},
+                    },
+                },
             },
-        }, f)
+            f,
+        )
     yield path_to_metadata_storage
     if os.path.exists(path_to_metadata_storage):
         shutil.rmtree("model_artifacts")
@@ -141,20 +139,15 @@ def test_metadata_file():
                 "drop_null": False,
                 "epochs": 1,
                 "print_report": False,
-                "row_limit": 800
+                "row_limit": 800,
             },
             "infer_settings": {
                 "print_report": True,
                 "random_seed": 1,
                 "run_parallel": False,
-                "size": 100
+                "size": 100,
             },
-            "keys": {
-                "pk_id": {
-                    "columns": ["Id"],
-                    "type": "PK"
-                }
-            }
+            "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
         }
     }
 
@@ -174,7 +167,7 @@ def caplog(caplog: LogCaptureFixture):
         format="{message}",
         level=0,
         filter=lambda record: record["level"].no >= caplog.handler.level,
-        enqueue=False
+        enqueue=False,
     )
     yield caplog
     logger.remove(handler_id)
