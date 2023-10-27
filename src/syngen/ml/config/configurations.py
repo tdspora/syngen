@@ -15,6 +15,7 @@ class TrainConfig:
     """
     The configuration class to set up the work of train process
     """
+
     source: Optional[str]
     epochs: int
     drop_null: bool
@@ -51,7 +52,7 @@ class TrainConfig:
             "epochs": self.epochs,
             "drop_null": self.drop_null,
             "row_subset": self.row_subset,
-            "batch_size": self.batch_size
+            "batch_size": self.batch_size,
         }
 
     def _set_batch_size(self):
@@ -66,10 +67,16 @@ class TrainConfig:
         """
         if os.path.exists(self.paths["resources_path"]):
             shutil.rmtree(self.paths["resources_path"])
-            logger.info(f"The artifacts located in the path - '{self.paths['resources_path']}' were removed")
+            logger.info(
+                f"The artifacts located in the path - '{self.paths['resources_path']}' "
+                f"were removed"
+            )
         if os.path.exists(self.paths["tmp_store_path"]):
             shutil.rmtree(self.paths["tmp_store_path"])
-            logger.info(f"The artifacts located in the path - '{self.paths['tmp_store_path']}' were removed")
+            logger.info(
+                f"The artifacts located in the path - '{self.paths['tmp_store_path']}' "
+                f"were removed"
+            )
 
     def _prepare_dirs(self):
         """
@@ -103,10 +110,7 @@ class TrainConfig:
         """
         if self.schema.get("format") == "CSV":
             self.schema["fields"] = dict()
-            self.schema["fields"] = {
-                column: "removed"
-                for column in self.dropped_columns
-            }
+            self.schema["fields"] = {column: "removed" for column in self.dropped_columns}
         else:
             for column, data_type in self.schema.get("fields", {}).items():
                 if column not in data.columns:
@@ -117,7 +121,9 @@ class TrainConfig:
         Check if the provided data is empty
         """
         if data.shape[0] < 1:
-            raise ValueError(f"The empty table was provided. Unable to train the table - '{self.table_name}'")
+            raise ValueError(
+                f"The empty table was provided. Unable to train the table - '{self.table_name}'"
+            )
 
     def _extract_data(self) -> Tuple[pd.DataFrame, Dict]:
         """
@@ -135,8 +141,10 @@ class TrainConfig:
             if not data.dropna().empty:
                 data = data.dropna()
             else:
-                logger.warning("The specified 'drop_null' argument results in the empty dataframe, "
-                               "so it will be ignored")
+                logger.warning(
+                    "The specified 'drop_null' argument results in the empty dataframe, "
+                    "so it will be ignored"
+                )
 
         if self.row_limit:
             self.row_subset = min(self.row_limit, len(data))
@@ -144,13 +152,17 @@ class TrainConfig:
             data = data.sample(n=self.row_subset)
 
             if len(data) < 100:
-                logger.warning("The input table is too small to provide any meaningful results. "
-                               "Please consider 1) disable drop_null argument, 2) provide bigger table")
+                logger.warning(
+                    "The input table is too small to provide any meaningful results. "
+                    "Please consider 1) disable drop_null argument, 2) provide bigger table"
+                )
             elif len(data) < 500:
                 logger.warning(
-                    f"The amount of data is {len(data)} rows. It seems that it isn't enough to supply "
-                    f"high-quality results. To improve the quality of generated data please consider any of the steps: "
-                    f"1) provide a bigger table, 2) disable drop_null argument")
+                    f"The amount of data is {len(data)} rows. It seems that it isn't enough "
+                    f"to supply high-quality results. To improve the quality of generated data "
+                    f"please consider any of the steps: 1) provide a bigger table, "
+                    f"2) disable drop_null argument"
+                )
 
         logger.info(f"The subset of rows was set to {len(data)}")
 
@@ -179,17 +191,21 @@ class TrainConfig:
             "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/",
             "source_path": self.source,
             "draws_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/draws",
-            "input_data_path":
-                f"model_artifacts/tmp_store/{self.slugify_table_name}/input_data_{self.slugify_table_name}.pkl",
+            "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                               f"input_data_{self.slugify_table_name}.pkl",
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
-            "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/train_config.pkl",
-            "dataset_pickle_path":
-                f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/model_dataset.pkl",
-            "fk_kde_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints/stat_keys/",
-            "original_data_path":
-                f"model_artifacts/tmp_store/{self.slugify_table_name}/input_data_{self.slugify_table_name}.pkl",
-            "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/merged_infer_{self.slugify_table_name}.csv",
-            "no_ml_state_path": f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
+            "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
+                                        f"checkpoints/train_config.pkl",
+            "dataset_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
+                                   f"checkpoints/model_dataset.pkl",
+            "fk_kde_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
+                           f"checkpoints/stat_keys/",
+            "original_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                                  f"input_data_{self.slugify_table_name}.pkl",
+            "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                                    f"merged_infer_{self.slugify_table_name}.csv",
+            "no_ml_state_path":
+                f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
         }
 
 
@@ -198,6 +214,7 @@ class InferConfig:
     """
     The configuration class to set up the work of infer process
     """
+
     destination: Optional[str]
     size: Optional[int]
     table_name: Optional[str]
@@ -225,7 +242,7 @@ class InferConfig:
             "size": self.size,
             "run_parallel": self.run_parallel,
             "batch_size": self.batch_size,
-            "random_seed": self.random_seed
+            "random_seed": self.random_seed,
         }
 
     def _set_up_reporting(self):
@@ -235,9 +252,11 @@ class InferConfig:
         if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
             self.print_report = False
             logger.warning(
-                f"It seems that the path to original data of the table - {self.table_name} doesn't exist. "
-                f"In this case, the accuracy report of the table - {self.table_name} won't be generated. "
-                f"The parameter '--print_report' of the table - {self.table_name} will be set to False\n")
+                f"It seems that the path to original data of the table - {self.table_name} "
+                f"doesn't exist. In this case, the accuracy report of the table - "
+                f"'{self.table_name}' won't be generated. The parameter '--print_report' "
+                f"of the table - '{self.table_name}' will be set to False"
+            )
 
     def _set_up_size(self):
         """
@@ -251,7 +270,9 @@ class InferConfig:
         """
         Set up "batch_size" of inference process
         """
-        self.batch_size = min(self.batch_size, self.size) if self.batch_size is not None else self.size
+        self.batch_size = (
+            min(self.batch_size, self.size) if self.batch_size is not None else self.size
+        )
 
     @slugify_attribute(table_name="slugify_table_name")
     def _get_paths(self) -> Dict:
@@ -260,16 +281,22 @@ class InferConfig:
         """
         dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         return {
-            "original_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
+            "original_data_path":
+                f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
             "draws_path": f"model_artifacts/tmp_store/{dynamic_name}/draws",
-            "input_data_path": f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
-            "path_to_merged_infer": self.destination if self.destination is not None
+            "input_data_path":
+                f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
+            "path_to_merged_infer": self.destination
+            if self.destination is not None
             else f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
             "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
-            "train_config_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+            "train_config_pickle_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
             "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
-            "dataset_pickle_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
+            "dataset_pickle_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
-            "path_to_no_ml": f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl"
+            "path_to_no_ml":
+                f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
         }

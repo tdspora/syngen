@@ -21,7 +21,7 @@ from syngen.ml.utils import (
     fetch_dataset,
     fetch_training_config,
     check_if_features_assigned,
-    define_existent_columns
+    define_existent_columns,
 )
 
 warnings.filterwarnings("ignore")
@@ -38,12 +38,7 @@ class BaseWrapper(ABC):
         self.model = None
 
     @abstractmethod
-    def fit_on_df(
-        self,
-        df: pd.DataFrame,
-        epochs: int,
-        columns_subset: List[str] = None
-    ):
+    def fit_on_df(self, df: pd.DataFrame, epochs: int, columns_subset: List[str] = None):
         pass
 
     @abstractmethod
@@ -123,7 +118,7 @@ class VAEWrapper(BaseWrapper):
                 schema=self.schema,
                 metadata=self.metadata,
                 table_name=self.table_name,
-                paths=self.paths
+                paths=self.paths,
             )
         elif self.process == "infer":
             self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
@@ -132,7 +127,8 @@ class VAEWrapper(BaseWrapper):
 
     def _update_dataset(self):
         # Check if the serialized class has associated dataframe and
-        # drop it as it might contain sensitive data. Save columns from the dataframe for later use.
+        # drop it as it might contain sensitive data.
+        # Save columns from the dataframe for later use.
         self.dataset.paths = self.paths
         attributes_to_remove = []
         existed_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
@@ -155,11 +151,17 @@ class VAEWrapper(BaseWrapper):
         Update attributes of the dataset object
         """
         for attr in vars(self.dataset):
-            if attr in ["primary_keys_mapping", "unique_keys_mapping", "foreign_keys_mapping"]:
+            if attr in [
+                "primary_keys_mapping",
+                "unique_keys_mapping",
+                "foreign_keys_mapping",
+            ]:
                 attr_value = getattr(self.dataset, attr)
                 updated_attr_value = attr_value.copy()
                 for key, config in attr_value.items():
-                    updated_columns = define_existent_columns(config.get("columns", []), existed_columns)
+                    updated_columns = define_existent_columns(
+                        config.get("columns", []), existed_columns
+                    )
                     config["columns"] = updated_columns
                     updated_attr_value[key] = config
 
@@ -192,7 +194,8 @@ class VAEWrapper(BaseWrapper):
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
                 logger.info(
-                    f"Column {column} has {num_zero_values} ({round(num_zero_values * 100 / len(num_column))}%) "
+                    f"Column {column} has {num_zero_values} "
+                    f"({round(num_zero_values * 100 / len(num_column))}%) "
                     f"zero values generated"
                 )
         return df
@@ -209,7 +212,8 @@ class VAEWrapper(BaseWrapper):
                 df = df.drop(column, axis=1)
                 num_nan_values = num_column.isna().sum()
                 logger.info(
-                    f"Column {column} has {num_nan_values} ({round(num_nan_values * 100 / len(num_column))}%) "
+                    f"Column {column} has {num_nan_values} "
+                    f"({round(num_nan_values * 100 / len(num_column))}%) "
                     f"empty values generated."
                 )
         return df
@@ -289,16 +293,15 @@ class VAEWrapper(BaseWrapper):
                 self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 loss_grows_num_epochs = 0
 
-            logger.info(
-                f"epoch: {epoch}, loss: {mean_loss}, time: {time.time()-t1}, sec"
-            )
+            logger.info(f"epoch: {epoch}, loss: {mean_loss}, time: {time.time()-t1}, sec")
             tracker.log_metric("loss", mean_loss, step=epoch)
 
             prev_total_loss = mean_loss
             if loss_grows_num_epochs == es_patience:
                 self.vae.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 logger.info(
-                    f"The loss does not become lower for {loss_grows_num_epochs} epochs in a row. Stopping the training."
+                    f"The loss does not become lower for {loss_grows_num_epochs} epochs in a row. "
+                    f"Stopping the training."
                 )
                 break
             epoch += 1
@@ -334,9 +337,7 @@ class VAEWrapper(BaseWrapper):
             # Compute reconstruction loss
             loss = sum(self.vae.losses)
 
-        self.optimizer.minimize(
-            loss=loss, var_list=self.vae.trainable_weights, tape=tape
-        )
+        self.optimizer.minimize(loss=loss, var_list=self.vae.trainable_weights, tape=tape)
         self.loss_metric(loss)
         return loss
 
@@ -357,9 +358,7 @@ class VAEWrapper(BaseWrapper):
         sampled_df = self._restore_zero_values(sampled_df)
         return sampled_df
 
-    def predict_less_likely_samples(
-        self, df: pd.DataFrame, n: int, temp=0.05, variaty=3
-    ):
+    def predict_less_likely_samples(self, df: pd.DataFrame, n: int, temp=0.05, variaty=3):
         self.fit_sampler(df)
         return self.model.less_likely_sample(n, temp, variaty)
 

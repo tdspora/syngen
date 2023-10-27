@@ -1,4 +1,4 @@
-from syngen.ml.data_loaders.data_loaders import (
+from syngen.ml.data_loaders.data_loaders import (  # noqa: F401;
     CSVLoader,
     AvroLoader,
     DataLoader,
@@ -6,5 +6,5 @@ from syngen.ml.data_loaders.data_loaders import (
     YAMLLoader,
     BaseDataLoader,
     BinaryLoader,
-    ExcelLoader
+    ExcelLoader,
 )

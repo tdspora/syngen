@@ -8,6 +8,7 @@ class MlflowTracker:
     A singleton class for tracking the MLflow experiments.
     All methods are derived from the MLflow API, however a check for the active state is added.
     """
+
     _instance = None
 
     def __new__(cls, experiment_name=None, is_active=False):
@@ -32,7 +33,7 @@ class MlflowTracker:
         run_name: Optional[str] = None,
         nested: bool = False,
         tags: Optional[Dict[str, Any]] = None,
-        description: Optional[str] = None
+        description: Optional[str] = None,
     ):
         if self.is_active:
             mlflow.start_run(run_id, experiment_id, run_name, nested, tags, description)
@@ -54,26 +55,28 @@ class MlflowTracker:
         self,
         name: str,
         artifact_location: Optional[str] = None,
-        tags: Optional[Dict[str, Any]] = None
+        tags: Optional[Dict[str, Any]] = None,
     ):
         if self.is_active:
             mlflow.create_experiment(name, artifact_location, tags)
 
     def set_experiment(
-            self,
-            experiment_name: str = None,
-            experiment_id: str = None,
+        self,
+        experiment_name: str = None,
+        experiment_id: str = None,
     ):
         """
         Set the experiment for tracking.
         If the experiment name is not provided, the last experiment will be used.
         """
         if self.is_active:
-            if re.search("\d{4}-\d+-\d+\s\d+:\d+:\d+", experiment_name):
+            if re.search(r"\d{4}-\d+-\d+\s\d+:\d+:\d+", experiment_name):
                 metadata_name = experiment_name[:-20]  # strip datetime
             else:
                 metadata_name = experiment_name
-            last_matching = mlflow.search_experiments(filter_string=f"name LIKE '{metadata_name}%'")[0]
+            last_matching = mlflow.search_experiments(
+                filter_string=f"name LIKE '{metadata_name}%'"
+            )[0]
             matching_name = last_matching.name
             mlflow.set_experiment(matching_name, experiment_id)
 

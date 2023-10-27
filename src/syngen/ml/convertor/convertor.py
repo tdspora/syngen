@@ -9,6 +9,7 @@ from loguru import logger
 
 class Convertor(ABC):
     """Abstract class for converting fetched schema in Avro, Parquet or Delta formats"""
+
     def __init__(self, schema, df):
         self.converted_schema, self.preprocessed_df = self._convert_schema_and_df(schema, df)
 
@@ -39,7 +40,9 @@ class Convertor(ABC):
             else:
                 df_object_subset = df.select_dtypes(["object"])
                 for column in df_object_subset:
-                    df[column] = [i if not isinstance(i, str) and np.isnan(i) else str(i) for i in df[column]]
+                    df[column] = [
+                        i if not isinstance(i, str) and np.isnan(i) else str(i) for i in df[column]
+                    ]
             return df
         else:
             return df
@@ -50,6 +53,7 @@ class CSVConvertor(Convertor):
     """
     Class for supporting custom schema for csv files
     """
+
     df: pd.DataFrame()
     schema = {"fields": {}, "format": "CSV"}
 
@@ -65,6 +69,7 @@ class AvroConvertor(Convertor):
     """
     Class for converting fetched avro schema
     """
+
     def __init__(self, schema, df):
         super().__init__(schema, df)
 
@@ -85,7 +90,10 @@ class AvroConvertor(Convertor):
             elif "bytes" in data_type:
                 fields[column] = "string"
             else:
-                message = f"It seems that the column - '{column}' has unsupported data type - '{data_type}'"
+                message = (
+                    f"It seems that the column - '{column}' has unsupported data type - "
+                    f"'{data_type}'"
+                )
                 logger.error(message)
                 raise ValueError(message)
         converted_schema["format"] = "Avro"

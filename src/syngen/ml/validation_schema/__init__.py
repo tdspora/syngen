@@ -1,4 +1,4 @@
-from syngen.ml.validation_schema.validation_schema import (
+from syngen.ml.validation_schema.validation_schema import (  # noqa: F401;
     TrainingSettingsSchema,
     InferSettingsSchema,
     CSVFormatSettingsSchema,
@@ -7,5 +7,5 @@ from syngen.ml.validation_schema.validation_schema import (
     ConfigurationSchema,
     KeysSchema,
     ValidationSchema,
-    SUPPORTED_EXCEL_EXTENSIONS
+    SUPPORTED_EXCEL_EXTENSIONS,
 )

@@ -8,9 +8,7 @@ from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_training_process_with_absent_metadata(
-        mock_validator_run, rp_logger
-):
+def test_init_worker_for_training_process_with_absent_metadata(mock_validator_run, rp_logger):
     """
     Test the initialization of 'Worker' class with the absent metadata
     during the training process
@@ -28,10 +26,10 @@ def test_init_worker_for_training_process_with_absent_metadata(
             "drop_null": True,
             "row_limit": 1000,
             "batch_size": 1000,
-            "print_report": True
+            "print_report": True,
         },
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
@@ -43,10 +41,10 @@ def test_init_worker_for_training_process_with_absent_metadata(
                 "drop_null": True,
                 "epochs": 20,
                 "print_report": True,
-                "row_limit": 1000
+                "row_limit": 1000,
             },
             "infer_settings": {},
-            "keys": {}
+            "keys": {},
         }
     }
     mock_validator_run.assert_called_once()
@@ -54,9 +52,7 @@ def test_init_worker_for_training_process_with_absent_metadata(
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_infer_process_with_absent_metadata(
-        mock_validator_run, rp_logger
-):
+def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run, rp_logger):
     """
     Test the initialization of 'Worker' class with the absent metadata
     during the inference process
@@ -73,26 +69,24 @@ def test_init_worker_for_infer_process_with_absent_metadata(
             "run_parallel": False,
             "batch_size": 100,
             "print_report": False,
-            "random_seed": 1
+            "random_seed": 1,
         },
         log_level="INFO",
-        type_of_process="infer"
+        type_of_process="infer",
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
-    assert worker.metadata =={
+    assert worker.metadata == {
         "test_table": {
-            "train_settings": {
-                "source": "absent"
-            },
+            "train_settings": {"source": "absent"},
             "infer_settings": {
                 "size": 100,
                 "run_parallel": False,
                 "batch_size": 100,
                 "print_report": False,
-                "random_seed": 1
+                "random_seed": 1,
             },
-            "keys": {}
+            "keys": {},
         }
     }
     mock_validator_run.assert_called_once()
@@ -120,10 +114,10 @@ def test_init_worker_with_metadata(mock_validator_run, rp_logger):
             "drop_null": True,
             "row_limit": 1000,
             "batch_size": 1000,
-            "print_report": True
+            "print_report": True,
         },
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
@@ -136,22 +130,17 @@ def test_init_worker_with_metadata(mock_validator_run, rp_logger):
                 "drop_null": False,
                 "print_report": False,
                 "row_limit": 800,
-                "batch_size": 2000
+                "batch_size": 2000,
             },
             "infer_settings": {
                 "size": 200,
                 "run_parallel": True,
                 "random_seed": 2,
                 "print_report": True,
-                "batch_size": 200
+                "batch_size": 200,
             },
-            "keys": {
-                "pk_id": {
-                    "type": "PK",
-                    "columns": ["Id"]
-                }
-            }
-        }
+            "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+        },
     }
     mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -178,10 +167,10 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validator_run, rp_logg
             "drop_null": True,
             "row_limit": 1000,
             "batch_size": 1000,
-            "print_report": True
+            "print_report": True,
         },
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
@@ -194,19 +183,19 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validator_run, rp_logg
                 "drop_null": True,
                 "print_report": True,
                 "row_limit": 1000,
-                "batch_size": 1000
+                "batch_size": 1000,
             },
             "infer_settings": {},
-            "keys": {}
-            }
-        }
+            "keys": {},
+        },
+    }
     mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "run")
 def test_init_worker_for_training_with_metadata_with_global_settings(
-        mock_validator_run, rp_logger
+    mock_validator_run, rp_logger
 ):
     """
     Test the initialization of 'Worker' class during the training process
@@ -225,25 +214,21 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
             "drop_null": True,
             "row_limit": 1000,
             "batch_size": 1000,
-            "print_report": True
+            "print_report": True,
         },
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {
-            "train_settings": {
-                "drop_null": True,
-                "epochs": 5,
-                "row_limit": 500
-            },
+            "train_settings": {"drop_null": True, "epochs": 5, "row_limit": 500},
             "infer_settings": {
                 "print_report": True,
                 "run_parallel": True,
-                "size": 1000
-            }
+                "size": 1000,
+            },
         },
         "pk_test": {
             "train_settings": {
@@ -252,27 +237,17 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
                 "epochs": 5,
                 "drop_null": True,
                 "batch_size": 1000,
-                "print_report": True
+                "print_report": True,
             },
-            "infer_settings": {
-                "print_report": False
-            },
-            "keys": {
-                "pk_id": {
-                    "type": "PK",
-                    "columns": ["Id"]
-                }
-            }
+            "infer_settings": {"print_report": False},
+            "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
         },
         "fk_test": {
             "keys": {
                 "fk_id": {
                     "type": "FK",
                     "columns": ["Id"],
-                    "references": {
-                        "table": "pk_test",
-                        "columns": ["Id"]
-                    }
+                    "references": {"table": "pk_test", "columns": ["Id"]},
                 }
             },
             "train_settings": {
@@ -281,10 +256,10 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
                 "drop_null": True,
                 "row_limit": 500,
                 "batch_size": 1000,
-                "print_report": True
+                "print_report": True,
             },
-            "infer_settings": {}
-        }
+            "infer_settings": {},
+        },
     }
     mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -292,7 +267,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
 
 @patch.object(Validator, "run")
 def test_init_worker_for_inference_with_metadata_with_global_settings(
-        mock_validator_run, rp_logger
+    mock_validator_run, rp_logger
 ):
     """
     Test the initialization of 'Worker' class during an inference process
@@ -310,67 +285,50 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
             "run_parallel": False,
             "batch_size": 200,
             "print_report": False,
-            "random_seed": 5
+            "random_seed": 5,
         },
         log_level="INFO",
-        type_of_process="infer"
+        type_of_process="infer",
     )
     assert isinstance(worker.train_strategy, TrainStrategy) is True
     assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {
-            "train_settings": {
-                "drop_null": True,
-                "epochs": 5,
-                "row_limit": 500
-            },
+            "train_settings": {"drop_null": True, "epochs": 5, "row_limit": 500},
             "infer_settings": {
                 "print_report": True,
                 "run_parallel": True,
-                "size": 1000
-            }
+                "size": 1000,
+            },
         },
         "pk_test": {
-            "train_settings": {
-                "source": "./path/to/pk_test.csv",
-                "row_limit": 800
-            },
+            "train_settings": {"source": "./path/to/pk_test.csv", "row_limit": 800},
             "infer_settings": {
                 "print_report": False,
                 "size": 1000,
                 "run_parallel": True,
                 "batch_size": 200,
-                "random_seed": 5
+                "random_seed": 5,
             },
-            "keys": {
-                "pk_id": {
-                    "type": "PK",
-                    "columns": ["Id"]
-                }
-            }
+            "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
         },
         "fk_test": {
             "keys": {
                 "fk_id": {
                     "type": "FK",
                     "columns": ["Id"],
-                    "references": {
-                        "table": "pk_test",
-                        "columns": ["Id"]
-                    }
+                    "references": {"table": "pk_test", "columns": ["Id"]},
                 }
             },
-            "train_settings": {
-                "source": "./path/to/fk_test.csv"
-            },
+            "train_settings": {"source": "./path/to/fk_test.csv"},
             "infer_settings": {
                 "size": 1000,
                 "run_parallel": True,
                 "print_report": True,
                 "batch_size": 200,
-                "random_seed": 5
-            }
-        }
+                "random_seed": 5,
+            },
+        },
     }
     mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -382,12 +340,12 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata(
-        mock_train_tables,
-        mock_generate_reports,
-        mock_check_existence_of_source,
-        mock_check_key_columns,
-        mock_validate_metadata,
-        rp_logger
+    mock_train_tables,
+    mock_generate_reports,
+    mock_check_existence_of_source,
+    mock_check_key_columns,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -408,66 +366,59 @@ def test_launch_train_with_metadata(
             "drop_null": True,
             "row_limit": 1000,
             "batch_size": 1000,
-            "print_report": True
+            "print_report": True,
         },
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        (["test_table"],
-         {
-             "test_table": {
-                "train_settings": {
-                    "source": "./path/to/test_table.csv",
-                    "epochs": 100,
-                    "drop_null": False,
-                    "print_report": False,
-                    "row_limit": 800,
-                    "batch_size": 2000
-                },
-                "infer_settings": {
-                    "size": 200,
-                    "run_parallel": True,
-                    "random_seed": 2,
-                    "print_report": True,
-                    "batch_size": 200},
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["Id"]
-                    }
+        (
+            ["test_table"],
+            {
+                "test_table": {
+                    "train_settings": {
+                        "source": "./path/to/test_table.csv",
+                        "epochs": 100,
+                        "drop_null": False,
+                        "print_report": False,
+                        "row_limit": 800,
+                        "batch_size": 2000,
+                    },
+                    "infer_settings": {
+                        "size": 200,
+                        "run_parallel": True,
+                        "random_seed": 2,
+                        "print_report": True,
+                        "batch_size": 200,
+                    },
+                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 }
-            }
-        }
+            },
         ),
-        (["test_table"],
-         {
-             "test_table": {
-                 "train_settings": {
-                     "source": "./path/to/test_table.csv",
-                     "epochs": 100,
-                     "drop_null": False,
-                     "print_report": False,
-                     "row_limit": 800,
-                     "batch_size": 2000
-                 },
-                 "infer_settings": {
-                    "size": 200,
-                    "run_parallel": True,
-                    "random_seed": 2,
-                    "print_report": True,
-                    "batch_size": 200
-                 },
-                 "keys": {
-                     "pk_id": {
-                         "type": "PK",
-                         "columns": ["Id"]
-                     }
-                 }
-             }
-         }
-         )
+        (
+            ["test_table"],
+            {
+                "test_table": {
+                    "train_settings": {
+                        "source": "./path/to/test_table.csv",
+                        "epochs": 100,
+                        "drop_null": False,
+                        "print_report": False,
+                        "row_limit": 800,
+                        "batch_size": 2000,
+                    },
+                    "infer_settings": {
+                        "size": 200,
+                        "run_parallel": True,
+                        "random_seed": 2,
+                        "print_report": True,
+                        "batch_size": 200,
+                    },
+                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                }
+            },
+        ),
     )
     mock_check_existence_of_source.assert_called_once()
     mock_check_key_columns.assert_called_once()
@@ -482,12 +433,12 @@ def test_launch_train_with_metadata(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables(
-        mock_train_tables,
-        mock_generate_reports,
-        mock_check_existence_of_source,
-        mock_check_key_columns,
-        mock_validate_metadata,
-        rp_logger
+    mock_train_tables,
+    mock_generate_reports,
+    mock_check_existence_of_source,
+    mock_check_key_columns,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -506,10 +457,10 @@ def test_launch_train_with_metadata_of_related_tables(
             "drop_null": True,
             "row_limit": 1000,
             "batch_size": 1000,
-            "print_report": True
+            "print_report": True,
         },
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -523,19 +474,14 @@ def test_launch_train_with_metadata_of_related_tables(
                         "drop_null": False,
                         "row_limit": 800,
                         "batch_size": 1000,
-                        "print_report": True
+                        "print_report": True,
                     },
                     "infer_settings": {
                         "size": 200,
                         "run_parallel": True,
-                        "print_report": True
+                        "print_report": True,
                     },
-                    "keys": {
-                        "pk_id": {
-                            "type": "PK",
-                            "columns": ["Id"]
-                        }
-                    }
+                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 },
                 "fk_test": {
                     "train_settings": {
@@ -544,26 +490,23 @@ def test_launch_train_with_metadata_of_related_tables(
                         "drop_null": True,
                         "print_report": True,
                         "row_limit": 600,
-                        "batch_size": 1000
+                        "batch_size": 1000,
                     },
                     "infer_settings": {
                         "size": 90,
                         "run_parallel": True,
                         "random_seed": 2,
-                        "print_report": False
+                        "print_report": False,
                     },
                     "keys": {
                         "fk_id": {
                             "type": "FK",
-                            "columns":["Id"],
-                            "references": {
-                                "table": "pk_test",
-                                "columns": ["Id"]
-                            }
+                            "columns": ["Id"],
+                            "references": {"table": "pk_test", "columns": ["Id"]},
                         }
-                    }
-                }
-            }
+                    },
+                },
+            },
         ),
         (
             ["pk_test", "fk_test"],
@@ -575,20 +518,14 @@ def test_launch_train_with_metadata_of_related_tables(
                         "drop_null": False,
                         "row_limit": 800,
                         "batch_size": 1000,
-                        "print_report": True
+                        "print_report": True,
                     },
-                    "infer_settings":
-                        {
-                            "size": 200,
-                            "run_parallel": True,
-                            "print_report": True
-                        },
-                    "keys": {
-                        "pk_id": {
-                            "type": "PK",
-                            "columns": ["Id"]
-                        }
-                    }
+                    "infer_settings": {
+                        "size": 200,
+                        "run_parallel": True,
+                        "print_report": True,
+                    },
+                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 },
                 "fk_test": {
                     "train_settings": {
@@ -597,26 +534,24 @@ def test_launch_train_with_metadata_of_related_tables(
                         "drop_null": True,
                         "print_report": True,
                         "row_limit": 600,
-                        "batch_size": 1000
+                        "batch_size": 1000,
                     },
                     "infer_settings": {
                         "size": 90,
                         "run_parallel": True,
                         "random_seed": 2,
-                        "print_report": False
+                        "print_report": False,
                     },
                     "keys": {
                         "fk_id": {
                             "type": "FK",
                             "columns": ["Id"],
-                            "references": {
-                                "table": "pk_test",
-                                "columns": ["Id"]}
+                            "references": {"table": "pk_test", "columns": ["Id"]},
                         }
-                    }
-                }
-            }
-        )
+                    },
+                },
+            },
+        ),
     )
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_key_columns.call_count == 2
@@ -631,16 +566,17 @@ def test_launch_train_with_metadata_of_related_tables(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
-        mock_train_tables,
-        mock_generate_reports,
-        mock_check_existence_of_source,
-        mock_check_key_columns,
-        mock_validate_metadata,
-        rp_logger
+    mock_train_tables,
+    mock_generate_reports,
+    mock_check_existence_of_source,
+    mock_check_key_columns,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_train' method calls all necessary methods
-    by providing the metadata file of related tables in which the table contains several different keys
+    by providing the metadata file of related tables
+    in which the table contains several different keys
     """
     rp_logger.info(
         "Test that 'launch_train' method calls all necessary methods by providing "
@@ -648,149 +584,124 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/"
+                      "metadata_of_related_tables_with_diff_keys.yaml",
         settings={
             "source": None,
             "epochs": 20,
             "drop_null": True,
             "row_limit": 1000,
             "batch_size": 1000,
-            "print_report": True
+            "print_report": True,
         },
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
     )
     worker.launch_train()
-    mock_train_tables.assert_called_once_with((
-        ["tdm_models", "tdm_clusters"],
-        {
-            "tdm_models": {
-                "train_settings": {
-                    "source": "./path/to/tdm_models.csv",
-                    "epochs": 20,
-                    "drop_null": True,
-                    "row_limit": 1000,
-                    "batch_size": 1000,
-                    "print_report": True
-                },
-                "keys": {
-                    "tdm_models_pkey": {
-                        "type": "PK",
-                        "columns": ["id"]
+    mock_train_tables.assert_called_once_with(
+        (
+            ["tdm_models", "tdm_clusters"],
+            {
+                "tdm_models": {
+                    "train_settings": {
+                        "source": "./path/to/tdm_models.csv",
+                        "epochs": 20,
+                        "drop_null": True,
+                        "row_limit": 1000,
+                        "batch_size": 1000,
+                        "print_report": True,
                     },
-                    "tdm_models_fkey": {
-                        "type": "FK",
-                        "columns": ["cluster_id"],
-                        "references": {
-                            "table": "tdm_clusters",
-                            "columns": ["id"]
-                        }
-                    }
+                    "keys": {
+                        "tdm_models_pkey": {"type": "PK", "columns": ["id"]},
+                        "tdm_models_fkey": {
+                            "type": "FK",
+                            "columns": ["cluster_id"],
+                            "references": {"table": "tdm_clusters", "columns": ["id"]},
+                        },
+                    },
+                    "infer_settings": {},
                 },
-                "infer_settings": {}
+                "tdm_clusters": {
+                    "train_settings": {
+                        "source": "./path/to/tdm_clusters.csv",
+                        "epochs": 20,
+                        "drop_null": True,
+                        "row_limit": 1000,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
+                    "infer_settings": {},
+                },
             },
-            "tdm_clusters": {
-                "train_settings": {
-                    "source": "./path/to/tdm_clusters.csv",
-                    "epochs": 20,
-                    "drop_null": True,
-                    "row_limit": 1000,
-                    "batch_size": 1000,
-                    "print_report": True
+        ),
+        (
+            ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
+            {
+                "tdm_models": {
+                    "train_settings": {
+                        "source": "./path/to/tdm_models.csv",
+                        "epochs": 20,
+                        "drop_null": True,
+                        "row_limit": 1000,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "keys": {
+                        "tdm_models_pkey": {"type": "PK", "columns": ["id"]},
+                        "tdm_models_fkey": {
+                            "type": "FK",
+                            "columns": ["cluster_id"],
+                            "references": {"table": "tdm_clusters", "columns": ["id"]},
+                        },
+                    },
+                    "infer_settings": {},
                 },
-                "keys": {
-                    "tdm_clusters_pkey": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
+                "tdm_clusters": {
+                    "train_settings": {
+                        "source": "./path/to/tdm_clusters.csv",
+                        "epochs": 20,
+                        "drop_null": True,
+                        "row_limit": 1000,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
+                    "infer_settings": {},
                 },
-                "infer_settings": {}
-            }
-        }),
-        (["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
-         {
-             "tdm_models": {
-                 "train_settings": {
-                     "source": "./path/to/tdm_models.csv",
-                     "epochs": 20,
-                     "drop_null": True,
-                     "row_limit": 1000,
-                     "batch_size": 1000,
-                     "print_report": True
-                 },
-                 "keys": {
-                     "tdm_models_pkey": {
-                         "type": "PK",
-                         "columns": ["id"]
-                     },
-                     "tdm_models_fkey": {
-                         "type": "FK",
-                         "columns": ["cluster_id"],
-                         "references": {
-                             "table": "tdm_clusters",
-                             "columns": ["id"]
-                         }
-                     }
-                 },
-                 "infer_settings": {}
-             },
-             "tdm_clusters": {
-                 "train_settings": {
-                     "source": "./path/to/tdm_clusters.csv",
-                     "epochs": 20,
-                     "drop_null": True,
-                     "row_limit": 1000,
-                     "batch_size": 1000,
-                     "print_report": True
-                 },
-                 "keys": {
-                     "tdm_clusters_pkey": {
-                         "type": "PK",
-                         "columns": ["id"]
-                     }
-                 },
-                 "infer_settings": {}
-             },
-             "tdm_models_pk": {
-                 "train_settings": {
-                     "source": "./path/to/tdm_models.csv",
-                     "epochs": 20,
-                     "drop_null": True,
-                     "row_limit": 1000,
-                     "batch_size": 1000,
-                     "print_report": True
-                 },
-                 "keys": {
-                     "tdm_models_pkey": {
-                         "type": "PK",
-                         "columns": ["id"]
-                     }
-                 },
-                 "infer_settings": {}
-             },
-             "tdm_models_fk": {
-                 "train_settings": {
-                     "source": "./path/to/tdm_models.csv",
-                     "epochs": 20,
-                     "drop_null": True,
-                     "row_limit": 1000,
-                     "batch_size": 1000,
-                     "print_report": True
-                 },
-                 "keys": {
-                     "tdm_models_fkey": {
-                         "type": "FK",
-                         "columns": ["cluster_id"],
-                         "references": {
-                             "table": "tdm_clusters",
-                             "columns": ["id"]
-                         }
-                     }
-                 },
-                 "infer_settings": {}
-             }
-         }
-         ))
+                "tdm_models_pk": {
+                    "train_settings": {
+                        "source": "./path/to/tdm_models.csv",
+                        "epochs": 20,
+                        "drop_null": True,
+                        "row_limit": 1000,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "keys": {"tdm_models_pkey": {"type": "PK", "columns": ["id"]}},
+                    "infer_settings": {},
+                },
+                "tdm_models_fk": {
+                    "train_settings": {
+                        "source": "./path/to/tdm_models.csv",
+                        "epochs": 20,
+                        "drop_null": True,
+                        "row_limit": 1000,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "keys": {
+                        "tdm_models_fkey": {
+                            "type": "FK",
+                            "columns": ["cluster_id"],
+                            "references": {"table": "tdm_clusters", "columns": ["id"]},
+                        }
+                    },
+                    "infer_settings": {},
+                },
+            },
+        ),
+    )
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_key_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
@@ -804,12 +715,12 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_without_metadata(
-        mock_train_tables,
-        mock_generate_reports,
-        mock_check_existence_of_source,
-        mock_check_key_columns,
-        mock_validate_metadata,
-        rp_logger
+    mock_train_tables,
+    mock_generate_reports,
+    mock_check_existence_of_source,
+    mock_check_key_columns,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -828,43 +739,47 @@ def test_launch_train_without_metadata(
             "drop_null": True,
             "row_limit": 1000,
             "batch_size": 1000,
-            "print_report": True
+            "print_report": True,
         },
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        (["test_table"],
-        {
-            "test_table": {
-                "train_settings": {
-                    "source": "./path/to/source.csv",
-                    "epochs": 20,
-                    "drop_null": True,
-                    "row_limit": 1000,
-                    "batch_size": 1000,
-                    "print_report": True
-                },
-                "infer_settings": {},
-                "keys": {}
-            }
-        }),
-        (["test_table"],
-         {
-             "test_table": {
-                 "train_settings": {
-                     "source": "./path/to/source.csv",
-                     "epochs": 20,
-                     "drop_null": True,
-                     "row_limit": 1000,
-                     "batch_size": 1000,
-                     "print_report": True
-                 },
-                 "infer_settings": {},
-                 "keys": {}
-             }
-         })
+        (
+            ["test_table"],
+            {
+                "test_table": {
+                    "train_settings": {
+                        "source": "./path/to/source.csv",
+                        "epochs": 20,
+                        "drop_null": True,
+                        "row_limit": 1000,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "infer_settings": {},
+                    "keys": {},
+                }
+            },
+        ),
+        (
+            ["test_table"],
+            {
+                "test_table": {
+                    "train_settings": {
+                        "source": "./path/to/source.csv",
+                        "epochs": 20,
+                        "drop_null": True,
+                        "row_limit": 1000,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "infer_settings": {},
+                    "keys": {},
+                }
+            },
+        ),
     )
     mock_check_existence_of_source.assert_called_once()
     mock_check_key_columns.assert_called_once()
@@ -879,12 +794,12 @@ def test_launch_train_without_metadata(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_contained_global_settings(
-        mock_train_tables,
-        mock_generate_reports,
-        mock_check_existence_of_source,
-        mock_check_key_columns,
-        mock_validate_metadata,
-        rp_logger
+    mock_train_tables,
+    mock_generate_reports,
+    mock_check_existence_of_source,
+    mock_check_key_columns,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_train' method calls all necessary methods
@@ -904,101 +819,83 @@ def test_launch_train_with_metadata_contained_global_settings(
             "drop_null": True,
             "row_limit": 1000,
             "batch_size": 1000,
-            "print_report": True
+            "print_report": True,
         },
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        (["pk_test", "fk_test"],
-         {
-             "pk_test": {
-                 "train_settings": {
-                     "source": "./path/to/pk_test.csv",
-                     "row_limit": 800,
-                     "epochs": 5,
-                     "drop_null": True,
-                     "batch_size": 1000,
-                     "print_report": True
-                 },
-                 "infer_settings": {
-                     "print_report": False
-                 },
-                 "keys": {
-                     "pk_id": {
-                         "type": "PK",
-                         "columns": ["Id"]
-                     }
-                 }
-             },
-             "fk_test": {
-                 "keys": {
-                     "fk_id": {
-                         "type": "FK",
-                         "columns": ["Id"],
-                         "references": {
-                             "table": "pk_test",
-                             "columns": ["Id"]
-                         }
-                     }
-                 },
-                 "train_settings": {
-                     "source": "./path/to/fk_test.csv",
-                     "epochs": 5,
-                     "drop_null": True,
-                     "row_limit": 500,
-                     "batch_size": 1000,
-                     "print_report": True
-                 },
-                 "infer_settings": {}
-             }
-         }
-         ),
-        (["pk_test", "fk_test"],
-         {
-             "pk_test": {
-                 "train_settings": {
-                     "source": "./path/to/pk_test.csv",
-                     "row_limit": 800,
-                     "epochs": 5,
-                     "drop_null": True,
-                     "batch_size": 1000,
-                     "print_report": True
-                 },
-                 "infer_settings": {
-                     "print_report": False
-                 },
-                 "keys": {
-                     "pk_id": {
-                         "type": "PK",
-                         "columns": ["Id"]
-                     }
-                 }
-             },
-             "fk_test": {
-                 "keys": {
-                     "fk_id": {
-                         "type": "FK",
-                         "columns": ["Id"],
-                         "references": {
-                             "table": "pk_test",
-                             "columns": ["Id"]
-                         }
-                     }
-                 },
-                 "train_settings": {
-                     "source": "./path/to/fk_test.csv",
-                     "epochs": 5,
-                     "drop_null": True,
-                     "row_limit": 500,
-                     "batch_size": 1000,
-                     "print_report": True
-                 },
-                 "infer_settings": {}
-             }
-         }
-         )
+        (
+            ["pk_test", "fk_test"],
+            {
+                "pk_test": {
+                    "train_settings": {
+                        "source": "./path/to/pk_test.csv",
+                        "row_limit": 800,
+                        "epochs": 5,
+                        "drop_null": True,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "infer_settings": {"print_report": False},
+                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                },
+                "fk_test": {
+                    "keys": {
+                        "fk_id": {
+                            "type": "FK",
+                            "columns": ["Id"],
+                            "references": {"table": "pk_test", "columns": ["Id"]},
+                        }
+                    },
+                    "train_settings": {
+                        "source": "./path/to/fk_test.csv",
+                        "epochs": 5,
+                        "drop_null": True,
+                        "row_limit": 500,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "infer_settings": {},
+                },
+            },
+        ),
+        (
+            ["pk_test", "fk_test"],
+            {
+                "pk_test": {
+                    "train_settings": {
+                        "source": "./path/to/pk_test.csv",
+                        "row_limit": 800,
+                        "epochs": 5,
+                        "drop_null": True,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "infer_settings": {"print_report": False},
+                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                },
+                "fk_test": {
+                    "keys": {
+                        "fk_id": {
+                            "type": "FK",
+                            "columns": ["Id"],
+                            "references": {"table": "pk_test", "columns": ["Id"]},
+                        }
+                    },
+                    "train_settings": {
+                        "source": "./path/to/fk_test.csv",
+                        "epochs": 5,
+                        "drop_null": True,
+                        "row_limit": 500,
+                        "batch_size": 1000,
+                        "print_report": True,
+                    },
+                    "infer_settings": {},
+                },
+            },
+        ),
     )
     assert mock_validate_metadata.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
@@ -1012,11 +909,11 @@ def test_launch_train_with_metadata_contained_global_settings(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata(
-        mock_infer_tables,
-        mock_generate_reports,
-        mock_check_existence_of_destination,
-        mock_validate_metadata,
-        rp_logger
+    mock_infer_tables,
+    mock_generate_reports,
+    mock_check_existence_of_destination,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1034,10 +931,10 @@ def test_launch_infer_with_metadata(
             "run_parallel": True,
             "random_seed": 2,
             "print_report": True,
-            "batch_size": 200
+            "batch_size": 200,
         },
         log_level="INFO",
-        type_of_process="infer"
+        type_of_process="infer",
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1057,15 +954,11 @@ def test_launch_infer_with_metadata(
                     "run_parallel": True,
                     "random_seed": 2,
                     "print_report": True,
-                    "batch_size": 200
+                    "batch_size": 200,
                 },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["Id"]}
-                }
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
             }
-        }
+        },
     )
     mock_check_existence_of_destination.assert_called_once()
     mock_validate_metadata.assert_called_once()
@@ -1078,11 +971,11 @@ def test_launch_infer_with_metadata(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_of_related_tables(
-        mock_infer_tables,
-        mock_generate_reports,
-        mock_check_existence_of_destination,
-        mock_validate_metadata,
-        rp_logger
+    mock_infer_tables,
+    mock_generate_reports,
+    mock_check_existence_of_destination,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1100,10 +993,10 @@ def test_launch_infer_with_metadata_of_related_tables(
             "run_parallel": True,
             "print_report": True,
             "batch_size": 200,
-            "random_seed": 1
+            "random_seed": 1,
         },
         log_level="INFO",
-        type_of_process="infer"
+        type_of_process="infer",
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1114,20 +1007,16 @@ def test_launch_infer_with_metadata_of_related_tables(
                     "source": "./path/to/pk_test.csv",
                     "epochs": 1,
                     "drop_null": False,
-                    "row_limit": 800
+                    "row_limit": 800,
                 },
                 "infer_settings": {
                     "size": 200,
                     "run_parallel": True,
                     "print_report": True,
                     "batch_size": 200,
-                    "random_seed": 1
+                    "random_seed": 1,
                 },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK", "columns": ["Id"]
-                    }
-                }
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
             },
             "fk_test": {
                 "train_settings": {
@@ -1135,27 +1024,24 @@ def test_launch_infer_with_metadata_of_related_tables(
                     "epochs": 5,
                     "drop_null": True,
                     "print_report": True,
-                    "row_limit": 600
+                    "row_limit": 600,
                 },
                 "infer_settings": {
                     "size": 90,
                     "run_parallel": True,
                     "random_seed": 2,
                     "print_report": False,
-                    "batch_size": 200
+                    "batch_size": 200,
                 },
                 "keys": {
                     "fk_id": {
                         "type": "FK",
                         "columns": ["Id"],
-                        "references": {
-                            "table": "pk_test",
-                            "columns": ["Id"]
-                        }
+                        "references": {"table": "pk_test", "columns": ["Id"]},
                     }
-                }
-            }
-        }
+                },
+            },
+        },
     )
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
@@ -1168,11 +1054,11 @@ def test_launch_infer_with_metadata_of_related_tables(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
-        mock_infer_tables,
-        mock_generate_reports,
-        mock_check_existence_of_destination,
-        mock_validate_metadata,
-        rp_logger
+    mock_infer_tables,
+    mock_generate_reports,
+    mock_check_existence_of_destination,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1180,100 +1066,75 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     the table contains several different keys was provided
     """
     rp_logger.info(
-        "Test that 'launch_infer' method calls all necessary methods by providing the metadata file "
-        "of related tables in which the table contains several different keys was provided"
+        "Test that 'launch_infer' method calls all necessary methods "
+        "by providing the metadata file of related tables "
+        "in which the table contains several different keys was provided"
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables_with_diff_keys.yaml",
+        metadata_path="./tests/unit/test_worker/fixtures/"
+                      "metadata_of_related_tables_with_diff_keys.yaml",
         settings={
             "size": 300,
             "run_parallel": True,
             "print_report": True,
             "batch_size": 200,
-            "random_seed": 1
+            "random_seed": 1,
         },
         log_level="INFO",
-        type_of_process="infer"
+        type_of_process="infer",
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
         ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
         {
             "tdm_models": {
-                "train_settings": {
-                    "source": "./path/to/tdm_models.csv"
-                },
+                "train_settings": {"source": "./path/to/tdm_models.csv"},
                 "keys": {
-                    "tdm_models_pkey": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
+                    "tdm_models_pkey": {"type": "PK", "columns": ["id"]},
                     "tdm_models_fkey": {
                         "type": "FK",
                         "columns": ["cluster_id"],
-                        "references": {
-                            "table": "tdm_clusters",
-                            "columns": ["id"]
-                        }
-                    }
+                        "references": {"table": "tdm_clusters", "columns": ["id"]},
+                    },
                 },
                 "infer_settings": {
                     "size": 300,
                     "run_parallel": True,
                     "print_report": True,
                     "batch_size": 200,
-                    "random_seed": 1
-                }
+                    "random_seed": 1,
+                },
             },
             "tdm_clusters": {
-                "train_settings": {
-                    "source": "./path/to/tdm_clusters.csv"
-                },
-                "keys": {
-                    "tdm_clusters_pkey": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
-                },
+                "train_settings": {"source": "./path/to/tdm_clusters.csv"},
+                "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
                 "infer_settings": {
                     "size": 300,
                     "run_parallel": True,
                     "print_report": True,
                     "batch_size": 200,
-                    "random_seed": 1
-                }
+                    "random_seed": 1,
+                },
             },
             "tdm_models_pk": {
-                "train_settings": {
-                    "source": "./path/to/tdm_models.csv"
-                },
-                "keys": {
-                    "tdm_models_pkey": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
-                },
+                "train_settings": {"source": "./path/to/tdm_models.csv"},
+                "keys": {"tdm_models_pkey": {"type": "PK", "columns": ["id"]}},
                 "infer_settings": {
                     "size": 300,
                     "run_parallel": True,
                     "print_report": True,
                     "batch_size": 200,
-                    "random_seed": 1
-                }
+                    "random_seed": 1,
+                },
             },
             "tdm_models_fk": {
-                "train_settings": {
-                    "source": "./path/to/tdm_models.csv"
-                },
+                "train_settings": {"source": "./path/to/tdm_models.csv"},
                 "keys": {
                     "tdm_models_fkey": {
                         "type": "FK",
                         "columns": ["cluster_id"],
-                        "references": {
-                            "table": "tdm_clusters",
-                            "columns": ["id"]
-                        }
+                        "references": {"table": "tdm_clusters", "columns": ["id"]},
                     }
                 },
                 "infer_settings": {
@@ -1281,10 +1142,10 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                     "run_parallel": True,
                     "print_report": True,
                     "batch_size": 200,
-                    "random_seed": 1
-                }
-            }
-        }
+                    "random_seed": 1,
+                },
+            },
+        },
     )
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
@@ -1297,11 +1158,11 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_without_metadata(
-        mock_infer_tables,
-        mock_generate_reports,
-        mock_check_existence_of_destination,
-        mock_validate_metadata,
-        rp_logger
+    mock_infer_tables,
+    mock_generate_reports,
+    mock_check_existence_of_destination,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1309,7 +1170,8 @@ def test_launch_infer_without_metadata(
     """
     rp_logger.info(
         "Test that 'launch_infer' method calls all necessary methods "
-        "in case the metadata file wasn't provided and the inference process was launched through CLI"
+        "in case the metadata file wasn't provided and "
+        "the inference process was launched through CLI"
     )
     worker = Worker(
         table_name="test_table",
@@ -1319,29 +1181,27 @@ def test_launch_infer_without_metadata(
             "run_parallel": True,
             "random_seed": 2,
             "print_report": True,
-            "batch_size": 200
+            "batch_size": 200,
         },
         log_level="INFO",
-        type_of_process="infer"
+        type_of_process="infer",
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
         ["test_table"],
         {
             "test_table": {
-                "train_settings": {
-                    "source": "absent"
-                },
+                "train_settings": {"source": "absent"},
                 "infer_settings": {
                     "size": 200,
                     "run_parallel": True,
                     "random_seed": 2,
                     "print_report": True,
-                    "batch_size": 200
+                    "batch_size": 200,
                 },
-                "keys": {}
+                "keys": {},
             }
-        }
+        },
     )
     mock_check_existence_of_destination.assert_called_once()
     mock_validate_metadata.assert_called_once()
@@ -1354,11 +1214,11 @@ def test_launch_infer_without_metadata(
 @patch.object(Worker, "_generate_reports", return_value=None)
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_contained_global_settings(
-        mock_infer_tables,
-        mock_generate_reports,
-        mock_check_existence_of_destination,
-        mock_validate_metadata,
-        rp_logger
+    mock_infer_tables,
+    mock_generate_reports,
+    mock_check_existence_of_destination,
+    mock_validate_metadata,
+    rp_logger,
 ):
     """
     Test that 'launch_infer' method calls all necessary methods
@@ -1377,57 +1237,44 @@ def test_launch_infer_with_metadata_contained_global_settings(
             "run_parallel": True,
             "random_seed": 3,
             "print_report": True,
-            "batch_size": 300
+            "batch_size": 300,
         },
         log_level="INFO",
-        type_of_process="infer"
+        type_of_process="infer",
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
         ["pk_test", "fk_test"],
         {
             "pk_test": {
-                "train_settings": {
-                    "source": "./path/to/pk_test.csv",
-                    "row_limit": 800
-                },
+                "train_settings": {"source": "./path/to/pk_test.csv", "row_limit": 800},
                 "infer_settings": {
                     "print_report": False,
                     "size": 1000,
                     "run_parallel": True,
                     "random_seed": 3,
-                    "batch_size": 300
+                    "batch_size": 300,
                 },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["Id"]
-                    }
-                }
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
             },
             "fk_test": {
                 "keys": {
                     "fk_id": {
                         "type": "FK",
                         "columns": ["Id"],
-                        "references": {
-                            "table": "pk_test",
-                            "columns": ["Id"]
-                        }
+                        "references": {"table": "pk_test", "columns": ["Id"]},
                     }
                 },
-                "train_settings": {
-                    "source": "./path/to/fk_test.csv"
-                },
+                "train_settings": {"source": "./path/to/fk_test.csv"},
                 "infer_settings": {
                     "size": 1000,
                     "run_parallel": True,
                     "print_report": True,
                     "random_seed": 3,
-                    "batch_size": 300
-                }
-            }
-        }
+                    "batch_size": 300,
+                },
+            },
+        },
     )
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2

@@ -9,7 +9,7 @@ from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
     fetch_dataset,
-    datetime_to_timestamp
+    datetime_to_timestamp,
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader
@@ -21,12 +21,7 @@ class Reporter:
     Abstract class for reporters
     """
 
-    def __init__(
-            self,
-            table_name: str,
-            paths: Dict[str, str],
-            config: Dict[str, str]
-    ):
+    def __init__(self, table_name: str, paths: Dict[str, str], config: Dict[str, str]):
         self.table_name = table_name
         self.paths = paths
         self.config = config
@@ -39,10 +34,13 @@ class Reporter:
     def fetch_data_types(self):
         dataset = fetch_dataset(self.paths["dataset_pickle_path"])
         types = (
-            dataset.str_columns, dataset.date_columns,
-            dataset.int_columns, dataset.float_columns,
-            dataset.binary_columns, dataset.categ_columns,
-            dataset.long_text_columns
+            dataset.str_columns,
+            dataset.date_columns,
+            dataset.int_columns,
+            dataset.float_columns,
+            dataset.binary_columns,
+            dataset.categ_columns,
+            dataset.long_text_columns,
         )
         return types
 
@@ -59,20 +57,19 @@ class Reporter:
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
         types = self.fetch_data_types()
-        str_columns, date_columns, int_columns, float_columns, \
-            binary_columns, categ_columns, long_text_columns = types
-        original = original[[
-            col for col in original.columns
-            if col in set().union(*types)
-        ]]
-        synthetic = synthetic[[
-            col for col in synthetic.columns
-            if col in set().union(*types)
-        ]]
+        (
+            str_columns,
+            date_columns,
+            int_columns,
+            float_columns,
+            binary_columns,
+            categ_columns,
+            long_text_columns,
+        ) = types
+        original = original[[col for col in original.columns if col in set().union(*types)]]
+        synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
         for date_col in date_columns:
-            original[date_col] = list(
-                map(lambda d: datetime_to_timestamp(d), original[date_col])
-            )
+            original[date_col] = list(map(lambda d: datetime_to_timestamp(d), original[date_col]))
             synthetic[date_col] = list(
                 map(lambda d: datetime_to_timestamp(d), synthetic[date_col])
             )
@@ -90,11 +87,18 @@ class Reporter:
         int_columns = int_columns | {i + "_char_len" for i in text_columns}
 
         categ_columns = categ_columns | binary_columns
-        
+
         for categ_col in categ_columns:
             original[categ_col] = original[categ_col].astype(str)
             synthetic[categ_col] = synthetic[categ_col].astype(str)
-        return original, synthetic, float_columns, int_columns, categ_columns, date_columns
+        return (
+            original,
+            synthetic,
+            float_columns,
+            int_columns,
+            categ_columns,
+            date_columns,
+        )
 
     @abstractmethod
     def report(self, **kwargs):
@@ -140,8 +144,10 @@ class Report:
         list_of_reporters = itertools.chain.from_iterable(cls._reporters.values())
         for reporter in list_of_reporters:
             reporter.report()
-            logger.info(f"The {reporter.__class__.report_type} report "
-                        f"of the table - '{reporter.table_name}' has been generated")
+            logger.info(
+                f"The {reporter.__class__.report_type} report "
+                f"of the table - '{reporter.table_name}' has been generated"
+            )
 
     @property
     def reporters(self) -> Dict[str, Reporter]:
@@ -152,6 +158,7 @@ class AccuracyReporter(Reporter):
     """
     Reporter for running accuracy test
     """
+
     report_type = "accuracy"
 
     def report(self):
@@ -164,13 +171,13 @@ class AccuracyReporter(Reporter):
             float_columns,
             int_columns,
             categ_columns,
-            date_columns
+            date_columns,
         ) = self.preprocess_data()
         accuracy_test = AccuracyTest(original, synthetic, self.paths, self.table_name, self.config)
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
             categ_columns=list(categ_columns),
-            date_columns=list(date_columns)
+            date_columns=list(date_columns),
         )
         logger.info(
             f"Corresponding plot pickle files regarding to accuracy test were saved "
@@ -182,6 +189,7 @@ class SampleAccuracyReporter(Reporter):
     """
     Reporter for running accuracy test
     """
+
     report_type = "sample"
 
     def _extract_report_data(self):
@@ -199,13 +207,15 @@ class SampleAccuracyReporter(Reporter):
             float_columns,
             int_columns,
             categ_columns,
-            date_columns
+            date_columns,
         ) = self.preprocess_data()
-        accuracy_test = SampleAccuracyTest(original, sampled, self.paths, self.table_name, self.config)
+        accuracy_test = SampleAccuracyTest(
+            original, sampled, self.paths, self.table_name, self.config
+        )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
             categ_columns=list(categ_columns),
-            date_columns=list(date_columns)
+            date_columns=list(date_columns),
         )
         logger.info(
             f"Corresponding plot pickle files regarding to sampled data accuracy test were saved "
