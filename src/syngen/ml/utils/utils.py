@@ -298,6 +298,8 @@ def set_mlflow_exp_name(table_name: str, metadata_path: str):
 
 
 def check_mlflow_server(server_url):
+    if server_url is None:
+        return False
     try:
         response = requests.get(server_url)
         # If the response was successful, no Exception will be raised
@@ -319,8 +321,11 @@ def set_mlflow(type_of_process: str):
             tracker = MlflowTracker(exp_name, True)
         else:
             tracker = MlflowTracker(exp_name, False)
-            logger.warning("MLFlow server is not reachable, so the tracking will not be performed")
-        tracker.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+            logger.warning(
+                "MLFlow server is either unreachable or not set up, "
+                "therefore the tracking will not be performed"
+            )
+        tracker.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
         if type_of_process == "train":
             tracker.create_experiment(
                 exp_name,

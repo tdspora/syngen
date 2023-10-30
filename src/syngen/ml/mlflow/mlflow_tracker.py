@@ -31,11 +31,12 @@ class MlflowTracker:
         run_id: str = None,
         experiment_id: Optional[str] = None,
         run_name: Optional[str] = None,
+        start: bool = True,
         nested: bool = False,
         tags: Optional[Dict[str, Any]] = None,
         description: Optional[str] = None,
     ):
-        if self.is_active:
+        if self.is_active and start:
             mlflow.start_run(run_id, experiment_id, run_name, nested, tags, description)
 
     def end_run(self):
@@ -47,7 +48,6 @@ class MlflowTracker:
             mlflow.set_tags(tags)
 
     def set_tracking_uri(self, uri: str):
-        print(uri, self.is_active)
         if self.is_active:
             mlflow.set_tracking_uri(uri)
 
