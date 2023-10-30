@@ -3,6 +3,8 @@ import os
 import traceback
 from loguru import logger
 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
 from syngen.ml.handlers import RootHandler
 from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
 from syngen.ml.config import TrainConfig, InferConfig
@@ -10,9 +12,6 @@ from syngen.ml.handlers import LongTextsHandler, VaeTrainHandler, VaeInferHandle
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
 from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
-
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 
 class Strategy(ABC):

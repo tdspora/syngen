@@ -12,7 +12,7 @@ from sklearn.metrics import r2_score, accuracy_score
 import matplotlib
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Patch
-
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -22,8 +22,6 @@ from slugify import slugify
 from loguru import logger
 
 from syngen.ml.utils import get_nan_labels, nan_labels_to_float, timestamp_to_datetime
-
-matplotlib.use("Agg")
 
 
 class BaseMetric(ABC):

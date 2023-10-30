@@ -3,6 +3,7 @@ import os
 
 import click
 from loguru import logger
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
@@ -11,9 +12,6 @@ from syngen.ml.utils import (
     set_mlflow,
     set_mlflow_exp_name,
 )
-
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 
 @click.command()
