@@ -26,6 +26,10 @@ class MlflowTracker:
         if self.is_active:
             mlflow.log_artifact(local_path, artifact_path)
 
+    def log_params(self, params: Dict[str, Any]):
+        if self.is_active:
+            mlflow.log_params(params)
+
     def start_run(
         self,
         run_id: str = None,
@@ -70,12 +74,10 @@ class MlflowTracker:
         If the experiment name is not provided, the last experiment will be used.
         """
         if self.is_active:
-            if re.search(r"\d{4}-\d+-\d+\s\d+:\d+:\d+", experiment_name):
-                metadata_name = experiment_name[:-20]  # strip datetime
-            else:
-                metadata_name = experiment_name
+            datetime_pattern = "\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$"
+            name = re.sub(datetime_pattern, "", experiment_name)
             last_matching = mlflow.search_experiments(
-                filter_string=f"name LIKE '{metadata_name}%'"
+                filter_string=f"name LIKE '{name}%'"
             )[0]
             matching_name = last_matching.name
             mlflow.set_experiment(matching_name, experiment_id)

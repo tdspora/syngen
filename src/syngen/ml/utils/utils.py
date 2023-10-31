@@ -299,17 +299,18 @@ def set_mlflow_exp_name(table_name: str, metadata_path: str):
 
 def check_mlflow_server(server_url):
     if server_url is None:
+        logger.warning("MLFlow server URL not provided")
         return False
     try:
         response = requests.get(server_url)
         # If the response was successful, no Exception will be raised
         response.raise_for_status()
     except requests.exceptions.HTTPError as http_err:
-        logger.warning(f"HTTP error occurred: {http_err}")
+        logger.warning(f"An HTTP error occurred while connecting to the MLFlow server: {http_err}")
     except Exception as err:
-        logger.warning(f"Other error occurred: {err}")
+        logger.warning(f"An unexpected error occurred while connecting to the MLFlow server: {err}")
     else:
-        logger.info("MLFlow server is up and running.")
+        logger.info("MLFlow server is up and running")
         return True
 
 

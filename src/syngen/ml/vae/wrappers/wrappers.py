@@ -273,8 +273,6 @@ class VAEWrapper(BaseWrapper):
         es_min_delta = 0.005
         es_patience = 10
         pth = Path(self.paths["state_path"])
-        tracker = MlflowTracker()
-        tracker.set_tags({"table_name": self.table_name, "process": "train"})
 
         for epoch in range(epochs):
             num_batches = 0.0
@@ -293,8 +291,8 @@ class VAEWrapper(BaseWrapper):
                 self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 loss_grows_num_epochs = 0
 
-            logger.info(f"epoch: {epoch}, loss: {mean_loss}, time: {time.time()-t1}, sec")
-            tracker.log_metric("loss", mean_loss, step=epoch)
+            logger.info(f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec")
+            MlflowTracker().log_metric("loss", mean_loss, step=epoch)
 
             prev_total_loss = mean_loss
             if loss_grows_num_epochs == es_patience:
@@ -305,7 +303,7 @@ class VAEWrapper(BaseWrapper):
                 )
                 break
             epoch += 1
-        tracker.end_run()
+        MlflowTracker().end_run()
 
     # @staticmethod
     def _create_optimizer(self):

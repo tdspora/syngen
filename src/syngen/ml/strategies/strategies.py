@@ -136,8 +136,9 @@ class TrainStrategy(Strategy, ABC):
                 print_report=kwargs["print_report"],
                 batch_size=kwargs["batch_size"],
             )
-            tracker = MlflowTracker()
-            tracker.start_run(run_name=f"{kwargs['table_name']} | TRAIN")
+            MlflowTracker().log_params(self.config.to_dict())
+            MlflowTracker().start_run(run_name=f"{kwargs['table_name']} | TRAIN")
+            MlflowTracker().set_tags({"table_name": self.table_name, "process": "train"})
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()
             self.handler.handle()
