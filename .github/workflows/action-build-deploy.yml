@@ -6,17 +6,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python 3.8
+      - name: Set up Python 3.9
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.9
 
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
 
       - name: Install dependencies
         run: |
-          sudo apt install python3.8-venv -y
+          sudo apt install python3.9-venv -y
           python -m pip install --upgrade pip
           pip install flake8 pytest build
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
