@@ -74,7 +74,7 @@ class MlflowTracker:
         If the experiment name is not provided, the last experiment will be used.
         """
         if self.is_active:
-            datetime_pattern = "\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$"
+            datetime_pattern = r"\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$"
             name = re.sub(datetime_pattern, "", experiment_name)
             last_matching = mlflow.search_experiments(
                 filter_string=f"name LIKE '{name}%'"

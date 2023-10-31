@@ -167,5 +167,5 @@ class AccuracyTest(BaseTest):
         with open(f"{self.paths['draws_path']}/accuracy_report.html", "w", encoding="utf-8") as f:
             f.write(html)
         self.log_report_to_mlflow(f"{self.paths['draws_path']}/accuracy_report.html")
-        self.tracker.end_run()
+        MlflowTracker().end_run()
         self._remove_artifacts()

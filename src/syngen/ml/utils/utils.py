@@ -306,9 +306,13 @@ def check_mlflow_server(server_url):
         # If the response was successful, no Exception will be raised
         response.raise_for_status()
     except requests.exceptions.HTTPError as http_err:
-        logger.warning(f"An HTTP error occurred while connecting to the MLFlow server: {http_err}")
+        logger.warning(
+            f"An HTTP error occurred while connecting to the MLFlow server: {http_err}"
+        )
     except Exception as err:
-        logger.warning(f"An unexpected error occurred while connecting to the MLFlow server: {err}")
+        logger.warning(
+            f"An unexpected error occurred while connecting to the MLFlow server: {err}"
+        )
     else:
         logger.info("MLFlow server is up and running")
         return True
