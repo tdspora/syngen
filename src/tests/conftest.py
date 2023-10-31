@@ -9,6 +9,7 @@ from _pytest.logging import LogCaptureFixture
 
 import pandas as pd
 from reportportal_client import RPLogger
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 SUCCESSFUL_MESSAGE = "The test passed successfully"
@@ -171,3 +172,10 @@ def caplog(caplog: LogCaptureFixture):
     )
     yield caplog
     logger.remove(handler_id)
+
+
+@pytest.fixture
+def mlflow_tracker():
+    MlflowTracker(experiment_name="test_experiment", is_active=True)
+    yield MlflowTracker()
+    MlflowTracker()._instance = None

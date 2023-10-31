@@ -334,7 +334,10 @@ def set_mlflow(type_of_process: str):
         if type_of_process == "train":
             tracker.create_experiment(
                 exp_name,
-                artifact_location=os.environ.get("MLFLOW_ARTIFACTS_DESTINATION", "/mlflow_tracker"),
+                artifact_location=os.environ.get(
+                    "MLFLOW_ARTIFACTS_DESTINATION",
+                    "/mlflow_tracker"
+                ),
             )
         tracker.set_experiment(exp_name)
     except Exception as e:
