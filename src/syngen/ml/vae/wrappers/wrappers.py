@@ -16,7 +16,7 @@ from loguru import logger
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
-from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
+from syngen.ml.mlflow_tracker.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import (
     fetch_dataset,
     fetch_training_config,

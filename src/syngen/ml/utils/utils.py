@@ -16,7 +16,7 @@ from ulid import ULID
 import random
 from loguru import logger
 
-from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 def datetime_to_timestamp(dt):
@@ -334,7 +334,7 @@ def set_mlflow(type_of_process: str):
         if type_of_process == "train":
             tracker.create_experiment(
                 exp_name,
-                artifact_location=os.environ.get("MLFLOW_ARTIFACTS_DESTINATION", "/mlflow"),
+                artifact_location=os.environ.get("MLFLOW_ARTIFACTS_DESTINATION", "/mlflow_tracker"),
             )
         tracker.set_experiment(exp_name)
     except Exception as e:

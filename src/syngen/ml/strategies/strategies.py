@@ -11,7 +11,7 @@ from syngen.ml.config import TrainConfig, InferConfig
 from syngen.ml.handlers import LongTextsHandler, VaeTrainHandler, VaeInferHandler
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
-from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
+from syngen.ml.mlflow_tracker.mlflow_tracker import MlflowTracker
 
 
 class Strategy(ABC):
