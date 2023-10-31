@@ -18,7 +18,7 @@ from syngen.ml.metrics import (
 )
 from syngen.ml.metrics.utils import transform_to_base64
 from syngen.ml.utils import fetch_training_config
-from syngen.ml.mlflow_tracker.mlflow_tracker import MlflowTracker
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 class BaseTest(ABC):
