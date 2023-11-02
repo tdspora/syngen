@@ -174,8 +174,7 @@ def caplog(caplog: LogCaptureFixture):
     logger.remove(handler_id)
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def mlflow_tracker():
-    MlflowTracker(experiment_name="test_experiment", is_active=True)
-    yield MlflowTracker()
+    yield MlflowTracker(experiment_name="test_experiment", is_active=True)
     MlflowTracker()._instance = None

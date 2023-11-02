@@ -18,6 +18,10 @@ class MlflowTracker:
             cls._instance.is_active = is_active
         return cls._instance
 
+    @classmethod
+    def reset_status(cls, start: bool = True):
+        cls._instance.is_active = start
+
     def log_metric(self, key: str, value: float, step: Optional[int] = None):
         if self.is_active:
             mlflow.log_metric(key, value, step)
@@ -35,21 +39,16 @@ class MlflowTracker:
         run_id: str = None,
         experiment_id: Optional[str] = None,
         run_name: Optional[str] = None,
-        start: bool = True,
         nested: bool = False,
         tags: Optional[Dict[str, Any]] = None,
         description: Optional[str] = None,
     ):
-        if self.is_active and start:
+        if self.is_active:
             mlflow.start_run(run_id, experiment_id, run_name, nested, tags, description)
 
     def end_run(self):
         if self.is_active:
             mlflow.end_run()
-
-    def set_tags(self, tags: dict):
-        if self.is_active:
-            mlflow.set_tags(tags)
 
     def set_tracking_uri(self, uri: str):
         if self.is_active:

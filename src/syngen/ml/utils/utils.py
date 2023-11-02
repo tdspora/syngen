@@ -320,28 +320,26 @@ def check_mlflow_server(server_url):
 
 def set_mlflow(type_of_process: str):
     exp_name = os.environ["MLFLOW_EXPERIMENT_NAME"]
-    try:
-        response = check_mlflow_server(os.environ.get("MLFLOW_TRACKING_URI"))
-        if response:
-            tracker = MlflowTracker(exp_name, True)
-        else:
-            tracker = MlflowTracker(exp_name, False)
-            logger.warning(
-                "MLFlow server is either unreachable or not set up, "
-                "therefore the tracking will not be performed"
-            )
-        tracker.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
-        if type_of_process == "train":
-            tracker.create_experiment(
-                exp_name,
-                artifact_location=os.environ.get(
+    response = check_mlflow_server(os.environ.get("MLFLOW_TRACKING_URI"))
+    if response:
+        tracker = MlflowTracker(exp_name, True)
+    else:
+        tracker = MlflowTracker(exp_name, False)
+        logger.warning(
+            "MLFlow server is either unreachable or not set up, "
+            "therefore the tracking will not be performed"
+        )
+    tracker.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
+    if type_of_process == "train":
+        tracker.create_experiment(
+            exp_name,
+            artifact_location=os.environ.get(
                     "MLFLOW_ARTIFACTS_DESTINATION",
                     "/mlflow_tracker"
-                ),
-            )
+            ),
+        )
+    if type_of_process == "infer":
         tracker.set_experiment(exp_name)
-    except Exception as e:
-        logger.warning(f"MLFlow server is not reachable. {e}")
 
 
 def file_sink(record):
