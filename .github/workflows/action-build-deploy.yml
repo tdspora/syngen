@@ -13,6 +13,7 @@ jobs:
 
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
+
       # Compare requirement files
       - name: Compare requirement files
         run: |
@@ -24,10 +25,10 @@ jobs:
           if [ "$DIFF" != "" ]; then
               echo "Files are different:" 
               echo "$DIFF"
-              exit 1
           else
               echo "Requirements checks are OK"
           fi
+          if [ "$DIFF" != "" ]; then exit 1; fi
 
       - name: Install dependencies
         run: |
