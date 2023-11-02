@@ -19,16 +19,15 @@ jobs:
         run: |
           # Extract requirements from setup.cfg, remove leading spaces, and store in req_compare.txt
           sed -n '/install_requires/,/^\[/{//!p}' setup.cfg | awk '/^ *$/ { next; } { print; }' | sed 's/^    //' > req_compare.txt
-          # Compare req_compare.txt with requirements.txt
-          DIFF=$(diff req_compare.txt requirements.txt) 
+          # Compare req_compare.txt with requirements.txt 
           # If files are different, echo the differences and exit with error status
-          if [ "$DIFF" != "" ]; then
-              echo "Files are different:" 
-              echo "$DIFF"
+          if DIFF=$(diff req_compare.txt requirements.txt) ; then
+              echo "Files are the same"
           else
-              echo "Requirements checks are OK"
+              echo "Files are different:"
+              diff req_compare.txt requirements.txt
+              exit 1
           fi
-          if [ "$DIFF" != "" ]; then exit 1; fi
 
       - name: Install dependencies
         run: |
