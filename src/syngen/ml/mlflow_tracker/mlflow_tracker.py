@@ -16,12 +16,14 @@ class MlflowTracker:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.experiment_name = experiment_name
+            cls._instance.connect_to_server = is_active
             cls._instance.is_active = is_active
         return cls._instance
 
     @classmethod
     def reset_status(cls, active_status: bool = True):
-        cls._instance.is_active = active_status
+        if cls._instance.connect_to_server:
+            cls._instance.is_active = active_status
 
     def log_metric(self, key: str, value: float, step: Optional[int] = None):
         if self.is_active:
