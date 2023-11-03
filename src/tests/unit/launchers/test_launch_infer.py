@@ -84,7 +84,9 @@ def test_infer_table_without_parameters(mock_set_mlflow, rp_logger):
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.infer.set_mlflow")
-def test_infer_table_with_valid_size(mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger):
+def test_infer_table_with_valid_size(
+        mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger
+):
     rp_logger.info(
         "Launch infer process through CLI with valid 'size' parameter equals 10"
     )

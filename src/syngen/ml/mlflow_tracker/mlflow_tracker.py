@@ -1,6 +1,7 @@
 import mlflow
 import re
 from typing import Optional, Dict, Any
+from loguru import logger
 
 
 class MlflowTracker:
@@ -19,8 +20,8 @@ class MlflowTracker:
         return cls._instance
 
     @classmethod
-    def reset_status(cls, start: bool = True):
-        cls._instance.is_active = start
+    def reset_status(cls, active_status: bool = True):
+        cls._instance.is_active = active_status
 
     def log_metric(self, key: str, value: float, step: Optional[int] = None):
         if self.is_active:
@@ -75,10 +76,16 @@ class MlflowTracker:
         if self.is_active:
             datetime_pattern = r"\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$"
             name = re.sub(datetime_pattern, "", experiment_name)
-            last_matching = mlflow.search_experiments(
+            experiments = mlflow.search_experiments(
                 filter_string=f"name LIKE '{name}%'"
-            )[0]
-            matching_name = last_matching.name
+            )
+            last_matching = experiments[0] if experiments else None
+            if not last_matching:
+                logger.warning(
+                    f"It seems that no experiment with a name starting with - '{name}' was found. "
+                    f"A new experiment with the name  - '{experiment_name}' will be created"
+                )
+            matching_name = last_matching.name if last_matching else experiment_name
             mlflow.set_experiment(matching_name, experiment_id)
 
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):

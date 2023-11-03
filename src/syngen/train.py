@@ -148,7 +148,7 @@ def launch_train(
         "row_limit": row_limit,
         "batch_size": batch_size,
         "print_report": print_report,
-    },
+    }
     set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
     set_mlflow("train")
     worker = Worker(

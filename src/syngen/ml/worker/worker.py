@@ -66,6 +66,7 @@ class Worker:
         """
         Update the table settings with the provided settings that are not already defined
         """
+        print
         for setting, value in settings_to_update.items():
             if setting not in table_settings:
                 table_settings[setting] = value
