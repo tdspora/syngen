@@ -227,10 +227,10 @@ def test_set_experiment_with_valid_name_and_active_mlflow_(
         mock_search_experiment.assert_called_once_with(
             filter_string="name LIKE 'test_experiment-%'"
         )
-        assert (f"It seems that no experiment with a name starting "
-                f"with - 'test_experiment-' was found. A new experiment "
-                f"with the name  - 'test_experiment-2000-00-00 00:00:00' "
-                f"will be created") in caplog.text
+        assert ("It seems that no experiment with a name starting "
+                "with - 'test_experiment-' was found. A new experiment "
+                "with the name  - 'test_experiment-2000-00-00 00:00:00' "
+                "will be created") in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
