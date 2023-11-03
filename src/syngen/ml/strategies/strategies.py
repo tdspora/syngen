@@ -3,16 +3,15 @@ import os
 import traceback
 from loguru import logger
 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
 from syngen.ml.handlers import RootHandler
 from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
 from syngen.ml.config import TrainConfig, InferConfig
 from syngen.ml.handlers import LongTextsHandler, VaeTrainHandler, VaeInferHandler
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
-from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
-
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+from syngen.ml.mlflow_tracker.mlflow_tracker import MlflowTracker
 
 
 class Strategy(ABC):
@@ -137,8 +136,11 @@ class TrainStrategy(Strategy, ABC):
                 print_report=kwargs["print_report"],
                 batch_size=kwargs["batch_size"],
             )
-            tracker = MlflowTracker()
-            tracker.start_run(run_name=f"{kwargs['table_name']} | TRAIN")
+            MlflowTracker().start_run(
+                run_name=f"{kwargs['table_name']} | TRAIN",
+                tags={"table_name": kwargs["table_name"], "process": "train"}
+            )
+            MlflowTracker().log_params(self.config.to_dict())
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()
             self.handler.handle()

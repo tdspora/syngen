@@ -1,6 +1,7 @@
 import mlflow
 import re
 from typing import Optional, Dict, Any
+from loguru import logger
 
 
 class MlflowTracker:
@@ -15,8 +16,14 @@ class MlflowTracker:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.experiment_name = experiment_name
+            cls._instance.connect_to_server = is_active
             cls._instance.is_active = is_active
         return cls._instance
+
+    @classmethod
+    def reset_status(cls, active_status: bool = True):
+        if cls._instance.connect_to_server:
+            cls._instance.is_active = active_status
 
     def log_metric(self, key: str, value: float, step: Optional[int] = None):
         if self.is_active:
@@ -25,6 +32,10 @@ class MlflowTracker:
     def log_artifact(self, local_path: str, artifact_path: Optional[str] = None):
         if self.is_active:
             mlflow.log_artifact(local_path, artifact_path)
+
+    def log_params(self, params: Dict[str, Any]):
+        if self.is_active:
+            mlflow.log_params(params)
 
     def start_run(
         self,
@@ -42,12 +53,7 @@ class MlflowTracker:
         if self.is_active:
             mlflow.end_run()
 
-    def set_tags(self, tags: dict):
-        if self.is_active:
-            mlflow.set_tags(tags)
-
     def set_tracking_uri(self, uri: str):
-        print(uri, self.is_active)
         if self.is_active:
             mlflow.set_tracking_uri(uri)
 
@@ -70,14 +76,18 @@ class MlflowTracker:
         If the experiment name is not provided, the last experiment will be used.
         """
         if self.is_active:
-            if re.search(r"\d{4}-\d+-\d+\s\d+:\d+:\d+", experiment_name):
-                metadata_name = experiment_name[:-20]  # strip datetime
-            else:
-                metadata_name = experiment_name
-            last_matching = mlflow.search_experiments(
-                filter_string=f"name LIKE '{metadata_name}%'"
-            )[0]
-            matching_name = last_matching.name
+            datetime_pattern = r"\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$"
+            name = re.sub(datetime_pattern, "", experiment_name)
+            experiments = mlflow.search_experiments(
+                filter_string=f"name LIKE '{name}%'"
+            )
+            last_matching = experiments[0] if experiments else None
+            if not last_matching:
+                logger.warning(
+                    f"It seems that no experiment with a name starting with - '{name}' was found. "
+                    f"A new experiment with the name  - '{experiment_name}' will be created"
+                )
+            matching_name = last_matching.name if last_matching else experiment_name
             mlflow.set_experiment(matching_name, experiment_id)
 
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):

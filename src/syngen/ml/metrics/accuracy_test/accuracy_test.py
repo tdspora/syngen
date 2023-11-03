@@ -6,6 +6,7 @@ import os
 
 import jinja2
 import pandas as pd
+from loguru import logger
 
 from syngen.ml.metrics import (
     UnivariateMetric,
@@ -17,7 +18,7 @@ from syngen.ml.metrics import (
 )
 from syngen.ml.metrics.utils import transform_to_base64
 from syngen.ml.utils import fetch_training_config
-from syngen.ml.mlflow.mlflow_tracker import MlflowTracker
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 class BaseTest(ABC):
@@ -85,19 +86,24 @@ class AccuracyTest(BaseTest):
         acc = JensenShannonDistance(self.original, self.synthetic, True, self.draws_path)
         return univariate, bivariate, correlations, clustering, utility, acc
 
-    def log_report_to_mlflow(self, path):
+    @staticmethod
+    def log_report_to_mlflow(path):
         try:
-            self.tracker.log_artifact(path)
-        except PermissionError:
+            MlflowTracker().log_artifact(path)
+        except PermissionError as error:
+            logger.warning(
+                f"Logging the report to mlflow has failed due to a permission error. "
+                f"File path: '{path}', Error details: {error}"
+            )
             pass
 
     def track_metrics(self, utility_result, clustering_result, acc_median, corr_result):
-        self.tracker = MlflowTracker()
-        self.tracker.start_run(
+        MlflowTracker().start_run(
             run_name=f"{self.table_name} | INFER",
             tags={"process": "infer", "table_name": self.table_name},
         )
-        self.tracker.log_metrics(
+        MlflowTracker().log_params(self.config)
+        MlflowTracker().log_metrics(
             {
                 "Utility_avg": utility_result["Synth to orig ratio"].mean(),
                 "Clustering": float(clustering_result),
@@ -161,5 +167,5 @@ class AccuracyTest(BaseTest):
         with open(f"{self.paths['draws_path']}/accuracy_report.html", "w", encoding="utf-8") as f:
             f.write(html)
         self.log_report_to_mlflow(f"{self.paths['draws_path']}/accuracy_report.html")
-        self.tracker.end_run()
+        MlflowTracker().end_run()
         self._remove_artifacts()

@@ -88,8 +88,6 @@ def launch_infer(
     """
     os.environ["LOGURU_LEVEL"] = log_level
     create_log_file(type_of_process="infer", table_name=table_name, metadata_path=metadata_path)
-    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
-    set_mlflow("infer")
     setup_logger()
     if not metadata_path and not table_name:
         raise AttributeError(
@@ -116,6 +114,8 @@ def launch_infer(
         "print_report": print_report,
         "random_seed": random_seed,
     }
+    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
+    set_mlflow("infer")
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,

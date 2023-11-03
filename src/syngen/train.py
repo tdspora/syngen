@@ -3,6 +3,7 @@ import os
 
 import click
 from loguru import logger
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
@@ -11,9 +12,6 @@ from syngen.ml.utils import (
     set_mlflow,
     set_mlflow_exp_name,
 )
-
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 
 @click.command()
@@ -101,8 +99,6 @@ def launch_train(
     """
     os.environ["LOGURU_LEVEL"] = log_level
     create_log_file(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
-    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
-    set_mlflow("train")
     setup_logger()
     if not metadata_path and not source and not table_name:
         raise AttributeError(
@@ -153,6 +149,8 @@ def launch_train(
         "batch_size": batch_size,
         "print_report": print_report,
     }
+    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
+    set_mlflow("train")
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
