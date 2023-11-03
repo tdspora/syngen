@@ -99,8 +99,6 @@ def launch_train(
     """
     os.environ["LOGURU_LEVEL"] = log_level
     create_log_file(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
-    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
-    set_mlflow("train")
     setup_logger()
     if not metadata_path and not source and not table_name:
         raise AttributeError(
@@ -150,7 +148,9 @@ def launch_train(
         "row_limit": row_limit,
         "batch_size": batch_size,
         "print_report": print_report,
-    }
+    },
+    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
+    set_mlflow("train")
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,

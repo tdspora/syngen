@@ -12,7 +12,7 @@ PATH_TO_METADATA = "./tests/unit/launchers/fixtures/metadata.yaml"
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
+@patch("syngen.infer.set_mlflow")
 def test_infer_table_with_table_name(
         mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger
 ):
@@ -27,7 +27,7 @@ def test_infer_table_with_table_name(
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
+@patch("syngen.infer.set_mlflow")
 def test_infer_table_with_metadata_path(
         mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger
 ):
@@ -42,7 +42,7 @@ def test_infer_table_with_metadata_path(
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
+@patch("syngen.infer.set_mlflow")
 @patch("syngen.infer.setup_logger")
 def test_infer_table_with_metadata_path_and_table_name(
     mock_logger, mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger, caplog
@@ -66,7 +66,7 @@ def test_infer_table_with_metadata_path_and_table_name(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch("syngen.train.set_mlflow")
+@patch("syngen.infer.set_mlflow")
 def test_infer_table_without_parameters(mock_set_mlflow, rp_logger):
     rp_logger.info("Launch infer process through CLI without parameters")
     runner = CliRunner()
@@ -83,7 +83,7 @@ def test_infer_table_without_parameters(mock_set_mlflow, rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
+@patch("syngen.infer.set_mlflow")
 def test_infer_table_with_valid_size(mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info(
         "Launch infer process through CLI with valid 'size' parameter equals 10"
@@ -108,7 +108,7 @@ def test_infer_table_with_invalid_size(rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
+@patch("syngen.infer.set_mlflow")
 def test_infer_table_with_valid_run_parallel(
     mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger
 ):
@@ -135,7 +135,7 @@ def test_infer_table_with_invalid_run_parallel(rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
+@patch("syngen.infer.set_mlflow")
 def test_infer_table_with_valid_batch_size(
         mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger
 ):
@@ -162,7 +162,7 @@ def test_infer_table_with_invalid_batch_size(rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
+@patch("syngen.infer.set_mlflow")
 def test_infer_table_with_valid_random_seed(
         mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger
 ):
@@ -189,7 +189,7 @@ def test_infer_table_with_invalid_random_seed(rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
+@patch("syngen.infer.set_mlflow")
 def test_infer_table_with_valid_print_report(
         mock_set_mlflow, mock_post_init, mock_launch_infer, rp_logger
 ):
