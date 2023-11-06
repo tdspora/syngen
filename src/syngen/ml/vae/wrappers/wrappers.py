@@ -270,7 +270,7 @@ class VAEWrapper(BaseWrapper):
         self.feature_losses = defaultdict(list)
         loss_grows_num_epochs = 0
         prev_total_loss = float("inf")
-        es_min_delta = 0.005
+        rel_delta_loss_limit = 0.001
         es_patience = 10
         pth = Path(self.paths["state_path"])
 
@@ -285,7 +285,9 @@ class VAEWrapper(BaseWrapper):
                 num_batches += 1
 
             mean_loss = np.mean(total_loss / num_batches)
-            if mean_loss >= prev_total_loss - es_min_delta:
+            rel_delta_loss = (mean_loss - prev_total_loss)/prev_total_loss
+
+            if rel_delta_loss >= -rel_delta_loss_limit:
                 loss_grows_num_epochs += 1
             else:
                 self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
