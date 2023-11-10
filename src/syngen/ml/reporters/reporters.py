@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import Dict
 import itertools
+from collections import defaultdict
 
 import numpy as np
 from loguru import logger
@@ -14,6 +15,7 @@ from syngen.ml.utils import (
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.metrics.utils import text_to_continuous
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 class Reporter:
@@ -137,17 +139,38 @@ class Report:
         cls._reporters.clear()
 
     @classmethod
+    def _group_reporters(cls):
+        """
+        Group reporters by table name
+        """
+        list_of_reporters = itertools.chain.from_iterable(cls._reporters.values())
+        sorted_reporters = sorted(list_of_reporters, key=lambda r: r.table_name)
+        grouped_reporters = defaultdict(list)
+
+        for reporter in sorted_reporters:
+            grouped_reporters[reporter.table_name].append(reporter)
+
+        return grouped_reporters
+
+    @classmethod
     def generate_report(cls):
         """
         Generate all needed reports
         """
-        list_of_reporters = itertools.chain.from_iterable(cls._reporters.values())
-        for reporter in list_of_reporters:
-            reporter.report()
-            logger.info(
-                f"The {reporter.__class__.report_type} report "
-                f"of the table - '{reporter.table_name}' has been generated"
+        grouped_reporters = cls._group_reporters()
+
+        for table_name, reporters in grouped_reporters.items():
+            MlflowTracker().start_run(
+                run_name=f"{table_name} | INFER",
+                tags={"process": "infer", "table_name": table_name}
             )
+            for reporter in reporters:
+                reporter.report()
+                logger.info(
+                    f"The {reporter.__class__.report_type} report "
+                    f"of the table - '{reporter.table_name}' has been generated"
+                )
+            MlflowTracker().end_run()
 
     @property
     def reporters(self) -> Dict[str, Reporter]:
