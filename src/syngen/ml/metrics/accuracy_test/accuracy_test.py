@@ -64,10 +64,6 @@ class BaseTest(ABC):
         """
         Track metrics to mlflow
         """
-        MlflowTracker().start_run(
-            run_name=f"{self.table_name} | INFER",
-            tags={"process": "infer", "table_name": self.table_name},
-        )
         MlflowTracker().log_params(self.config)
         MlflowTracker().log_metrics(metrics)
 
@@ -173,5 +169,4 @@ class AccuracyTest(BaseTest):
         with open(f"{self.paths['draws_path']}/accuracy_report.html", "w", encoding="utf-8") as f:
             f.write(html)
         self._log_report_to_mlflow(f"{self.paths['draws_path']}/accuracy_report.html")
-        MlflowTracker().end_run()
         self._remove_artifacts()
