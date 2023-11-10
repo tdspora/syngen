@@ -60,6 +60,31 @@ class BaseTest(ABC):
         """
         shutil.rmtree(self.draws_path)
 
+    def _track_metrics(self, metrics: Dict):
+        """
+        Track metrics to mlflow
+        """
+        MlflowTracker().start_run(
+            run_name=f"{self.table_name} | INFER",
+            tags={"process": "infer", "table_name": self.table_name},
+        )
+        MlflowTracker().log_params(self.config)
+        MlflowTracker().log_metrics(metrics)
+
+    def _log_report_to_mlflow(self, path):
+        """
+        Log report to mlflow
+        """
+        try:
+            MlflowTracker().log_artifact(path)
+        except Exception as error:
+            logger.warning(
+                f"Logging the report to mlflow has failed due to a permission error. "
+                f"File path: '{path}', Error details: {error}.\n"
+                f"The report will be saved locally in '{self.draws_path}'"
+            )
+            pass
+
 
 class AccuracyTest(BaseTest):
     def __init__(
@@ -86,32 +111,6 @@ class AccuracyTest(BaseTest):
         acc = JensenShannonDistance(self.original, self.synthetic, True, self.draws_path)
         return univariate, bivariate, correlations, clustering, utility, acc
 
-    @staticmethod
-    def log_report_to_mlflow(path):
-        try:
-            MlflowTracker().log_artifact(path)
-        except PermissionError as error:
-            logger.warning(
-                f"Logging the report to mlflow has failed due to a permission error. "
-                f"File path: '{path}', Error details: {error}"
-            )
-            pass
-
-    def track_metrics(self, utility_result, clustering_result, acc_median, corr_result):
-        MlflowTracker().start_run(
-            run_name=f"{self.table_name} | INFER",
-            tags={"process": "infer", "table_name": self.table_name},
-        )
-        MlflowTracker().log_params(self.config)
-        MlflowTracker().log_metrics(
-            {
-                "Utility_avg": utility_result["Synth to orig ratio"].mean(),
-                "Clustering": float(clustering_result),
-                "Accuracy": float(acc_median),
-                "Correlation": corr_result,
-            }
-        )
-
     def report(self, **kwargs):
         (
             univariate,
@@ -136,7 +135,14 @@ class AccuracyTest(BaseTest):
         )
         utility_result = utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
 
-        self.track_metrics(utility_result, clustering_result, acc_median, corr_result)
+        metrics = {
+            "Utility_avg": utility_result["Synth to orig ratio"].mean(),
+            "Clustering": float(clustering_result),
+            "Accuracy": float(acc_median),
+            "Correlation": corr_result,
+        }
+
+        self._track_metrics(metrics)
 
         # Generate html report
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
@@ -166,6 +172,6 @@ class AccuracyTest(BaseTest):
 
         with open(f"{self.paths['draws_path']}/accuracy_report.html", "w", encoding="utf-8") as f:
             f.write(html)
-        self.log_report_to_mlflow(f"{self.paths['draws_path']}/accuracy_report.html")
+        self._log_report_to_mlflow(f"{self.paths['draws_path']}/accuracy_report.html")
         MlflowTracker().end_run()
         self._remove_artifacts()
