@@ -77,7 +77,7 @@ class BaseTest(ABC):
             logger.warning(
                 f"Logging the report to mlflow has failed due to a permission error. "
                 f"File path: '{path}', Error details: {error}.\n"
-                f"The report will be saved locally in '{self.draws_path}'"
+                f"The report will be saved locally in '{self.paths['draws_path']}'"
             )
             pass
 
