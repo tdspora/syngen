@@ -56,8 +56,10 @@ class MlflowTrackerFactory:
 
         if response:
             tracker.is_active = True
+            tracker.connect_to_server = True
         else:
             tracker.is_active = False
+            tracker.connect_to_server = False
             logger.warning(
                 "MLFlow server is either unreachable or not set up, "
                 "therefore the tracking will not be performed"
