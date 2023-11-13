@@ -5,7 +5,6 @@ from typing import List, Dict
 from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
-import requests
 
 import pandas as pd
 import numpy as np
@@ -15,8 +14,6 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
-
-from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 def datetime_to_timestamp(dt):
@@ -290,56 +287,6 @@ def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
         "model_artifacts/tmp_store", f"{slugify(file_name_without_extension)}.log"
     )
     os.environ["SUCCESS_LOG_FILE"] = file_path
-
-
-def set_mlflow_exp_name(table_name: str, metadata_path: str):
-    name = fetch_unique_root(table_name, metadata_path)
-    os.environ["MLFLOW_EXPERIMENT_NAME"] = name
-
-
-def check_mlflow_server(server_url):
-    if server_url is None:
-        logger.warning("MLFlow server URL not provided")
-        return False
-    try:
-        response = requests.get(server_url)
-        # If the response was successful, no Exception will be raised
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as http_err:
-        logger.warning(
-            f"An HTTP error occurred while connecting to the MLFlow server: {http_err}"
-        )
-    except Exception as err:
-        logger.warning(
-            f"An unexpected error occurred while connecting to the MLFlow server: {err}"
-        )
-    else:
-        logger.info("MLFlow server is up and running")
-        return True
-
-
-def set_mlflow(type_of_process: str):
-    exp_name = os.environ["MLFLOW_EXPERIMENT_NAME"]
-    response = check_mlflow_server(os.environ.get("MLFLOW_TRACKING_URI"))
-    if response:
-        tracker = MlflowTracker(exp_name, True)
-    else:
-        tracker = MlflowTracker(exp_name, False)
-        logger.warning(
-            "MLFlow server is either unreachable or not set up, "
-            "therefore the tracking will not be performed"
-        )
-    tracker.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
-    if type_of_process == "train":
-        tracker.create_experiment(
-            exp_name,
-            artifact_location=os.environ.get(
-                    "MLFLOW_ARTIFACTS_DESTINATION",
-                    "/mlflow_tracker"
-            ),
-        )
-    if type_of_process == "infer":
-        tracker.set_experiment(exp_name)
 
 
 def file_sink(record):

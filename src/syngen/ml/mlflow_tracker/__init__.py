@@ -1,1 +1,4 @@
-from syngen.ml.mlflow_tracker.mlflow_tracker import MlflowTracker  # noqa: F401
+from syngen.ml.mlflow_tracker.mlflow_tracker import (
+    MlflowTracker,
+    MlflowTrackerFactory
+)  # noqa: F401;

@@ -9,7 +9,7 @@ from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
-
+from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
 
 
@@ -35,6 +35,7 @@ class Worker:
         self.metadata = self.__fetch_metadata()
         self._update_metadata()
         self.__validate_metadata()
+        self._set_mlflow()
 
     def __validate_metadata(self):
         """
@@ -47,6 +48,16 @@ class Worker:
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
+
+    def _set_mlflow(self):
+        """
+        Set the mlflow experiment name and the mlflow run
+        """
+        MlflowTrackerFactory.create_tracker(
+            table_name=self.table_name,
+            metadata_path=self.metadata_path,
+            type_of_process=self.type_of_process
+        )
 
     def _update_metadata_for_table(self):
         """

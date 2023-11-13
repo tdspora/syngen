@@ -11,13 +11,12 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     trim_string,
     check_if_features_assigned,
     fetch_training_config,
+    fetch_unique_root,
     generate_uuid,
     generate_uuids,
     setup_logger,
     datetime_to_timestamp,
     timestamp_to_datetime,
     define_existent_columns,
-    create_log_file,
-    set_mlflow,
-    set_mlflow_exp_name,
+    create_log_file
 )

@@ -7,9 +7,7 @@ from loguru import logger
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_logger,
-    create_log_file,
-    set_mlflow,
-    set_mlflow_exp_name,
+    create_log_file
 )
 
 
@@ -114,8 +112,6 @@ def launch_infer(
         "print_report": print_report,
         "random_seed": random_seed,
     }
-    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
-    set_mlflow("infer")
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,

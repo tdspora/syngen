@@ -1,13 +1,97 @@
-import mlflow
 import re
 from typing import Optional, Dict, Any
+import os
+import requests
+
+import mlflow
 from loguru import logger
+from syngen.ml.utils import fetch_unique_root
+
+
+class MlflowTrackerFactory:
+    """
+    A factory class for creating the Mlflow tracker
+    """
+
+    @staticmethod
+    def check_mlflow_server(server_url):
+        """
+        Check if the MlFlow server is up and running
+        """
+        if server_url is None:
+            logger.warning("MLFlow server URL not provided")
+            return False
+        try:
+            response = requests.get(server_url)
+            # If the response was successful, no Exception will be raised
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as http_err:
+            logger.warning(
+                f"An HTTP error occurred while connecting to the MLFlow server: {http_err}"
+            )
+        except Exception as err:
+            logger.warning(
+                f"An unexpected error occurred while connecting to the MLFlow server: {err}"
+            )
+        else:
+            logger.info("MLFlow server is up and running")
+            return True
+
+    @classmethod
+    def create_tracker(
+            cls,
+            table_name: Optional[str],
+            metadata_path: Optional[str],
+            type_of_process: str,
+            experiment_name=None,
+            is_active=False
+    ):
+        """
+        Create the Mlflow tracker, and create or set the experiment
+        """
+        cls.set_mlflow_exp_name(table_name, metadata_path)
+        tracker = MlflowTracker(experiment_name, is_active)
+
+        response = cls.check_mlflow_server(os.environ.get("MLFLOW_TRACKING_URI"))
+
+        if response:
+            tracker.is_active = True
+        else:
+            tracker.is_active = False
+            logger.warning(
+                "MLFlow server is either unreachable or not set up, "
+                "therefore the tracking will not be performed"
+            )
+
+        tracker.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
+
+        exp_name = os.environ["MLFLOW_EXPERIMENT_NAME"]
+
+        if type_of_process == "train":
+            tracker.create_experiment(
+                exp_name,
+                artifact_location=os.environ.get(
+                    "MLFLOW_ARTIFACTS_DESTINATION",
+                    "/mlflow_tracker"
+                ),
+            )
+        if type_of_process == "infer":
+            tracker.set_experiment(exp_name)
+
+    @classmethod
+    def set_mlflow_exp_name(cls, table_name: str, metadata_path: str):
+        """
+        Set the name of the Mlflow experiment
+        """
+        name = fetch_unique_root(table_name, metadata_path)
+        os.environ["MLFLOW_EXPERIMENT_NAME"] = name
 
 
 class MlflowTracker:
     """
-    A singleton class for tracking the MLflow experiments.
-    All methods are derived from the MLflow API, however a check for the active state is added.
+    A singleton class for tracking the Mlflow experiments.
+    All methods are derived from the Mlflow API,
+    however a check for the active state is added.
     """
 
     _instance = None
