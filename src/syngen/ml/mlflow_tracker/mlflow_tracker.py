@@ -49,7 +49,8 @@ class MlflowTrackerFactory:
         """
         Create the Mlflow tracker, and create or set the experiment
         """
-        cls.set_mlflow_exp_name(table_name, metadata_path)
+        experiment_name = cls.get_mlflow_exp_name(table_name, metadata_path)
+
         tracker = MlflowTracker(experiment_name, is_active)
 
         response = cls.check_mlflow_server(os.environ.get("MLFLOW_TRACKING_URI"))
@@ -67,26 +68,23 @@ class MlflowTrackerFactory:
 
         tracker.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
 
-        exp_name = os.environ["MLFLOW_EXPERIMENT_NAME"]
-
         if type_of_process == "train":
             tracker.create_experiment(
-                exp_name,
+                experiment_name,
                 artifact_location=os.environ.get(
                     "MLFLOW_ARTIFACTS_DESTINATION",
                     "/mlflow_tracker"
                 ),
             )
         if type_of_process == "infer":
-            tracker.set_experiment(exp_name)
+            tracker.set_experiment(experiment_name)
 
     @classmethod
-    def set_mlflow_exp_name(cls, table_name: str, metadata_path: str):
+    def get_mlflow_exp_name(cls, table_name: str, metadata_path: str) -> str:
         """
-        Set the name of the Mlflow experiment
+        Get the name of the Mlflow experiment
         """
-        name = fetch_unique_root(table_name, metadata_path)
-        os.environ["MLFLOW_EXPERIMENT_NAME"] = name
+        return fetch_unique_root(table_name, metadata_path)
 
 
 class MlflowTracker:
