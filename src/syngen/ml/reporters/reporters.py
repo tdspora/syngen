@@ -160,6 +160,7 @@ class Report:
         grouped_reporters = cls._group_reporters()
 
         for table_name, reporters in grouped_reporters.items():
+            MlflowTracker.reset_status(active_status=True)
             MlflowTracker().start_run(
                 run_name=f"{table_name} | INFER",
                 tags={"process": "infer", "table_name": table_name}
