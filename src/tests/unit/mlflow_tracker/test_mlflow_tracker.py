@@ -1,4 +1,6 @@
 from unittest.mock import patch
+import requests
+
 from tests.conftest import SUCCESSFUL_MESSAGE
 from syngen.ml.mlflow_tracker import MlflowTracker, MlflowTrackerFactory
 
@@ -388,10 +390,10 @@ def test_create_mlflow_tracker_for_metadata_path_in_inference_process(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(MlflowTracker, "set_experiment")
+@patch.object(MlflowTracker, "create_experiment")
 @patch.object(MlflowTracker, "set_tracking_uri")
 @patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=False)
-def test_create_mlflow_tracker_in_train_process_with_inactive_server(
+def test_create_mlflow_tracker_with_inactive_server(
         mock_check_mlflow_server,
         mock_set_tracking_uri,
         mock_set_experiment,
@@ -406,7 +408,7 @@ def test_create_mlflow_tracker_in_train_process_with_inactive_server(
     MlflowTrackerFactory.create_tracker(
         table_name="test_table",
         metadata_path=None,
-        type_of_process="infer"
+        type_of_process="train"
     )
 
     assert MlflowTracker().experiment_name.startswith("test_table")
@@ -415,4 +417,62 @@ def test_create_mlflow_tracker_in_train_process_with_inactive_server(
     mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
     mock_set_tracking_uri.assert_called_once()
     mock_set_experiment.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.requests.get")
+def test_check_mlflow_server_positive(mock_get, rp_logger, caplog):
+    rp_logger.info(
+        "Test the method 'check_mlflow_server' of the class 'MlflowTrackerFactory' "
+        "if 'server_uri' is valid"
+    )
+    mock_get.return_value.raise_for_status.return_value = None
+    server_url = "http://mock_server:5000"
+    with caplog.at_level(level="INFO"):
+        result = MlflowTrackerFactory.check_mlflow_server(server_url)
+        assert result is True
+        mock_get.assert_called_once_with(server_url)
+        assert "MLFlow server is up and running" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.requests.get")
+def test_check_mlflow_server_negative_http_error(mock_get, rp_logger, caplog):
+    rp_logger.info(
+        "Test the method 'check_mlflow_server' of the class 'MlflowTrackerFactory' "
+        "if 'server_uri' is invalid and raises HTTPError"
+    )
+    mock_get.side_effect = requests.exceptions.HTTPError("An HTTP error occurred")
+    server_url = "http://mock_failed_server:5000"
+    with caplog.at_level(level="WARNING"):
+        MlflowTrackerFactory.check_mlflow_server(server_url)
+        mock_get.assert_called_once_with(server_url)
+        assert "An HTTP error occurred while connecting to the MLFlow server" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.requests.get")
+def test_check_mlflow_server_negative_general_error(mock_get, rp_logger, caplog):
+    rp_logger.info(
+        "Test the method 'check_mlflow_server' of the class 'MlflowTrackerFactory' "
+        "if 'server_uri' is invalid and raises unexpected error"
+    )
+    mock_get.side_effect = Exception("An unexpected error occurred")
+    server_url = "http://mock_failed_server:5000"
+    with caplog.at_level(level="WARNING"):
+        MlflowTrackerFactory.check_mlflow_server(server_url)
+        mock_get.assert_called_once_with(server_url)
+        assert "An unexpected error occurred while connecting to the MLFlow server" in caplog.text
+    mock_get.assert_called_once_with(server_url)
+
+
+def test_check_mlflow_server_if_server_uri_not_provided(caplog, rp_logger):
+    rp_logger.info(
+        "Test the method 'check_mlflow_server' of the class 'MlflowTrackerFactory' "
+        "if 'server_uri' hasn't been provided"
+    )
+    MlflowTracker._instance = None
+    with caplog.at_level(level="WARNING"):
+        assert MlflowTrackerFactory.check_mlflow_server(server_url=None) is False
+        assert "MLFlow server URL not provided" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
