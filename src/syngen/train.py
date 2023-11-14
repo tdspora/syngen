@@ -8,9 +8,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_logger,
-    create_log_file,
-    set_mlflow,
-    set_mlflow_exp_name,
+    create_log_file
 )
 
 
@@ -149,8 +147,6 @@ def launch_train(
         "batch_size": batch_size,
         "print_report": print_report,
     }
-    set_mlflow_exp_name(table_name=table_name, metadata_path=metadata_path)
-    set_mlflow("train")
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,

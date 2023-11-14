@@ -1,6 +1,8 @@
 from unittest.mock import patch
+import requests
+
 from tests.conftest import SUCCESSFUL_MESSAGE
-from syngen.ml.mlflow_tracker import MlflowTracker
+from syngen.ml.mlflow_tracker import MlflowTracker, MlflowTrackerFactory
 
 
 def test_log_metric_with_active_mlflow(mlflow_tracker, rp_logger):
@@ -262,4 +264,224 @@ def test_set_experiment_with_inactive_mlflow(
     test_experiment_name = "test_experiment-2000-00-00 00:00:00"
     mlflow_tracker.set_experiment(test_experiment_name)
     mock_search_experiment.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(MlflowTracker, "set_experiment")
+@patch.object(MlflowTracker, "create_experiment")
+@patch.object(MlflowTracker, "set_tracking_uri")
+@patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
+def test_create_mlflow_tracker_for_single_table_in_train_process(
+        mock_check_mlflow_server,
+        mock_set_tracking_uri,
+        mock_create_experiment,
+        mock_set_experiment,
+        monkeypatch,
+        rp_logger
+):
+    rp_logger.info(
+        "Create the instance of the class MlflowTracker in the training process "
+        "by providing 'table_name'"
+    )
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mock_server:5000")
+    MlflowTracker._instance = None
+    MlflowTrackerFactory.create_tracker(
+        table_name="test_table",
+        metadata_path=None,
+        type_of_process="train"
+    )
+
+    assert MlflowTracker().experiment_name.startswith("test_table")
+    assert MlflowTracker().is_active is True
+    assert MlflowTracker().connect_to_server is True
+    mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
+    mock_set_tracking_uri.assert_called_once()
+    mock_create_experiment.assert_called_once()
+    mock_set_experiment.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(MlflowTracker, "set_experiment")
+@patch.object(MlflowTracker, "set_tracking_uri")
+@patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
+def test_create_mlflow_tracker_for_single_table_in_inference_process(
+        mock_check_mlflow_server,
+        mock_set_tracking_uri,
+        mock_set_experiment,
+        monkeypatch,
+        rp_logger
+):
+    rp_logger.info(
+        "Create the instance of the class MlflowTracker in the inference process "
+        "by providing 'table_name'"
+    )
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mock_server:5000")
+    MlflowTracker._instance = None
+    MlflowTrackerFactory.create_tracker(
+        table_name="test_table",
+        metadata_path=None,
+        type_of_process="infer"
+    )
+
+    assert MlflowTracker().experiment_name.startswith("test_table")
+    assert MlflowTracker().is_active is True
+    assert MlflowTracker().connect_to_server is True
+    mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
+    mock_set_tracking_uri.assert_called_once()
+    mock_set_experiment.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(MlflowTracker, "set_experiment")
+@patch.object(MlflowTracker, "create_experiment")
+@patch.object(MlflowTracker, "set_tracking_uri")
+@patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
+def test_create_mlflow_tracker_for_metadata_path_in_train_process(
+        mock_check_mlflow_server,
+        mock_set_tracking_uri,
+        mock_create_experiment,
+        mock_set_experiment,
+        monkeypatch,
+        rp_logger
+):
+    rp_logger.info(
+        "Create the instance of the class MlflowTracker in the training process "
+        "by providing 'metadata_path'"
+    )
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mock_server:5000")
+    MlflowTracker._instance = None
+    MlflowTrackerFactory.create_tracker(
+        table_name=None,
+        metadata_path="path/to/metadata.yaml",
+        type_of_process="train"
+    )
+
+    assert MlflowTracker().experiment_name.startswith("metadata")
+    assert MlflowTracker().is_active is True
+    assert MlflowTracker().connect_to_server is True
+    mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
+    mock_set_tracking_uri.assert_called_once()
+    mock_create_experiment.assert_called_once()
+    mock_set_experiment.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(MlflowTracker, "set_experiment")
+@patch.object(MlflowTracker, "set_tracking_uri")
+@patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
+def test_create_mlflow_tracker_for_metadata_path_in_inference_process(
+        mock_check_mlflow_server,
+        mock_set_tracking_uri,
+        mock_set_experiment,
+        monkeypatch,
+        rp_logger
+):
+    rp_logger.info(
+        "Create the instance of the class MlflowTracker in the inference process "
+        "by providing 'metadata_path'"
+    )
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mock_server:5000")
+    MlflowTrackerFactory.create_tracker(
+        table_name=None,
+        metadata_path="path/to/metadata.yaml",
+        type_of_process="infer"
+    )
+
+    assert MlflowTracker().experiment_name.startswith("metadata")
+    assert MlflowTracker().is_active is True
+    assert MlflowTracker().connect_to_server is True
+    mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
+    mock_set_tracking_uri.assert_called_once()
+    mock_set_experiment.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(MlflowTracker, "set_experiment")
+@patch.object(MlflowTracker, "create_experiment")
+@patch.object(MlflowTracker, "set_tracking_uri")
+@patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=False)
+def test_create_mlflow_tracker_with_inactive_server(
+        mock_check_mlflow_server,
+        mock_set_tracking_uri,
+        mock_create_experiment,
+        mock_set_experiment,
+        monkeypatch,
+        rp_logger
+):
+    rp_logger.info(
+        "Create the instance of the class MlflowTracker if mlflow server is inactive"
+    )
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mock_server:5000")
+    MlflowTracker._instance = None
+    MlflowTrackerFactory.create_tracker(
+        table_name="test_table",
+        metadata_path=None,
+        type_of_process="train"
+    )
+
+    assert MlflowTracker().experiment_name.startswith("test_table")
+    assert MlflowTracker().is_active is False
+    assert MlflowTracker().connect_to_server is False
+    mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
+    mock_set_tracking_uri.assert_called_once()
+    mock_create_experiment.assert_called_once()
+    mock_set_experiment.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.requests.get")
+def test_check_mlflow_server_positive(mock_get, rp_logger, caplog):
+    rp_logger.info(
+        "Test the method 'check_mlflow_server' of the class 'MlflowTrackerFactory' "
+        "if 'server_uri' is valid"
+    )
+    mock_get.return_value.raise_for_status.return_value = None
+    server_url = "http://mock_server:5000"
+    with caplog.at_level(level="INFO"):
+        result = MlflowTrackerFactory.check_mlflow_server(server_url)
+        assert result is True
+        mock_get.assert_called_once_with(server_url)
+        assert "MLFlow server is up and running" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.requests.get")
+def test_check_mlflow_server_negative_http_error(mock_get, rp_logger, caplog):
+    rp_logger.info(
+        "Test the method 'check_mlflow_server' of the class 'MlflowTrackerFactory' "
+        "if 'server_uri' is invalid and raises HTTPError"
+    )
+    mock_get.side_effect = requests.exceptions.HTTPError("An HTTP error occurred")
+    server_url = "http://mock_failed_server:5000"
+    with caplog.at_level(level="WARNING"):
+        MlflowTrackerFactory.check_mlflow_server(server_url)
+        mock_get.assert_called_once_with(server_url)
+        assert "An HTTP error occurred while connecting to the MLFlow server" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.requests.get")
+def test_check_mlflow_server_negative_general_error(mock_get, rp_logger, caplog):
+    rp_logger.info(
+        "Test the method 'check_mlflow_server' of the class 'MlflowTrackerFactory' "
+        "if 'server_uri' is invalid and raises unexpected error"
+    )
+    mock_get.side_effect = Exception("An unexpected error occurred")
+    server_url = "http://mock_failed_server:5000"
+    with caplog.at_level(level="WARNING"):
+        MlflowTrackerFactory.check_mlflow_server(server_url)
+        mock_get.assert_called_once_with(server_url)
+        assert "An unexpected error occurred while connecting to the MLFlow server" in caplog.text
+    mock_get.assert_called_once_with(server_url)
+
+
+def test_check_mlflow_server_if_server_uri_not_provided(caplog, rp_logger):
+    rp_logger.info(
+        "Test the method 'check_mlflow_server' of the class 'MlflowTrackerFactory' "
+        "if 'server_uri' hasn't been provided"
+    )
+    MlflowTracker._instance = None
+    with caplog.at_level(level="WARNING"):
+        assert MlflowTrackerFactory.check_mlflow_server(server_url=None) is False
+        assert "MLFlow server URL not provided" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)

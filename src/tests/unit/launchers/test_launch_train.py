@@ -12,9 +12,8 @@ PATH_TO_METADATA = "./tests/unit/launchers/fixtures/metadata.yaml"
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 def test_train_table_with_source_and_table_name(
-        mock_set_mlflow, mock_post_init, mock_launch_train, rp_logger
+        mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with parameters '--source' and '--table_name'"
@@ -29,9 +28,8 @@ def test_train_table_with_source_and_table_name(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 def test_train_table_with_metadata_path(
-        mock_set_mlflow, mock_post_init, mock_launch_train, rp_logger
+        mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info("Launch train process through CLI with parameters '--metadata_path'")
     runner = CliRunner()
@@ -44,10 +42,9 @@ def test_train_table_with_metadata_path(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 @patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_source(
-    mock_logger, mock_set_mlflow, mock_post_init, mock_launch_train, rp_logger, caplog
+    mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
         "Launch train process through CLI with parameters '--metadata_path' and '--source'"
@@ -70,10 +67,9 @@ def test_train_table_with_metadata_path_and_source(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 @patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_table_name(
-    mock_logger, mock_set_mlflow, mock_post_init, mock_launch_train, rp_logger, caplog
+    mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
         "Launch train process through CLI with parameters '--metadata_path' and '--table_name'"
@@ -96,10 +92,9 @@ def test_train_table_with_metadata_path_and_table_name(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 @patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_table_name_and_source(
-    mock_logger, mock_set_mlflow, mock_post_init, mock_launch_train, rp_logger, caplog
+    mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
         "Launch train process through CLI with parameters "
@@ -129,8 +124,7 @@ def test_train_table_with_metadata_path_and_table_name_and_source(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch("syngen.train.set_mlflow")
-def test_train_table_with_table_name_and_without_source(mock_set_mlflow, rp_logger):
+def test_train_table_with_table_name_and_without_source(rp_logger):
     rp_logger.info("Launch train process through CLI only with parameter '--table_name'")
     runner = CliRunner()
     result = runner.invoke(launch_train, ["--table_name", TABLE_NAME])
@@ -144,8 +138,7 @@ def test_train_table_with_table_name_and_without_source(mock_set_mlflow, rp_logg
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch("syngen.train.set_mlflow")
-def test_train_table_with_source_and_without_table_name(mock_set_mlflow, rp_logger):
+def test_train_table_with_source_and_without_table_name(rp_logger):
     rp_logger.info("Launch train process through CLI only with parameter '--source'")
     runner = CliRunner()
     result = runner.invoke(launch_train, ["--source", PATH_TO_TABLE])
@@ -159,8 +152,7 @@ def test_train_table_with_source_and_without_table_name(mock_set_mlflow, rp_logg
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch("syngen.train.set_mlflow")
-def test_train_table_without_parameters(mock_set_mlflow, rp_logger):
+def test_train_table_without_parameters(rp_logger):
     rp_logger.info("Launch train process through CLI without parameters")
     runner = CliRunner()
     result = runner.invoke(launch_train, [])
@@ -176,9 +168,8 @@ def test_train_table_without_parameters(mock_set_mlflow, rp_logger):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 def test_train_table_with_valid_epochs(
-        mock_set_mlflow, mock_post_init, mock_launch_train, monkeypatch, rp_logger
+        mock_post_init, mock_launch_train, monkeypatch, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with valid 'epochs' parameter"
@@ -209,9 +200,8 @@ def test_train_table_with_invalid_epochs(rp_logger):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 def test_train_table_with_valid_drop_null(
-        mock_set_mlflow, mock_post_init, mock_launch_train, rp_logger
+        mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with valid 'drop_null' parameter equals 'True'"
@@ -242,9 +232,8 @@ def test_train_table_with_invalid_drop_null(rp_logger):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 def test_train_table_with_valid_row_limit(
-        mock_set_mlflow, mock_post_init, mock_launch_train, rp_logger
+        mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with valid 'row_limit' parameter equals 100"
@@ -275,9 +264,8 @@ def test_train_table_with_invalid_row_limit(rp_logger):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 def test_train_table_with_valid_print_report(
-        mock_set_mlflow, mock_post_init, mock_launch_train, rp_logger
+        mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with valid 'print_report' parameter equals True"
@@ -315,9 +303,8 @@ def test_train_table_with_invalid_print_report(rp_logger):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.set_mlflow")
 def test_train_table_with_valid_batch_size(
-        mock_set_mlflow, mock_post_init, mock_launch_train, rp_logger
+        mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with valid 'batch_size' parameter equals 100"
