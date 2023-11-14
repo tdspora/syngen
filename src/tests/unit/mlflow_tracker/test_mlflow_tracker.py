@@ -267,6 +267,7 @@ def test_set_experiment_with_inactive_mlflow(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(MlflowTracker, "set_experiment")
 @patch.object(MlflowTracker, "create_experiment")
 @patch.object(MlflowTracker, "set_tracking_uri")
 @patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
@@ -274,6 +275,7 @@ def test_create_mlflow_tracker_for_single_table_in_train_process(
         mock_check_mlflow_server,
         mock_set_tracking_uri,
         mock_create_experiment,
+        mock_set_experiment,
         monkeypatch,
         rp_logger
 ):
@@ -295,6 +297,7 @@ def test_create_mlflow_tracker_for_single_table_in_train_process(
     mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
     mock_set_tracking_uri.assert_called_once()
     mock_create_experiment.assert_called_once()
+    mock_set_experiment.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -329,6 +332,7 @@ def test_create_mlflow_tracker_for_single_table_in_inference_process(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(MlflowTracker, "set_experiment")
 @patch.object(MlflowTracker, "create_experiment")
 @patch.object(MlflowTracker, "set_tracking_uri")
 @patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
@@ -336,6 +340,7 @@ def test_create_mlflow_tracker_for_metadata_path_in_train_process(
         mock_check_mlflow_server,
         mock_set_tracking_uri,
         mock_create_experiment,
+        mock_set_experiment,
         monkeypatch,
         rp_logger
 ):
@@ -357,6 +362,7 @@ def test_create_mlflow_tracker_for_metadata_path_in_train_process(
     mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
     mock_set_tracking_uri.assert_called_once()
     mock_create_experiment.assert_called_once()
+    mock_set_experiment.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -390,12 +396,14 @@ def test_create_mlflow_tracker_for_metadata_path_in_inference_process(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(MlflowTracker, "set_experiment")
 @patch.object(MlflowTracker, "create_experiment")
 @patch.object(MlflowTracker, "set_tracking_uri")
 @patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=False)
 def test_create_mlflow_tracker_with_inactive_server(
         mock_check_mlflow_server,
         mock_set_tracking_uri,
+        mock_create_experiment,
         mock_set_experiment,
         monkeypatch,
         rp_logger
@@ -416,6 +424,7 @@ def test_create_mlflow_tracker_with_inactive_server(
     assert MlflowTracker().connect_to_server is False
     mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
     mock_set_tracking_uri.assert_called_once()
+    mock_create_experiment.assert_called_once()
     mock_set_experiment.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

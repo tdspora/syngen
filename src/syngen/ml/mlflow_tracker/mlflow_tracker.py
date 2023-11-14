@@ -43,7 +43,6 @@ class MlflowTrackerFactory:
             table_name: Optional[str],
             metadata_path: Optional[str],
             type_of_process: str,
-            experiment_name=None,
             is_active=False
     ):
         """
@@ -67,7 +66,6 @@ class MlflowTrackerFactory:
             )
 
         tracker.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
-
         if type_of_process == "train":
             tracker.create_experiment(
                 experiment_name,
@@ -76,6 +74,7 @@ class MlflowTrackerFactory:
                     "/mlflow_tracker"
                 ),
             )
+            tracker.set_experiment(experiment_name)
         if type_of_process == "infer":
             tracker.set_experiment(experiment_name)
 
