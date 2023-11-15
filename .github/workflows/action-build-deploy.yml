@@ -1,7 +1,8 @@
 name: Build, Deploy & Docker
-on: [push]
-  branches-ignore:
-    - development
+on:
+  push:
+    branches-ignore:
+      - development
 jobs:
   build-deploy-docker:
     runs-on: ubuntu-20.04
