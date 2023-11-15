@@ -45,8 +45,9 @@ jobs:
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          repository-url: https://test.pypi.org/legacy/
           password: ${{ secrets.PYPI_TEST_TOKEN }}
-          print_hash: true
+          print-hash: true
           verbose: true
 
       - name: Login to Docker Hub
