@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - development
-  pull_request:
-    branches:
-      - development
 
 jobs:
   development-branch-build:
@@ -43,7 +40,7 @@ jobs:
           python3 -m build .
 
       - name: Publish package
-        if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_TEST_TOKEN }}
