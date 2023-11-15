@@ -57,7 +57,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_TOKEN }} # For testing purposes: use secrets.PYPI_TEST_TOKEN
-          print_hash: true
+          print-hash: true
           verbose: true
 
       - name: Login to Docker Hub
