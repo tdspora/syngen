@@ -270,38 +270,67 @@ class VAEWrapper(BaseWrapper):
         self.feature_losses = defaultdict(list)
         loss_grows_num_epochs = 0
         prev_total_loss = float("inf")
-        rel_delta_loss_limit = 0.001
+        #ANCHOR - rel_loss_delta_thresh
+        rel_loss_delta_thresh = 0.05
         es_patience = 10
+        big_loss_check_limit = 100 #10000 / data.shape[0]
+        big_loss_check = 0
         pth = Path(self.paths["state_path"])
 
         for epoch in range(epochs):
             num_batches = 0.0
             total_loss = 0.0
             t1 = time.time()
+            print(f"Relative loss delta threshold= {rel_loss_delta_thresh}!!!!!!!!!!!!")
 
             # Iterate over the batches of the dataset.
             for i, x_batch_train in tqdm.tqdm(iterable=enumerate(dataset)):
                 total_loss += step(x_batch_train)
                 num_batches += 1
+            # #original code!!!!!!!!!!
+            # mean_loss = np.mean(total_loss / num_batches)
+            # if mean_loss >= prev_total_loss - es_min_delta:
+            #     loss_grows_num_epochs += 1
+            # else:
+            #     self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+            #     loss_grows_num_epochs = 0
 
+            # logger.info(f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec")
+            #modified code!!!!!!!!!!
             mean_loss = np.mean(total_loss / num_batches)
-            rel_delta_loss = (mean_loss - prev_total_loss)/prev_total_loss
+            rel_delta_loss = (prev_total_loss - mean_loss)/prev_total_loss
 
-            if rel_delta_loss >= -rel_delta_loss_limit:
-                loss_grows_num_epochs += 1
-            else:
+            if rel_delta_loss >= rel_loss_delta_thresh:
                 self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 loss_grows_num_epochs = 0
+            else:
+                loss_grows_num_epochs += 1
 
-            logger.info(f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec")
+            logger.info(f"epoch: {epoch}, loss: {mean_loss: .5f}, "
+                        #f"mean_loss_avg: {mean_loss_avg: .5f}, "
+                        f"abs_delta_loss: {(prev_total_loss - mean_loss): .5f}, "
+                        f"rel_delta_loss: {rel_delta_loss: .5f}, "
+                        f"loss_grows_num_epochs: {loss_grows_num_epochs}"
+                        )
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
 
             prev_total_loss = mean_loss
+            #check value of prev_total_loss
+            if (loss_grows_num_epochs == es_patience) & (prev_total_loss > 1):
+                if big_loss_check <= big_loss_check_limit:
+                    loss_grows_num_epochs = 0
+                    big_loss_check +=1
+                    print("Ten more epochs!!!!!!!")
+
+
+
             if loss_grows_num_epochs == es_patience:
                 self.vae.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 logger.info(
                     f"The loss does not become lower for {loss_grows_num_epochs} epochs in a row. "
                     f"Stopping the training."
+                    f":Last epoch= {epoch}!!!!!!!!!!!!!!!"
+                    f":\n Itterupted {big_loss_check} times!!!!!!!!!"
                 )
                 break
             epoch += 1
