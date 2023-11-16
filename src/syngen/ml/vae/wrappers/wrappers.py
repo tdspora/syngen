@@ -314,7 +314,7 @@ class VAEWrapper(BaseWrapper):
                 logger.info(
                     f"The loss does not become lower for {loss_grows_num_epochs} epochs in a row. "
                     f"Stopping the training."
-                    f":Last epoch= {epoch}!!!!!!!!!!!!!!!"
+                    f":Last epoch= {epoch}!!!!!!!!!!!!!"
                 )
                 break
             epoch += 1
