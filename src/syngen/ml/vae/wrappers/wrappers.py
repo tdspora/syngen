@@ -270,7 +270,7 @@ class VAEWrapper(BaseWrapper):
         self.feature_losses = defaultdict(list)
         loss_grows_num_epochs = 0
         prev_total_loss = float("inf")
-        #ANCHOR - rel_loss_delta_thresh
+        #ANCHOR - rel_loss_delta_thresh_basis
         rel_loss_delta_thresh_basis = 0.01
         es_patience = 10
         pth = Path(self.paths["state_path"])
