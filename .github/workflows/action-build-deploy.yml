@@ -1,10 +1,10 @@
-name: Build, Deploy & Docker
+name: CI/CD
 on: 
   push:
     branches-ignore:
       - "development"
 jobs:
-  build-deploy-docker:
+  ci-cd:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
