@@ -1,8 +1,5 @@
 name: CI/CD
-on: 
-  push:
-    branches-ignore:
-      - "development"
+on: [push]
 jobs:
   ci-cd:
     runs-on: ubuntu-20.04
