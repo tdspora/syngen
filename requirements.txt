@@ -20,7 +20,6 @@ pandavro==1.7.2
 pathos==0.2.*
 pillow==10.0.1
 py-ulid
-pyarrow>=14.0.1,<15
 pytest
 pytest-reportportal
 python-slugify[unidecode]>=7.0.0
