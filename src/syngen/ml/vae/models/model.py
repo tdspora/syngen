@@ -17,7 +17,6 @@ from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
 from loguru import logger
-from IPython.display import SVG
 from keras.utils import plot_model
 
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
@@ -241,9 +240,6 @@ class CVAE:
                 if key_type is float or self.__check_pk_numeric_convertability(column, key_type):
                     mapped_keys = np.arange(len(self.inverse_transformed_df[column])) + 1
                     self.inverse_transformed_df[column] = mapped_keys
-
-    def show_model(self):
-        return SVG(plot_model(self.model).create(prog="dot", format="svg"))
 
     def save_state(self, path: str):
         pth = Path(path)
