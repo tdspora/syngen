@@ -627,21 +627,7 @@
 				<div class="container--item">
 					<h2 class="h2-title"
 						id="h2-title-bivariate">Bivariate distributions</h2>
-					<p class="text-description">Bivariate distributions are actually the two-dimensional histograms. For
-						each
-						pair of columns each
-						combination
-						of their values' levels are plotted as a matrix, thus resulting in a grid. In each cell of this
-						grid
-						a
-						number
-						of records belonging to both classes simultaneously is calculated. For instance, for the column
-						with
-						values "Monday", "Tuesday", "Sunday" and column with values "Working", "Museum visiting" and
-						"Walking"
-						a count of each activity in each day will be calculated and plotted in the corresponding cell.
-						For good synthetic data the pattern of bivariate distribution should match the original
-						distribution.
+					<p class="text-description">Bivariate distributions are actually the two-dimensional histograms. For each pair of columns, each combination of their corresponding values are plotted as a matrix, resulting in a grid. Each cell within the grid contains a ratio, computed as the number of records belonging to both classes simultaneously divided by the total number of records in corresponding dataset. For example, consider a column with values 'Monday', 'Tuesday', 'Sunday', and another column with values 'Working', 'Museum visiting', 'Walking'. In this case, the ratio representing the occurrence of each activity on each day is calculated and displayed in the appropriate grid cell. For good synthetic data the pattern of bivariate distribution should match the original distribution.
 					</p>
 					<div class="bivariate-img-container">
 						{% for title, bi_img in bi_imgs.items() -%}
