@@ -531,7 +531,7 @@ class BivariateMetric(BaseMetric):
             for y_val in yticks:
                 heatmap_row = []
                 for x_val in xticks:
-                    count = df[df[y_col].eq(y_val) & df[x_col].eq(x_val)].shape[0]
+                    count = df[df[y_col].eq(y_val) & df[x_col].eq(x_val)].shape[0] / len(df)
                     heatmap_row.append(count)
                 heatmap.append(heatmap_row)
             return (
@@ -568,7 +568,7 @@ class BivariateMetric(BaseMetric):
                     x_index = df[cont_col].isna()
 
                 for val in yticks:
-                    count = df[x_index & df[categ_col].eq(val)].shape[0]
+                    count = df[x_index & df[categ_col].eq(val)].shape[0] / len(df)
                     heatmap_row.append(count)
                 heatmap.append(heatmap_row)
 
@@ -616,7 +616,7 @@ class BivariateMetric(BaseMetric):
                     else:
                         x_index = df[x_col].isna()
 
-                    count = df[y_index & x_index].shape[0]
+                    count = df[y_index & x_index].shape[0] / len(df)
                     heatmap_row.append(count)
 
                 heatmap.append(heatmap_row)
