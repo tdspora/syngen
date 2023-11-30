@@ -11,6 +11,7 @@ from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 @define
@@ -248,6 +249,11 @@ class Worker:
             train_settings = config_of_table["train_settings"]
             logger.info(f"Training process of the table - {table} has started.")
 
+            MlflowTracker().start_run(
+                run_name=f"{table} | TRAIN",
+                tags={"table_name": table, "process": "train"},
+            )
+
             self.train_strategy.run(
                 metadata=config_of_metadata_for_training,
                 source=train_settings["source"],
@@ -259,6 +265,7 @@ class Worker:
                 print_report=train_settings["print_report"],
                 batch_size=train_settings["batch_size"],
             )
+            MlflowTracker().end_run()
             self._write_success_message(slugify(table))
             self._save_metadata_file()
         generation_of_reports = any(
@@ -305,6 +312,11 @@ class Worker:
             both_keys = table in self.divided
             infer_settings = config_of_table["infer_settings"]
 
+            MlflowTracker().start_run(
+                run_name=f"{table} | INFER",
+                tags={"table_name": table, "process": "infer"},
+            )
+
             self.infer_strategy.run(
                 destination=infer_settings.get("destination"),
                 metadata=config_of_tables,
@@ -319,13 +331,14 @@ class Worker:
                 both_keys=both_keys,
                 type=self.type_of_process,
             )
+            MlflowTracker().end_run()
 
     @staticmethod
-    def _generate_reports():
+    def _generate_reports(type_of_process: str):
         """
         Generate reports
         """
-        Report().generate_report()
+        Report().generate_report(type_of_process=type_of_process)
         Report().clear_report()
 
     @staticmethod
@@ -351,7 +364,7 @@ class Worker:
         metadata_for_training = self._prepare_metadata_for_process()
         metadata_for_inference = self._prepare_metadata_for_process(type_of_process="infer")
         self.__train_tables(metadata_for_training, metadata_for_inference)
-        self._generate_reports()
+        self._generate_reports(type_of_process="TRAIN")
 
     def launch_infer(self):
         """
@@ -361,4 +374,4 @@ class Worker:
             type_of_process="infer"
         )
         self.__infer_tables(chain_of_tables, config_of_tables)
-        self._generate_reports()
+        self._generate_reports(type_of_process="INFER")

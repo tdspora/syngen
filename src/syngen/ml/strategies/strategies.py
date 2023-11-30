@@ -136,10 +136,6 @@ class TrainStrategy(Strategy, ABC):
                 print_report=kwargs["print_report"],
                 batch_size=kwargs["batch_size"],
             )
-            MlflowTracker().start_run(
-                run_name=f"{kwargs['table_name']} | TRAIN",
-                tags={"table_name": kwargs["table_name"], "process": "train"}
-            )
             MlflowTracker().log_params(self.config.to_dict())
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()
@@ -216,7 +212,11 @@ class InferStrategy(Strategy):
                 print_report=kwargs["print_report"],
                 log_level=kwargs["log_level"],
                 both_keys=kwargs["both_keys"],
-            ).add_reporters().set_metadata(kwargs["metadata"]).add_handler(
+            )
+
+            MlflowTracker().log_params(self.config.to_dict())
+
+            self.add_reporters().set_metadata(kwargs["metadata"]).add_handler(
                 type_of_process=kwargs["type"]
             )
             self.handler.handle()
