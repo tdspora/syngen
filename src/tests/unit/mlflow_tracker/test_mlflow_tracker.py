@@ -86,17 +86,17 @@ def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
         "Test the method 'search_run' of the class 'MlflowTracker' with the active status"
     )
     data = {
-        "run_id": ["6d2fa2df6ef14734a2dc03ab07e016f1"],
-        "experiment_id": ["921287541001106206"],
+        "run_id": ["6d2fa5df6ef14734a2dc03ab07e016f1"],
+        "experiment_id": ["021287541001106206"],
         "status": ["FINISHED"],
-        "tags.mlflow.source.git.commit": ["45b9ae205e1cb30869070b07bf64efab1c68fcce"],
+        "tags.mlflow.source.git.commit": ["49b9ae205e1cb10869070b07bf64efab1c68fcce"],
         "tags.process": ["train"],
         "tags.mlflow.source.type": ["LOCAL"]
     }
     with patch(
             "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_runs",
             return_value=pd.DataFrame(data)) as mock_search_run:
-        assert mlflow_tracker.search_run("test_table", "TRAIN") == "6d2fa2df6ef14734a2dc03ab07e016f1"
+        assert mlflow_tracker.search_run("test_table", "TRAIN") == "6d2fa5df6ef14734a2dc03ab07e016f1"
         mock_search_run.assert_called_once_with(filter_string="run_name = 'test_table | TRAIN'")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
