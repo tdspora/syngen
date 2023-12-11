@@ -214,7 +214,8 @@ class InferStrategy(Strategy):
                 both_keys=kwargs["both_keys"],
             )
 
-            MlflowTracker().log_params(self.config.to_dict())
+            if kwargs["type"] == "infer":
+                MlflowTracker().log_params(self.config.to_dict())
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler(
                 type_of_process=kwargs["type"]
