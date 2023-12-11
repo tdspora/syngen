@@ -161,7 +161,9 @@ class Report:
 
         for table_name, reporters in grouped_reporters.items():
             MlflowTracker.reset_status(active_status=True)
-            run_id = MlflowTracker().search_run(table_name=table_name, type_of_process=type_of_process)
+            run_id = MlflowTracker().search_run(
+                table_name=table_name, type_of_process=type_of_process
+            )
             if run_id is not None:
                 MlflowTracker().start_run(run_id=run_id)
             for reporter in reporters:
