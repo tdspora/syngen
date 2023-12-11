@@ -333,12 +333,11 @@ class Worker:
             )
             MlflowTracker().end_run()
 
-    @staticmethod
-    def _generate_reports(type_of_process: str):
+    def _generate_reports(self):
         """
         Generate reports
         """
-        Report().generate_report(type_of_process=type_of_process)
+        Report().generate_report(type_of_process=self.type_of_process.upper())
         Report().clear_report()
 
     @staticmethod
@@ -364,7 +363,7 @@ class Worker:
         metadata_for_training = self._prepare_metadata_for_process()
         metadata_for_inference = self._prepare_metadata_for_process(type_of_process="infer")
         self.__train_tables(metadata_for_training, metadata_for_inference)
-        self._generate_reports(type_of_process="TRAIN")
+        self._generate_reports()
 
     def launch_infer(self):
         """
@@ -374,4 +373,4 @@ class Worker:
             type_of_process="infer"
         )
         self.__infer_tables(chain_of_tables, config_of_tables)
-        self._generate_reports(type_of_process="INFER")
+        self._generate_reports()
