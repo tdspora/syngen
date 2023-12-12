@@ -213,12 +213,12 @@ class InferStrategy(Strategy):
                 log_level=kwargs["log_level"],
                 both_keys=kwargs["both_keys"],
             )
-
-            if kwargs["type"] == "infer":
+            type_of_process = kwargs["type_of_process"]
+            if type_of_process == "infer":
                 MlflowTracker().log_params(self.config.to_dict())
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler(
-                type_of_process=kwargs["type"]
+                type_of_process=type_of_process
             )
             self.handler.handle()
         except Exception as e:

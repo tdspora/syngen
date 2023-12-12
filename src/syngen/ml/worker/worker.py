@@ -296,7 +296,7 @@ class Worker:
                     print_report=print_report,
                     log_level=self.log_level,
                     both_keys=both_keys,
-                    type=self.type_of_process,
+                    type_of_process=self.type_of_process,
                 )
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
@@ -329,7 +329,7 @@ class Worker:
                 print_report=infer_settings["print_report"],
                 log_level=self.log_level,
                 both_keys=both_keys,
-                type=self.type_of_process,
+                type_of_process=self.type_of_process,
             )
             MlflowTracker().end_run()
 
