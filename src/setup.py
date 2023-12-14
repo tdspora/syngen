@@ -8,8 +8,8 @@ setup(
     packages=find_packages(),
     extras_require={
         'ui':[
-            streamlit,
-            altair<5
+            'streamlit',
+            'altair<5',
         ],
     }
 )
