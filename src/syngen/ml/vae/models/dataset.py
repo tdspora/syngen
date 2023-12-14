@@ -633,6 +633,7 @@ class Dataset:
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
+        self.date_mapping = self._set_date_format(df)
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
         if schema.get("format") == "CSV":
