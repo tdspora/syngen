@@ -79,7 +79,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./syngen.dockerfile
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.docker_meta_base.outputs.tags }}
           labels: ${{ steps.docker_meta_base.outputs.labels }}
