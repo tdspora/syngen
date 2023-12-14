@@ -65,7 +65,7 @@ def test_datetime_to_timestamp():
     ]
 
     for date_time, expected_timestamp in test_cases:
-        calculated_timestamp = datetime_to_timestamp(date_time)
+        calculated_timestamp = datetime_to_timestamp(date_time, "%Y-%m-%d")
         if np.isnan(expected_timestamp):
             assert np.isnan(calculated_timestamp)
         else:

@@ -59,6 +59,7 @@ class Reporter:
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
         types = self.fetch_data_types()
+        date_mapping = fetch_dataset(self.paths["dataset_pickle_path"]).date_mapping
         (
             str_columns,
             date_columns,
@@ -70,10 +71,10 @@ class Reporter:
         ) = types
         original = original[[col for col in original.columns if col in set().union(*types)]]
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
-        for date_col in date_columns:
-            original[date_col] = list(map(lambda d: datetime_to_timestamp(d), original[date_col]))
+        for date_col, date_format in date_mapping.items():
+            original[date_col] = list(map(lambda d: datetime_to_timestamp(d, date_format), original[date_col]))
             synthetic[date_col] = list(
-                map(lambda d: datetime_to_timestamp(d), synthetic[date_col])
+                map(lambda d: datetime_to_timestamp(d, date_format), synthetic[date_col])
             )
 
         int_columns = date_columns | int_columns

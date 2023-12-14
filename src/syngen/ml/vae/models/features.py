@@ -1,13 +1,10 @@
-from collections import Counter
 from itertools import chain
 from typing import Union, List
-import re
 from lazy import lazy
 
 import category_encoders as ce
 import numpy as np
 import pandas as pd
-from pandas._libs.tslibs.parsing import guess_datetime_format
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from scipy.stats import shapiro
@@ -28,6 +25,7 @@ from syngen.ml.utils import (
     inverse_dict,
     datetime_to_timestamp,
     timestamp_to_datetime,
+    fetch_dataset
 )
 
 
@@ -52,7 +50,7 @@ class BaseFeature:
         """
         return name
 
-    def fit(self, data: pd.DataFrame):
+    def fit(self, data: pd.DataFrame, **kwargs):
         """
         Fit scalars, one-hot encoders, and mappers in the data
         """
@@ -109,7 +107,7 @@ class BinaryFeature(BaseFeature):
     def __init__(self, name: str):
         super().__init__(name=name)
 
-    def fit(self, data: pd.DataFrame):
+    def fit(self, data: pd.DataFrame, **kwargs):
         self.mapping = {k: n for n, k in enumerate(np.unique(data))}
         self.inverse_mapping = inverse_dict(self.mapping)
         self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get)
@@ -180,7 +178,7 @@ class ContinuousFeature(BaseFeature):
         self.weight_randomizer = weight_randomizer
         self.column_type = column_type
 
-    def fit(self, data: pd.DataFrame):
+    def fit(self, data: pd.DataFrame, **kwargs):
         self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
         normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
         self.scaler = StandardScaler() if normality >= 0.05 else MinMaxScaler()
@@ -283,7 +281,7 @@ class CategoricalFeature(BaseFeature):
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
 
-    def fit(self, data: pd.DataFrame):
+    def fit(self, data: pd.DataFrame, **kwargs):
         data = data.astype(object)
         self.one_hot_encoder.fit(data)
         self.mapping = {
@@ -384,7 +382,7 @@ class CharBasedTextFeature(BaseFeature):
         self.rnn_unit = LSTM
         self.dropout = dropout
 
-    def fit(self, data: pd.DataFrame):
+    def fit(self, data: pd.DataFrame, **kwargs):
         from tensorflow.keras.preprocessing.text import Tokenizer
 
         if len(data.columns) > 1:
@@ -597,42 +595,17 @@ class DateFeature(BaseFeature):
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
 
-    @staticmethod
-    def __validate_format(date_text: pd.DataFrame):
-        """
-        Define the most common date format.
-        Supported date formats -
-        MM/DD/YYYY; MM-DD-YYYY; DD/MM/YYYY; DD-MM-YYYY;
-        YYYY/MM/DD; YYYY-MM-DD; MMM DD, YYYY; MMM DD YYYY;
-        DD MMM YYYY; YYYY-MM-DD HH:MM:SS
-
-        Not supported formats -
-        MM/DD/YY, DD/MM/YY, YY/MM/DD, MM-DD-YY, DD-MM-YY
-
-        """
-        pattern = (
-            r"\s{0,1}\d+[-/\\:\.]\s{0,1}\d+[-/\\:\.]\s{0,1}\d+|"
-            r"[A-Z][a-z]+ \d{1,2} \d{4}|"
-            r"[A-Z][a-z]+ \d{1,2}, \d{4}|"
-            r"\d{2} [A-Z][a-z]+ \d{4}|"
-            r"\d{2}[-][A-Z][a-z]+[-]\d{2}|"
-            r"\d{4}[-/\\]\d{1,2}"
-        )
-        types = []
-        sample = date_text.dropna().sample(100, replace=len(date_text) <= 100).values
-        for i in sample:
-            date_format = guess_datetime_format(re.match(pattern, i[0]).group(0))
-            types.append(date_format)
-        if not list(filter(lambda x: bool(x), types)) or not types:
-            return "%d-%m-%Y"
-        if Counter(types).most_common(1)[0][0] is None:
-            return Counter(types).most_common(2)[1][0]
-        return Counter(types).most_common(1)[0][0]
-
-    def fit(self, data):
-        self.date_format = self.__validate_format(data)
+    def fit(self, data, **kwargs):
+        self.date_format = kwargs["date_mapping"][self.original_name]
         self.data = chain.from_iterable(data.values)
-        self.data = pd.DataFrame(list(map(lambda d: datetime_to_timestamp(d), self.data)))
+        self.data = pd.DataFrame(
+            list(
+                map(
+                    lambda d: datetime_to_timestamp(d, self.date_format),
+                    self.data
+                )
+            )
+        )
         self.is_positive = (self.data >= 0).sum().item() >= len(self.data) * 0.99
         normality = shapiro(self.data.sample(n=min(len(self.data), 500))).pvalue
         self.data = np.array(self.data).reshape(-1, 1)

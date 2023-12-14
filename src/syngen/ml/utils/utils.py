@@ -16,13 +16,17 @@ import random
 from loguru import logger
 
 
-def datetime_to_timestamp(dt):
+def datetime_to_timestamp(dt, date_format):
     max_allowed_time_ms = 253402214400
     min_allowed_time_ms = -62135596800
     if pd.isnull(dt):
         return np.nan
+    check_if_day_first = lambda df: df.lower().startswith("%d")
+    check_if_year_first = lambda df: df.lower().startswith("%y")
     try:
-        dt = parser.parse(dt).replace(tzinfo=None)
+        dt = parser.parse(dt,
+                          dayfirst=check_if_day_first(date_format),
+                          yearfirst=check_if_year_first(date_format)).replace(tzinfo=None)
         delta = dt - datetime(1970, 1, 1)
         return delta.total_seconds()
     except parser._parser.ParserError as e:

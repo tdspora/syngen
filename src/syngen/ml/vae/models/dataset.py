@@ -4,10 +4,13 @@ import pickle
 from uuid import UUID
 from datetime import datetime
 import base32_crockford
+from collections import Counter
+import re
 
 import numpy as np
 import dill
 import pandas as pd
+from pandas._libs.tslibs.parsing import guess_datetime_format
 from scipy.stats import gaussian_kde
 import tqdm
 from loguru import logger
@@ -501,6 +504,45 @@ class Dataset:
 
         self.non_existent_columns = non_existent_columns - self.dropped_columns
 
+    @staticmethod
+    def __define_date_format(date_text: pd.DataFrame):
+        """
+        Define the most common date format.
+        Supported date formats -
+        MM/DD/YYYY; MM-DD-YYYY; DD/MM/YYYY; DD-MM-YYYY;
+        YYYY/MM/DD; YYYY-MM-DD; MMM DD, YYYY; MMM DD YYYY;
+        DD MMM YYYY; YYYY-MM-DD HH:MM:SS
+
+        Not supported formats -
+        MM/DD/YY, DD/MM/YY, YY/MM/DD, MM-DD-YY, DD-MM-YY
+
+        """
+        pattern = (
+            r"\s{0,1}\d+[-/\\:\.]\s{0,1}\d+[-/\\:\.]\s{0,1}\d+|"
+            r"[A-Z][a-z]+ \d{1,2} \d{4}|"
+            r"[A-Z][a-z]+ \d{1,2}, \d{4}|"
+            r"\d{2} [A-Z][a-z]+ \d{4}|"
+            r"\d{2}[-][A-Z][a-z]+[-]\d{2}|"
+            r"\d{4}[-/\\]\d{1,2}"
+        )
+        types = []
+        n_samples = min(100, len(date_text.dropna()))
+        sample = date_text.dropna().sample(n_samples).values
+        for i in sample:
+            date_format = guess_datetime_format(re.match(pattern, i).group(0))
+            types.append(date_format)
+        if not list(filter(lambda x: bool(x), types)) or not types:
+            return "%d-%m-%Y"
+        if Counter(types).most_common(1)[0][0] is None:
+            return Counter(types).most_common(2)[1][0]
+        return Counter(types).most_common(1)[0][0]
+
+    def _set_date_format(self, df) -> Dict[str, str]:
+        date_mapping = {
+            column: self.__define_date_format(df[column]) for column in self.date_columns
+        }
+        return date_mapping
+
     def _general_data_pipeline(
         self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True
     ):
@@ -551,6 +593,7 @@ class Dataset:
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
+        self.date_mapping = self._set_date_format(df)
 
     def _avro_data_pipeline(self, df, schema):
         """
@@ -642,7 +685,7 @@ class Dataset:
 
     def fit(self, data):
         for name, feature in self.features.items():
-            feature.fit(data[self.columns[name]])
+            feature.fit(data[self.columns[name]], date_mapping=self.date_mapping)
 
         self.all_columns = [col for col in self.columns]
         self.is_fitted = True
