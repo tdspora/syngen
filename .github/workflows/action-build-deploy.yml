@@ -66,42 +66,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Docker meta (Training)
-        id: docker_meta_train
+      - name: Docker meta (BASE)
+        id: docker_meta_base
         uses: crazy-max/ghaction-docker-meta@v1
         with:
-          images: tdspora/syngen-train
+          images: tdspora/syngen
           tag-custom: ${{ github.ref == 'refs/heads/main' && 'latest' || '' }}
           tag-semver: |
             {{raw}}
 
-      - name: Docker meta (Inference)
-        id: docker_meta_infer
-        uses: crazy-max/ghaction-docker-meta@v1
-        with:
-          images: tdspora/syngen-infer
-          tag-custom: ${{ github.ref == 'refs/heads/main' && 'latest' || '' }}
-          tag-semver: |
-            {{raw}}
-
-      - name: Build and push (Training)
+      - name: Build and push (BASE)
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./ml-training.dockerfile
+          file: ./syngen.dockerfile
           push: true
-          tags: ${{ steps.docker_meta_train.outputs.tags }}
-          labels: ${{ steps.docker_meta_train.outputs.labels }}
-          cache-from: type=registry,ref=tdspora/syngen-train:buildcache
-          cache-to: type=registry,ref=tdspora/syngen-train:buildcache,mode=max
-
-      - name: Build and push (Inference)
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./ml-inference.dockerfile
-          push: true
-          tags: ${{ steps.docker_meta_infer.outputs.tags }}
-          labels: ${{ steps.docker_meta_infer.outputs.labels }}
-          cache-from: type=registry,ref=tdspora/syngen-infer:buildcache
-          cache-to: type=registry,ref=tdspora/syngen-infer:buildcache,mode=max
+          tags: ${{ steps.docker_meta_base.outputs.tags }}
+          labels: ${{ steps.docker_meta_base.outputs.labels }}
+          cache-from: type=registry,ref=tdspora/syngen:buildcache
+          cache-to: type=registry,ref=tdspora/syngen:buildcache,mode=max
