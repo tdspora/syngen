@@ -34,8 +34,8 @@ def datetime_to_timestamp(dt, date_format):
         return np.nan
     try:
         dt = parser.parse(dt,
-                          dayfirst=is_format_first(date_format, "%d"),
-                          yearfirst=is_format_first(date_format, "%y")).replace(tzinfo=None)
+                          dayfirst=is_format_first(date_format, "d"),
+                          yearfirst=is_format_first(date_format, "y")).replace(tzinfo=None)
         delta = dt - datetime(1970, 1, 1)
         return delta.total_seconds()
     except parser._parser.ParserError as e:

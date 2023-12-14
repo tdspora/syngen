@@ -52,20 +52,21 @@ def test_slugify_parameters(parameter, expected_parameter, rp_logger):
 
 def test_datetime_to_timestamp():
     test_cases = [
-        ("0001-01-01", -62135596800.0),
-        ("1970-01-01", 0),
-        ("2000-01-01", 946684800),
-        ("2023-01-01", 1672531200.0),
-        ("2023-01-01 00:00:00", 1672531200.0),
-        ("2023-01-01 00:00:00.000000", 1672531200.0),
-        ("2023-01-01 00:00:00.000000+00:00", 1672531200.0),
-        ("9999-12-31", 253402214400.0),
-        ("10000-12-31", 253402214400.0),
-        (np.nan, np.nan),
+        ("0001-01-01", -62135596800.0, "%Y-%m-%d"),
+        ("1970-01-01", 0, "%Y-%m-%d"),
+        ("2000-01-01", 946684800, "%Y-%m-%d"),
+        ("2023-01-01", 1672531200.0, "%Y-%m-%d"),
+        ("2023-01-01 00:00:00", 1672531200.0, "%Y-%m-%d"),
+        ("2023-01-01 00:00:00.000000", 1672531200.0, "%Y-%m-%d"),
+        ("2023-01-01 00:00:00.000000+00:00", 1672531200.0, "%Y-%m-%d"),
+        ("9999-12-31", 253402214400.0, "%Y-%m-%d"),
+        ("10000-12-31", 253402214400.0, "%Y-%m-%d"),
+        (np.nan, np.nan, "%Y-%m-%d"),
+        ("31-11-28", 1953590400.0, "%Y-%m-%d"),
     ]
 
-    for date_time, expected_timestamp in test_cases:
-        calculated_timestamp = datetime_to_timestamp(date_time, "%Y-%m-%d")
+    for date_time, expected_timestamp, date_format in test_cases:
+        calculated_timestamp = datetime_to_timestamp(date_time, date_format)
         if np.isnan(expected_timestamp):
             assert np.isnan(calculated_timestamp)
         else:

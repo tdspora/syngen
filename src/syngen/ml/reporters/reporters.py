@@ -78,7 +78,9 @@ class Reporter:
                 )
             )
             synthetic[date_col] = list(
-                map(lambda d: datetime_to_timestamp(d, date_format), synthetic[date_col])
+                map(
+                    lambda d: datetime_to_timestamp(d, date_format), synthetic[date_col]
+                )
             )
 
         int_columns = date_columns | int_columns
