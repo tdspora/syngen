@@ -538,6 +538,9 @@ class Dataset:
         return Counter(types).most_common(1)[0][0]
 
     def _set_date_format(self, df) -> Dict[str, str]:
+        """
+        Define the date format for each date column
+        """
         date_mapping = {
             column: self.__define_date_format(df[column]) for column in self.date_columns
         }

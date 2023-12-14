@@ -72,7 +72,11 @@ class Reporter:
         original = original[[col for col in original.columns if col in set().union(*types)]]
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
         for date_col, date_format in date_mapping.items():
-            original[date_col] = list(map(lambda d: datetime_to_timestamp(d, date_format), original[date_col]))
+            original[date_col] = list(
+                map(
+                    lambda d: datetime_to_timestamp(d, date_format), original[date_col]
+                )
+            )
             synthetic[date_col] = list(
                 map(lambda d: datetime_to_timestamp(d, date_format), synthetic[date_col])
             )

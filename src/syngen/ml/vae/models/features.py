@@ -24,8 +24,7 @@ from syngen.ml.utils import (
     slugify_parameters,
     inverse_dict,
     datetime_to_timestamp,
-    timestamp_to_datetime,
-    fetch_dataset
+    timestamp_to_datetime
 )
 
 
@@ -567,7 +566,9 @@ class CharBasedTextFeature(BaseFeature):
             Exception("Decoder isn't created")
 
         return self.weight * K.mean(
-            tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(labels=self.input, logits=self.decoder)
+            tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
+                labels=self.input, logits=self.decoder
+            )
         )
 
 

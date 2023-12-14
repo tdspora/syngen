@@ -180,7 +180,7 @@ def test_check_non_existent_columns(rp_logger):
 @pytest.mark.parametrize(
     "initial_date_format, expected_date_format",
     [
-        ("%m-%d-%Y","%m-%d-%Y"),
+        ("%m-%d-%Y", "%m-%d-%Y"),
         ("%d-%m-%Y", "%d-%m-%Y"),
         ("%m/%d/%Y", "%m/%d/%Y"),
         ("%d/%m/%Y", "%d/%m/%Y"),
@@ -207,10 +207,8 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
         }
     }
     data = {
-        "Date": [
-            (datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).strftime(initial_date_format)
-            for x in range(10000)
-        ]
+        "Date": [(datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).
+                 strftime(initial_date_format) for x in range(10000)]
     }
     df = pd.DataFrame(data, columns=["Date"])
     with patch.object(Dataset, "__post_init__", lambda x: None):
@@ -236,7 +234,9 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
         ("%m/%d/%Y", "%m/%d/%Y", ["31/11/2017T07:45:35Z", "31/02/1999T05:22:15Z"])
     ]
 )
-def test_define_date_format_with_extreme_values(initial_date_format, expected_date_format, extreme_values, rp_logger):
+def test_define_date_format_with_extreme_values(
+        initial_date_format, expected_date_format, extreme_values, rp_logger
+):
     rp_logger.info(
         "Test the process of identifying the date format in the date column "
         "where the initial date format - %s and expected date format: %s",
@@ -249,10 +249,8 @@ def test_define_date_format_with_extreme_values(initial_date_format, expected_da
         }
     }
     data = {
-        "Date": [
-            (datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).strftime(initial_date_format)
-            for x in range(10000)
-        ]
+        "Date": [(datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).
+                 strftime(initial_date_format) for x in range(10000)]
     }
     data.update({"Date": data["Date"] + extreme_values})
     df = pd.DataFrame(data, columns=["Date"])
