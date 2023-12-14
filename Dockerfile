@@ -12,7 +12,7 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir streamlit
+    pip install --no-cache-dir streamlit, altair<5
 
 COPY src/ .
 ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
