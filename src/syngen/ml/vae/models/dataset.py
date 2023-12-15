@@ -52,6 +52,7 @@ class Dataset:
     dropped_columns: Set = field(init=False)
     order_of_columns: List = field(init=False)
     non_existent_columns: Set = field(init=False)
+    format: Dict = field(init=False)
 
     def __post_init__(self):
         self._predefine_fields()
@@ -87,6 +88,7 @@ class Dataset:
         self.order_of_columns = fetch_training_config(
             self.paths["train_config_pickle_path"]
         ).columns
+        self.format = self.metadata[self.table_name].get("format", {})
 
     def __set_pk_key(self, config_of_keys: Dict):
         """

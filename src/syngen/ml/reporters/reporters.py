@@ -46,6 +46,15 @@ class Reporter:
         )
         return types
 
+    @staticmethod
+    def convert_to_timestamp(df, col_name, date_format, na_values):
+        """
+        Convert date column to timestamp
+        """
+        return [
+            datetime_to_timestamp(d, date_format) if d not in na_values else d for d in df[col_name]
+        ]
+
     def preprocess_data(self):
         """
         Preprocess original and synthetic data.
@@ -58,8 +67,8 @@ class Reporter:
         columns_nan_labels = get_nan_labels(original)
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
+        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
         types = self.fetch_data_types()
-        date_mapping = fetch_dataset(self.paths["dataset_pickle_path"]).date_mapping
         (
             str_columns,
             date_columns,
@@ -71,17 +80,10 @@ class Reporter:
         ) = types
         original = original[[col for col in original.columns if col in set().union(*types)]]
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
-        for date_col, date_format in date_mapping.items():
-            original[date_col] = list(
-                map(
-                    lambda d: datetime_to_timestamp(d, date_format), original[date_col]
-                )
-            )
-            synthetic[date_col] = list(
-                map(
-                    lambda d: datetime_to_timestamp(d, date_format), synthetic[date_col]
-                )
-            )
+        na_values = dataset.format.get("na_values", [])
+        for date_col, date_format in dataset.date_mapping.items():
+            original[date_col] = self.convert_to_timestamp(original, date_col, date_format, na_values)
+            synthetic[date_col] = self.convert_to_timestamp(synthetic, date_col, date_format, na_values)
 
         int_columns = date_columns | int_columns
         text_columns = str_columns | long_text_columns
