@@ -303,9 +303,7 @@ class VAEWrapper(BaseWrapper):
                 )
                 break
             epoch += 1
-        MlflowTracker().end_run()
 
-    # @staticmethod
     def _create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
         return tf.keras.optimizers.Adam(learning_rate=learning_rate)

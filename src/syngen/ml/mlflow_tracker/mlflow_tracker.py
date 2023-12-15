@@ -176,3 +176,10 @@ class MlflowTracker:
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
         if self.is_active:
             mlflow.log_metrics(metrics, step)
+
+    def search_run(self, table_name: str, type_of_process: str):
+        if self.is_active:
+            run = mlflow.search_runs(
+                filter_string=f"run_name = '{table_name} | {type_of_process}'"
+            )
+            return run["run_id"][0] if run.shape[0] > 0 else None

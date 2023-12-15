@@ -60,13 +60,6 @@ class BaseTest(ABC):
         """
         shutil.rmtree(self.draws_path)
 
-    def _track_metrics(self, metrics: Dict):
-        """
-        Track metrics to mlflow
-        """
-        MlflowTracker().log_params(self.config)
-        MlflowTracker().log_metrics(metrics)
-
     def _log_report_to_mlflow(self, path):
         """
         Log report to mlflow
@@ -138,7 +131,7 @@ class AccuracyTest(BaseTest):
             "Correlation": corr_result,
         }
 
-        self._track_metrics(metrics)
+        MlflowTracker().log_metrics(metrics)
 
         # Generate html report
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
