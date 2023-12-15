@@ -378,7 +378,7 @@ docker run --rm -e LOGURU_LEVEL=INFO \
 You can access the streamlit UI web interface by launching the container with the following command:
 
 ```bash
-docker run -p 8501:8501 tdspora/syngen --streamlit
+docker run -p 8501:8501 tdspora/syngen --webui
 ```
 
 The UI will be available at <http://localhost:8501>.
