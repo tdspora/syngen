@@ -3,7 +3,7 @@ import streamlit as st
 import os
 import pandas as pd
 from syngen.ml.worker import Worker
-
+import time
 import queue
 from loguru import logger
 import threading
@@ -83,5 +83,6 @@ if st.button('Start Model Training'):
                     elif not training_thread.is_alive():
                         st.success("Training completed.")
                         break
+                    time.sleep(0.01)
     else:
         st.warning("Please upload a CSV file to proceed.")
