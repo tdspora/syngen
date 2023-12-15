@@ -569,7 +569,9 @@ class CharBasedTextFeature(BaseFeature):
             Exception("Decoder isn't created")
 
         return self.weight * K.mean(
-            tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(labels=self.input, logits=self.decoder)
+            tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
+                labels=self.input, logits=self.decoder
+            )
         )
 
 

@@ -1,4 +1,6 @@
 from unittest.mock import patch
+
+import pandas as pd
 import requests
 
 from tests.conftest import SUCCESSFUL_MESSAGE
@@ -76,6 +78,37 @@ def test_log_params_with_active_mlflow(mlflow_tracker, rp_logger):
         params = {"param1": 1, "param2": 2}
         mlflow_tracker.log_params(params)
         mock_log_params.assert_called_once_with(params)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
+    rp_logger.info(
+        "Test the method 'search_run' of the class 'MlflowTracker' with the active status"
+    )
+    data = {
+        "run_id": ["6d2fa5df6ef14734a2dc03ab07e016f1"],
+        "experiment_id": ["021287541001106206"],
+        "status": ["FINISHED"],
+        "tags.mlflow.source.git.commit": ["49b9ae205e1cb10869070b07bf64efab1c68fcce"],
+        "tags.process": ["train"],
+        "tags.mlflow.source.type": ["LOCAL"]
+    }
+    with patch(
+            "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_runs",
+            return_value=pd.DataFrame(data)) as mock_search_run:
+        assert mlflow_tracker.search_run("test_table", "TRAIN") == "6d2fa5df6ef14734a2dc03ab07e016f1"
+        mock_search_run.assert_called_once_with(filter_string="run_name = 'test_table | TRAIN'")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_search_run_with_inactive_mlflow(mlflow_tracker, rp_logger):
+    rp_logger.info(
+        "Test the method 'search_run' of the class 'MlflowTracker' with the inactive status"
+    )
+    MlflowTracker.reset_status(active_status=False)
+    with patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_runs") as mock_search_run:
+        mlflow_tracker.search_run("test_table", "TRAIN")
+        mock_search_run.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
