@@ -24,7 +24,7 @@ st.title("Syngen")
 st.write("Upload CSV files and train your model.")
 
 # Define file uploader
-uploaded_files = st.file_uploader("Upload CSV files", type="csv", accept_multiple_files=True)
+uploaded_files = st.file_uploader("Upload CSV files", type="csv", accept_multiple_files=False)
 
 dataframes = {}
 if uploaded_files:
