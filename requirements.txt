@@ -33,3 +33,4 @@ tqdm==4.64.*
 Werkzeug==3.0.1
 xlrd
 xlwt
+aiohttp>=3.9.0 # not directly required, pinned by Snyk to avoid a vulnerability
