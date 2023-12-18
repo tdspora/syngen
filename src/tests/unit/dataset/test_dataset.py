@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from unittest.mock import patch
 import datetime
@@ -231,7 +232,8 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
     [
         ("%Y-%m-%d", "%Y-%m-%d", ["4723-10-17T07:45:35Z", "9999-12-31T05:22:15Z"]),
         ("%Y/%m/%d", "%Y/%m/%d", ["3/10/17T07:45:35Z", "9/12/31T05:22:15Z"]),
-        ("%m/%d/%Y", "%m/%d/%Y", ["31/11/2017T07:45:35Z", "31/02/1999T05:22:15Z"])
+        ("%m/%d/%Y", "%m/%d/%Y", ["31/11/2017T07:45:35Z", "31/02/1999T05:22:15Z"]),
+        ("%d-%m-%Y", "%d-%m-%Y", [np.nan, np.nan, np.nan])
     ]
 )
 def test_define_date_format_with_extreme_values(

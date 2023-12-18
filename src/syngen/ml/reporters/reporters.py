@@ -52,7 +52,7 @@ class Reporter:
         Convert date column to timestamp
         """
         return [
-            datetime_to_timestamp(d, date_format) if d not in na_values else d for d in df[col_name]
+            datetime_to_timestamp(d, date_format) if d not in na_values else np.NaN for d in df[col_name]
         ]
 
     def preprocess_data(self):
