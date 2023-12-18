@@ -1,3 +1,4 @@
+aiohttp>=3.9.0
 attrs
 avro
 base32-crockford
