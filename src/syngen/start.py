@@ -2,9 +2,12 @@ import argparse
 import subprocess
 import sys
 
+
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run training, inference tasks, or a Streamlit web UI.", add_help=False)
-    parser.add_argument("--task", choices=['train', 'infer'], help="Task to run: 'train' or 'infer'.")
+    parser = argparse.ArgumentParser(
+        description="Run training, inference tasks, or a Streamlit web UI.", add_help=False
+    )
+    parser.add_argument("--task", choices=["train", "infer"], help="Task to run: 'train' or 'infer'.")
     parser.add_argument("--webui", action="store_true", help="Launch the Streamlit web UI.")
 
     # Forward unknown arguments to train.py, infer.py, or Streamlit without explicit parsing in start.py
@@ -12,6 +15,7 @@ def parse_args():
 
     # Remaining unknown args will be passed to train/infer script or Streamlit
     return known_args, remaining_argv
+
 
 def main():
     known_args, remaining_argv = parse_args()
@@ -33,5 +37,6 @@ def main():
     # Run the command with any additional arguments
     subprocess.run(command, check=True)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict
+from typing import List, Dict, Optional
 from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
@@ -276,7 +276,7 @@ def fetch_unique_root(table_name: str, metadata_path: str):
     return f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
 
-def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
+def create_log_file(type_of_process: str, table_name: Optional[str], metadata_path: Optional[str]):
     """
     Create the file for storing the logs of main processes
     """

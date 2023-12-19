@@ -1,12 +1,14 @@
-# streamlit_app.py
-import streamlit as st
 import os
-import pandas as pd
-from syngen.ml.worker import Worker
+import threading
 import time
 import queue
+from slugify import slugify
+
+import pandas as pd
 from loguru import logger
-import threading
+import streamlit as st
+from syngen.ml.worker import Worker
+from syngen.ml.utils import setup_logger
 
 # Setup the log queue
 log_queue = queue.Queue()
@@ -16,12 +18,10 @@ def log_sink(message):
     log_queue.put(message.record["message"])
 
 
-logger.add(log_sink)
-
 # Create the path for uploaded CSV files
 UPLOAD_DIRECTORY = "uploaded_files"
 if not os.path.exists(UPLOAD_DIRECTORY):
-    os.makedirs(UPLOAD_DIRECTORY)
+    os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
 st.title("Syngen")
 uploaded_file = st.file_uploader(
@@ -29,52 +29,59 @@ uploaded_file = st.file_uploader(
     type="csv",
     accept_multiple_files=False
 )
-dataframe = {}  # Define the "dataframe" variable as an empty dictionary
+dataframe = {}
+file_name = str()
+table_name = str()
 
 if uploaded_file:
+    file_name = uploaded_file.name
+    table_name = os.path.splitext(file_name)[0]
     # Save the uploaded file to the local directory
-    file_path = os.path.join(UPLOAD_DIRECTORY, uploaded_file.name)
-    with open(file_path, 'wb') as f:
+    file_path = os.path.join(UPLOAD_DIRECTORY, file_name)
+    with open(file_path, "wb") as f:
         f.write(uploaded_file.getvalue())
 
     # Read the CSV into a DataFrame
     df = pd.read_csv(file_path)
-    dataframe[uploaded_file.name] = df
+    dataframe[table_name] = df
 
     # Show a preview of the uploaded file
-    st.write(f"Preview of {uploaded_file.name}:", df.head())
+    st.write(f"Preview of {file_name}:", df.head())
+    st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
 
 # Main page for training parameters
-epochs = st.number_input('Epochs', min_value=1, value=1)
-size_limit = st.number_input('Size Limit',
+epochs = st.number_input("Epochs", min_value=1, value=1)
+size_limit = st.number_input("Size Limit",
                              min_value=1,
                              max_value=None,
                              value=1000)
+log_level = "INFO"
 
 
 @logger.catch
 def train_model():
     logger.info("Starting model training...")
-    file_path = os.path.join(UPLOAD_DIRECTORY, uploaded_file.name)
+    file_path = os.path.join(UPLOAD_DIRECTORY, file_name)
     settings = {
         "source": file_path,
         "epochs": epochs,
-        "row_limit": 1000,
+        "row_limit": 10000,
         "drop_null": False,
         "batch_size": 32,
         "print_report": False
     }
     worker = Worker(
-        table_name=uploaded_file.name,
+        table_name=table_name,
         settings=settings,
         metadata_path=None,
-        log_level='DEBUG',
+        log_level="INFO",
         type_of_process="train"
     )
     worker.launch_train()
     logger.info("Model training completed.")
 
 
+@logger.catch
 def infer_model():
     try:
         logger.info("Starting data generation...")
@@ -86,10 +93,10 @@ def infer_model():
             "print_report": False
         }
         worker = Worker(
-            table_name=uploaded_file.name,
+            table_name=table_name,
             settings=settings,
             metadata_path=None,
-            log_level='DEBUG',
+            log_level="INFO",
             type_of_process="infer"
         )
         worker.launch_infer()
@@ -102,38 +109,40 @@ def infer_model():
 # Function to run both training and inference in sequence
 
 def train_and_infer():
+    os.environ["LOGURU_LEVEL"] = log_level
+    os.environ["SUCCESS_LOG_FILE"] = f"{UPLOAD_DIRECTORY}/{table_name}.log"
+    setup_logger()
+    logger.add(log_sink, format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>")
     train_model()
     infer_model()
 
 
 # Button to start the training and inference process
-if st.button('Generate data'):
+if st.button("Generate data"):
+    thread = None
     if uploaded_file:
         # Start the training and inference thread
         thread = threading.Thread(target=train_and_infer)
         thread.start()
 
-        # Display logs from the log queue in different format on streamlit
-#        with st.spinner('Waiting for the training to complete...'):
-#            with st.expander("Logs"):
-#                while True:
-#                    if not log_queue.empty():
-#                        with st.code("logs"):
-#                            st.text(log_queue.get())
-#                    elif not training_thread.is_alive():
-#                        st.success("Training completed.")
-#                        break
-#                    time.sleep(0.001)
-
         # Display logs from the log queue
-        with st.spinner('Waiting for the processes to complete...'):
+        with st.spinner("Waiting for the processes to complete..."):
             with st.expander("Logs"):
                 st.code("Logs will be displayed here...")
                 while thread.is_alive():
                     if not log_queue.empty():
                         log = log_queue.get()
-                        st.code(log, language='log')
+                        st.code(log, language="log")
                     time.sleep(0.001)
                 st.success("Data generation completed.")
     else:
         st.warning("Please upload a CSV file to proceed.")
+sl_table_name = slugify(table_name)
+path_to_generated_data = f"model_artifacts/tmp_store/{sl_table_name}/merged_infer_{sl_table_name}.csv"
+path_to_logs = f"{UPLOAD_DIRECTORY}/{table_name}.log"
+if os.path.exists(path_to_generated_data):
+    with open(path_to_generated_data, "rb") as f:
+        st.download_button("Download the generated data", f, file_name=f"generated_{file_name}")
+if os.path.exists(path_to_logs):
+    with open(path_to_logs, "rb") as f:
+        st.download_button("Download the logs", f, file_name=f"logs.log")

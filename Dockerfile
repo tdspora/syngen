@@ -15,5 +15,6 @@ RUN apt-get update && \
     pip install --no-cache-dir streamlit
 
 COPY src/ .
+COPY src/config.toml /root/.streamlit/config.toml
 ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
 ENTRYPOINT ["python3", "-m", "start"]
