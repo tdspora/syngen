@@ -125,17 +125,35 @@ if st.button("Generate data"):
         # Start the training and inference thread
         thread = threading.Thread(target=train_and_infer)
         thread.start()
+        x = 0
+        prg = st.progress(x)
 
-        # Display logs from the log queue
-        with st.spinner("Waiting for the processes to complete..."):
-            with st.expander("Logs"):
-                st.code("Logs will be displayed here...")
-                while thread.is_alive():
-                    if not log_queue.empty():
-                        log = log_queue.get()
-                        st.code(log, language="log")
-                    time.sleep(0.001)
-                st.success("Data generation completed.")
+        # Progress bar
+        while thread.is_alive():
+            if not log_queue.empty():
+                log = log_queue.get()
+                if f"Training process of the table - {table_name} has started" in log:
+                    x = 5
+                    prg.progress(x, text=f"Training process of the table - {table_name} has started")
+                elif x >= 5 and x < 40:
+                    for i in range(5, 40):
+                        time.sleep(epochs/35 if epochs < 35 else 1)
+                        prg.progress(i + 1, text="Training model...")
+                    x = 45
+                elif f"Training of the table - {table_name} was completed" in log:
+                    x = 45
+                    prg.progress(x)
+                elif f"Infer process of the table - {table_name} has started" in log:
+                    x = 50
+                    prg.progress(x, text=f"Infer process of the table - {table_name} has started")
+                elif x >= 50 and x < 90:
+                    sleep_time = int((size_limit/32)/40)
+                    for i in range(50, 90):
+                        time.sleep(sleep_time)
+                        prg.progress(i + 1, text="Generating data...")
+            time.sleep(0.001)
+        st.success("Data generation completed.")
+        prg.progress(100)
     else:
         st.warning("Please upload a CSV file to proceed.")
 sl_table_name = slugify(table_name)
