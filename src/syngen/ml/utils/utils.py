@@ -15,35 +15,45 @@ from ulid import ULID
 import random
 from loguru import logger
 
+MAX_ALLOWED_TIME_MS = 253402214400
+MIN_ALLOWED_TIME_MS = -62135596800
 
-def datetime_to_timestamp(dt):
-    max_allowed_time_ms = 253402214400
-    min_allowed_time_ms = -62135596800
+
+def is_format_first(date_format: str, format_type: str) -> bool:
+    """
+    Check if the date format starts with the specified string
+    """
+    return date_format.lower().startswith(f"%{format_type}")
+
+
+def datetime_to_timestamp(dt, date_format):
+    """
+    Convert datetime to timestamp
+    """
     if pd.isnull(dt):
         return np.nan
     try:
-        dt = parser.parse(dt).replace(tzinfo=None)
+        dt = parser.parse(dt,
+                          dayfirst=is_format_first(date_format, "d"),
+                          yearfirst=is_format_first(date_format, "y")).replace(tzinfo=None)
         delta = dt - datetime(1970, 1, 1)
         return delta.total_seconds()
     except parser._parser.ParserError as e:
         year = re.match(r"\d+", e.args[0][5:]).group(0)
         if int(year) > 9999:
-            return max_allowed_time_ms
+            return MAX_ALLOWED_TIME_MS
         elif int(year) < 1:
-            return min_allowed_time_ms
+            return MIN_ALLOWED_TIME_MS
 
 
 def timestamp_to_datetime(timestamp):
     # Calculate the number of seconds in the UNIX epoch and the number of seconds left
-    max_allowed_time_ms = 253402214400
-    min_allowed_time_ms = -62135596800
-
     if pd.isnull(timestamp):
         return np.nan
 
-    if timestamp >= max_allowed_time_ms:
+    if timestamp >= MAX_ALLOWED_TIME_MS:
         return datetime(9999, 12, 31, 23, 59, 59, 999999)
-    elif timestamp <= min_allowed_time_ms:
+    elif timestamp <= MIN_ALLOWED_TIME_MS:
         return datetime(1, 1, 1, 0, 0, 0, 0)
 
     seconds_since_epoch = int(timestamp)
