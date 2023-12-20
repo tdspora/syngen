@@ -299,13 +299,23 @@ def create_log_file(type_of_process: str, table_name: Optional[str], metadata_pa
     os.environ["SUCCESS_LOG_FILE"] = file_path
 
 
-def file_sink(record):
+def fetch_log_message(message):
     """
-    Save logs with level 'INFO' and above to the log file
+    Fetch the log message
+    """
+    record = message.record
+    log_message = (f'{record["time"]} | {record["level"]}    | '
+                   f'{record["file"]}:{record["function"]}:{record["line"]} - {record["message"]}')
+    return log_message
+
+
+def file_sink(message):
+    """
+    Save logs to the log file
     """
     with open(os.getenv("SUCCESS_LOG_FILE"), "a") as log_file:
-        log_message = record.record["message"] + "\n"
-        log_file.write(log_message)
+        log_message = fetch_log_message(message)
+        log_file.write(log_message + "\n")
 
 
 def console_sink(record):

@@ -8,14 +8,15 @@ import pandas as pd
 from loguru import logger
 import streamlit as st
 from syngen.ml.worker import Worker
-from syngen.ml.utils import setup_logger
+from syngen.ml.utils import setup_logger, fetch_log_message
 
 # Setup the log queue
 log_queue = queue.Queue()
 
 
 def log_sink(message):
-    log_queue.put(message.record["message"])
+    log_message = fetch_log_message(message)
+    log_queue.put(log_message)
 
 
 # Create the path for uploaded CSV files
