@@ -13,11 +13,12 @@ from syngen.ml.utils import file_sink, fetch_log_message
 
 
 class StreamlitHandler:
-    def __init__(self, uploaded_file, epochs, size_limit):
+    def __init__(self, uploaded_file, epochs, size_limit, print_report):
         self.upload_directory = "uploaded_files"
         self.log_queue = Queue()
         self.epochs = epochs
         self.size_limit = size_limit
+        self.print_report = print_report
         self.log_format = ("<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
                            "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
                            "<level>{message}</level>")
@@ -187,7 +188,7 @@ class StreamlitHandler:
                 "batch_size": 32,
                 "run_parallel": False,
                 "random_seed": None,
-                "print_report": True
+                "print_report": self.print_report
             }
             worker = Worker(
                 table_name=self.table_name,
@@ -263,8 +264,9 @@ def main():
         show_data(uploaded_file)
         epochs = st.number_input("Epochs", min_value=1, value=1)
         size_limit = st.number_input("Size Limit", min_value=1, max_value=None, value=1000)
+        print_report = st.checkbox("Create the accuracy report", value=False)
         if st.button("Generate data"):
-            app = StreamlitHandler(uploaded_file, epochs, size_limit)
+            app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
             app.prepare_data()
 
             thread = threading.Thread(target=app.train_and_infer)
