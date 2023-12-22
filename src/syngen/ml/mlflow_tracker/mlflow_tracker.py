@@ -72,14 +72,14 @@ class MlflowTrackerFactory:
                 artifact_location=os.environ.get(
                     "MLFLOW_ARTIFACTS_DESTINATION",
                     "/mlflow_tracker"
-                ),
+                )
             )
             tracker.set_experiment(experiment_name)
         if type_of_process == "infer":
             tracker.set_experiment(experiment_name)
 
     @classmethod
-    def get_mlflow_exp_name(cls, table_name: str, metadata_path: str) -> str:
+    def get_mlflow_exp_name(cls, table_name: Optional[str], metadata_path: Optional[str]) -> str:
         """
         Get the name of the Mlflow experiment
         """
@@ -145,11 +145,10 @@ class MlflowTracker:
     def create_experiment(
         self,
         name: str,
-        artifact_location: Optional[str] = None,
-        tags: Optional[Dict[str, Any]] = None,
+        artifact_location: Optional[str] = None
     ):
         if self.is_active:
-            mlflow.create_experiment(name, artifact_location, tags)
+            mlflow.create_experiment(name, artifact_location)
 
     def set_experiment(
         self,

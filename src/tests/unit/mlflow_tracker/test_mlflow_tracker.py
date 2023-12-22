@@ -1,7 +1,7 @@
 from unittest.mock import patch
+import requests
 
 import pandas as pd
-import requests
 
 from tests.conftest import SUCCESSFUL_MESSAGE
 from syngen.ml.mlflow_tracker import MlflowTracker, MlflowTrackerFactory
@@ -205,12 +205,10 @@ def test_create_experiment_with_active_status(mlflow_tracker, rp_logger):
     ) as mock_create_experiment:
         test_experiment_name = "test_experiment"
         artifact_location = "path/to/artifacts"
-        tags = {"tag1": 1, "tag2": 2}
-        mlflow_tracker.create_experiment(test_experiment_name, artifact_location, tags)
+        mlflow_tracker.create_experiment(test_experiment_name, artifact_location)
         mock_create_experiment.assert_called_once_with(
             test_experiment_name,
-            artifact_location,
-            tags
+            artifact_location
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -226,19 +224,19 @@ def test_create_experiment_with_inactive_mlflow(mlflow_tracker, rp_logger):
     ) as mock_create_experiment:
         test_experiment_name = "test_experiment"
         artifact_location = "path/to/artifacts"
-        tags = {"tag1": 1, "tag2": 2}
-        mlflow_tracker.create_experiment(test_experiment_name, artifact_location, tags)
+        mlflow_tracker.create_experiment(test_experiment_name, artifact_location)
         mock_create_experiment.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment")
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments", return_value=[])
-def test_set_experiment_with_valid_name_and_active_mlflow(
-        mock_search_experiment, mock_set_experiment, mlflow_tracker, rp_logger, caplog):
+def test_set_not_existent_experiment_with_active_mlflow(
+        mock_search_experiment, mock_create_experiment, mock_set_experiment, mlflow_tracker, rp_logger, caplog):
     rp_logger.info(
         "Test the method 'set_experiment' of the class 'MlflowTracker' "
-        "with the valid experiment name and the active mlflow"
+        "with not-existent experiment name and the active mlflow"
     )
     test_experiment_name = "test_experiment_first-2000-00-00 00:00:00"
     with caplog.at_level(level="WARNING"):
@@ -250,22 +248,7 @@ def test_set_experiment_with_valid_name_and_active_mlflow(
                 "with - 'test_experiment_first-' was found. A new experiment "
                 "with the name  - 'test_experiment_first-2000-00-00 00:00:00' "
                 "will be created") in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
-@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments")
-def test_set_experiment_with_invalid_name_and_active_mlflow(
-        mock_search_experiment, mock_set_experiment, mlflow_tracker, rp_logger):
-    rp_logger.info(
-        "Test the method 'set_experiment' of the class 'MlflowTracker' "
-        "with the invalid experiment name and the active mlflow"
-    )
-    test_experiment_name = "test_experiment"
-    mlflow_tracker.set_experiment(test_experiment_name)
-    mock_search_experiment.assert_called_once_with(
-        filter_string="name LIKE 'test_experiment%'"
-    )
+        mock_create_experiment.assert_called_once_with(test_experiment_name, "/mlflow_tracker")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -501,4 +484,24 @@ def test_check_mlflow_server_if_server_uri_not_provided(caplog, rp_logger):
     with caplog.at_level(level="WARNING"):
         assert MlflowTrackerFactory.check_mlflow_server(server_url=None) is False
         assert "MLFlow server URL not provided" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_mlflow_exp_name_if_env_var_present(monkeypatch, rp_logger):
+    rp_logger.info(
+        "Test the method 'get_mlflow_exp_name' of the class 'MlflowTrackerFactory' "
+        "if the environment variable 'MLFLOW_EXPERIMENT_NAME' is present"
+    )
+    monkeypatch.setenv("MLFLOW_EXPERIMENT_NAME", "experiment")
+    assert MlflowTrackerFactory.get_mlflow_exp_name("test_table", None) == "experiment"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_mlflow_exp_name_if_env_var_not_present(monkeypatch, rp_logger):
+    rp_logger.info(
+        "Test the method 'get_mlflow_exp_name' of the class 'MlflowTrackerFactory' "
+        "if the environment variable 'MLFLOW_EXPERIMENT_NAME' is not present"
+    )
+    assert MlflowTrackerFactory.get_mlflow_exp_name(
+        "table_name", None).startswith("table_name") is True
     rp_logger.info(SUCCESSFUL_MESSAGE)
