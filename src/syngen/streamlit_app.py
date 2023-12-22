@@ -223,9 +223,9 @@ class StreamlitHandler:
                                           f"generated_{self.file_name}",
                                           "data")
         if st.button("Download the report", key="report"):
-            self.generate_download_button("Download the generated data",
+            self.generate_download_button("Download the report",
                                           self.path_to_generated_data,
-                                          f"generated_{self.file_name}",
+                                          f"accuracy_report.html",
                                           "report")
         if st.button("Download the logs", key="logs"):
             self.generate_download_button("Download the logs",
