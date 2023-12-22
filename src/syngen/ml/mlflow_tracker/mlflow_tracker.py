@@ -83,6 +83,8 @@ class MlflowTrackerFactory:
         """
         Get the name of the Mlflow experiment
         """
+        if os.getenv("MLFLOW_EXPERIMENT_NAME"):
+            return os.getenv("MLFLOW_EXPERIMENT_NAME")
         return fetch_unique_root(table_name, metadata_path)
 
 
@@ -164,11 +166,18 @@ class MlflowTracker:
             experiments = mlflow.search_experiments(
                 filter_string=f"name LIKE '{name}%'"
             )
-            last_matching = experiments[0] if experiments else None
+            last_matching = experiments[0] if experiments else []
             if not last_matching:
                 logger.warning(
                     f"It seems that no experiment with a name starting with - '{name}' was found. "
                     f"A new experiment with the name  - '{experiment_name}' will be created"
+                )
+                MlflowTracker().create_experiment(
+                    experiment_name,
+                    artifact_location=os.environ.get(
+                        "MLFLOW_ARTIFACTS_DESTINATION",
+                        "/mlflow_tracker"
+                    ),
                 )
             matching_name = last_matching.name if last_matching else experiment_name
             mlflow.set_experiment(matching_name, experiment_id)
