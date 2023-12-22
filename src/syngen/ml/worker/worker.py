@@ -56,8 +56,7 @@ class Worker:
         """
         MlflowTrackerFactory.create_tracker(
             table_name=self.table_name,
-            metadata_path=self.metadata_path,
-            type_of_process=self.type_of_process
+            metadata_path=self.metadata_path
         )
 
     def _update_metadata_for_table(self):

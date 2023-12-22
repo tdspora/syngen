@@ -203,7 +203,7 @@ def test_create_experiment_with_active_status(mlflow_tracker, rp_logger):
     with patch(
             "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment"
     ) as mock_create_experiment:
-        test_experiment_name = "test_experiment"
+        test_experiment_name = "test_experiment_first"
         artifact_location = "path/to/artifacts"
         mlflow_tracker.create_experiment(test_experiment_name, artifact_location)
         mock_create_experiment.assert_called_once_with(
@@ -222,7 +222,7 @@ def test_create_experiment_with_inactive_mlflow(mlflow_tracker, rp_logger):
     with patch(
             "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment"
     ) as mock_create_experiment:
-        test_experiment_name = "test_experiment"
+        test_experiment_name = "test_experiment_second"
         artifact_location = "path/to/artifacts"
         mlflow_tracker.create_experiment(test_experiment_name, artifact_location)
         mock_create_experiment.assert_not_called()
@@ -238,73 +238,41 @@ def test_set_not_existent_experiment_with_active_mlflow(
         "Test the method 'set_experiment' of the class 'MlflowTracker' "
         "with not-existent experiment name and the active mlflow"
     )
-    test_experiment_name = "test_experiment_first-2000-00-00 00:00:00"
+    test_experiment_name = "test_experiment_third"
     with caplog.at_level(level="WARNING"):
         mlflow_tracker.set_experiment(test_experiment_name)
         mock_search_experiment.assert_called_once_with(
-            filter_string="name LIKE 'test_experiment_first-%'"
+            filter_string="name LIKE 'test_experiment_third%'"
         )
         assert ("It seems that no experiment with a name starting "
-                "with - 'test_experiment_first-' was found. A new experiment "
-                "with the name  - 'test_experiment_first-2000-00-00 00:00:00' "
+                "with - 'test_experiment_third' was found. A new experiment "
+                "with the name  - 'test_experiment_third' "
                 "will be created") in caplog.text
         mock_create_experiment.assert_called_once_with(test_experiment_name, "/mlflow_tracker")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment")
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments")
 def test_set_experiment_with_inactive_mlflow(
-        mock_search_experiment, mock_set_experiment, mlflow_tracker, rp_logger):
+        mock_search_experiment, mock_set_experiment, mock_create_experiment, mlflow_tracker, rp_logger):
     rp_logger.info(
-        "Test the method 'set_experiment' of the class 'MlflowTracker' "
-        "with the valid experiment name and the inactive mlflow"
+        "Test the method 'set_experiment' of the class 'MlflowTracker' with the inactive mlflow"
     )
     MlflowTracker.reset_status(active_status=False)
-    test_experiment_name = "test_experiment_third-2005-00-00 00:00:00"
+    test_experiment_name = "test_experiment_fourth"
     mlflow_tracker.set_experiment(test_experiment_name)
     mock_search_experiment.assert_not_called()
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch.object(MlflowTracker, "set_experiment")
-@patch.object(MlflowTracker, "create_experiment")
-@patch.object(MlflowTracker, "set_tracking_uri")
-@patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
-def test_create_mlflow_tracker_for_single_table_in_train_process(
-        mock_check_mlflow_server,
-        mock_set_tracking_uri,
-        mock_create_experiment,
-        mock_set_experiment,
-        monkeypatch,
-        rp_logger
-):
-    rp_logger.info(
-        "Create the instance of the class MlflowTracker in the training process "
-        "by providing 'table_name'"
-    )
-    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mock_server:5000")
-    MlflowTracker._instance = None
-    MlflowTrackerFactory.create_tracker(
-        table_name="test_table",
-        metadata_path=None,
-        type_of_process="train"
-    )
-
-    assert MlflowTracker().experiment_name.startswith("test_table")
-    assert MlflowTracker().is_active is True
-    assert MlflowTracker().connect_to_server is True
-    mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
-    mock_set_tracking_uri.assert_called_once()
-    mock_create_experiment.assert_called_once()
-    mock_set_experiment.assert_called_once()
+    mock_create_experiment.assert_not_called()
+    mock_set_experiment.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(MlflowTracker, "set_experiment")
 @patch.object(MlflowTracker, "set_tracking_uri")
 @patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
-def test_create_mlflow_tracker_for_single_table_in_inference_process(
+def test_create_mlflow_tracker_for_single_table(
         mock_check_mlflow_server,
         mock_set_tracking_uri,
         mock_set_experiment,
@@ -312,18 +280,16 @@ def test_create_mlflow_tracker_for_single_table_in_inference_process(
         rp_logger
 ):
     rp_logger.info(
-        "Create the instance of the class MlflowTracker in the inference process "
-        "by providing 'table_name'"
+        "Create the instance of the class MlflowTracker by providing 'table_name'"
     )
     monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mock_server:5000")
     MlflowTracker._instance = None
     MlflowTrackerFactory.create_tracker(
-        table_name="test_table",
-        metadata_path=None,
-        type_of_process="infer"
+        table_name="table_new",
+        metadata_path=None
     )
 
-    assert MlflowTracker().experiment_name.startswith("test_table")
+    assert MlflowTracker().experiment_name == "table-new"
     assert MlflowTracker().is_active is True
     assert MlflowTracker().connect_to_server is True
     mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
@@ -333,61 +299,25 @@ def test_create_mlflow_tracker_for_single_table_in_inference_process(
 
 
 @patch.object(MlflowTracker, "set_experiment")
-@patch.object(MlflowTracker, "create_experiment")
 @patch.object(MlflowTracker, "set_tracking_uri")
 @patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
-def test_create_mlflow_tracker_for_metadata_path_in_train_process(
+def test_create_mlflow_tracker_for_metadata_path(
         mock_check_mlflow_server,
         mock_set_tracking_uri,
-        mock_create_experiment,
         mock_set_experiment,
         monkeypatch,
         rp_logger
 ):
     rp_logger.info(
-        "Create the instance of the class MlflowTracker in the training process "
-        "by providing 'metadata_path'"
+        "Create the instance of the class MlflowTracker by providing 'metadata_path'"
     )
     monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mock_server:5000")
     MlflowTracker._instance = None
     MlflowTrackerFactory.create_tracker(
         table_name=None,
-        metadata_path="path/to/metadata.yaml",
-        type_of_process="train"
+        metadata_path="path/to/metadata.yaml"
     )
-
-    assert MlflowTracker().experiment_name.startswith("metadata")
-    assert MlflowTracker().is_active is True
-    assert MlflowTracker().connect_to_server is True
-    mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
-    mock_set_tracking_uri.assert_called_once()
-    mock_create_experiment.assert_called_once()
-    mock_set_experiment.assert_called_once()
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch.object(MlflowTracker, "set_experiment")
-@patch.object(MlflowTracker, "set_tracking_uri")
-@patch.object(MlflowTrackerFactory, "check_mlflow_server", return_value=True)
-def test_create_mlflow_tracker_for_metadata_path_in_inference_process(
-        mock_check_mlflow_server,
-        mock_set_tracking_uri,
-        mock_set_experiment,
-        monkeypatch,
-        rp_logger
-):
-    rp_logger.info(
-        "Create the instance of the class MlflowTracker in the inference process "
-        "by providing 'metadata_path'"
-    )
-    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mock_server:5000")
-    MlflowTrackerFactory.create_tracker(
-        table_name=None,
-        metadata_path="path/to/metadata.yaml",
-        type_of_process="infer"
-    )
-
-    assert MlflowTracker().experiment_name.startswith("metadata")
+    assert MlflowTracker().experiment_name == "metadata-yaml"
     assert MlflowTracker().is_active is True
     assert MlflowTracker().connect_to_server is True
     mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
@@ -415,16 +345,14 @@ def test_create_mlflow_tracker_with_inactive_server(
     MlflowTracker._instance = None
     MlflowTrackerFactory.create_tracker(
         table_name="test_table",
-        metadata_path=None,
-        type_of_process="train"
+        metadata_path=None
     )
-
-    assert MlflowTracker().experiment_name.startswith("test_table")
+    assert MlflowTracker().experiment_name == "test-table"
     assert MlflowTracker().is_active is False
     assert MlflowTracker().connect_to_server is False
     mock_check_mlflow_server.assert_called_once_with("http://mock_server:5000")
     mock_set_tracking_uri.assert_called_once()
-    mock_create_experiment.assert_called_once()
+    mock_create_experiment.assert_not_called()
     mock_set_experiment.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -503,5 +431,5 @@ def test_get_mlflow_exp_name_if_env_var_not_present(monkeypatch, rp_logger):
         "if the environment variable 'MLFLOW_EXPERIMENT_NAME' is not present"
     )
     assert MlflowTrackerFactory.get_mlflow_exp_name(
-        "table_name", None).startswith("table_name") is True
+        "test_table", None) == "test-table"
     rp_logger.info(SUCCESSFUL_MESSAGE)

@@ -283,7 +283,7 @@ def fetch_unique_root(table_name: str, metadata_path: str):
         unique_name = table_name
     if metadata_path:
         unique_name = os.path.basename(metadata_path)
-    return f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    return slugify(unique_name)
 
 
 def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
@@ -291,8 +291,9 @@ def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
     Create the file for storing the logs of main processes
     """
     os.makedirs("model_artifacts/tmp_store", exist_ok=True)
-    unique_root = fetch_unique_root(table_name, metadata_path)
-    file_name_without_extension = f"logs_{type_of_process}_{unique_root}"
+    unique_name = fetch_unique_root(table_name, metadata_path)
+    unique_name = f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    file_name_without_extension = f"logs_{type_of_process}_{unique_name}"
     file_path = os.path.join(
         "model_artifacts/tmp_store", f"{slugify(file_name_without_extension)}.log"
     )
