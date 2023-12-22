@@ -19,5 +19,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     timestamp_to_datetime,
     define_existent_columns,
     create_log_file,
-    fetch_log_message
+    fetch_log_message,
+    file_sink
 )
