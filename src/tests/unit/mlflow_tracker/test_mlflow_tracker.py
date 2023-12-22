@@ -233,38 +233,22 @@ def test_create_experiment_with_inactive_mlflow(mlflow_tracker, rp_logger):
 
 
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
-@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments")
-def test_set_experiment_with_valid_name_and_active_mlflow(
-        mock_search_experiment, mock_set_experiment, mlflow_tracker, rp_logger):
-    rp_logger.info(
-        "Test the method 'set_experiment' of the class 'MlflowTracker' "
-        "with the valid experiment name and the active mlflow"
-    )
-    test_experiment_name = "test_experiment-2000-00-00 00:00:00"
-    mlflow_tracker.set_experiment(test_experiment_name)
-    mock_search_experiment.assert_called_once_with(
-        filter_string="name LIKE 'test_experiment-%'"
-    )
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments", return_value=[])
-def test_set_experiment_with_valid_name_and_active_mlflow_(
+def test_set_experiment_with_valid_name_and_active_mlflow(
         mock_search_experiment, mock_set_experiment, mlflow_tracker, rp_logger, caplog):
     rp_logger.info(
         "Test the method 'set_experiment' of the class 'MlflowTracker' "
         "with the valid experiment name and the active mlflow"
     )
-    test_experiment_name = "test_experiment-2000-00-00 00:00:00"
+    test_experiment_name = "test_experiment_first-2000-00-00 00:00:00"
     with caplog.at_level(level="WARNING"):
         mlflow_tracker.set_experiment(test_experiment_name)
         mock_search_experiment.assert_called_once_with(
-            filter_string="name LIKE 'test_experiment-%'"
+            filter_string="name LIKE 'test_experiment_first-%'"
         )
         assert ("It seems that no experiment with a name starting "
-                "with - 'test_experiment-' was found. A new experiment "
-                "with the name  - 'test_experiment-2000-00-00 00:00:00' "
+                "with - 'test_experiment_first-' was found. A new experiment "
+                "with the name  - 'test_experiment_first-2000-00-00 00:00:00' "
                 "will be created") in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -294,7 +278,7 @@ def test_set_experiment_with_inactive_mlflow(
         "with the valid experiment name and the inactive mlflow"
     )
     MlflowTracker.reset_status(active_status=False)
-    test_experiment_name = "test_experiment-2000-00-00 00:00:00"
+    test_experiment_name = "test_experiment_third-2005-00-00 00:00:00"
     mlflow_tracker.set_experiment(test_experiment_name)
     mock_search_experiment.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
