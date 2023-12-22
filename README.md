@@ -361,9 +361,10 @@ docker run --rm -e LOGURU_LEVEL=INFO \
 
 #### MLflow monitoring
 Set the `MLFLOW_TRACKING_URI` environment variable to the desired MLflow tracking server, for instance:
-http://localhost:5000/. You can also set `MLFLOW_ARTIFACTS_DESTINATION` environment variable to the preferred path 
-(including cloud path), where the artifacts should be stored. When using Docker, ensure the environmental variables 
-are set before running the container.
+http://localhost:5000/. You can also set the `MLFLOW_ARTIFACTS_DESTINATION` environment variable to your preferred path 
+(including the cloud path), where the artifacts should be stored. Additionally, set the `MLFLOW_EXPERIMENT_NAME` 
+environment variable to the name you prefer for the experiment. 
+When using Docker, ensure the environmental variables are set before running the container.
 
 The provided environmental variables allow to track the training process, and the inference process, and store 
 the artifacts in the desired location.
