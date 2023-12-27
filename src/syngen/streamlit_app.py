@@ -102,7 +102,7 @@ class StreamlitHandler:
                     while thread.is_alive():
                         if not self.log_queue.empty():
                             log = self.log_queue.get()
-                            st.code(log, language='log')
+                            st.code(log, language="log")
                         time.sleep(0.001)
             if not self.log_queue.empty():
                 log_message = self.log_queue.get()
