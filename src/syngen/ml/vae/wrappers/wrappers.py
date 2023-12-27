@@ -273,6 +273,7 @@ class VAEWrapper(BaseWrapper):
         es_min_delta = 0.005
         es_patience = 10
         pth = Path(self.paths["state_path"])
+        best_loss = float("inf")
 
         for epoch in range(epochs):
             num_batches = 0.0
@@ -287,7 +288,6 @@ class VAEWrapper(BaseWrapper):
             mean_loss = np.mean(total_loss / num_batches)
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
-                best_loss = prev_total_loss
             else:
                 self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 loss_grows_num_epochs = 0
