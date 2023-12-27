@@ -287,12 +287,16 @@ class VAEWrapper(BaseWrapper):
             mean_loss = np.mean(total_loss / num_batches)
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
+                best_loss = prev_total_loss
             else:
                 self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 loss_grows_num_epochs = 0
+                # loss that corresponds to the best saved weights
+                best_loss = mean_loss
 
             logger.info(f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec")
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
+            MlflowTracker().log_metric("best loss", best_loss, step=epoch)
 
             prev_total_loss = mean_loss
             if loss_grows_num_epochs == es_patience:
