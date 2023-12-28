@@ -371,6 +371,21 @@ the artifacts in the desired location.
 You can access the MLflow UI by navigating to the provided URL in your browser. If you store artifacts in remote storage,
 ensure that all necessary credentials are provided before using Mlflow.
 
+```bash
+docker pull tdspora/syngen-train:latest
+docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
+  -e MLFLOW_ARTIFACTS_DESTINATION=s3://epmctdm-mlflow-bucket/mlflow/ \
+  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML --log_level=DEBUG
+
+
+docker pull tdspora/syngen-infer:latest
+docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
+  -e MLFLOW_ARTIFACTS_DESTINATION=s3://epmctdm-mlflow-bucket/mlflow/ \
+  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML --log_level=DEBUG
+```
+
 ## Contribution
 
 We welcome contributions from the community to help us improve and maintain our public GitHub repository. We appreciate any feedback, bug reports, or feature requests, and we encourage developers to submit fixes or new features using issues.
