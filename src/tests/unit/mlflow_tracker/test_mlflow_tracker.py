@@ -97,7 +97,7 @@ def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
             "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_runs",
             return_value=pd.DataFrame(data)) as mock_search_run:
         assert mlflow_tracker.search_run("test_table", "TRAIN") == "6d2fa5df6ef14734a2dc03ab07e016f1"
-        mock_search_run.assert_called_once_with(filter_string="run_name = 'test_table | TRAIN'")
+        mock_search_run.assert_called_once_with(filter_string="run_name = 'test_table-TRAIN'")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -129,8 +129,8 @@ def test_start_run_with_active_mlflow(mlflow_tracker, rp_logger):
         "Test the method 'start_run' of the class 'MlflowTracker' with the active mlflow"
     )
     with patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.start_run") as mock_start_run:
-        mlflow_tracker.start_run(run_name="test_run | TRAIN")
-        mock_start_run.assert_called_once_with(None, None, "test_run | TRAIN", False, None, None)
+        mlflow_tracker.start_run(run_name="test_run-TRAIN")
+        mock_start_run.assert_called_once_with(None, None, "test_run-TRAIN", False, None, None)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -140,7 +140,7 @@ def test_start_run_with_inactive_mlflow(mlflow_tracker, rp_logger):
     )
     MlflowTracker.reset_status(active_status=False)
     with patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.start_run") as mock_start_run:
-        mlflow_tracker.start_run(run_name="test_run | TRAIN")
+        mlflow_tracker.start_run(run_name="test_run-TRAIN")
         mock_start_run.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
