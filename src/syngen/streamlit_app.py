@@ -10,7 +10,15 @@ from loguru import logger
 import streamlit as st
 from syngen.ml.worker import Worker
 from syngen.ml.utils import file_sink, fetch_log_message
+from streamlit_option_menu import option_menu
 
+st.markdown("""
+    <style>
+    * {
+        font-family: "Open Sans" !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 class StreamlitHandler:
     def __init__(self, uploaded_file, epochs, size_limit, print_report):
@@ -252,29 +260,37 @@ def show_data(uploaded_file):
     st.write(f"Preview of {uploaded_file.name}:", df.head())
     st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
 
+st.sidebar.image("./.streamlit/img/logo.svg", use_column_width=True)
+with st.sidebar:
+        selected = option_menu("", ["Demo", 'Advanced', "DOCS", "Authorization"],
+        icons=['play', 'gear', 'journals', 'person-check'], default_index=0, menu_icon=None,
+        styles={
+        "container": {"font-family": "Open Sans"}
+    })
 
 def main():
-    st.title("Syngen")
-    uploaded_file = st.file_uploader(
-        "Upload CSV file",
-        type="csv",
-        accept_multiple_files=False
-    )
-    if uploaded_file:
-        show_data(uploaded_file)
-        epochs = st.number_input("Epochs", min_value=1, value=1)
-        size_limit = st.number_input("Size Limit", min_value=1, max_value=None, value=1000)
-        print_report = st.checkbox("Create the accuracy report", value=False)
-        if st.button("Generate data"):
-            app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
-            app.prepare_data()
+    if selected == 'Demo':
+        st.title("Syngen")
+        uploaded_file = st.file_uploader(
+            "Upload CSV file",
+            type="csv",
+            accept_multiple_files=False
+        )
+        if uploaded_file:
+            show_data(uploaded_file)
+            epochs = st.number_input("Epochs", min_value=1, value=1)
+            size_limit = st.number_input("Size Limit", min_value=1, max_value=None, value=1000)
+            print_report = st.checkbox("Create the accuracy report", value=False)
+            if st.button("Generate data"):
+                app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
+                app.prepare_data()
 
-            thread = threading.Thread(target=app.train_and_infer)
-            thread.start()
-            app.show_progress_bar(thread)
-            app.download_artifacts()
-        else:
-            st.warning("Please upload a CSV file to proceed.")
+                thread = threading.Thread(target=app.train_and_infer)
+                thread.start()
+                app.show_progress_bar(thread)
+                app.download_artifacts()
+            else:
+                st.warning("Please upload a CSV file to proceed.")
 
 
 if __name__ == "__main__":

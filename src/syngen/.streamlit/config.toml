@@ -1,5 +1,6 @@
 [theme]
-backgroundColor="#FFFFFF"
+primaryColor="#009dc4"
+backgroundColor="#edf0f7"
 textColor="#262730"
 font="sans serif"
 [logger]
