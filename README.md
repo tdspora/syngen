@@ -374,14 +374,14 @@ ensure that all necessary credentials are provided before using Mlflow.
 ```bash
 docker pull tdspora/syngen-train:latest
 docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
-  -e MLFLOW_ARTIFACTS_DESTINATION=s3://epmctdm-mlflow-bucket/mlflow/ \
+  -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
   -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML --log_level=DEBUG
 
 
 docker pull tdspora/syngen-infer:latest
 docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
-  -e MLFLOW_ARTIFACTS_DESTINATION=s3://epmctdm-mlflow-bucket/mlflow/ \
+  -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
   -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML --log_level=DEBUG
 ```
