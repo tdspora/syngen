@@ -29,6 +29,8 @@ scikit_learn==1.1.*
 scipy==1.11.*
 seaborn==0.11.*
 setuptools>=65.5.1
+streamlit
+streamlit_option_menu
 tensorflow==2.15.*
 tqdm==4.64.*
 Werkzeug==3.0.1
