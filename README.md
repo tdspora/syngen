@@ -324,13 +324,13 @@ To run dockerized code (see parameters description in *Training* and *Inference*
 ```bash
 docker run --rm \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
-  --type=train \
+  --task=train \
   --table_name=TABLE_NAME \
   --source=./model_artifacts/YOUR_CSV_FILE.csv
 
 docker run --rm \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
-  --type=infer \
+  --task=infer \
   --table_name=TABLE_NAME
 ```
 
@@ -343,12 +343,12 @@ To run dockerized code by providing the metadata file simply call:
 ```bash
 docker run --rm \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
-  --type=train \
+  --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
 docker run --rm \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
-  --type=infer \
+  --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
@@ -363,13 +363,13 @@ For example, to suppress the debug messages, add `-e LOGURU_LEVEL=INFO` to the `
 ```bash
 docker run --rm -e LOGURU_LEVEL=INFO \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
-  --type=train \
+  --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
 docker pull tdspora/syngen-infer:latest
 docker run --rm -e LOGURU_LEVEL=INFO \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
-  --type=infer \
+  --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
