@@ -7,9 +7,10 @@ setup(
     version=version_info,
     packages=find_packages(),
     extras_require={
-        'ui':[
-            'streamlit',
-            'altair<5',
+        "ui": [
+            "streamlit",
+            "streamlit_option_menu",
+            "altair<5",
         ],
     }
 )
