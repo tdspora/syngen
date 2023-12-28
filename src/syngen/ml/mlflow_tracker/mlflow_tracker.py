@@ -175,6 +175,6 @@ class MlflowTracker:
     def search_run(self, table_name: str, type_of_process: str):
         if self.is_active:
             run = mlflow.search_runs(
-                filter_string=f"run_name = '{table_name} | {type_of_process}'"
+                filter_string=f"run_name = '{table_name}-{type_of_process}'"
             )
             return run["run_id"][0] if run.shape[0] > 0 else None
