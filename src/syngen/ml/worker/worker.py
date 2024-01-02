@@ -56,8 +56,7 @@ class Worker:
         """
         MlflowTrackerFactory.create_tracker(
             table_name=self.table_name,
-            metadata_path=self.metadata_path,
-            type_of_process=self.type_of_process
+            metadata_path=self.metadata_path
         )
 
     def _update_metadata_for_table(self):
@@ -250,7 +249,7 @@ class Worker:
             logger.info(f"Training process of the table - {table} has started.")
 
             MlflowTracker().start_run(
-                run_name=f"{table} | TRAIN",
+                run_name=f"{table}-TRAIN",
                 tags={"table_name": table, "process": "train"},
             )
 
@@ -313,7 +312,7 @@ class Worker:
             infer_settings = config_of_table["infer_settings"]
 
             MlflowTracker().start_run(
-                run_name=f"{table} | INFER",
+                run_name=f"{table}-INFER",
                 tags={"table_name": table, "process": "infer"},
             )
 

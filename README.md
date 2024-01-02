@@ -386,14 +386,30 @@ The UI will be available at <http://localhost:8501>.
 #### MLflow monitoring
 
 Set the `MLFLOW_TRACKING_URI` environment variable to the desired MLflow tracking server, for instance:
-http://localhost:5000/. You can also set `MLFLOW_ARTIFACTS_DESTINATION` environment variable to the preferred path
-(including cloud path), where the artifacts should be stored. When using Docker, ensure the environmental variables
-are set before running the container.
+http://localhost:5000/. You can also set the `MLFLOW_ARTIFACTS_DESTINATION` environment variable to your preferred path 
+(including the cloud path), where the artifacts should be stored. Additionally, set the `MLFLOW_EXPERIMENT_NAME` 
+environment variable to the name you prefer for the experiment. 
+When using Docker, ensure the environmental variables are set before running the container.
 
-The provided environmental variables allow to track the training process, and the inference process, and store
+The provided environmental variables allow to track the training process, and the inference process, and store 
 the artifacts in the desired location.
 You can access the MLflow UI by navigating to the provided URL in your browser. If you store artifacts in remote storage,
 ensure that all necessary credentials are provided before using Mlflow.
+
+```bash
+docker pull tdspora/syngen-train:latest
+docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
+  -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
+  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+
+
+docker pull tdspora/syngen-infer:latest
+docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
+  -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
+  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+```
 
 ## Contribution
 
