@@ -42,7 +42,6 @@ class MlflowTrackerFactory:
             cls,
             table_name: Optional[str],
             metadata_path: Optional[str],
-            type_of_process: str,
             is_active=False
     ):
         """
@@ -66,23 +65,15 @@ class MlflowTrackerFactory:
             )
 
         tracker.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
-        if type_of_process == "train":
-            tracker.create_experiment(
-                experiment_name,
-                artifact_location=os.environ.get(
-                    "MLFLOW_ARTIFACTS_DESTINATION",
-                    "/mlflow_tracker"
-                ),
-            )
-            tracker.set_experiment(experiment_name)
-        if type_of_process == "infer":
-            tracker.set_experiment(experiment_name)
+        tracker.set_experiment(experiment_name)
 
     @classmethod
-    def get_mlflow_exp_name(cls, table_name: str, metadata_path: str) -> str:
+    def get_mlflow_exp_name(cls, table_name: Optional[str], metadata_path: Optional[str]) -> str:
         """
         Get the name of the Mlflow experiment
         """
+        if os.getenv("MLFLOW_EXPERIMENT_NAME"):
+            return os.getenv("MLFLOW_EXPERIMENT_NAME")
         return fetch_unique_root(table_name, metadata_path)
 
 
@@ -143,32 +134,36 @@ class MlflowTracker:
     def create_experiment(
         self,
         name: str,
-        artifact_location: Optional[str] = None,
-        tags: Optional[Dict[str, Any]] = None,
+        artifact_location: Optional[str] = None
     ):
         if self.is_active:
-            mlflow.create_experiment(name, artifact_location, tags)
+            mlflow.create_experiment(name, artifact_location)
 
     def set_experiment(
         self,
         experiment_name: str = None,
-        experiment_id: str = None,
+        experiment_id: str = None
     ):
         """
         Set the experiment for tracking.
         If the experiment name is not provided, the last experiment will be used.
         """
         if self.is_active:
-            datetime_pattern = r"\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$"
-            name = re.sub(datetime_pattern, "", experiment_name)
             experiments = mlflow.search_experiments(
-                filter_string=f"name LIKE '{name}%'"
+                filter_string=f"name LIKE '{experiment_name}%'"
             )
-            last_matching = experiments[0] if experiments else None
+            last_matching = experiments[0] if experiments else []
             if not last_matching:
                 logger.warning(
-                    f"It seems that no experiment with a name starting with - '{name}' was found. "
+                    f"It seems that no experiment with a name starting with - '{experiment_name}' was found. "
                     f"A new experiment with the name  - '{experiment_name}' will be created"
+                )
+                MlflowTracker().create_experiment(
+                    experiment_name,
+                    artifact_location=os.environ.get(
+                        "MLFLOW_ARTIFACTS_DESTINATION",
+                        "/mlflow_tracker"
+                    ),
                 )
             matching_name = last_matching.name if last_matching else experiment_name
             mlflow.set_experiment(matching_name, experiment_id)
@@ -180,6 +175,6 @@ class MlflowTracker:
     def search_run(self, table_name: str, type_of_process: str):
         if self.is_active:
             run = mlflow.search_runs(
-                filter_string=f"run_name = '{table_name} | {type_of_process}'"
+                filter_string=f"run_name = '{table_name}-{type_of_process}'"
             )
             return run["run_id"][0] if run.shape[0] > 0 else None
