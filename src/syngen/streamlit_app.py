@@ -29,8 +29,10 @@ class StreamlitHandler:
         self.file_path = os.path.join(self.upload_directory, self.file_name)
         sl_table_name = slugify(self.table_name)
         self.path_to_generated_data = f"model_artifacts/tmp_store/{sl_table_name}/merged_infer_{sl_table_name}.csv"
-        self.path_to_logs = f"{self.upload_directory}/{self.table_name}.log"
+        self.path_to_logs = f"model_artifacts/tmp_store/{sl_table_name}/logs_{sl_table_name}.log"
         self.path_to_report = f"model_artifacts/tmp_store/{sl_table_name}/draws/accuracy_report.html"
+        if "result" not in st.session_state:
+            st.session_state.result = False
 
     def set_parameters(self, epochs, size_limit, print_report):
         self.epochs = epochs
@@ -85,7 +87,6 @@ class StreamlitHandler:
     def train_model(self):
         try:
             logger.info("Starting model training...")
-            shutil.rmtree("model_artifacts", ignore_errors=True)
             self.set_logger()
             settings = {
                 "source": self.file_path,
@@ -127,7 +128,7 @@ class StreamlitHandler:
                 type_of_process="infer"
             )
             worker.launch_infer()
-            logger.info("Data generation completed.")
+            logger.info("Data generation completed")
         except Exception as e:
             logger.error(f"Error during infer: {e}")
             self.log_queue.put(f"Error during infer: {e}")
@@ -140,9 +141,15 @@ class StreamlitHandler:
 
     @staticmethod
     def generate_button(label, path_to_file, download_name):
+        lock = False if st.session_state.result else True
         if os.path.exists(path_to_file):
             with open(path_to_file, "rb") as f:
-                st.download_button(label, f, file_name=download_name)
+                st.download_button(
+                    label,
+                    f,
+                    file_name=download_name,
+                    disabled=lock
+                )
 
     def train_and_infer(self):
         self.train_model()
@@ -158,6 +165,10 @@ def show_data(uploaded_file):
     df = pd.read_csv(file_path)
     st.write(f"Preview of {uploaded_file.name}:", df.head())
     st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
+
+
+def reset_status():
+    st.session_state.result = False
 
 
 def main():
@@ -193,7 +204,7 @@ def main():
             size_limit = st.number_input("Size Limit", min_value=1, max_value=None, value=1000)
             print_report = st.checkbox("Create the accuracy report", value=False)
             app.set_parameters(epochs, size_limit, print_report)
-            if st.button("Generate data"):
+            if st.button("Generate data", type="primary", on_click=reset_status):
                 thread = threading.Thread(target=app.train_and_infer)
                 thread.start()
                 current_progress = 0
@@ -228,14 +239,14 @@ def main():
                             for i in range(50, 90):
                                 time.sleep(sleep_time)
                                 prg.progress(i + 1, text="Generating data...")
+                        elif "Data generation completed" in log:
+                            st.success("Data generation completed")
                     time.sleep(0.001)
-                st.success("Data generation completed.")
                 prg.progress(100)
-
             app.generate_button(
                 "Download the generated data",
                 app.path_to_generated_data,
-                f"generated_{app.table_name}.csv",
+                f"generated_{app.table_name}.csv"
             )
             app.generate_button(
                 "Download the report",
