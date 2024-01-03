@@ -43,6 +43,10 @@ class StreamlitHandler:
         logger.add(self.log_sink, format=self.log_format)
 
     def show_data(self):
+        if not os.path.exists("uploaded_files"):
+            os.makedirs("uploaded_files", exist_ok=True)
+        with open(self.file_path, "wb") as file_object:
+            file_object.write(self.uploaded_file.getvalue())
         df = pd.read_csv(self.file_path)
         st.write(f"Preview of {self.file_name}:", df.head())
         st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
