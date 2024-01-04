@@ -150,7 +150,7 @@ class MlflowTracker:
         """
         if self.is_active:
             experiments = mlflow.search_experiments(
-                filter_string=f"name LIKE '{experiment_name}%'"
+                filter_string=f"name LIKE '{experiment_name}'"
             )
             last_matching = experiments[0] if experiments else []
             if not last_matching:
