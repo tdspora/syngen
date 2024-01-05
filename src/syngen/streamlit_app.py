@@ -1,5 +1,4 @@
 import os
-import shutil
 import threading
 import time
 from queue import Queue
@@ -199,7 +198,7 @@ def main():
         """, unsafe_allow_html=True)
     with st.sidebar:
         selected = option_menu("", ["Demo", "Download artifacts", "Advanced", "DOCS", "Authorization"],
-                               icons=["play'", '"gear'"", '"journals'"", '"person-check'""],
+                               icons=["play'", '"download"', '"gear'"", '"journals'"", '"person-check'""],
                                default_index=0,
                                menu_icon=None,
                                styles={
