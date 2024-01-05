@@ -63,7 +63,7 @@ class Dataset:
         Return a dictionary of the dataset's state
         """
         dataset_instance = self.__dict__.copy()
-        attribute_keys_to_remove = ["df", "metadata", "non_existent_columns"]
+        attribute_keys_to_remove = ["df", "non_existent_columns"]
 
         for attr_key in attribute_keys_to_remove:
             if attr_key in dataset_instance:
