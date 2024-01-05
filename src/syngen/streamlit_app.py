@@ -17,6 +17,7 @@ class StreamlitHandler:
     def __init__(self, uploaded_file):
         self.upload_directory = "uploaded_files"
         self.log_queue = Queue()
+        self.log_error_queue = Queue()
         self.epochs = int()
         self.size_limit = int()
         self.print_report = bool()
@@ -33,6 +34,8 @@ class StreamlitHandler:
         self.path_to_report = f"model_artifacts/tmp_store/{sl_table_name}/draws/accuracy_report.html"
         if "result" not in st.session_state:
             st.session_state.result = False
+        if "gen_button" not in st.session_state:
+            st.session_state.gen_button = False
 
     def set_parameters(self, epochs, size_limit, print_report):
         self.epochs = epochs
@@ -40,16 +43,21 @@ class StreamlitHandler:
         self.print_report = print_report
 
     def set_logger(self):
-        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
         logger.add(file_sink, level="INFO")
         logger.add(self.log_sink, format=self.log_format)
+
+    def set_env_variables(self):
+        os.environ["GENERATED_DATA"] = self.path_to_generated_data
+        os.environ["REPORT"] = self.path_to_report if self.print_report else str()
+        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
+        os.environ["TABLE_NAME"] = self.table_name
 
     def show_data(self):
         if not os.path.exists("uploaded_files"):
             os.makedirs("uploaded_files", exist_ok=True)
         with open(self.file_path, "wb") as file_object:
             file_object.write(self.uploaded_file.getvalue())
-        if st.checkbox('Show dataframe'):
+        if st.checkbox("Show dataframe"):
             df = pd.read_csv(self.file_path)
             st.write(f"Preview of {self.file_name}:", df.head())
             st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
@@ -84,7 +92,6 @@ class StreamlitHandler:
             progress_bar.progress(i + 1, text="Generating data...")
         return current_progress
 
-    @logger.catch
     def train_model(self):
         try:
             logger.info("Starting model training...")
@@ -105,12 +112,11 @@ class StreamlitHandler:
                 type_of_process="train"
             )
             worker.launch_train()
-            logger.info("Model training completed.")
+            logger.info("Model training completed")
         except Exception as e:
             logger.error(f"Error during train: {e}")
-            self.log_queue.put(f"Error during train: {e}")
+            self.log_error_queue.put(f"Error during train: {e}")
 
-    @logger.catch
     def infer_model(self):
         try:
             logger.info("Starting data generation...")
@@ -129,9 +135,10 @@ class StreamlitHandler:
                 type_of_process="infer"
             )
             worker.launch_infer()
+            logger.info("Data generation completed")
         except Exception as e:
             logger.error(f"Error during infer: {e}")
-            self.log_queue.put(f"Error during infer: {e}")
+            self.log_error_queue.put(f"Error during infer: {e}")
 
     @staticmethod
     def load_data(label, path_to_file, download_name):
@@ -139,19 +146,22 @@ class StreamlitHandler:
             with open(path_to_file, "rb") as f:
                 st.download_button(label, f, file_name=download_name)
 
-    @staticmethod
-    def generate_button(label, path_to_file, download_name):
-        if os.path.exists(path_to_file):
-            with open(path_to_file, "rb") as f:
-                st.download_button(
-                    label,
-                    f,
-                    file_name=download_name
-                )
+    # @staticmethod
+    # def generate_button(label, path_to_file, download_name):
+    #     if os.path.exists(path_to_file) and not st.session_state.result:
+    #         with open(path_to_file, "rb") as f:
+    #             st.download_button(
+    #                 label,
+    #                 f,
+    #                 file_name=download_name
+    #             )
 
     def train_and_infer(self):
-        self.train_model()
-        self.infer_model()
+        try:
+            self.train_model()
+            self.infer_model()
+        except Exception as e:
+            self.log_error_queue.put(e)
 
 
 def show_data(uploaded_file):
@@ -166,8 +176,18 @@ def show_data(uploaded_file):
     st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
 
 
-def reset_status(status=False):
-    st.session_state.result = status
+def generate_button(label, path_to_file, download_name):
+    if os.path.exists(path_to_file) and not st.session_state.result:
+        with open(path_to_file, "rb") as f:
+            st.download_button(
+                label,
+                f,
+                file_name=download_name
+            )
+
+
+def reset_status(key, status=False):
+    st.session_state[key] = status
 
 
 def main():
@@ -178,7 +198,7 @@ def main():
         </style>
         """, unsafe_allow_html=True)
     with st.sidebar:
-        selected = option_menu("", ["Demo", 'Advanced', "DOCS", "Authorization"],
+        selected = option_menu("", ["Demo", "Download artifacts", "Advanced", "DOCS", "Authorization"],
                                icons=["play'", '"gear'"", '"journals'"", '"person-check'""],
                                default_index=0,
                                menu_icon=None,
@@ -203,8 +223,8 @@ def main():
             size_limit = st.number_input("Size Limit", min_value=1, max_value=None, value=1000)
             print_report = st.checkbox("Create the accuracy report", value=False)
             app.set_parameters(epochs, size_limit, print_report)
-            if st.button("Generate data", type="primary", on_click=reset_status):
-                st.write("Status - ", st.session_state.result)
+            app.set_env_variables()
+            if st.button("Generate data", type="primary", on_click=reset_status, args=("result",)):
                 thread = threading.Thread(target=app.train_and_infer)
                 thread.start()
                 current_progress = 0
@@ -234,33 +254,32 @@ def main():
                                 current_progress,
                                 text=f"Infer process of the table - {app.table_name} has started"
                             )
-                        elif current_progress >= 50 and current_progress < 90:
+                        elif current_progress >= 50 and current_progress < 100:
                             sleep_time = int((size_limit / 32) / 40)
-                            for i in range(50, 90):
+                            for i in range(50, 100):
                                 time.sleep(sleep_time)
                                 prg.progress(i + 1, text="Generating data...")
                     time.sleep(0.001)
-                prg.progress(100)
-                reset_status(status=True)
-                if st.session_state.result:
+                if not app.log_error_queue.empty():
+                    st.exception(app.log_error_queue.get())
+                elif app.log_error_queue.empty():
                     st.success("Data generation completed")
-                if st.session_state.result:
-                    app.generate_button(
-                    "Download the generated data",
-                    app.path_to_generated_data,
-                    f"generated_{app.table_name}.csv"
-                )
-                    if app.print_report:
-                        app.generate_button(
-                        "Download the report",
-                        app.path_to_report,
-                        f"accuracy_report_{app.table_name}.html"
-                    )
-                    app.generate_button(
-                    "Download the logs",
-                    app.path_to_logs,
-                    f"logs_{app.table_name}.log"
-                )
+    if selected == "Download artifacts":
+        generate_button(
+            "Download the generated data",
+            os.getenv("GENERATED_DATA", ""),
+            f"generated_{os.getenv('TABLE_NAME')}.csv"
+        )
+        generate_button(
+            "Download the report",
+            os.getenv("REPORT", ""),
+            f"accuracy_report_{os.getenv('TABLE_NAME')}.html"
+        )
+        generate_button(
+            "Download the logs",
+            os.getenv("SUCCESS_LOG_FILE", ""),
+            f"logs_{os.getenv('TABLE_NAME')}.log"
+        )
 
 
 if __name__ == "__main__":
