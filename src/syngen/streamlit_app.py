@@ -197,8 +197,8 @@ def main():
         </style>
         """, unsafe_allow_html=True)
     with st.sidebar:
-        selected = option_menu("", ["Demo", "Download artifacts", "Advanced", "DOCS", "Authorization"],
-                               icons=["play'", '"download"', '"gear'"", '"journals'"", '"person-check'""],
+        selected = option_menu("", ["Demo", "Advanced", "DOCS", "Authorization"],
+                               icons=["play'", '"gear'"", '"journals'"", '"person-check'""],
                                default_index=0,
                                menu_icon=None,
                                styles={
@@ -263,22 +263,21 @@ def main():
                     st.exception(app.log_error_queue.get())
                 elif app.log_error_queue.empty():
                     st.success("Data generation completed")
-    if selected == "Download artifacts":
         generate_button(
-            "Download the generated data",
-            os.getenv("GENERATED_DATA", ""),
-            f"generated_{os.getenv('TABLE_NAME')}.csv"
-        )
+                        "Download the generated data",
+                        os.getenv("GENERATED_DATA", ""),
+                        f"generated_{os.getenv('TABLE_NAME')}.csv"
+                    )
         generate_button(
-            "Download the report",
-            os.getenv("REPORT", ""),
-            f"accuracy_report_{os.getenv('TABLE_NAME')}.html"
-        )
+                        "Download the report",
+                        os.getenv("REPORT", ""),
+                        f"accuracy_report_{os.getenv('TABLE_NAME')}.html"
+                    )
         generate_button(
-            "Download the logs",
-            os.getenv("SUCCESS_LOG_FILE", ""),
-            f"logs_{os.getenv('TABLE_NAME')}.log"
-        )
+                        "Download the logs",
+                        os.getenv("SUCCESS_LOG_FILE", ""),
+                        f"logs_{os.getenv('TABLE_NAME')}.log"
+                    )
 
 
 if __name__ == "__main__":
