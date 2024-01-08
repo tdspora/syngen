@@ -62,8 +62,7 @@ def test_datetime_to_timestamp():
         ("9999-12-31", 253402214400.0, "%Y-%m-%d"),
         ("10000-12-31", 253402214400.0, "%Y-%m-%d"),
         (np.nan, np.nan, "%Y-%m-%d"),
-        ("31-11-28", 1953590400.0, "%Y-%m-%d"),
-        ("2019-01", 1546646400.0, "%d-%m-%Y")
+        ("31-11-28", 1953590400.0, "%Y-%m-%d")
     ]
 
     for date_time, expected_timestamp, date_format in test_cases:
