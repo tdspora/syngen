@@ -136,34 +136,22 @@ class StreamlitHandler:
             with open(path_to_file, "rb") as f:
                 st.download_button(label, f, file_name=download_name)
 
+    @staticmethod
+    def generate_button(label, path_to_file, download_name):
+        if os.path.exists(path_to_file):
+            with open(path_to_file, "rb") as f:
+                st.download_button(
+                    label,
+                    f,
+                    file_name=download_name,
+                )
+
     def train_and_infer(self):
         try:
             self.train_model()
             self.infer_model()
         except Exception as e:
             self.log_error_queue.put(e)
-
-
-def show_data(uploaded_file):
-    file_path = os.path.join("uploaded_files", uploaded_file.name)
-    if not os.path.exists("uploaded_files"):
-        os.makedirs("uploaded_files", exist_ok=True)
-    with open(file_path, "wb") as file_object:
-        file_object.write(uploaded_file.getvalue())
-    df = pd.read_csv(file_path)
-    st.write(f"Preview of {uploaded_file.name}:")
-    st.dataframe(df.head())
-    st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
-
-
-def generate_button(label, path_to_file, download_name):
-    if os.path.exists(path_to_file):
-        with open(path_to_file, "rb") as f:
-            st.download_button(
-                label,
-                f,
-                file_name=download_name,
-            )
 
 
 def main():
@@ -240,17 +228,17 @@ def main():
                 elif app.log_error_queue.empty():
                     st.success("Data generation completed")
             with st.container():
-                generate_button(
+                app.generate_button(
                     "Download the generated data",
                     app.path_to_generated_data,
                     f"generated_{app.table_name}.csv"
                 )
-                generate_button(
+                app.generate_button(
                     "Download the report",
                     app.path_to_report,
                     f"accuracy_report_{app.table_name}.html"
                 )
-                generate_button(
+                app.generate_button(
                     "Download the logs",
                     app.path_to_logs,
                     f"logs_{app.table_name}.log"
