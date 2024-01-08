@@ -31,10 +31,7 @@ class StreamlitHandler:
         self.path_to_generated_data = f"model_artifacts/tmp_store/{sl_table_name}/merged_infer_{sl_table_name}.csv"
         self.path_to_logs = f"model_artifacts/tmp_store/{sl_table_name}/logs_{sl_table_name}.log"
         self.path_to_report = f"model_artifacts/tmp_store/{sl_table_name}/draws/accuracy_report.html"
-        if "result" not in st.session_state:
-            st.session_state.result = False
-        if "gen_button" not in st.session_state:
-            st.session_state.gen_button = False
+        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
 
     def set_parameters(self, epochs, size_limit, print_report):
         self.epochs = epochs
@@ -44,12 +41,6 @@ class StreamlitHandler:
     def set_logger(self):
         logger.add(file_sink, level="INFO")
         logger.add(self.log_sink, format=self.log_format)
-
-    def set_env_variables(self):
-        os.environ["GENERATED_DATA"] = self.path_to_generated_data
-        os.environ["REPORT"] = self.path_to_report if self.print_report else str()
-        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
-        os.environ["TABLE_NAME"] = self.table_name
 
     def show_data(self):
         if not os.path.exists("uploaded_files"):
@@ -145,16 +136,6 @@ class StreamlitHandler:
             with open(path_to_file, "rb") as f:
                 st.download_button(label, f, file_name=download_name)
 
-    # @staticmethod
-    # def generate_button(label, path_to_file, download_name):
-    #     if os.path.exists(path_to_file) and not st.session_state.result:
-    #         with open(path_to_file, "rb") as f:
-    #             st.download_button(
-    #                 label,
-    #                 f,
-    #                 file_name=download_name
-    #             )
-
     def train_and_infer(self):
         try:
             self.train_model()
@@ -176,17 +157,13 @@ def show_data(uploaded_file):
 
 
 def generate_button(label, path_to_file, download_name):
-    if os.path.exists(path_to_file) and not st.session_state.result:
+    if os.path.exists(path_to_file):
         with open(path_to_file, "rb") as f:
             st.download_button(
                 label,
                 f,
-                file_name=download_name
+                file_name=download_name,
             )
-
-
-def reset_status(key, status=False):
-    st.session_state[key] = status
 
 
 def main():
@@ -198,7 +175,7 @@ def main():
         """, unsafe_allow_html=True)
     with st.sidebar:
         selected = option_menu("", ["Demo", "Advanced", "DOCS", "Authorization"],
-                               icons=["play'", '"gear'"", '"journals'"", '"person-check'""],
+                               icons=["'play'", "'gear'", "'journals'", "'person-check'"],
                                default_index=0,
                                menu_icon=None,
                                styles={
@@ -222,8 +199,7 @@ def main():
             size_limit = st.number_input("Size Limit", min_value=1, max_value=None, value=1000)
             print_report = st.checkbox("Create the accuracy report", value=False)
             app.set_parameters(epochs, size_limit, print_report)
-            app.set_env_variables()
-            if st.button("Generate data", type="primary", on_click=reset_status, args=("result",)):
+            if st.button("Generate data", type="primary"):
                 thread = threading.Thread(target=app.train_and_infer)
                 thread.start()
                 current_progress = 0
@@ -263,21 +239,22 @@ def main():
                     st.exception(app.log_error_queue.get())
                 elif app.log_error_queue.empty():
                     st.success("Data generation completed")
-        generate_button(
-                        "Download the generated data",
-                        os.getenv("GENERATED_DATA", ""),
-                        f"generated_{os.getenv('TABLE_NAME')}.csv"
-                    )
-        generate_button(
-                        "Download the report",
-                        os.getenv("REPORT", ""),
-                        f"accuracy_report_{os.getenv('TABLE_NAME')}.html"
-                    )
-        generate_button(
-                        "Download the logs",
-                        os.getenv("SUCCESS_LOG_FILE", ""),
-                        f"logs_{os.getenv('TABLE_NAME')}.log"
-                    )
+            with st.container():
+                generate_button(
+                    "Download the generated data",
+                    app.path_to_generated_data,
+                    f"generated_{app.table_name}.csv"
+                )
+                generate_button(
+                    "Download the report",
+                    app.path_to_report,
+                    f"accuracy_report_{app.table_name}.html"
+                )
+                generate_button(
+                    "Download the logs",
+                    app.path_to_logs,
+                    f"logs_{app.table_name}.log"
+                )
 
 
 if __name__ == "__main__":
