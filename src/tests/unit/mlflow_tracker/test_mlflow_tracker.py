@@ -242,7 +242,7 @@ def test_set_not_existent_experiment_with_active_mlflow(
     with caplog.at_level(level="WARNING"):
         mlflow_tracker.set_experiment(test_experiment_name)
         mock_search_experiment.assert_called_once_with(
-            filter_string="name LIKE 'test_experiment_third%'"
+            filter_string="name LIKE 'test_experiment_third'"
         )
         assert ("It seems that no experiment with a name starting "
                 "with - 'test_experiment_third' was found. A new experiment "

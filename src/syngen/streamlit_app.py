@@ -1,4 +1,5 @@
 import os
+import shutil
 import threading
 import time
 from queue import Queue
@@ -8,7 +9,7 @@ import pandas as pd
 from loguru import logger
 import streamlit as st
 from syngen.ml.worker import Worker
-from syngen.ml.utils import fetch_log_message, create_log_file
+from syngen.ml.utils import fetch_log_message
 from streamlit_option_menu import option_menu
 
 
@@ -20,9 +21,6 @@ class StreamlitHandler:
         self.epochs = int()
         self.size_limit = int()
         self.print_report = bool()
-        self.log_format = ("<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
-                           "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-                           "<level>{message}</level>")
         self.uploaded_file = uploaded_file
         self.file_name = uploaded_file.name
         self.table_name = os.path.splitext(self.file_name)[0]
@@ -39,7 +37,7 @@ class StreamlitHandler:
 
     def set_logger(self):
         logger.add(self.file_sink, level="INFO")
-        logger.add(self.log_sink, format=self.log_format)
+        logger.add(self.log_sink)
 
     def show_data(self):
         if not os.path.exists("uploaded_files"):
@@ -185,6 +183,8 @@ def main():
             accept_multiple_files=False
         )
         if not uploaded_file:
+            shutil.rmtree("uploaded_files", ignore_errors=True)
+            shutil.rmtree("model_artifacts", ignore_errors=True)
             st.warning("Please upload a CSV file to proceed.")
         if uploaded_file:
             app = StreamlitHandler(uploaded_file)
@@ -201,37 +201,44 @@ def main():
 
                 # Progress bar
                 while thread.is_alive():
-                    if not app.log_queue.empty():
-                        log = app.log_queue.get()
-                        if f"Training process of the table - {app.table_name} has started" in log:
-                            current_progress = 5
-                            prg.progress(
-                                current_progress,
-                                text=f"Training process of the table - {app.table_name} has started"
-                            )
-                        elif current_progress >= 5 and current_progress < 40:
-                            for i in range(5, 40):
-                                time.sleep(epochs / 35 if epochs < 35 else 1)
-                                prg.progress(i + 1, text="Training model...")
-                            current_progress = 45
-                        elif f"Training of the table - {app.table_name} was completed" in log:
-                            current_progress = 45
-                            prg.progress(current_progress)
-                        elif f"Infer process of the table - {app.table_name} has started" in log:
-                            current_progress = 50
-                            prg.progress(
-                                current_progress,
-                                text=f"Infer process of the table - {app.table_name} has started"
-                            )
-                        elif current_progress >= 50 and current_progress < 100:
-                            sleep_time = int((size_limit / 32) / 40)
-                            for i in range(50, 100):
-                                time.sleep(sleep_time)
-                                prg.progress(i + 1, text="Generating data...")
-                    time.sleep(0.001)
+                    with st.spinner("Waiting for the process to complete..."):
+                        with st.expander("Logs"):
+                            while True:
+                                if not app.log_queue.empty():
+                                    with st.code("logs", language="log"):
+                                        log = app.log_queue.get()
+                                        st.text(log)
+                                        if f"Training process of the table - {app.table_name} has started" in log:
+                                            current_progress = 5
+                                            prg.progress(
+                                                current_progress,
+                                                text=f"Training process of the table - {app.table_name} has started"
+                                            )
+                                        elif current_progress >= 5 and current_progress < 40:
+                                            for i in range(5, 40):
+                                                time.sleep(epochs / 35 if epochs < 35 else 1)
+                                                prg.progress(i + 1, text="Training model...")
+                                            current_progress = 45
+                                        elif f"Training of the table - {app.table_name} was completed" in log:
+                                            current_progress = 45
+                                            prg.progress(current_progress)
+                                        elif f"Infer process of the table - {app.table_name} has started" in log:
+                                            current_progress = 50
+                                            prg.progress(
+                                                current_progress,
+                                                text=f"Infer process of the table - {app.table_name} has started"
+                                            )
+                                        elif current_progress >= 50 and current_progress < 100:
+                                            sleep_time = int((size_limit / 32) / 40)
+                                            for i in range(50, 100):
+                                                time.sleep(sleep_time)
+                                                prg.progress(i + 1, text="Generating data...")
+                                elif not thread.is_alive():
+                                    break
+                                time.sleep(0.001)
                 if not app.log_error_queue.empty():
                     st.exception(app.log_error_queue.get())
-                elif app.log_error_queue.empty():
+                elif app.log_error_queue.empty() and not thread.is_alive():
                     st.success("Data generation completed")
             with st.container():
                 app.generate_button(
@@ -239,11 +246,12 @@ def main():
                     app.path_to_generated_data,
                     f"generated_{app.table_name}.csv"
                 )
-                app.generate_button(
-                    "Download the report",
-                    app.path_to_report,
-                    f"accuracy_report_{app.table_name}.html"
-                )
+                if app.print_report:
+                    app.generate_button(
+                        "Download the report",
+                        app.path_to_report,
+                        f"accuracy_report_{app.table_name}.html"
+                    )
                 app.generate_button(
                     "Download the logs",
                     app.path_to_logs,
