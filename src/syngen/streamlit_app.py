@@ -8,7 +8,7 @@ import pandas as pd
 from loguru import logger
 import streamlit as st
 from syngen.ml.worker import Worker
-from syngen.ml.utils import file_sink, fetch_log_message
+from syngen.ml.utils import fetch_log_message, create_log_file
 from streamlit_option_menu import option_menu
 
 
@@ -29,9 +29,8 @@ class StreamlitHandler:
         self.file_path = os.path.join(self.upload_directory, self.file_name)
         sl_table_name = slugify(self.table_name)
         self.path_to_generated_data = f"model_artifacts/tmp_store/{sl_table_name}/merged_infer_{sl_table_name}.csv"
-        self.path_to_logs = f"model_artifacts/tmp_store/{sl_table_name}/logs_{sl_table_name}.log"
+        self.path_to_logs = f"uploaded_files/logs_{sl_table_name}.log"
         self.path_to_report = f"model_artifacts/tmp_store/{sl_table_name}/draws/accuracy_report.html"
-        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
 
     def set_parameters(self, epochs, size_limit, print_report):
         self.epochs = epochs
@@ -39,7 +38,7 @@ class StreamlitHandler:
         self.print_report = print_report
 
     def set_logger(self):
-        logger.add(file_sink, level="INFO")
+        logger.add(self.file_sink, level="INFO")
         logger.add(self.log_sink, format=self.log_format)
 
     def show_data(self):
@@ -55,6 +54,13 @@ class StreamlitHandler:
     def log_sink(self, message):
         log_message = fetch_log_message(message)
         self.log_queue.put(log_message)
+
+    def file_sink(self, message):
+        os.makedirs(os.path.dirname(self.path_to_logs), exist_ok=True)
+        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
+        with open(self.path_to_logs, "a") as log_file:
+            log_message = fetch_log_message(message)
+            log_file.write(log_message + "\n")
 
     def get_progress_status(self, log_message):
         mapping = {
@@ -84,8 +90,8 @@ class StreamlitHandler:
 
     def train_model(self):
         try:
-            logger.info("Starting model training...")
             self.set_logger()
+            logger.info("Starting model training...")
             settings = {
                 "source": self.file_path,
                 "epochs": self.epochs,
