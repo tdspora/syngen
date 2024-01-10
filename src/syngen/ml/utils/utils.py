@@ -248,6 +248,21 @@ def inverse_dict(dictionary: Dict) -> Dict:
     return dict(zip(dictionary.values(), dictionary.keys()))
 
 
+def clean_up_metadata(metadata: Dict):
+    """
+    Clean up the metadata,
+    remove the sensitive information (credentials to the remote storage) from the metadata
+    """
+    for key, value in list(metadata.items()):
+        if key == "credentials":
+            del metadata[key]
+        elif isinstance(value, dict):
+            clean_up_metadata(value)
+        else:
+            continue
+    return metadata
+
+
 def trim_string(col):
     if isinstance(col.dtype, str):
         return col.str.slice(stop=10 * 1024)

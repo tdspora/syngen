@@ -1,4 +1,3 @@
-import re
 from typing import Optional, Dict, Any
 import os
 import requests
@@ -155,8 +154,10 @@ class MlflowTracker:
             last_matching = experiments[0] if experiments else []
             if not last_matching:
                 logger.warning(
-                    f"It seems that no experiment with a name starting with - '{experiment_name}' was found. "
-                    f"A new experiment with the name  - '{experiment_name}' will be created"
+                    f"It seems that no experiment with a name "
+                    f"starting with - '{experiment_name}' was found. "
+                    f"A new experiment with the name  - '{experiment_name}' "
+                    f"will be created"
                 )
                 MlflowTracker().create_experiment(
                     experiment_name,

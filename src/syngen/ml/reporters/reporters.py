@@ -52,7 +52,8 @@ class Reporter:
         Convert date column to timestamp
         """
         return [
-            datetime_to_timestamp(d, date_format) if d not in na_values else np.NaN for d in df[col_name]
+            datetime_to_timestamp(d, date_format)
+            if d not in na_values else np.NaN for d in df[col_name]
         ]
 
     def preprocess_data(self):
@@ -82,8 +83,12 @@ class Reporter:
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
         na_values = dataset.format.get("na_values", [])
         for date_col, date_format in dataset.date_mapping.items():
-            original[date_col] = self.convert_to_timestamp(original, date_col, date_format, na_values)
-            synthetic[date_col] = self.convert_to_timestamp(synthetic, date_col, date_format, na_values)
+            original[date_col] = self.convert_to_timestamp(
+                original, date_col, date_format, na_values
+            )
+            synthetic[date_col] = self.convert_to_timestamp(
+                synthetic, date_col, date_format, na_values
+            )
 
         int_columns = date_columns | int_columns
         text_columns = str_columns | long_text_columns

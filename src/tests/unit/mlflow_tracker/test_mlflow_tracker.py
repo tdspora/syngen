@@ -93,10 +93,12 @@ def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
         "tags.process": ["train"],
         "tags.mlflow.source.type": ["LOCAL"]
     }
-    with patch(
+    with (
+        patch(
             "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_runs",
-            return_value=pd.DataFrame(data)) as mock_search_run:
-        assert mlflow_tracker.search_run("test_table", "TRAIN") == "6d2fa5df6ef14734a2dc03ab07e016f1"
+            return_value=pd.DataFrame(data)) as mock_search_run):
+        assert mlflow_tracker.search_run(
+            "test_table", "TRAIN") == "6d2fa5df6ef14734a2dc03ab07e016f1"
         mock_search_run.assert_called_once_with(filter_string="run_name = 'test_table-TRAIN'")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -233,7 +235,8 @@ def test_create_experiment_with_inactive_mlflow(mlflow_tracker, rp_logger):
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment")
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments", return_value=[])
 def test_set_not_existent_experiment_with_active_mlflow(
-        mock_search_experiment, mock_create_experiment, mock_set_experiment, mlflow_tracker, rp_logger, caplog):
+        mock_search_experiment, mock_create_experiment,
+        mock_set_experiment, mlflow_tracker, rp_logger, caplog):
     rp_logger.info(
         "Test the method 'set_experiment' of the class 'MlflowTracker' "
         "with not-existent experiment name and the active mlflow"
@@ -242,7 +245,7 @@ def test_set_not_existent_experiment_with_active_mlflow(
     with caplog.at_level(level="WARNING"):
         mlflow_tracker.set_experiment(test_experiment_name)
         mock_search_experiment.assert_called_once_with(
-            filter_string="name LIKE 'test_experiment_third%'"
+            filter_string="name LIKE 'test_experiment_third'"
         )
         assert ("It seems that no experiment with a name starting "
                 "with - 'test_experiment_third' was found. A new experiment "
@@ -256,7 +259,8 @@ def test_set_not_existent_experiment_with_active_mlflow(
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments")
 def test_set_experiment_with_inactive_mlflow(
-        mock_search_experiment, mock_set_experiment, mock_create_experiment, mlflow_tracker, rp_logger):
+        mock_search_experiment, mock_set_experiment,
+        mock_create_experiment, mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'set_experiment' of the class 'MlflowTracker' with the inactive mlflow"
     )
