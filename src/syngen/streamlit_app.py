@@ -56,7 +56,7 @@ class StreamlitHandler:
     def file_sink(self, message):
         os.makedirs(os.path.dirname(self.path_to_logs), exist_ok=True)
         os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
-        with open(self.path_to_logs, "a") as log_file:
+        with open(self.path_to_logs, "w") as log_file:
             log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
@@ -239,6 +239,7 @@ def main():
                 if not app.log_error_queue.empty():
                     st.exception(app.log_error_queue.get())
                 elif app.log_error_queue.empty() and not thread.is_alive():
+                    prg.progress(100, text="Data generation completed")
                     st.success("Data generation completed")
             with st.container():
                 app.generate_button(
