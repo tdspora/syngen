@@ -125,7 +125,8 @@ def test_save_dataset(rp_logger):
             "int_columns": set(),
             "str_columns": set(),
             "date_columns": set(),
-            "date_mapping": dict()
+            "date_mapping": dict(),
+            "metadata": {}
         }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

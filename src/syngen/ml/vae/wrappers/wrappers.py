@@ -137,9 +137,6 @@ class VAEWrapper(BaseWrapper):
             self.dataset.order_of_columns = existed_columns
             attributes_to_remove.append("df")
 
-        if hasattr(self.dataset, "metadata"):
-            attributes_to_remove.append("metadata")
-
         if attributes_to_remove:
             for attr in attributes_to_remove:
                 delattr(self.dataset, attr)
