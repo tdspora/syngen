@@ -44,12 +44,18 @@ class Reporter:
             dataset.categ_columns,
             dataset.long_text_columns,
         )
+        #ANCHOR - eliminate keys and unique columns from the report
+        # ### eliminate keys and unique columns from the report
+        # keys_columns = set(dataset.pk_columns) | set(dataset.fk_columns) | set(dataset.uq_columns)
+        # types = tuple(columns - keys_columns for columns in types)
+
         return types
 
     def preprocess_data(self):
         """
         Preprocess original and synthetic data.
         Return original data, synthetic data, float columns, integer columns, categorical columns
+        without keys columns
         """
         original, synthetic = self._extract_report_data()
         missing_columns = set(original) - set(synthetic)
@@ -68,8 +74,10 @@ class Reporter:
             categ_columns,
             long_text_columns,
         ) = types
+
         original = original[[col for col in original.columns if col in set().union(*types)]]
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
+
         for date_col in date_columns:
             original[date_col] = list(map(lambda d: datetime_to_timestamp(d), original[date_col]))
             synthetic[date_col] = list(
