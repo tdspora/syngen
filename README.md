@@ -301,24 +301,24 @@ If `--metadata_path` is present and the metadata contains the necessary paramete
 
 ### Docker images
 
-The train and inference components of <i>syngen</i> is available as public docker images:
+The train and inference components of <i>syngen</i> is available as public docker image:
 
-<https://hub.docker.com/r/tdspora/syngen-train>
-
-<https://hub.docker.com/r/tdspora/syngen-infer>
+<https://hub.docker.com/r/tdspora/syngen>
 
 To run dockerized code (see parameters description in *Training* and *Inference* sections) for one table call:
 
 ```bash
 docker pull tdspora/syngen-train:latest
 docker run --rm \
-  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=train \
   --table_name=TABLE_NAME \
   --source=./model_artifacts/YOUR_CSV_FILE.csv
 
 docker pull tdspora/syngen-infer:latest
 docker run --rm \
-  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=infer \
   --table_name=TABLE_NAME
 ```
 
@@ -329,14 +329,15 @@ You can add any arguments listed in the corresponding sections for infer and tra
 To run dockerized code by providing the metadata file simply call:
 
 ```bash
-docker pull tdspora/syngen-train:latest
+docker pull tdspora/syngen:latest
 docker run --rm \
-  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
-docker pull tdspora/syngen-infer:latest
 docker run --rm \
-  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
@@ -348,14 +349,15 @@ overwritten by corresponding arguments in the metadata file.
 Set the `LOGURU_LEVEL` environment variable to desired level of logging.
 For example, to suppress the debug messages, add `-e LOGURU_LEVEL=INFO` to the `docker run` command:
 ```bash
-docker pull tdspora/syngen-train:latest
+docker pull tdspora/syngen:latest
 docker run --rm -e LOGURU_LEVEL=INFO \
-  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
-docker pull tdspora/syngen-infer:latest
 docker run --rm -e LOGURU_LEVEL=INFO \
-  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
@@ -372,17 +374,19 @@ You can access the MLflow UI by navigating to the provided URL in your browser. 
 ensure that all necessary credentials are provided before using Mlflow.
 
 ```bash
-docker pull tdspora/syngen-train:latest
+docker pull tdspora/syngen:latest
 docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
-  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-train \
+  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
 
 docker pull tdspora/syngen-infer:latest
 docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
-  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen-infer \
+  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 

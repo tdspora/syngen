@@ -12,7 +12,9 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r requirements.txt
+#    pip install --no-cache-dir streamlit
 
 COPY src/ .
-
-ENTRYPOINT ["python3", "-m", "syngen.train"]
+# COPY src/syngen/.streamlit/config.toml /root/.streamlit/config.toml
+ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
+ENTRYPOINT ["python3", "-m", "start"]
