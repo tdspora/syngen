@@ -44,10 +44,10 @@ class Reporter:
             dataset.categ_columns,
             dataset.long_text_columns,
         )
-        #ANCHOR - eliminate keys and unique columns from the report
-        # ### eliminate keys and unique columns from the report
-        # keys_columns = set(dataset.pk_columns) | set(dataset.fk_columns) | set(dataset.uq_columns)
-        # types = tuple(columns - keys_columns for columns in types)
+
+        ### eliminate keys columns from the report
+        keys_columns = set(dataset.pk_columns) | set(dataset.fk_columns) | set(dataset.uq_columns)
+        types = tuple(columns - keys_columns for columns in types)
 
         return types
 
