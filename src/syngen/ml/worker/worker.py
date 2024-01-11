@@ -11,6 +11,7 @@ from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 @define
@@ -55,8 +56,7 @@ class Worker:
         """
         MlflowTrackerFactory.create_tracker(
             table_name=self.table_name,
-            metadata_path=self.metadata_path,
-            type_of_process=self.type_of_process
+            metadata_path=self.metadata_path
         )
 
     def _update_metadata_for_table(self):
@@ -248,6 +248,11 @@ class Worker:
             train_settings = config_of_table["train_settings"]
             logger.info(f"Training process of the table - {table} has started.")
 
+            MlflowTracker().start_run(
+                run_name=f"{table}-TRAIN",
+                tags={"table_name": table, "process": "train"},
+            )
+
             self.train_strategy.run(
                 metadata=config_of_metadata_for_training,
                 source=train_settings["source"],
@@ -259,6 +264,7 @@ class Worker:
                 print_report=train_settings["print_report"],
                 batch_size=train_settings["batch_size"],
             )
+            MlflowTracker().end_run()
             self._write_success_message(slugify(table))
             self._save_metadata_file()
         generation_of_reports = any(
@@ -289,7 +295,7 @@ class Worker:
                     print_report=print_report,
                     log_level=self.log_level,
                     both_keys=both_keys,
-                    type=self.type_of_process,
+                    type_of_process=self.type_of_process,
                 )
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
@@ -305,6 +311,11 @@ class Worker:
             both_keys = table in self.divided
             infer_settings = config_of_table["infer_settings"]
 
+            MlflowTracker().start_run(
+                run_name=f"{table}-INFER",
+                tags={"table_name": table, "process": "infer"},
+            )
+
             self.infer_strategy.run(
                 destination=infer_settings.get("destination"),
                 metadata=config_of_tables,
@@ -317,15 +328,15 @@ class Worker:
                 print_report=infer_settings["print_report"],
                 log_level=self.log_level,
                 both_keys=both_keys,
-                type=self.type_of_process,
+                type_of_process=self.type_of_process,
             )
+            MlflowTracker().end_run()
 
-    @staticmethod
-    def _generate_reports():
+    def _generate_reports(self):
         """
         Generate reports
         """
-        Report().generate_report()
+        Report().generate_report(type_of_process=self.type_of_process.upper())
         Report().clear_report()
 
     @staticmethod

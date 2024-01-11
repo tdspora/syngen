@@ -17,7 +17,6 @@ from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
 from loguru import logger
-from keras.utils import plot_model
 
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
 from syngen.ml.utils import slugify_parameters

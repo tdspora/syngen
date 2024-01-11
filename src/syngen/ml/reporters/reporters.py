@@ -51,6 +51,16 @@ class Reporter:
 
         return types
 
+    @staticmethod
+    def convert_to_timestamp(df, col_name, date_format, na_values):
+        """
+        Convert date column to timestamp
+        """
+        return [
+            datetime_to_timestamp(d, date_format)
+            if d not in na_values else np.NaN for d in df[col_name]
+        ]
+
     def preprocess_data(self):
         """
         Preprocess original and synthetic data.
@@ -64,6 +74,7 @@ class Reporter:
         columns_nan_labels = get_nan_labels(original)
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
+        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
         types = self.fetch_data_types()
         (
             str_columns,
@@ -77,11 +88,13 @@ class Reporter:
 
         original = original[[col for col in original.columns if col in set().union(*types)]]
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
-
-        for date_col in date_columns:
-            original[date_col] = list(map(lambda d: datetime_to_timestamp(d), original[date_col]))
-            synthetic[date_col] = list(
-                map(lambda d: datetime_to_timestamp(d), synthetic[date_col])
+        na_values = dataset.format.get("na_values", [])
+        for date_col, date_format in dataset.date_mapping.items():
+            original[date_col] = self.convert_to_timestamp(
+                original, date_col, date_format, na_values
+            )
+            synthetic[date_col] = self.convert_to_timestamp(
+                synthetic, date_col, date_format, na_values
             )
 
         int_columns = date_columns | int_columns
@@ -161,7 +174,7 @@ class Report:
         return grouped_reporters
 
     @classmethod
-    def generate_report(cls):
+    def generate_report(cls, type_of_process: str):
         """
         Generate all needed reports
         """
@@ -169,10 +182,11 @@ class Report:
 
         for table_name, reporters in grouped_reporters.items():
             MlflowTracker.reset_status(active_status=True)
-            MlflowTracker().start_run(
-                run_name=f"{table_name} | INFER",
-                tags={"process": "infer", "table_name": table_name}
+            run_id = MlflowTracker().search_run(
+                table_name=table_name, type_of_process=type_of_process
             )
+            if run_id is not None:
+                MlflowTracker().start_run(run_id=run_id)
             for reporter in reporters:
                 reporter.report()
                 logger.info(

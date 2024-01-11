@@ -18,5 +18,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     datetime_to_timestamp,
     timestamp_to_datetime,
     define_existent_columns,
-    create_log_file
+    create_log_file,
+    clean_up_metadata
 )

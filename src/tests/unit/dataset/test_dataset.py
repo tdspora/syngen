@@ -1,12 +1,13 @@
+import numpy as np
 import pytest
 from unittest.mock import patch
+import datetime
 
 import pandas as pd
 import pandavro as pdx
 
 from syngen.ml.vae.models.dataset import Dataset
 from tests.conftest import SUCCESSFUL_MESSAGE
-
 
 CSV_SCHEMA = {"fields": {}, "format": "CSV"}
 
@@ -124,6 +125,8 @@ def test_save_dataset(rp_logger):
             "int_columns": set(),
             "str_columns": set(),
             "date_columns": set(),
+            "date_mapping": dict(),
+            "metadata": {}
         }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -173,4 +176,97 @@ def test_check_non_existent_columns(rp_logger):
                 }
             }
         }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "initial_date_format, expected_date_format",
+    [
+        ("%m-%d-%Y", "%m-%d-%Y"),
+        ("%d-%m-%Y", "%d-%m-%Y"),
+        ("%m/%d/%Y", "%m/%d/%Y"),
+        ("%d/%m/%Y", "%d/%m/%Y"),
+        ("%Y/%m/%d", "%Y/%m/%d"),
+        ("%Y-%m-%d", "%Y-%m-%d"),
+        ("%B %d, %Y", "%B %d, %Y"),
+        ("%b %d, %Y", "%b %d, %Y"),
+        ("%d %B %Y", "%d %B %Y"),
+        ("%b %d %Y", "%b %d %Y"),
+        ("%d.%m.%Y", "%d.%m.%Y"),
+        ("%m-%b-%y", "%d-%m-%Y"),
+    ]
+)
+def test_define_date_format_with_diff_format(initial_date_format, expected_date_format, rp_logger):
+    rp_logger.info(
+        "Test the process of identifying the date format in the date column "
+        "where the initial date format - %s and expected date format: %s",
+        initial_date_format,
+        expected_date_format,
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+    data = {
+        "Date": [(datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).
+                 strftime(initial_date_format) for x in range(10000)]
+    }
+    df = pd.DataFrame(data, columns=["Date"])
+    with patch.object(Dataset, "__post_init__", lambda x: None):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={},
+        )
+        setattr(mock_dataset, "dropped_columns", set())
+        setattr(mock_dataset, "non_existent_columns", set())
+        mock_dataset._set_metadata()
+        assert mock_dataset.date_mapping == {"Date": expected_date_format}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "initial_date_format, expected_date_format, extreme_values",
+    [
+        ("%Y-%m-%d", "%Y-%m-%d", ["4723-10-17T07:45:35Z", "9999-12-31T05:22:15Z"]),
+        ("%Y/%m/%d", "%Y/%m/%d", ["3/10/17T07:45:35Z", "9/12/31T05:22:15Z"]),
+        ("%m/%d/%Y", "%m/%d/%Y", ["31/11/2017T07:45:35Z", "31/02/1999T05:22:15Z"]),
+        ("%d-%m-%Y", "%d-%m-%Y", [np.nan, np.nan, np.nan])
+    ]
+)
+def test_define_date_format_with_extreme_values(
+        initial_date_format, expected_date_format, extreme_values, rp_logger
+):
+    rp_logger.info(
+        "Test the process of identifying the date format in the date column "
+        "where the initial date format - %s and expected date format: %s",
+        initial_date_format,
+        expected_date_format,
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+    data = {
+        "Date": [(datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).
+                 strftime(initial_date_format) for x in range(10000)]
+    }
+    data.update({"Date": data["Date"] + extreme_values})
+    df = pd.DataFrame(data, columns=["Date"])
+    with patch.object(Dataset, "__post_init__", lambda x: None):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={},
+        )
+        setattr(mock_dataset, "dropped_columns", set())
+        setattr(mock_dataset, "non_existent_columns", set())
+        mock_dataset._set_metadata()
+        assert mock_dataset.date_mapping == {"Date": expected_date_format}
     rp_logger.info(SUCCESSFUL_MESSAGE)

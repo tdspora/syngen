@@ -15,35 +15,45 @@ from ulid import ULID
 import random
 from loguru import logger
 
+MAX_ALLOWED_TIME_MS = 253402214400
+MIN_ALLOWED_TIME_MS = -62135596800
 
-def datetime_to_timestamp(dt):
-    max_allowed_time_ms = 253402214400
-    min_allowed_time_ms = -62135596800
+
+def is_format_first(date_format: str, format_type: str) -> bool:
+    """
+    Check if the date format starts with the specified string
+    """
+    return date_format.lower().startswith(f"%{format_type}")
+
+
+def datetime_to_timestamp(dt, date_format):
+    """
+    Convert datetime to timestamp
+    """
     if pd.isnull(dt):
         return np.nan
     try:
-        dt = parser.parse(dt).replace(tzinfo=None)
+        dt = parser.parse(dt,
+                          dayfirst=is_format_first(date_format, "d"),
+                          yearfirst=is_format_first(date_format, "y")).replace(tzinfo=None)
         delta = dt - datetime(1970, 1, 1)
         return delta.total_seconds()
     except parser._parser.ParserError as e:
         year = re.match(r"\d+", e.args[0][5:]).group(0)
         if int(year) > 9999:
-            return max_allowed_time_ms
+            return MAX_ALLOWED_TIME_MS
         elif int(year) < 1:
-            return min_allowed_time_ms
+            return MIN_ALLOWED_TIME_MS
 
 
 def timestamp_to_datetime(timestamp):
     # Calculate the number of seconds in the UNIX epoch and the number of seconds left
-    max_allowed_time_ms = 253402214400
-    min_allowed_time_ms = -62135596800
-
     if pd.isnull(timestamp):
         return np.nan
 
-    if timestamp >= max_allowed_time_ms:
+    if timestamp >= MAX_ALLOWED_TIME_MS:
         return datetime(9999, 12, 31, 23, 59, 59, 999999)
-    elif timestamp <= min_allowed_time_ms:
+    elif timestamp <= MIN_ALLOWED_TIME_MS:
         return datetime(1, 1, 1, 0, 0, 0, 0)
 
     seconds_since_epoch = int(timestamp)
@@ -238,6 +248,21 @@ def inverse_dict(dictionary: Dict) -> Dict:
     return dict(zip(dictionary.values(), dictionary.keys()))
 
 
+def clean_up_metadata(metadata: Dict):
+    """
+    Clean up the metadata,
+    remove the sensitive information (credentials to the remote storage) from the metadata
+    """
+    for key, value in list(metadata.items()):
+        if key == "credentials":
+            del metadata[key]
+        elif isinstance(value, dict):
+            clean_up_metadata(value)
+        else:
+            continue
+    return metadata
+
+
 def trim_string(col):
     if isinstance(col.dtype, str):
         return col.str.slice(stop=10 * 1024)
@@ -273,7 +298,7 @@ def fetch_unique_root(table_name: str, metadata_path: str):
         unique_name = table_name
     if metadata_path:
         unique_name = os.path.basename(metadata_path)
-    return f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    return slugify(unique_name)
 
 
 def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
@@ -281,8 +306,9 @@ def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
     Create the file for storing the logs of main processes
     """
     os.makedirs("model_artifacts/tmp_store", exist_ok=True)
-    unique_root = fetch_unique_root(table_name, metadata_path)
-    file_name_without_extension = f"logs_{type_of_process}_{unique_root}"
+    unique_name = fetch_unique_root(table_name, metadata_path)
+    unique_name = f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    file_name_without_extension = f"logs_{type_of_process}_{unique_name}"
     file_path = os.path.join(
         "model_artifacts/tmp_store", f"{slugify(file_name_without_extension)}.log"
     )
