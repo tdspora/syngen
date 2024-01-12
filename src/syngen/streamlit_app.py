@@ -15,9 +15,14 @@ from syngen.ml.utils import fetch_log_message
 from streamlit_option_menu import option_menu
 
 
+UPLOAD_DIRECTORY = "uploaded_files"
+
+
 class StreamlitHandler:
+    """
+    A class for handling Streamlit app
+    """
     def __init__(self, uploaded_file):
-        self.upload_directory = "uploaded_files"
         self.log_queue = Queue()
         self.log_error_queue = Queue()
         self.epochs = int()
@@ -25,7 +30,7 @@ class StreamlitHandler:
         self.print_report = bool()
         self.file_name = uploaded_file.name
         self.table_name = os.path.splitext(self.file_name)[0]
-        self.file_path = os.path.join(self.upload_directory, self.file_name)
+        self.file_path = os.path.join(UPLOAD_DIRECTORY, self.file_name)
         self.sl_table_name = slugify(self.table_name)
         self.path_to_generated_data = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                        f"merged_infer_{self.sl_table_name}.csv")
@@ -34,11 +39,17 @@ class StreamlitHandler:
         self.path_to_report = f"model_artifacts/tmp_store/{self.sl_table_name}/draws/accuracy_report.html"
 
     def set_parameters(self, epochs, size_limit, print_report):
+        """
+        Set parameters for a model training and data generation
+        """
         self.epochs = epochs
         self.size_limit = size_limit
         self.print_report = print_report
 
     def set_env_variables(self):
+        """
+        Set environment variables
+        """
         os.environ["PATH_TO_GENERATED_DATA"] = self.path_to_generated_data
         os.environ["PATH_TO_REPORT"] = self.path_to_report
         os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
@@ -46,46 +57,33 @@ class StreamlitHandler:
         os.environ["TABLE_NAME"] = self.sl_table_name
 
     def set_logger(self):
+        """
+        Set a logger in order to see logs in the Streamlit app,
+        and collect log messages with the log level - 'INFO' in a log file
+        """
         logger.add(self.file_sink, level="INFO")
         logger.add(self.log_sink)
 
     def log_sink(self, message):
+        """
+        Put log messages to a log queue
+        """
         log_message = fetch_log_message(message)
         self.log_queue.put(log_message)
 
     def file_sink(self, message):
+        """
+        Write log messages to a log file
+        """
         os.makedirs(os.path.dirname(self.path_to_logs), exist_ok=True)
         with open(self.path_to_logs, "a") as log_file:
             log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
-    def get_progress_status(self, log_message):
-        mapping = {
-            f"Training process of the table - {self.table_name} has started": 5,
-            f"Training of the table - {self.table_name} was completed": 40,
-            f"Infer process of the table - {self.table_name} has started": 50
-        }
-        if log_message in mapping.keys():
-            current_progress = mapping[log_message]
-            return current_progress
-
-    def handle_training_process(self, progress_bar):
-        for i in range(5, 40):
-            time.sleep(self.epochs / 35 if self.epochs < 35 else 1)
-            progress_bar.progress(i + 1, text="Training model...")
-
-    def handle_infer_process(self, log, progress_bar, current_progress):
-        log_message = f"Infer process of the table - {self.table_name} has started"
-        if log_message in log:
-            current_progress = 50
-            progress_bar.progress(current_progress, text=log_message)
-        sleep_time = int((self.size_limit / 32) / 40)
-        for i in range(50, 90):
-            time.sleep(sleep_time)
-            progress_bar.progress(i + 1, text="Generating data...")
-        return current_progress
-
     def train_model(self):
+        """
+        Launch a model training
+        """
         try:
             self.set_logger()
             logger.info("Starting model training...")
@@ -111,6 +109,9 @@ class StreamlitHandler:
             self.log_error_queue.put(f"Error during train: {e}")
 
     def infer_model(self):
+        """
+        Launch a data generation
+        """
         try:
             logger.info("Starting data generation...")
             settings = {
@@ -133,25 +134,22 @@ class StreamlitHandler:
             logger.error(f"Error during infer: {e}")
             self.log_error_queue.put(f"Error during infer: {e}")
 
-    @staticmethod
-    def load_data(label, path_to_file, download_name):
-        if os.path.exists(path_to_file):
-            with open(path_to_file, "rb") as f:
-                st.download_button(label, f, file_name=download_name)
-
     def train_and_infer(self):
-        try:
-            self.train_model()
-            self.infer_model()
-        except Exception as e:
-            self.log_error_queue.put(e)
+        """
+        Launch a model training and data generation
+        """
+        self.train_model()
+        self.infer_model()
 
 
 def show_data(uploaded_file):
+    """
+    Show sample data from the uploaded file
+    """
     file_name = uploaded_file.name
-    file_path = os.path.join("uploaded_files", file_name)
-    if not os.path.exists("uploaded_files"):
-        os.makedirs("uploaded_files", exist_ok=True)
+    file_path = os.path.join(UPLOAD_DIRECTORY, file_name)
+    if not os.path.exists(UPLOAD_DIRECTORY):
+        os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
     with open(file_path, "wb") as file_object:
         file_object.write(uploaded_file.getvalue())
     if st.checkbox("Show sample data"):
@@ -161,6 +159,9 @@ def show_data(uploaded_file):
 
 
 def generate_button(label, path_to_file, download_name):
+    """
+    Generate a download button
+    """
     if os.path.exists(path_to_file):
         with open(path_to_file, "rb") as f:
             st.download_button(
@@ -171,6 +172,10 @@ def generate_button(label, path_to_file, download_name):
 
 
 def get_running_status():
+    """
+    Get the status of the proces of a model training and generation data
+    :return:
+    """
     if "gen_button" in st.session_state and st.session_state.gen_button is True:
         st.session_state.running = True
         return True
@@ -180,11 +185,12 @@ def get_running_status():
 
 
 def main():
+    path_to_logo = "./.streamlit/img/logo.svg"
     st.set_page_config(
         page_title="SynGen UI",
-        page_icon="./.streamlit/img/logo.svg"
+        page_icon=path_to_logo
     )
-    st.sidebar.image("./.streamlit/img/logo.svg", use_column_width=True)
+    st.sidebar.image(path_to_logo, use_column_width=True)
     st.markdown(f"""
         <style>
         {"".join(open("./.streamlit/css/font_style.css").readlines())}
@@ -197,7 +203,7 @@ def main():
            color:white;
         }
         div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"]::after {
-            content: "Browse";
+            content: "Browse a file";
             color:black;
             display: block;
             position: absolute;
@@ -252,9 +258,9 @@ def main():
             accept_multiple_files=False
         )
         if not uploaded_file:
-            shutil.rmtree("uploaded_files", ignore_errors=True)
+            shutil.rmtree(UPLOAD_DIRECTORY, ignore_errors=True)
             shutil.rmtree("model_artifacts", ignore_errors=True)
-            st.warning("Please upload a CSV file to proceed.")
+            st.warning("Please upload a CSV file to proceed")
         if uploaded_file:
             show_data(uploaded_file)
             epochs = st.number_input("Epochs", min_value=1, value=1)
@@ -269,10 +275,7 @@ def main():
                 lock = threading.Lock()
                 with lock:
                     runner.start()
-                current_progress = 0
-                prg = st.progress(current_progress)
 
-                # Progress bar
                 while runner.is_alive():
                     with st.spinner("Waiting for the process to complete..."):
                         with st.expander("Logs"):
@@ -281,38 +284,12 @@ def main():
                                     with st.code("logs", language="log"):
                                         log = app.log_queue.get()
                                         st.text(log)
-                                        if f"Training process of the table - {app.table_name} has started" in log:
-                                            current_progress = 5
-                                            prg.progress(
-                                                current_progress,
-                                                text=f"Training process of the table - {app.table_name} has started"
-                                            )
-                                        elif current_progress >= 5 and current_progress < 40:
-                                            for i in range(5, 40):
-                                                time.sleep(epochs / 35 if epochs < 35 else 1)
-                                                prg.progress(i + 1, text="Training model...")
-                                            current_progress = 45
-                                        elif f"Training of the table - {app.table_name} was completed" in log:
-                                            current_progress = 45
-                                            prg.progress(current_progress)
-                                        elif f"Infer process of the table - {app.table_name} has started" in log:
-                                            current_progress = 50
-                                            prg.progress(
-                                                current_progress,
-                                                text=f"Infer process of the table - {app.table_name} has started"
-                                            )
-                                        elif current_progress >= 50 and current_progress < 100:
-                                            sleep_time = int((size_limit / 32) / 40)
-                                            for i in range(50, 100):
-                                                time.sleep(sleep_time)
-                                                prg.progress(i + 1, text="Generating data...")
                                 elif not runner.is_alive():
                                     break
                                 time.sleep(0.001)
                 if not app.log_error_queue.empty():
                     st.exception(app.log_error_queue.get())
                 elif app.log_error_queue.empty() and not runner.is_alive():
-                    prg.progress(100, text="Data generation completed")
                     st.success("Data generation completed")
             with st.container():
                 col1, col2, col3 = st.columns([0.6, 0.4, 0.6], )
