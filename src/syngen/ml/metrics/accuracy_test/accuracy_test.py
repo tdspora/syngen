@@ -118,7 +118,8 @@ class AccuracyTest(BaseTest):
         bi_images = bivariate.calculate_all(
             kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
         )
-        corr_result = "%.4f" % correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+        corr_result = correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+        corr_result = int(corr_result) if corr_result == 0 else abs(corr_result)
         clustering_result = "%.4f" % clustering.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
@@ -158,6 +159,7 @@ class AccuracyTest(BaseTest):
             ).to_dict(),
             inference_config=self.config,
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
+            round=round
         )
 
         with open(f"{self.paths['draws_path']}/accuracy_report.html", "w", encoding="utf-8") as f:
