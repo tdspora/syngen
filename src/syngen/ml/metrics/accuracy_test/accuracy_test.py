@@ -118,7 +118,7 @@ class AccuracyTest(BaseTest):
         bi_images = bivariate.calculate_all(
             kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
         )
-        corr_result = correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+        corr_result = "%.4f" % correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
         clustering_result = "%.4f" % clustering.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
@@ -145,6 +145,7 @@ class AccuracyTest(BaseTest):
             accuracy_heatmap=transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.svg"),
             uni_imgs=uni_images,
             correlations_heatmap=transform_to_base64(f"{draws_acc_path}/correlations_heatmap.svg"),
+            correlation_median=corr_result,
             clusters_barplot=transform_to_base64(f"{draws_acc_path}/clusters_barplot.svg"),
             clustering_value=clustering_result,
             bi_imgs=bi_images,
