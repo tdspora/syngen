@@ -45,7 +45,7 @@ class Reporter:
             dataset.long_text_columns,
         )
 
-        ### eliminate keys columns from the report
+        # eliminate keys columns from the report
         keys_columns = set(dataset.pk_columns) | set(dataset.fk_columns) | set(dataset.uq_columns)
         types = tuple(columns - keys_columns for columns in types)
 

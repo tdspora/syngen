@@ -308,14 +308,13 @@ The train and inference components of <i>syngen</i> is available as public docke
 To run dockerized code (see parameters description in *Training* and *Inference* sections) for one table call:
 
 ```bash
-docker pull tdspora/syngen-train:latest
+docker pull tdspora/syngen:latest
 docker run --rm \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=train \
   --table_name=TABLE_NAME \
   --source=./model_artifacts/YOUR_CSV_FILE.csv
 
-docker pull tdspora/syngen-infer:latest
 docker run --rm \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=infer \
@@ -381,8 +380,6 @@ docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
-
-docker pull tdspora/syngen-infer:latest
 docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
   -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
