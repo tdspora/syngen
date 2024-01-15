@@ -151,18 +151,18 @@ class TrainConfig:
 
             data = data.sample(n=self.row_subset)
 
-            if len(data) < 100:
-                logger.warning(
-                    "The input table is too small to provide any meaningful results. "
-                    "Please consider 1) disable drop_null argument, 2) provide bigger table"
-                )
-            elif len(data) < 500:
-                logger.warning(
-                    f"The amount of data is {len(data)} rows. It seems that it isn't enough "
-                    f"to supply high-quality results. To improve the quality of generated data "
-                    f"please consider any of the steps: 1) provide a bigger table, "
-                    f"2) disable drop_null argument"
-                )
+        if len(data) < 100:
+            logger.warning(
+                "The input table is too small to provide any meaningful results. "
+                "Please consider 1) disable drop_null argument, 2) provide bigger table"
+            )
+        elif len(data) < 500:
+            logger.warning(
+                f"The amount of data is {len(data)} rows. It seems that it isn't enough "
+                f"to supply high-quality results. To improve the quality of generated data "
+                f"please consider any of the steps: 1) provide a bigger table, "
+                f"2) disable drop_null argument"
+            )
 
         logger.info(f"The subset of rows was set to {len(data)}")
 
