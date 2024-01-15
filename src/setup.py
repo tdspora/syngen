@@ -5,12 +5,5 @@ with open("../src/syngen/VERSION", "r") as file:
 setup(
     name="syngen",
     version=version_info,
-    packages=find_packages(),
-    extras_require={
-        "ui": [
-            "streamlit",
-            "streamlit_option_menu",
-            "altair<5",
-        ],
-    }
+    packages=find_packages()
 )

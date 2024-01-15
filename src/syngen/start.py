@@ -23,7 +23,7 @@ def main():
     # Check if the Streamlit web UI should be launched
     if known_args.webui:
         # Adjust the path to your Streamlit application script if necessary
-        command = ["streamlit", "run", "syngen/streamlit_app.py"] + remaining_argv
+        command = ["streamlit", "run", "syngen/streamlit_app/run.py"] + remaining_argv
     elif known_args.task == "train":
         # Construct the command to run the training script
         command = ["python", "syngen/train.py"] + remaining_argv

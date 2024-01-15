@@ -380,6 +380,13 @@ You can access the streamlit UI web interface by launching the container with th
 docker run -p 8501:8501 tdspora/syngen --webui
 ```
 
+Or by running the following command after installing the library with the UI option:
+
+```bash
+pip install syngen[ui]
+ui
+```
+
 The UI will be available at <http://localhost:8501>.
 
 #### MLflow monitoring
