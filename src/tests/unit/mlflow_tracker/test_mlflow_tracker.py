@@ -234,12 +234,12 @@ def test_create_experiment_with_inactive_mlflow(mlflow_tracker, rp_logger):
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment")
 @patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments", return_value=[])
-def test_set_not_existent_experiment_with_active_mlflow(
+def test_set_new_experiment_without_env_var_and_with_active_mlflow(
         mock_search_experiment, mock_create_experiment,
         mock_set_experiment, mlflow_tracker, rp_logger, caplog):
     rp_logger.info(
         "Test the method 'set_experiment' of the class 'MlflowTracker' "
-        "with not-existent experiment name and the active mlflow"
+        "for the new experiment without setting up 'MLFLOW_EXPERIMENT_NAME' and with the active mlflow"
     )
     test_experiment_name = "test_experiment_third"
     with caplog.at_level(level="WARNING"):
@@ -247,11 +247,73 @@ def test_set_not_existent_experiment_with_active_mlflow(
         mock_search_experiment.assert_called_once_with(
             filter_string="name LIKE 'test_experiment_third'"
         )
-        assert ("It seems that no experiment with a name starting "
-                "with - 'test_experiment_third' was found. A new experiment "
-                "with the name  - 'test_experiment_third' "
-                "will be created") in caplog.text
+        assert ("A new experiment with the name based on 'table_name' or 'metadata_path' value - "
+                "'test_experiment_third' will be created") in caplog.text
         mock_create_experiment.assert_called_once_with(test_experiment_name, "/mlflow_tracker")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment")
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments", return_value=[])
+def test_set_new_experiment_with_env_var_and_with_active_mlflow(
+        mock_search_experiment, mock_create_experiment,
+        mock_set_experiment, mlflow_tracker, monkeypatch, rp_logger, caplog):
+    rp_logger.info(
+        "Test the method 'set_experiment' of the class 'MlflowTracker' "
+        "for the new experiment with setting up 'MLFLOW_EXPERIMENT_NAME' and with the active mlflow"
+    )
+    monkeypatch.setenv("MLFLOW_EXPERIMENT_NAME", "test_experiment_sixth")
+    test_experiment_name = "test_experiment_sixth"
+    with caplog.at_level(level="INFO"):
+        mlflow_tracker.set_experiment(test_experiment_name)
+        mock_search_experiment.assert_called_once_with(
+            filter_string="name LIKE 'test_experiment_sixth'"
+        )
+        assert "A new experiment with the name - 'test_experiment_sixth' will be created" in caplog.text
+        mock_create_experiment.assert_called_once_with(test_experiment_name, "/mlflow_tracker")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment")
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments", return_value=[])
+def test_set_existed_experiment_with_env_var_and_with_active_mlflow(
+        mock_search_experiment, mock_set_experiment, mock_create_experiment,
+        mlflow_tracker, monkeypatch, rp_logger, caplog):
+    rp_logger.info(
+        "Test the method 'set_experiment' of the class 'MlflowTracker' "
+        "for the existed experiment with setting up 'MLFLOW_EXPERIMENT_NAME' and with the active mlflow"
+    )
+    monkeypatch.setenv("MLFLOW_EXPERIMENT_NAME", "test_experiment_sixth")
+    test_experiment_name = "test_experiment_sixth"
+    with caplog.at_level(level="WARNING"):
+        mlflow_tracker.set_experiment(test_experiment_name)
+        mock_search_experiment.assert_called_once_with(
+            filter_string="name LIKE 'test_experiment_sixth'"
+        )
+        assert ("The experiment with the same name - 'test_experiment_sixth' already existed. "
+                "The created runs will be stored in the experiment - 'test_experiment_sixth'") in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment")
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_experiment")
+@patch("syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_experiments", return_value=[])
+def test_set_existed_experiment_without_env_var_and_with_active_mlflow(
+        mock_search_experiment, mock_set_experiment, mock_create_experiment,
+        mlflow_tracker, rp_logger, caplog):
+    rp_logger.info(
+        "Test the method 'set_experiment' of the class 'MlflowTracker' "
+        "for the existed experiment without setting up 'MLFLOW_EXPERIMENT_NAME' and with the active mlflow"
+    )
+    test_experiment_name = "test_experiment_sixth"
+    with caplog.at_level(level="WARNING"):
+        mlflow_tracker.set_experiment(test_experiment_name)
+        mock_search_experiment.assert_called_once_with(
+            filter_string="name LIKE 'test_experiment_sixth'"
+        )
+        assert "The created runs will be stored in the existed experiment - 'test_experiment_sixth'" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
