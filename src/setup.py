@@ -5,5 +5,6 @@ with open("../src/syngen/VERSION", "r") as file:
 setup(
     name="syngen",
     version=version_info,
-    packages=find_packages()
+    packages=find_packages(),
+    include_package_data=True
 )
