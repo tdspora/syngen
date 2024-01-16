@@ -185,7 +185,7 @@ def get_running_status():
 
 
 def main():
-    path_to_logo = "/src/syngen/streamlit_app/.streamlit/img/logo.svg"
+    path_to_logo = f"{os.path.join(os.path.dirname(__file__))}/.streamlit/img/logo.svg"
     st.set_page_config(
         page_title="SynGen UI",
         page_icon=path_to_logo
@@ -193,7 +193,7 @@ def main():
     st.sidebar.image(path_to_logo, use_column_width=True)
     st.markdown(f"""
         <style>
-        {"".join(open("/src/syngen/streamlit_app/.streamlit/css/font_style.css").readlines())}
+        {"".join(open(f"{os.path.join(os.path.dirname(__file__))}/.streamlit/css/font_style.css").readlines())}
         </style>
         """, unsafe_allow_html=True)
     label = (

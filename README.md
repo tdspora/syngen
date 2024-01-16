@@ -384,7 +384,14 @@ Or by running the following command after installing the library with the UI opt
 
 ```bash
 pip install syngen[ui]
-ui
+```
+and then use the code below in your python file:
+
+```python
+from syngen.streamlit_app.run import main
+
+
+main()
 ```
 
 The UI will be available at <http://localhost:8501>.
