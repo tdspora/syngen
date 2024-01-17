@@ -153,11 +153,7 @@ class MlflowTracker:
             )
             env_value = os.getenv("MLFLOW_EXPERIMENT_NAME", "")
             last_matching = experiments[0] if experiments else []
-            if not last_matching and not env_value:
-                logger.warning(
-                    f"A new experiment with the name based on 'table_name' or "
-                    f"'metadata_path' value - '{experiment_name}' will be created"
-                )
+            if not last_matching:
                 MlflowTracker().create_experiment(
                     experiment_name,
                     artifact_location=os.environ.get(
@@ -165,26 +161,29 @@ class MlflowTracker:
                         "/mlflow_tracker"
                     ),
                 )
+                mlflow.set_experiment(experiment_name, experiment_id)
 
-            if not last_matching and env_value:
-                logger.info(f"A new experiment with the name - '{experiment_name}' will be created")
+                if not env_value:
+                    logger.warning(
+                        f"A new experiment with the name based on 'table_name' or "
+                        f"'metadata_path' value - '{experiment_name}' will be created"
+                    )
 
-                MlflowTracker().create_experiment(
-                    experiment_name,
-                    artifact_location=os.environ.get(
-                        "MLFLOW_ARTIFACTS_DESTINATION",
-                        "/mlflow_tracker"
-                    ),
-                )
-            matching_name = last_matching.name if last_matching else experiment_name
-            mlflow.set_experiment(matching_name, experiment_id)
-            if env_value:
-                logger.warning(
-                    f"The experiment with the same name - '{experiment_name}' already existed. "
-                    f"The created runs will be stored in the experiment - '{matching_name}'"
-                )
-            if not env_value:
-                logger.warning(f"The created runs will be stored in the existed experiment - '{matching_name}'")
+                if env_value:
+                    logger.info(f"A new experiment with the name - '{experiment_name}' will be created")
+
+            if last_matching:
+                matching_name = last_matching.name
+                mlflow.set_experiment(matching_name, experiment_id)
+                if env_value:
+                    logger.warning(
+                        f"The experiment with the same name - '{experiment_name}' already existed. "
+                        f"The created runs will be stored in the experiment - '{matching_name}'"
+                    )
+                if not env_value:
+                    logger.warning(
+                        f"The created runs will be stored in the existed experiment - '{matching_name}'"
+                    )
 
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
         if self.is_active:
