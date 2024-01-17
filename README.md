@@ -15,10 +15,10 @@ If you want to install the UI version with streamlit, run:
 
 ```bash
 pip install syngen[ui]
-python -m streamlit_app
 ```
+*Note*: see details of the UI usage in the [corresponding section](#ui-web-interface)
 
-Otherwise you can install the library with CLI input only:
+Otherwise, you can install the library with CLI input only:
 
 ```bash
 pip install syngen
@@ -322,6 +322,7 @@ The train and inference components of <i>syngen</i> is available as public docke
 To run dockerized code (see parameters description in *Training* and *Inference* sections) for one table call:
 
 ```bash
+docker pull tdspora/syngen
 docker run --rm \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=train \
@@ -341,6 +342,7 @@ You can add any arguments listed in the corresponding sections for infer and tra
 To run dockerized code by providing the metadata file simply call:
 
 ```bash
+docker pull tdspora/syngen
 docker run --rm \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=train \
@@ -361,6 +363,7 @@ Set the `LOGURU_LEVEL` environment variable to desired level of logging.
 For example, to suppress the debug messages, add `-e LOGURU_LEVEL=INFO` to the `docker run` command:
 
 ```bash
+docker pull tdspora/syngen
 docker run --rm -e LOGURU_LEVEL=INFO \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=train \
@@ -373,25 +376,30 @@ docker run --rm -e LOGURU_LEVEL=INFO \
 ```
 
 #### UI web interface
-
-You can access the streamlit UI web interface by launching the container with the following command:
-
-```bash
-docker run -p 8501:8501 tdspora/syngen --webui
-```
-
-Or by running the following command after installing the library with the UI option:
+You can access the streamlit UI web interface by running the following command after installing the library with the UI option:
 
 ```bash
 pip install syngen[ui]
 ```
-and then use the code below in your python file:
+then use the code below in your python file:
 
 ```python
 from syngen.streamlit_app.run import main
 
 
 main()
+```
+and launch it with the following command:
+
+```bash
+streamlit run YOUR_PYTHON_FILE.py
+```
+
+You also can access the streamlit UI web interface by launching the container with the following command:
+
+```bash
+docker pull tdspora/syngen
+docker run -p 8501:8501 tdspora/syngen --webui
 ```
 
 The UI will be available at <http://localhost:8501>.
