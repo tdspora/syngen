@@ -177,7 +177,7 @@ class MlflowTracker:
                 mlflow.set_experiment(matching_name, experiment_id)
                 if env_value:
                     logger.warning(
-                        f"The experiment with the same name - '{experiment_name}' already existed. "
+                        f"The experiment with the same name - '{experiment_name}' already exists. "
                         f"The created runs will be stored in the experiment - '{matching_name}'"
                     )
                 if not env_value:
