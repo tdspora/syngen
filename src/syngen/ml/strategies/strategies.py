@@ -186,7 +186,7 @@ class InferStrategy(Strategy):
         return self
 
     def add_reporters(self):
-        if self.config.print_report:
+        if self.config.print_report or self.config.get_infer_metrics:
             accuracy_reporter = AccuracyReporter(
                 table_name=self.config.table_name,
                 paths=self.config.paths,
@@ -210,6 +210,7 @@ class InferStrategy(Strategy):
                 batch_size=kwargs["batch_size"],
                 random_seed=kwargs["random_seed"],
                 print_report=kwargs["print_report"],
+                get_infer_metrics=kwargs["get_infer_metrics"],
                 log_level=kwargs["log_level"],
                 both_keys=kwargs["both_keys"],
             )

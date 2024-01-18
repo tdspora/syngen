@@ -86,53 +86,34 @@ class AccuracyTest(BaseTest):
     ):
         super().__init__(original, synthetic, paths, table_name, infer_config)
         self.draws_path = f"{self.paths['draws_path']}/accuracy"
-
-    def __prepare_before_report(self):
-        """
-        Do preparation work before creating the report
-        """
+        self.plot_exists = self.config["print_report"]
+        self.univariate = UnivariateMetric(self.original, self.synthetic, self.plot_exists, self.draws_path)
+        self.bivariate = BivariateMetric(self.original, self.synthetic, self.plot_exists, self.draws_path)
+        self.correlations = Correlations(self.original, self.synthetic, self.plot_exists, self.draws_path)
+        self.clustering = Clustering(self.original, self.synthetic, self.plot_exists, self.draws_path)
+        self.utility = Utility(self.original, self.synthetic, self.plot_exists, self.draws_path)
+        self.acc = JensenShannonDistance(self.original, self.synthetic, self.plot_exists, self.draws_path)
         self._prepare_dir()
-        univariate = UnivariateMetric(self.original, self.synthetic, True, self.draws_path)
-        bivariate = BivariateMetric(self.original, self.synthetic, True, self.draws_path)
-        correlations = Correlations(self.original, self.synthetic, True, self.draws_path)
-        clustering = Clustering(self.original, self.synthetic, True, self.draws_path)
-        utility = Utility(self.original, self.synthetic, True, self.draws_path)
-        acc = JensenShannonDistance(self.original, self.synthetic, True, self.draws_path)
-        return univariate, bivariate, correlations, clustering, utility, acc
 
-    def report(self, **kwargs):
-        (
-            univariate,
-            bivariate,
-            correlations,
-            clustering,
-            utility,
-            acc,
-        ) = self.__prepare_before_report()
-        acc.calculate_all(kwargs["categ_columns"])
-        acc_median = "%.4f" % acc.calculate_heatmap_median(acc.heatmap)
-
-        uni_images = univariate.calculate_all(
-            kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
-        )
-        bi_images = bivariate.calculate_all(
-            kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
-        )
-        corr_result = correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+    def _fetch_metrics(self, **kwargs):
+        self.acc.calculate_all(kwargs["categ_columns"])
+        acc_median = "%.4f" % self.acc.calculate_heatmap_median(self.acc.heatmap)
+        corr_result = self.correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
         corr_result = int(corr_result) if corr_result == 0 else abs(corr_result)
-        clustering_result = "%.4f" % clustering.calculate_all(
+        clustering_result = "%.4f" % self.clustering.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
-        utility_result = utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
+        utility_result = self.utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
 
-        metrics = {
-            "Utility_avg": utility_result["Synth to orig ratio"].mean(),
-            "Clustering": float(clustering_result),
-            "Accuracy": float(acc_median),
-            "Correlation": corr_result,
-        }
+        return acc_median, corr_result, clustering_result, utility_result
 
-        MlflowTracker().log_metrics(metrics)
+    def _generate_report(self, acc_median, corr_result, clustering_result, utility_result, **kwargs):
+        uni_images = self.univariate.calculate_all(
+            kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
+        )
+        bi_images = self.bivariate.calculate_all(
+            kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
+        )
 
         # Generate html report
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
@@ -141,6 +122,12 @@ class AccuracyTest(BaseTest):
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
         uni_images = {title: transform_to_base64(path) for title, path in uni_images.items()}
         bi_images = {title: transform_to_base64(path) for title, path in bi_images.items()}
+        infer_config = {k: v for k, v in self.config.items() if k not in ["print_report", "get_infer_metrics"]}
+        train_config = {
+            k: v
+            for k, v in fetch_training_config(self.paths["train_config_pickle_path"]).to_dict().items()
+            if k != "print_report"
+        }
         html = template.render(
             accuracy_value=acc_median,
             accuracy_heatmap=transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.svg"),
@@ -154,10 +141,8 @@ class AccuracyTest(BaseTest):
             utility_table=utility_result.to_html(),
             is_data_available=False if utility_result.empty else True,
             table_name=self.table_name,
-            training_config=fetch_training_config(
-                self.paths["train_config_pickle_path"]
-            ).to_dict(),
-            inference_config=self.config,
+            training_config=train_config,
+            inference_config=infer_config,
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
             round=round
         )
@@ -166,3 +151,24 @@ class AccuracyTest(BaseTest):
             f.write(html)
         self._log_report_to_mlflow(f"{self.paths['draws_path']}/accuracy_report.html")
         self._remove_artifacts()
+
+    def report(self, **kwargs):
+        metrics = self._fetch_metrics(**kwargs)
+        acc_median, corr_result, clustering_result, utility_result = metrics
+        MlflowTracker().log_metrics(
+            {
+                "Utility_avg": utility_result["Synth to orig ratio"].mean(),
+                "Clustering": float(clustering_result),
+                "Accuracy": float(acc_median),
+                "Correlation": corr_result,
+            }
+        )
+
+        if self.config["print_report"]:
+            self._generate_report(
+                acc_median,
+                corr_result,
+                clustering_result,
+                utility_result,
+                **kwargs
+            )

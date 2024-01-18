@@ -100,7 +100,7 @@ infer --size INT \
     --run_parallel BOOL \
     --batch_size INT \
     --random_seed INT \
-    --print_report BOOL
+    --print_report BOOL \
 ```
  
 To generate one or more tables using a metadata file, you can use the following command:
@@ -169,6 +169,7 @@ global:                                     # Global settings. Optional paramete
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
+    get_infer_metrics: False                # Whether to fetch metrics for the inference process. If set to False and 'print_report' is set to True, the 'get_infer_metrics' parameter will be ignored and metrics will be fetched anyway. Optional parameter
 
 CUSTOMER:                                   # Table name. Required parameter               
   train_settings:                           # Settings for training process. Required parameter
@@ -202,6 +203,7 @@ CUSTOMER:                                   # Table name. Required parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
+    get_infer_metrics: False                # Whether to fetch metrics for the inference process. If set to False and 'print_report' is set to True, the 'get_infer_metrics' parameter will be ignored and metrics will be fetched anyway. Optional parameter
   keys:                                     # Keys of the table. Optional parameter
     PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
       type: "PK"                            # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
@@ -254,6 +256,7 @@ ORDER:                                      # Table name. Required parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
+    get_infer_metrics: False                # Whether to fetch metrics for the inference process. If set to False and 'print_report' is set to True, the 'get_infer_metrics' parameter will be ignored and metrics will be fetched anyway. Optional parameter
   format:                                   # Settings for reading and writing data in 'csv' format. Optional parameter
     sep: ','                                # Delimiter to use. Optional parameter
     quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter
