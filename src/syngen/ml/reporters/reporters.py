@@ -196,7 +196,7 @@ class Report:
                     )
                 if not reporter.config["print_report"] and reporter.config["get_infer_metrics"]:
                     logger.info(
-                        f"The metrics for the table - '{reporter.table_name}' has been evaluated"
+                        f"The metrics for the table - '{reporter.table_name}' have been evaluated"
                     )
 
             MlflowTracker().end_run()

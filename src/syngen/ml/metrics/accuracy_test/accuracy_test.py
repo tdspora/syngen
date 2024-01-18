@@ -96,6 +96,9 @@ class AccuracyTest(BaseTest):
         self._prepare_dir()
 
     def _fetch_metrics(self, **kwargs):
+        """
+        Fetch the main metrics
+        """
         self.acc.calculate_all(kwargs["categ_columns"])
         acc_median = "%.4f" % self.acc.calculate_heatmap_median(self.acc.heatmap)
         corr_result = self.correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
@@ -108,6 +111,9 @@ class AccuracyTest(BaseTest):
         return acc_median, corr_result, clustering_result, utility_result
 
     def _generate_report(self, acc_median, corr_result, clustering_result, utility_result, **kwargs):
+        """
+        Generate the report
+        """
         uni_images = self.univariate.calculate_all(
             kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
         )
@@ -115,7 +121,6 @@ class AccuracyTest(BaseTest):
             kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
         )
 
-        # Generate html report
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
             template = jinja2.Template(file_.read())
 
