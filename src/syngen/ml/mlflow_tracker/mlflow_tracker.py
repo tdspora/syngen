@@ -182,7 +182,8 @@ class MlflowTracker:
                     )
                 if not env_value:
                     logger.warning(
-                        f"The created runs will be stored in the existed experiment - '{matching_name}'"
+                        f"The experiment with the name similar to 'table_name' or 'metadata_path' value - "
+                        f"'{experiment_name}' already exists and new runs will be sent there"
                     )
 
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
