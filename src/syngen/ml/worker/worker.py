@@ -12,6 +12,7 @@ from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
 from syngen.ml.mlflow_tracker import MlflowTracker
+from syngen.ml.utils import ProgressHandler
 
 
 @define
@@ -242,11 +243,19 @@ class Worker:
             config_of_metadata_for_inference,
         ) = metadata_for_inference
 
+        delta = 0.5 / len(chain_for_tables_for_training)
+
         for table in chain_for_tables_for_training:
             config_of_table = config_of_metadata_for_training[table]
             global_context(config_of_table.get("format", {}))
             train_settings = config_of_table["train_settings"]
-            logger.info(f"Training process of the table - {table} has started.")
+            log_message = f"Training process of the table - {table} has started"
+            logger.info(log_message)
+            ProgressHandler().set_progress(
+                progress=ProgressHandler().get_progress(),
+                delta=delta,
+                message=log_message
+            )
 
             MlflowTracker().start_run(
                 run_name=f"{table}-TRAIN",
@@ -267,6 +276,11 @@ class Worker:
             MlflowTracker().end_run()
             self._write_success_message(slugify(table))
             self._save_metadata_file()
+            ProgressHandler().set_progress(
+                progress=ProgressHandler().get_progress(),
+                delta=delta,
+                message=f"Training of the table - {table} was completed"
+            )
         generation_of_reports = any(
             [
                 config.get("train_settings", {}).get("print_report", False)
@@ -304,10 +318,17 @@ class Worker:
         :param tables: the list of tables for infer process
         :param config_of_tables: configuration of tables declared in metadata file
         """
+        delta = 0.25 / len(tables)
         for table in tables:
             config_of_table = config_of_tables[table]
             global_context(config_of_table.get("format", {}))
-            logger.info(f"Infer process of the table - {table} has started")
+            log_message = f"Infer process of the table - '{table}' has started"
+            logger.info(log_message)
+            ProgressHandler().set_progress(
+                progress=ProgressHandler().get_progress(),
+                delta=delta,
+                message=log_message
+            )
             both_keys = table in self.divided
             infer_settings = config_of_table["infer_settings"]
 
@@ -331,6 +352,11 @@ class Worker:
                 type_of_process=self.type_of_process,
             )
             MlflowTracker().end_run()
+            ProgressHandler().set_progress(
+                progress=ProgressHandler().get_progress(),
+                delta=delta,
+                message=f"Infer process of the table - {table} was completed"
+            )
 
     def _generate_reports(self):
         """

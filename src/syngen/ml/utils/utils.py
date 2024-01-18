@@ -19,6 +19,35 @@ MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
 
 
+class ProgressHandler:
+    def __new__(cls):
+        if not hasattr(cls, "instance"):
+            cls.instance = super(ProgressHandler, cls).__new__(cls)
+            cls.instance._progress = 0
+            cls.instance._delta = None
+            cls.instance._message = None
+        return cls.instance
+
+    def get_progress(self):
+        return self._progress
+
+    def get_delta(self):
+        return self._delta
+
+    def get_info(self):
+        return self._progress, self._message
+
+    def reset_progress(self):
+        self._progress = 0
+        self._delta = None
+        self._message = None
+
+    def set_progress(self, progress, delta=None, message=None):
+        self._delta = delta if delta is not None else self._delta
+        self._progress = progress
+        self._message = message
+
+
 def is_format_first(date_format: str, format_type: str) -> bool:
     """
     Check if the date format starts with the specified string

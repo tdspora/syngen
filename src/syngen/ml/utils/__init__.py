@@ -21,5 +21,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     create_log_file,
     clean_up_metadata,
     fetch_log_message,
-    file_sink
+    file_sink,
+    ProgressHandler
 )

@@ -22,6 +22,7 @@ from syngen.ml.utils import (
     fetch_training_config,
     check_if_features_assigned,
     define_existent_columns,
+    ProgressHandler
 )
 
 warnings.filterwarnings("ignore")
@@ -272,6 +273,7 @@ class VAEWrapper(BaseWrapper):
         # loss that corresponds to the best saved weights
         saved_weights_loss = float("inf")
 
+        delta = ProgressHandler().get_delta() / epochs
         for epoch in range(epochs):
             num_batches = 0.0
             total_loss = 0.0
@@ -292,8 +294,12 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            logger.info(f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec")
-
+            log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec"
+            logger.info(log_message)
+            ProgressHandler().set_progress(
+                progress=ProgressHandler().get_progress() + delta,
+                message=log_message
+            )
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
 

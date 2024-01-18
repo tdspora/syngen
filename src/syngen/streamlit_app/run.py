@@ -1,4 +1,5 @@
 import os
+import traceback
 import shutil
 import threading
 import time
@@ -11,7 +12,7 @@ from loguru import logger
 import streamlit as st
 
 from syngen.ml.worker import Worker
-from syngen.ml.utils import fetch_log_message
+from syngen.ml.utils import fetch_log_message, ProgressHandler
 from streamlit_option_menu import option_menu
 
 
@@ -24,6 +25,7 @@ class StreamlitHandler:
     """
     def __init__(self, uploaded_file):
         self.log_queue = Queue()
+        self.progress_handler = ProgressHandler()
         self.log_error_queue = Queue()
         self.epochs = int()
         self.size_limit = int()
@@ -104,9 +106,9 @@ class StreamlitHandler:
             )
             worker.launch_train()
             logger.info("Model training completed")
-        except Exception as e:
-            logger.error(f"Error during train: {e}")
-            self.log_error_queue.put(f"Error during train: {e}")
+        except Exception:
+            logger.error(f"Error during train: {traceback.format_exc()}")
+            self.log_error_queue.put(f"Error during train: {traceback.format_exc()}")
 
     def infer_model(self):
         """
@@ -130,9 +132,9 @@ class StreamlitHandler:
             )
             worker.launch_infer()
             logger.info("Data generation completed")
-        except Exception as e:
-            logger.error(f"Error during infer: {e}")
-            self.log_error_queue.put(f"Error during infer: {e}")
+        except Exception:
+            logger.error(f"Error during infer: {traceback.format_exc()}")
+            self.log_error_queue.put(f"Error during infer: {traceback.format_exc()}")
 
     def train_and_infer(self):
         """
@@ -275,6 +277,8 @@ def main():
                 lock = threading.Lock()
                 with lock:
                     runner.start()
+                current_progress = 0
+                prg = st.progress(current_progress)
 
                 while runner.is_alive():
                     with st.spinner("Waiting for the process to complete..."):
@@ -284,12 +288,16 @@ def main():
                                     with st.code("logs", language="log"):
                                         log = app.log_queue.get()
                                         st.text(log)
+                                        current_progress, message = app.progress_handler.get_info()
+                                        prg.progress(value=current_progress, text=message)
                                 elif not runner.is_alive():
                                     break
                                 time.sleep(0.001)
                 if not app.log_error_queue.empty():
                     st.exception(app.log_error_queue.get())
                 elif app.log_error_queue.empty() and not runner.is_alive():
+                    prg.progress(100, text="Data generation completed")
+                    app.progress_handler.reset_progress()
                     st.success("Data generation completed")
             with st.container():
                 col1, col2, col3 = st.columns([0.6, 0.4, 0.6], )

@@ -16,10 +16,16 @@ from collections import OrderedDict
 from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
+from tqdm import tqdm
 
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.utils import fetch_dataset, check_if_features_assigned, generate_uuid
+from syngen.ml.utils import (
+    fetch_dataset,
+    check_if_features_assigned,
+    generate_uuid,
+    ProgressHandler
+)
 from syngen.ml.context import get_context
 
 
@@ -427,7 +433,15 @@ class VaeInferHandler(BaseHandler):
         )
         logger.info(f"Total of {batch_num} batch(es)")
         batches = self.split_by_batches(self.size, batch_num)
-        prepared_batches = [self.run(batch, self.run_parallel) for batch in batches]
+        delta = ProgressHandler().get_delta() / batch_num
+        prepared_batches = []
+        for i, batch in tqdm(enumerate(batches), desc="Data synthesis"):
+            ProgressHandler().set_progress(
+                progress=ProgressHandler().get_progress() + delta,
+                delta=delta
+            )
+            prepared_batch = self.run(batch, self.run_parallel)
+            prepared_batches.append(prepared_batch)
         prepared_data = (
             self._concat_slices_with_unique_pk(prepared_batches)
             if len(prepared_batches) > 0
