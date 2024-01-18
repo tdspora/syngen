@@ -139,9 +139,9 @@ class MlflowTracker:
             mlflow.create_experiment(name, artifact_location)
 
     def set_experiment(
-        self,
-        experiment_name: str = None,
-        experiment_id: str = None
+            self,
+            experiment_name: str = None,
+            experiment_id: str = None
     ):
         """
         Set the experiment for tracking.
@@ -151,14 +151,9 @@ class MlflowTracker:
             experiments = mlflow.search_experiments(
                 filter_string=f"name LIKE '{experiment_name}'"
             )
+            env_value = os.getenv("MLFLOW_EXPERIMENT_NAME", "")
             last_matching = experiments[0] if experiments else []
             if not last_matching:
-                logger.warning(
-                    f"It seems that no experiment with a name "
-                    f"starting with - '{experiment_name}' was found. "
-                    f"A new experiment with the name  - '{experiment_name}' "
-                    f"will be created"
-                )
                 MlflowTracker().create_experiment(
                     experiment_name,
                     artifact_location=os.environ.get(
@@ -166,8 +161,30 @@ class MlflowTracker:
                         "/mlflow_tracker"
                     ),
                 )
-            matching_name = last_matching.name if last_matching else experiment_name
-            mlflow.set_experiment(matching_name, experiment_id)
+                mlflow.set_experiment(experiment_name, experiment_id)
+
+                if not env_value:
+                    logger.warning(
+                        f"A new experiment with the name based on 'table_name' or "
+                        f"'metadata_path' value - '{experiment_name}' will be created"
+                    )
+
+                if env_value:
+                    logger.info(f"A new experiment with the name - '{experiment_name}' will be created")
+
+            if last_matching:
+                matching_name = last_matching.name
+                mlflow.set_experiment(matching_name, experiment_id)
+                if env_value:
+                    logger.warning(
+                        f"The experiment with the same name - '{experiment_name}' already exists. "
+                        f"The created runs will be stored in the experiment - '{matching_name}'"
+                    )
+                if not env_value:
+                    logger.warning(
+                        f"The experiment with the name similar to 'table_name' or 'metadata_path' value - "
+                        f"'{experiment_name}' already exists and new runs will be sent there"
+                    )
 
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
         if self.is_active:
