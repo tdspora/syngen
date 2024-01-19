@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict
+from typing import List, Dict, Optional
 from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
@@ -301,7 +301,7 @@ def fetch_unique_root(table_name: str, metadata_path: str):
     return slugify(unique_name)
 
 
-def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
+def create_log_file(type_of_process: str, table_name: Optional[str], metadata_path: Optional[str]):
     """
     Create the file for storing the logs of main processes
     """
@@ -315,13 +315,23 @@ def create_log_file(type_of_process: str, table_name: str, metadata_path: str):
     os.environ["SUCCESS_LOG_FILE"] = file_path
 
 
-def file_sink(record):
+def fetch_log_message(message):
     """
-    Save logs with level 'INFO' and above to the log file
+    Fetch the log message
+    """
+    record = message.record
+    log_message = (f'{record["time"]} | {record["level"]}    | '
+                   f'{record["file"]}:{record["function"]}:{record["line"]} - {record["message"]}')
+    return log_message
+
+
+def file_sink(message):
+    """
+    Save logs to the log file
     """
     with open(os.getenv("SUCCESS_LOG_FILE"), "a") as log_file:
-        log_message = record.record["message"] + "\n"
-        log_file.write(log_message)
+        log_message = fetch_log_message(message)
+        log_file.write(log_message + "\n")
 
 
 def console_sink(record):

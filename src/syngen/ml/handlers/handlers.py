@@ -21,7 +21,6 @@ from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import fetch_dataset, check_if_features_assigned, generate_uuid
 from syngen.ml.context import get_context
-from syngen.ml.utils import setup_logger
 
 
 class AbstractHandler(ABC):
@@ -281,8 +280,6 @@ class VaeInferHandler(BaseHandler):
         return synthetic_infer
 
     def run_separate(self, params: Tuple):
-        os.environ["LOGURU_LEVEL"] = self.log_level
-        setup_logger()
         i, size = params
 
         if self.random_seed:
