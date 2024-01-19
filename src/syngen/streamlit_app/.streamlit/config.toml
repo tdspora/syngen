@@ -5,3 +5,5 @@ textColor="#262730"
 font="sans serif"
 [logger]
 messageFormat = "%(asctime)s | %(levelname)s  | %(pathname)s:%(funcName)s:%(lineno)d | %(message)s"
+[browser]
+gatherUsageStats = false
