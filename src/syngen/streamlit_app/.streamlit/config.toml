@@ -1,0 +1,9 @@
+[theme]
+primaryColor="#009dc4"
+backgroundColor="#edf0f7"
+textColor="#262730"
+font="sans serif"
+[logger]
+messageFormat = "%(asctime)s | %(levelname)s  | %(pathname)s:%(funcName)s:%(lineno)d | %(message)s"
+[browser]
+gatherUsageStats = false

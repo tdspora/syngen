@@ -1,4 +1,1 @@
-include src/syngen/VERSION
-include src/syngen/*.py
-include src/syngen/ml/metrics/accuracy_test/src/fonts/*.ttf
-recursive-include src
+graft src/syngen
