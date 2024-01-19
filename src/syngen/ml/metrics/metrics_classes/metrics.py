@@ -100,7 +100,6 @@ class JensenShannonDistance(BaseMetric):
             heatmap.shape[0], -1
         )
         heatmap_median = np.nanmedian(heatmap_no_diag)  # ignores nan when calculating median
-        logger.info("Median of Jensen Shannon Distance heatmap is {0:.4f}".format(heatmap_median))
         return heatmap_median
 
     def _calculate_pair_continuous_vs_continuous(self, first_column, second_column):
@@ -889,7 +888,6 @@ class Clustering(BaseMetric):
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
         self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
-        logger.info("Mean clusters homogeneity is {0:.4f}".format(self.mean_score.values[0]))
 
         if self.plot:
             plt.clf()

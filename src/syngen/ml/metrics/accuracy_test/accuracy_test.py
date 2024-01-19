@@ -35,6 +35,7 @@ class BaseTest(ABC):
         self.paths = paths
         self.table_name = table_name
         self.config = config
+        self.plot_exists = self.config["print_report"]
         self.draws_path = str()
 
     @abstractmethod
@@ -74,6 +75,22 @@ class BaseTest(ABC):
             )
             pass
 
+    def _get_cleaned_configs(self):
+        """
+        Get cleaned configs for the report
+        """
+        train_config = {
+            k: v
+            for k, v in fetch_training_config(self.paths["train_config_pickle_path"]).to_dict().items()
+            if k != "print_report"
+        }
+        infer_config = {
+            k: v
+            for k, v in self.config.items()
+            if k not in ["print_report", "get_infer_metrics"]
+        }
+        return infer_config, train_config
+
 
 class AccuracyTest(BaseTest):
     def __init__(
@@ -86,7 +103,6 @@ class AccuracyTest(BaseTest):
     ):
         super().__init__(original, synthetic, paths, table_name, infer_config)
         self.draws_path = f"{self.paths['draws_path']}/accuracy"
-        self.plot_exists = self.config["print_report"]
         self.univariate = UnivariateMetric(self.original, self.synthetic, self.plot_exists, self.draws_path)
         self.bivariate = BivariateMetric(self.original, self.synthetic, self.plot_exists, self.draws_path)
         self.correlations = Correlations(self.original, self.synthetic, self.plot_exists, self.draws_path)
@@ -108,6 +124,10 @@ class AccuracyTest(BaseTest):
         )
         utility_result = self.utility.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
 
+        logger.info(f"Median accuracy is {acc_median}")
+        logger.info(f"Median of differences of correlations is {round(corr_result, 4)}")
+        logger.info(f"Median clusters homogeneity is {clustering_result}")
+
         return acc_median, corr_result, clustering_result, utility_result
 
     def _generate_report(self, acc_median, corr_result, clustering_result, utility_result, **kwargs):
@@ -127,12 +147,9 @@ class AccuracyTest(BaseTest):
         draws_acc_path = f"{self.paths['draws_path']}/accuracy"
         uni_images = {title: transform_to_base64(path) for title, path in uni_images.items()}
         bi_images = {title: transform_to_base64(path) for title, path in bi_images.items()}
-        infer_config = {k: v for k, v in self.config.items() if k not in ["print_report", "get_infer_metrics"]}
-        train_config = {
-            k: v
-            for k, v in fetch_training_config(self.paths["train_config_pickle_path"]).to_dict().items()
-            if k != "print_report"
-        }
+
+        train_config, infer_config = self._get_cleaned_configs()
+
         html = template.render(
             accuracy_value=acc_median,
             accuracy_heatmap=transform_to_base64(f"{draws_acc_path}/accuracy_heatmap.svg"),
@@ -165,7 +182,7 @@ class AccuracyTest(BaseTest):
                 "Utility_avg": utility_result["Synth to orig ratio"].mean(),
                 "Clustering": float(clustering_result),
                 "Accuracy": float(acc_median),
-                "Correlation": corr_result,
+                "Correlation": round(corr_result, 4),
             }
         )
 
