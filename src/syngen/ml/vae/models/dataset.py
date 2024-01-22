@@ -105,10 +105,21 @@ class Dataset:
         pk_columns_lists = [val["columns"] for val in self.primary_keys_mapping.values()]
         self.pk_columns = [col for uq_cols in pk_columns_lists for col in uq_cols]
 
+        for column in self.pk_columns:
+            # Check for presence of NA values in primary key columns
+            if self.df[column].isna().any().any():
+                raise ValueError(f"Primary key columns {column} contain missing values. Please check the original data.")
+            # Check uniqueness of primary key columns
+            if self.df[column].duplicated().any():
+                raise ValueError(f"Values in primary key {column} are not unique. Please check the original data.")
+            else:
+                logger.info(f"Values in primary key column {column} are unique.")
+
         if self.primary_key_name:
             logger.info(f"The primary key name was set: {self.primary_key_name}")
         if self.primary_key_name is None:
             logger.info("No primary key was set.")
+
 
     def __set_uq_keys(self, config_of_keys: Dict):
         """
@@ -126,10 +137,18 @@ class Dataset:
         uq_columns_lists = [val["columns"] for val in self.unique_keys_mapping.values()]
         self.uq_columns = [col for uq_cols in uq_columns_lists for col in uq_cols]
 
+        # Check uniqueness of uq key
+        for column in self.uq_columns:
+            if self.df[column].duplicated().any():
+                raise ValueError(f"Values in unique key {column} are not unique. Please check the original data.")
+            else:
+                logger.info(f"Values in unique key column {column} are unique.")
+
         if self.unique_keys_list:
             logger.info(f"The unique keys were set: {self.unique_keys_list}")
         if not self.unique_keys_list:
             logger.info("No unique keys were set.")
+
 
     def _filter_dropped_keys(self, config_of_keys: Dict, type_of_key: str) -> Tuple[Dict, Set]:
         """
