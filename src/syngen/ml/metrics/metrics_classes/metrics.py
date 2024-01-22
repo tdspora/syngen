@@ -93,6 +93,7 @@ class JensenShannonDistance(BaseMetric):
                 bbox_inches="tight",
                 format="svg",
             )
+            plt.clf()
 
     @staticmethod
     def calculate_heatmap_median(heatmap):
@@ -350,6 +351,7 @@ class BivariateMetric(BaseMetric):
             desc="Generating bivariate distributions...",
             total=len(column_pairs),
         ):
+            plt.clf()
             fig, self._axes = plt.subplots(
                 1, 2, figsize=(30, 15), gridspec_kw={"width_ratios": [7, 8.7]}
             )

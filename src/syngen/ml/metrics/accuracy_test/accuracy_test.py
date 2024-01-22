@@ -52,6 +52,8 @@ class BaseTest(ABC):
         """
         Create the directory where images and reports should be stored
         """
+        if os.path.exists(self.paths["draws_path"]):
+            shutil.rmtree(self.paths["draws_path"])
         os.makedirs(self.paths["draws_path"], exist_ok=True)
         os.makedirs(self.draws_path, exist_ok=True)
 
@@ -117,6 +119,15 @@ class AccuracyTest(BaseTest):
         """
         self.acc.calculate_all(kwargs["categ_columns"])
         acc_median = "%.4f" % self.acc.calculate_heatmap_median(self.acc.heatmap)
+        uni_images = dict()
+        bi_images = dict()
+        if self.plot_exists:
+            uni_images = self.univariate.calculate_all(
+                kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
+            )
+            bi_images = self.bivariate.calculate_all(
+                kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
+            )
         corr_result = self.correlations.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"])
         corr_result = int(corr_result) if corr_result == 0 else abs(corr_result)
         clustering_result = "%.4f" % self.clustering.calculate_all(
@@ -128,19 +139,20 @@ class AccuracyTest(BaseTest):
         logger.info(f"Median of differences of correlations is {round(corr_result, 4)}")
         logger.info(f"Median clusters homogeneity is {clustering_result}")
 
-        return acc_median, corr_result, clustering_result, utility_result
+        return acc_median, corr_result, clustering_result, utility_result, uni_images, bi_images
 
-    def _generate_report(self, acc_median, corr_result, clustering_result, utility_result, **kwargs):
+    def _generate_report(
+            self,
+            acc_median,
+            corr_result,
+            clustering_result,
+            utility_result,
+            uni_images,
+            bi_images
+    ):
         """
         Generate the report
         """
-        uni_images = self.univariate.calculate_all(
-            kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
-        )
-        bi_images = self.bivariate.calculate_all(
-            kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
-        )
-
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html") as file_:
             template = jinja2.Template(file_.read())
 
@@ -174,9 +186,9 @@ class AccuracyTest(BaseTest):
         self._log_report_to_mlflow(f"{self.paths['draws_path']}/accuracy_report.html")
         self._remove_artifacts()
 
-    def report(self, **kwargs):
+    def report(self, *args, **kwargs):
         metrics = self._fetch_metrics(**kwargs)
-        acc_median, corr_result, clustering_result, utility_result = metrics
+        acc_median, corr_result, clustering_result, utility_result, uni_images, bi_images = metrics
         MlflowTracker().log_metrics(
             {
                 "Utility_avg": utility_result["Synth to orig ratio"].mean(),
@@ -186,11 +198,12 @@ class AccuracyTest(BaseTest):
             }
         )
 
-        if self.config["print_report"]:
+        if self.plot_exists:
             self._generate_report(
                 acc_median,
                 corr_result,
                 clustering_result,
                 utility_result,
-                **kwargs
+                uni_images,
+                bi_images
             )
