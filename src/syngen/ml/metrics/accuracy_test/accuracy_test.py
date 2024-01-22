@@ -52,8 +52,6 @@ class BaseTest(ABC):
         """
         Create the directory where images and reports should be stored
         """
-        if os.path.exists(self.paths["draws_path"]):
-            shutil.rmtree(self.paths["draws_path"])
         os.makedirs(self.paths["draws_path"], exist_ok=True)
         os.makedirs(self.draws_path, exist_ok=True)
 
