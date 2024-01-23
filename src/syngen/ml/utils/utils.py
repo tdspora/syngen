@@ -58,15 +58,15 @@ class ProgressBarHandler:
         """
         return self._progress, self._message
 
-    def reset_progress(self):
-        self._progress = 0
-        self._delta = None
-        self._message = None
-
     def set_progress(self, progress, delta=None, message=None):
         self._delta = delta if delta is not None else self._delta
-        self._progress = progress
+        self._progress = progress if progress <= 1.0 else 1.0
         self._message = message
+
+    @classmethod
+    def reset_instance(cls):
+        if hasattr(cls, "instance"):
+            del cls.instance
 
 
 def is_format_first(date_format: str, format_type: str) -> bool:

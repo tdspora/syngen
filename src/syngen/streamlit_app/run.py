@@ -298,7 +298,7 @@ def main():
                     st.exception(app.log_error_queue.get())
                 elif app.log_error_queue.empty() and not runner.is_alive():
                     prg.progress(100, text="Data generation completed")
-                    app.progress_handler.reset_progress()
+                    app.progress_handler.reset_instance()
                     st.success("Data generation completed")
             with st.container():
                 col1, col2, col3 = st.columns([0.6, 0.4, 0.6], )
