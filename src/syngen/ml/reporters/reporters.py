@@ -188,8 +188,8 @@ class Report:
             )
             if run_id is not None:
                 MlflowTracker().start_run(run_id=run_id)
+            delta = 0.25 / (len(reporters) * 2)
             for reporter in reporters:
-                delta = 0.25 / len(reporters)
                 message = (f"The generation of the {reporter.__class__.report_type} report "
                            f"of the table - '{reporter.table_name}'")
                 ProgressBarHandler().set_progress(

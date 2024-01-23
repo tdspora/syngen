@@ -273,11 +273,12 @@ class VAEWrapper(BaseWrapper):
         # loss that corresponds to the best saved weights
         saved_weights_loss = float("inf")
 
-        delta = ProgressBarHandler().delta / epochs
+        delta = ProgressBarHandler().delta / (epochs * 2)
         for epoch in range(epochs):
+            log_message = f"Training process of the table - '{self.table_name}' on the epoch: {epoch}"
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
-                message=f"Training process of the table - '{self.table_name}' on the epoch: {epoch}"
+                message=log_message
             )
             num_batches = 0.0
             total_loss = 0.0
@@ -299,6 +300,10 @@ class VAEWrapper(BaseWrapper):
                 saved_weights_loss = mean_loss
 
             log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec"
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta,
+                message=log_message
+            )
             logger.info(log_message)
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
