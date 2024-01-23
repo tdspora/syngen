@@ -16,7 +16,7 @@ from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.metrics.utils import text_to_continuous
 from syngen.ml.mlflow_tracker import MlflowTracker
-from syngen.ml.utils import ProgressHandler
+from syngen.ml.utils import ProgressBarHandler
 
 
 class Reporter:
@@ -187,9 +187,8 @@ class Report:
                 message = (f"The {reporter.__class__.report_type} report "
                            f"of the table - '{reporter.table_name}' has been generated")
                 logger.info(message)
-                current_progress = ProgressHandler().get_progress()
-                ProgressHandler().set_progress(
-                    progress=current_progress + delta,
+                ProgressBarHandler().set_progress(
+                    progress=ProgressBarHandler().progress + delta,
                     delta=delta,
                     message=message
                 )

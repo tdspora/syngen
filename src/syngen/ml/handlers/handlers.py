@@ -24,7 +24,7 @@ from syngen.ml.utils import (
     fetch_dataset,
     check_if_features_assigned,
     generate_uuid,
-    ProgressHandler
+    ProgressBarHandler
 )
 from syngen.ml.context import get_context
 
@@ -433,11 +433,11 @@ class VaeInferHandler(BaseHandler):
         )
         logger.info(f"Total of {batch_num} batch(es)")
         batches = self.split_by_batches(self.size, batch_num)
-        delta = ProgressHandler().get_delta() / batch_num
+        delta = ProgressBarHandler().delta / batch_num
         prepared_batches = []
         for i, batch in tqdm(enumerate(batches), desc="Data synthesis"):
-            ProgressHandler().set_progress(
-                progress=ProgressHandler().get_progress() + delta,
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta,
                 delta=delta
             )
             prepared_batch = self.run(batch, self.run_parallel)

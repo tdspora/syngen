@@ -19,22 +19,39 @@ MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
 
 
-class ProgressHandler:
+class ProgressBarHandler:
+    """
+    Singleton class for handling the progress bar
+    """
     def __new__(cls):
         if not hasattr(cls, "instance"):
-            cls.instance = super(ProgressHandler, cls).__new__(cls)
+            cls.instance = super(ProgressBarHandler, cls).__new__(cls)
             cls.instance._progress = 0
             cls.instance._delta = None
             cls.instance._message = None
         return cls.instance
 
-    def get_progress(self):
+    @property
+    def progress(self):
+        """
+        Get the current progress of the process
+        """
         return self._progress
 
-    def get_delta(self):
+    @property
+    def delta(self):
+        """
+        Get the delta of the progress
+        inside which the progress should be changed
+        """
         return self._delta
 
-    def get_info(self):
+    @property
+    def info(self):
+        """
+        Get the information about the current progress
+        and the log message described the status of the process
+        """
         return self._progress, self._message
 
     def reset_progress(self):

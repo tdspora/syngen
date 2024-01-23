@@ -12,7 +12,7 @@ from loguru import logger
 import streamlit as st
 
 from syngen.ml.worker import Worker
-from syngen.ml.utils import fetch_log_message, ProgressHandler
+from syngen.ml.utils import fetch_log_message, ProgressBarHandler
 from streamlit_option_menu import option_menu
 
 
@@ -25,7 +25,7 @@ class StreamlitHandler:
     """
     def __init__(self, uploaded_file):
         self.log_queue = Queue()
-        self.progress_handler = ProgressHandler()
+        self.progress_handler = ProgressBarHandler()
         self.log_error_queue = Queue()
         self.epochs = int()
         self.size_limit = int()
@@ -288,7 +288,7 @@ def main():
                                     with st.code("logs", language="log"):
                                         log = app.log_queue.get()
                                         st.text(log)
-                                        current_progress, message = app.progress_handler.get_info()
+                                        current_progress, message = app.progress_handler.info
                                         prg.progress(value=current_progress, text=message)
                                 elif not runner.is_alive():
                                     break

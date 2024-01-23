@@ -12,7 +12,7 @@ from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
 from syngen.ml.mlflow_tracker import MlflowTracker
-from syngen.ml.utils import ProgressHandler
+from syngen.ml.utils import ProgressBarHandler
 
 
 @define
@@ -251,8 +251,8 @@ class Worker:
             train_settings = config_of_table["train_settings"]
             log_message = f"Training process of the table - {table} has started"
             logger.info(log_message)
-            ProgressHandler().set_progress(
-                progress=ProgressHandler().get_progress(),
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress,
                 delta=delta,
                 message=log_message
             )
@@ -276,8 +276,8 @@ class Worker:
             MlflowTracker().end_run()
             self._write_success_message(slugify(table))
             self._save_metadata_file()
-            ProgressHandler().set_progress(
-                progress=ProgressHandler().get_progress(),
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress,
                 delta=delta,
                 message=f"Training of the table - {table} was completed"
             )
@@ -324,8 +324,8 @@ class Worker:
             global_context(config_of_table.get("format", {}))
             log_message = f"Infer process of the table - '{table}' has started"
             logger.info(log_message)
-            ProgressHandler().set_progress(
-                progress=ProgressHandler().get_progress(),
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress,
                 delta=delta,
                 message=log_message
             )
@@ -352,8 +352,8 @@ class Worker:
                 type_of_process=self.type_of_process,
             )
             MlflowTracker().end_run()
-            ProgressHandler().set_progress(
-                progress=ProgressHandler().get_progress(),
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress,
                 delta=delta,
                 message=f"Infer process of the table - {table} was completed"
             )
