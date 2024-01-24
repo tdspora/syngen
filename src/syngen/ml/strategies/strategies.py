@@ -96,6 +96,7 @@ class TrainStrategy(Strategy, ABC):
             row_subset=self.config.row_subset,
             drop_null=self.config.drop_null,
             batch_size=self.config.batch_size,
+            print_report=self.config.print_report,
         )
 
         long_text_handler = LongTextsHandler(
@@ -180,6 +181,7 @@ class InferStrategy(Strategy):
             batch_size=self.config.batch_size,
             run_parallel=self.config.run_parallel,
             print_report=self.config.print_report,
+            get_infer_metrics=self.config.get_infer_metrics,
             log_level=self.config.log_level,
             type_of_process=type_of_process,
         )
