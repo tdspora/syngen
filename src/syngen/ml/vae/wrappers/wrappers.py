@@ -286,7 +286,7 @@ class VAEWrapper(BaseWrapper):
             mean_loss = np.mean(total_loss / num_batches)
             rel_delta_loss = (prev_total_loss - mean_loss)/prev_total_loss
 
-            if rel_delta_loss >= rel_loss_delta_thresh_basis:
+            if rel_delta_loss <= rel_loss_delta_thresh_basis:
                 loss_grows_num_epochs += 1
             else:
                 self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
