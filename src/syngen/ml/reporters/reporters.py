@@ -189,10 +189,16 @@ class Report:
                 MlflowTracker().start_run(run_id=run_id)
             for reporter in reporters:
                 reporter.report()
-                logger.info(
-                    f"The {reporter.__class__.report_type} report "
-                    f"of the table - '{reporter.table_name}' has been generated"
-                )
+                if reporter.config["print_report"]:
+                    logger.info(
+                        f"The {reporter.__class__.report_type} report of the table - "
+                        f"'{reporter.table_name}' has been generated"
+                    )
+                if not reporter.config["print_report"] and reporter.config["get_infer_metrics"]:
+                    logger.info(
+                        f"The metrics for the table - '{reporter.table_name}' have been evaluated"
+                    )
+
             MlflowTracker().end_run()
 
     @property

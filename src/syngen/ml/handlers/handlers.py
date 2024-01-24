@@ -21,6 +21,7 @@ from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import fetch_dataset, check_if_features_assigned, generate_uuid
 from syngen.ml.context import get_context
+from syngen.ml.config import TrainConfig
 
 
 class AbstractHandler(ABC):
@@ -143,6 +144,7 @@ class VaeTrainHandler(BaseHandler):
     row_subset: int
     drop_null: bool
     batch_size: int
+    print_report: bool
 
     def __fit_model(self, data: pd.DataFrame):
         logger.info("Start VAE training")
@@ -164,7 +166,7 @@ class VaeTrainHandler(BaseHandler):
 
         logger.debug(
             f"Train model with parameters: epochs={self.epochs}, row_subset={self.row_subset}, "
-            f"drop_null={self.drop_null}, batch_size={self.batch_size}"
+            f"print_report={self.print_report}, drop_null={self.drop_null}, batch_size={self.batch_size}"
         )
 
         self.model.fit_on_df(
@@ -195,6 +197,7 @@ class VaeInferHandler(BaseHandler):
     batch_size: int
     run_parallel: bool
     print_report: bool
+    get_infer_metrics: bool
     wrapper_name: str
     log_level: str
     type_of_process: str
@@ -423,7 +426,7 @@ class VaeInferHandler(BaseHandler):
         logger.debug(
             f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}, "
             f"batch_size={self.batch_size}, random_seed={self.random_seed}, "
-            f"print_report={self.print_report}"
+            f"print_report={self.print_report}, get_infer_metrics={self.get_infer_metrics}"
         )
         logger.info(f"Total of {batch_num} batch(es)")
         batches = self.split_by_batches(self.size, batch_num)

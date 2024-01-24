@@ -73,38 +73,64 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("wrong_setting, expected_error", [
-    ({"source": 0},
-     "The details are - {'fk_test': {'train_settings': {"
-     "'source': ['Not a valid string.']}}}"),
-    ({"epochs": 0},
-     "The details are - {'fk_test': {'train_settings': "
-     "{'epochs': ['Must be greater than or equal to 1.']}}}"),
-    ({"epochs": "not a valid type of a value"},
-     "The details are - {'fk_test': {'train_settings': "
-     "{'epochs': ['Not a valid integer.']}}}"),
-    ({"drop_null": "not a valid type of a value"},
-     "The details are - {'fk_test': {'train_settings': {"
-     "'drop_null': ['Not a valid boolean.']}}}"),
-    ({"row_limit": 0},
-     "The details are - {'fk_test': {'train_settings': "
-     "{'row_limit': ['Must be greater than or equal to 1.']}}}"),
-    ({"row_limit": "not a valid type of a value"},
-     "The details are - {'fk_test': {'train_settings': "
-     "{'row_limit': ['Not a valid integer.']}}}"),
-    ({"batch_size": 0},
-     "The details are - {'fk_test': {'train_settings': "
-     "{'batch_size': ['Must be greater than or equal to 1.']}}}"),
-    ({"batch_size": "not a valid type of a value"},
-     "The details are - {'fk_test': {'train_settings': "
-     "{'batch_size': ['Not a valid integer.']}}}"),
-    ({"print_report": "not a valid type of a value"},
-     "The details are - {'fk_test': {'train_settings': "
-     "{'print_report': ['Not a valid boolean.']}}}"),
-    ({"column_types": {"invalid_type": ["column_1", "column_2"]}},
-     "The details are - {'fk_test': {'train_settings': {'column_types': "
-     "defaultdict(<class 'dict'>, {'invalid_type': {"
-     "'key': ['Must be one of: categorical.']}})}}}")
+@pytest.mark.parametrize(
+    "wrong_setting, expected_error",
+    [
+        (
+                {"source": 0},
+                "The details are - {'fk_test': {'train_settings': {"
+                "'source': ['Not a valid string.']}}}"
+        ),
+        (
+                {"epochs": 0},
+                "The details are - {'fk_test': {'train_settings': "
+                "{'epochs': ['Must be greater than or equal to 1.']}}}"
+        ),
+        (
+                {"epochs": "not a valid type of a value"},
+                "The details are - {'fk_test': {'train_settings': "
+                "{'epochs': ['Not a valid integer.']}}}"
+        ),
+        (
+                {"drop_null": "not a valid type of a value"},
+                "The details are - {'fk_test': {'train_settings': {"
+                "'drop_null': ['Not a valid boolean.']}}}"
+        ),
+        (
+                {"row_limit": 0},
+                "The details are - {'fk_test': {'train_settings': "
+                "{'row_limit': ['Must be greater than or equal to 1.']}}}"
+        ),
+        (
+                {"row_limit": "not a valid type of a value"},
+                "The details are - {'fk_test': {'train_settings': "
+                "{'row_limit': ['Not a valid integer.']}}}"
+        ),
+        (
+                {"batch_size": 0},
+                "The details are - {'fk_test': {'train_settings': "
+                "{'batch_size': ['Must be greater than or equal to 1.']}}}"
+        ),
+        (
+                {"batch_size": "not a valid type of a value"},
+                "The details are - {'fk_test': {'train_settings': "
+                "{'batch_size': ['Not a valid integer.']}}}"
+        ),
+        (
+                {"print_report": "not a valid type of a value"},
+                "The details are - {'fk_test': {'train_settings': "
+                "{'print_report': ['Not a valid boolean.']}}}"
+        ),
+        (
+                {"column_types": {"invalid_type": ["column_1", "column_2"]}},
+                "The details are - {'fk_test': {'train_settings': {'column_types': "
+                "defaultdict(<class 'dict'>, {'invalid_type': {"
+                "'key': ['Must be one of: categorical.']}})}}}"
+        ),
+        (
+                {"get_infer_metrics": "invalid parameter"},
+                "The details are - {'fk_test': {'train_settings': {'get_infer_metrics': ['Unknown field.']}}}"
+        )
 ])
 def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, expected_error):
     rp_logger.info(
@@ -123,30 +149,49 @@ def test_metadata_file_with_invalid_training_settings(rp_logger, wrong_setting, 
 
 
 @pytest.mark.parametrize("wrong_setting, expected_error", [
-    ({"epochs": 0},
-     "The details are - {'global': {'train_settings': "
-     "{'epochs': ['Must be greater than or equal to 1.']}}}"),
-    ({"epochs": "not a valid type of a value"},
-     "The details are - {'global': {'train_settings': "
-     "{'epochs': ['Not a valid integer.']}}}"),
-    ({"drop_null": "not a valid type of a value"},
-     "The details are - {'global': {'train_settings': {"
-     "'drop_null': ['Not a valid boolean.']}}}"),
-    ({"row_limit": 0},
-     "The details are - {'global': {'train_settings': "
-     "{'row_limit': ['Must be greater than or equal to 1.']}}}"),
-    ({"row_limit": "not a valid type of a value"},
-     "The details are - {'global': {'train_settings': "
-     "{'row_limit': ['Not a valid integer.']}}}"),
-    ({"batch_size": 0},
-     "The details are - {'global': {'train_settings': "
-     "{'batch_size': ['Must be greater than or equal to 1.']}}}"),
-    ({"batch_size": "not a valid type of a value"},
-     "The details are - {'global': {'train_settings': "
-     "{'batch_size': ['Not a valid integer.']}}}"),
-    ({"print_report": "not a valid type of a value"},
-     "The details are - {'global': {'train_settings': "
-     "{'print_report': ['Not a valid boolean.']}}}")
+    (
+            {"epochs": 0},
+            "The details are - {'global': {'train_settings': "
+            "{'epochs': ['Must be greater than or equal to 1.']}}}"),
+    (
+            {"epochs": "not a valid type of a value"},
+            "The details are - {'global': {'train_settings': "
+            "{'epochs': ['Not a valid integer.']}}}"
+    ),
+    (
+            {"drop_null": "not a valid type of a value"},
+            "The details are - {'global': {'train_settings': {"
+            "'drop_null': ['Not a valid boolean.']}}}"
+    ),
+    (
+            {"row_limit": 0},
+            "The details are - {'global': {'train_settings': "
+            "{'row_limit': ['Must be greater than or equal to 1.']}}}"
+    ),
+    (
+            {"row_limit": "not a valid type of a value"},
+            "The details are - {'global': {'train_settings': "
+            "{'row_limit': ['Not a valid integer.']}}}"
+    ),
+    (
+            {"batch_size": 0},
+            "The details are - {'global': {'train_settings': "
+            "{'batch_size': ['Must be greater than or equal to 1.']}}}"
+    ),
+    (
+            {"batch_size": "not a valid type of a value"},
+            "The details are - {'global': {'train_settings': "
+            "{'batch_size': ['Not a valid integer.']}}}"
+    ),
+    (
+            {"print_report": "not a valid type of a value"},
+            "The details are - {'global': {'train_settings': "
+            "{'print_report': ['Not a valid boolean.']}}}"
+    ),
+    (
+            {"get_infer_metrics": "invalid parameter"},
+            "The details are - {'global': {'train_settings': {'get_infer_metrics': ['Unknown field.']}}}"
+    )
 ])
 def test_metadata_file_with_invalid_global_training_settings(
     rp_logger, wrong_setting, expected_error
@@ -170,40 +215,45 @@ def test_metadata_file_with_invalid_global_training_settings(
     "wrong_setting, expected_error",
     [
         (
-            {"destination": 0},
-            "The details are - {'fk_test': {'infer_settings': {"
-            "'destination': ['Not a valid string.']}}}",
+                {"destination": 0},
+                "The details are - {'fk_test': {'infer_settings': {"
+                "'destination': ['Not a valid string.']}}}",
         ),
         (
-            {"size": 0},
-            "The details are - {'fk_test': {'infer_settings': {"
-            "'size': ['Must be greater than or equal to 1.']}}}",
+                {"size": 0},
+                "The details are - {'fk_test': {'infer_settings': {"
+                "'size': ['Must be greater than or equal to 1.']}}}",
         ),
         (
-            {"size": "not a valid type of a value"},
-            "The details are - {'fk_test': {'infer_settings': {"
-            "'size': ['Not a valid integer.']}}}",
+                {"size": "not a valid type of a value"},
+                "The details are - {'fk_test': {'infer_settings': {"
+                "'size': ['Not a valid integer.']}}}",
         ),
         (
-            {"run_parallel": "not a valid type of a value"},
-            "The details are - {'fk_test': {'infer_settings': {"
-            "'run_parallel': ['Not a valid boolean.']}}}",
+                {"run_parallel": "not a valid type of a value"},
+                "The details are - {'fk_test': {'infer_settings': {"
+                "'run_parallel': ['Not a valid boolean.']}}}",
         ),
         (
-            {"random_seed": -1},
-            "The details are - {'fk_test': {'infer_settings': {"
-            "'random_seed': ['Must be greater than or equal to 0.']}}}",
+                {"random_seed": -1},
+                "The details are - {'fk_test': {'infer_settings': {"
+                "'random_seed': ['Must be greater than or equal to 0.']}}}",
         ),
         (
-            {"random_seed": "not a valid type of a value"},
-            "The details are - {'fk_test': {'infer_settings': "
-            "{'random_seed': ['Not a valid integer.']}}}",
+                {"random_seed": "not a valid type of a value"},
+                "The details are - {'fk_test': {'infer_settings': "
+                "{'random_seed': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
-            "The details are - {'fk_test': {'infer_settings': {"
-            "'print_report': ['Not a valid boolean.']}}}",
+                {"print_report": "not a valid type of a value"},
+                "The details are - {'fk_test': {'infer_settings': {"
+                "'print_report': ['Not a valid boolean.']}}}",
         ),
+        (
+                {"get_infer_metrics": "not a valid type of a value"},
+                "The details are - {'fk_test': {'infer_settings': {"
+                "'get_infer_metrics': ['Not a valid boolean.']}}}",
+        )
     ],
 )
 def test_metadata_file_with_invalid_infer_settings(rp_logger, wrong_setting, expected_error):
@@ -224,35 +274,40 @@ def test_metadata_file_with_invalid_infer_settings(rp_logger, wrong_setting, exp
     "wrong_setting, expected_error",
     [
         (
-            {"size": 0},
-            "The details are - {'global': {'infer_settings': {"
-            "'size': ['Must be greater than or equal to 1.']}}}",
+                {"size": 0},
+                "The details are - {'global': {'infer_settings': {"
+                "'size': ['Must be greater than or equal to 1.']}}}",
         ),
         (
-            {"size": "not a valid type of a value"},
-            "The details are - {'global': {'infer_settings': {"
-            "'size': ['Not a valid integer.']}}}",
+                {"size": "not a valid type of a value"},
+                "The details are - {'global': {'infer_settings': {"
+                "'size': ['Not a valid integer.']}}}",
         ),
         (
-            {"run_parallel": "not a valid type of a value"},
-            "The details are - {'global': {'infer_settings': {"
-            "'run_parallel': ['Not a valid boolean.']}}}",
+                {"run_parallel": "not a valid type of a value"},
+                "The details are - {'global': {'infer_settings': {"
+                "'run_parallel': ['Not a valid boolean.']}}}",
         ),
         (
-            {"random_seed": -1},
-            "The details are - {'global': {'infer_settings': {"
-            "'random_seed': ['Must be greater than or equal to 0.']}}}",
+                {"random_seed": -1},
+                "The details are - {'global': {'infer_settings': {"
+                "'random_seed': ['Must be greater than or equal to 0.']}}}",
         ),
         (
-            {"random_seed": "not a valid type of a value"},
-            "The details are - {'global': {'infer_settings': "
-            "{'random_seed': ['Not a valid integer.']}}}",
+                {"random_seed": "not a valid type of a value"},
+                "The details are - {'global': {'infer_settings': "
+                "{'random_seed': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
-            "The details are - {'global': {'infer_settings': {"
-            "'print_report': ['Not a valid boolean.']}}}",
+                {"print_report": "not a valid type of a value"},
+                "The details are - {'global': {'infer_settings': {"
+                "'print_report': ['Not a valid boolean.']}}}",
         ),
+        (
+                {"get_infer_metrics": "not a valid type of a value"},
+                "The details are - {'global': {'infer_settings': {"
+                "'get_infer_metrics': ['Not a valid boolean.']}}}",
+        )
     ],
 )
 def test_metadata_file_with_invalid_global_infer_settings(
@@ -276,64 +331,67 @@ def test_metadata_file_with_invalid_global_infer_settings(
 @pytest.mark.parametrize(
     "wrong_setting, expected_error",
     [
-        ({"sep": 0}, "The details are - {'fk_test': {'sep': ['Not a valid string.']}}"),
         (
-            {"quotechar": 0},
-            "The details are - {'fk_test': {'quotechar': ['Not a valid string.']}}",
+                {"sep": 0},
+                "The details are - {'fk_test': {'sep': ['Not a valid string.']}}"
         ),
         (
-            {"quotechar": "value with more than one character"},
-            "The details are - {'fk_test': {'quotechar': [" "'Length must be 1.']}}",
+                {"quotechar": 0},
+                "The details are - {'fk_test': {'quotechar': ['Not a valid string.']}}",
         ),
         (
-            {"quoting": 0},
-            "The details are - {'fk_test': {'quoting': ['Not a valid string.']}}",
+                {"quotechar": "value with more than one character"},
+                "The details are - {'fk_test': {'quotechar': [" "'Length must be 1.']}}",
         ),
         (
-            {"quoting": "not a valid value"},
-            "The details are - {'fk_test': {'quoting': ["
-            "'Must be one of: minimal, all, non-numeric, none.']}}",
+                {"quoting": 0},
+                "The details are - {'fk_test': {'quoting': ['Not a valid string.']}}",
         ),
         (
-            {"escapechar": 0},
-            "The details are - {'fk_test': {'escapechar': ['Not a valid string.']}}",
+                {"quoting": "not a valid value"},
+                "The details are - {'fk_test': {'quoting': ["
+                "'Must be one of: minimal, all, non-numeric, none.']}}",
         ),
         (
-            {"escapechar": "value with more than one character"},
-            "The details are - {'fk_test': {'escapechar': [" "'Length must be 1.']}}",
+                {"escapechar": 0},
+                "The details are - {'fk_test': {'escapechar': ['Not a valid string.']}}",
         ),
         (
-            {"encoding": 0},
-            "The details are - {'fk_test': {'encoding': ['Not a valid string.']}}",
+                {"escapechar": "value with more than one character"},
+                "The details are - {'fk_test': {'escapechar': [" "'Length must be 1.']}}",
         ),
         (
-            {"header": "not a valid type of a value"},
-            "The details are - {'fk_test': {" "'header': ['Invalid value.']}}",
+                {"encoding": 0},
+                "The details are - {'fk_test': {'encoding': ['Not a valid string.']}}",
         ),
         (
-            {"skiprows": "not a valid type of a value"},
-            "The details are - {'fk_test': {" "'skiprows': ['Invalid value.']}}",
+                {"header": "not a valid type of a value"},
+                "The details are - {'fk_test': {" "'header': ['Invalid value.']}}",
         ),
         (
-            {"on_bad_lines": 0},
-            "The details are - {'fk_test': {'on_bad_lines': ['Not a valid string.']}}",
+                {"skiprows": "not a valid type of a value"},
+                "The details are - {'fk_test': {" "'skiprows': ['Invalid value.']}}",
         ),
         (
-            {"on_bad_lines": "not a valid value"},
-            "The details are - {'fk_test': {'on_bad_lines': ["
-            "'Must be one of: error, warn, skip.']}}",
+                {"on_bad_lines": 0},
+                "The details are - {'fk_test': {'on_bad_lines': ['Not a valid string.']}}",
         ),
         (
-            {"engine": 0},
-            "The details are - {'fk_test': {'engine': ['Not a valid string.']}}",
+                {"on_bad_lines": "not a valid value"},
+                "The details are - {'fk_test': {'on_bad_lines': ["
+                "'Must be one of: error, warn, skip.']}}",
         ),
         (
-            {"engine": "not a valid value"},
-            "The details are - {'fk_test': {'engine': ['Must be one of: c, python.']}}",
+                {"engine": 0},
+                "The details are - {'fk_test': {'engine': ['Not a valid string.']}}",
         ),
         (
-            {"sheet_name": 0},
-            "The details are - {'fk_test': {'sheet_name': ['Unknown field.']}}",
+                {"engine": "not a valid value"},
+                "The details are - {'fk_test': {'engine': ['Must be one of: c, python.']}}",
+        ),
+        (
+                {"sheet_name": 0},
+                "The details are - {'fk_test': {'sheet_name': ['Unknown field.']}}",
         ),
     ],
 )
@@ -358,38 +416,40 @@ def test_metadata_file_with_invalid_format_settings_for_csv_table(
 @pytest.mark.parametrize(
     "wrong_setting, expected_error",
     [
-        ({"sep": ","}, "The details are - {'pk_test': {'sep': ['Unknown field.']}}"),
         (
-            {"quotechar": '"'},
-            "The details are - {'pk_test': {'quotechar': ['Unknown field.']}}",
+                {"sep": ","},
+                "The details are - {'pk_test': {'sep': ['Unknown field.']}}"),
+        (
+                {"quotechar": '"'},
+                "The details are - {'pk_test': {'quotechar': ['Unknown field.']}}",
         ),
         (
-            {"quoting": "non-numeric"},
-            "The details are - {'pk_test': {'quoting': ['Unknown field.']}}",
+                {"quoting": "non-numeric"},
+                "The details are - {'pk_test': {'quoting': ['Unknown field.']}}",
         ),
         (
-            {"escapechar": "\\"},
-            "The details are - {'pk_test': {'escapechar': ['Unknown field.']}}",
+                {"escapechar": "\\"},
+                "The details are - {'pk_test': {'escapechar': ['Unknown field.']}}",
         ),
         (
-            {"encoding": "ascii"},
-            "The details are - {'pk_test': {'encoding': ['Unknown field.']}}",
+                {"encoding": "ascii"},
+                "The details are - {'pk_test': {'encoding': ['Unknown field.']}}",
         ),
         (
-            {"header": 0},
-            "The details are - {'pk_test': {'header': ['Unknown field.']}}",
+                {"header": 0},
+                "The details are - {'pk_test': {'header': ['Unknown field.']}}",
         ),
         (
-            {"skiprows": 0},
-            "The details are - {'pk_test': {'skiprows': ['Unknown field.']}}",
+                {"skiprows": 0},
+                "The details are - {'pk_test': {'skiprows': ['Unknown field.']}}",
         ),
         (
-            {"on_bad_lines": "skip"},
-            "The details are - {'pk_test': {'on_bad_lines': ['Unknown field.']}}",
+                {"on_bad_lines": "skip"},
+                "The details are - {'pk_test': {'on_bad_lines': ['Unknown field.']}}",
         ),
         (
-            {"engine": "python"},
-            "The details are - {'pk_test': {'engine': ['Unknown field.']}}",
+                {"engine": "python"},
+                "The details are - {'pk_test': {'engine': ['Unknown field.']}}",
         ),
     ],
 )

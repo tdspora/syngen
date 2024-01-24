@@ -182,6 +182,7 @@ global:                                     # Global settings. Optional paramete
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
+    get_infer_metrics: False                # Whether to fetch metrics for the inference process. If the parameter 'print_report' is set to True, the 'get_infer_metrics' parameter will be ignored and metrics will be fetched anyway. Optional parameter
 
 CUSTOMER:                                   # Table name. Required parameter
   train_settings:                           # Settings for training process. Required parameter
@@ -215,6 +216,7 @@ CUSTOMER:                                   # Table name. Required parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
+    get_infer_metrics: False                # Whether to fetch metrics for the inference process. If the parameter 'print_report' is set to True, the 'get_infer_metrics' parameter will be ignored and metrics will be fetched anyway. Optional parameter
   keys:                                     # Keys of the table. Optional parameter
     PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
       type: "PK"                            # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
@@ -267,6 +269,7 @@ ORDER:                                      # Table name. Required parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
+    get_infer_metrics: False                # Whether to fetch metrics for the inference process. If the parameter 'print_report' is set to True, the 'get_infer_metrics' parameter will be ignored and metrics will be fetched anyway. Optional parameter
   format:                                   # Settings for reading and writing data in 'csv' format. Optional parameter
     sep: ','                                # Delimiter to use. Optional parameter
     quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter
@@ -356,24 +359,6 @@ docker run --rm \
 
 You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call, however, they will be
 overwritten by corresponding arguments in the metadata file.
-
-#### Logging level
-
-Set the `LOGURU_LEVEL` environment variable to desired level of logging.
-For example, to suppress the debug messages, add `-e LOGURU_LEVEL=INFO` to the `docker run` command:
-
-```bash
-docker pull tdspora/syngen
-docker run --rm -e LOGURU_LEVEL=INFO \
-  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
-  --task=train \
-  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
-
-docker run --rm -e LOGURU_LEVEL=INFO \
-  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
-  --task=infer \
-  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
-```
 
 #### UI web interface
 You can access the streamlit UI web interface by running the following command after installing the library with the UI option:
