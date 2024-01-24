@@ -104,6 +104,7 @@ class StreamlitHandler:
                 log_level="INFO",
                 type_of_process="train"
             )
+            ProgressBarHandler().set_progress(0.01)
             worker.launch_train()
             logger.info("Model training completed")
         except Exception:

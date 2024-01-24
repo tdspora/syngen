@@ -243,7 +243,7 @@ class Worker:
             config_of_metadata_for_inference,
         ) = metadata_for_inference
 
-        delta = 0.5 / len(chain_for_tables_for_training)
+        delta = 0.49 / len(chain_for_tables_for_training)
 
         for table in chain_for_tables_for_training:
             config_of_table = config_of_metadata_for_training[table]
@@ -318,7 +318,13 @@ class Worker:
         :param tables: the list of tables for infer process
         :param config_of_tables: configuration of tables declared in metadata file
         """
-        delta = 0.25 / len(tables)
+        generation_of_reports = any(
+            [
+                config.get("infer_settings", {}).get("print_report", False)
+                for table, config in config_of_tables.items()
+            ]
+        )
+        delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
         for table in tables:
             config_of_table = config_of_tables[table]
             global_context(config_of_table.get("format", {}))

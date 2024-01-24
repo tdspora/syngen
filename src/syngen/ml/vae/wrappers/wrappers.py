@@ -275,6 +275,10 @@ class VAEWrapper(BaseWrapper):
 
         delta = ProgressBarHandler().delta / epochs
         for epoch in range(epochs):
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta / 2,
+                message=f"epoch: {epoch}"
+            )
             num_batches = 0.0
             total_loss = 0.0
             t1 = time.time()
@@ -297,7 +301,7 @@ class VAEWrapper(BaseWrapper):
             log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec"
             logger.info(log_message)
             ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress + delta,
+                progress=ProgressBarHandler().progress + delta / 2,
                 message=log_message
             )
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)

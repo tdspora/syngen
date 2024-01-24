@@ -23,6 +23,10 @@ class ProgressBarHandler:
     """
     Singleton class for handling the progress bar
     """
+    _delta = None
+    _progress = 0
+    _message = None
+
     def __new__(cls):
         if not hasattr(cls, "instance"):
             cls.instance = super(ProgressBarHandler, cls).__new__(cls)
