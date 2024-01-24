@@ -249,7 +249,7 @@ class Worker:
             config_of_table = config_of_metadata_for_training[table]
             global_context(config_of_table.get("format", {}))
             train_settings = config_of_table["train_settings"]
-            log_message = f"Training process of the table - {table} has started"
+            log_message = f"Training process of the table - '{table}' has started"
             logger.info(log_message)
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress,

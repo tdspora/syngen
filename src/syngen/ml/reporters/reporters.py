@@ -190,6 +190,13 @@ class Report:
                 MlflowTracker().start_run(run_id=run_id)
             for reporter in reporters:
                 delta = 0.25 / len(reporters)
+                message = (f"The generation of the {reporter.__class__.report_type} report "
+                           f"of the table - '{reporter.table_name}'")
+                ProgressBarHandler().set_progress(
+                    progress=ProgressBarHandler().progress,
+                    delta=delta,
+                    message=message
+                )
                 reporter.report()
                 message = (f"The {reporter.__class__.report_type} report "
                            f"of the table - '{reporter.table_name}' has been generated")

@@ -16,7 +16,6 @@ from collections import OrderedDict
 from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
-from tqdm import tqdm
 
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
@@ -435,10 +434,12 @@ class VaeInferHandler(BaseHandler):
         batches = self.split_by_batches(self.size, batch_num)
         delta = ProgressBarHandler().delta / batch_num
         prepared_batches = []
-        for i, batch in tqdm(enumerate(batches), desc="Data synthesis"):
+        for i, batch in enumerate(batches):
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
-                delta=delta
+                delta=delta,
+                message=f"Data synthesis for the table - '{self.table_name}. "
+                        f"Generating the batch {i + 1} of {batch_num}",
             )
             prepared_batch = self.run(batch, self.run_parallel)
             prepared_batches.append(prepared_batch)
