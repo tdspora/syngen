@@ -267,8 +267,8 @@ class VAEWrapper(BaseWrapper):
         self.feature_losses = defaultdict(list)
         loss_grows_num_epochs = 0
         prev_total_loss = float("inf")
-        es_min_delta = 0.005
-        es_patience = 10
+        rel_loss_delta_thresh_basis = 0.01
+        epochs_for_early_stop = 10
         pth = Path(self.paths["state_path"])
         # loss that corresponds to the best saved weights
         saved_weights_loss = float("inf")
@@ -284,8 +284,9 @@ class VAEWrapper(BaseWrapper):
                 num_batches += 1
 
             mean_loss = np.mean(total_loss / num_batches)
+            rel_delta_loss = (prev_total_loss - mean_loss)/prev_total_loss
 
-            if mean_loss >= prev_total_loss - es_min_delta:
+            if rel_delta_loss >= rel_loss_delta_thresh_basis:
                 loss_grows_num_epochs += 1
             else:
                 self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
@@ -300,7 +301,7 @@ class VAEWrapper(BaseWrapper):
 
             prev_total_loss = mean_loss
 
-            if loss_grows_num_epochs == es_patience:
+            if loss_grows_num_epochs == epochs_for_early_stop:
                 self.vae.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 logger.info(
                     f"The loss does not become lower for {loss_grows_num_epochs} epochs in a row. "
