@@ -262,7 +262,7 @@ class Worker:
                 table_name=table,
                 metadata_path=self.metadata_path,
                 print_report=train_settings["print_report"],
-                batch_size=train_settings["batch_size"],
+                batch_size=train_settings["batch_size"]
             )
             MlflowTracker().end_run()
             self._write_success_message(slugify(table))

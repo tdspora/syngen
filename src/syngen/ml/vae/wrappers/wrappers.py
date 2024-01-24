@@ -96,6 +96,7 @@ class VAEWrapper(BaseWrapper):
         table_name: str,
         paths: dict,
         process: str,
+        main_process: str,
         batch_size: int,
         latent_dim: int = 10,
         latent_components: int = 30,
@@ -104,20 +105,20 @@ class VAEWrapper(BaseWrapper):
         self.df = df
         self.schema = schema
         self.process = process
+        self.main_process = main_process
         self.batch_size = batch_size
         self.latent_dim = latent_dim
         self.latent_components = latent_components
         self.metadata = metadata
         self.table_name = table_name
         self.paths = paths
-
-    def __post_init__(self):
         if self.process == "train":
             self.dataset = Dataset(
                 df=self.df,
                 schema=self.schema,
                 metadata=self.metadata,
                 table_name=self.table_name,
+                main_process=self.main_process,
                 paths=self.paths,
             )
         elif self.process == "infer":
@@ -130,6 +131,7 @@ class VAEWrapper(BaseWrapper):
         # drop it as it might contain sensitive data.
         # Save columns from the dataframe for later use.
         self.dataset.paths = self.paths
+        self.dataset.main_process = self.main_process
         attributes_to_remove = []
         existed_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
 
@@ -175,7 +177,6 @@ class VAEWrapper(BaseWrapper):
         """
         Launch the pipeline in the dataset
         """
-        self.__post_init__()
         self.df = self.dataset.pipeline()
         self._save_dataset()
 

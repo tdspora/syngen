@@ -63,6 +63,7 @@ class BaseHandler(AbstractHandler):
             table_name=kwargs["table_name"],
             paths=kwargs["paths"],
             batch_size=kwargs["batch_size"],
+            main_process=kwargs["main_process"],
             process=kwargs["process"],
         )
 
@@ -143,6 +144,7 @@ class VaeTrainHandler(BaseHandler):
     row_subset: int
     drop_null: bool
     batch_size: int
+    type_of_process: str
 
     def __fit_model(self, data: pd.DataFrame):
         logger.info("Start VAE training")
@@ -158,6 +160,7 @@ class VaeTrainHandler(BaseHandler):
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,
+            main_process=self.type_of_process,
             process="train",
         )
         self.model.batch_size = min(self.batch_size, len(data))
@@ -253,6 +256,7 @@ class VaeInferHandler(BaseHandler):
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,
+            main_process=self.type_of_process,
             process="infer",
         )
         self.vae.load_state(self.paths["state_path"])

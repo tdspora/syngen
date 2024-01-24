@@ -40,6 +40,7 @@ class Dataset:
     metadata: Dict
     table_name: str
     paths: Dict
+    main_process: str
     features: Dict = field(init=False)
     columns: Dict = field(init=False)
     is_fitted: bool = field(init=False)
