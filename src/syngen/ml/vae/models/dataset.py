@@ -108,7 +108,7 @@ class Dataset:
         for column in self.pk_columns:
             # Check for presence of NA values in primary key columns
             if self.df[column].isna().any():
-                raise ValueError(f"Primary key columns {column} contain missing values. Please check the original data.")
+                raise ValueError(f"Primary key column {column} contains missing values. Please check the original data.")
             # Check uniqueness of primary key columns
             if self.df[column].duplicated().any():
                 raise ValueError(f"Values in primary key {column} are not unique. Please check the original data.")
