@@ -53,10 +53,12 @@ class SampleAccuracyTest(BaseTest):
             if "word_count" not in title
         }
 
+        config = {k: v for k, v in self.config.items() if k != "print_report"}
+
         html = template.render(
             uni_imgs=uni_images,
             table_name=self.table_name,
-            config=self.config,
+            config=config,
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
         )
 

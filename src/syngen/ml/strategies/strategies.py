@@ -96,7 +96,8 @@ class TrainStrategy(Strategy, ABC):
             row_subset=self.config.row_subset,
             drop_null=self.config.drop_null,
             batch_size=self.config.batch_size,
-            type_of_process="train"
+            print_report=self.config.print_report,
+            type_of_process="train",
         )
 
         long_text_handler = LongTextsHandler(
@@ -181,13 +182,14 @@ class InferStrategy(Strategy):
             batch_size=self.config.batch_size,
             run_parallel=self.config.run_parallel,
             print_report=self.config.print_report,
+            get_infer_metrics=self.config.get_infer_metrics,
             log_level=self.config.log_level,
             type_of_process=type_of_process,
         )
         return self
 
     def add_reporters(self):
-        if self.config.print_report:
+        if self.config.print_report or self.config.get_infer_metrics:
             accuracy_reporter = AccuracyReporter(
                 table_name=self.config.table_name,
                 paths=self.config.paths,
@@ -211,6 +213,7 @@ class InferStrategy(Strategy):
                 batch_size=kwargs["batch_size"],
                 random_seed=kwargs["random_seed"],
                 print_report=kwargs["print_report"],
+                get_infer_metrics=kwargs["get_infer_metrics"],
                 log_level=kwargs["log_level"],
                 both_keys=kwargs["both_keys"],
             )

@@ -53,6 +53,7 @@ class TrainConfig:
             "drop_null": self.drop_null,
             "row_subset": self.row_subset,
             "batch_size": self.batch_size,
+            "print_report": self.print_report
         }
 
     def _set_batch_size(self):
@@ -223,6 +224,7 @@ class InferConfig:
     metadata_path: Optional[str]
     random_seed: Optional[int]
     print_report: bool
+    get_infer_metrics: bool
     both_keys: bool
     log_level: str
     slugify_table_name: str = field(init=False)
@@ -243,6 +245,8 @@ class InferConfig:
             "run_parallel": self.run_parallel,
             "batch_size": self.batch_size,
             "random_seed": self.random_seed,
+            "print_report": self.print_report,
+            "get_infer_metrics": self.get_infer_metrics,
         }
 
     def _set_up_reporting(self):

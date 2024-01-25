@@ -253,7 +253,7 @@ def main():
     if selected == "Basic":
         st.title("SynGen UI")
         uploaded_file = st.file_uploader(
-            "Upload CSV file",
+            "Upload a CSV file",
             type="csv",
             accept_multiple_files=False
         )

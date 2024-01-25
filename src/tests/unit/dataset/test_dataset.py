@@ -264,7 +264,9 @@ def test_define_date_format_with_extreme_values(
         "Date": [(datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).
                  strftime(initial_date_format) for x in range(10000)]
     }
-    data.update({"Date": data["Date"] + extreme_values})
+    data.update(
+        {"Date": data['Date'] + extreme_values}
+    )
     df = pd.DataFrame(data, columns=["Date"])
     with patch.object(Dataset, "__post_init__", lambda x: None):
         mock_dataset = Dataset(

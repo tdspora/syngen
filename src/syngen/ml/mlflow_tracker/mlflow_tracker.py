@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 import os
 import requests
 
@@ -186,7 +186,7 @@ class MlflowTracker:
                         f"'{experiment_name}' already exists and new runs will be sent there"
                     )
 
-    def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
+    def log_metrics(self, metrics: Dict[str, Union[float, str]], step: Optional[int] = None):
         if self.is_active:
             mlflow.log_metrics(metrics, step)
 

@@ -111,6 +111,7 @@ def launch_infer(
         "batch_size": batch_size,
         "print_report": print_report,
         "random_seed": random_seed,
+        "get_infer_metrics": False
     }
     worker = Worker(
         table_name=table_name,
