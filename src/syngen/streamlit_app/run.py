@@ -64,7 +64,7 @@ class StreamlitHandler:
         and collect log messages with the log level - 'INFO' in a log file
         """
         logger.add(self.file_sink, level="INFO")
-        logger.add(self.log_sink)
+        logger.add(self.log_sink, level="INFO")
 
     def log_sink(self, message):
         """
