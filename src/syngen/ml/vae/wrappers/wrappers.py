@@ -2,6 +2,7 @@ from typing import Tuple, List, Optional, Dict
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from pathlib import Path
+from dataclasses import dataclass, field
 
 import warnings
 import pickle
@@ -54,6 +55,7 @@ class BaseWrapper(ABC):
         pass
 
 
+@dataclass
 class VAEWrapper(BaseWrapper):
     """Base class that implements end to end train and generation of structured data.
 
@@ -87,31 +89,18 @@ class VAEWrapper(BaseWrapper):
         generate new data based on df that consist of n which has less probability
         computed as log likelihood and return the result as pd.DataFrame
     """
+    df: pd.DataFrame
+    schema: Optional[Dict]
+    metadata: dict
+    table_name: str
+    paths: dict
+    process: str
+    main_process: str
+    batch_size: int
+    latent_dim: int = field(init=False, default=10)
+    latent_components: int = field(init=False, default=30)
 
-    def __init__(
-        self,
-        df: pd.DataFrame,
-        schema: Optional[Dict],
-        metadata: dict,
-        table_name: str,
-        paths: dict,
-        process: str,
-        main_process: str,
-        batch_size: int,
-        latent_dim: int = 10,
-        latent_components: int = 30,
-    ):
-        super().__init__()
-        self.df = df
-        self.schema = schema
-        self.process = process
-        self.main_process = main_process
-        self.batch_size = batch_size
-        self.latent_dim = latent_dim
-        self.latent_components = latent_components
-        self.metadata = metadata
-        self.table_name = table_name
-        self.paths = paths
+    def __post_init__(self):
         if self.process == "train":
             self.dataset = Dataset(
                 df=self.df,
