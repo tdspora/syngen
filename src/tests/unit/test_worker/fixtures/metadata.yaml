@@ -13,6 +13,7 @@ test_table:
     random_seed: 2
     print_report: true
     batch_size: 200
+    get_infer_metrics: false
 
   keys:
     pk_id:

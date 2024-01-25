@@ -47,6 +47,7 @@ def test_get_pk_path(mock_os_path_exists, path_to_metadata, expected_path, type_
             batch_size=100,
             run_parallel=False,
             print_report=False,
+            get_infer_metrics=False,
             wrapper_name="MMDVAEWrapper",
             log_level="INFO",
             type_of_process=type_of_process,

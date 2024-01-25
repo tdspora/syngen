@@ -122,7 +122,8 @@ class StreamlitHandler:
                 "batch_size": 32,
                 "run_parallel": False,
                 "random_seed": None,
-                "print_report": self.print_report
+                "print_report": self.print_report,
+                "get_infer_metrics": False
             }
             worker = Worker(
                 table_name=self.table_name,
@@ -256,7 +257,7 @@ def main():
     if selected == "Basic":
         st.title("SynGen UI")
         uploaded_file = st.file_uploader(
-            "Upload CSV file",
+            "Upload a CSV file",
             type="csv",
             accept_multiple_files=False
         )

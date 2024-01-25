@@ -198,14 +198,23 @@ class Report:
                     message=message
                 )
                 reporter.report()
-                message = (f"The {reporter.__class__.report_type} report "
-                           f"of the table - '{reporter.table_name}' has been generated")
-                logger.info(message)
-                ProgressBarHandler().set_progress(
-                    progress=ProgressBarHandler().progress + delta,
-                    delta=delta,
-                    message=message
-                )
+                if reporter.config["print_report"]:
+                    message = (f"The {reporter.__class__.report_type} report of the table - "
+                               f"'{reporter.table_name}' has been generated")
+                    logger.info(
+                        f"The {reporter.__class__.report_type} report of the table - "
+                        f"'{reporter.table_name}' has been generated"
+                    )
+                    ProgressBarHandler().set_progress(
+                        progress=ProgressBarHandler().progress + delta,
+                        delta=delta,
+                        message=message
+                    )
+
+                if not reporter.config["print_report"] and reporter.config["get_infer_metrics"]:
+                    logger.info(
+                        f"The metrics for the table - '{reporter.table_name}' have been evaluated"
+                    )
             MlflowTracker().end_run()
 
     @property
