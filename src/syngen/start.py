@@ -5,12 +5,18 @@ import sys
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run training, inference tasks, or a Streamlit web UI.", add_help=False
+        description="Run training, inference tasks, or a Streamlit web UI.",
+        add_help=False,
     )
-    parser.add_argument("--task", choices=["train", "infer"], help="Task to run: 'train' or 'infer'.")
-    parser.add_argument("--webui", action="store_true", help="Launch the Streamlit web UI.")
+    parser.add_argument(
+        "--task", choices=["train", "infer"], help="Task to run: 'train' or 'infer'."
+    )
+    parser.add_argument(
+        "--webui", action="store_true", help="Launch the Streamlit web UI."
+    )
 
-    # Forward unknown arguments to train.py, infer.py, or Streamlit without explicit parsing in start.py
+    # Forward unknown arguments to train.py, infer.py,
+    # or Streamlit without explicit parsing in start.py
     known_args, remaining_argv = parser.parse_known_args()
 
     # Remaining unknown args will be passed to train/infer script or Streamlit
@@ -31,7 +37,10 @@ def main():
         # Construct the command to run the inference script
         command = ["python", "syngen/infer.py"] + remaining_argv
     else:
-        print("Unknown command. Use --task=train, --task=infer, or --webui.", file=sys.stderr)
+        print(
+            "Unknown command. Use --task=train, --task=infer, or --webui.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # Run the command with any additional arguments

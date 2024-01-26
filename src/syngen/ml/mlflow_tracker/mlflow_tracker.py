@@ -38,10 +38,7 @@ class MlflowTrackerFactory:
 
     @classmethod
     def create_tracker(
-            cls,
-            table_name: Optional[str],
-            metadata_path: Optional[str],
-            is_active=False
+        cls, table_name: Optional[str], metadata_path: Optional[str], is_active=False
     ):
         """
         Create the Mlflow tracker, and create or set the experiment
@@ -67,7 +64,9 @@ class MlflowTrackerFactory:
         tracker.set_experiment(experiment_name)
 
     @classmethod
-    def get_mlflow_exp_name(cls, table_name: Optional[str], metadata_path: Optional[str]) -> str:
+    def get_mlflow_exp_name(
+        cls, table_name: Optional[str], metadata_path: Optional[str]
+    ) -> str:
         """
         Get the name of the Mlflow experiment
         """
@@ -130,19 +129,11 @@ class MlflowTracker:
         if self.is_active:
             mlflow.set_tracking_uri(uri)
 
-    def create_experiment(
-        self,
-        name: str,
-        artifact_location: Optional[str] = None
-    ):
+    def create_experiment(self, name: str, artifact_location: Optional[str] = None):
         if self.is_active:
             mlflow.create_experiment(name, artifact_location)
 
-    def set_experiment(
-            self,
-            experiment_name: str = None,
-            experiment_id: str = None
-    ):
+    def set_experiment(self, experiment_name: str = None, experiment_id: str = None):
         """
         Set the experiment for tracking.
         If the experiment name is not provided, the last experiment will be used.
@@ -157,8 +148,7 @@ class MlflowTracker:
                 MlflowTracker().create_experiment(
                     experiment_name,
                     artifact_location=os.environ.get(
-                        "MLFLOW_ARTIFACTS_DESTINATION",
-                        "/mlflow_tracker"
+                        "MLFLOW_ARTIFACTS_DESTINATION", "/mlflow_tracker"
                     ),
                 )
                 mlflow.set_experiment(experiment_name, experiment_id)
@@ -170,7 +160,9 @@ class MlflowTracker:
                     )
 
                 if env_value:
-                    logger.info(f"A new experiment with the name - '{experiment_name}' will be created")
+                    logger.info(
+                        f"A new experiment with the name - '{experiment_name}' will be created"
+                    )
 
             if last_matching:
                 matching_name = last_matching.name
@@ -182,11 +174,14 @@ class MlflowTracker:
                     )
                 if not env_value:
                     logger.warning(
-                        f"The experiment with the name similar to 'table_name' or 'metadata_path' value - "
-                        f"'{experiment_name}' already exists and new runs will be sent there"
+                        f"The experiment with the name similar to 'table_name' or "
+                        f"'metadata_path' value - '{experiment_name}' already exists "
+                        f"and new runs will be sent there"
                     )
 
-    def log_metrics(self, metrics: Dict[str, Union[float, str]], step: Optional[int] = None):
+    def log_metrics(
+        self, metrics: Dict[str, Union[float, str]], step: Optional[int] = None
+    ):
         if self.is_active:
             mlflow.log_metrics(metrics, step)
 

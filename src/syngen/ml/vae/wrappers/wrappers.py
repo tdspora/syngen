@@ -265,7 +265,8 @@ class VAEWrapper(BaseWrapper):
 
         delta = ProgressBarHandler().delta / (epochs * 2)
         for epoch in range(epochs):
-            log_message = f"Training process of the table - '{self.table_name}' on the epoch: {epoch}"
+            log_message = (f"Training process of the table - '{self.table_name}' "
+                           f"on the epoch: {epoch}")
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
                 message=log_message

@@ -26,7 +26,6 @@ from syngen.ml.utils import (
     ProgressBarHandler
 )
 from syngen.ml.context import get_context
-from syngen.ml.config import TrainConfig
 
 
 class AbstractHandler(ABC):
@@ -173,8 +172,9 @@ class VaeTrainHandler(BaseHandler):
         self.model.batch_size = min(self.batch_size, len(data))
 
         logger.debug(
-            f"Train model with parameters: epochs={self.epochs}, row_subset={self.row_subset}, "
-            f"print_report={self.print_report}, drop_null={self.drop_null}, batch_size={self.batch_size}"
+            f"Train model with parameters: epochs={self.epochs}, "
+            f"row_subset={self.row_subset}, print_report={self.print_report}, "
+            f"drop_null={self.drop_null}, batch_size={self.batch_size}"
         )
 
         self.model.fit_on_df(

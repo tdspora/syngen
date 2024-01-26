@@ -21,7 +21,7 @@ UPLOAD_DIRECTORY = "uploaded_files"
 
 class StreamlitHandler:
     """
-    A class for handling Streamlit app
+    A class for handling the Streamlit app
     """
     def __init__(self, uploaded_file):
         self.log_queue = Queue()
@@ -38,7 +38,8 @@ class StreamlitHandler:
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_logs = (f"model_artifacts/tmp_store/{self.sl_table_name}_"
                              f"{slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}.log")
-        self.path_to_report = f"model_artifacts/tmp_store/{self.sl_table_name}/draws/accuracy_report.html"
+        self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
+                               f"draws/accuracy_report.html")
 
     def set_parameters(self, epochs, size_limit, print_report):
         """
@@ -60,8 +61,8 @@ class StreamlitHandler:
 
     def set_logger(self):
         """
-        Set a logger in order to see logs in the Streamlit app,
-        and collect log messages with the log level - 'INFO' in a log file
+        Set a logger to see logs, and collect log messages
+        with the log level - 'INFO' in a log file and stdout
         """
         logger.add(self.file_sink, level="INFO")
         logger.add(self.log_sink, level="INFO")
@@ -178,7 +179,6 @@ def generate_button(label, path_to_file, download_name):
 def get_running_status():
     """
     Get the status of the proces of a model training and generation data
-    :return:
     """
     if "gen_button" in st.session_state and st.session_state.gen_button is True:
         st.session_state.running = True
@@ -268,9 +268,13 @@ def main():
         if uploaded_file:
             show_data(uploaded_file)
             epochs = st.number_input("Epochs", min_value=1, value=1)
-            size_limit = st.number_input("Rows to generate", min_value=1, max_value=None, value=1000)
+            size_limit = st.number_input(
+                "Rows to generate", min_value=1, max_value=None, value=1000
+            )
             print_report = st.checkbox("Create an accuracy report", value=False)
-            if st.button("Generate data", type="primary", key="gen_button", disabled=get_running_status()):
+            if st.button(
+                    "Generate data", type="primary", key="gen_button", disabled=get_running_status()
+            ):
                 app = StreamlitHandler(uploaded_file)
                 app.set_parameters(epochs, size_limit, print_report)
                 app.set_env_variables()
@@ -298,9 +302,10 @@ def main():
                 if not app.log_error_queue.empty():
                     st.exception(app.log_error_queue.get())
                 elif app.log_error_queue.empty() and not runner.is_alive():
-                    prg.progress(100, text="Data generation completed")
+                    log_message = "Data generation completed"
+                    prg.progress(100, text=log_message)
                     app.progress_handler.reset_instance()
-                    st.success("Data generation completed")
+                    st.success(log_message)
             with st.container():
                 col1, col2, col3 = st.columns([0.6, 0.4, 0.6], )
                 with col1:
