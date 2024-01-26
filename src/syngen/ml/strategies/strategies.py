@@ -97,6 +97,7 @@ class TrainStrategy(Strategy, ABC):
             drop_null=self.config.drop_null,
             batch_size=self.config.batch_size,
             print_report=self.config.print_report,
+            type_of_process="train",
         )
 
         long_text_handler = LongTextsHandler(
