@@ -77,9 +77,8 @@ class BaseTest(ABC):
 
     @staticmethod
     def update_progress_bar(delta, message):
-        progress_bar = ProgressBarHandler()
-        progress_bar.set_progress(
-            progress=progress_bar.progress + delta, delta=None, message=message
+        ProgressBarHandler().set_progress(
+            progress=ProgressBarHandler().progress + delta, delta=None, message=message
         )
 
     def _get_cleaned_configs(self):

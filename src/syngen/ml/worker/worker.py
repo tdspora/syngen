@@ -251,11 +251,7 @@ class Worker:
             train_settings = config_of_table["train_settings"]
             log_message = f"Training process of the table - '{table}' has started"
             logger.info(log_message)
-            ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress,
-                delta=delta,
-                message=log_message
-            )
+            ProgressBarHandler().set_progress(delta=delta, message=log_message)
 
             MlflowTracker().start_run(
                 run_name=f"{table}-TRAIN",
@@ -277,7 +273,6 @@ class Worker:
             self._write_success_message(slugify(table))
             self._save_metadata_file()
             ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress,
                 delta=delta,
                 message=f"Training of the table - {table} was completed"
             )
@@ -331,11 +326,7 @@ class Worker:
             global_context(config_of_table.get("format", {}))
             log_message = f"Infer process of the table - '{table}' has started"
             logger.info(log_message)
-            ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress,
-                delta=delta,
-                message=log_message
-            )
+            ProgressBarHandler().set_progress(delta=delta, message=log_message)
             both_keys = table in self.divided
             infer_settings = config_of_table["infer_settings"]
 
@@ -361,7 +352,6 @@ class Worker:
             )
             MlflowTracker().end_run()
             ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress,
                 delta=delta,
                 message=f"Infer process of the table - {table} was completed"
             )

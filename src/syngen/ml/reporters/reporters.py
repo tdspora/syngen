@@ -192,11 +192,7 @@ class Report:
             for reporter in reporters:
                 message = (f"The generation of the {reporter.__class__.report_type} report "
                            f"of the table - '{reporter.table_name}'")
-                ProgressBarHandler().set_progress(
-                    progress=ProgressBarHandler().progress,
-                    delta=delta,
-                    message=message
-                )
+                ProgressBarHandler().set_progress(delta=delta, message=message)
                 reporter.report()
                 if reporter.config["print_report"]:
                     message = (f"The {reporter.__class__.report_type} report of the table - "

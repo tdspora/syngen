@@ -58,9 +58,10 @@ class ProgressBarHandler:
         """
         return self._progress, self._message
 
-    def set_progress(self, progress, delta=None, message=None):
+    def set_progress(self, progress=None, delta=None, message=None):
         self._delta = delta if delta is not None else self._delta
-        self._progress = progress if progress <= 1.0 else 1.0
+        self._progress = self._progress if progress is None else progress
+        self._progress = self._progress if self._progress <= 1.0 else 1.0
         self._message = message
 
     @classmethod

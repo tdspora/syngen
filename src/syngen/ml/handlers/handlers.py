@@ -186,7 +186,9 @@ class VaeTrainHandler(BaseHandler):
             return
 
         self.model.save_state(self.paths["state_path"])
-        logger.info("Finished VAE training")
+        log_message = "Finished VAE training"
+        logger.info(log_message)
+        ProgressBarHandler().set_progress(message=log_message)
 
     def __prepare_dir(self):
         os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
