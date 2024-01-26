@@ -76,7 +76,7 @@ class BaseTest(ABC):
             pass
 
     @staticmethod
-    def update_progress_bar(delta, message):
+    def update_progress_bar(message, delta=0):
         ProgressBarHandler().set_progress(
             progress=ProgressBarHandler().progress + delta, delta=None, message=message
         )
@@ -137,53 +137,53 @@ class AccuracyTest(BaseTest):
         """
         delta = ProgressBarHandler().delta / 6
 
-        self.update_progress_bar(0, "Generation of the accuracy heatmap...")
+        self.update_progress_bar("Generation of the accuracy heatmap...")
         self.acc.calculate_all(kwargs["categ_columns"])
         acc_median = "%.4f" % self.acc.calculate_heatmap_median(self.acc.heatmap)
         logger.info(f"Median accuracy is {acc_median}")
-        self.update_progress_bar(delta, "The accuracy heatmap has been generated")
+        self.update_progress_bar("The accuracy heatmap has been generated", delta)
 
         uni_images = dict()
         bi_images = dict()
 
         if self.plot_exists:
-            self.update_progress_bar(0, "Generation of the univariate distributions...")
+            self.update_progress_bar("Generation of the univariate distributions...")
             uni_images = self.univariate.calculate_all(
                 kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
             )
             self.update_progress_bar(
-                delta, "The univariate distributions have been generated"
+                "The univariate distributions have been generated", delta
             )
 
-            self.update_progress_bar(0, "Generation of the bivariate distributions...")
+            self.update_progress_bar("Generation of the bivariate distributions...")
             bi_images = self.bivariate.calculate_all(
                 kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
             )
             self.update_progress_bar(
-                delta, "The bivariate distributions have been generated"
+                "The bivariate distributions have been generated", delta
             )
 
-        self.update_progress_bar(0, "Generation of the correlations heatmap...")
+        self.update_progress_bar("Generation of the correlations heatmap...")
         corr_result = self.correlations.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
         corr_result = int(corr_result) if corr_result == 0 else abs(corr_result)
         logger.info(f"Median of differences of correlations is {round(corr_result, 4)}")
-        self.update_progress_bar(delta, "The correlations heatmap has been generated")
+        self.update_progress_bar("The correlations heatmap has been generated", delta)
 
-        self.update_progress_bar(0, "Generation of the clustering metric...")
+        self.update_progress_bar("Generation of the clustering metric...")
         clustering_result = "%.4f" % self.clustering.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
         logger.info(f"Median clusters homogeneity is {clustering_result}")
-        self.update_progress_bar(delta, "The clustering metric has been calculated")
+        self.update_progress_bar("The clustering metric has been calculated", delta)
 
-        self.update_progress_bar(0, "Generation of the utility metric...")
+        self.update_progress_bar("Generation of the utility metric...")
         utility_result = self.utility.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
         logger.info(f"Median clusters homogeneity is {clustering_result}")
-        self.update_progress_bar(delta, "The utility metric has been calculated")
+        self.update_progress_bar("The utility metric has been calculated", delta)
 
         return (
             acc_median,
