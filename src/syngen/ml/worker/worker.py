@@ -282,6 +282,11 @@ class Worker:
                 both_keys = table in self.divided
 
                 logger.info(f"Infer process of the table - {table} has started")
+                
+                MlflowTracker().start_run(
+                    run_name=f"{table}-REPORT",
+                    tags={"table_name": table, "process": "report"},
+                )
 
                 self.infer_strategy.run(
                     destination=None,
@@ -297,6 +302,7 @@ class Worker:
                     both_keys=both_keys,
                     type_of_process=self.type_of_process,
                 )
+                MlflowTracker().end_run()
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
         """

@@ -297,8 +297,8 @@ class VAEWrapper(BaseWrapper):
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
-            MlflowTracker().log_metric("CPU_usage", psutil.cpu_percent(), step=epoch)
-            MlflowTracker().log_metric("RAM_usage", psutil.virtual_memory().percent, step=epoch)
+            # MlflowTracker().log_metric("CPU_usage", psutil.cpu_percent(), step=epoch)
+            # MlflowTracker().log_metric("RAM_usage", psutil.virtual_memory().percent, step=epoch)
 
     def _create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
