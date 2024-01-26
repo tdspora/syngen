@@ -1116,6 +1116,15 @@ def test_get_column_from_table_in_xls_format(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_get_column_from_table_in_xls_format_with_formatting_settings(rp_logger):
+    rp_logger.info("Get the list of the columns from the table in '.xls' format from the certain sheet")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_sheets.xls")
+    columns = data_loader.get_columns(sheet_name="TestName")
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert columns == ["gender", "height", "id"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_get_columns_from_empty_excel_table(caplog, rp_logger):
     rp_logger.info("Get the list of the columns from the empty table in '.xlsx' format")
     data_loader = DataLoader("./tests/unit/data_loaders/fixtures/excel_tables/empty_table.xlsx")
