@@ -5,7 +5,8 @@ import sys
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run training, inference tasks, or a Streamlit web UI.", add_help=False
+        description="Run training, inference tasks, or a Streamlit web UI.",
+        add_help=False,
     )
     parser.add_argument(
         "--task", choices=["train", "infer"], help="Task to run: 'train' or 'infer'."
@@ -28,7 +29,7 @@ def main():
     # Check if the Streamlit web UI should be launched
     if known_args.webui:
         # Adjust the path to your Streamlit application script if necessary
-        command = ["streamlit", "run", "syngen/streamlit_app.py"] + remaining_argv
+        command = ["streamlit", "run", "syngen/streamlit_app/run.py"] + remaining_argv
     elif known_args.task == "train":
         # Construct the command to run the training script
         command = ["python", "syngen/train.py"] + remaining_argv
@@ -36,7 +37,10 @@ def main():
         # Construct the command to run the inference script
         command = ["python", "syngen/infer.py"] + remaining_argv
     else:
-        print("Unknown command. Use --task=train, --task=infer, or --webui.", file=sys.stderr)
+        print(
+            "Unknown command. Use --task=train, --task=infer, or --webui.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # Run the command with any additional arguments
