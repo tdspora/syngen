@@ -287,25 +287,23 @@ def main():
                 prg = st.progress(current_progress)
 
                 while runner.is_alive():
-                    with st.spinner("Waiting for the process to complete..."):
-                        with st.expander("Logs"):
-                            while True:
-                                if not app.log_queue.empty():
-                                    with st.code("logs", language="log"):
-                                        log = app.log_queue.get()
-                                        st.text(log)
-                                        current_progress, message = app.progress_handler.info
-                                        prg.progress(value=current_progress, text=message)
-                                elif not runner.is_alive():
-                                    break
-                                time.sleep(0.001)
+                    with st.expander("Logs"):
+                        while True:
+                            if not app.log_queue.empty():
+                                with st.code("logs", language="log"):
+                                    log = app.log_queue.get()
+                                    st.text(log)
+                                    current_progress, message = app.progress_handler.info
+                                    prg.progress(value=current_progress, text=message)
+                            elif not runner.is_alive():
+                                break
+                            time.sleep(0.001)
                 if not app.log_error_queue.empty():
                     st.exception(app.log_error_queue.get())
                 elif app.log_error_queue.empty() and not runner.is_alive():
-                    log_message = "Data generation completed"
-                    prg.progress(100, text=log_message)
+                    prg.progress(100)
                     app.progress_handler.reset_instance()
-                    st.success(log_message)
+                    st.success("Data generation completed")
             with st.container():
                 col1, col2, col3 = st.columns([0.6, 0.4, 0.6], )
                 with col1:

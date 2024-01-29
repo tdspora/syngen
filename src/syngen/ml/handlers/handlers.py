@@ -444,12 +444,14 @@ class VaeInferHandler(BaseHandler):
         delta = ProgressBarHandler().delta / batch_num
         prepared_batches = []
         for i, batch in enumerate(batches):
+            log_message = (f"Data synthesis for the table - '{self.table_name}'. "
+                           f"Generating the batch {i + 1} of {batch_num}")
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
                 delta=delta,
-                message=f"Data synthesis for the table - '{self.table_name}'. "
-                        f"Generating the batch {i + 1} of {batch_num}",
+                message=log_message,
             )
+            logger.info(log_message)
             prepared_batch = self.run(batch, self.run_parallel)
             prepared_batches.append(prepared_batch)
         prepared_data = (
