@@ -16,6 +16,7 @@ from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.metrics.utils import text_to_continuous
 from syngen.ml.mlflow_tracker import MlflowTracker
+from syngen.ml.utils import ProgressBarHandler
 
 
 class Reporter:
@@ -187,18 +188,29 @@ class Report:
             )
             if run_id is not None:
                 MlflowTracker().start_run(run_id=run_id)
+            delta = 0.25 / len(reporters)
             for reporter in reporters:
+                message = (f"The calculation of {reporter.__class__.report_type} metrics "
+                           f"for the table - '{reporter.table_name}' has started")
+                ProgressBarHandler().set_progress(delta=delta, message=message)
                 reporter.report()
                 if reporter.config["print_report"]:
+                    message = (f"The {reporter.__class__.report_type} report of the table - "
+                               f"'{reporter.table_name}' has been generated")
                     logger.info(
                         f"The {reporter.__class__.report_type} report of the table - "
                         f"'{reporter.table_name}' has been generated"
                     )
+                    ProgressBarHandler().set_progress(
+                        progress=ProgressBarHandler().progress + delta,
+                        delta=delta,
+                        message=message
+                    )
+
                 if not reporter.config["print_report"] and reporter.config["get_infer_metrics"]:
                     logger.info(
                         f"The metrics for the table - '{reporter.table_name}' have been evaluated"
                     )
-
             MlflowTracker().end_run()
 
     @property

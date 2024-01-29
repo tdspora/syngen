@@ -19,9 +19,13 @@ from loguru import logger
 
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.utils import fetch_dataset, check_if_features_assigned, generate_uuid
+from syngen.ml.utils import (
+    fetch_dataset,
+    check_if_features_assigned,
+    generate_uuid,
+    ProgressBarHandler
+)
 from syngen.ml.context import get_context
-from syngen.ml.config import TrainConfig
 
 
 class AbstractHandler(ABC):
@@ -168,8 +172,9 @@ class VaeTrainHandler(BaseHandler):
         self.model.batch_size = min(self.batch_size, len(data))
 
         logger.debug(
-            f"Train model with parameters: epochs={self.epochs}, row_subset={self.row_subset}, "
-            f"print_report={self.print_report}, drop_null={self.drop_null}, batch_size={self.batch_size}"
+            f"Train model with parameters: epochs={self.epochs}, "
+            f"row_subset={self.row_subset}, print_report={self.print_report}, "
+            f"drop_null={self.drop_null}, batch_size={self.batch_size}"
         )
 
         self.model.fit_on_df(
@@ -181,7 +186,9 @@ class VaeTrainHandler(BaseHandler):
             return
 
         self.model.save_state(self.paths["state_path"])
-        logger.info("Finished VAE training")
+        log_message = "Finished VAE training"
+        logger.info(log_message)
+        ProgressBarHandler().set_progress(message=log_message)
 
     def __prepare_dir(self):
         os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
@@ -434,7 +441,19 @@ class VaeInferHandler(BaseHandler):
         )
         logger.info(f"Total of {batch_num} batch(es)")
         batches = self.split_by_batches(self.size, batch_num)
-        prepared_batches = [self.run(batch, self.run_parallel) for batch in batches]
+        delta = ProgressBarHandler().delta / batch_num
+        prepared_batches = []
+        for i, batch in enumerate(batches):
+            log_message = (f"Data synthesis for the table - '{self.table_name}'. "
+                           f"Generating the batch {i + 1} of {batch_num}")
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta,
+                delta=delta,
+                message=log_message,
+            )
+            logger.info(log_message)
+            prepared_batch = self.run(batch, self.run_parallel)
+            prepared_batches.append(prepared_batch)
         prepared_data = (
             self._concat_slices_with_unique_pk(prepared_batches)
             if len(prepared_batches) > 0

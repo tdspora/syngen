@@ -19,7 +19,7 @@ import pandas as pd
 from loguru import logger
 
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
-from syngen.ml.utils import slugify_parameters
+from syngen.ml.utils import slugify_parameters, ProgressBarHandler
 
 
 class CVAE:
@@ -174,9 +174,13 @@ class CVAE:
         return self.model.fit(transformed_data, batch_size=self.batch_size, **kwargs)
 
     def fit_sampler(self, data: pd.DataFrame):
-        logger.info("Fit sampler")
+        log_message = "Fit sampler"
+        logger.info(log_message)
+        ProgressBarHandler().set_progress(message=log_message)
         transformed_data = self.dataset.transform(data)
-        logger.info("Start encoding")
+        log_message = "Start encoding"
+        logger.info(log_message)
+        ProgressBarHandler().set_progress(message=log_message)
         latent_points = self.encoder_model.predict(transformed_data)
 
         logger.info("Creating BayesianGaussianMixture")
