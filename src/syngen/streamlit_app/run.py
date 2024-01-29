@@ -157,10 +157,9 @@ def show_data(uploaded_file):
         os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
     with open(file_path, "wb") as file_object:
         file_object.write(uploaded_file.getvalue())
-    if st.checkbox("Show sample data"):
-        df = pd.read_csv(file_path)
-        st.write(f"Preview of {file_name}:", df.head())
-        st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
+    df = pd.read_csv(file_path)
+    st.write(f"Preview of {file_name}:", df.head())
+    st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
 
 
 def generate_button(label, path_to_file, download_name):
@@ -304,27 +303,24 @@ def main():
                     prg.progress(100)
                     app.progress_handler.reset_instance()
                     st.success("Data generation completed")
+                    st.experimental_rerun()
             with st.container():
-                col1, col2, col3 = st.columns([0.6, 0.4, 0.6], )
-                with col1:
-                    generate_button(
-                        "Download generated data",
-                        os.getenv("PATH_TO_GENERATED_DATA", ""),
-                        f"generated_{os.getenv('TABLE_NAME', '')}.csv"
-                    )
-                with col2:
-                    generate_button(
-                        "Download logs",
-                        os.getenv("SUCCESS_LOG_FILE", ""),
-                        f"logs_{os.getenv('TABLE_NAME', '')}.log"
-                    )
+                generate_button(
+                    "Download generated data",
+                    os.getenv("PATH_TO_GENERATED_DATA", ""),
+                    f"generated_{os.getenv('TABLE_NAME', '')}.csv"
+                )
+                generate_button(
+                    "Download logs",
+                    os.getenv("SUCCESS_LOG_FILE", ""),
+                    f"logs_{os.getenv('TABLE_NAME', '')}.log"
+                )
                 if os.getenv("PRINT_REPORT", ""):
-                    with col3:
-                        generate_button(
-                            "Download report",
-                            os.getenv("PATH_TO_REPORT", ""),
-                            f"accuracy_report_{os.getenv('TABLE_NAME', '')}.html"
-                        )
+                    generate_button(
+                        "Download report",
+                        os.getenv("PATH_TO_REPORT", ""),
+                        f"accuracy_report_{os.getenv('TABLE_NAME', '')}.html"
+                    )
 
 
 if __name__ == "__main__":
