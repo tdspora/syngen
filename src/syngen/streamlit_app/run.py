@@ -1,4 +1,5 @@
 import os
+import traceback
 import shutil
 import threading
 import time
@@ -11,7 +12,7 @@ from loguru import logger
 import streamlit as st
 
 from syngen.ml.worker import Worker
-from syngen.ml.utils import fetch_log_message
+from syngen.ml.utils import fetch_log_message, ProgressBarHandler
 from streamlit_option_menu import option_menu
 
 
@@ -20,10 +21,11 @@ UPLOAD_DIRECTORY = "uploaded_files"
 
 class StreamlitHandler:
     """
-    A class for handling Streamlit app
+    A class for handling the Streamlit app
     """
     def __init__(self, uploaded_file):
         self.log_queue = Queue()
+        self.progress_handler = ProgressBarHandler()
         self.log_error_queue = Queue()
         self.epochs = int()
         self.size_limit = int()
@@ -36,7 +38,8 @@ class StreamlitHandler:
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_logs = (f"model_artifacts/tmp_store/{self.sl_table_name}_"
                              f"{slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}.log")
-        self.path_to_report = f"model_artifacts/tmp_store/{self.sl_table_name}/draws/accuracy_report.html"
+        self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
+                               f"draws/accuracy_report.html")
 
     def set_parameters(self, epochs, size_limit, print_report):
         """
@@ -58,11 +61,11 @@ class StreamlitHandler:
 
     def set_logger(self):
         """
-        Set a logger in order to see logs in the Streamlit app,
-        and collect log messages with the log level - 'INFO' in a log file
+        Set a logger to see logs, and collect log messages
+        with the log level - 'INFO' in a log file and stdout
         """
         logger.add(self.file_sink, level="INFO")
-        logger.add(self.log_sink)
+        logger.add(self.log_sink, level="INFO")
 
     def log_sink(self, message):
         """
@@ -102,11 +105,12 @@ class StreamlitHandler:
                 log_level="INFO",
                 type_of_process="train"
             )
+            ProgressBarHandler().set_progress(0.01)
             worker.launch_train()
             logger.info("Model training completed")
-        except Exception as e:
-            logger.error(f"Error during train: {e}")
-            self.log_error_queue.put(f"Error during train: {e}")
+        except Exception:
+            logger.error(f"Error during train: {traceback.format_exc()}")
+            self.log_error_queue.put(f"Error during train: {traceback.format_exc()}")
 
     def infer_model(self):
         """
@@ -119,7 +123,8 @@ class StreamlitHandler:
                 "batch_size": 32,
                 "run_parallel": False,
                 "random_seed": None,
-                "print_report": self.print_report
+                "print_report": self.print_report,
+                "get_infer_metrics": False
             }
             worker = Worker(
                 table_name=self.table_name,
@@ -130,9 +135,9 @@ class StreamlitHandler:
             )
             worker.launch_infer()
             logger.info("Data generation completed")
-        except Exception as e:
-            logger.error(f"Error during infer: {e}")
-            self.log_error_queue.put(f"Error during infer: {e}")
+        except Exception:
+            logger.error(f"Error during infer: {traceback.format_exc()}")
+            self.log_error_queue.put(f"Error during infer: {traceback.format_exc()}")
 
     def train_and_infer(self):
         """
@@ -174,7 +179,6 @@ def generate_button(label, path_to_file, download_name):
 def get_running_status():
     """
     Get the status of the proces of a model training and generation data
-    :return:
     """
     if "gen_button" in st.session_state and st.session_state.gen_button is True:
         st.session_state.running = True
@@ -264,9 +268,13 @@ def main():
         if uploaded_file:
             show_data(uploaded_file)
             epochs = st.number_input("Epochs", min_value=1, value=1)
-            size_limit = st.number_input("Rows to generate", min_value=1, max_value=None, value=1000)
+            size_limit = st.number_input(
+                "Rows to generate", min_value=1, max_value=None, value=1000
+            )
             print_report = st.checkbox("Create an accuracy report", value=False)
-            if st.button("Generate data", type="primary", key="gen_button", disabled=get_running_status()):
+            if st.button(
+                    "Generate data", type="primary", key="gen_button", disabled=get_running_status()
+            ):
                 app = StreamlitHandler(uploaded_file)
                 app.set_parameters(epochs, size_limit, print_report)
                 app.set_env_variables()
@@ -275,21 +283,26 @@ def main():
                 lock = threading.Lock()
                 with lock:
                     runner.start()
+                current_progress = 0
+                prg = st.progress(current_progress)
 
                 while runner.is_alive():
-                    with st.spinner("Waiting for the process to complete..."):
-                        with st.expander("Logs"):
-                            while True:
-                                if not app.log_queue.empty():
-                                    with st.code("logs", language="log"):
-                                        log = app.log_queue.get()
-                                        st.text(log)
-                                elif not runner.is_alive():
-                                    break
-                                time.sleep(0.001)
+                    with st.expander("Logs"):
+                        while True:
+                            if not app.log_queue.empty():
+                                with st.code("logs", language="log"):
+                                    log = app.log_queue.get()
+                                    st.text(log)
+                                    current_progress, message = app.progress_handler.info
+                                    prg.progress(value=current_progress, text=message)
+                            elif not runner.is_alive():
+                                break
+                            time.sleep(0.001)
                 if not app.log_error_queue.empty():
                     st.exception(app.log_error_queue.get())
                 elif app.log_error_queue.empty() and not runner.is_alive():
+                    prg.progress(100)
+                    app.progress_handler.reset_instance()
                     st.success("Data generation completed")
             with st.container():
                 col1, col2, col3 = st.columns([0.6, 0.4, 0.6], )
