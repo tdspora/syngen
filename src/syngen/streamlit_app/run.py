@@ -303,7 +303,7 @@ def main():
                     prg.progress(100)
                     app.progress_handler.reset_instance()
                     st.success("Data generation completed")
-                    st.experimental_rerun()
+                    st.rerun()
             with st.container():
                 generate_button(
                     "Download generated data",
