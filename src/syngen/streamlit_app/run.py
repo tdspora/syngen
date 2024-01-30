@@ -272,7 +272,7 @@ def main():
             )
             print_report = st.checkbox("Create an accuracy report", value=False)
             if st.button(
-                    "Generate data", type="primary", key="gen_button", disabled=get_running_status()
+                "Generate data", type="primary", key="gen_button", disabled=get_running_status()
             ):
                 app = StreamlitHandler(uploaded_file)
                 app.set_parameters(epochs, size_limit, print_report)
