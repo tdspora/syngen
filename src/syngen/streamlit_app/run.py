@@ -229,8 +229,8 @@ def main():
         unsafe_allow_html=True
     )
     with st.sidebar:
-        selected = option_menu("", ["Basic", "Advanced", "DOCS", "Authorization"],
-                               icons=["'play'", "'gear'", "'journals'", "'person-check'"],
+        selected = option_menu("", ["Basic"],
+                               icons=["'play'"],
                                default_index=0,
                                menu_icon=None,
                                styles={
