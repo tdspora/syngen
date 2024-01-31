@@ -122,16 +122,12 @@ class VAEWrapper(BaseWrapper):
         # Save columns from the dataframe for later use.
         self.dataset.paths = self.paths
         self.dataset.main_process = self.main_process
-        attributes_to_remove = []
+        self.dataset.metadata = self.metadata
         existed_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
 
         if hasattr(self.dataset, "df"):
             self.dataset.order_of_columns = existed_columns
-            attributes_to_remove.append("df")
-
-        if attributes_to_remove:
-            for attr in attributes_to_remove:
-                delattr(self.dataset, attr)
+            delattr(self, "df")
 
             self.__update_attributes(existed_columns)
 
