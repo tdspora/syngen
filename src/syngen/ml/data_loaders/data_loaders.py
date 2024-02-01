@@ -104,8 +104,8 @@ class DataLoader(BaseDataLoader):
         if df is not None:
             self.file_loader.save_data(path, df, **kwargs)
 
-    def get_columns(self) -> List[str]:
-        return self.file_loader.get_columns(self.path)
+    def get_columns(self, **kwargs) -> List[str]:
+        return self.file_loader.get_columns(self.path, **kwargs)
 
 
 class CSVLoader:
@@ -182,16 +182,16 @@ class CSVLoader:
     def load_data(self, path, **kwargs):
         return self._load_data(path, format=self.format, **kwargs)
 
-    def get_columns(self, path: str) -> List[str]:
-        return self._get_columns(path)
+    def get_columns(self, path: str, **kwargs) -> List[str]:
+        return self._get_columns(path, **kwargs)
 
     @staticmethod
-    def _get_columns(path) -> List[str]:
+    def _get_columns(path, **kwargs) -> List[str]:
         """
         Get the column names of the table located in the path
         """
         try:
-            head_df = pd.read_csv(path, nrows=0)
+            head_df = pd.read_csv(path, **kwargs, nrows=0)
             return list(head_df.columns)
         except pd.errors.EmptyDataError as error:
             logger.error(
@@ -317,17 +317,17 @@ class AvroLoader(BaseDataLoader):
         schema, preprocessed_df = convertor.converted_schema, convertor.preprocessed_df
         return preprocessed_df, schema
 
-    def _get_columns(self, f) -> List[str]:
+    def _get_columns(self, f, **kwargs) -> List[str]:
         """
         Get the column names of the table located in the path
         """
         schema = self._load_schema(f)
         return list(schema.keys())
 
-    def get_columns(self, path: str) -> List[str]:
+    def get_columns(self, path: str, **kwargs) -> List[str]:
         try:
             with open(path, "rb") as f:
-                return self._get_columns(f)
+                return self._get_columns(f, **kwargs)
         except InvalidAvroBinaryEncoding as error:
             logger.error(
                 f"The empty file was provided. Unable to train this table "
@@ -488,13 +488,13 @@ class ExcelLoader:
         if df is not None:
             df.to_excel(path, index=False)
 
-    def get_columns(self, path: str) -> List[str]:
-        return self._get_columns(path)
+    def get_columns(self, path: str, **kwargs) -> List[str]:
+        return self._get_columns(path, **kwargs)
 
     @staticmethod
-    def _get_columns(path) -> List[str]:
+    def _get_columns(path, **kwargs) -> List[str]:
         """
         Get the column names of the table located in the path
         """
-        head_df = pd.read_excel(path, nrows=0)
+        head_df = pd.read_excel(path, **kwargs, nrows=0)
         return list(head_df.columns)
