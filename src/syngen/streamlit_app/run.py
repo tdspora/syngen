@@ -2,6 +2,7 @@ import os
 import traceback
 import shutil
 import threading
+
 import time
 from datetime import datetime
 from queue import Queue
@@ -10,10 +11,11 @@ from slugify import slugify
 import pandas as pd
 from loguru import logger
 import streamlit as st
+from streamlit_option_menu import option_menu
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
-from streamlit_option_menu import option_menu
+from syngen.ml.utils import encrypt
 
 
 UPLOAD_DIRECTORY = "uploaded_files"
@@ -24,6 +26,7 @@ class StreamlitHandler:
     A class for handling the Streamlit app
     """
     def __init__(self, uploaded_file):
+        self.crypto_key = FernetKey()
         self.log_queue = Queue()
         self.progress_handler = ProgressBarHandler()
         self.log_error_queue = Queue()
@@ -156,7 +159,7 @@ def show_data(uploaded_file):
     if not os.path.exists(UPLOAD_DIRECTORY):
         os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
     with open(file_path, "wb") as file_object:
-        file_object.write(uploaded_file.getvalue())
+        encrypt(uploaded_file.getvalue(), file_path)
     if st.checkbox("Show sample data"):
         df = pd.read_csv(file_path)
         st.write(f"Preview of {file_name}:", df.head())

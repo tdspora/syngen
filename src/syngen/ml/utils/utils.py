@@ -14,6 +14,10 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
+from cryptography.fernet import Fernet
+
+
+_fernet = None
 
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
@@ -401,3 +405,45 @@ def setup_logger():
     logger.remove()
     logger.add(console_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
     logger.add(file_sink, level="INFO")
+
+
+class FernetKey:
+    def __init__(self):
+        self.__fernet_key = Fernet.generate_key()
+        os.environ["FERNET_KEY"] = self.__fernet_key.decode("utf-8")
+
+
+class EmptyFernet:
+    is_encrypted = False
+
+
+def get_fernet():
+    global _fernet
+    if _fernet:
+        return _fernet
+
+    try:
+        if not os.environ["FERNET_KEY"]:
+            _fernet = EmptyFernet()
+        else:
+            _fernet = Fernet(os.environ["FERNET_KEY"].encode("utf-8"))
+            _fernet.is_encrypted = True
+    except (ValueError, TypeError):
+        _fernet = EmptyFernet()
+
+    return _fernet
+
+
+def encrypt(data, path: str):
+    f = get_fernet()
+    data = f.encrypt(data)
+    with open(path, "wb") as encrypted_file:
+        encrypted_file.write(data)
+
+
+def decrypt(path: str):
+    f = get_fernet()
+    with open(path, "rb") as encrypted_file:
+        data = encrypted_file.read()
+    data = f.decrypt(data)
+    return data

@@ -8,6 +8,7 @@ from loguru import logger
 
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_attribute
+from syngen.ml.utils import encrypt
 
 
 @dataclass
@@ -171,6 +172,8 @@ class TrainConfig:
         return data
 
     def _save_input_data(self, data: pd.DataFrame):
+        if os.getenv("FERNET_KEY", ""):
+            encrypt(data, self.paths["input_data_path"])
         DataLoader(self.paths["input_data_path"]).save_data(self.paths["input_data_path"], data)
 
     def _prepare_data(self, data: pd.DataFrame):

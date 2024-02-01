@@ -22,5 +22,9 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     clean_up_metadata,
     fetch_log_message,
     file_sink,
-    ProgressBarHandler
+    ProgressBarHandler,
+    FernetKey,
+    get_fernet,
+    encrypt,
+    decrypt
 )
