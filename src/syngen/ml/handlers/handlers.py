@@ -426,8 +426,10 @@ class VaeInferHandler(BaseHandler):
         Restore empty columns in the generated table
         """
         empty_columns = self.dataset.dropped_columns
-        empty_df = pd.DataFrame(index=df.index, columns=empty_columns)
+
+        empty_df = pd.DataFrame(index=df.index, columns=list(empty_columns))
         df = pd.concat([df, empty_df], axis=1)
+
         return df
 
     def handle(self, **kwargs):
