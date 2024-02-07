@@ -19,7 +19,12 @@ from loguru import logger
 
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.utils import fetch_dataset, check_if_features_assigned, generate_uuid
+from syngen.ml.utils import (
+    fetch_dataset,
+    check_if_features_assigned,
+    generate_uuid,
+    ProgressBarHandler
+)
 from syngen.ml.context import get_context
 
 
@@ -63,6 +68,7 @@ class BaseHandler(AbstractHandler):
             table_name=kwargs["table_name"],
             paths=kwargs["paths"],
             batch_size=kwargs["batch_size"],
+            main_process=kwargs["main_process"],
             process=kwargs["process"],
         )
 
@@ -143,6 +149,8 @@ class VaeTrainHandler(BaseHandler):
     row_subset: int
     drop_null: bool
     batch_size: int
+    type_of_process: str
+    print_report: bool
 
     def __fit_model(self, data: pd.DataFrame):
         logger.info("Start VAE training")
@@ -158,12 +166,14 @@ class VaeTrainHandler(BaseHandler):
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,
+            main_process=self.type_of_process,
             process="train",
         )
         self.model.batch_size = min(self.batch_size, len(data))
 
         logger.debug(
-            f"Train model with parameters: epochs={self.epochs}, row_subset={self.row_subset}, "
+            f"Train model with parameters: epochs={self.epochs}, "
+            f"row_subset={self.row_subset}, print_report={self.print_report}, "
             f"drop_null={self.drop_null}, batch_size={self.batch_size}"
         )
 
@@ -176,7 +186,9 @@ class VaeTrainHandler(BaseHandler):
             return
 
         self.model.save_state(self.paths["state_path"])
-        logger.info("Finished VAE training")
+        log_message = "Finished VAE training"
+        logger.info(log_message)
+        ProgressBarHandler().set_progress(message=log_message)
 
     def __prepare_dir(self):
         os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
@@ -195,6 +207,7 @@ class VaeInferHandler(BaseHandler):
     batch_size: int
     run_parallel: bool
     print_report: bool
+    get_infer_metrics: bool
     wrapper_name: str
     log_level: str
     type_of_process: str
@@ -249,10 +262,11 @@ class VaeInferHandler(BaseHandler):
             self.wrapper_name,
             data,
             schema,
-            metadata={"table_name": self.table_name},
+            metadata=self.metadata,
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,
+            main_process=self.type_of_process,
             process="infer",
         )
         self.vae.load_state(self.paths["state_path"])
@@ -423,11 +437,23 @@ class VaeInferHandler(BaseHandler):
         logger.debug(
             f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}, "
             f"batch_size={self.batch_size}, random_seed={self.random_seed}, "
-            f"print_report={self.print_report}"
+            f"print_report={self.print_report}, get_infer_metrics={self.get_infer_metrics}"
         )
         logger.info(f"Total of {batch_num} batch(es)")
         batches = self.split_by_batches(self.size, batch_num)
-        prepared_batches = [self.run(batch, self.run_parallel) for batch in batches]
+        delta = ProgressBarHandler().delta / batch_num
+        prepared_batches = []
+        for i, batch in enumerate(batches):
+            log_message = (f"Data synthesis for the table - '{self.table_name}'. "
+                           f"Generating the batch {i + 1} of {batch_num}")
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta,
+                delta=delta,
+                message=log_message,
+            )
+            logger.info(log_message)
+            prepared_batch = self.run(batch, self.run_parallel)
+            prepared_batches.append(prepared_batch)
         prepared_data = (
             self._concat_slices_with_unique_pk(prepared_batches)
             if len(prepared_batches) > 0

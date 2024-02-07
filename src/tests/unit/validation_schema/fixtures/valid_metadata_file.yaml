@@ -12,6 +12,7 @@ global:
     batch_size: 100
     random_seed: 5
     print_report: true
+    get_infer_metrics: false
 
 pk_test:
   train_settings:
@@ -46,6 +47,7 @@ fk_test:
     batch_size: 200
     random_seed: 1
     print_report: false
+    get_infer_metrics: false
 
   keys:
     fk_test_pk_id:

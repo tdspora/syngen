@@ -1,1 +1,1 @@
-from syngen.streamlit_app import run
+from syngen.streamlit_app import run  # noqa: F401

@@ -95,6 +95,7 @@ class InferSettingsSchema(Schema):
     batch_size = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     random_seed = fields.Integer(validate=validate.Range(min=0), allow_none=True, required=False)
     print_report = fields.Boolean(required=False)
+    get_infer_metrics = fields.Boolean(required=False)
 
 
 class CSVFormatSettingsSchema(Schema):
