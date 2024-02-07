@@ -101,15 +101,48 @@ class Dataset:
             for (key, value) in config_of_keys.items()
             if config_of_keys.get(key).get("type") == "PK"
         }
+
         self.primary_keys_list = list(self.primary_keys_mapping.keys())
         self.primary_key_name = self.primary_keys_list[0] if self.primary_keys_list else None
         pk_columns_lists = [val["columns"] for val in self.primary_keys_mapping.values()]
         self.pk_columns = [col for uq_cols in pk_columns_lists for col in uq_cols]
 
-        if self.primary_key_name:
-            logger.info(f"The primary key name was set: {self.primary_key_name}")
         if self.primary_key_name is None:
             logger.info("No primary key was set.")
+        if self.primary_key_name:
+            logger.info(f"The primary key name was set: {self.primary_key_name}")
+            self._validate_pk_key()
+
+    def _validate_pk_key(self):
+        """
+        Check null values and uniqueness in primary key
+        """
+        errors = []
+        # Check NA values in primary key columns
+        if self.df[self.pk_columns].isna().any(axis=None):
+            pk_columns_with_na = [
+                column for column in self.pk_columns if self.df[column].isna().any()
+            ]
+            error_msg = (
+                f"The primary key '{self.primary_key_name}' "
+                f"contains null values in columns: {pk_columns_with_na}. "
+            )
+            errors.append(error_msg)
+
+        # Check uniqueness of primary key
+        if self.df[self.pk_columns].duplicated().any():
+            error_msg = (
+                f"The primary key '{self.primary_key_name}' "
+                f"contains duplicates. "
+            )
+            errors.append(error_msg)
+
+        if errors:
+            raise ValueError(
+                " ".join(errors) + "Please check the original data."
+            )
+        else:
+            logger.info("Values in primary key are unique.")
 
     def __set_uq_keys(self, config_of_keys: Dict):
         """
@@ -124,13 +157,49 @@ class Dataset:
         self.unique_keys_list = (
             self.unique_keys_mapping_list if self.unique_keys_mapping_list else []
         )
-        uq_columns_lists = [val["columns"] for val in self.unique_keys_mapping.values()]
-        self.uq_columns = [col for uq_cols in uq_columns_lists for col in uq_cols]
+        self.uq_columns_lists = [
+            val["columns"] for val in self.unique_keys_mapping.values()
+        ]
+        self.uq_columns = [
+            col for uq_cols in self.uq_columns_lists for col in uq_cols
+        ]
 
-        if self.unique_keys_list:
-            logger.info(f"The unique keys were set: {self.unique_keys_list}")
         if not self.unique_keys_list:
             logger.info("No unique keys were set.")
+        if self.unique_keys_list:
+            logger.info(f"The unique keys were set: {self.unique_keys_list}")
+            self._validate_uq_keys()
+
+    def _validate_uq_keys(self):
+        """
+        Check null values and uniqueness in unique keys
+        """
+        uq_keys_mapping = dict(
+            zip(self.unique_keys_mapping_list, self.uq_columns_lists)
+        )
+        errors = []
+        for key_name, key_columns in uq_keys_mapping.items():
+            # explicitly check for > 1 null values in unique key columns
+            all_na_mask = self.df[key_columns].isna().all(axis=1)
+            if all_na_mask.sum() > 1:
+                error_msg = (
+                    f"The unique key '{key_name}' contains > 1 null values. "
+                )
+                errors.append(error_msg)
+
+            not_all_na_mask = ~all_na_mask
+            if self.df[not_all_na_mask][key_columns].duplicated().any():
+                error_msg = (
+                    f"Values in the unique key '{key_name}' are not unique. "
+                )
+                errors.append(error_msg)
+
+        if errors:
+            raise ValueError(
+                " ".join(errors) + "Please check the original data."
+            )
+        else:
+            logger.info("Values in unique keys are unique.")
 
     def _filter_dropped_keys(self, config_of_keys: Dict, type_of_key: str) -> Tuple[Dict, Set]:
         """
