@@ -84,7 +84,9 @@ class DataLoader(BaseDataLoader):
     def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         try:
             df, schema = self.file_loader.load_data(self.path, **kwargs)
-            if os.getenv("FERNET_KEY", ""):
+            if os.getenv("FERNET_KEY"):
+                print("Decrypting data")
+                print(os.getenv("FERNET_KEY"))
                 decrypt(path=self.path)
             return df, schema
         except UnicodeDecodeError as error:

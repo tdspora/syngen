@@ -23,7 +23,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     fetch_log_message,
     file_sink,
     ProgressBarHandler,
-    FernetKey,
     get_fernet,
     encrypt,
     decrypt

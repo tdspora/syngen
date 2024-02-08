@@ -133,6 +133,8 @@ class TrainConfig:
         """
         data, schema = self._load_source()
         self._check_if_data_is_empty(data)
+        if os.getenv("FERNET_KEY"):
+            encrypt(self.source, self.paths["source_path"])
         return data, schema
 
     def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -172,7 +174,7 @@ class TrainConfig:
         return data
 
     def _save_input_data(self, data: pd.DataFrame):
-        if os.getenv("FERNET_KEY", ""):
+        if os.getenv("FERNET_KEY"):
             encrypt(data, self.paths["input_data_path"])
         DataLoader(self.paths["input_data_path"]).save_data(self.paths["input_data_path"], data)
 

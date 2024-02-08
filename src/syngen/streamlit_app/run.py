@@ -15,7 +15,7 @@ from streamlit_option_menu import option_menu
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
-from syngen.ml.utils import encrypt
+from cryptography.fernet import Fernet
 
 
 UPLOAD_DIRECTORY = "uploaded_files"
@@ -27,7 +27,6 @@ class StreamlitHandler:
     A class for handling the Streamlit app
     """
     def __init__(self, uploaded_file):
-        self.crypto_key = FernetKey()
         self.log_queue = Queue()
         self.progress_handler = ProgressBarHandler()
         self.log_error_queue = Queue()
@@ -131,6 +130,7 @@ class StreamlitHandler:
         """
         Launch a model training and data generation
         """
+        os.environ["FERNET_KEY"] = Fernet.generate_key().decode("utf-8")
         self.train_model()
         self.infer_model()
 
@@ -143,8 +143,8 @@ def show_data(uploaded_file):
     file_path = os.path.join(UPLOAD_DIRECTORY, file_name)
     if not os.path.exists(UPLOAD_DIRECTORY):
         os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
-    with open(file_path, "wb"):
-        encrypt(uploaded_file.getvalue(), file_path)
+    with open(file_path, "wb") as file_object:
+        file_object.write(uploaded_file.getvalue())
     df = pd.read_csv(file_path)
     st.write(f"Preview of {file_name}:", df.head())
     st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
