@@ -369,15 +369,10 @@ pip install syngen[ui]
 then use the code below in your python file:
 
 ```python
-from syngen.streamlit_app.run import main
+from syngen import streamlit_app
 
 
-main()
-```
-and launch it with the following command:
-
-```bash
-streamlit run YOUR_PYTHON_FILE.py
+streamlit_app.start()
 ```
 
 You also can access the streamlit UI web interface by launching the container with the following command:

@@ -172,7 +172,7 @@ def get_running_status():
         return False
 
 
-def main():
+def run():
     path_to_logo = f"{os.path.join(os.path.dirname(__file__))}/img/logo.svg"
     st.set_page_config(
         page_title="SynGen UI",
@@ -302,4 +302,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run()
