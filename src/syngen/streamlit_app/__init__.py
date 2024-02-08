@@ -1,1 +1,1 @@
-from syngen.streamlit_app import run  # noqa: F401
+from syngen.streamlit_app.start import start
