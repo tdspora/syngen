@@ -262,7 +262,7 @@ class VaeInferHandler(BaseHandler):
             self.wrapper_name,
             data,
             schema,
-            metadata={"table_name": self.table_name},
+            metadata=self.metadata,
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,

@@ -19,6 +19,7 @@ from syngen.ml.utils import encrypt
 
 
 UPLOAD_DIRECTORY = "uploaded_files"
+TIMESTAMP = slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 
 class StreamlitHandler:
@@ -30,37 +31,19 @@ class StreamlitHandler:
         self.log_queue = Queue()
         self.progress_handler = ProgressBarHandler()
         self.log_error_queue = Queue()
-        self.epochs = int()
-        self.size_limit = int()
-        self.print_report = bool()
+        self.epochs = st.number_input("Epochs", min_value=1, value=1)
+        self.size_limit = st.number_input(
+            "Rows to generate", min_value=1, max_value=None, value=1000
+        )
+        self.print_report = st.checkbox("Create an accuracy report", value=False)
         self.file_name = uploaded_file.name
         self.table_name = os.path.splitext(self.file_name)[0]
         self.file_path = os.path.join(UPLOAD_DIRECTORY, self.file_name)
         self.sl_table_name = slugify(self.table_name)
         self.path_to_generated_data = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                        f"merged_infer_{self.sl_table_name}.csv")
-        self.path_to_logs = (f"model_artifacts/tmp_store/{self.sl_table_name}_"
-                             f"{slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}.log")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                f"draws/accuracy_report.html")
-
-    def set_parameters(self, epochs, size_limit, print_report):
-        """
-        Set parameters for a model training and data generation
-        """
-        self.epochs = epochs
-        self.size_limit = size_limit
-        self.print_report = print_report
-
-    def set_env_variables(self):
-        """
-        Set environment variables
-        """
-        os.environ["PATH_TO_GENERATED_DATA"] = self.path_to_generated_data
-        os.environ["PATH_TO_REPORT"] = self.path_to_report
-        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
-        os.environ["PRINT_REPORT"] = "True" if self.print_report else str()
-        os.environ["TABLE_NAME"] = self.sl_table_name
 
     def set_logger(self):
         """
@@ -81,8 +64,10 @@ class StreamlitHandler:
         """
         Write log messages to a log file
         """
-        os.makedirs(os.path.dirname(self.path_to_logs), exist_ok=True)
-        with open(self.path_to_logs, "a") as log_file:
+        path_to_logs = f"model_artifacts/tmp_store/{self.sl_table_name}_{TIMESTAMP}.log"
+        os.environ["SUCCESS_LOG_FILE"] = path_to_logs
+        os.makedirs(os.path.dirname(path_to_logs), exist_ok=True)
+        with open(path_to_logs, "a") as log_file:
             log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
@@ -158,12 +143,11 @@ def show_data(uploaded_file):
     file_path = os.path.join(UPLOAD_DIRECTORY, file_name)
     if not os.path.exists(UPLOAD_DIRECTORY):
         os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
-    with open(file_path, "wb") as file_object:
+    with open(file_path, "wb"):
         encrypt(uploaded_file.getvalue(), file_path)
-    if st.checkbox("Show sample data"):
-        df = pd.read_csv(file_path)
-        st.write(f"Preview of {file_name}:", df.head())
-        st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
+    df = pd.read_csv(file_path)
+    st.write(f"Preview of {file_name}:", df.head())
+    st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
 
 
 def generate_button(label, path_to_file, download_name):
@@ -248,8 +232,8 @@ def main():
         unsafe_allow_html=True
     )
     with st.sidebar:
-        selected = option_menu("", ["Basic", "Advanced", "DOCS", "Authorization"],
-                               icons=["'play'", "'gear'", "'journals'", "'person-check'"],
+        selected = option_menu("", ["Basic"],
+                               icons=["'play'"],
                                default_index=0,
                                menu_icon=None,
                                styles={
@@ -270,17 +254,10 @@ def main():
             st.warning("Please upload a CSV file to proceed")
         if uploaded_file:
             show_data(uploaded_file)
-            epochs = st.number_input("Epochs", min_value=1, value=1)
-            size_limit = st.number_input(
-                "Rows to generate", min_value=1, max_value=None, value=1000
-            )
-            print_report = st.checkbox("Create an accuracy report", value=False)
+            app = StreamlitHandler(uploaded_file)
             if st.button(
-                    "Generate data", type="primary", key="gen_button", disabled=get_running_status()
+                "Generate data", type="primary", key="gen_button", disabled=get_running_status()
             ):
-                app = StreamlitHandler(uploaded_file)
-                app.set_parameters(epochs, size_limit, print_report)
-                app.set_env_variables()
                 runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
                 st.session_state.running = True
                 lock = threading.Lock()
@@ -307,27 +284,24 @@ def main():
                     prg.progress(100)
                     app.progress_handler.reset_instance()
                     st.success("Data generation completed")
+                    st.rerun()
             with st.container():
-                col1, col2, col3 = st.columns([0.6, 0.4, 0.6], )
-                with col1:
+                generate_button(
+                    "Download generated data",
+                    app.path_to_generated_data,
+                    f"generated_data_{app.sl_table_name}.csv"
+                )
+                generate_button(
+                    "Download logs",
+                    os.getenv("SUCCESS_LOG_FILE", ""),
+                    f"logs_{app.sl_table_name}.log"
+                )
+                if app.print_report:
                     generate_button(
-                        "Download generated data",
-                        os.getenv("PATH_TO_GENERATED_DATA", ""),
-                        f"generated_{os.getenv('TABLE_NAME', '')}.csv"
+                        "Download report",
+                        app.path_to_report,
+                        f"accuracy_report_{app.sl_table_name}.html"
                     )
-                with col2:
-                    generate_button(
-                        "Download logs",
-                        os.getenv("SUCCESS_LOG_FILE", ""),
-                        f"logs_{os.getenv('TABLE_NAME', '')}.log"
-                    )
-                if os.getenv("PRINT_REPORT", ""):
-                    with col3:
-                        generate_button(
-                            "Download report",
-                            os.getenv("PATH_TO_REPORT", ""),
-                            f"accuracy_report_{os.getenv('TABLE_NAME', '')}.html"
-                        )
 
 
 if __name__ == "__main__":
