@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from slugify import slugify
-import streamlit as st
 import pickle as pkl
 import uuid
 from ulid import ULID
@@ -402,34 +401,3 @@ def setup_logger():
     logger.remove()
     logger.add(console_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
     logger.add(file_sink, level="INFO")
-
-
-class ProgressBarManager:
-
-    def __new__(cls):
-        if not hasattr(cls, "instance"):
-            cls.instance = super(ProgressBarManager, cls).__new__(cls)
-        return cls.instance
-
-    def __init__(self):
-        initial_value = 0
-        self.progress_bar = initial_value
-        self.delta = initial_value
-
-    def get_delta(self, metadata):
-        generation_of_reports = any(
-            [
-                config.get("train_settings", {}).get("print_report", False)
-                for table, config in metadata.items()
-            ]
-        )
-        if generation_of_reports:
-            self.delta = 0.5 / len(metadata)
-        else:
-            self.delta = 1 / len(metadata)
-
-    def get_progress(self):
-        return self.progress_bar
-
-    def set_progress(self, progress_status):
-        self.progress_bar = progress_status
