@@ -31,6 +31,7 @@ from syngen.ml.utils import (
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import fetch_training_config, clean_up_metadata
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 @dataclass
@@ -1092,5 +1093,7 @@ class Dataset:
         self.set_nan_params(columns_nan_labels)
 
         self.fit(self.df)
+
+        MlflowTracker().end_run()
 
         return self.df

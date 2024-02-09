@@ -128,20 +128,25 @@ class TrainStrategy(Strategy, ABC):
         Launch the training process
         """
         try:
+            table = kwargs["table_name"]
+            MlflowTracker().start_run(
+                run_name=f"{table}-PREPROCESS",
+                tags={"table_name": table, "process": "preprocess"},
+            )
             self.set_config(
                 source=kwargs["source"],
                 epochs=kwargs["epochs"],
                 drop_null=kwargs["drop_null"],
                 row_limit=kwargs["row_limit"],
-                table_name=kwargs["table_name"],
+                table_name=table,
                 metadata_path=kwargs["metadata_path"],
                 print_report=kwargs["print_report"],
                 batch_size=kwargs["batch_size"],
             )
-            MlflowTracker().log_params(self.config.to_dict())
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()
             self.handler.handle()
+            MlflowTracker().end_run()
         except Exception as e:
             logger.error(
                 f"Training of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
@@ -204,10 +209,16 @@ class InferStrategy(Strategy):
         Launch the infer process
         """
         try:
+            table = kwargs["table_name"]
+            MlflowTracker().start_run(
+                run_name=f"{table}-INFER",
+                tags={"table_name": table, "process": "infer"},
+            )
+
             self.set_config(
                 destination=kwargs["destination"],
                 size=kwargs["size"],
-                table_name=kwargs["table_name"],
+                table_name=table,
                 metadata_path=kwargs["metadata_path"],
                 run_parallel=kwargs["run_parallel"],
                 batch_size=kwargs["batch_size"],
@@ -225,6 +236,7 @@ class InferStrategy(Strategy):
                 type_of_process=type_of_process
             )
             self.handler.handle()
+            MlflowTracker().end_run()
         except Exception as e:
             logger.error(
                 f"Generation of the table - \"{kwargs['table_name']}\" failed on running stage.\n"

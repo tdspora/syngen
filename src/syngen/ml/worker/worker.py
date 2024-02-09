@@ -11,7 +11,6 @@ from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
-from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import ProgressBarHandler
 
 
@@ -253,11 +252,6 @@ class Worker:
             logger.info(log_message)
             ProgressBarHandler().set_progress(delta=delta, message=log_message)
 
-            MlflowTracker().start_run(
-                run_name=f"{table}-TRAIN",
-                tags={"table_name": table, "process": "train"},
-            )
-
             self.train_strategy.run(
                 metadata=config_of_metadata_for_training,
                 source=train_settings["source"],
@@ -269,7 +263,6 @@ class Worker:
                 print_report=train_settings["print_report"],
                 batch_size=train_settings["batch_size"]
             )
-            MlflowTracker().end_run()
             self._write_success_message(slugify(table))
             self._save_metadata_file()
             ProgressBarHandler().set_progress(
@@ -330,11 +323,6 @@ class Worker:
             both_keys = table in self.divided
             infer_settings = config_of_table["infer_settings"]
 
-            MlflowTracker().start_run(
-                run_name=f"{table}-INFER",
-                tags={"table_name": table, "process": "infer"},
-            )
-
             self.infer_strategy.run(
                 destination=infer_settings.get("destination"),
                 metadata=config_of_tables,
@@ -350,7 +338,6 @@ class Worker:
                 both_keys=both_keys,
                 type_of_process=self.type_of_process,
             )
-            MlflowTracker().end_run()
             ProgressBarHandler().set_progress(
                 delta=delta,
                 message=f"Infer process of the table - {table} was completed"
