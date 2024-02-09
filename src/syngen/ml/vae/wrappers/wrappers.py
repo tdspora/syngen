@@ -2,6 +2,7 @@ from typing import Tuple, List, Optional, Dict
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from pathlib import Path
+from dataclasses import dataclass, field
 
 import warnings
 import pickle
@@ -23,6 +24,7 @@ from syngen.ml.utils import (
     fetch_training_config,
     check_if_features_assigned,
     define_existent_columns,
+    ProgressBarHandler
 )
 
 warnings.filterwarnings("ignore")
@@ -55,6 +57,7 @@ class BaseWrapper(ABC):
         pass
 
 
+@dataclass
 class VAEWrapper(BaseWrapper):
     """Base class that implements end to end train and generation of structured data.
 
@@ -88,29 +91,16 @@ class VAEWrapper(BaseWrapper):
         generate new data based on df that consist of n which has less probability
         computed as log likelihood and return the result as pd.DataFrame
     """
-
-    def __init__(
-        self,
-        df: pd.DataFrame,
-        schema: Optional[Dict],
-        metadata: dict,
-        table_name: str,
-        paths: dict,
-        process: str,
-        batch_size: int,
-        latent_dim: int = 10,
-        latent_components: int = 30,
-    ):
-        super().__init__()
-        self.df = df
-        self.schema = schema
-        self.process = process
-        self.batch_size = batch_size
-        self.latent_dim = latent_dim
-        self.latent_components = latent_components
-        self.metadata = metadata
-        self.table_name = table_name
-        self.paths = paths
+    df: pd.DataFrame
+    schema: Optional[Dict]
+    metadata: dict
+    table_name: str
+    paths: dict
+    process: str
+    main_process: str
+    batch_size: int
+    latent_dim: int = field(init=False, default=10)
+    latent_components: int = field(init=False, default=30)
 
     def __post_init__(self):
         if self.process == "train":
@@ -119,6 +109,7 @@ class VAEWrapper(BaseWrapper):
                 schema=self.schema,
                 metadata=self.metadata,
                 table_name=self.table_name,
+                main_process=self.main_process,
                 paths=self.paths,
             )
         elif self.process == "infer":
@@ -131,16 +122,13 @@ class VAEWrapper(BaseWrapper):
         # drop it as it might contain sensitive data.
         # Save columns from the dataframe for later use.
         self.dataset.paths = self.paths
-        attributes_to_remove = []
+        self.dataset.main_process = self.main_process
+        self.dataset.metadata = self.metadata
         existed_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
 
         if hasattr(self.dataset, "df"):
             self.dataset.order_of_columns = existed_columns
-            attributes_to_remove.append("df")
-
-        if attributes_to_remove:
-            for attr in attributes_to_remove:
-                delattr(self.dataset, attr)
+            delattr(self, "df")
 
             self.__update_attributes(existed_columns)
 
@@ -176,7 +164,6 @@ class VAEWrapper(BaseWrapper):
         """
         Launch the pipeline in the dataset
         """
-        self.__post_init__()
         self.df = self.dataset.pipeline()
         self._save_dataset()
 
@@ -269,11 +256,19 @@ class VAEWrapper(BaseWrapper):
         loss_grows_num_epochs = 0
         prev_total_loss = float("inf")
         es_min_delta = 0.005
+        es_patience = 10
         pth = Path(self.paths["state_path"])
         # loss that corresponds to the best saved weights
         saved_weights_loss = float("inf")
 
+        delta = ProgressBarHandler().delta / (epochs * 2)
         for epoch in range(epochs):
+            log_message = (f"Training process of the table - '{self.table_name}' "
+                           f"on the epoch: {epoch}")
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta,
+                message=log_message
+            )
             num_batches = 0.0
             total_loss = 0.0
             t1 = time.time()
@@ -293,12 +288,29 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            logger.info(f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec")
-
+            log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec"
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta,
+                message=log_message
+            )
+            logger.info(log_message)
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
             # MlflowTracker().log_metric("CPU_usage", psutil.cpu_percent(), step=epoch)
             # MlflowTracker().log_metric("RAM_usage", psutil.virtual_memory().percent, step=epoch)
+
+            prev_total_loss = mean_loss
+
+            if loss_grows_num_epochs == es_patience:
+                self.vae.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                logger.info(
+                    f"The loss does not become lower for "
+                    f"{loss_grows_num_epochs} epochs in a row. "
+                    f"Stopping the training."
+                )
+                break
+            epoch += 1
+        MlflowTracker().end_run()
 
     def _create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)

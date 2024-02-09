@@ -19,6 +19,57 @@ MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
 
 
+class ProgressBarHandler:
+    """
+    Singleton class for handling the progress bar
+    """
+    _delta = None
+    _progress = 0
+    _message = None
+
+    def __new__(cls):
+        if not hasattr(cls, "instance"):
+            cls.instance = super(ProgressBarHandler, cls).__new__(cls)
+            cls.instance._progress = 0
+            cls.instance._delta = None
+            cls.instance._message = None
+        return cls.instance
+
+    @property
+    def progress(self):
+        """
+        Get the current progress of the process
+        """
+        return self._progress
+
+    @property
+    def delta(self):
+        """
+        Get the delta of the progress
+        inside which the progress should be changed
+        """
+        return self._delta
+
+    @property
+    def info(self):
+        """
+        Get the information about the current progress
+        and the log message described the status of the process
+        """
+        return self._progress, self._message
+
+    def set_progress(self, progress=None, delta=None, message=None):
+        self._delta = delta if delta is not None else self._delta
+        self._progress = self._progress if progress is None else progress
+        self._progress = self._progress if self._progress <= 1.0 else 1.0
+        self._message = message
+
+    @classmethod
+    def reset_instance(cls):
+        if hasattr(cls, "instance"):
+            del cls.instance
+
+
 def is_format_first(date_format: str, format_type: str) -> bool:
     """
     Check if the date format starts with the specified string

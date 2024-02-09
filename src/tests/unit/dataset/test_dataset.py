@@ -32,6 +32,7 @@ def uuid_detection(df, schema):
             metadata={"table_name": "mock_table"},
             table_name="mock_table",
             paths={},
+            main_process="train"
         )
 
     mock_dataset._set_uuid_columns(df)
@@ -86,7 +87,12 @@ def test_save_dataset(rp_logger):
     df = pd.read_csv("./tests/unit/dataset/fixtures/data.csv")
     with patch.object(Dataset, "__post_init__", lambda x: None):
         mock_dataset = Dataset(
-            df=df, schema=CSV_SCHEMA, metadata={}, table_name="mock_table", paths={}
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata={},
+            table_name="mock_table",
+            paths={},
+            main_process="train"
         )
         setattr(mock_dataset, "dropped_columns", set())
         setattr(mock_dataset, "non_existent_columns", set())
@@ -126,7 +132,8 @@ def test_save_dataset(rp_logger):
             "str_columns": set(),
             "date_columns": set(),
             "date_mapping": dict(),
-            "metadata": {}
+            "metadata": {},
+            "main_process": "train",
         }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -159,6 +166,7 @@ def test_check_non_existent_columns(rp_logger):
             metadata=metadata,
             table_name="mock_table",
             paths={},
+            main_process="train"
         )
         setattr(mock_dataset, "dropped_columns", set())
         setattr(mock_dataset, "non_existent_columns", set())
@@ -220,6 +228,7 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
             metadata=metadata,
             table_name="mock_table",
             paths={},
+            main_process="train"
         )
         setattr(mock_dataset, "dropped_columns", set())
         setattr(mock_dataset, "non_existent_columns", set())
@@ -255,7 +264,9 @@ def test_define_date_format_with_extreme_values(
         "Date": [(datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).
                  strftime(initial_date_format) for x in range(10000)]
     }
-    data.update({"Date": data["Date"] + extreme_values})
+    data.update(
+        {"Date": data['Date'] + extreme_values}
+    )
     df = pd.DataFrame(data, columns=["Date"])
     with patch.object(Dataset, "__post_init__", lambda x: None):
         mock_dataset = Dataset(
@@ -264,6 +275,7 @@ def test_define_date_format_with_extreme_values(
             metadata=metadata,
             table_name="mock_table",
             paths={},
+            main_process="train"
         )
         setattr(mock_dataset, "dropped_columns", set())
         setattr(mock_dataset, "non_existent_columns", set())
