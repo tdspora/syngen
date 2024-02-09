@@ -423,5 +423,6 @@ def decrypt(path: str):
     f = get_fernet()
     with open(path, "rb") as encrypted_file:
         data = encrypted_file.read()
-    data = f.decrypt(data)
-    return data
+
+    decrypted_data = f.decrypt(data)
+    return decrypted_data, {"fields": {}, "format": "CSV"}

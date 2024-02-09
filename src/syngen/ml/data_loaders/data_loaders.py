@@ -25,7 +25,7 @@ from syngen.ml.validation_schema import (
     ExcelFormatSettingsSchema,
     CSVFormatSettingsSchema,
 )
-from syngen.ml.utils import decrypt
+from syngen.ml.utils import decrypt, encrypt
 
 DELIMITERS = {"\\t": "\t"}
 
@@ -83,11 +83,10 @@ class DataLoader(BaseDataLoader):
 
     def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         try:
-            df, schema = self.file_loader.load_data(self.path, **kwargs)
             if os.getenv("FERNET_KEY"):
-                print("Decrypting data")
-                print(os.getenv("FERNET_KEY"))
-                decrypt(path=self.path)
+                df, schema = decrypt(path=self.path)
+            else:
+                df, schema = self.file_loader.load_data(self.path, **kwargs)
             return df, schema
         except UnicodeDecodeError as error:
             message = (

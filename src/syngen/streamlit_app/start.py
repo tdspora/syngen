@@ -20,3 +20,7 @@ def start():
     bootstrap.run(file_path, False, [], flag_options={})
 
 
+if __name__ == "__main__":
+    start()
+
+
