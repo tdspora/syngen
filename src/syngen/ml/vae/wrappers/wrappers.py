@@ -255,6 +255,7 @@ class VAEWrapper(BaseWrapper):
         loss_grows_num_epochs = 0
         prev_total_loss = float("inf")
         es_min_delta = 0.005
+        es_patience = 10
         pth = Path(self.paths["state_path"])
         # loss that corresponds to the best saved weights
         saved_weights_loss = float("inf")
@@ -294,6 +295,19 @@ class VAEWrapper(BaseWrapper):
             logger.info(log_message)
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
+
+            prev_total_loss = mean_loss
+
+            if loss_grows_num_epochs == es_patience:
+                self.vae.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                logger.info(
+                    f"The loss does not become lower for "
+                    f"{loss_grows_num_epochs} epochs in a row. "
+                    f"Stopping the training."
+                )
+                break
+            epoch += 1
+        MlflowTracker().end_run()
 
     def _create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
