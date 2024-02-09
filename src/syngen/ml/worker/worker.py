@@ -32,6 +32,9 @@ class Worker:
     metadata: Optional[Dict] = None
     divided: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
+    hardware_metrics: List = ['system/cpu_utilization_percentage', 'system/system_memory_usage_percentage', 
+                              'system/system_memory_usage_megabytes', 'system/gpu_utilization_percentage',
+                              'system/gpu_memory_usage_percentage', 'system/gpu_memory_usage_megabytes']
 
     def __attrs_post_init__(self):
         os.makedirs("model_artifacts/metadata", exist_ok=True)
@@ -235,11 +238,6 @@ class Worker:
         :param metadata_for_inference:
         the tuple included the list of tables and metadata for inference process
         """
-
-        hardware_metrics = ['system/cpu_utilization_percentage', 'system/system_memory_usage_percentage', 
-                            'system/system_memory_usage_megabytes', 'system/gpu_utilization_percentage',
-                            'system/gpu_memory_usage_percentage', 'system/gpu_memory_usage_megabytes']
-
         (
             chain_for_tables_for_training,
             config_of_metadata_for_training,
@@ -325,7 +323,7 @@ class Worker:
             run_id = MlflowTracker().search_run(table, 'TRAIN')
             run_info = MlflowTracker().get_run(run_id).info
             MlflowTracker().log_metric(key=f'{table}-TRAIN-duration', value=(run_info.end_time - run_info.start_time)/1000)
-            for metric in hardware_metrics:
+            for metric in self.hardware_metrics:
                 try:
                     MlflowTracker().log_metric(key=f'{table}-TRAIN-{metric}', 
                                                value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
@@ -337,7 +335,7 @@ class Worker:
                 run_id = MlflowTracker().search_run(table, 'REPORT')
                 run_info = MlflowTracker().get_run(run_id).info
                 MlflowTracker().log_metric(key=f'{table}-REPORT-duration', value=(run_info.end_time - run_info.start_time)/1000)
-                for metric in hardware_metrics:
+                for metric in self.hardware_metrics:
                     try:
                         MlflowTracker().log_metric(key=f'{table}-REPORT-{metric}', 
                                                    value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
@@ -395,6 +393,21 @@ class Worker:
                 delta=delta,
                 message=f"Infer process of the table - {table} was completed"
             )
+
+        MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
+        for table in tables:
+            run_id = MlflowTracker().search_run(table, 'INFER')
+            run_info = MlflowTracker().get_run(run_id).info
+            MlflowTracker().log_metric(key=f'{table}-INFER-duration', value=(run_info.end_time - run_info.start_time)/1000)
+            for metric in self.hardware_metrics:
+                try:
+                    MlflowTracker().log_metric(key=f'{table}-INFER-{metric}', 
+                                               value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
+                                              )
+                except:
+                    pass
+
+        MlflowTracker().end_run()            
 
     def _generate_reports(self):
         """
