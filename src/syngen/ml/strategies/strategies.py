@@ -209,12 +209,11 @@ class InferStrategy(Strategy):
         Launch the infer process
         """
         try:
-            table = kwargs["table_name"]
 
             self.set_config(
                 destination=kwargs["destination"],
                 size=kwargs["size"],
-                table_name=table,
+                table_name=kwargs["table_name"],
                 metadata_path=kwargs["metadata_path"],
                 run_parallel=kwargs["run_parallel"],
                 batch_size=kwargs["batch_size"],

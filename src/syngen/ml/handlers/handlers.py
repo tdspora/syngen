@@ -26,7 +26,6 @@ from syngen.ml.utils import (
     ProgressBarHandler
 )
 from syngen.ml.context import get_context
-from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 class AbstractHandler(ABC):
