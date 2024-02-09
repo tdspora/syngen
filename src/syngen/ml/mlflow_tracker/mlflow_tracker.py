@@ -91,6 +91,7 @@ class MlflowTracker:
             cls._instance.experiment_name = experiment_name
             cls._instance.connect_to_server = is_active
             cls._instance.is_active = is_active
+            cls._instance.client = mlflow.tracking.MlflowClient()
         return cls._instance
 
     @classmethod
@@ -121,6 +122,8 @@ class MlflowTracker:
     ):
         if self.is_active:
             mlflow.start_run(run_id, experiment_id, run_name, nested, tags, description)
+            return mlflow.last_active_run()
+
 
     def end_run(self):
         if self.is_active:
@@ -193,6 +196,15 @@ class MlflowTracker:
     def search_run(self, table_name: str, type_of_process: str):
         if self.is_active:
             run = mlflow.search_runs(
+                experiment_names=[self.experiment_name],
                 filter_string=f"run_name = '{table_name}-{type_of_process}'"
             )
             return run["run_id"][0] if run.shape[0] > 0 else None
+
+    def get_run(self, run_id):
+        if self.is_active:
+            return mlflow.get_run(run_id)
+
+    def get_metric_history(self, run_id, metric_key):
+        if self.is_active:
+            return self.client.get_metric_history(run_id, metric_key)

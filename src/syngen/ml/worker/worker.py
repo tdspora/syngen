@@ -3,6 +3,7 @@ from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
+from statistics import mean 
 import os
 
 from syngen.ml.data_loaders import MetadataLoader
@@ -233,6 +234,11 @@ class Worker:
         :param metadata_for_inference:
         the tuple included the list of tables and metadata for inference process
         """
+
+        hardware_metrics = ['system/cpu_utilization_percentage', 'system/system_memory_usage_percentage', 
+                            'system/system_memory_usage_megabytes', 'system/gpu_utilization_percentage',
+                            'system/gpu_memory_usage_percentage', 'system/gpu_memory_usage_megabytes']
+
         (
             chain_for_tables_for_training,
             config_of_metadata_for_training,
@@ -303,6 +309,34 @@ class Worker:
                     type_of_process=self.type_of_process,
                 )
                 MlflowTracker().end_run()
+
+        MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
+        for table in chain_for_tables_for_training:
+            run_id = MlflowTracker().search_run(table, 'TRAIN')
+            run_info = MlflowTracker().get_run(run_id).info
+            MlflowTracker().log_metric(key=f'{table}-TRAIN-duration', value=(run_info.end_time - run_info.start_time)/1000)
+            for metric in hardware_metrics:
+                try:
+                    MlflowTracker().log_metric(key=f'{table}-TRAIN-{metric}', 
+                                               value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
+                                              )
+                except:
+                    pass
+        if generation_of_reports:
+            for table in chain_for_tables_for_inference:
+                run_id = MlflowTracker().search_run(table, 'REPORT')
+                run_info = MlflowTracker().get_run(run_id).info
+                MlflowTracker().log_metric(key=f'{table}-REPORT-duration', value=(run_info.end_time - run_info.start_time)/1000)
+                for metric in hardware_metrics:
+                    try:
+                        MlflowTracker().log_metric(key=f'{table}-REPORT-{metric}', 
+                                                   value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
+                                                  )
+                    except:
+                        pass
+
+        MlflowTracker().end_run()
+
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
         """
