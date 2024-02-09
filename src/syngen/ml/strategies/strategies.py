@@ -210,10 +210,6 @@ class InferStrategy(Strategy):
         """
         try:
             table = kwargs["table_name"]
-            MlflowTracker().start_run(
-                run_name=f"{table}-INFER",
-                tags={"table_name": table, "process": "infer"},
-            )
 
             self.set_config(
                 destination=kwargs["destination"],
@@ -236,7 +232,6 @@ class InferStrategy(Strategy):
                 type_of_process=type_of_process
             )
             self.handler.handle()
-            MlflowTracker().end_run()
         except Exception as e:
             logger.error(
                 f"Generation of the table - \"{kwargs['table_name']}\" failed on running stage.\n"

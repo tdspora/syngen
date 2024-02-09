@@ -12,6 +12,7 @@ from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 @define
@@ -323,6 +324,10 @@ class Worker:
             both_keys = table in self.divided
             infer_settings = config_of_table["infer_settings"]
 
+            MlflowTracker().start_run(
+                run_name=f"{table}-INFER",
+                tags={"table_name": table, "process": "infer"},
+            )
             self.infer_strategy.run(
                 destination=infer_settings.get("destination"),
                 metadata=config_of_tables,
@@ -338,6 +343,7 @@ class Worker:
                 both_keys=both_keys,
                 type_of_process=self.type_of_process,
             )
+            MlflowTracker().end_run()
             ProgressBarHandler().set_progress(
                 delta=delta,
                 message=f"Infer process of the table - {table} was completed"
