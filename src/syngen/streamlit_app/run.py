@@ -191,8 +191,17 @@ def run():
     <style>
         div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"] {
            color:black;
+           font-size: 0px;
+           min-width:115px
         }
-        div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"]:active {
+        div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"]::after {
+            color:black;
+            content: "Browse a file";
+            display: block;
+            position: absolute;
+            font-size: 16px;
+        }
+        div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"]:active::after {
             color:white;
         }
         div[data-testid="stFileDropzoneInstructions"]>div>span {
@@ -227,6 +236,27 @@ def run():
         """,
         unsafe_allow_html=True
     )
+    st.markdown(
+        """
+        <style>
+            div[class="st-emotion-cache-vqd4fc e1nzilvr5"]{
+                margin-right:10px;
+            }
+            div[class="st-emotion-cache-7e7wz2 e1y5xkzn2"]{
+                justify-content:flex-start;
+            }
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+        <style>
+            div[role="tooltip"]{
+                left:20%;
+            }
+        """,
+        unsafe_allow_html=True,
+    )
     with st.sidebar:
         selected = option_menu("", ["Basic"],
                                icons=["'play'"],
@@ -242,7 +272,7 @@ def run():
         uploaded_file = st.file_uploader(
             "Upload a CSV file",
             type="csv",
-            accept_multiple_files=False
+            accept_multiple_files=False,
         )
         if not uploaded_file:
             shutil.rmtree(UPLOAD_DIRECTORY, ignore_errors=True)
