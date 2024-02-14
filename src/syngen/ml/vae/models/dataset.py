@@ -1094,6 +1094,7 @@ class Dataset:
 
         self.fit(self.df)
 
+        # The end of the run related to the preprocessing stage
         MlflowTracker().end_run()
 
         return self.df

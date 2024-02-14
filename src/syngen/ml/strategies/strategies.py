@@ -129,6 +129,9 @@ class TrainStrategy(Strategy, ABC):
         """
         try:
             table = kwargs["table_name"]
+            # Start the separate run for the preprocess stage
+            # included preprocessing of the original data, identification of data types of columns,
+            # fit and transform of the assigned features
             MlflowTracker().start_run(
                 run_name=f"{table}-PREPROCESS",
                 tags={"table_name": table, "process": "preprocess"},
@@ -146,6 +149,7 @@ class TrainStrategy(Strategy, ABC):
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()
             self.handler.handle()
+            # End the separate run for the training stage
             MlflowTracker().end_run()
         except Exception as e:
             logger.error(
