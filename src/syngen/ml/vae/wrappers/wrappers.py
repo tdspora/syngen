@@ -243,6 +243,15 @@ class VAEWrapper(BaseWrapper):
 
         self.optimizer = self._create_optimizer()
         self.loss_metric = self._create_loss()
+
+        # Start of the run of training process
+        MlflowTracker().start_run(
+            run_name=f"{self.table_name}-TRAIN",
+            tags={"table_name": self.table_name, "process": "train"},
+        )
+        config = fetch_training_config(self.paths["train_config_pickle_path"])
+        MlflowTracker().log_params(config.to_dict())
+
         self._train(train_dataset, epochs)
 
         self.model.model = self.vae
@@ -307,7 +316,6 @@ class VAEWrapper(BaseWrapper):
                 )
                 break
             epoch += 1
-        MlflowTracker().end_run()
 
     def _create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
