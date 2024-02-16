@@ -16,11 +16,14 @@ from collections import OrderedDict
 from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
+from flatten_json import unflatten_list
 
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import (
     fetch_dataset,
+    fetch_training_config,
+    remove_none_from_struct,
     check_if_features_assigned,
     generate_uuid,
     ProgressBarHandler
@@ -430,6 +433,32 @@ class VaeInferHandler(BaseHandler):
         df = pd.concat([df, empty_df], axis=1)
         return df
 
+    def _post_process_generated_data(self, data: pd.DataFrame):
+        """
+        Post process generated data, unflatten json columns to the original state
+        :param data: generated dataframe
+        """
+        config = fetch_training_config(self.paths["train_config_pickle_path"])
+        json_columns = config.json_columns
+        flattening_mapping = config.flattening_mapping
+        if json_columns:
+            for old_column, new_columns in flattening_mapping.items():
+                data[old_column] = data[new_columns].\
+                    apply(lambda row: unflatten_list(row.to_dict(), "."), axis=1).\
+                    apply(lambda row: remove_none_from_struct(row))
+                data.drop(new_columns, axis=1, inplace=True)
+        self._save_data(data)
+
+    def _save_data(self, generated_data):
+        """
+        Save generated data to the path
+        """
+        DataLoader(self.paths["path_to_merged_infer"]).save_data(
+            self.paths["path_to_merged_infer"],
+            generated_data,
+            format=get_context().get_config(),
+        )
+
     def handle(self, **kwargs):
         self._prepare_dir()
 
@@ -470,27 +499,12 @@ class VaeInferHandler(BaseHandler):
                 )
                 generated_data = generated_data[self.dataset.order_of_columns]
                 if generated_data is None:
-                    DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                        self.paths["path_to_merged_infer"],
-                        prepared_data,
-                        format=get_context().get_config(),
-                    )
+                    self._save_data(generated_data)
                 else:
-                    DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                        self.paths["path_to_merged_infer"],
-                        generated_data,
-                        format=get_context().get_config(),
-                    )
+                    self._save_data(generated_data)
             else:
-                DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                    self.paths["path_to_merged_infer"],
-                    prepared_data,
-                    format=get_context().get_config(),
-                )
+                self._save_data(prepared_data)
         if self.metadata_path is None:
             prepared_data = prepared_data[self.dataset.order_of_columns]
-            DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                self.paths["path_to_merged_infer"],
-                prepared_data,
-                format=get_context().get_config(),
-            )
+            self._save_data(prepared_data)
+        self._post_process_generated_data(prepared_data)

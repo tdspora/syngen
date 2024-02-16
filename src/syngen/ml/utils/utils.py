@@ -340,6 +340,21 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
+def remove_none_from_struct(input_dict):
+    """
+    Recursively remove None values from a nested dictionary or list
+    """
+    new_dict = {}
+    for k, v in input_dict.items():
+        if isinstance(v, dict):
+            new_dict[k] = remove_none_from_struct(v)
+        elif isinstance(v, list):
+            new_dict[k] = [i for i in v if i is not None]
+        elif v is not None:
+            new_dict[k] = v
+    return new_dict
+
+
 def fetch_unique_root(table_name: str, metadata_path: str):
     """
     Construct the unique constant substring for use in the name of the experiment and log file
