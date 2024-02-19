@@ -305,8 +305,6 @@ class VAEWrapper(BaseWrapper):
             logger.info(log_message)
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
-            # MlflowTracker().log_metric("CPU_usage", psutil.cpu_percent(), step=epoch)
-            # MlflowTracker().log_metric("RAM_usage", psutil.virtual_memory().percent, step=epoch)
 
             prev_total_loss = mean_loss
 
