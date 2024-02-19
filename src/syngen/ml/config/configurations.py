@@ -65,12 +65,19 @@ class TrainConfig:
         :param data: pandas.DataFrame
         :return: flattened dataframe
         """
-        flattened_df = pd.DataFrame()
+        df_list = []
         for column in self.json_columns:
-            flattened_df = pd.DataFrame([flatten(i, ".") for i in data[column].apply(json.loads)])
-            flattened_df = flattened_df.applymap(lambda val: np.nan if val in [list(), dict()] else val)
-            self.flattening_mapping[column] = flattened_df.columns.to_list()
-            flattened_df = pd.concat([data.drop(column, axis=1), flattened_df], axis=1)
+            flattened_data = pd.DataFrame(
+                [
+                    flatten(json.loads(i), ".")
+                    for i in data[column]
+                    if isinstance(i, str)
+                ]
+            )
+            flattened_df = pd.DataFrame(flattened_data)
+            self.flattening_mapping[column] = flattened_data.columns.to_list()
+            df_list.append(flattened_df)
+        flattened_df = pd.concat([data, *df_list], axis=1)
         return flattened_df
 
     def preprocess_data(self):

@@ -344,15 +344,23 @@ def remove_none_from_struct(input_dict):
     """
     Recursively remove None values from a nested dictionary or list
     """
-    new_dict = {}
+
+    def check_none_values(x):
+        return x is not None and not (isinstance(x, float) and np.isnan(x))
+
+    output = {}
     for k, v in input_dict.items():
         if isinstance(v, dict):
-            new_dict[k] = remove_none_from_struct(v)
+            output[k] = remove_none_from_struct(v)
         elif isinstance(v, list):
-            new_dict[k] = [i for i in v if i is not None]
-        elif v is not None:
-            new_dict[k] = v
-    return new_dict
+            output[k] = [
+                i
+                for i in v
+                if check_none_values(i)
+            ]
+        elif check_none_values(v):
+            output[k] = v
+    return output
 
 
 def fetch_unique_root(table_name: str, metadata_path: str):
