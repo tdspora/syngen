@@ -35,6 +35,8 @@ class Worker:
     hardware_metrics: List = ['system/cpu_utilization_percentage', 'system/system_memory_usage_percentage', 
                               'system/system_memory_usage_megabytes', 'system/gpu_utilization_percentage',
                               'system/gpu_memory_usage_percentage', 'system/gpu_memory_usage_megabytes']
+    
+    train_stages: List = ['PREPROCESS', 'TRAIN']
 
     def __attrs_post_init__(self):
         os.makedirs("model_artifacts/metadata", exist_ok=True)
@@ -314,16 +316,17 @@ class Worker:
 
         MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
         for table in chain_for_tables_for_training:
-            run_id = MlflowTracker().search_run(table, 'TRAIN')
-            run_info = MlflowTracker().get_run(run_id).info
-            MlflowTracker().log_metric(key=f'{table}-TRAIN-duration', value=(run_info.end_time - run_info.start_time)/1000)
-            for metric in self.hardware_metrics:
-                try:
-                    MlflowTracker().log_metric(key=f'{table}-TRAIN-{metric}', 
-                                               value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
-                                              )
-                except:
-                    pass
+            for stage in self.train_stages:
+                run_id = MlflowTracker().search_run(table, stage)
+                run_info = MlflowTracker().get_run(run_id).info
+                MlflowTracker().log_metric(key=f'{table}-{stage}-duration', value=(run_info.end_time - run_info.start_time)/1000)
+                for metric in self.hardware_metrics:
+                    try:
+                        MlflowTracker().log_metric(key=f'{table}-{stage}-{metric}', 
+                                                value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
+                                                )
+                    except:
+                        pass
         if generation_of_reports:
             for table in chain_for_tables_for_inference:
                 run_id = MlflowTracker().search_run(table, 'REPORT')
