@@ -31,7 +31,6 @@ class TrainConfig:
     batch_size: int
     json_columns: List = field(default_factory=list)
     flattening_mapping: Dict = field(default_factory=dict)
-    replaced_none_map: pd.DataFrame = pd.DataFrame()
     duplicated_columns: List = field(default_factory=list)
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
@@ -86,7 +85,6 @@ class TrainConfig:
             key for key, value in dict(Counter(flattened_df.columns.to_list())).items() if value > 1
         ]
         flattened_df = flattened_df.T.loc[~flattened_df.T.index.duplicated(), :].T
-        self.replaced_none_map = flattened_df.applymap(lambda x: isinstance(x, (list, dict)))
         flattened_df = flattened_df.applymap(lambda x: np.NaN if x in [list(), dict()] else x)
         return flattened_df
 
