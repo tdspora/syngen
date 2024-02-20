@@ -441,12 +441,14 @@ class VaeInferHandler(BaseHandler):
         config = fetch_training_config(self.paths["train_config_pickle_path"])
         json_columns = config.json_columns
         flattening_mapping = config.flattening_mapping
+        duplicated_columns = config.duplicated_columns
         if json_columns:
             for old_column, new_columns in flattening_mapping.items():
                 data[old_column] = data[new_columns].\
                     apply(lambda row: unflatten_list(row.to_dict(), "."), axis=1).\
                     apply(lambda row: remove_none_from_struct(row))
-                data.drop(new_columns, axis=1, inplace=True)
+                dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
+                data.drop(dropped_columns, axis=1, inplace=True)
         self._save_data(data)
 
     def _save_data(self, generated_data):
