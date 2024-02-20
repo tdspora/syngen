@@ -258,7 +258,9 @@ class Validator:
         Fetch the list of the columns of the source table
         """
         format_settings = metadata_of_table.get("format", {})
-        return DataLoader(metadata_of_table["train_settings"]["source"]).get_columns(**format_settings)
+        return DataLoader(
+            metadata_of_table["train_settings"]["source"]
+        ).get_columns(**format_settings)
 
     def _check_key_columns(self, table_name: str):
         """
