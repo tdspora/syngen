@@ -447,9 +447,9 @@ class VaeInferHandler(BaseHandler):
             for old_column, new_columns in flattening_mapping.items():
                 data[new_columns] = restore_empty_values(data[new_columns])
                 data[old_column] = data[new_columns].\
-                    apply(lambda row: remove_none_from_struct(row.to_dict()), axis=1)
+                    apply(lambda row: unflatten_list(row.to_dict(), "."), axis=1)
                 data[old_column] = data[old_column].\
-                    apply(lambda row: unflatten_list(row, "."))
+                    apply(lambda row: remove_none_from_struct(row))
                 dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
                 data.drop(dropped_columns, axis=1, inplace=True)
         self._save_data(data)

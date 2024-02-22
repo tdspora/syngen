@@ -1,8 +1,6 @@
-import json
 import os
 import sys
-import re
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
@@ -349,24 +347,27 @@ def check_none_values(x) -> bool:
     return x is None or (isinstance(x, float) and np.isnan(x))
 
 
-def remove_none_from_struct(input_dict: dict):
+def remove_none_from_struct(input_data: Any):
     """
-    Recursively remove np.NaN or None values
+    Remove np.NaN or None values from the nested structure
     """
-
-    output = {}
-    for k, v in input_dict.items():
-        if isinstance(v, dict):
-            output[k] = remove_none_from_struct(v)
-        elif isinstance(v, list):
-            output[k] = [
-                i
-                for i in v
-                if not check_none_values(i)
-            ]
-        elif not check_none_values(v):
-            output[k] = v
-    return output
+    if isinstance(input_data, list):
+        output = [
+            remove_none_from_struct(v)
+            for v in input_data
+            if not check_none_values(v) and v != {}
+        ]
+        output = [v for v in output if v != {}]
+        return output
+    elif isinstance(input_data, dict):
+        output = {
+            k: remove_none_from_struct(v)
+            for k, v in input_data.items()
+            if not check_none_values(v) and v != {}
+        }
+        return output
+    else:
+        return input_data
 
 
 def restore_empty_values(df: pd.DataFrame):
