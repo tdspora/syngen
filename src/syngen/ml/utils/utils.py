@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import re
@@ -5,6 +6,7 @@ from typing import List, Dict, Optional
 from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
+import re
 
 import pandas as pd
 import numpy as np
@@ -340,13 +342,13 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
-def remove_none_from_struct(input_dict):
+def remove_none_from_struct(input_dict: dict):
     """
-    Recursively remove None values from a nested dictionary or list
+    Recursively remove np.NaN or None values
     """
 
     def check_none_values(x):
-        return x is not None and not (isinstance(x, float) and np.isnan(x))
+        return x is None or (isinstance(x, float) and np.isnan(x))
 
     output = {}
     for k, v in input_dict.items():
@@ -356,11 +358,35 @@ def remove_none_from_struct(input_dict):
             output[k] = [
                 i
                 for i in v
-                if check_none_values(i)
+                if not check_none_values(i)
             ]
-        elif check_none_values(v):
+        elif not check_none_values(v):
             output[k] = v
     return output
+
+
+def restore_empty_values(df: pd.DataFrame):
+    """
+    Restore the empty dictionary values in the dataframe for nested fields
+    """
+    df = df.astype(object)
+    for i, row in df.iterrows():
+        for pos_col, col in enumerate(df.columns.to_list()):
+            if pd.isna(df.iloc[i, pos_col]):
+                columns_set = set(df.columns)
+                columns_set.remove(col)
+                nested_fields = ["".join(i.split(f"{col}.")) for i in columns_set if f"{col}." in i]
+                present_of_data = any(
+                    [
+                        not (isinstance(df.at[i, f"{col}.{nested_field}"], float)
+                             and np.isnan(df.at[i, f"{col}.{nested_field}"]))
+                        for nested_field in nested_fields
+                    ]
+                )
+
+                if nested_fields and present_of_data:
+                    df.at[i, col] = dict()
+    return df
 
 
 def fetch_unique_root(table_name: str, metadata_path: str):

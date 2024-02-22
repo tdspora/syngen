@@ -26,6 +26,7 @@ from syngen.ml.utils import (
     remove_none_from_struct,
     check_if_features_assigned,
     generate_uuid,
+    restore_empty_values,
     ProgressBarHandler
 )
 from syngen.ml.context import get_context
@@ -444,9 +445,11 @@ class VaeInferHandler(BaseHandler):
         duplicated_columns = config.duplicated_columns
         if json_columns:
             for old_column, new_columns in flattening_mapping.items():
+                data[new_columns] = restore_empty_values(data[new_columns])
                 data[old_column] = data[new_columns].\
-                    apply(lambda row: unflatten_list(row.to_dict(), "."), axis=1).\
-                    apply(lambda row: remove_none_from_struct(row))
+                    apply(lambda row: remove_none_from_struct(row.to_dict()), axis=1)
+                data[old_column] = data[old_column].\
+                    apply(lambda row: unflatten_list(row, "."))
                 dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
                 data.drop(dropped_columns, axis=1, inplace=True)
         self._save_data(data)
@@ -508,5 +511,6 @@ class VaeInferHandler(BaseHandler):
                 self._save_data(prepared_data)
         if self.metadata_path is None:
             prepared_data = prepared_data[self.dataset.order_of_columns]
+
             self._save_data(prepared_data)
         self._post_process_generated_data(prepared_data)

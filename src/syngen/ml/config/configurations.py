@@ -73,7 +73,6 @@ class TrainConfig:
                 [
                     flatten(json.loads(i), ".")
                     for i in data[column]
-                    if isinstance(i, str)
                 ]
             )
             flattened_df = pd.DataFrame(flattened_data)
