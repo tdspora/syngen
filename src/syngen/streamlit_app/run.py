@@ -33,9 +33,9 @@ class StreamlitHandler:
             min_value=1,
             value=1,
             help='- The larger number of epochs is set the better training result is.\n'
-                 '- The larger number of epochs is set the longer time for training will be required.\n'
-                 '- Actual number of epochs can be smaller that the one that was set here. '
-                 'Once training stops improving the model, further training is not needed.')
+            '- The larger number of epochs is set the longer time for training will be required.\n'
+            '- Actual number of epochs can be smaller that the one that was set here. '
+            'Once training stops improving the model, further training is not needed.')
         self.size_limit = st.number_input(
             "Rows to generate", min_value=1, max_value=None, value=1000
         )
