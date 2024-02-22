@@ -342,13 +342,17 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
+def check_none_values(x) -> bool:
+    """
+    Check if the value is None or np.NaN
+    """
+    return x is None or (isinstance(x, float) and np.isnan(x))
+
+
 def remove_none_from_struct(input_dict: dict):
     """
     Recursively remove np.NaN or None values
     """
-
-    def check_none_values(x):
-        return x is None or (isinstance(x, float) and np.isnan(x))
 
     output = {}
     for k, v in input_dict.items():
@@ -378,8 +382,7 @@ def restore_empty_values(df: pd.DataFrame):
                 nested_fields = ["".join(i.split(f"{col}.")) for i in columns_set if f"{col}." in i]
                 present_of_data = any(
                     [
-                        not (isinstance(df.at[i, f"{col}.{nested_field}"], float)
-                             and np.isnan(df.at[i, f"{col}.{nested_field}"]))
+                        check_none_values(df.at[i, f"{col}.{nested_field}"])
                         for nested_field in nested_fields
                     ]
                 )
