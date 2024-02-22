@@ -380,7 +380,9 @@ def restore_empty_values(df: pd.DataFrame):
             if pd.isna(df.iloc[i, pos_col]):
                 columns_set = set(df.columns)
                 columns_set.remove(col)
-                nested_fields = ["".join(i.split(f"{col}.")) for i in columns_set if f"{col}." in i]
+                nested_fields = [
+                    "".join(i.split(f"{col}.")) for i in columns_set if f"{col}." in i
+                ]
                 present_of_data = any(
                     [
                         check_none_values(df.at[i, f"{col}.{nested_field}"])
