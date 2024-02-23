@@ -136,6 +136,3 @@ def test_get_flattened_df_contained_more_than_one_json_column(rp_logger):
         ]
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-

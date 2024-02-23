@@ -72,17 +72,16 @@ class TrainConfig:
                     for i in data[column]
                 ]
             )
-            flattened_df = pd.DataFrame(flattened_data)
             self.flattening_mapping[column] = flattened_data.columns.to_list()
-            df_list.append(flattened_df)
-        flattened_df = pd.concat([data, *df_list], axis=1)
-        flattened_df.drop(columns=self.flattening_mapping.keys(), inplace=True)
+            df_list.append(flattened_data)
+        flattened_data = pd.concat([data, *df_list], axis=1)
+        flattened_data.drop(columns=self.flattening_mapping.keys(), inplace=True)
         self.duplicated_columns = [
             key
-            for key, value in dict(Counter(flattened_df.columns.to_list())).items()
+            for key, value in dict(Counter(flattened_data.columns.to_list())).items()
             if value > 1
         ]
-        flattened_df = flattened_df.T.loc[~flattened_df.T.index.duplicated(), :].T
+        flattened_df = flattened_data.T.loc[~flattened_data.T.index.duplicated(), :].T
         flattened_df = flattened_df.applymap(lambda x: np.NaN if x in [list(), dict()] else x)
         return flattened_df
 

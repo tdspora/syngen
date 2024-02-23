@@ -35,7 +35,9 @@ from tests.conftest import SUCCESSFUL_MESSAGE
         ),
     ],
 )
-def test_get_pk_path(mock_os_path_exists, path_to_metadata, expected_path, type_of_process, rp_logger):
+def test_get_pk_path(
+        mock_os_path_exists, path_to_metadata, expected_path, type_of_process, rp_logger
+):
     """
     Test the method '_get_pk_path' of the VaeInferHandler
     """
