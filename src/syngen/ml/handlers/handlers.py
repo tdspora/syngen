@@ -503,7 +503,7 @@ class VaeInferHandler(BaseHandler):
                 )
                 generated_data = generated_data[self.dataset.order_of_columns]
                 if generated_data is None:
-                    self._save_data(generated_data)
+                    self._save_data(prepared_data)
                 else:
                     self._save_data(generated_data)
             else:
