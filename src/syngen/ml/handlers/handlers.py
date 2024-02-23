@@ -434,10 +434,9 @@ class VaeInferHandler(BaseHandler):
         df = pd.concat([df, empty_df], axis=1)
         return df
 
-    def _post_process_generated_data(self, data: pd.DataFrame):
+    def _post_process_generated_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Post process generated data, unflatten json columns to the original state
-        :param data: generated dataframe
         """
         config = fetch_training_config(self.paths["train_config_pickle_path"])
         json_columns = config.json_columns
@@ -452,7 +451,7 @@ class VaeInferHandler(BaseHandler):
                     apply(lambda row: remove_none_from_struct(row))
                 dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
                 data.drop(dropped_columns, axis=1, inplace=True)
-        self._save_data(data)
+        return data
 
     def _save_data(self, generated_data):
         """
@@ -513,4 +512,5 @@ class VaeInferHandler(BaseHandler):
             prepared_data = prepared_data[self.dataset.order_of_columns]
 
             self._save_data(prepared_data)
-        self._post_process_generated_data(prepared_data)
+        processed_data = self._post_process_generated_data(prepared_data)
+        self._save_data(processed_data)
