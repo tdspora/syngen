@@ -56,9 +56,6 @@ class TrainConfig:
                 data[column].dropna().apply(lambda v: json.loads(v))
                 self.json_columns.append(column)
             except (TypeError, JSONDecodeError):
-                if any([isinstance(v, (list, dict)) for v in data[column]]):
-                    data[column] = data[column].apply(json.dumps)
-                    self.json_columns.append(column)
                 continue
 
     def _get_flattened_df(self, data: pd.DataFrame) -> pd.DataFrame:

@@ -272,15 +272,21 @@ class Validator:
         self._check_existence_of_columns(metadata_of_table, table_name, existed_columns)
         self._check_references_columns(table_name, metadata_of_table)
 
-    def run(self):
+    def preprocess_metadata(self):
         """
-        Run the validation process
+        Preprocess the metadata, set the metadata and the merged metadata
         """
         self._launch_validation_of_schema(metadata=self.metadata, metadata_path=self.metadata_path)
         self._define_mapping()
         self._merge_metadata()
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
+
+    def run(self):
+        """
+        Run the validation process
+        """
+        self.preprocess_metadata()
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train":
                 if self._check_existence_of_source(table_name):
