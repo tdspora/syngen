@@ -2,6 +2,7 @@ from typing import Tuple, Optional, Dict, List
 from abc import ABC, abstractmethod
 import os
 import math
+import json
 from ulid import ULID
 from uuid import UUID
 from dataclasses import dataclass, field
@@ -22,7 +23,6 @@ from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import (
     fetch_dataset,
-    fetch_training_config,
     remove_none_from_struct,
     check_if_features_assigned,
     generate_uuid,
@@ -434,15 +434,23 @@ class VaeInferHandler(BaseHandler):
         df = pd.concat([df, empty_df], axis=1)
         return df
 
+    def _fetch_flatten_config(self, path_to_flatten_config: str) -> Dict:
+        with open(path_to_flatten_config, "r") as f:
+            flatten_metadata = json.load(f).get(self.table_name)
+            return flatten_metadata
+        return flatten_metadata
+
     def _post_process_generated_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Post process generated data, unflatten json columns to the original state
         """
-        config = fetch_training_config(self.paths["train_config_pickle_path"])
-        json_columns = config.json_columns
-        flattening_mapping = config.flattening_mapping
-        duplicated_columns = config.duplicated_columns
-        if json_columns:
+        path_to_flatten_config = f"{os.getcwd()}/model_artifacts/flatten_metadata.json"
+
+        if os.path.exists(path_to_flatten_config):
+            flatten_metadata = self._fetch_flatten_config(path_to_flatten_config)
+            flattening_mapping = flatten_metadata.get("flattening_mapping")
+            duplicated_columns = flatten_metadata.get("duplicated_columns")
+
             for old_column, new_columns in flattening_mapping.items():
                 data[new_columns] = restore_empty_values(data[new_columns])
                 data[old_column] = data[new_columns].\

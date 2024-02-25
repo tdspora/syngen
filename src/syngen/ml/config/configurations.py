@@ -1,15 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Tuple, Set, List
-from collections import Counter
 import os
 import shutil
-import json
-from json import JSONDecodeError
 
-import numpy as np
 import pandas as pd
 from loguru import logger
-from flatten_json import flatten
 
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_attribute
@@ -29,9 +24,6 @@ class TrainConfig:
     metadata_path: Optional[str]
     print_report: bool
     batch_size: int
-    json_columns: List = field(default_factory=list)
-    flattening_mapping: Dict = field(default_factory=dict)
-    duplicated_columns: List = field(default_factory=list)
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
@@ -44,55 +36,11 @@ class TrainConfig:
         self._remove_existed_artifacts()
         self._prepare_dirs()
 
-    def _get_json_columns(self, data: pd.DataFrame):
-        """
-        Get the list of columns which contain JSON data
-        :param data: pandas.DataFrame
-        """
-        for column in data.columns.to_list():
-            try:
-                if pd.isnull(data[column]).all():
-                    continue
-                data[column].dropna().apply(lambda v: json.loads(v))
-                self.json_columns.append(column)
-            except (TypeError, JSONDecodeError):
-                continue
-
-    def _get_flattened_df(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Flatten the JSON columns in the dataframe
-        :param data: pandas.DataFrame
-        :return: flattened dataframe
-        """
-        df_list = []
-        for column in self.json_columns:
-            flattened_data = pd.DataFrame(
-                [
-                    flatten(json.loads(i), ".")
-                    for i in data[column]
-                ]
-            )
-            self.flattening_mapping[column] = flattened_data.columns.to_list()
-            df_list.append(flattened_data)
-        flattened_data = pd.concat([data, *df_list], axis=1)
-        flattened_data.drop(columns=self.flattening_mapping.keys(), inplace=True)
-        self.duplicated_columns = [
-            key
-            for key, value in dict(Counter(flattened_data.columns.to_list())).items()
-            if value > 1
-        ]
-        flattened_df = flattened_data.T.loc[~flattened_data.T.index.duplicated(), :].T
-        flattened_df = flattened_df.applymap(lambda x: np.NaN if x in [list(), dict()] else x)
-        return flattened_df
-
     def preprocess_data(self):
         """
         Preprocess the data for training
         """
         data, self.schema = self._extract_data()
-        self._get_json_columns(data)
-        if self.json_columns:
-            data = self._get_flattened_df(data)
         self.columns = list(data.columns)
         data = self._remove_empty_columns(data)
         self._mark_removed_columns(data)

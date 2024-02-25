@@ -1,8 +1,14 @@
-from typing import Optional
+from typing import Optional, List, Tuple, Dict
 import os
+import json
+from json import JSONDecodeError
+from collections import Counter
+import numpy as np
 
 import click
 from loguru import logger
+from flatten_json import flatten
+import pandas as pd
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
@@ -10,6 +16,7 @@ from syngen.ml.utils import (
     setup_logger,
     create_log_file
 )
+from syngen.ml.data_loaders import MetadataLoader, DataLoader
 
 
 @click.command()
@@ -147,6 +154,10 @@ def launch_train(
         "batch_size": batch_size,
         "print_report": print_report,
     }
+
+    if metadata_path:
+        preprocess_data(metadata_path)
+
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
@@ -158,15 +169,96 @@ def launch_train(
     worker.launch_train()
 
 
-def preprocess_data():
+def get_json_columns(data: pd.DataFrame) -> List[str]:
     """
-    Preprocess the data before the training process
+    Get the list of columns which contain JSON data
     """
+    json_columns = list()
+    for column in data.columns.to_list():
+        try:
+            if pd.isnull(data[column]).all():
+                continue
+            data[column].dropna().apply(lambda v: json.loads(v))
+            json_columns.append(column)
+        except (TypeError, JSONDecodeError):
+            continue
+    return json_columns
+
+
+def get_flattened_df(data: pd.DataFrame, json_columns: List) -> Tuple[pd.DataFrame, Dict]:
+    """
+    Flatten the JSON columns in the dataframe
+    """
+    df_list = list()
+    flattening_mapping = dict()
+    for column in json_columns:
+        flattened_data = pd.DataFrame(
+            [
+                    flatten(json.loads(i), ".")
+                    for i in data[column]
+            ]
+        )
+        flattening_mapping[column] = flattened_data.columns.to_list()
+        df_list.append(flattened_data)
+    flattened_data = pd.concat([data, *df_list], axis=1)
+    flattened_data.drop(columns=flattening_mapping.keys(), inplace=True)
+    flattened_df = flattened_data.T.loc[~flattened_data.T.index.duplicated(), :].T
+    flattened_df = flattened_df.applymap(lambda x: np.NaN if x in [list(), dict()] else x)
+    return flattened_df, flattening_mapping
+
+
+def run_script():
     path_to_script = f"{os.getcwd()}/model_artifacts/script.py"
     if os.path.exists(path_to_script):
         os.system(f"python3 {path_to_script}")
 
 
+def save_flatten_metadata(table_name: str, flattening_mapping: Dict, duplicated_columns: List):
+    """
+    Save the metadata of the flattening process
+    """
+    os.makedirs(f"{os.getcwd()}/model_artifacts", exist_ok=True)
+    with open(f"{os.getcwd()}/model_artifacts/flatten_metadata.json", "a") as f:
+        metadata = {
+            table_name: {
+                "flattening_mapping": flattening_mapping,
+                "duplicated_columns": duplicated_columns
+            }
+        }
+        json.dump(metadata, f)
+
+
+def handle_json_columns(path_to_metadata: str):
+    """
+    Preprocess the data contained JSON columns before the training process
+    """
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    for table, settings in metadata.items():
+        if table == "global":
+            continue
+        source = settings.get("train_settings", {}).get("source", "")
+        data, schema = DataLoader(source).load_data()
+        if json_columns := get_json_columns(data):
+            logger.info(f"The table '{table}' contains JSON columns: {', '.join(json_columns)}")
+            logger.info(f"Flattening the JSON columns in the table - '{table}'")
+            flattened_data, flattening_mapping = get_flattened_df(data, json_columns)
+            DataLoader(source).save_data(source, flattened_data)
+            duplicated_columns = [
+                key
+                for key, value in dict(Counter(flattened_data.columns.to_list())).items()
+                if value > 1
+            ]
+            save_flatten_metadata(table, flattening_mapping, duplicated_columns)
+            logger.info(f"The table '{table}' has been successfully flattened")
+
+
+def preprocess_data(path_to_metadata: str):
+    """
+    Preprocess the data before the training process
+    """
+    run_script()
+    handle_json_columns(path_to_metadata)
+
+
 if __name__ == "__main__":
-    preprocess_data()
     launch_train()

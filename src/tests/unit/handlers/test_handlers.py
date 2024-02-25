@@ -63,107 +63,43 @@ def test_get_pk_path(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize(
-    "path_to_generated_data, "
-    "path_to_train_config_pickle, "
-    "expected_result, "
-    "expected_json_columns, "
-    "expected_flattening_mapping",
-    [
-        (
-            "tests/unit/handlers/fixtures/flattened_data_with_one_json_column.csv",
-            "tests/unit/handlers/fixtures/flattened_table_with_one_json_column_train_config.pkl",
-            [
-                "id",
-                "created_at",
-                "updated_at",
-                "name",
-                "description",
-                "owner_id",
-                "is_default",
-                "is_encrypted",
-                "status",
-                "_details"
-            ],
-            ["_details"],
-            {
-                "_details": [
-                    "cluster_type",
-                    "master",
-                    "ssh_config",
-                    "username",
-                    "password",
-                    "authentication_type",
-                    "log_level",
-                    "env_variables",
-                    "key_passphrase",
-                    "private_key"
-                ]
-            }
-        ),
-        (
-            "tests/unit/handlers/fixtures/flattened_data_with_two_json_columns.csv",
-            "tests/unit/handlers/fixtures/flattened_table_with_two_json_columns_train_config.pkl",
-            [
-                "id",
-                "created_at",
-                "updated_at",
-                "start_time",
-                "finish_time",
-                "status",
-                "pipeline_id",
-                "user_id",
-                "progress",
-                "details"
-            ],
-            ["progress", "details"],
-            {
-                "progress": [
-                    "info.finished",
-                    "info.total",
-                    "step"
-                ],
-                "details": [
-                    "description",
-                    "source.id",
-                    "source.name",
-                    "source.connection_string",
-                    "target.id",
-                    "target.name",
-                    "target.connection_string",
-                    "cluster.id",
-                    "cluster.name",
-                    "cluster.master_webui",
-                    "cluster.history_server",
-                    "integrity_type",
-                    "total_tables",
-                    "included_tables",
-                    "base_table"
-                ]
-            }
-        )
-    ],
+@patch("os.path.exists", return_value=True)
+@patch.object(VaeInferHandler, "_fetch_flatten_config",
+              return_value=dict({
+                  "flattening_mapping":
+                      {
+                          "_details": [
+                              "cluster_type",
+                              "master",
+                              "ssh_config",
+                              "username",
+                              "password",
+                              "authentication_type",
+                              "log_level",
+                              "env_variables",
+                              "key_passphrase",
+                              "private_key"
+                          ]
+                      },
+                  "duplicated_columns": []
+              })
 )
-def test_post_process_generated_data(
-        path_to_generated_data,
-        path_to_train_config_pickle,
-        expected_result,
-        expected_json_columns,
-        expected_flattening_mapping,
-        rp_logger
+def test_post_process_generated_data_with_one_json_column(
+        mock_os_path_exists, mock_fetch_flatten_config, rp_logger
 ):
     """
-    Test the postprocessing of the flattened generated data
+    Test the postprocessing of the flattened generated data contained one json column
     """
+    rp_logger.info(
+        "Test the method '_post_process_generated_data' fo the class VaeInferHandler "
+        "for the flattened generated data with one json column"
+    )
     with patch.object(VaeInferHandler, "__post_init__", lambda x: None):
         handler = VaeInferHandler(
             metadata={},
             table_name="flattened_table",
-            paths={
-                "train_config_pickle_path":
-                    path_to_train_config_pickle
-            },
-            metadata_path="",
+            paths={},
+            metadata_path="path/to/not_existed/metadata.yaml",
             random_seed=0,
             size=100,
             batch_size=100,
@@ -174,9 +110,89 @@ def test_post_process_generated_data(
             log_level="INFO",
             type_of_process="infer",
         )
-        data = pd.read_csv(path_to_generated_data)
-        config = fetch_training_config(path_to_train_config_pickle)
-        assert config.json_columns == expected_json_columns
-        assert config.flattening_mapping == expected_flattening_mapping
+        data = pd.read_csv("tests/unit/handlers/fixtures/flattened_data_with_one_json_column.csv")
         un_flattened_data = handler._post_process_generated_data(data)
-        assert un_flattened_data.columns.to_list() == expected_result
+        assert un_flattened_data.columns.to_list() == [
+                "id",
+                "created_at",
+                "updated_at",
+                "name",
+                "description",
+                "owner_id",
+                "is_default",
+                "is_encrypted",
+                "status",
+                "_details"
+            ]
+
+
+@patch("os.path.exists", return_value=True)
+@patch.object(VaeInferHandler, "_fetch_flatten_config",
+              return_value={
+                    "flattening_mapping": {
+                        "progress": [
+                            "info.finished",
+                            "info.total",
+                            "step"
+                        ],
+                        "details": [
+                            "description",
+                            "source.id",
+                            "source.name",
+                            "source.connection_string",
+                            "target.id",
+                            "target.name",
+                            "target.connection_string",
+                            "cluster.id",
+                            "cluster.name",
+                            "cluster.master_webui",
+                            "cluster.history_server",
+                            "integrity_type",
+                            "total_tables",
+                            "included_tables",
+                            "base_table"
+                        ]
+                    },
+                        "duplicated_columns": []
+                    }
+              )
+def test_post_process_generated_data_with_two_json_column(
+        mock_os_path_exists, mock_fetch_flatten_config, rp_logger
+):
+    """
+    Test the postprocessing of the flattened generated data contained two json columns
+    """
+    rp_logger.info(
+        "Test the method '_post_process_generated_data' fo the class VaeInferHandler "
+        "for the flattened generated data with two json columns"
+    )
+    with patch.object(VaeInferHandler, "__post_init__", lambda x: None):
+        handler = VaeInferHandler(
+            metadata={},
+            table_name="flattened_table",
+            paths={},
+            metadata_path="path/to/not_existed/metadata.yaml",
+            random_seed=0,
+            size=100,
+            batch_size=100,
+            run_parallel=False,
+            print_report=False,
+            get_infer_metrics=False,
+            wrapper_name="MMDVAEWrapper",
+            log_level="INFO",
+            type_of_process="infer",
+        )
+        data = pd.read_csv("tests/unit/handlers/fixtures/flattened_data_with_two_json_columns.csv")
+        un_flattened_data = handler._post_process_generated_data(data)
+        assert un_flattened_data.columns.to_list() == [
+            "id",
+            "created_at",
+            "updated_at",
+            "start_time",
+            "finish_time",
+            "status",
+            "pipeline_id",
+            "user_id",
+            "progress",
+            "details"
+        ]
