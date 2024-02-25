@@ -5,7 +5,6 @@ import pandas as pd
 
 from syngen.ml.handlers import VaeInferHandler
 from syngen.ml.data_loaders import MetadataLoader
-from syngen.ml.utils import fetch_training_config
 from tests.conftest import SUCCESSFUL_MESSAGE
 
 
@@ -14,24 +13,24 @@ from tests.conftest import SUCCESSFUL_MESSAGE
     "path_to_metadata, expected_path, type_of_process",
     [
         (
-            "tests/unit/handlers/fixtures/metadata.yaml",
-            "path/to/merged_infer_parent-table.csv",
-            "train",
+                "tests/unit/handlers/fixtures/metadata.yaml",
+                "path/to/merged_infer_parent-table.csv",
+                "train",
         ),
         (
-            "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
-            "path/to/merged_infer_parent-table.csv",
-            "train",
+                "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
+                "path/to/merged_infer_parent-table.csv",
+                "train",
         ),
         (
-            "tests/unit/handlers/fixtures/metadata.yaml",
-            "../data/parent_table_generated.csv",
-            "infer",
+                "tests/unit/handlers/fixtures/metadata.yaml",
+                "../data/parent_table_generated.csv",
+                "infer",
         ),
         (
-            "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
-            "model_artifacts/tmp_store/parent-table/merged_infer_parent-table.csv",
-            "infer",
+                "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
+                "model_artifacts/tmp_store/parent-table/merged_infer_parent-table.csv",
+                "infer",
         ),
     ],
 )
@@ -83,7 +82,7 @@ def test_get_pk_path(
                       },
                   "duplicated_columns": []
               })
-)
+              )
 def test_post_process_generated_data_with_one_json_column(
         mock_os_path_exists, mock_fetch_flatten_config, rp_logger
 ):
@@ -113,50 +112,49 @@ def test_post_process_generated_data_with_one_json_column(
         data = pd.read_csv("tests/unit/handlers/fixtures/flattened_data_with_one_json_column.csv")
         un_flattened_data = handler._post_process_generated_data(data)
         assert un_flattened_data.columns.to_list() == [
-                "id",
-                "created_at",
-                "updated_at",
-                "name",
-                "description",
-                "owner_id",
-                "is_default",
-                "is_encrypted",
-                "status",
-                "_details"
-            ]
+            "id",
+            "created_at",
+            "updated_at",
+            "name",
+            "description",
+            "owner_id",
+            "is_default",
+            "is_encrypted",
+            "status",
+            "_details"
+        ]
 
 
 @patch("os.path.exists", return_value=True)
 @patch.object(VaeInferHandler, "_fetch_flatten_config",
               return_value={
-                    "flattening_mapping": {
-                        "progress": [
-                            "info.finished",
-                            "info.total",
-                            "step"
-                        ],
-                        "details": [
-                            "description",
-                            "source.id",
-                            "source.name",
-                            "source.connection_string",
-                            "target.id",
-                            "target.name",
-                            "target.connection_string",
-                            "cluster.id",
-                            "cluster.name",
-                            "cluster.master_webui",
-                            "cluster.history_server",
-                            "integrity_type",
-                            "total_tables",
-                            "included_tables",
-                            "base_table"
-                        ]
-                    },
-                        "duplicated_columns": []
-                    }
-              )
-def test_post_process_generated_data_with_two_json_column(
+                  "flattening_mapping": {
+                      "progress": [
+                          "info.finished",
+                          "info.total",
+                          "step"
+                      ],
+                      "details": [
+                          "description",
+                          "source.id",
+                          "source.name",
+                          "source.connection_string",
+                          "target.id",
+                          "target.name",
+                          "target.connection_string",
+                          "cluster.id",
+                          "cluster.name",
+                          "cluster.master_webui",
+                          "cluster.history_server",
+                          "integrity_type",
+                          "total_tables",
+                          "included_tables",
+                          "base_table"
+                      ]
+                  },
+                  "duplicated_columns": []
+              })
+def test_post_process_generated_data_with_two_json_columns(
         mock_os_path_exists, mock_fetch_flatten_config, rp_logger
 ):
     """

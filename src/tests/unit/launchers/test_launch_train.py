@@ -403,6 +403,16 @@ def test_get_flattened_df_contained_one_json_column(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_get_json_columns_contained_more_than_one_json_column(rp_logger):
+    rp_logger.info(
+        "Test that the method 'get_json_columns' method "
+        "for the dataframe contained more than one json column"
+    )
+    path_to_data = "tests/unit/launchers/fixtures/data_with_two_json_columns.csv"
+    data, schema = DataLoader(path_to_data).load_data()
+    assert get_json_columns(data) == ["progress", "details"]
+
+
 def test_get_flattened_df_with_df_contained_more_than_one_json_column(rp_logger):
     rp_logger.info(
         "Test that the method 'get_flattened_df' method "
