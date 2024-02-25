@@ -18,8 +18,6 @@ class PreprocessHandler:
     """
     def __init__(self, path_to_metadata: str):
         self.metadata_path = path_to_metadata
-        self.metadata = MetadataLoader(self.metadata_path).load_data()
-        self.data_loader = DataLoader.__name__
 
     @staticmethod
     def run_script():
@@ -88,11 +86,12 @@ class PreprocessHandler:
         """
         Preprocess the data contained JSON columns before the training process
         """
-        for table, settings in self.metadata.items():
+        metadata = MetadataLoader(self.metadata_path).load_data()
+        for table, settings in metadata.items():
             if table == "global":
                 continue
             source = settings.get("train_settings", {}).get("source", "")
-            data, schema = globals()[self.data_loader](source).load_data()
+            data, schema = DataLoader(source).load_data()
             if json_columns := self.get_json_columns(data):
                 logger.info(
                     f"The table '{table}' contains JSON columns: {', '.join(json_columns)}"
