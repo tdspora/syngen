@@ -24,7 +24,7 @@ class StreamlitHandler:
     """
     A class for handling the Streamlit app
     """
-    def __init__(self, uploaded_file, epochs=10, size_limit=1000, print_report=False):
+    def __init__(self, uploaded_file, epochs, size_limit, print_report):
         self.log_queue = Queue()
         self.progress_handler = ProgressBarHandler()
         self.log_error_queue = Queue()
