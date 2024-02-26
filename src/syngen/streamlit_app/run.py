@@ -19,21 +19,18 @@ from streamlit_option_menu import option_menu
 UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
+
 class StreamlitHandler:
     """
     A class for handling the Streamlit app
     """
-    def __init__(self, uploaded_file):
+    def __init__(self, uploaded_file, epochs=10, size_limit=1000, print_report=False):
         self.log_queue = Queue()
         self.progress_handler = ProgressBarHandler()
         self.log_error_queue = Queue()
-        self.epochs = st.number_input("Epochs", min_value=1, value=1, help='- The larger number of epochs is set the better training result is.\n' +
-      '- The larger number of epochs is set the longer time for training will be required.\n' +
-      '- Actual number of epochs can be smaller that the one that was set here. Once training stops improving the model, further training is not needed.')
-        self.size_limit = st.number_input(
-            "Rows to generate", min_value=1, max_value=None, value=1000
-        )
-        self.print_report = st.checkbox("Create an accuracy report", value=False)
+        self.epochs = epochs
+        self.size_limit = size_limit
+        self.print_report = print_report
         self.file_name = uploaded_file.name
         self.table_name = os.path.splitext(self.file_name)[0]
         self.file_path = os.path.join(UPLOAD_DIRECTORY, self.file_name)
@@ -280,10 +277,25 @@ def run():
             st.warning("Please upload a CSV file to proceed")
         if uploaded_file:
             show_data(uploaded_file)
-            app = StreamlitHandler(uploaded_file)
+            epochs = st.number_input(
+                "Epochs",
+                min_value=1,
+                value=1,
+                help="- The larger number of epochs is set the better training result is.\n'"
+                     "- The larger number of epochs is set the longer time for training will be required.\n'"
+                     "- Actual number of epochs can be smaller that the one that was set here. "
+                     "Once training stops improving the model, further training is not needed."
+            )
+            size_limit = st.number_input(
+                "Rows to generate",
+                min_value=1, max_value=None,
+                value=1000
+            )
+            print_report = st.checkbox("Create an accuracy report", value=False)
             if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
             ):
+                app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
                 runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
                 st.session_state.running = True
                 lock = threading.Lock()
@@ -311,23 +323,23 @@ def run():
                     app.progress_handler.reset_instance()
                     st.success("Data generation completed")
                     st.rerun()
-            with st.container():
-                generate_button(
-                    "Download generated data",
-                    app.path_to_generated_data,
-                    f"generated_data_{app.sl_table_name}.csv"
-                )
-                generate_button(
-                    "Download logs",
-                    os.getenv("SUCCESS_LOG_FILE", ""),
-                    f"logs_{app.sl_table_name}.log"
-                )
-                if app.print_report:
+                with st.container():
                     generate_button(
-                        "Download report",
-                        app.path_to_report,
-                        f"accuracy_report_{app.sl_table_name}.html"
+                        "Download generated data",
+                        app.path_to_generated_data,
+                        f"generated_data_{app.sl_table_name}.csv"
                     )
+                    generate_button(
+                        "Download logs",
+                        os.getenv("SUCCESS_LOG_FILE", ""),
+                        f"logs_{app.sl_table_name}.log"
+                    )
+                    if app.print_report:
+                        generate_button(
+                            "Download report",
+                            app.path_to_report,
+                            f"accuracy_report_{app.sl_table_name}.html"
+                        )
 
 
 if __name__ == "__main__":
