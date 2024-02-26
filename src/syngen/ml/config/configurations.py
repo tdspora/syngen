@@ -286,4 +286,7 @@ class InferConfig:
             "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
             "path_to_no_ml":
                 f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
+            "path_to_flatten_metadata":
+                f"model_artifacts/tmp_store/flatten_configs/"
+                f"flatten_metadata_{fetch_unique_root(None, self.metadata_path)}.json"
         }

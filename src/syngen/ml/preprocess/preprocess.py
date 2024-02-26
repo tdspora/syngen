@@ -90,7 +90,7 @@ class PreprocessHandler:
         return json_columns
 
     @staticmethod
-    def _get_flattened_df(data: pd.DataFrame, json_columns: List) -> Tuple[pd.DataFrame, Dict]:
+    def _get_flattened_df(data: pd.DataFrame, json_columns: List) -> Tuple[pd.DataFrame, Dict, List]:
         """
         Flatten the JSON columns in the dataframe
         """
@@ -106,10 +106,15 @@ class PreprocessHandler:
             flattening_mapping[column] = flattened_data.columns.to_list()
             df_list.append(flattened_data)
         flattened_data = pd.concat([data, *df_list], axis=1)
+        duplicated_columns = [
+            key
+            for key, value in dict(Counter(flattened_data.columns.to_list())).items()
+            if value > 1
+        ]
         flattened_data.drop(columns=flattening_mapping.keys(), inplace=True)
         flattened_df = flattened_data.T.loc[~flattened_data.T.index.duplicated(), :].T
         flattened_df = flattened_df.applymap(lambda x: np.NaN if x in [list(), dict()] else x)
-        return flattened_df, flattening_mapping
+        return flattened_df, flattening_mapping, duplicated_columns
 
     def _save_flatten_metadata(self, metadata: Dict):
         """
@@ -138,19 +143,17 @@ class PreprocessHandler:
                     f"The table '{table}' contains JSON columns: {', '.join(json_columns)}"
                 )
                 logger.info(f"Flattening the JSON columns in the table - '{table}'")
-                flattened_data, flattening_mapping = self._get_flattened_df(data, json_columns)
+                (flattened_data,
+                 flattening_mapping,
+                 duplicated_columns) = self._get_flattened_df(data, json_columns)
                 DataLoader(path_to_input_data).save_data(path_to_input_data, flattened_data)
-                duplicated_columns = [
-                    key
-                    for key, value in dict(Counter(flattened_data.columns.to_list())).items()
-                    if value > 1
-                ]
                 flatten_metadata[table] = {
                     "flattening_mapping": flattening_mapping,
                     "duplicated_columns": duplicated_columns
                 }
                 logger.info(f"The table '{table}' has been successfully flattened")
-        self._save_flatten_metadata(flatten_metadata)
+        if flatten_metadata:
+            self._save_flatten_metadata(flatten_metadata)
 
     def run(self):
         """

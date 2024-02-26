@@ -443,7 +443,7 @@ class VaeInferHandler(BaseHandler):
         """
         Post process generated data, unflatten json columns to the original state
         """
-        path_to_flatten_config = f"{os.getcwd()}/model_artifacts/flatten_metadata.json"
+        path_to_flatten_config = self.paths["path_to_flatten_metadata"]
 
         if os.path.exists(path_to_flatten_config):
             flatten_metadata = self._fetch_flatten_config(path_to_flatten_config)
