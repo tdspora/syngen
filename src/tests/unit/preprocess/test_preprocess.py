@@ -14,7 +14,7 @@ def test_get_json_columns_contained_one_json_column(rp_logger):
                         "metadata_for_table_with_one_json_column.yaml")
     handler = PreprocessHandler(path_to_metadata)
     data, schema = DataLoader(path_to_data).load_data()
-    assert handler.get_json_columns(data) == ["_details"]
+    assert handler._get_json_columns(data) == ["_details"]
 
 
 def test_get_flattened_df_contained_one_json_column(rp_logger):
@@ -29,7 +29,7 @@ def test_get_flattened_df_contained_one_json_column(rp_logger):
     handler = PreprocessHandler(path_to_metadata)
     data, schema = DataLoader(path_to_data).load_data()
     json_columns = ["_details"]
-    flattened_data, flattening_mapping = handler.get_flattened_df(data, json_columns)
+    flattened_data, flattening_mapping = handler._get_flattened_df(data, json_columns)
     assert flattened_data.columns.to_list() == [
         "id",
         "created_at",
@@ -78,7 +78,7 @@ def test_get_json_columns_contained_more_than_one_json_column(rp_logger):
                         "metadata_for_table_with_two_json_columns.yaml")
     handler = PreprocessHandler(path_to_metadata)
     data, schema = DataLoader(path_to_data).load_data()
-    assert handler.get_json_columns(data) == ["progress", "details"]
+    assert handler._get_json_columns(data) == ["progress", "details"]
 
 
 def test_get_flattened_df_with_df_contained_more_than_one_json_column(rp_logger):
@@ -93,7 +93,7 @@ def test_get_flattened_df_with_df_contained_more_than_one_json_column(rp_logger)
     data, schema = DataLoader(path_to_data).load_data()
     handler = PreprocessHandler(path_to_metadata)
     json_columns = ["progress", "details"]
-    flattened_data, flattening_mapping = handler.get_flattened_df(data, json_columns)
+    flattened_data, flattening_mapping = handler._get_flattened_df(data, json_columns)
     assert flattened_data.columns.to_list() == [
         "id",
         "created_at",

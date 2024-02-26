@@ -177,7 +177,7 @@ class CSVLoader:
             logger.error(message)
             raise FileNotFoundError(message)
 
-        return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
+        return df, CSVConvertor(df).schema
 
     def load_data(self, path, **kwargs):
         return self._load_data(path, format=self.format, **kwargs)
@@ -464,7 +464,7 @@ class ExcelLoader:
                 dfs = [df for sheet_name, df in df.items()]
                 df = pd.concat(dfs, ignore_index=True)
             global_context({})
-            return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
+            return df, CSVConvertor(df).schema
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"

@@ -438,7 +438,6 @@ class VaeInferHandler(BaseHandler):
         with open(path_to_flatten_config, "r") as f:
             flatten_metadata = json.load(f).get(self.table_name)
             return flatten_metadata
-        return flatten_metadata
 
     def _post_process_generated_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """

@@ -395,7 +395,7 @@ def restore_empty_values(df: pd.DataFrame):
     return df
 
 
-def fetch_unique_root(table_name: str, metadata_path: str):
+def fetch_unique_root(table_name: Optional[str], metadata_path: Optional[str]):
     """
     Construct the unique constant substring for use in the name of the experiment and log file
     """

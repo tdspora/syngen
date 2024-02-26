@@ -1,13 +1,13 @@
+import os
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Tuple, Set, List
-import os
-import shutil
 
 import pandas as pd
 from loguru import logger
 
 from syngen.ml.data_loaders import DataLoader
-from syngen.ml.utils import slugify_attribute
+from syngen.ml.convertor import CSVConvertor
+from syngen.ml.utils import slugify_attribute, fetch_unique_root
 
 
 @dataclass
@@ -33,8 +33,6 @@ class TrainConfig:
 
     def __post_init__(self):
         self.paths = self._get_paths()
-        self._remove_existed_artifacts()
-        self._prepare_dirs()
 
     def preprocess_data(self):
         """
@@ -65,35 +63,14 @@ class TrainConfig:
         """
         self.batch_size = min(self.batch_size, self.row_subset)
 
-    def _remove_existed_artifacts(self):
-        """
-        Remove existed artifacts from previous train process
-        """
-        if os.path.exists(self.paths["resources_path"]):
-            shutil.rmtree(self.paths["resources_path"])
-            logger.info(
-                f"The artifacts located in the path - '{self.paths['resources_path']}' "
-                f"were removed"
-            )
-        if os.path.exists(self.paths["tmp_store_path"]):
-            shutil.rmtree(self.paths["tmp_store_path"])
-            logger.info(
-                f"The artifacts located in the path - '{self.paths['tmp_store_path']}' "
-                f"were removed"
-            )
-
-    def _prepare_dirs(self):
-        """
-        Create main directories for saving original, synthetic data and model artifacts
-        """
-        os.makedirs(self.paths["model_artifacts_path"], exist_ok=True)
-        os.makedirs(self.paths["state_path"], exist_ok=True)
-        os.makedirs(self.paths["tmp_store_path"], exist_ok=True)
-
     def _load_source(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Return dataframe and schema of original data
         """
+        if os.path.exists(self.paths["path_to_flatten_metadata"]):
+            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+            schema = CSVConvertor(data).schema
+            return data, schema
         return DataLoader(self.source).load_data()
 
     def _remove_empty_columns(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -209,7 +186,10 @@ class TrainConfig:
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path":
-                f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
+                f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
+            "path_to_flatten_metadata":
+                f"model_artifacts/tmp_store/flatten_configs/"
+                f"flatten_metadata_{fetch_unique_root(None, self.metadata_path)}.json"
         }
 
 
