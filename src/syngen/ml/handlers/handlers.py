@@ -2,7 +2,6 @@ from typing import Tuple, Optional, Dict, List
 from abc import ABC, abstractmethod
 import os
 import math
-import json
 from ulid import ULID
 from uuid import UUID
 from dataclasses import dataclass, field
@@ -17,16 +16,13 @@ from collections import OrderedDict
 from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
-from flatten_json import unflatten_list
 
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import (
     fetch_dataset,
-    remove_none_from_struct,
     check_if_features_assigned,
     generate_uuid,
-    restore_empty_values,
     ProgressBarHandler
 )
 from syngen.ml.context import get_context
@@ -434,32 +430,6 @@ class VaeInferHandler(BaseHandler):
         df = pd.concat([df, empty_df], axis=1)
         return df
 
-    def _fetch_flatten_config(self, path_to_flatten_config: str) -> Dict:
-        with open(path_to_flatten_config, "r") as f:
-            flatten_metadata = json.load(f).get(self.table_name)
-            return flatten_metadata
-
-    def _post_process_generated_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Post process generated data, unflatten json columns to the original state
-        """
-        path_to_flatten_config = self.paths["path_to_flatten_metadata"]
-
-        if os.path.exists(path_to_flatten_config):
-            flatten_metadata = self._fetch_flatten_config(path_to_flatten_config)
-            flattening_mapping = flatten_metadata.get("flattening_mapping")
-            duplicated_columns = flatten_metadata.get("duplicated_columns")
-
-            for old_column, new_columns in flattening_mapping.items():
-                data[new_columns] = restore_empty_values(data[new_columns])
-                data[old_column] = data[new_columns].\
-                    apply(lambda row: unflatten_list(row.to_dict(), "."), axis=1)
-                data[old_column] = data[old_column].\
-                    apply(lambda row: remove_none_from_struct(row))
-                dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
-                data.drop(dropped_columns, axis=1, inplace=True)
-        return data
-
     def _save_data(self, generated_data):
         """
         Save generated data to the path
@@ -519,5 +489,3 @@ class VaeInferHandler(BaseHandler):
             prepared_data = prepared_data[self.dataset.order_of_columns]
 
             self._save_data(prepared_data)
-        processed_data = self._post_process_generated_data(prepared_data)
-        self._save_data(processed_data)

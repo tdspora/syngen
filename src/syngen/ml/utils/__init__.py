@@ -11,8 +11,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     trim_string,
     check_if_features_assigned,
     fetch_training_config,
-    remove_none_from_struct,
-    restore_empty_values,
     fetch_unique_root,
     generate_uuid,
     generate_uuids,

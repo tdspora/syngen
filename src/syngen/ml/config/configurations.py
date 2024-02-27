@@ -189,7 +189,7 @@ class TrainConfig:
                 f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
             "path_to_flatten_metadata":
                 f"model_artifacts/tmp_store/flatten_configs/"
-                f"flatten_metadata_{fetch_unique_root(None, self.metadata_path)}.json"
+                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
         }
 
 
@@ -288,5 +288,5 @@ class InferConfig:
                 f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
             "path_to_flatten_metadata":
                 f"model_artifacts/tmp_store/flatten_configs/"
-                f"flatten_metadata_{fetch_unique_root(None, self.metadata_path)}.json"
+                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
         }

@@ -10,7 +10,7 @@ from syngen.ml.utils import (
     setup_logger,
     create_log_file
 )
-from syngen.ml.preprocess import PreprocessHandler
+from syngen.ml.processors import PreprocessHandler
 
 
 @click.command()
@@ -149,8 +149,7 @@ def launch_train(
         "print_report": print_report,
     }
 
-    if metadata_path:
-        PreprocessHandler(metadata_path).run()
+    PreprocessHandler(metadata_path, table_name, settings).run()
 
     worker = Worker(
         table_name=table_name,
