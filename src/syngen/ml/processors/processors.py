@@ -285,35 +285,55 @@ class PostprocessHandler(Processor):
         data, schema = DataLoader(path_to_generated_data).load_data()
         return data
 
+    def _post_process_generated_data(
+            self,
+            path_to_generated_data: str,
+            flattening_mapping: Dict,
+            duplicated_columns: List
+    ) -> pd.DataFrame:
+        """
+        Postprocess the generated data
+        :param path_to_generated_data:
+        :param flattening_mapping:
+        :param duplicated_columns:
+        :return:
+        """
+        data = self._load_generated_data(path_to_generated_data)
+        for old_column, new_columns in flattening_mapping.items():
+            data[new_columns] = self._restore_empty_values(data[new_columns])
+            data[old_column] = data[new_columns]. \
+                apply(lambda row: unflatten_list(row.to_dict(), "."), axis=1)
+            data[old_column] = data[old_column]. \
+                apply(lambda row: self._remove_none_from_struct(row))
+            dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
+            data.drop(dropped_columns, axis=1, inplace=True)
+        return data
+
     def run(self):
         """
-        Postprocess generated data, unflatten json columns to the original state
+        Launch the postprocessing of generated data,
+        and save the processed data to the predefined path
         """
-        path_to_flatten_config = self.path_to_flatten_metadata
         metadata = self._fetch_metadata()
 
-        if os.path.exists(path_to_flatten_config):
+        if os.path.exists(self.path_to_flatten_metadata):
             logger.info("Start postprocessing of the generated data")
             for table in metadata.keys():
                 if table == "global":
                     continue
-                destination = metadata[table].get("infer_settings", {}).get("destination", "")
-                path_to_generated_data = (f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/{slugify(table)}/"
-                                          f"merged_infer_{slugify(table)}.csv")
-                path_to_destination = destination if destination else path_to_generated_data
                 flatten_metadata = self._fetch_flatten_config(table)
                 flattening_mapping = flatten_metadata.get("flattening_mapping")
                 duplicated_columns = flatten_metadata.get("duplicated_columns")
                 order_of_columns = flatten_metadata.get("order_of_columns")
-                data = self._load_generated_data(path_to_generated_data)
-                for old_column, new_columns in flattening_mapping.items():
-                    data[new_columns] = self._restore_empty_values(data[new_columns])
-                    data[old_column] = data[new_columns].\
-                        apply(lambda row: unflatten_list(row.to_dict(), "."), axis=1)
-                    data[old_column] = data[old_column].\
-                        apply(lambda row: self._remove_none_from_struct(row))
-                    dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
-                    data.drop(dropped_columns, axis=1, inplace=True)
+                path_to_generated_data = (f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/"
+                                          f"{slugify(table)}/merged_infer_{slugify(table)}.csv")
+                data = self._post_process_generated_data(
+                    path_to_generated_data,
+                    flattening_mapping,
+                    duplicated_columns
+                )
+                destination = metadata[table].get("infer_settings", {}).get("destination", "")
+                path_to_destination = destination if destination else path_to_generated_data
                 self._save_generated_data(data, path_to_destination, order_of_columns)
                 logger.info("Finish postprocessing of the generated data")
 
