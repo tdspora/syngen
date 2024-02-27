@@ -15,6 +15,9 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
 from streamlit_option_menu import option_menu
 
+# Streamlit Keycloak Import
+from dataclasses import asdict
+from streamlit_keycloak import login
 
 UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -173,7 +176,10 @@ def get_running_status():
         return False
 
 
-def run():
+def auth_main():
+    """
+    Function to manage the authentication flow and main app dashboard.
+    """
     path_to_logo = f"{os.path.join(os.path.dirname(__file__))}/img/logo.svg"
     path_to_logo_img = f"{os.path.join(os.path.dirname(__file__))}/img/favicon.svg"
     st.set_page_config(
@@ -181,6 +187,19 @@ def run():
         page_icon=path_to_logo_img
     )
     st.sidebar.image(path_to_logo, use_column_width=True)
+    st.title("SynGen UI")
+
+    keycloak = login(
+        url="https://example.com:8081",  # Adjust this to your Keycloak URL
+        realm="syngen-realm",
+        client_id="syngen-integration"
+    )
+    if keycloak.authenticated:
+        run()  # Run the main app logic if authenticated
+    else:
+        st.error("You are not authenticated. Please log in to continue.")
+
+def run():
     st.markdown(f"""
         <style>
         {"".join(open(f"{os.path.join(os.path.dirname(__file__))}/css/font_style.css").readlines())}
@@ -268,7 +287,7 @@ def run():
                                )
 
     if selected == "Basic":
-        st.title("SynGen UI")
+#        st.title("SynGen UI")
         uploaded_file = st.file_uploader(
             "Upload a CSV file",
             type="csv",
@@ -331,4 +350,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    auth_main()
