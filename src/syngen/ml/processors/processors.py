@@ -253,7 +253,8 @@ class PostprocessHandler(Processor):
         else:
             return input_data
 
-    def _restore_empty_values(self, df: pd.DataFrame):
+    @staticmethod
+    def _restore_empty_values(df: pd.DataFrame):
         """
         Restore the empty dictionary values in the dataframe for nested fields
         """
@@ -266,14 +267,8 @@ class PostprocessHandler(Processor):
                     nested_fields = [
                         "".join(i.split(f"{col}.")) for i in columns_set if f"{col}." in i
                     ]
-                    present_of_data = any(
-                        [
-                            self._check_none_values(df.at[i, f"{col}.{nested_field}"])
-                            for nested_field in nested_fields
-                        ]
-                    )
 
-                    if nested_fields and present_of_data:
+                    if nested_fields:
                         df.at[i, col] = dict()
         return df
 
