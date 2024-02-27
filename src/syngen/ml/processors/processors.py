@@ -293,10 +293,6 @@ class PostprocessHandler(Processor):
     ) -> pd.DataFrame:
         """
         Postprocess the generated data
-        :param path_to_generated_data:
-        :param flattening_mapping:
-        :param duplicated_columns:
-        :return:
         """
         data = self._load_generated_data(path_to_generated_data)
         for old_column, new_columns in flattening_mapping.items():

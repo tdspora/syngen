@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 from syngen.ml.data_loaders import DataLoader
 from tests.conftest import SUCCESSFUL_MESSAGE
@@ -31,7 +29,9 @@ def test_get_flattened_df_contained_one_json_column(rp_logger):
     handler = PreprocessHandler(path_to_metadata, None, {})
     data, schema = DataLoader(path_to_data).load_data()
     json_columns = ["_details"]
-    flattened_data, flattening_mapping, duplicated_columns = handler._get_flattened_df(data, json_columns)
+    (flattened_data,
+     flattening_mapping,
+     duplicated_columns) = handler._get_flattened_df(data, json_columns)
     assert flattened_data.columns.to_list() == [
         "id",
         "created_at",
@@ -96,7 +96,9 @@ def test_get_flattened_df_with_df_contained_more_than_one_json_column(rp_logger)
     data, schema = DataLoader(path_to_data).load_data()
     handler = PreprocessHandler(path_to_metadata, None, {})
     json_columns = ["progress", "details"]
-    flattened_data, flattening_mapping, duplicated_columns = handler._get_flattened_df(data, json_columns)
+    (flattened_data,
+     flattening_mapping,
+     duplicated_columns) = handler._get_flattened_df(data, json_columns)
     assert flattened_data.columns.to_list() == [
         "id",
         "created_at",
@@ -161,8 +163,10 @@ def test_post_process_generated_data_with_one_json_column(rp_logger):
         "Test the method '_post_process_generated_data' fo the class PostprocessHandler "
         "for the flattened generated data with one json column"
     )
-    path_to_metadata = "tests/unit/processors/fixtures/metadata_for_table_with_one_json_column.yaml"
-    path_to_flattened_data = "tests/unit/processors/fixtures/flattened_data_with_one_json_column.csv"
+    path_to_metadata = ("tests/unit/processors/fixtures/"
+                        "metadata_for_table_with_one_json_column.yaml")
+    path_to_flattened_data = ("tests/unit/processors/fixtures/"
+                              "flattened_data_with_one_json_column.csv")
     handler = PostprocessHandler(path_to_metadata, None, {})
     un_flattened_data = handler._post_process_generated_data(
         path_to_generated_data=path_to_flattened_data,
@@ -204,8 +208,10 @@ def test_post_process_generated_data_with_two_json_columns(rp_logger):
         "Test the method '_post_process_generated_data' fo the class PostproccesorHandler "
         "for the flattened generated data with one json column"
     )
-    path_to_metadata = "tests/unit/processors/fixtures/metadata_for_table_with_two_json_columns.yaml"
-    path_to_flattened_data = "tests/unit/processors/fixtures/flattened_data_with_two_json_columns.csv"
+    path_to_metadata = ("tests/unit/processors/fixtures/"
+                        "metadata_for_table_with_two_json_columns.yaml")
+    path_to_flattened_data = ("tests/unit/processors/fixtures/"
+                              "flattened_data_with_two_json_columns.csv")
     handler = PostprocessHandler(path_to_metadata, None, {})
     un_flattened_data = handler._post_process_generated_data(
         path_to_generated_data=path_to_flattened_data,
@@ -239,11 +245,11 @@ def test_post_process_generated_data_with_two_json_columns(rp_logger):
         "id",
         "created_at",
         "updated_at",
-        "name",
-        "description",
-        "owner_id",
-        "is_default",
-        "is_encrypted",
+        "start_time",
+        "finish_time",
         "status",
-        "_details"
+        "pipeline_id",
+        "user_id",
+        "progress",
+        "details"
     ]

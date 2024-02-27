@@ -1,3 +1,3 @@
 test_table:
   train_settings:
-    source: tests/unit/launchers/fixtures/data_with_two_json_columns.csv
+    source: tests/unit/processors/fixtures/data_with_two_json_columns.csv
