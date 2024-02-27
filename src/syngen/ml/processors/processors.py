@@ -161,6 +161,20 @@ class PreprocessHandler(Processor):
         with open(f"{self.path_to_flatten_metadata}", "w") as f:
             json.dump(metadata, f)
 
+    @staticmethod
+    def _load_source(source: str):
+        """
+        Load the data from the predefined source
+        """
+        return DataLoader(source).load_data()
+
+    @staticmethod
+    def _save_input_data(path_to_input_data, flattened_data):
+        """
+        Save the input data to the predefined path
+        """
+        DataLoader(path_to_input_data).save_data(path_to_input_data, flattened_data)
+
     def _handle_json_columns(self):
         """
         Preprocess the data contained JSON columns before the training process
@@ -173,7 +187,7 @@ class PreprocessHandler(Processor):
             path_to_input_data = (f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/{slugify(table)}/"
                                   f"input_data_{slugify(table)}.pkl")
             source = settings.get("train_settings", {}).get("source", "")
-            data, schema = DataLoader(source).load_data()
+            data, schema = self._load_source(source)
             order_of_columns = data.columns.to_list()
             self._remove_existed_artifacts(table_name=table)
             self._prepare_dirs(table)
@@ -185,7 +199,7 @@ class PreprocessHandler(Processor):
                 (flattened_data,
                  flattening_mapping,
                  duplicated_columns) = self._get_flattened_df(data, json_columns)
-                DataLoader(path_to_input_data).save_data(path_to_input_data, flattened_data)
+                self._save_input_data(path_to_input_data, flattened_data)
                 flatten_metadata[table] = {
                     "flattening_mapping": flattening_mapping,
                     "duplicated_columns": duplicated_columns,
