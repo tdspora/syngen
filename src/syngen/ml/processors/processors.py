@@ -36,6 +36,7 @@ class Processor:
             f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/flatten_configs/"
             f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
         )
+        self.metadata = self._fetch_metadata()
 
     def _fetch_metadata(self) -> Dict:
         metadata = dict()
@@ -162,17 +163,19 @@ class PreprocessHandler(Processor):
             json.dump(metadata, f)
 
     @staticmethod
-    def _load_source(source: str):
+    def _load_source(*args):
         """
         Load the data from the predefined source
         """
+        source, = args
         return DataLoader(source).load_data()
 
     @staticmethod
-    def _save_input_data(path_to_input_data, flattened_data):
+    def _save_input_data(*args):
         """
         Save the input data to the predefined path
         """
+        path_to_input_data, flattened_data = args
         DataLoader(path_to_input_data).save_data(path_to_input_data, flattened_data)
 
     def _handle_json_columns(self):
@@ -287,23 +290,23 @@ class PostprocessHandler(Processor):
         return df
 
     @staticmethod
-    def _load_generated_data(path_to_generated_data: str) -> pd.DataFrame:
+    def _load_generated_data(*args) -> pd.DataFrame:
         """
         Load generated data from the predefined path
         """
+        path_to_generated_data, = args
         data, schema = DataLoader(path_to_generated_data).load_data()
         return data
 
     def _post_process_generated_data(
             self,
-            path_to_generated_data: str,
+            data: pd.DataFrame,
             flattening_mapping: Dict,
             duplicated_columns: List
     ) -> pd.DataFrame:
         """
         Postprocess the generated data
         """
-        data = self._load_generated_data(path_to_generated_data)
         for old_column, new_columns in flattening_mapping.items():
             data[new_columns] = self._restore_empty_values(data[new_columns])
             data[old_column] = data[new_columns]. \
@@ -332,8 +335,9 @@ class PostprocessHandler(Processor):
                 order_of_columns = flatten_metadata.get("order_of_columns")
                 path_to_generated_data = (f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/"
                                           f"{slugify(table)}/merged_infer_{slugify(table)}.csv")
+                data = self._load_generated_data(path_to_generated_data)
                 data = self._post_process_generated_data(
-                    path_to_generated_data,
+                    data,
                     flattening_mapping,
                     duplicated_columns
                 )
@@ -343,14 +347,15 @@ class PostprocessHandler(Processor):
                 logger.info("Finish postprocessing of the generated data")
 
     @staticmethod
-    def _save_generated_data(
-            generated_data: pd.DataFrame,
-            path_to_destination: str,
-            order_of_columns: List
-    ):
+    def _save_generated_data(*args):
         """
         Save generated data to the path
         """
+        (
+            generated_data,
+            path_to_destination,
+            order_of_columns,
+        ) = args
         generated_data = generated_data[order_of_columns]
         DataLoader(path_to_destination).save_data(
             path_to_destination,

@@ -168,8 +168,9 @@ def test_post_process_generated_data_with_one_json_column(rp_logger):
     path_to_flattened_data = ("tests/unit/processors/fixtures/"
                               "flattened_data_with_one_json_column.csv")
     handler = PostprocessHandler(path_to_metadata, None, {})
+    data = handler._load_generated_data(path_to_flattened_data)
     un_flattened_data = handler._post_process_generated_data(
-        path_to_generated_data=path_to_flattened_data,
+        data=data,
         flattening_mapping={
             "_details": [
                 "cluster_type",
@@ -213,8 +214,9 @@ def test_post_process_generated_data_with_two_json_columns(rp_logger):
     path_to_flattened_data = ("tests/unit/processors/fixtures/"
                               "flattened_data_with_two_json_columns.csv")
     handler = PostprocessHandler(path_to_metadata, None, {})
+    data = handler._load_generated_data(path_to_flattened_data)
     un_flattened_data = handler._post_process_generated_data(
-        path_to_generated_data=path_to_flattened_data,
+        data=data,
         flattening_mapping={
             "progress": [
                 "info.finished",
