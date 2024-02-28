@@ -69,7 +69,7 @@ class TrainConfig:
         """
         if os.path.exists(self.paths["path_to_flatten_metadata"]):
             data, schema = DataLoader(self.paths["input_data_path"]).load_data()
-            schema = CSVConvertor(data).schema
+            schema = CSVConvertor.schema
             return data, schema
         return DataLoader(self.source).load_data()
 
