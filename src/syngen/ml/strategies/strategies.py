@@ -113,6 +113,8 @@ class TrainStrategy(Strategy, ABC):
         return self
 
     def add_reporters(self, **kwargs):
+        # TODO: now the reporter isn't added if the flatten metadata exists
+        # This should be refactored in the future
         flatten_metadata_exists = os.path.exists(self.config.paths["path_to_flatten_metadata"])
         if self.config.print_report and not flatten_metadata_exists:
             sample_reporter = SampleAccuracyReporter(

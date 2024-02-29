@@ -326,11 +326,10 @@ class PostprocessHandler(Processor):
         Launch the postprocessing of generated data,
         and save the processed data to the predefined path
         """
-        metadata = self._fetch_metadata()
 
         if os.path.exists(self.path_to_flatten_metadata):
             logger.info("Start postprocessing of the generated data")
-            for table in metadata.keys():
+            for table in self.metadata.keys():
                 if table == "global":
                     continue
                 flatten_metadata = self._fetch_flatten_config(table)
@@ -345,7 +344,7 @@ class PostprocessHandler(Processor):
                     flattening_mapping,
                     duplicated_columns
                 )
-                destination = metadata[table].get("infer_settings", {}).get("destination", "")
+                destination = self.metadata[table].get("infer_settings", {}).get("destination", "")
                 path_to_destination = destination if destination else path_to_generated_data
                 self._save_generated_data(data, path_to_destination, order_of_columns, table)
                 logger.info("Finish postprocessing of the generated data")
