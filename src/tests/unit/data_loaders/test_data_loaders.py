@@ -339,6 +339,36 @@ def test_load_data_from_table_in_pickle_format(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_get_from_table_in_pickle_format(rp_logger):
+    rp_logger.info("Loading data from local table in pickle format")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/pickle_tables/table_with_data.pkl")
+    df, schema = data_loader.load_data()
+
+    assert isinstance(data_loader.file_loader, BinaryLoader)
+    assert (
+        assert_frame_equal(
+            df,
+            pd.DataFrame(
+                {
+                    "gender": [0, 1, 0, 1],
+                    "height": [
+                        157.18518021548246,
+                        166.7731072622863,
+                        162.91821942384928,
+                        173.51448996432848,
+                    ],
+                    "id": [925, 84, 821, 383],
+                }
+            ),
+        )
+        is None
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert schema is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_load_data_from_empty_table_in_pickle_format(caplog, rp_logger):
     rp_logger.info("Loading data from local empty table in pickle format")
     path = "tests/unit/data_loaders/fixtures/pickle_tables/empty_table.pkl"

@@ -184,9 +184,8 @@ class PreprocessHandler(Processor):
         """
         Preprocess the data contained JSON columns before the training process
         """
-        metadata = self._fetch_metadata()
         flatten_metadata = dict()
-        for table, settings in metadata.items():
+        for table, settings in self.metadata.items():
             if table == "global":
                 continue
             path_to_input_data = (f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/{slugify(table)}/"

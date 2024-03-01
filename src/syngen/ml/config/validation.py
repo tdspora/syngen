@@ -9,6 +9,7 @@ from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader
 from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.utils import fetch_unique_root
 
 
 @dataclass
@@ -137,13 +138,11 @@ class Validator:
             )
             self.errors["check existence of the generated data"][parent_table] = message
 
-    def _check_existence_of_source(self, table_name: str) -> bool:
+    def _check_existence_of_source(self, path_to_source: str, table_name: str) -> bool:
         """
         Check if the source of the certain table exists
         """
-        if not DataLoader(
-            self.merged_metadata[table_name]["train_settings"]["source"]
-        ).has_existed_path:
+        if not DataLoader(path_to_source).has_existed_path:
             message = (
                 f"It seems that the path to the source of the table - '{table_name}' "
                 f"isn't correct. Please, check the path to the source of the table - "
@@ -282,6 +281,18 @@ class Validator:
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
 
+    def _fetch_path_to_source(self, table_name):
+        """
+        Fetch the path to the source of the certain table
+        """
+        if os.path.exists(
+                f"model_artifacts/tmp_store/flatten_configs/flatten_metadata_"
+                f"{fetch_unique_root(table_name, self.metadata_path)}.json"
+        ):
+            return (f"model_artifacts/tmp_store/{slugify(table_name)}/"
+                    f"input_data_{slugify(table_name)}.pkl")
+        return self.merged_metadata[table_name]["train_settings"]["source"]
+
     def run(self):
         """
         Run the validation process
@@ -289,7 +300,8 @@ class Validator:
         self.preprocess_metadata()
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train":
-                if self._check_existence_of_source(table_name):
+                path_to_source = self._fetch_path_to_source(table_name)
+                if self._check_existence_of_source(path_to_source, table_name):
                     self._check_key_columns(table_name)
             elif self.type_of_process == "infer":
                 self._check_existence_of_destination(table_name)
