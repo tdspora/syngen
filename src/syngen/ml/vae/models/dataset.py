@@ -479,8 +479,8 @@ class Dataset:
         """
         Check if uuid_to_test is a valid ULID (https://github.com/ulid/spec)
         """
-        ulid_timestamp = uuid[:10]
         try:
+            ulid_timestamp = uuid[:10]
             assert len(uuid) == 26
             ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
             datetime.fromtimestamp(ulid_timestamp_int / 1000.0)
@@ -499,7 +499,7 @@ class Dataset:
                     uuid_obj = UUID(i, version=v)
                     if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
                         result.append(v)
-                except ValueError:
+                except (ValueError, AttributeError, TypeError):
                     result.append(self._is_valid_ulid(i))
         if result:
             return max(set(result), key=result.count)
