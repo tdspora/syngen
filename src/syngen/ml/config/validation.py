@@ -232,8 +232,9 @@ class Validator:
             if config_of_key["type"] in self.type_of_fk_keys:
                 referenced_columns = config_of_key["references"]["columns"]
                 referenced_table = config_of_key["references"]["table"]
+                path_to_source = self._fetch_path_to_source(referenced_table)
                 existed_columns = self._fetch_existed_columns(
-                    self.merged_metadata[referenced_table]
+                    path_to_source, self.merged_metadata[referenced_table]
                 )
                 if all([column in existed_columns for column in referenced_columns]):
                     continue
@@ -252,22 +253,20 @@ class Validator:
                     ] = message
 
     @staticmethod
-    def _fetch_existed_columns(metadata_of_table) -> List[str]:
+    def _fetch_existed_columns(path_to_source: str, metadata_of_table) -> List[str]:
         """
         Fetch the list of the columns of the source table
         """
         format_settings = metadata_of_table.get("format", {})
-        return DataLoader(
-            metadata_of_table["train_settings"]["source"]
-        ).get_columns(**format_settings)
+        return DataLoader(path_to_source).get_columns(**format_settings)
 
-    def _check_key_columns(self, table_name: str):
+    def _check_key_columns(self, path_to_source: str, table_name: str):
         """
         Fetch the list of the columns of the source table and
         check whether the columns of the certain key exist in the source table
         """
         metadata_of_table = self.merged_metadata[table_name]
-        existed_columns = self._fetch_existed_columns(metadata_of_table)
+        existed_columns = self._fetch_existed_columns(path_to_source, metadata_of_table)
         self._check_existence_of_columns(metadata_of_table, table_name, existed_columns)
         self._check_references_columns(table_name, metadata_of_table)
 
@@ -286,10 +285,10 @@ class Validator:
         Fetch the path to the source of the certain table
         """
         if os.path.exists(
-                f"model_artifacts/tmp_store/flatten_configs/flatten_metadata_"
+                f"{os.getcwd()}/model_artifacts/tmp_store/flatten_configs/flatten_metadata_"
                 f"{fetch_unique_root(table_name, self.metadata_path)}.json"
         ):
-            return (f"model_artifacts/tmp_store/{slugify(table_name)}/"
+            return (f"{os.getcwd()}/model_artifacts/tmp_store/{slugify(table_name)}/"
                     f"input_data_{slugify(table_name)}.pkl")
         return self.merged_metadata[table_name]["train_settings"]["source"]
 
@@ -302,7 +301,7 @@ class Validator:
             if self.type_of_process == "train":
                 path_to_source = self._fetch_path_to_source(table_name)
                 if self._check_existence_of_source(path_to_source, table_name):
-                    self._check_key_columns(table_name)
+                    self._check_key_columns(path_to_source, table_name)
             elif self.type_of_process == "infer":
                 self._check_existence_of_destination(table_name)
         for table_name in self.metadata.keys():

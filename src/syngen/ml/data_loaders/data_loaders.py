@@ -424,16 +424,16 @@ class BinaryLoader(BaseDataLoader):
     """
 
     @staticmethod
-    def _load_data(f) -> pd.DataFrame:
-        return pickle.load(f)
+    def _load_data(f) -> Tuple[pd.DataFrame, None]:
+        return pickle.load(f), None
 
     def get_columns(self, path: str) -> List[str]:
-        data = self._load_data(path)
+        data, schema = self.load_data(path)
         return data.columns.tolist()
 
     def load_data(self, path: str) -> Tuple[pd.DataFrame, None]:
         with open(path, "rb") as f:
-            return self._load_data(f), None
+            return self._load_data(f)
 
     @staticmethod
     def _save_data(data, f):
