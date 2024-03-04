@@ -18,6 +18,7 @@ from loguru import logger
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
     CharBasedTextFeature,
+    EmailFeature,
     ContinuousFeature,
     DateFeature,
     BinaryFeature,
@@ -432,6 +433,7 @@ class Dataset:
         )
         self.categ_columns.update(defined_columns)
 
+    # TODO: cache this function calls (?)
     def _select_str_columns(self, df):
         if self.schema.get("format", "") == "CSV":
             data_subset = df.select_dtypes(include=[pd.StringDtype(), "object"])
@@ -473,6 +475,20 @@ class Dataset:
                     f"therefore this column(-s) will be generated using "
                     f"a simplified statistical approach"
                 )
+
+    def _set_email_columns(self, df: pd.DataFrame):
+        """
+        Set up the list of columns with long texts (> 200 symbols)
+        """
+        data_subset = self._select_str_columns(df)
+
+        self.email_columns = set()
+        if not data_subset.empty:
+            data_subset = data_subset.loc[  # @ presents in more than half of not None values of every column
+                :, df.apply(lambda col: col.str.count('@'), axis=1).sum().values*2 > df.count().values
+            ]
+            self.email_columns = set(data_subset.columns)
+            self.email_columns -= self.categ_columns
 
     @staticmethod
     def _is_valid_ulid(uuid):
@@ -639,6 +655,7 @@ class Dataset:
         self._set_binary_columns(df)
         self._set_categorical_columns(df, schema)
         self._set_long_text_columns(df)
+        self._set_email_columns(df)
         tmp_df = get_tmp_df(df)
         self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
         self.int_columns = set(tmp_df.select_dtypes(include=["int", "int64"]).columns)
@@ -661,6 +678,7 @@ class Dataset:
             - self.int_columns
             - self.binary_columns
             - self.long_text_columns
+            - self.email_columns
             - self.uuid_columns
         )
         self.categ_columns -= self.long_text_columns
@@ -682,6 +700,7 @@ class Dataset:
         self._set_binary_columns(df)
         self._set_categorical_columns(df, schema)
         self._set_long_text_columns(df)
+        self._set_email_columns(df)
         self.int_columns = set(
             column for column, data_type in schema.items() if data_type == "int"
         )
@@ -699,6 +718,7 @@ class Dataset:
             - self.categ_columns
             - self.binary_columns
             - self.long_text_columns
+            - self.email_columns
             - self.uuid_columns
         )
         self._set_date_columns(df)
@@ -975,6 +995,27 @@ class Dataset:
             features[0],
         )
         logger.info(f"Column '{features[0]}' assigned as text based feature")
+
+        if len(features) > 1:
+            for feature in features[1:]:
+                if feature.endswith("_null"):
+                    self.null_num_column_names.append(feature)
+                if feature.endswith("_zero"):
+                    self.zero_num_column_names.append(feature)
+                self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
+                logger.info(f"Column '{feature}' assigned as float based feature")
+
+    def _assign_email_feature(self, feature):
+        """
+        Assign text based feature to text columns
+        """
+        features = self._preprocess_nan_cols(feature, fillna_strategy="text")
+        max_len, rnn_units = 15, 128
+        self.assign_feature(
+            EmailFeature(features[0], text_max_len=max_len, rnn_units=rnn_units),
+            features[0],
+        )
+        logger.info(f"Column '{features[0]}' assigned as email feature")
 
         if len(features) > 1:
             for feature in features[1:]:
