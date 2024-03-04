@@ -259,6 +259,7 @@ class Dataset:
                     if column
                     in (
                         self.str_columns
+                        | self.email_columns
                         | self.categ_columns
                         | self.date_columns
                         | self.long_text_columns
@@ -485,7 +486,7 @@ class Dataset:
         self.email_columns = set()
         if not data_subset.empty:
             data_subset = data_subset.loc[  # @ presents in more than half of not None values of every column
-                :, df.apply(lambda col: col.str.count('@'), axis=1).sum().values*2 > df.count().values
+                :, data_subset.apply(lambda col: col.str.count('@'), axis=1).sum().values*2 > data_subset.count().values
             ]
             self.email_columns = set(data_subset.columns)
             self.email_columns -= self.categ_columns
@@ -540,6 +541,7 @@ class Dataset:
         """
         self.date_columns = (
             get_date_columns(df, list(self.str_columns))
+            - self.email_columns
             - self.categ_columns
             - self.binary_columns
             - self.long_text_columns
@@ -740,7 +742,7 @@ class Dataset:
             self.date_columns
         ) + len(self.categ_columns) + len(self.binary_columns) + len(self.long_text_columns) + len(
             self.uuid_columns
-        ) == len(
+        ) + len(self.email_columns) == len(
             df.columns
         ), (
             "According to number of columns with defined types, "
@@ -749,6 +751,7 @@ class Dataset:
 
         logger.debug(
             f"Count of string columns: {len(self.str_columns)}; "
+            + f"Count of email columns: {len(self.email_columns)}; "
             + f"Count of float columns: {len(self.float_columns)}; "
             + f"Count of int columns: {len(self.int_columns)}; "
             + f"Count of categorical columns: {len(self.categ_columns)}; "
@@ -1010,7 +1013,7 @@ class Dataset:
         Assign text based feature to text columns
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="text")
-        max_len, rnn_units = 15, 128
+        max_len, rnn_units = 15, 32
         self.assign_feature(
             EmailFeature(features[0], text_max_len=max_len, rnn_units=rnn_units),
             features[0],
@@ -1120,6 +1123,8 @@ class Dataset:
         for column in self.df.columns:
             if column in self.str_columns:
                 self._assign_char_feature(column)
+            if column in self.email_columns:
+                self._assign_email_feature(column)
             elif column in self.float_columns:
                 self._assign_float_feature(column)
             elif column in self.int_columns:

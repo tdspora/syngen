@@ -593,10 +593,10 @@ class EmailFeature(CharBasedTextFeature):
 
         pattern = r'^([^@]+).*$'  # returns all the string if there's no "@" in it
 
-        return super().transform(data.iloc[:, 0].str.extract(pattern))
+        return super().transform(data.iloc[:, 0].str.extract(pattern).rename({0: data.columns[0]}, axis=1).fillna('test1'))
 
     def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
-        return [s + '@' + self.domain for s in super().inverse_transform(data, **kwargs)]
+        return [s.translate({32: None, 44: None, 64: None}) + '@' + self.domain for s in super().inverse_transform(data, **kwargs)]
 
 class DateFeature(BaseFeature):
     """
