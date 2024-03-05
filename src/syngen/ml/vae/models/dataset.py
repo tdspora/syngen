@@ -55,6 +55,15 @@ class Dataset:
     dropped_columns: Set = field(init=False)
     order_of_columns: List = field(init=False)
     non_existent_columns: Set = field(init=False)
+    categ_columns: Set = field(init=False)
+    str_columns: Set = field(init=False)
+    float_columns: Set = field(init=False)
+    int_columns: Set = field(init=False)
+    date_columns: Set = field(init=False)
+    binary_columns: Set = field(init=False)
+    email_columns: Set = field(init=False)
+    long_text_columns: Set = field(init=False)
+
     format: Dict = field(init=False)
 
     def __post_init__(self):
@@ -479,14 +488,14 @@ class Dataset:
 
     def _set_email_columns(self, df: pd.DataFrame):
         """
-        Set up the list of columns with long texts (> 200 symbols)
+        Set up the list of columns with emails (defined by count of @ symbols)
         """
         data_subset = self._select_str_columns(df)
 
         self.email_columns = set()
         if not data_subset.empty:
             data_subset = data_subset.loc[  # @ presents in more than half of not None values of every column
-                :, data_subset.apply(lambda col: col.str.count('@'), axis=1).sum().values*2 > data_subset.count().values
+                :, data_subset.apply(lambda col: col.str.count('@'), axis=1).sum().values*1.25 > data_subset.count().values
             ]
             self.email_columns = set(data_subset.columns)
             self.email_columns -= self.categ_columns
@@ -1020,6 +1029,7 @@ class Dataset:
         )
         logger.info(f"Column '{features[0]}' assigned as email feature")
 
+        # TODO: encapsulate this logic in a separate function
         if len(features) > 1:
             for feature in features[1:]:
                 if feature.endswith("_null"):
