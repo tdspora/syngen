@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
@@ -122,7 +122,7 @@ def timestamp_to_datetime(timestamp):
     return result_datetime
 
 
-def generate_uuids(version: int, size: int):
+def generate_uuids(version: Union[int, str], size: int):
     ulid = ULID()
     generated_uuid_column = []
     for i in range(size):
