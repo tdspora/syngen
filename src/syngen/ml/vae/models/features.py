@@ -572,6 +572,32 @@ class CharBasedTextFeature(BaseFeature):
         )
 
 
+class EmailFeature(CharBasedTextFeature):
+    def __init__(
+        self,
+        name: str,
+        text_max_len: int,
+        rnn_units: int = 128,
+        dropout: int = 0,
+        domain: str = 'syngenai.com'
+    ):
+        super().__init__(name=name,
+                         text_max_len=text_max_len,
+                         rnn_units=rnn_units,
+                         dropout=dropout)
+        self.domain = domain
+
+    def transform(self, data: pd.DataFrame) -> np.ndarray:
+        if len(data.columns) > 1:
+            raise Exception("CharBasedTextFeature can work only with one text column")
+
+        pattern = r'^([^@]+).*$'  # returns all the string if there's no "@" in it
+
+        return super().transform(data.iloc[:, 0].str.extract(pattern).rename({0: data.columns[0]}, axis=1).fillna('test1'))
+
+    def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
+        return [s.translate({32: None, 44: None, 64: None}) + '@' + self.domain for s in super().inverse_transform(data, **kwargs)]
+
 class DateFeature(BaseFeature):
     """
     A class to process datetime features
