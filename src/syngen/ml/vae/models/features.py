@@ -592,7 +592,7 @@ class EmailFeature(CharBasedTextFeature):
             raise Exception("CharBasedTextFeature can work only with one text column")
 
         pattern = r'^([^@]+).*$'  # returns all the string if there's no "@" in it
-
+        # TODO: add logic for emails to Dataset._preprocess_nan_cols
         return super().transform(data.iloc[:, 0].str.extract(pattern).rename({0: data.columns[0]}, axis=1).fillna('test1'))
 
     def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
