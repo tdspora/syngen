@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import datetime
 import random
 
@@ -8,7 +8,7 @@ import pandas as pd
 import pandavro as pdx
 
 from syngen.ml.vae.models.dataset import Dataset
-from syngen.ml.utils import generate_uuids
+from syngen.ml.utils import generate_uuids, fetch_training_config
 from tests.conftest import SUCCESSFUL_MESSAGE
 
 CSV_SCHEMA = {"fields": {}, "format": "CSV"}
@@ -128,6 +128,7 @@ def test_save_dataset(rp_logger):
                 "id",
                 "first_name",
             },
+            "email_columns": set(),
             "long_text_columns": set(),
             "float_columns": set(),
             "int_columns": set(),
@@ -333,4 +334,31 @@ def test_is_valid_uuid(rp_logger):
             "UUID_4": 4,
             "UUID_5": 5
         }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_set_email_columns(rp_logger):
+    rp_logger.info(
+        "Test the method '_set_email_columns' of the class Dataset",
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    df = pd.read_csv("./tests/unit/dataset/fixtures/data_with_emails.csv")
+    with patch.object(Dataset, "__post_init__", lambda x: None):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={},
+            main_process="train"
+        )
+        setattr(mock_dataset, "dropped_columns", set())
+        setattr(mock_dataset, "non_existent_columns", set())
+        mock_dataset._set_metadata()
+        assert mock_dataset.email_columns == {"ExtractedFrom"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
