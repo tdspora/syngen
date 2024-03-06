@@ -96,15 +96,42 @@ def test_save_dataset(rp_logger):
             paths={},
             main_process="train"
         )
-        setattr(mock_dataset, "dropped_columns", set())
-        setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
         fetched_dataset = mock_dataset.__getstate__()
         assert "df" not in fetched_dataset
         assert fetched_dataset == {
             "schema": {"fields": {}, "format": "CSV"},
+            "metadata": {},
             "table_name": "mock_table",
             "paths": {},
+            "main_process": "train",
+            "features": {},
+            "columns": {},
+            "is_fitted": False,
+            "all_columns": [],
+            "null_num_column_names": [],
+            "zero_num_column_names": [],
+            "nan_labels_dict": {},
+            "uuid_columns": set(),
+            "uuid_columns_types": {},
+            "dropped_columns": set(),
+            "order_of_columns": [],
+            "categ_columns": {
+                "gender",
+                "id",
+                "email",
+                "ip_address",
+                "first_name",
+                "last_name"
+            },
+            "str_columns": set(),
+            "float_columns": set(),
+            "int_columns": set(),
+            "date_columns": set(),
+            "binary_columns": set(),
+            "email_columns": set(),
+            "long_text_columns": set(),
+            "format": {},
             "primary_keys_mapping": {},
             "primary_keys_list": [],
             "primary_key_name": None,
@@ -116,27 +143,7 @@ def test_save_dataset(rp_logger):
             "foreign_keys_mapping": {},
             "foreign_keys_list": [],
             "fk_columns": [],
-            "dropped_columns": set(),
-            "uuid_columns_types": {},
-            "uuid_columns": set(),
-            "binary_columns": set(),
-            "categ_columns": {
-                "last_name",
-                "ip_address",
-                "email",
-                "gender",
-                "id",
-                "first_name",
-            },
-            "email_columns": set(),
-            "long_text_columns": set(),
-            "float_columns": set(),
-            "int_columns": set(),
-            "str_columns": set(),
-            "date_columns": set(),
-            "date_mapping": dict(),
-            "metadata": {},
-            "main_process": "train",
+            "date_mapping": {}
         }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -171,8 +178,6 @@ def test_check_non_existent_columns(rp_logger):
             paths={},
             main_process="train"
         )
-        setattr(mock_dataset, "dropped_columns", set())
-        setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
         assert mock_dataset.non_existent_columns == {
             "non_existent_pk_column",
@@ -233,8 +238,6 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
             paths={},
             main_process="train"
         )
-        setattr(mock_dataset, "dropped_columns", set())
-        setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
         assert mock_dataset.date_mapping == {"Date": expected_date_format}
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -321,8 +324,6 @@ def test_is_valid_uuid(rp_logger):
             paths={},
             main_process="train"
         )
-        setattr(mock_dataset, "dropped_columns", set())
-        setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
         assert mock_dataset.uuid_columns == {
             "UUID_1", "UUID_2", "UUID_3", "UUID_4", "UUID_5"
@@ -357,8 +358,6 @@ def test_set_email_columns(rp_logger):
             paths={},
             main_process="train"
         )
-        setattr(mock_dataset, "dropped_columns", set())
-        setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
         assert mock_dataset.email_columns == {"ExtractedFrom"}
     rp_logger.info(SUCCESSFUL_MESSAGE)

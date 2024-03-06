@@ -43,28 +43,27 @@ class Dataset:
     table_name: str
     paths: Dict
     main_process: str
-    features: Dict = field(init=False)
-    columns: Dict = field(init=False)
-    is_fitted: bool = field(init=False)
-    all_columns: List = field(init=False)
-    null_num_column_names: List = field(init=False)
-    zero_num_column_names: List = field(init=False)
-    nan_labels_dict: Dict = field(init=False)
-    uuid_columns: Set = field(init=False)
-    uuid_columns_types: Dict = field(init=False)
-    dropped_columns: Set = field(init=False)
-    order_of_columns: List = field(init=False)
-    non_existent_columns: Set = field(init=False)
-    categ_columns: Set = field(init=False)
-    str_columns: Set = field(init=False)
-    float_columns: Set = field(init=False)
-    int_columns: Set = field(init=False)
-    date_columns: Set = field(init=False)
-    binary_columns: Set = field(init=False)
-    email_columns: Set = field(init=False)
-    long_text_columns: Set = field(init=False)
-
-    format: Dict = field(init=False)
+    features: Dict = field(default_factory=dict)
+    columns: Dict = field(default_factory=dict)
+    is_fitted: bool = field(default=False)
+    all_columns: List = field(default_factory=list)
+    null_num_column_names: List = field(default_factory=list)
+    zero_num_column_names: List = field(default_factory=list)
+    nan_labels_dict: Dict = field(default_factory=dict)
+    uuid_columns: Set = field(default_factory=set)
+    uuid_columns_types: Dict = field(default_factory=dict)
+    dropped_columns: Set = field(default_factory=set)
+    order_of_columns: List = field(default_factory=list)
+    non_existent_columns: Set = field(default_factory=set)
+    categ_columns: Set = field(default_factory=set)
+    str_columns: Set = field(default_factory=set)
+    float_columns: Set = field(default_factory=set)
+    int_columns: Set = field(default_factory=set)
+    date_columns: Set = field(default_factory=set)
+    binary_columns: Set = field(default_factory=set)
+    email_columns: Set = field(default_factory=set)
+    long_text_columns: Set = field(default_factory=set)
+    format: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         self._predefine_fields()
@@ -85,19 +84,9 @@ class Dataset:
         return dataset_instance
 
     def _predefine_fields(self):
-        self.features = dict()
-        self.columns = dict()
-        self.is_fitted = False
-        self.all_columns = list()
-        self.null_num_column_names = list()
-        self.zero_num_column_names = list()
-        self.nan_labels_dict = dict()
-        self.uuid_columns = set()
-        self.uuid_columns_types = {}
         self.dropped_columns = fetch_training_config(
             self.paths["train_config_pickle_path"]
         ).dropped_columns
-        self.non_existent_columns = set()
         self.order_of_columns = fetch_training_config(
             self.paths["train_config_pickle_path"]
         ).columns
@@ -444,17 +433,22 @@ class Dataset:
         self.categ_columns.update(defined_columns)
 
     # TODO: cache this function calls (?)
-    def _select_str_columns(self, df):
+    def _select_str_columns(self, df) -> List[str]:
+        """
+        Select the text columns
+        """
         if self.schema.get("format", "") == "CSV":
-            data_subset = df.select_dtypes(include=[pd.StringDtype(), "object"])
+            text_columns = [
+                col for col, dtype in dict(df.dtypes).items()
+                if dtype in ["object", "string"]
+            ]
         else:
             text_columns = [
                 col
                 for col, data_type in self.schema.get("fields", {}).items()
                 if data_type == "string"
             ]
-            data_subset = df[text_columns]
-        return data_subset
+        return text_columns
 
     def _set_categorical_columns(self, df: pd.DataFrame, schema: Dict):
         """
@@ -468,7 +462,8 @@ class Dataset:
         """
         Set up the list of columns with long texts (> 200 symbols)
         """
-        data_subset = self._select_str_columns(df)
+        text_columns = self._select_str_columns(df)
+        data_subset = df[text_columns]
 
         self.long_text_columns = set()
         if not data_subset.empty:
@@ -490,12 +485,16 @@ class Dataset:
         """
         Set up the list of columns with emails (defined by count of @ symbols)
         """
-        data_subset = self._select_str_columns(df)
+        text_columns = self._select_str_columns(df)
+        data_subset = df[text_columns]
 
-        self.email_columns = set()
         if not data_subset.empty:
+            count_at_symbols = data_subset.apply(lambda col: col.str.count("@"), axis=1).sum()
+            adjusted_count = count_at_symbols.values * 1.25
+            non_na_values_count = data_subset.count().values
+            filter_mask = adjusted_count > non_na_values_count
             data_subset = data_subset.loc[  # @ presents in more than half of not None values of every column
-                :, data_subset.apply(lambda col: col.str.count('@'), axis=1).sum().values*1.25 > data_subset.count().values
+                :, filter_mask
             ]
             self.email_columns = set(data_subset.columns)
             self.email_columns -= self.categ_columns
@@ -537,7 +536,8 @@ class Dataset:
         Set up the list of columns with UUIDs
         """
 
-        data_subset = self._select_str_columns(df)
+        text_columns = self._select_str_columns(df)
+        data_subset = df[text_columns]
 
         if not data_subset.empty:
             data_subset = data_subset.apply(self._is_valid_uuid)
