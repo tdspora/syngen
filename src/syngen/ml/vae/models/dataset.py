@@ -1,5 +1,4 @@
 from typing import Dict, Optional, List, Tuple, Set
-from dataclasses import dataclass, field
 import pickle
 from uuid import UUID
 from datetime import datetime
@@ -35,38 +34,61 @@ from syngen.ml.utils import fetch_training_config, clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
-@dataclass
 class Dataset:
-    df: pd.DataFrame
-    schema: Optional[Dict]
-    metadata: Dict
-    table_name: str
-    paths: Dict
-    main_process: str
-    features: Dict = field(default_factory=dict)
-    columns: Dict = field(default_factory=dict)
-    is_fitted: bool = field(default=False)
-    all_columns: List = field(default_factory=list)
-    null_num_column_names: List = field(default_factory=list)
-    zero_num_column_names: List = field(default_factory=list)
-    nan_labels_dict: Dict = field(default_factory=dict)
-    uuid_columns: Set = field(default_factory=set)
-    uuid_columns_types: Dict = field(default_factory=dict)
-    dropped_columns: Set = field(default_factory=set)
-    order_of_columns: List = field(default_factory=list)
-    non_existent_columns: Set = field(default_factory=set)
-    categ_columns: Set = field(default_factory=set)
-    str_columns: Set = field(default_factory=set)
-    float_columns: Set = field(default_factory=set)
-    int_columns: Set = field(default_factory=set)
-    date_columns: Set = field(default_factory=set)
-    binary_columns: Set = field(default_factory=set)
-    email_columns: Set = field(default_factory=set)
-    long_text_columns: Set = field(default_factory=set)
-    format: Dict = field(default_factory=dict)
-
-    def __post_init__(self):
-        self._predefine_fields()
+    def __init__(
+            self,
+            df: pd.DataFrame,
+            schema: Optional[Dict],
+            metadata: Dict,
+            table_name: str,
+            main_process: str,
+            paths: Dict
+    ):
+        self.df = df
+        self.schema = schema
+        self.metadata = metadata
+        self.table_name = table_name
+        self.paths = paths
+        self.main_process = main_process
+        self.features: Dict = dict()
+        self.columns: Dict = dict()
+        self.is_fitted: bool = False
+        self.all_columns: List = list()
+        self.null_num_column_names: List = list()
+        self.zero_num_column_names: List = list()
+        self.nan_labels_dict: Dict = dict()
+        self.uuid_columns: Set = set()
+        self.uuid_columns_types: Dict = dict()
+        self.dropped_columns: Set = set()
+        self.order_of_columns: List = list()
+        self.categ_columns: Set = set()
+        self.str_columns: Set = set()
+        self.float_columns: Set = set()
+        self.int_columns: Set = set()
+        self.date_columns: Set = set()
+        self.date_mapping: Dict = dict()
+        self.binary_columns: Set = set()
+        self.email_columns: Set = set()
+        self.long_text_columns: Set = set()
+        self.primary_keys_mapping: Dict = dict()
+        self.primary_keys_list: List = list()
+        self.primary_key_name: Optional[str] = None
+        self.pk_columns: List = list()
+        self.unique_keys_mapping: Dict = dict()
+        self.unique_keys_mapping_list: List = list()
+        self.unique_keys_list: List = list()
+        self.uq_columns_lists: List = list()
+        self.uq_columns: List = list()
+        self.foreign_keys_mapping: Dict = dict()
+        self.foreign_keys_list: List = list()
+        self.fk_columns: List = list()
+        self.dropped_columns: Set = fetch_training_config(
+            self.paths["train_config_pickle_path"]
+        ).dropped_columns
+        self.order_of_columns: List = fetch_training_config(
+            self.paths["train_config_pickle_path"]
+        ).columns
+        self.format = self.metadata[self.table_name].get("format", {})
         self._set_metadata()
 
     def __getstate__(self) -> Dict:
@@ -80,7 +102,6 @@ class Dataset:
         for attr_key in attribute_keys_to_remove:
             if attr_key in dataset_instance:
                 del dataset_instance[attr_key]
-
         return dataset_instance
 
     def _predefine_fields(self):
@@ -281,18 +302,6 @@ class Dataset:
             self.__set_pk_key(config_of_keys)
             self.__set_uq_keys(config_of_keys)
             self.__set_fk_keys(config_of_keys)
-        else:
-            self.primary_keys_mapping = {}
-            self.primary_keys_list = []
-            self.primary_key_name = None
-            self.pk_columns = []
-            self.unique_keys_mapping = {}
-            self.unique_keys_mapping_list = []
-            self.unique_keys_list = []
-            self.uq_columns = []
-            self.foreign_keys_mapping = {}
-            self.foreign_keys_list = []
-            self.fk_columns = []
 
     def _set_metadata(self):
         table_config = self.metadata.get(self.table_name, {})
@@ -390,8 +399,6 @@ class Dataset:
         """
         metadata_of_table = self.metadata.get(self.table_name)
 
-        self.categ_columns = set()
-
         if metadata_of_table is not None:
             self.categ_columns = set(
                 metadata_of_table.get("train_settings", {})
@@ -465,7 +472,6 @@ class Dataset:
         text_columns = self._select_str_columns(df)
         data_subset = df[text_columns]
 
-        self.long_text_columns = set()
         if not data_subset.empty:
             data_subset = data_subset.loc[
                 :, data_subset.apply(lambda x: (x.str.len() > 200).any())
@@ -638,14 +644,13 @@ class Dataset:
             return Counter(types).most_common(2)[1][0]
         return Counter(types).most_common(1)[0][0]
 
-    def _set_date_format(self, df) -> Dict[str, str]:
+    def _set_date_format(self, df):
         """
         Define the date format for each date column
         """
-        date_mapping = {
+        self.date_mapping = {
             column: self.__define_date_format(df[column]) for column in self.date_columns
         }
-        return date_mapping
 
     def _general_data_pipeline(
         self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True
@@ -699,7 +704,7 @@ class Dataset:
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
-        self.date_mapping = self._set_date_format(df)
+        self._set_date_format(df)
 
     def _avro_data_pipeline(self, df, schema):
         """
@@ -738,7 +743,7 @@ class Dataset:
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
-        self.date_mapping = self._set_date_format(df)
+        self._set_date_format(df)
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
         if schema.get("format") == "CSV":
