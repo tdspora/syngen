@@ -34,15 +34,15 @@ from syngen.ml.utils import fetch_training_config, clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
-class Dataset:
+class BaseDataset:
     def __init__(
-            self,
-            df: pd.DataFrame,
-            schema: Optional[Dict],
-            metadata: Dict,
-            table_name: str,
-            main_process: str,
-            paths: Dict
+        self,
+        df: pd.DataFrame,
+        schema: Optional[Dict],
+        metadata: Dict,
+        table_name: str,
+        main_process: str,
+        paths: Dict
     ):
         self.df = df
         self.schema = schema
@@ -89,6 +89,26 @@ class Dataset:
             self.paths["train_config_pickle_path"]
         ).columns
         self.format = self.metadata[self.table_name].get("format", {})
+
+
+class Dataset(BaseDataset):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        schema: Optional[Dict],
+        metadata: Dict,
+        table_name: str,
+        main_process: str,
+        paths: Dict
+    ):
+        super().__init__(
+            df,
+            schema,
+            metadata,
+            table_name,
+            main_process,
+            paths
+        )
         self._set_metadata()
 
     def __getstate__(self) -> Dict:
