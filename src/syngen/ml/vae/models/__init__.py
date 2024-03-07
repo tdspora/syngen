@@ -1,1 +1,4 @@
-from syngen.ml.vae.models.dataset import Dataset  # noqa: F401
+from syngen.ml.vae.models.dataset import (  # noqa: F401
+    BaseDataset,
+    Dataset
+)
