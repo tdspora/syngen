@@ -104,15 +104,6 @@ class Dataset:
                 del dataset_instance[attr_key]
         return dataset_instance
 
-    def _predefine_fields(self):
-        self.dropped_columns = fetch_training_config(
-            self.paths["train_config_pickle_path"]
-        ).dropped_columns
-        self.order_of_columns = fetch_training_config(
-            self.paths["train_config_pickle_path"]
-        ).columns
-        self.format = self.metadata[self.table_name].get("format", {})
-
     def __set_pk_key(self, config_of_keys: Dict):
         """
         Set up primary key for the table
@@ -495,11 +486,12 @@ class Dataset:
         data_subset = df[text_columns]
 
         if not data_subset.empty:
+            # @ presents in more than half of not None values of every column
             count_at_symbols = data_subset.apply(lambda col: col.str.count("@"), axis=1).sum()
             adjusted_count = count_at_symbols.values * 1.25
             non_na_values_count = data_subset.count().values
             filter_mask = adjusted_count > non_na_values_count
-            data_subset = data_subset.loc[  # @ presents in more than half of not None values of every column
+            data_subset = data_subset.loc[
                 :, filter_mask
             ]
             self.email_columns = set(data_subset.columns)
