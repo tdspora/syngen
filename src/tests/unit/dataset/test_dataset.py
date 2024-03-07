@@ -47,6 +47,7 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
             },
             main_process="train"
         )
+        mock_dataset.set_metadata()
         mock_dataset._set_uuid_columns(df)
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
@@ -88,6 +89,7 @@ def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test
             },
             main_process="train"
         )
+        mock_dataset.set_metadata()
         mock_dataset._set_uuid_columns(df)
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
@@ -122,6 +124,7 @@ def test_save_dataset(rp_logger):
             },
             main_process="train"
         )
+        mock_dataset.set_metadata()
     fetched_dataset = mock_dataset.__getstate__()
     assert "df" not in fetched_dataset
     assert list(fetched_dataset.keys()) == [
@@ -200,6 +203,7 @@ def test_check_non_existent_columns(rp_logger):
         },
         main_process="train"
     )
+    mock_dataset.set_metadata()
     assert mock_dataset.non_existent_columns == {
         "non_existent_pk_column",
         "non_existent_uq_column",
@@ -261,6 +265,7 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
             },
             main_process="train"
         )
+        mock_dataset.set_metadata()
     assert mock_dataset.date_mapping == {"Date": expected_date_format}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -307,6 +312,7 @@ def test_define_date_format_with_extreme_values(
             },
             main_process="train"
         )
+        mock_dataset.set_metadata()
     assert mock_dataset.date_mapping == {"Date": expected_date_format}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -347,6 +353,7 @@ def test_is_valid_uuid(rp_logger):
             },
             main_process="train"
         )
+        mock_dataset.set_metadata()
     assert mock_dataset.uuid_columns == {
         "UUID_1", "UUID_2", "UUID_3", "UUID_4", "UUID_5"
     }
@@ -382,5 +389,6 @@ def test_set_email_columns(rp_logger):
             },
             main_process="train"
         )
+        mock_dataset.set_metadata()
     assert mock_dataset.email_columns == {"ExtractedFrom"}
     rp_logger.info(SUCCESSFUL_MESSAGE)

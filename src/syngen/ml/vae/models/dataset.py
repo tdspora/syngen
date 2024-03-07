@@ -109,7 +109,6 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
-        self._set_metadata()
 
     def __getstate__(self) -> Dict:
         """
@@ -314,7 +313,7 @@ class Dataset(BaseDataset):
             self.__set_uq_keys(config_of_keys)
             self.__set_fk_keys(config_of_keys)
 
-    def _set_metadata(self):
+    def set_metadata(self):
         table_config = self.metadata.get(self.table_name, {})
         self._set_non_existent_columns(table_config)
         self._update_table_config(table_config)
