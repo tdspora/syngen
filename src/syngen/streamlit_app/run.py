@@ -19,21 +19,18 @@ from streamlit_option_menu import option_menu
 UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
+
 class StreamlitHandler:
     """
     A class for handling the Streamlit app
     """
-    def __init__(self, uploaded_file):
+    def __init__(self, uploaded_file, epochs, size_limit, print_report):
         self.log_queue = Queue()
         self.progress_handler = ProgressBarHandler()
         self.log_error_queue = Queue()
-        self.epochs = st.number_input("Epochs", min_value=1, value=1, help='- The larger number of epochs is set the better training result is.\n' +
-      '- The larger number of epochs is set the longer time for training will be required.\n' +
-      '- Actual number of epochs can be smaller that the one that was set here. Once training stops improving the model, further training is not needed.')
-        self.size_limit = st.number_input(
-            "Rows to generate", min_value=1, max_value=None, value=1000
-        )
-        self.print_report = st.checkbox("Create an accuracy report", value=False)
+        self.epochs = epochs
+        self.size_limit = size_limit
+        self.print_report = print_report
         self.file_name = uploaded_file.name
         self.table_name = os.path.splitext(self.file_name)[0]
         self.file_path = os.path.join(UPLOAD_DIRECTORY, self.file_name)
@@ -42,6 +39,8 @@ class StreamlitHandler:
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                f"draws/accuracy_report.html")
+        os.environ["GENERATED_DATA"] = self.path_to_generated_data
+        os.environ["REPORT"] = self.path_to_report
 
     def set_logger(self):
         """
@@ -161,16 +160,20 @@ def generate_button(label, path_to_file, download_name):
             )
 
 
-def get_running_status():
+def set_session_state():
+    if "disabled" not in st.session_state:
+        st.session_state.disabled = False
+    if "print_report" not in st.session_state:
+        st.session_state.print_report = False
+    if "runner" not in st.session_state:
+        st.session_state.runner = None
+
+
+def disable():
     """
-    Get the status of the proces of a model training and generation data
+    Disable the button depending on the status of the runner
     """
-    if "gen_button" in st.session_state and st.session_state.gen_button is True:
-        st.session_state.running = True
-        return True
-    else:
-        st.session_state.running = False
-        return False
+    st.session_state.disabled = True
 
 
 def run():
@@ -269,6 +272,7 @@ def run():
 
     if selected == "Basic":
         st.title("SynGen UI")
+        set_session_state()
         uploaded_file = st.file_uploader(
             "Upload a CSV file",
             type="csv",
@@ -280,54 +284,79 @@ def run():
             st.warning("Please upload a CSV file to proceed")
         if uploaded_file:
             show_data(uploaded_file)
-            app = StreamlitHandler(uploaded_file)
-            if st.button(
-                "Generate data", type="primary", key="gen_button", disabled=get_running_status()
-            ):
-                runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
-                st.session_state.running = True
-                lock = threading.Lock()
-                with lock:
-                    runner.start()
-                current_progress = 0
-                prg = st.progress(current_progress)
-
-                while runner.is_alive():
-                    with st.expander("Logs"):
-                        while True:
-                            if not app.log_queue.empty():
-                                with st.code("logs", language="log"):
-                                    log = app.log_queue.get()
-                                    st.text(log)
-                                    current_progress, message = app.progress_handler.info
-                                    prg.progress(value=current_progress, text=message)
-                            elif not runner.is_alive():
-                                break
-                            time.sleep(0.001)
-                if not app.log_error_queue.empty():
-                    st.exception(app.log_error_queue.get())
-                elif app.log_error_queue.empty() and not runner.is_alive():
-                    prg.progress(100)
-                    app.progress_handler.reset_instance()
-                    st.success("Data generation completed")
-                    st.rerun()
-            with st.container():
-                generate_button(
-                    "Download generated data",
-                    app.path_to_generated_data,
-                    f"generated_data_{app.sl_table_name}.csv"
-                )
-                generate_button(
-                    "Download logs",
-                    os.getenv("SUCCESS_LOG_FILE", ""),
-                    f"logs_{app.sl_table_name}.log"
-                )
-                if app.print_report:
-                    generate_button(
-                        "Download report",
-                        app.path_to_report,
-                        f"accuracy_report_{app.sl_table_name}.html"
+            with st.form(key="basic_form", border=False):
+                # os.environ.clear()
+                epochs = st.number_input(
+                    "Epochs",
+                    min_value=1,
+                    value=1,
+                    help="- The larger number of epochs is set the better training result is.\n'"
+                         "- The larger number of epochs is set the longer time for training will be required.\n'"
+                         "- Actual number of epochs can be smaller that the one that was set here. "
+                         "Once training stops improving the model, further training is not needed."
                     )
+                size_limit = st.number_input(
+                    "Rows to generate",
+                    min_value=1,
+                    max_value=None,
+                    value=1000,
+                )
+                print_report = st.checkbox(
+                    "Create an accuracy report",
+                    value=False,
+                    key="print_report"
+                )
+                submit = st.form_submit_button(
+                    label="Generate data",
+                    type="primary",
+                    on_click=disable,
+                    disabled=st.session_state.disabled
+                )
+                if submit:
+                    app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
+                    runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
+                    st.session_state.runner = runner.getName()
+                    runner.start()
+                    current_progress = 0
+                    prg = st.progress(current_progress)
+
+                    while runner.is_alive():
+                        with st.expander("Logs"):
+                            while True:
+                                if not app.log_queue.empty():
+                                    with st.code("logs", language="log"):
+                                        log = app.log_queue.get()
+                                        st.text(log)
+                                        current_progress, message = app.progress_handler.info
+                                        prg.progress(value=current_progress, text=message)
+                                elif not runner.is_alive():
+                                    break
+                                time.sleep(0.001)
+                    if not app.log_error_queue.empty():
+                        st.exception(app.log_error_queue.get())
+                    elif app.log_error_queue.empty() and not runner.is_alive():
+                        prg.progress(100)
+                        app.progress_handler.reset_instance()
+                        st.success("Data generation completed")
+                    st.session_state.disabled = False
+                    st.rerun()
+        with st.container():
+            generate_button(
+                "Download generated data",
+                os.getenv("GENERATED_DATA", ""),
+                f"generated_data.csv"
+            )
+            generate_button(
+                "Download logs",
+                 os.getenv("SUCCESS_LOG_FILE", ""),
+                f"logs.log"
+            )
+            if st.session_state.print_report:
+                generate_button(
+                    "Download report",
+                    os.getenv("REPORT", ""),
+                    f"accuracy_report.html"
+                )
 
 
 if __name__ == "__main__":
