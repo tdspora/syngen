@@ -176,7 +176,7 @@ def disable():
     Disable the button depending on the status of the runner
     """
     st.session_state.disabled = True
-    st.session_state.show_download_buttons = True
+    st.session_state.show_download_buttons = False
 
 
 def run():
@@ -287,35 +287,37 @@ def run():
             st.warning("Please upload a CSV file to proceed")
         if uploaded_file:
             show_data(uploaded_file)
-            with st.form(key="basic_form", border=False):
-                epochs = st.number_input(
-                    "Epochs",
-                    min_value=1,
-                    value=1,
-                    help="- The larger number of epochs is set the better training result is.\n"
-                         "- The larger number of epochs is set the longer time for training will be required.\n"
-                         "- Actual number of epochs can be smaller that the one that was set here. "
-                         "Once training stops improving the model, further training is not needed."
+            with st.container():
+                with st.form(key="form"):
+                    epochs = st.number_input(
+                        "Epochs",
+                        min_value=1,
+                        value=1,
+                        help="- The larger number of epochs is set the better training result is.\n"
+                             "- The larger number of epochs is set the longer time for training will be required.\n"
+                             "- Actual number of epochs can be smaller that the one that was set here. "
+                             "Once training stops improving the model, further training is not needed."
+                        )
+                    size_limit = st.number_input(
+                        "Rows to generate",
+                        min_value=1,
+                        max_value=None,
+                        value=1000,
                     )
-                size_limit = st.number_input(
-                    "Rows to generate",
-                    min_value=1,
-                    max_value=None,
-                    value=1000,
-                )
-                print_report = st.checkbox(
-                    "Create an accuracy report",
-                    value=False,
-                    key="print_report"
-                )
-                submit = st.form_submit_button(
-                    label="Generate data",
-                    type="primary",
-                    on_click=disable,
-                    disabled=st.session_state.disabled
-                )
-                if submit:
+                    print_report = st.checkbox(
+                        "Create an accuracy report",
+                        value=False,
+                        key="print_report"
+                    )
+                    submit = st.button(
+                        label="Generate data",
+                        type="primary",
+                        key="gen_button",
+                        on_click=disable,
+                        disabled=st.session_state.disabled
+                    )
                     app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
+                if submit:
                     runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
                     st.session_state.runner = runner.getName()
                     runner.start()
@@ -340,26 +342,28 @@ def run():
                         prg.progress(100)
                         app.progress_handler.reset_instance()
                         st.success("Data generation completed")
+                    st.session_state.show_download_buttons = True
                     st.session_state.disabled = False
-                    # st.rerun()
-            if st.session_state.show_download_buttons:
-                with st.container():
-                    generate_button(
-                        "Download generated data",
-                        os.getenv("GENERATED_DATA", ""),
-                        f"generated_data.csv"
-                    )
-                    generate_button(
-                        "Download logs",
-                        os.getenv("SUCCESS_LOG_FILE", ""),
-                        f"logs.log"
-                    )
-                    if st.session_state.print_report:
+                    st.session_state.runner = None
+                if st.session_state.show_download_buttons:
+                    with st.container():
+                        st.write(st.session_state)
                         generate_button(
-                            "Download report",
-                            os.getenv("REPORT", ""),
-                            f"accuracy_report.html"
+                            "Download generated data",
+                            app.path_to_generated_data,
+                            f"generated_data_{app.sl_table_name}.csv"
                         )
+                        generate_button(
+                            "Download logs",
+                            os.getenv("SUCCESS_LOG_FILE", ""),
+                            f"logs_{app.sl_table_name}.log"
+                        )
+                        if app.print_report:
+                            generate_button(
+                                "Download report",
+                                app.path_to_report,
+                                f"accuracy_report_{app.sl_table_name}.html"
+                            )
 
 
 if __name__ == "__main__":
