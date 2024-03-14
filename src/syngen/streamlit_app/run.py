@@ -167,6 +167,8 @@ def set_session_state():
         st.session_state.print_report = False
     if "runner" not in st.session_state:
         st.session_state.runner = None
+    if "show_download_buttons" not in st.session_state:
+        st.session_state.show_download_buttons = False
 
 
 def disable():
@@ -174,6 +176,7 @@ def disable():
     Disable the button depending on the status of the runner
     """
     st.session_state.disabled = True
+    st.session_state.show_download_buttons = True
 
 
 def run():
@@ -271,8 +274,8 @@ def run():
                                )
 
     if selected == "Basic":
-        st.title("SynGen UI")
         set_session_state()
+        st.title("SynGen UI")
         uploaded_file = st.file_uploader(
             "Upload a CSV file",
             type="csv",
@@ -285,13 +288,12 @@ def run():
         if uploaded_file:
             show_data(uploaded_file)
             with st.form(key="basic_form", border=False):
-                # os.environ.clear()
                 epochs = st.number_input(
                     "Epochs",
                     min_value=1,
                     value=1,
-                    help="- The larger number of epochs is set the better training result is.\n'"
-                         "- The larger number of epochs is set the longer time for training will be required.\n'"
+                    help="- The larger number of epochs is set the better training result is.\n"
+                         "- The larger number of epochs is set the longer time for training will be required.\n"
                          "- Actual number of epochs can be smaller that the one that was set here. "
                          "Once training stops improving the model, further training is not needed."
                     )
@@ -339,24 +341,25 @@ def run():
                         app.progress_handler.reset_instance()
                         st.success("Data generation completed")
                     st.session_state.disabled = False
-                    st.rerun()
-        with st.container():
-            generate_button(
-                "Download generated data",
-                os.getenv("GENERATED_DATA", ""),
-                f"generated_data.csv"
-            )
-            generate_button(
-                "Download logs",
-                 os.getenv("SUCCESS_LOG_FILE", ""),
-                f"logs.log"
-            )
-            if st.session_state.print_report:
-                generate_button(
-                    "Download report",
-                    os.getenv("REPORT", ""),
-                    f"accuracy_report.html"
-                )
+                    # st.rerun()
+            if st.session_state.show_download_buttons:
+                with st.container():
+                    generate_button(
+                        "Download generated data",
+                        os.getenv("GENERATED_DATA", ""),
+                        f"generated_data.csv"
+                    )
+                    generate_button(
+                        "Download logs",
+                        os.getenv("SUCCESS_LOG_FILE", ""),
+                        f"logs.log"
+                    )
+                    if st.session_state.print_report:
+                        generate_button(
+                            "Download report",
+                            os.getenv("REPORT", ""),
+                            f"accuracy_report.html"
+                        )
 
 
 if __name__ == "__main__":
