@@ -160,13 +160,11 @@ def generate_button(label, path_to_file, download_name):
 
 def get_running_status():
     """
-    Get the status of the proces of a model training and generation data
+    Get the status of the process of a model training and generation data
     """
     if "gen_button" in st.session_state and st.session_state.gen_button is True:
-        st.session_state.running = True
         return True
     else:
-        st.session_state.running = False
         return False
 
 
@@ -311,7 +309,6 @@ def run():
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
             ):
                 runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
-                st.session_state.running = True
                 lock = threading.Lock()
                 with lock:
                     runner.start()
