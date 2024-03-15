@@ -76,9 +76,9 @@ class StreamlitHandler:
             settings = {
                 "source": self.file_path,
                 "epochs": self.epochs,
-                "row_limit": 10000,
+                "row_limit": None,
                 "drop_null": False,
-                "batch_size": 32,
+                "batch_size": 1000,
                 "print_report": False
             }
             worker = Worker(
@@ -103,7 +103,7 @@ class StreamlitHandler:
             logger.info("Starting data generation...")
             settings = {
                 "size": self.size_limit,
-                "batch_size": 32,
+                "batch_size": 5000,
                 "run_parallel": False,
                 "random_seed": None,
                 "print_report": self.print_report,
