@@ -301,6 +301,17 @@ class PostprocessHandler(Processor):
         data, schema = DataLoader(path_to_generated_data).load_data()
         return data
 
+    @staticmethod
+    def _handle_json_string(row: str) -> str:
+        values_to_replace = {
+            "'": '"',
+            "True": "true",
+            "False": "false"
+        }
+        for key, value in values_to_replace.items():
+            row = row.replace(key, value)
+        return row
+
     def _post_process_generated_data(
             self,
             data: pd.DataFrame,
@@ -316,6 +327,8 @@ class PostprocessHandler(Processor):
                 apply(lambda row: unflatten_list(row.to_dict(), "."), axis=1)
             data[old_column] = data[old_column]. \
                 apply(lambda row: self._remove_none_from_struct(row))
+            data[old_column] = data[old_column]. \
+                apply(lambda row: json.dumps(row, ensure_ascii=False))
             dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
             data.drop(dropped_columns, axis=1, inplace=True)
         return data
