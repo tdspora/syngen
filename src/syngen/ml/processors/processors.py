@@ -312,8 +312,15 @@ class PostprocessHandler(Processor):
         """
         for old_column, new_columns in flattening_mapping.items():
             data[new_columns] = self._restore_empty_values(data[new_columns])
-            data[old_column] = data[new_columns]. \
-                apply(lambda row: unflatten_list(row.to_dict(), "."), axis=1)
+
+            batch_size = 10
+            data["batch_id"] = np.arange(len(data)) // batch_size
+            for batch_id, batch_data in data.groupby("batch_id"):
+                data.loc[batch_data.index, old_column] = batch_data[new_columns].apply(
+                    lambda row: unflatten_list(row.to_dict(), "."), axis=1
+                )
+            data = data.drop(columns=["batch_id"])
+
             data[old_column] = data[old_column]. \
                 apply(lambda row: self._remove_none_from_struct(row))
             data[old_column] = data[old_column]. \
