@@ -301,17 +301,6 @@ class PostprocessHandler(Processor):
         data, schema = DataLoader(path_to_generated_data).load_data()
         return data
 
-    @staticmethod
-    def _handle_json_string(row: str) -> str:
-        values_to_replace = {
-            "'": '"',
-            "True": "true",
-            "False": "false"
-        }
-        for key, value in values_to_replace.items():
-            row = row.replace(key, value)
-        return row
-
     def _post_process_generated_data(
             self,
             data: pd.DataFrame,
