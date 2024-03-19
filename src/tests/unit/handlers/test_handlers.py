@@ -1,8 +1,10 @@
 from unittest.mock import patch
 import pytest
 
+
 from syngen.ml.handlers import VaeInferHandler
 from syngen.ml.data_loaders import MetadataLoader
+from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 @patch("os.path.exists", return_value=True)
@@ -10,31 +12,34 @@ from syngen.ml.data_loaders import MetadataLoader
     "path_to_metadata, expected_path, type_of_process",
     [
         (
-            "tests/unit/handlers/fixtures/metadata.yaml",
-            "path/to/merged_infer_parent-table.csv",
-            "train",
+                "tests/unit/handlers/fixtures/metadata.yaml",
+                "path/to/merged_infer_parent-table.csv",
+                "train",
         ),
         (
-            "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
-            "path/to/merged_infer_parent-table.csv",
-            "train",
+                "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
+                "path/to/merged_infer_parent-table.csv",
+                "train",
         ),
         (
-            "tests/unit/handlers/fixtures/metadata.yaml",
-            "../data/parent_table_generated.csv",
-            "infer",
+                "tests/unit/handlers/fixtures/metadata.yaml",
+                "../data/parent_table_generated.csv",
+                "infer",
         ),
         (
-            "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
-            "model_artifacts/tmp_store/parent-table/merged_infer_parent-table.csv",
-            "infer",
+                "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
+                "model_artifacts/tmp_store/parent-table/merged_infer_parent-table.csv",
+                "infer",
         ),
     ],
 )
-def test_get_pk_path(mock_os_path_exists, path_to_metadata, expected_path, type_of_process):
+def test_get_pk_path(
+        mock_os_path_exists, path_to_metadata, expected_path, type_of_process, rp_logger
+):
     """
-    Test set_pk method
+    Test the method '_get_pk_path' of the VaeInferHandler
     """
+    rp_logger.info("Test the method '_get_pk_path' of the VaeInferHandler")
     with patch.object(VaeInferHandler, "__post_init__", lambda x: None):
         metadata = MetadataLoader(path_to_metadata).load_data()
         handler = VaeInferHandler(
@@ -53,3 +58,4 @@ def test_get_pk_path(mock_os_path_exists, path_to_metadata, expected_path, type_
             type_of_process=type_of_process,
         )
         assert handler._get_pk_path("parent_table", "child_table") == expected_path
+    rp_logger.info(SUCCESSFUL_MESSAGE)

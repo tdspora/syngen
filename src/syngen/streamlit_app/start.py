@@ -18,5 +18,3 @@ def start():
 
     bootstrap.load_config_options(config_options)
     bootstrap.run(file_path, False, [], flag_options={})
-
-

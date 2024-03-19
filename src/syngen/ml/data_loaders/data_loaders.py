@@ -177,7 +177,7 @@ class CSVLoader:
             logger.error(message)
             raise FileNotFoundError(message)
 
-        return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
+        return df, CSVConvertor(df).schema
 
     def load_data(self, path, **kwargs):
         return self._load_data(path, format=self.format, **kwargs)
@@ -427,6 +427,10 @@ class BinaryLoader(BaseDataLoader):
     def _load_data(f) -> Tuple[pd.DataFrame, None]:
         return pickle.load(f), None
 
+    def get_columns(self, path: str) -> List[str]:
+        data, schema = self.load_data(path)
+        return data.columns.tolist()
+
     def load_data(self, path: str) -> Tuple[pd.DataFrame, None]:
         with open(path, "rb") as f:
             return self._load_data(f)
@@ -464,7 +468,7 @@ class ExcelLoader:
                 dfs = [df for sheet_name, df in df.items()]
                 df = pd.concat(dfs, ignore_index=True)
             global_context({})
-            return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
+            return df, CSVConvertor(df).schema
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"

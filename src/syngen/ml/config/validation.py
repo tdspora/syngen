@@ -9,6 +9,7 @@ from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader
 from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.utils import fetch_unique_root
 
 
 @dataclass
@@ -137,13 +138,11 @@ class Validator:
             )
             self.errors["check existence of the generated data"][parent_table] = message
 
-    def _check_existence_of_source(self, table_name: str) -> bool:
+    def _check_existence_of_source(self, path_to_source: str, table_name: str) -> bool:
         """
         Check if the source of the certain table exists
         """
-        if not DataLoader(
-            self.merged_metadata[table_name]["train_settings"]["source"]
-        ).has_existed_path:
+        if not DataLoader(path_to_source).has_existed_path:
             message = (
                 f"It seems that the path to the source of the table - '{table_name}' "
                 f"isn't correct. Please, check the path to the source of the table - "
@@ -233,8 +232,9 @@ class Validator:
             if config_of_key["type"] in self.type_of_fk_keys:
                 referenced_columns = config_of_key["references"]["columns"]
                 referenced_table = config_of_key["references"]["table"]
+                path_to_source = self._fetch_path_to_source(referenced_table)
                 existed_columns = self._fetch_existed_columns(
-                    self.merged_metadata[referenced_table]
+                    path_to_source, self.merged_metadata[referenced_table]
                 )
                 if all([column in existed_columns for column in referenced_columns]):
                     continue
@@ -253,38 +253,55 @@ class Validator:
                     ] = message
 
     @staticmethod
-    def _fetch_existed_columns(metadata_of_table) -> List[str]:
+    def _fetch_existed_columns(path_to_source: str, metadata_of_table) -> List[str]:
         """
         Fetch the list of the columns of the source table
         """
         format_settings = metadata_of_table.get("format", {})
-        return DataLoader(
-            metadata_of_table["train_settings"]["source"]
-        ).get_columns(**format_settings)
+        return DataLoader(path_to_source).get_columns(**format_settings)
 
-    def _check_key_columns(self, table_name: str):
+    def _check_key_columns(self, path_to_source: str, table_name: str):
         """
         Fetch the list of the columns of the source table and
         check whether the columns of the certain key exist in the source table
         """
         metadata_of_table = self.merged_metadata[table_name]
-        existed_columns = self._fetch_existed_columns(metadata_of_table)
+        existed_columns = self._fetch_existed_columns(path_to_source, metadata_of_table)
         self._check_existence_of_columns(metadata_of_table, table_name, existed_columns)
         self._check_references_columns(table_name, metadata_of_table)
 
-    def run(self):
+    def preprocess_metadata(self):
         """
-        Run the validation process
+        Preprocess the metadata, set the metadata and the merged metadata
         """
         self._launch_validation_of_schema(metadata=self.metadata, metadata_path=self.metadata_path)
         self._define_mapping()
         self._merge_metadata()
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
+
+    def _fetch_path_to_source(self, table_name):
+        """
+        Fetch the path to the source of the certain table
+        """
+        if os.path.exists(
+                f"{os.getcwd()}/model_artifacts/tmp_store/flatten_configs/flatten_metadata_"
+                f"{fetch_unique_root(table_name, self.metadata_path)}.json"
+        ):
+            return (f"{os.getcwd()}/model_artifacts/tmp_store/{slugify(table_name)}/"
+                    f"input_data_{slugify(table_name)}.pkl")
+        return self.merged_metadata[table_name]["train_settings"]["source"]
+
+    def run(self):
+        """
+        Run the validation process
+        """
+        self.preprocess_metadata()
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train":
-                if self._check_existence_of_source(table_name):
-                    self._check_key_columns(table_name)
+                path_to_source = self._fetch_path_to_source(table_name)
+                if self._check_existence_of_source(path_to_source, table_name):
+                    self._check_key_columns(path_to_source, table_name)
             elif self.type_of_process == "infer":
                 self._check_existence_of_destination(table_name)
         for table_name in self.metadata.keys():

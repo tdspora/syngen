@@ -1,6 +1,5 @@
 from typing import Dict, Tuple
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 
 import pandas as pd
 import numpy as np
@@ -48,17 +47,15 @@ class Convertor(ABC):
             return df
 
 
-@dataclass
 class CSVConvertor(Convertor):
     """
     Class for supporting custom schema for csv files
     """
 
-    df: pd.DataFrame()
-    schema = {"fields": {}, "format": "CSV"}
+    schema: Dict = {"fields": {}, "format": "CSV"}
 
-    def __init__(self, schema, df):
-        super().__init__(schema, df)
+    def __init__(self, df: pd.DataFrame):
+        super().__init__(self.schema, df)
 
     def _convert_schema_and_df(self, schema, df) -> Tuple[Dict, pd.DataFrame]:
         preprocessed_df = self._preprocess_df(schema, df)

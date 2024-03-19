@@ -1,10 +1,10 @@
 import os
 import sys
-import re
 from typing import List, Dict, Optional, Union
 from dateutil import parser
 import pickle
 from datetime import datetime, timedelta
+import re
 
 import pandas as pd
 import numpy as np
@@ -128,10 +128,10 @@ def generate_uuids(version: Union[int, str], size: int):
     for i in range(size):
         if version != "ulid":
             generated_uuid_column.append(
-                uuid.UUID(int=random.getrandbits(128), version=int(version))
+                str(uuid.UUID(int=random.getrandbits(128), version=int(version)))
             )
         else:
-            generated_uuid_column.append(ulid.generate())
+            generated_uuid_column.append(str(ulid.generate()))
     return generated_uuid_column
 
 
@@ -340,7 +340,7 @@ def fetch_training_config(train_config_pickle_path):
         return pkl.load(f)
 
 
-def fetch_unique_root(table_name: str, metadata_path: str):
+def fetch_unique_root(table_name: Optional[str], metadata_path: Optional[str]):
     """
     Construct the unique constant substring for use in the name of the experiment and log file
     """

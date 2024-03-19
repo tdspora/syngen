@@ -189,7 +189,9 @@ def test_get_columns_from_table_in_csv_format(rp_logger):
 
 
 def test_get_columns_from_table_in_csv_format_with_formatting_settings(rp_logger):
-    rp_logger.info("Get the list of the columns from the table in CSV format where the separator is '|'")
+    rp_logger.info(
+        "Get the list of the columns from the table in CSV format where the separator is '|'"
+    )
     data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.csv")
     columns = data_loader.get_columns(sep="|")
     assert isinstance(data_loader.file_loader, CSVLoader)
@@ -308,6 +310,36 @@ def test_save_data_in_avro_format(test_avro_path, test_df, rp_logger):
 
 
 def test_load_data_from_table_in_pickle_format(rp_logger):
+    rp_logger.info("Loading data from local table in pickle format")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/pickle_tables/table_with_data.pkl")
+    df, schema = data_loader.load_data()
+
+    assert isinstance(data_loader.file_loader, BinaryLoader)
+    assert (
+        assert_frame_equal(
+            df,
+            pd.DataFrame(
+                {
+                    "gender": [0, 1, 0, 1],
+                    "height": [
+                        157.18518021548246,
+                        166.7731072622863,
+                        162.91821942384928,
+                        173.51448996432848,
+                    ],
+                    "id": [925, 84, 821, 383],
+                }
+            ),
+        )
+        is None
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert schema is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_from_table_in_pickle_format(rp_logger):
     rp_logger.info("Loading data from local table in pickle format")
     data_loader = DataLoader("tests/unit/data_loaders/fixtures/pickle_tables/table_with_data.pkl")
     df, schema = data_loader.load_data()
@@ -1117,8 +1149,12 @@ def test_get_column_from_table_in_xls_format(rp_logger):
 
 
 def test_get_column_from_table_in_xls_format_with_formatting_settings(rp_logger):
-    rp_logger.info("Get the list of the columns from the table in '.xls' format from the certain sheet")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_sheets.xls")
+    rp_logger.info(
+        "Get the list of the columns from the table in '.xls' format from the certain sheet"
+    )
+    data_loader = DataLoader(
+        "tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_sheets.xls"
+    )
     columns = data_loader.get_columns(sheet_name="TestName")
     assert isinstance(data_loader.file_loader, ExcelLoader)
     assert columns == ["gender", "height", "id"]

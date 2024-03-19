@@ -10,6 +10,7 @@ from syngen.ml.utils import (
     setup_logger,
     create_log_file
 )
+from syngen.ml.processors import PreprocessHandler
 
 
 @click.command()
@@ -147,6 +148,9 @@ def launch_train(
         "batch_size": batch_size,
         "print_report": print_report,
     }
+
+    PreprocessHandler(metadata_path, table_name, settings).run()
+
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
@@ -158,15 +162,5 @@ def launch_train(
     worker.launch_train()
 
 
-def preprocess_data():
-    """
-    Preprocess the data before the training process
-    """
-    path_to_script = f"{os.getcwd()}/model_artifacts/script.py"
-    if os.path.exists(path_to_script):
-        os.system(f"python3 {path_to_script}")
-
-
 if __name__ == "__main__":
-    preprocess_data()
     launch_train()
