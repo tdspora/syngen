@@ -15,7 +15,6 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
 from streamlit_option_menu import option_menu
 
-
 UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
@@ -24,6 +23,7 @@ class StreamlitHandler:
     """
     A class for handling the Streamlit app
     """
+
     def __init__(self, uploaded_file, epochs: int, size_limit: int, print_report: bool):
         self.log_queue = Queue()
         self.progress_handler = ProgressBarHandler()
@@ -183,80 +183,10 @@ def run():
     st.sidebar.image(path_to_logo, use_column_width=True)
     st.markdown(f"""
         <style>
-        {"".join(open(f"{os.path.join(os.path.dirname(__file__))}/css/font_style.css").readlines())}
+        {"".join(open(f"{os.path.join(os.path.dirname(__file__))}/css/style.css").readlines())}
         </style>
-        """, unsafe_allow_html=True)
-    label = (
-        """
-    <style>
-        div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"] {
-           color:black;
-           font-size: 0px;
-           min-width:115px
-        }
-        div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"]::after {
-            color:black;
-            content: "Browse a file";
-            display: block;
-            position: absolute;
-            font-size: 16px;
-        }
-        div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"]:active::after {
-            color:white;
-        }
-        div[data-testid="stFileDropzoneInstructions"]>div>span {
-           visibility:hidden;
-        }
-        div[data-testid="stFileDropzoneInstructions"]>div>span::after {
-           content:"Drop a file here";
-           visibility:visible;
-           display:block;
-        }
-         div[data-testid="stFileDropzoneInstructions"]>div>small {
-           visibility:hidden;
-        }
-        div[data-testid="stFileDropzoneInstructions"]>div>small::before {
-           content:"Limit 200MB per file";
-           visibility:visible;
-           display:block;
-        }
-    </style>
-    """
-    )
-    st.markdown(label, unsafe_allow_html=True)
-    st.markdown(
-        """
-        <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        .stDeployButton {
-            visibility: hidden;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        """
-        <style>
-            div[class="st-emotion-cache-vqd4fc e1nzilvr5"]{
-                margin-right:10px;
-            }
-            div[class="st-emotion-cache-7e7wz2 e1y5xkzn2"]{
-                justify-content:flex-start;
-            }
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        """
-        <style>
-            div[role="tooltip"]{
-                left:20%;
-            }
-        """,
-        unsafe_allow_html=True,
-    )
+        """, unsafe_allow_html=True
+                )
     with st.sidebar:
         selected = option_menu("", ["Basic"],
                                icons=["'play'"],
@@ -306,7 +236,7 @@ def run():
             )
             app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
             if st.button(
-                "Generate data", type="primary", key="gen_button", disabled=get_running_status()
+                    "Generate data", type="primary", key="gen_button", disabled=get_running_status()
             ):
                 runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
                 lock = threading.Lock()
