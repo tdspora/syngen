@@ -19,8 +19,8 @@ def setup_ui():
     """
     Set up the UI for the Streamlit app
     """
-    path_to_logo = f"{os.path.join(os.path.dirname(__file__))}/../img/logo.svg"
-    path_to_logo_img = f"{os.path.join(os.path.dirname(__file__))}/../img/favicon.svg"
+    path_to_logo = f"{os.path.join(os.path.dirname(__file__))}/img/logo.svg"
+    path_to_logo_img = f"{os.path.join(os.path.dirname(__file__))}/img/favicon.svg"
     st.set_page_config(
         page_title="SynGen UI",
         page_icon=path_to_logo_img
@@ -29,12 +29,12 @@ def setup_ui():
     st.markdown(
         f"""
         <style>
-        {"".join(open(f"{os.path.join(os.path.dirname(__file__))}/../css/style.css").readlines())}
+        {"".join(open(f"{os.path.join(os.path.dirname(__file__))}/css/style.css").readlines())}
         </style>
         """, unsafe_allow_html=True
     )
 
-    st.title("SynGen UI", help=f"The current version of the app is {fetch_version_syngen()}")
+    st.title("SynGen UI", help=f"The current version of syngen library is {fetch_version_syngen()}")
 
 
 def run_basic_page():
