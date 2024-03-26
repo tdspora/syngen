@@ -401,12 +401,3 @@ def setup_logger():
     logger.remove()
     logger.add(console_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
     logger.add(file_sink, level="INFO")
-
-
-def fetch_version_syngen() -> str:
-    """
-    Fetch the version of the syngen library
-    """
-    with open("../src/syngen/VERSION", "r") as file:
-        version_info = file.read()
-    return version_info

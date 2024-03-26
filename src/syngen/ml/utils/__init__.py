@@ -22,6 +22,5 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     clean_up_metadata,
     fetch_log_message,
     file_sink,
-    fetch_version_syngen,
     ProgressBarHandler
 )

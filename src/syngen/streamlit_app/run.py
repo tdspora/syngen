@@ -12,7 +12,7 @@ from syngen.streamlit_app.utils import (
     set_session_state,
     cleanup_artifacts,
 )
-from syngen.ml.utils import fetch_version_syngen
+from syngen import __version__
 
 
 def setup_ui():
@@ -34,7 +34,10 @@ def setup_ui():
         """, unsafe_allow_html=True
     )
 
-    st.title("SynGen UI", help=f"The current version of syngen library is {fetch_version_syngen()}")
+    st.title(
+        "SynGen UI",
+        help=f"The current version of syngen library is {__version__}"
+    )
 
 
 def run_basic_page():
