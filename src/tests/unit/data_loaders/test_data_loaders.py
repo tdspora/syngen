@@ -189,7 +189,9 @@ def test_get_columns_from_table_in_csv_format(rp_logger):
 
 
 def test_get_columns_from_table_in_csv_format_with_formatting_settings(rp_logger):
-    rp_logger.info("Get the list of the columns from the table in CSV format where the separator is '|'")
+    rp_logger.info(
+        "Get the list of the columns from the table in CSV format where the separator is '|'"
+    )
     data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.csv")
     columns = data_loader.get_columns(sep="|")
     assert isinstance(data_loader.file_loader, CSVLoader)
@@ -1117,8 +1119,12 @@ def test_get_column_from_table_in_xls_format(rp_logger):
 
 
 def test_get_column_from_table_in_xls_format_with_formatting_settings(rp_logger):
-    rp_logger.info("Get the list of the columns from the table in '.xls' format from the certain sheet")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_sheets.xls")
+    rp_logger.info(
+        "Get the list of the columns from the table in '.xls' format from the certain sheet"
+    )
+    data_loader = DataLoader(
+        "tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_sheets.xls"
+    )
     columns = data_loader.get_columns(sheet_name="TestName")
     assert isinstance(data_loader.file_loader, ExcelLoader)
     assert columns == ["gender", "height", "id"]
