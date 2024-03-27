@@ -24,15 +24,13 @@ class StreamlitHandler:
     """
     A class for handling the Streamlit app
     """
-    def __init__(self, uploaded_file):
+    def __init__(self, uploaded_file, epochs: int, size_limit: int, print_report: bool):
         self.log_queue = Queue()
         self.progress_handler = ProgressBarHandler()
         self.log_error_queue = Queue()
-        self.epochs = st.number_input("Epochs", min_value=1, value=1)
-        self.size_limit = st.number_input(
-            "Rows to generate", min_value=1, max_value=None, value=1000
-        )
-        self.print_report = st.checkbox("Create an accuracy report", value=False)
+        self.epochs = epochs
+        self.size_limit = size_limit
+        self.print_report = print_report
         self.file_name = uploaded_file.name
         self.table_name = os.path.splitext(self.file_name)[0]
         self.file_path = os.path.join(UPLOAD_DIRECTORY, self.file_name)
@@ -162,21 +160,25 @@ def generate_button(label, path_to_file, download_name):
 
 def get_running_status():
     """
-    Get the status of the proces of a model training and generation data
+    Get the status of the process of a model training and generation data
     """
     if "gen_button" in st.session_state and st.session_state.gen_button is True:
-        st.session_state.running = True
         return True
     else:
-        st.session_state.running = False
         return False
+
+
+def set_session_state():
+    if "disabled" not in st.session_state:
+        st.session_state.disabled = False
 
 
 def run():
     path_to_logo = f"{os.path.join(os.path.dirname(__file__))}/img/logo.svg"
+    path_to_logo_img = f"{os.path.join(os.path.dirname(__file__))}/img/favicon.svg"
     st.set_page_config(
         page_title="SynGen UI",
-        page_icon=path_to_logo
+        page_icon=path_to_logo_img
     )
     st.sidebar.image(path_to_logo, use_column_width=True)
     st.markdown(f"""
@@ -188,13 +190,19 @@ def run():
         """
     <style>
         div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"] {
-           color:white;
+           color:black;
+           font-size: 0px;
+           min-width:115px
         }
         div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"]::after {
-            content: "Browse a file";
             color:black;
+            content: "Browse a file";
             display: block;
             position: absolute;
+            font-size: 16px;
+        }
+        div[data-testid="stFileUploader"]>section[data-testid="stFileUploadDropzone"]>button[data-testid="baseButton-secondary"]:active::after {
+            color:white;
         }
         div[data-testid="stFileDropzoneInstructions"]>div>span {
            visibility:hidden;
@@ -228,6 +236,27 @@ def run():
         """,
         unsafe_allow_html=True
     )
+    st.markdown(
+        """
+        <style>
+            div[class="st-emotion-cache-vqd4fc e1nzilvr5"]{
+                margin-right:10px;
+            }
+            div[class="st-emotion-cache-7e7wz2 e1y5xkzn2"]{
+                justify-content:flex-start;
+            }
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+        <style>
+            div[role="tooltip"]{
+                left:20%;
+            }
+        """,
+        unsafe_allow_html=True,
+    )
     with st.sidebar:
         selected = option_menu("", ["Basic"],
                                icons=["'play'"],
@@ -240,10 +269,11 @@ def run():
 
     if selected == "Basic":
         st.title("SynGen UI")
+        set_session_state()
         uploaded_file = st.file_uploader(
             "Upload a CSV file",
             type="csv",
-            accept_multiple_files=False
+            accept_multiple_files=False,
         )
         if not uploaded_file:
             shutil.rmtree(UPLOAD_DIRECTORY, ignore_errors=True)
@@ -251,12 +281,34 @@ def run():
             st.warning("Please upload a CSV file to proceed")
         if uploaded_file:
             show_data(uploaded_file)
-            app = StreamlitHandler(uploaded_file)
+            epochs = st.number_input(
+                "Epochs",
+                min_value=1,
+                value=1,
+                help="- The larger number of epochs is set the better training result is.\n"
+                     "- The larger number of epochs is set the longer time for training will be required.\n"
+                     "- Actual number of epochs can be smaller that the one that was set here. "
+                     "Once training stops improving the model, further training is not needed.",
+                disabled=get_running_status()
+            )
+            size_limit = st.number_input(
+                "Rows to generate",
+                min_value=1,
+                max_value=None,
+                value=1000,
+                disabled=get_running_status()
+            )
+            print_report = st.checkbox(
+                "Create an accuracy report",
+                value=False,
+                key="print_report",
+                disabled=get_running_status()
+            )
+            app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
             if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
             ):
                 runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
-                st.session_state.running = True
                 lock = threading.Lock()
                 with lock:
                     runner.start()

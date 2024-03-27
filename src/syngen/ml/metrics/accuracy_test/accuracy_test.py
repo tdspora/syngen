@@ -97,7 +97,7 @@ class BaseTest(ABC):
             for k, v in self.config.items()
             if k not in ["print_report", "get_infer_metrics"]
         }
-        return infer_config, train_config
+        return train_config, infer_config
 
 
 class AccuracyTest(BaseTest):
