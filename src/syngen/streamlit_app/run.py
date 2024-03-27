@@ -1,6 +1,7 @@
 import threading
 import time
 import os
+import ctypes
 
 import streamlit as st
 from streamlit_option_menu import option_menu
@@ -38,6 +39,26 @@ def setup_ui():
         "SynGen UI",
         help=f"The current version of syngen library is {__version__}"
     )
+
+
+class ThreadWithException(threading.Thread):
+
+    def get_id(self):
+
+        # returns id of the respective thread
+        if hasattr(self, '_thread_id'):
+            return self._thread_id
+        for id, thread in threading._active.items():
+            if thread is self:
+                return id
+
+    def raise_exception(self):
+        thread_id = self.get_id()
+        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id,
+                                                         ctypes.py_object(SystemExit))
+        if res > 1:
+            ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
+            print('Exception raise failure')
 
 
 def run_basic_page():
@@ -83,32 +104,31 @@ def run_basic_page():
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
-            runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
-            lock = threading.Lock()
-            with lock:
-                runner.start()
+            runner = ThreadWithException(name="train_and_infer", target=app.train_and_infer)
+            runner.start()
             current_progress = 0
             prg = st.progress(current_progress)
 
             while runner.is_alive():
                 with st.expander("Logs"):
                     while True:
-                        if not app.log_queue.empty():
+                        if not app.log_error_queue.empty() or not runner.is_alive():
+                            break
+                        elif not app.log_queue.empty():
                             with st.code("logs", language="log"):
                                 log = app.log_queue.get()
                                 st.text(log)
                                 current_progress, message = app.progress_handler.info
                                 prg.progress(value=current_progress, text=message)
-                        elif not runner.is_alive():
-                            break
                         time.sleep(0.001)
             if not app.log_error_queue.empty():
+                runner.raise_exception()
                 st.exception(app.log_error_queue.get())
-            elif app.log_error_queue.empty() and not runner.is_alive():
-                prg.progress(100)
-                app.progress_handler.reset_instance()
+            elif not runner.is_alive():
                 st.success("Data generation completed")
-                st.rerun()
+            prg.progress(100)
+            app.progress_handler.reset_instance()
+            st.rerun()
         with st.container():
             app.generate_buttons()
 
