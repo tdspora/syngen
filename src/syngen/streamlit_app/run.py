@@ -44,13 +44,8 @@ def setup_ui():
 class ThreadWithException(threading.Thread):
 
     def get_id(self):
-
-        # returns id of the respective thread
-        if hasattr(self, '_thread_id'):
-            return self._thread_id
-        for id, thread in threading._active.items():
-            if thread is self:
-                return id
+        if hasattr(self, "_ident"):
+            return self._ident
 
     def raise_exception(self):
         thread_id = self.get_id()
@@ -58,7 +53,6 @@ class ThreadWithException(threading.Thread):
                                                          ctypes.py_object(SystemExit))
         if res > 1:
             ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
-            print('Exception raise failure')
 
 
 def run_basic_page():
@@ -100,10 +94,11 @@ def run_basic_page():
             key="print_report",
             disabled=get_running_status()
         )
-        app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
+        app = StreamlitHandler(epochs, size_limit, print_report, uploaded_file)
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
+            app.__post_init__()
             runner = ThreadWithException(name="train_and_infer", target=app.train_and_infer)
             runner.start()
             current_progress = 0
