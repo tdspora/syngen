@@ -123,6 +123,9 @@ class MlflowTracker:
             mlflow.start_run(run_id, experiment_id, run_name, nested, tags, description)
             return mlflow.last_active_run()
 
+    @staticmethod
+    def get_last_run():
+        return mlflow.last_active_run()
 
     def end_run(self):
         if self.is_active:

@@ -315,33 +315,12 @@ class Worker:
                 MlflowTracker().end_run()
 
         MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
-        for table in chain_for_tables_for_training:
-            for stage in self.train_stages:
-                run_id = MlflowTracker().search_run(table, stage)
-                run_info = MlflowTracker().get_run(run_id).info
-                MlflowTracker().log_metric(key=f'{table}-{stage}-duration', value=(run_info.end_time - run_info.start_time)/1000)
-                for metric in self.hardware_metrics:
-                    try:
-                        MlflowTracker().log_metric(key=f'{table}-{stage}-{metric}', 
-                                                value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
-                                                )
-                    except:
-                        pass
+        for stage in self.train_stages:
+            self.collect_metrics(chain_for_tables_for_training, stage)
         if generation_of_reports:
-            for table in chain_for_tables_for_inference:
-                run_id = MlflowTracker().search_run(table, 'REPORT')
-                run_info = MlflowTracker().get_run(run_id).info
-                MlflowTracker().log_metric(key=f'{table}-REPORT-duration', value=(run_info.end_time - run_info.start_time)/1000)
-                for metric in self.hardware_metrics:
-                    try:
-                        MlflowTracker().log_metric(key=f'{table}-REPORT-{metric}', 
-                                                   value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
-                                                  )
-                    except:
-                        pass
+            self.collect_metrics(chain_for_tables_for_inference, stage='REPORT')
 
         MlflowTracker().end_run()
-
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
         """
@@ -391,19 +370,22 @@ class Worker:
             )
 
         MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
+        self.collect_metrics(tables, stage='INFER')
+
+    def collect_metrics(self, tables, stage):
         for table in tables:
-            run_id = MlflowTracker().search_run(table, 'INFER')
+            run_id = MlflowTracker().search_run(table, stage)
             run_info = MlflowTracker().get_run(run_id).info
-            MlflowTracker().log_metric(key=f'{table}-INFER-duration', value=(run_info.end_time - run_info.start_time)/1000)
+            MlflowTracker().log_metric(key=f'{table}-{stage}-duration',
+                                       value=(run_info.end_time - run_info.start_time) / 1000)
             for metric in self.hardware_metrics:
                 try:
-                    MlflowTracker().log_metric(key=f'{table}-INFER-{metric}', 
-                                               value=mean([m.value for m in MlflowTracker().get_metric_history(run_id, metric)])
-                                              )
+                    MlflowTracker().log_metric(key=f'{table}-{stage}-{metric}',
+                                               value=mean([m.value for m in
+                                                           MlflowTracker().get_metric_history(run_id, metric)])
+                                               )
                 except:
                     pass
-
-        MlflowTracker().end_run()            
 
     def _generate_reports(self):
         """
