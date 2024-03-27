@@ -11,6 +11,7 @@ from tensorflow.python.data.experimental import AutoShardPolicy
 import matplotlib.pyplot as plt
 import time
 import tqdm
+import psutil
 import pandas as pd
 import numpy as np
 from loguru import logger

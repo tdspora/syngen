@@ -3,6 +3,7 @@ from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
+from statistics import mean 
 import os
 
 from syngen.ml.data_loaders import MetadataLoader
@@ -31,6 +32,11 @@ class Worker:
     metadata: Optional[Dict] = None
     divided: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
+    hardware_metrics: List = ['system/cpu_utilization_percentage', 'system/system_memory_usage_percentage', 
+                              'system/system_memory_usage_megabytes', 'system/gpu_utilization_percentage',
+                              'system/gpu_memory_usage_percentage', 'system/gpu_memory_usage_megabytes']
+    
+    train_stages: List = ['PREPROCESS', 'TRAIN']
 
     def __attrs_post_init__(self):
         os.makedirs("model_artifacts/metadata", exist_ok=True)
@@ -285,6 +291,11 @@ class Worker:
                 both_keys = table in self.divided
 
                 logger.info(f"Infer process of the table - {table} has started")
+                
+                MlflowTracker().start_run(
+                    run_name=f"{table}-REPORT",
+                    tags={"table_name": table, "process": "report"},
+                )
 
                 self.infer_strategy.run(
                     destination=None,
@@ -301,6 +312,15 @@ class Worker:
                     both_keys=both_keys,
                     type_of_process=self.type_of_process,
                 )
+                MlflowTracker().end_run()
+
+        MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
+        for stage in self.train_stages:
+            self.collect_metrics(chain_for_tables_for_training, stage)
+        if generation_of_reports:
+            self.collect_metrics(chain_for_tables_for_inference, stage='REPORT')
+
+        MlflowTracker().end_run()
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
         """
@@ -348,6 +368,24 @@ class Worker:
                 delta=delta,
                 message=f"Infer process of the table - {table} was completed"
             )
+
+        MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
+        self.collect_metrics(tables, stage='INFER')
+
+    def collect_metrics(self, tables, stage):
+        for table in tables:
+            run_id = MlflowTracker().search_run(table, stage)
+            run_info = MlflowTracker().get_run(run_id).info
+            MlflowTracker().log_metric(key=f'{table}-{stage}-duration',
+                                       value=(run_info.end_time - run_info.start_time) / 1000)
+            for metric in self.hardware_metrics:
+                try:
+                    MlflowTracker().log_metric(key=f'{table}-{stage}-{metric}',
+                                               value=mean([m.value for m in
+                                                           MlflowTracker().get_metric_history(run_id, metric)])
+                                               )
+                except:
+                    pass
 
     def _generate_reports(self):
         """
