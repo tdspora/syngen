@@ -504,7 +504,11 @@ class BivariateMetric(BaseMetric):
             remaining_ticks, min(other_ticks, len(remaining_ticks))
         )
 
-        return selected_min_ticks + selected_other_ticks + selected_max_ticks
+        return sorted(
+            set(
+                selected_min_ticks + selected_other_ticks + selected_max_ticks
+                )
+            )
 
     @staticmethod
     def _format_categorical_labels(labels):
