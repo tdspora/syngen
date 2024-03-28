@@ -98,8 +98,9 @@ def run_basic_page():
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
-            app.__post_init__()
-            runner = ThreadWithException(name="train_and_infer", target=app.train_and_infer)
+            # app = StreamlitHandler(epochs, size_limit, print_report, uploaded_file)
+            # app.__post_init__()
+            runner = threading.Thread(name="train_and_infer", target=app.train_and_infer)
             runner.start()
             current_progress = 0
             prg = st.progress(current_progress)
@@ -107,7 +108,11 @@ def run_basic_page():
             while runner.is_alive():
                 with st.expander("Logs"):
                     while True:
-                        if not app.log_error_queue.empty() or not runner.is_alive():
+                        if not app.log_error_queue.empty():
+                            st.exception(app.log_error_queue.get())
+                            break
+                        elif not runner.is_alive():
+                            st.success("Data generation completed")
                             break
                         elif not app.log_queue.empty():
                             with st.code("logs", language="log"):
@@ -116,16 +121,11 @@ def run_basic_page():
                                 current_progress, message = app.progress_handler.info
                                 prg.progress(value=current_progress, text=message)
                         time.sleep(0.001)
-            if not app.log_error_queue.empty():
-                runner.raise_exception()
-                st.exception(app.log_error_queue.get())
-            elif not runner.is_alive():
-                st.success("Data generation completed")
             prg.progress(100)
             app.progress_handler.reset_instance()
             st.rerun()
-        with st.container():
-            app.generate_buttons()
+        # with st.container():
+            # app.generate_buttons()
 
 
 def run():

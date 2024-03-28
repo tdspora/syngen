@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 import traceback
 from queue import Queue
-from dataclasses import dataclass, field
 
 from loguru import logger
 from slugify import slugify
@@ -16,39 +15,34 @@ UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 
-@dataclass
 class StreamlitHandler:
     """
     A class for handling the Streamlit app
     """
-    epochs: int
-    size_limit: int
-    print_report: bool
-    uploaded_file: UploadedFile
-    log_queue: Queue = field(init=False)
-    log_error_queue: Queue = field(init=False)
-    progress_handler: ProgressBarHandler = field(init=False)
-    table_name: str = field(init=False)
-    file_name: str = field(init=False)
-    file_path: str = field(init=False)
-    sl_table_name: str = field(init=False)
-    path_to_logs: str = field(init=False)
-    path_to_generated_data: str = field(init=False)
-    path_to_report: str = field(init=False)
-
-    def __post_init__(self):
-        self.log_queue = Queue()
-        self.log_error_queue = Queue()
-        self.progress_handler = ProgressBarHandler()
+    def __init__(
+            self,
+            epochs: int,
+            size_limit: int,
+            print_report: bool,
+            uploaded_file: UploadedFile
+    ):
+        self.epochs = epochs
+        self.size_limit = size_limit
+        self.print_report = print_report
+        self.uploaded_file = uploaded_file
         self.file_name = self.uploaded_file.name
         self.table_name = os.path.splitext(self.file_name)[0]
         self.file_path = os.path.join(UPLOAD_DIRECTORY, self.file_name)
         self.sl_table_name = slugify(self.table_name)
+        self.progress_handler = ProgressBarHandler()
+        self.log_queue = Queue()
+        self.log_error_queue = Queue()
         self.path_to_logs = f"model_artifacts/tmp_store/{self.sl_table_name}_{TIMESTAMP}.log"
         self.path_to_generated_data = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                f"draws/accuracy_report.html")
+        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
 
     def set_logger(self):
         """
@@ -69,7 +63,6 @@ class StreamlitHandler:
         """
         Write log messages to a log file
         """
-        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
         os.makedirs(os.path.dirname(self.path_to_logs), exist_ok=True)
         with open(self.path_to_logs, "a") as log_file:
             log_message = fetch_log_message(message)
