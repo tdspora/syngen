@@ -42,7 +42,7 @@ class BaseFeature:
         self.weight: float = 1.0
 
     @staticmethod
-    @slugify_parameters()
+    @slugify_parameters(turn_on=False)
     def _reset_name(name):
         """
         Slugify the attribute 'name' of the instance
