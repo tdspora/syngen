@@ -272,7 +272,7 @@ def slugify_attribute(**kwargs):
     return wrapper
 
 
-def slugify_parameters(exclude_params=()):
+def slugify_parameters(exclude_params=(), turn_on=True):
     """
     Slugify the values of parameters, excluding specified parameters
     """
@@ -284,7 +284,7 @@ def slugify_parameters(exclude_params=()):
                 if key in exclude_params:
                     updated_kwargs[key] = value
                 else:
-                    updated_kwargs[key] = slugify(value)
+                    updated_kwargs[key] = slugify(value, lowercase=turn_on)
             return function(**updated_kwargs)
 
         return inner_wrapper
