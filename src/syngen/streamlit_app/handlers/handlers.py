@@ -12,7 +12,6 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
 
 UPLOAD_DIRECTORY = "uploaded_files"
-TIMESTAMP = slugify(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 
 class StreamlitHandler:
@@ -37,7 +36,8 @@ class StreamlitHandler:
         self.progress_handler = ProgressBarHandler()
         self.log_queue = Queue()
         self.log_error_queue = Queue()
-        self.path_to_logs = f"model_artifacts/tmp_store/{self.sl_table_name}_{TIMESTAMP}.log"
+        self.path_to_logs = (f"model_artifacts/tmp_store/{self.sl_table_name}_"
+                             f"{slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}.log")
         self.path_to_generated_data = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
@@ -49,6 +49,7 @@ class StreamlitHandler:
         Set a logger to see logs, and collect log messages
         with the log level - 'INFO' in a log file and stdout
         """
+        logger.remove()
         logger.add(self.file_sink, level="INFO")
         logger.add(self.log_sink, level="INFO")
 
@@ -73,7 +74,6 @@ class StreamlitHandler:
         Launch a model training
         """
         try:
-            self.set_logger()
             logger.info("Starting model training...")
             settings = {
                 "source": self.file_path,
@@ -88,14 +88,15 @@ class StreamlitHandler:
                 settings=settings,
                 metadata_path=None,
                 log_level="INFO",
-                type_of_process="train"
+                type_of_process="test"
             )
             ProgressBarHandler().set_progress(0.01)
             worker.launch_train()
             logger.info("Model training completed")
-        except Exception:
-            logger.error(f"Error during train: {traceback.format_exc()}")
-            self.log_error_queue.put(f"Error during train: {traceback.format_exc()}")
+        except Exception as e:
+            error_message = f"Error during train: {traceback.format_exc()}"
+            logger.error(error_message)
+            self.log_error_queue.put(error_message)
 
     def infer_model(self):
         """
@@ -120,14 +121,16 @@ class StreamlitHandler:
             )
             worker.launch_infer()
             logger.info("Data generation completed")
-        except Exception:
-            logger.error(f"Error during infer: {traceback.format_exc()}")
-            self.log_error_queue.put(f"Error during infer: {traceback.format_exc()}")
+        except Exception as e:
+            error_message = f"Error during infer: {traceback.format_exc()}"
+            logger.error(error_message)
+            self.log_error_queue.put(error_message)
 
     def train_and_infer(self):
         """
         Launch a model training and data generation
         """
+        self.set_logger()
         self.train_model()
         self.infer_model()
 
@@ -156,7 +159,7 @@ class StreamlitHandler:
         self.generate_button(
             "Download logs",
             os.getenv("SUCCESS_LOG_FILE", ""),
-            f"logs_{self.sl_table_name}_{TIMESTAMP}.log"
+            f"logs_{self.sl_table_name}.log"
         )
         if self.print_report:
             self.generate_button(

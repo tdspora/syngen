@@ -98,8 +98,6 @@ def run_basic_page():
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
-            # app = StreamlitHandler(epochs, size_limit, print_report, uploaded_file)
-            # app.__post_init__()
             runner = threading.Thread(name="train_and_infer", target=app.train_and_infer)
             runner.start()
             current_progress = 0
@@ -108,24 +106,26 @@ def run_basic_page():
             while runner.is_alive():
                 with st.expander("Logs"):
                     while True:
-                        if not app.log_error_queue.empty():
-                            st.exception(app.log_error_queue.get())
-                            break
-                        elif not runner.is_alive():
-                            st.success("Data generation completed")
-                            break
-                        elif not app.log_queue.empty():
+                        if not app.log_queue.empty():
                             with st.code("logs", language="log"):
                                 log = app.log_queue.get()
                                 st.text(log)
                                 current_progress, message = app.progress_handler.info
                                 prg.progress(value=current_progress, text=message)
+                        elif not app.log_error_queue.empty():
+                            st.exception(app.log_error_queue.get())
+                            break
+                        elif not runner.is_alive():
+                            break
                         time.sleep(0.001)
-            prg.progress(100)
-            app.progress_handler.reset_instance()
-            st.rerun()
-        # with st.container():
-            # app.generate_buttons()
+            if app.log_error_queue.empty() and not runner.is_alive():
+                prg.progress(100)
+                app.progress_handler.reset_instance()
+                st.success("Data generation completed")
+                st.rerun()
+
+        with st.container():
+            app.generate_buttons()
 
 
 def run():
