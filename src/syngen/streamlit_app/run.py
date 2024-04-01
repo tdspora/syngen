@@ -11,9 +11,11 @@ from syngen.streamlit_app.utils import (
     show_data,
     get_running_status,
     set_session_state,
-    cleanup_artifacts,
 )
 from syngen import __version__
+
+
+runner = None
 
 
 def setup_ui():
@@ -59,6 +61,7 @@ def run_basic_page():
     """
     Run the basic page of the Streamlit app
     """
+    global runner
     set_session_state()
     uploaded_file = st.file_uploader(
         "Upload a CSV file",
@@ -66,7 +69,14 @@ def run_basic_page():
         accept_multiple_files=False,
     )
     if not uploaded_file:
-        cleanup_artifacts()
+        thread = [
+            thread
+            for thread in threading.enumerate()
+            if thread.name == "train_and_infer"
+        ]
+        if thread:
+            runner = thread[0]
+            runner.raise_exception()
         st.warning("Please upload a CSV file to proceed")
     if uploaded_file:
         show_data(uploaded_file)
@@ -98,8 +108,9 @@ def run_basic_page():
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
-            runner = threading.Thread(name="train_and_infer", target=app.train_and_infer)
+            runner = ThreadWithException(name="train_and_infer", target=app.train_and_infer)
             runner.start()
+            app.reset_log_queues()
             current_progress = 0
             prg = st.progress(current_progress)
 
@@ -113,16 +124,15 @@ def run_basic_page():
                                 current_progress, message = app.progress_handler.info
                                 prg.progress(value=current_progress, text=message)
                         elif not app.log_error_queue.empty():
-                            st.exception(app.log_error_queue.get())
-                            break
-                        elif not runner.is_alive():
                             break
                         time.sleep(0.001)
-            if app.log_error_queue.empty() and not runner.is_alive():
+            runner.join()
+            if not app.log_error_queue.empty() and not runner.is_alive():
+                st.exception(app.log_error_queue.get())
+            elif app.log_queue.empty() and not runner.is_alive():
                 prg.progress(100)
-                app.progress_handler.reset_instance()
                 st.success("Data generation completed")
-                st.rerun()
+            app.progress_handler.reset_instance()
 
         with st.container():
             app.generate_buttons()

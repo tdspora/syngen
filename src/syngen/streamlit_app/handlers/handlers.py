@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 import traceback
 from queue import Queue
+import sys
 
 from loguru import logger
 from slugify import slugify
@@ -44,20 +45,28 @@ class StreamlitHandler:
                                f"draws/accuracy_report.html")
         os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
 
+    def reset_log_queues(self):
+        """
+        Clean up log queues
+        """
+        self.log_queue = Queue()
+        self.log_error_queue = Queue()
+
     def set_logger(self):
         """
         Set a logger to see logs, and collect log messages
         with the log level - 'INFO' in a log file and stdout
         """
         logger.remove()
+        logger.add(self.console_sink, colorize=True, level="INFO")
         logger.add(self.file_sink, level="INFO")
-        logger.add(self.log_sink, level="INFO")
 
-    def log_sink(self, message):
+    def console_sink(self, message):
         """
         Put log messages to a log queue
         """
         log_message = fetch_log_message(message)
+        sys.stdout.write(log_message + "\n")
         self.log_queue.put(log_message)
 
     def file_sink(self, message):
@@ -96,7 +105,7 @@ class StreamlitHandler:
         except Exception as e:
             error_message = f"Error during train: {traceback.format_exc()}"
             logger.error(error_message)
-            self.log_error_queue.put(error_message)
+            self.log_error_queue.put(e)
 
     def infer_model(self):
         """
@@ -124,7 +133,7 @@ class StreamlitHandler:
         except Exception as e:
             error_message = f"Error during infer: {traceback.format_exc()}"
             logger.error(error_message)
-            self.log_error_queue.put(error_message)
+            self.log_error_queue.put(e)
 
     def train_and_infer(self):
         """
