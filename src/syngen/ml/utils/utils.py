@@ -400,4 +400,4 @@ def setup_logger():
     """
     logger.remove()
     logger.add(console_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
-    logger.add(file_sink, level="INFO")
+    logger.add(file_sink, level=os.getenv("LOGURU_LEVEL"))
