@@ -97,7 +97,7 @@ class StreamlitHandler:
                 settings=settings,
                 metadata_path=None,
                 log_level="INFO",
-                type_of_process="test"
+                type_of_process="train"
             )
             ProgressBarHandler().set_progress(0.01)
             worker.launch_train()
@@ -139,6 +139,8 @@ class StreamlitHandler:
         """
         Launch a model training and data generation
         """
+        self.progress_handler.reset_instance()
+        self.reset_log_queues()
         self.set_logger()
         self.train_model()
         self.infer_model()

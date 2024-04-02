@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import pandas as pd
 import streamlit as st
@@ -39,3 +40,11 @@ def set_session_state():
     """
     if "disabled" not in st.session_state:
         st.session_state.disabled = False
+
+
+def cleanup_artifacts():
+    """
+    Clean up the artifacts
+    """
+    shutil.rmtree(UPLOAD_DIRECTORY, ignore_errors=True)
+    shutil.rmtree(MODEL_ARTIFACTS, ignore_errors=True)

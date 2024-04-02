@@ -11,6 +11,7 @@ from syngen.streamlit_app.utils import (
     show_data,
     get_running_status,
     set_session_state,
+    cleanup_artifacts
 )
 from syngen import __version__
 
@@ -69,6 +70,7 @@ def run_basic_page():
         accept_multiple_files=False,
     )
     if not uploaded_file:
+        cleanup_artifacts()
         thread = [
             thread
             for thread in threading.enumerate()
@@ -77,6 +79,9 @@ def run_basic_page():
         if thread:
             runner = thread[0]
             runner.raise_exception()
+            runner.join()
+            if not runner.is_alive():
+                st.warning("The training and the generation were interrupted")
         st.warning("Please upload a CSV file to proceed")
     if uploaded_file:
         show_data(uploaded_file)
@@ -110,7 +115,6 @@ def run_basic_page():
         ):
             runner = ThreadWithException(name="train_and_infer", target=app.train_and_infer)
             runner.start()
-            app.reset_log_queues()
             current_progress = 0
             prg = st.progress(current_progress)
 
@@ -124,15 +128,15 @@ def run_basic_page():
                                 current_progress, message = app.progress_handler.info
                                 prg.progress(value=current_progress, text=message)
                         elif not app.log_error_queue.empty():
+                            runner.raise_exception()
+                            runner.join()
                             break
                         time.sleep(0.001)
-            runner.join()
             if not app.log_error_queue.empty() and not runner.is_alive():
                 st.exception(app.log_error_queue.get())
             elif app.log_queue.empty() and not runner.is_alive():
                 prg.progress(100)
                 st.success("Data generation completed")
-            app.progress_handler.reset_instance()
 
         with st.container():
             app.generate_buttons()
