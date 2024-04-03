@@ -579,7 +579,7 @@ class EmailFeature(CharBasedTextFeature):
         text_max_len: int,
         rnn_units: int = 128,
         dropout: int = 0,
-        domain: str = 'syngenai.com'
+        domain: str = 'tdspora.ai'
     ):
         super().__init__(name=name,
                          text_max_len=text_max_len,
@@ -601,7 +601,7 @@ class EmailFeature(CharBasedTextFeature):
 
     def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
         return [
-            s.translate({32: None, 44: None, 64: None}) +
+            s.translate({32: None, 44: None, 64: None}).lstrip('.') +
             "@" +
             self.domain for s in super().inverse_transform(data, **kwargs)
         ]
