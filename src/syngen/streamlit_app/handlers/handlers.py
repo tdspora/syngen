@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-import traceback
 from queue import Queue
 import sys
 
@@ -65,9 +64,12 @@ class StreamlitHandler:
         """
         Put log messages to a log queue
         """
-        log_message = fetch_log_message(message)
+        log_message, level = fetch_log_message(message)
         sys.stdout.write(log_message + "\n")
-        self.log_queue.put(log_message)
+        if level in ["INFO", "WARNING"]:
+            self.log_queue.put(log_message)
+        elif level == "ERROR":
+            self.log_error_queue.put(log_message)
 
     def file_sink(self, message):
         """
@@ -75,7 +77,7 @@ class StreamlitHandler:
         """
         os.makedirs(os.path.dirname(self.path_to_logs), exist_ok=True)
         with open(self.path_to_logs, "a") as log_file:
-            log_message = fetch_log_message(message)
+            log_message, level = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
     def train_model(self):
@@ -103,9 +105,7 @@ class StreamlitHandler:
             worker.launch_train()
             logger.info("Model training completed")
         except Exception as e:
-            error_message = f"Error during train: {traceback.format_exc()}"
-            logger.error(error_message)
-            self.log_error_queue.put(e)
+            logger.error(e)
 
     def infer_model(self):
         """
@@ -131,9 +131,7 @@ class StreamlitHandler:
             worker.launch_infer()
             logger.info("Data generation completed")
         except Exception as e:
-            error_message = f"Error during infer: {traceback.format_exc()}"
-            logger.error(error_message)
-            self.log_error_queue.put(e)
+            logger.error(e)
 
     def train_and_infer(self):
         """

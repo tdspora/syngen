@@ -372,9 +372,10 @@ def fetch_log_message(message):
     Fetch the log message
     """
     record = message.record
-    log_message = (f'{record["time"]} | {record["level"]}    | '
+    level = record["level"].name
+    log_message = (f'{record["time"]} | {level}    | '
                    f'{record["file"]}:{record["function"]}:{record["line"]} - {record["message"]}')
-    return log_message
+    return log_message, level
 
 
 def file_sink(message):
@@ -382,7 +383,7 @@ def file_sink(message):
     Save logs to the log file
     """
     with open(os.getenv("SUCCESS_LOG_FILE"), "a") as log_file:
-        log_message = fetch_log_message(message)
+        log_message, level = fetch_log_message(message)
         log_file.write(log_message + "\n")
 
 

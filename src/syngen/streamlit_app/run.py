@@ -131,6 +131,8 @@ def run_basic_page():
                             runner.raise_exception()
                             runner.join()
                             break
+                        elif not runner.is_alive():
+                            break
                         time.sleep(0.001)
             if not app.log_error_queue.empty() and not runner.is_alive():
                 st.exception(app.log_error_queue.get())
