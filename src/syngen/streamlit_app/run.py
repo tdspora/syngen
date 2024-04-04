@@ -125,9 +125,6 @@ def run_basic_page():
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
-            runner = stop_running_thread()
-            if runner and not runner.is_alive():
-                st.warning("The previous training and the generation were interrupted")
             runner = ThreadWithException(name="train_and_infer", target=app.train_and_infer)
             runner.start()
             current_progress = 0
