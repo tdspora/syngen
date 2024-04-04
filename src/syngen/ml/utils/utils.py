@@ -372,10 +372,9 @@ def fetch_log_message(message):
     Fetch the log message
     """
     record = message.record
-    level = record["level"].name
-    log_message = (f'{record["time"]} | {level}    | '
+    log_message = (f'{record["time"]} | {record["level"]} | '
                    f'{record["file"]}:{record["function"]}:{record["line"]} - {record["message"]}')
-    return log_message, level
+    return log_message
 
 
 def file_sink(message):

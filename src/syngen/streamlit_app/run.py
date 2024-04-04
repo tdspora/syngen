@@ -49,6 +49,9 @@ class ThreadWithException(threading.Thread):
     def get_id(self):
         if hasattr(self, "_ident"):
             return self._ident
+        for id, thread in threading._active.items():
+            if thread is self:
+                return id
 
     def raise_exception(self):
         thread_id = self.get_id()
@@ -56,6 +59,23 @@ class ThreadWithException(threading.Thread):
                                                          ctypes.py_object(SystemExit))
         if res > 1:
             ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
+
+
+def stop_running_thread():
+    """
+    Stop the running thread
+    """
+    thread = [
+        thread
+        for thread in threading.enumerate()
+        if thread.name == "train_and_infer"
+    ]
+    if thread:
+        runner = thread[0]
+        runner.raise_exception()
+        runner.join()
+        return runner
+    return None
 
 
 def run_basic_page():
@@ -70,18 +90,10 @@ def run_basic_page():
         accept_multiple_files=False,
     )
     if not uploaded_file:
+        runner = stop_running_thread()
+        if runner and not runner.is_alive():
+            st.warning("The training and the generation were interrupted")
         cleanup_artifacts()
-        thread = [
-            thread
-            for thread in threading.enumerate()
-            if thread.name == "train_and_infer"
-        ]
-        if thread:
-            runner = thread[0]
-            runner.raise_exception()
-            runner.join()
-            if not runner.is_alive():
-                st.warning("The training and the generation were interrupted")
         st.warning("Please upload a CSV file to proceed")
     if uploaded_file:
         show_data(uploaded_file)
@@ -113,6 +125,9 @@ def run_basic_page():
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
+            runner = stop_running_thread()
+            if runner and not runner.is_alive():
+                st.warning("The previous training and the generation were interrupted")
             runner = ThreadWithException(name="train_and_infer", target=app.train_and_infer)
             runner.start()
             current_progress = 0

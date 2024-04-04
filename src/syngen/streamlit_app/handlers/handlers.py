@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from queue import Queue
 import sys
+import traceback
 
 from loguru import logger
 from slugify import slugify
@@ -64,12 +65,9 @@ class StreamlitHandler:
         """
         Put log messages to a log queue
         """
-        log_message, level = fetch_log_message(message)
+        log_message = fetch_log_message(message)
         sys.stdout.write(log_message + "\n")
-        if level in ["INFO", "WARNING"]:
-            self.log_queue.put(log_message)
-        elif level == "ERROR":
-            self.log_error_queue.put(log_message)
+        self.log_queue.put(log_message)
 
     def file_sink(self, message):
         """
@@ -77,7 +75,7 @@ class StreamlitHandler:
         """
         os.makedirs(os.path.dirname(self.path_to_logs), exist_ok=True)
         with open(self.path_to_logs, "a") as log_file:
-            log_message, level = fetch_log_message(message)
+            log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
     def train_model(self):
@@ -105,7 +103,10 @@ class StreamlitHandler:
             worker.launch_train()
             logger.info("Model training completed")
         except Exception as e:
-            logger.error(e)
+            error_message = f"The error raised during the training process - {traceback.format_exc()}"
+            logger.error(error_message)
+            self.log_error_queue.put(e)
+            raise e
 
     def infer_model(self):
         """
@@ -131,7 +132,10 @@ class StreamlitHandler:
             worker.launch_infer()
             logger.info("Data generation completed")
         except Exception as e:
-            logger.error(e)
+            error_message = f"The error raised during the inference process - {traceback.format_exc()}"
+            logger.error(error_message)
+            self.log_error_queue.put(e)
+            raise e
 
     def train_and_infer(self):
         """
