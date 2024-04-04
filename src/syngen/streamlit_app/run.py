@@ -140,8 +140,6 @@ def run_basic_page():
                                 current_progress, message = app.progress_handler.info
                                 prg.progress(value=current_progress, text=message)
                         elif not app.log_error_queue.empty():
-                            runner.raise_exception()
-                            runner.join()
                             break
                         elif not runner.is_alive():
                             break

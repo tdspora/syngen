@@ -13,6 +13,7 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
 
 UPLOAD_DIRECTORY = "uploaded_files"
+TIMESTAMP = slugify(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 
 class StreamlitHandler:
@@ -37,13 +38,10 @@ class StreamlitHandler:
         self.progress_handler = ProgressBarHandler()
         self.log_queue = Queue()
         self.log_error_queue = Queue()
-        self.path_to_logs = (f"model_artifacts/tmp_store/{self.sl_table_name}_"
-                             f"{slugify(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}.log")
         self.path_to_generated_data = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                f"draws/accuracy_report.html")
-        os.environ["SUCCESS_LOG_FILE"] = self.path_to_logs
 
     def reset_log_queues(self):
         """
@@ -73,8 +71,10 @@ class StreamlitHandler:
         """
         Write log messages to a log file
         """
-        os.makedirs(os.path.dirname(self.path_to_logs), exist_ok=True)
-        with open(self.path_to_logs, "a") as log_file:
+        path_to_logs = f"model_artifacts/tmp_store/{self.sl_table_name}_{TIMESTAMP}.log"
+        os.environ["SUCCESS_LOG_FILE"] = path_to_logs
+        os.makedirs(os.path.dirname(path_to_logs), exist_ok=True)
+        with open(path_to_logs, "a") as log_file:
             log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
@@ -106,6 +106,7 @@ class StreamlitHandler:
             error_message = f"The error raised during the training process - {traceback.format_exc()}"
             logger.error(error_message)
             self.log_error_queue.put(e)
+            raise e
 
     def infer_model(self):
         """
@@ -134,6 +135,7 @@ class StreamlitHandler:
             error_message = f"The error raised during the inference process - {traceback.format_exc()}"
             logger.error(error_message)
             self.log_error_queue.put(e)
+            raise e
 
     def train_and_infer(self):
         """
