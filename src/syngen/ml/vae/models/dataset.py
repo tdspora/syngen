@@ -505,9 +505,9 @@ class Dataset(BaseDataset):
         data_subset = df[text_columns]
 
         if not data_subset.empty:
-            # @ presents in more than half of not None values of every column
+            # @ presents in more than 4/5 of not None values of every column
             count_at_symbols = data_subset.apply(lambda col: col.str.count("@"), axis=1).sum()
-            adjusted_count = count_at_symbols.values * 1.25
+            adjusted_count = count_at_symbols.values * 1.25  # inverce to 4/5
             non_na_values_count = data_subset.count().values
             filter_mask = adjusted_count > non_na_values_count
             data_subset = data_subset.loc[
