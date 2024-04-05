@@ -103,7 +103,8 @@ class StreamlitHandler:
             worker.launch_train()
             logger.info("Model training completed")
         except Exception as e:
-            error_message = f"The error raised during the training process - {traceback.format_exc()}"
+            error_message = (f"The error raised during the training process - "
+                             f"{traceback.format_exc()}")
             logger.error(error_message)
             self.log_error_queue.put(e)
 
@@ -131,7 +132,8 @@ class StreamlitHandler:
             worker.launch_infer()
             logger.info("Data generation completed")
         except Exception as e:
-            error_message = f"The error raised during the inference process - {traceback.format_exc()}"
+            error_message = (f"The error raised during the inference process - "
+                             f"{traceback.format_exc()}")
             logger.error(error_message)
             self.log_error_queue.put(e)
 
