@@ -382,7 +382,7 @@ def file_sink(message):
     Save logs to the log file
     """
     with open(os.getenv("SUCCESS_LOG_FILE"), "a") as log_file:
-        log_message, level = fetch_log_message(message)
+        log_message = fetch_log_message(message)
         log_file.write(log_message + "\n")
 
 
