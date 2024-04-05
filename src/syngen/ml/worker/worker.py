@@ -371,6 +371,7 @@ class Worker:
 
         MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
         self.collect_metrics(tables, stage='INFER')
+        MlflowTracker().end_run()
 
     def collect_metrics(self, tables, stage):
         for table in tables:
