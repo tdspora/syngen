@@ -45,13 +45,13 @@ def setup_ui():
 
 
 class ThreadWithException(threading.Thread):
+    """
+    A class for a thread with the ability to raise an exception
+    """
 
     def get_id(self):
         if hasattr(self, "_ident"):
             return self._ident
-        for id, thread in threading._active.items():
-            if thread is self:
-                return id
 
     def raise_exception(self):
         thread_id = self.get_id()
@@ -88,6 +88,7 @@ def run_basic_page():
         "Upload a CSV file",
         type="csv",
         accept_multiple_files=False,
+        disabled=get_running_status()
     )
     if not uploaded_file:
         runner = stop_running_thread()
