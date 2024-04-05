@@ -106,7 +106,6 @@ class StreamlitHandler:
             error_message = f"The error raised during the training process - {traceback.format_exc()}"
             logger.error(error_message)
             self.log_error_queue.put(e)
-            raise e
 
     def infer_model(self):
         """
@@ -135,7 +134,6 @@ class StreamlitHandler:
             error_message = f"The error raised during the inference process - {traceback.format_exc()}"
             logger.error(error_message)
             self.log_error_queue.put(e)
-            raise e
 
     def train_and_infer(self):
         """

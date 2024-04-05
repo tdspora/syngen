@@ -16,9 +16,6 @@ from syngen.streamlit_app.utils import (
 from syngen import __version__
 
 
-runner = None
-
-
 def setup_ui():
     """
     Set up the UI for the Streamlit app
@@ -82,7 +79,6 @@ def run_basic_page():
     """
     Run the basic page of the Streamlit app
     """
-    global runner
     set_session_state()
     uploaded_file = st.file_uploader(
         "Upload a CSV file",
@@ -141,6 +137,8 @@ def run_basic_page():
                                 current_progress, message = app.progress_handler.info
                                 prg.progress(value=current_progress, text=message)
                         elif not app.log_error_queue.empty():
+                            runner.raise_exception()
+                            runner.join()
                             break
                         elif not runner.is_alive():
                             break
