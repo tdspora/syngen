@@ -371,7 +371,7 @@ You can access the streamlit UI web interface by running the following command a
 ```bash
 pip install syngen[ui]
 ```
-then create a python file and put the code below in this python file:
+then create a python file and insert the code provided below into it:
 
 ```python
 from syngen import streamlit_app
