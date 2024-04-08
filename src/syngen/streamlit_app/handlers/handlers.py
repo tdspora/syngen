@@ -9,6 +9,13 @@ import streamlit as st
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
+import streamlit.components.v1 as components
+from syngen.streamlit_app.utils import (
+    show_data,
+    get_running_status,
+    set_session_state,
+    cleanup_artifacts,
+)
 
 UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -137,6 +144,17 @@ class StreamlitHandler:
                     file_name=download_name,
                 )
 
+    @staticmethod
+    def open_report(app):
+        if os.path.exists(app.path_to_report):
+            if app.print_report:
+                with open(app.path_to_report, 'r') as report:
+                    report_content = report.read()
+                # if get_running_status():
+                    if os.path.exists(app.path_to_report):
+                        with st.expander("View the report"):
+                            components.html(report_content, 680,1000,True)
+
     def generate_buttons(self):
         """
         Generate download buttons for downloading artifacts
@@ -157,3 +175,5 @@ class StreamlitHandler:
                 self.path_to_report,
                 f"accuracy_report_{self.sl_table_name}.html"
             )
+            self.open_report(self)
+

@@ -3,6 +3,7 @@ import shutil
 
 import pandas as pd
 import streamlit as st
+import threading
 
 
 UPLOAD_DIRECTORY = "uploaded_files"
@@ -28,7 +29,10 @@ def get_running_status():
     """
     Get the status of the process of a model training and generation data
     """
-    if "gen_button" in st.session_state and st.session_state.gen_button is True:
+    if (
+            ("gen_button" in st.session_state and st.session_state.gen_button is True) or
+            [thread for thread in threading.enumerate() if thread.name == "train_and_infer"]
+    ):
         return True
     else:
         return False
