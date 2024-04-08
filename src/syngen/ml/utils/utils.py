@@ -352,9 +352,9 @@ def fetch_unique_root(table_name: str, metadata_path: str):
     return slugify(unique_name)
 
 
-def create_log_file(type_of_process: str, table_name: Optional[str], metadata_path: Optional[str]):
+def set_log_path(type_of_process: str, table_name: Optional[str], metadata_path: Optional[str]):
     """
-    Create the file for storing the logs of main processes
+    Set the log path for storing the logs of main processes
     """
     os.makedirs("model_artifacts/tmp_store", exist_ok=True)
     unique_name = fetch_unique_root(table_name, metadata_path)

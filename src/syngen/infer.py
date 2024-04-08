@@ -7,7 +7,7 @@ from loguru import logger
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_logger,
-    create_log_file
+    set_log_path
 )
 
 
@@ -85,7 +85,7 @@ def launch_infer(
 
     """
     os.environ["LOGURU_LEVEL"] = log_level
-    create_log_file(type_of_process="infer", table_name=table_name, metadata_path=metadata_path)
+    set_log_path(type_of_process="infer", table_name=table_name, metadata_path=metadata_path)
     setup_logger()
     if not metadata_path and not table_name:
         raise AttributeError(
