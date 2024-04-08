@@ -7,7 +7,8 @@ from loguru import logger
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_logger,
-    set_log_path
+    set_log_path,
+    check_if_logs_available
 )
 
 
@@ -122,6 +123,7 @@ def launch_infer(
     )
 
     worker.launch_infer()
+    check_if_logs_available()
 
 
 if __name__ == "__main__":

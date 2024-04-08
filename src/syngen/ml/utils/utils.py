@@ -401,3 +401,14 @@ def setup_logger():
     logger.remove()
     logger.add(console_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
     logger.add(file_sink, level=os.getenv("LOGURU_LEVEL"))
+
+
+def check_if_logs_available():
+    """
+    Check if the logs are available and
+    write a message to the log file if not
+    """
+    path_to_logs = os.getenv("SUCCESS_LOG_FILE")
+    if not os.path.exists(path_to_logs):
+        with open(path_to_logs, "a") as file:
+            file.write("No logs available\n")

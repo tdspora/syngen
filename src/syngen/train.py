@@ -8,7 +8,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_logger,
-    set_log_path
+    set_log_path,
+    check_if_logs_available
 )
 
 
@@ -156,18 +157,7 @@ def launch_train(
     )
 
     worker.launch_train()
-
-
-def check_if_logs_available():
-    """
-    Check if the logs are available and
-    write a message to the log file if not
-    """
-    path_to_logs = os.getenv("SUCCESS_LOG_FILE")
-    if not os.path.exists(path_to_logs):
-        with open(path_to_logs, "a") as file:
-            file.write("No logs available\n")
-
+    check_if_logs_available()
 
 def preprocess_data():
     """
@@ -178,11 +168,6 @@ def preprocess_data():
         os.system(f"python3 {path_to_script}")
 
 
-def postprocess_step():
-    check_if_logs_available()
-
-
 if __name__ == "__main__":
     preprocess_data()
     launch_train()
-    postprocess_step()
