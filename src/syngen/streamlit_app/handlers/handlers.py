@@ -152,7 +152,7 @@ class StreamlitHandler:
                     report_content = report.read()
                 # if get_running_status():
                     if os.path.exists(app.path_to_report):
-                        with st.expander("View the report"):
+                        with st.expander("View the accuracy report"):
                             components.html(report_content, 680,1000,True)
 
     def generate_buttons(self):
@@ -171,7 +171,7 @@ class StreamlitHandler:
         )
         if self.print_report:
             self.generate_button(
-                "Download report",
+                "Download the accuracy report",
                 self.path_to_report,
                 f"accuracy_report_{self.sl_table_name}.html"
             )
