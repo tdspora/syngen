@@ -130,10 +130,12 @@ if __name__ == "__main__":
     try:
         launch_infer()
     except Exception as e:
-        logger.error(
-            f"Generation failed on running stage. "
-            f"The details of the error - {traceback.format_exc()}"
-        )
+        log_file = os.getenv("SUCCESS_LOG_FILE")
+        if not os.path.exists(log_file):
+            logger.error(
+                f"Generation failed on running stage. "
+                f"The traceback of the error - {traceback.format_exc()}"
+            )
         raise e
     finally:
         check_if_logs_available()

@@ -174,10 +174,12 @@ if __name__ == "__main__":
         preprocess_data()
         launch_train()
     except Exception as e:
-        logger.error(
-            f"Training failed on running stage. "
-            f"The details of the error - {traceback.format_exc()}"
-        )
+        log_file = os.getenv("SUCCESS_LOG_FILE")
+        if not os.path.exists(log_file):
+            logger.error(
+                f"Training failed on running stage. "
+                f"The traceback of the error - {traceback.format_exc()}"
+            )
         raise e
     finally:
         check_if_logs_available()
