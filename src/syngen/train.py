@@ -1,5 +1,6 @@
 from typing import Optional
 import os
+import traceback
 
 import click
 from loguru import logger
@@ -157,7 +158,7 @@ def launch_train(
     )
 
     worker.launch_train()
-    check_if_logs_available()
+
 
 def preprocess_data():
     """
@@ -169,5 +170,14 @@ def preprocess_data():
 
 
 if __name__ == "__main__":
-    preprocess_data()
-    launch_train()
+    try:
+        preprocess_data()
+        launch_train()
+    except Exception as e:
+        logger.error(
+            f"Training failed on running stage. "
+            f"The details of the error - {traceback.format_exc()}"
+        )
+        raise e
+    finally:
+        check_if_logs_available()

@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+import traceback
 
 import click
 from loguru import logger
@@ -123,8 +124,16 @@ def launch_infer(
     )
 
     worker.launch_infer()
-    check_if_logs_available()
 
 
 if __name__ == "__main__":
-    launch_infer()
+    try:
+        launch_infer()
+    except Exception as e:
+        logger.error(
+            f"Generation failed on running stage. "
+            f"The details of the error - {traceback.format_exc()}"
+        )
+        raise e
+    finally:
+        check_if_logs_available()

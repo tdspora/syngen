@@ -137,7 +137,7 @@ class TrainStrategy(Strategy, ABC):
                 tags={"table_name": table, "process": "preprocess"},
             )
             self.set_config(
-                source=kwargs["source"],
+                source=kwargs["test"],
                 epochs=kwargs["epochs"],
                 drop_null=kwargs["drop_null"],
                 row_limit=kwargs["row_limit"],
