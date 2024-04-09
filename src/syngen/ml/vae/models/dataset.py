@@ -506,8 +506,9 @@ class Dataset(BaseDataset):
 
         if not data_subset.empty:
             # @ presents in more than 4/5 of not None values of every column
-            count_at_symbols = data_subset.apply(lambda col: col.str.count("@"), axis=1).sum()
-            adjusted_count = count_at_symbols.values * 1.25  # inverce to 4/5
+            email_pattern = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
+            count_emails = data_subset.apply(lambda col: col.str.contains(email_pattern), axis=1).sum()
+            adjusted_count = count_emails.values * 1.25  # inverse to 4/5
             non_na_values_count = data_subset.count().values
             filter_mask = adjusted_count > non_na_values_count
             data_subset = data_subset.loc[
@@ -1037,7 +1038,7 @@ class Dataset(BaseDataset):
         """
         Assign text based feature to text columns
         """
-        features = self._preprocess_nan_cols(feature, fillna_strategy="text")
+        features = self._preprocess_nan_cols(feature, fillna_strategy="email")
         max_len, rnn_units = 15, 32
         self.assign_feature(
             EmailFeature(features[0], text_max_len=max_len, rnn_units=rnn_units),
