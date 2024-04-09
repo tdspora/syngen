@@ -84,8 +84,30 @@ def run_basic_page():
         "Upload a CSV file",
         type="csv",
         accept_multiple_files=False,
-        disabled=get_running_status()
+        disabled=get_running_status(),
     )
+    if get_running_status():
+        st.markdown(
+        """
+        <style>
+            div[data-testid="fileDeleteBtn"] {
+            display: none;
+            }
+        </style>
+        """,
+            unsafe_allow_html=True,
+        )
+    if not get_running_status():
+        st.markdown(
+        """
+        <style>
+            div[data-testid="fileDeleteBtn"] {
+            display: block;
+            }
+        </style>
+        """,
+            unsafe_allow_html=True,
+        )
     if not uploaded_file:
         runner = stop_running_thread()
         if runner and not runner.is_alive():
