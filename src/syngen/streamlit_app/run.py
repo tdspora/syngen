@@ -14,6 +14,7 @@ from syngen.streamlit_app.utils import (
 )
 from syngen import __version__
 
+
 def setup_ui():
     """
     Set up the UI for the Streamlit app
@@ -107,10 +108,9 @@ def run_basic_page():
                 prg.progress(100)
                 app.progress_handler.reset_instance()
                 st.success("Data generation completed")
-                # st.rerun()
-        with st.container():
-                app.generate_buttons()
 
+        with st.container():
+            app.generate_buttons()
 
 
 def run():

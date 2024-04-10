@@ -144,16 +144,15 @@ class StreamlitHandler:
                     file_name=download_name,
                 )
 
-    @staticmethod
-    def open_report(app):
-        if os.path.exists(app.path_to_report):
-            if app.print_report:
-                with open(app.path_to_report, 'r') as report:
-                    report_content = report.read()
-                # if get_running_status():
-                    if os.path.exists(app.path_to_report):
-                        with st.expander("View the accuracy report"):
-                            components.html(report_content, 680,1000,True)
+    def open_report(self):
+        """
+        Open the accuracy report in the iframe
+        """
+        if os.path.exists(self.path_to_report) and self.print_report:
+            with open(self.path_to_report, "r") as report:
+                report_content = report.read()
+            with st.expander("View the accuracy report"):
+                components.html(report_content, 680, 1000, True)
 
     def generate_buttons(self):
         """
@@ -175,5 +174,5 @@ class StreamlitHandler:
                 self.path_to_report,
                 f"accuracy_report_{self.sl_table_name}.html"
             )
-            self.open_report(self)
+            self.open_report()
 

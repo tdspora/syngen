@@ -151,10 +151,9 @@ class TrainStrategy(Strategy, ABC):
             self.handler.handle()
             # End the separate run for the training stage
             MlflowTracker().end_run()
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Training of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
-                f"The details of the error - {str(e)}\n"
                 f"The traceback of the error - {traceback.format_exc()}"
             )
             raise
@@ -235,10 +234,9 @@ class InferStrategy(Strategy):
                 type_of_process=type_of_process
             )
             self.handler.handle()
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Generation of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
-                f"The details of the error - {str(e)}\n"
                 f"The traceback of the error - {traceback.format_exc()}"
             )
             raise
