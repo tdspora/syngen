@@ -10,12 +10,6 @@ import streamlit as st
 from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
 import streamlit.components.v1 as components
-from syngen.streamlit_app.utils import (
-    show_data,
-    get_running_status,
-    set_session_state,
-    cleanup_artifacts,
-)
 
 UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -175,4 +169,3 @@ class StreamlitHandler:
                 f"accuracy_report_{self.sl_table_name}.html"
             )
             self.open_report()
-
