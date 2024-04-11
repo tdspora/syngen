@@ -75,6 +75,24 @@ def stop_running_thread():
     return None
 
 
+def handle_cross_icon():
+    """
+    Handle the behavior of disabling of the cross icon
+    """
+    running_status = get_running_status()
+
+    display_status = 'none' if running_status else 'block'
+
+    css = f"""
+    <style>
+        div[data-testid="fileDeleteBtn"] {{
+        display: {display_status};
+        }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+
 def run_basic_page():
     """
     Run the basic page of the Streamlit app
@@ -86,28 +104,7 @@ def run_basic_page():
         accept_multiple_files=False,
         disabled=get_running_status(),
     )
-    if get_running_status():
-        st.markdown(
-        """
-        <style>
-            div[data-testid="fileDeleteBtn"] {
-            display: none;
-            }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-    if not get_running_status():
-        st.markdown(
-        """
-        <style>
-            div[data-testid="fileDeleteBtn"] {
-            display: block;
-            }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
+    handle_cross_icon()
     if not uploaded_file:
         runner = stop_running_thread()
         if runner and not runner.is_alive():
