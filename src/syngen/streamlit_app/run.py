@@ -108,7 +108,7 @@ def run_basic_page():
                 prg.progress(100)
                 app.progress_handler.reset_instance()
                 st.success("Data generation completed")
-                st.rerun()
+
         with st.container():
             app.generate_buttons()
 

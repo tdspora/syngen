@@ -1,6 +1,6 @@
-from typing import Optional
 import os
 import traceback
+from typing import Optional
 
 import click
 from loguru import logger
