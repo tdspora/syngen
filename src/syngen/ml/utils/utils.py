@@ -273,7 +273,7 @@ def slugify_attribute(**kwargs):
     return wrapper
 
 
-def slugify_parameters(exclude_params=()):
+def slugify_parameters(exclude_params=(), turn_on=True):
     """
     Slugify the values of parameters, excluding specified parameters
     """
@@ -285,7 +285,7 @@ def slugify_parameters(exclude_params=()):
                 if key in exclude_params:
                     updated_kwargs[key] = value
                 else:
-                    updated_kwargs[key] = slugify(value)
+                    updated_kwargs[key] = slugify(value, lowercase=turn_on)
             return function(**updated_kwargs)
 
         return inner_wrapper
@@ -353,9 +353,9 @@ def fetch_unique_root(table_name: str, metadata_path: str):
     return slugify(unique_name)
 
 
-def create_log_file(type_of_process: str, table_name: Optional[str], metadata_path: Optional[str]):
+def set_log_path(type_of_process: str, table_name: Optional[str], metadata_path: Optional[str]):
     """
-    Create the file for storing the logs of main processes
+    Set the log path for storing the logs of main processes
     """
     os.makedirs("model_artifacts/tmp_store", exist_ok=True)
     unique_name = fetch_unique_root(table_name, metadata_path)
@@ -401,4 +401,15 @@ def setup_logger():
     """
     logger.remove()
     logger.add(console_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
-    logger.add(file_sink, level="INFO")
+    logger.add(file_sink, level=os.getenv("LOGURU_LEVEL"))
+
+
+def check_if_logs_available():
+    """
+    Check if the logs are available and
+    write a message to the log file if not
+    """
+    path_to_logs = os.getenv("SUCCESS_LOG_FILE")
+    if not os.path.exists(path_to_logs):
+        with open(path_to_logs, "a") as file:
+            file.write("No logs available\n")

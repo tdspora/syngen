@@ -11,6 +11,7 @@ from streamlit.elements.widgets.file_uploader import UploadedFile
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
+import streamlit.components.v1 as components
 
 UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -160,6 +161,16 @@ class StreamlitHandler:
                     file_name=download_name,
                 )
 
+    def open_report(self):
+        """
+        Open the accuracy report in the iframe
+        """
+        if os.path.exists(self.path_to_report) and self.print_report:
+            with open(self.path_to_report, "r") as report:
+                report_content = report.read()
+            with st.expander("View the accuracy report"):
+                components.html(report_content, 680, 1000, True)
+
     def generate_buttons(self):
         """
         Generate download buttons for downloading artifacts
@@ -176,7 +187,8 @@ class StreamlitHandler:
         )
         if self.print_report:
             self.generate_button(
-                "Download report",
+                "Download the accuracy report",
                 self.path_to_report,
                 f"accuracy_report_{self.sl_table_name}.html"
             )
+            self.open_report()

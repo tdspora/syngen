@@ -81,7 +81,7 @@ def handle_cross_icon():
     """
     running_status = get_running_status()
 
-    display_status = 'none' if running_status else 'block'
+    display_status = "none" if running_status else "block"
 
     css = f"""
     <style>
