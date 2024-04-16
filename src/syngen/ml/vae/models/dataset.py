@@ -913,7 +913,7 @@ class Dataset(BaseDataset):
                 fillna_value = self.df[feature].mean()
             elif fillna_strategy == "mode":
                 fillna_value = self.df[feature].dropna().mode().sample(1).values[0]
-            elif fillna_strategy == "text":
+            elif (fillna_strategy == "text") or (fillna_strategy == "email"):
                 fillna_value = ""
             else:
                 fillna_value = 0

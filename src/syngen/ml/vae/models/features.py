@@ -587,22 +587,24 @@ class EmailFeature(CharBasedTextFeature):
                          dropout=dropout)
         self.domain = domain
 
+    def fit(self, data: pd.DataFrame, **kwargs):
+        super().fit(self.extract_email_name(data))
+
+    @staticmethod
+    def extract_email_name(data: pd.DataFrame) -> pd.DataFrame:
+        pattern = r'^([^@]+).*$'  # returns all the string if there's no "@" in it
+        return data.iloc[:, 0].str.extract(pattern).rename({0: data.columns[0]}, axis=1).fillna('')
+
     def transform(self, data: pd.DataFrame) -> np.ndarray:
         if len(data.columns) > 1:
             raise Exception("CharBasedTextFeature can work only with one text column")
 
-        pattern = r'^([^@]+).*$'  # returns all the string if there's no "@" in it
         # TODO: add logic for emails to Dataset._preprocess_nan_cols
-        return super().transform(
-            data.iloc[:, 0].str.extract(pattern).
-            rename({0: data.columns[0]}, axis=1).
-            fillna('test1')
-        )
+        return super().transform(self.extract_email_name(data))
 
     def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
         return [
-            s.translate({32: None, 44: None, 64: None}).lstrip('.') +
-            "@" +
+            s + "@" +
             self.domain for s in super().inverse_transform(data, **kwargs)
         ]
 
