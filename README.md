@@ -7,22 +7,28 @@ The source of data might be in CSV, Avro and Excel format and should be located 
 
 The tool is based on the variational autoencoder model (VAE). The Bayesian Gaussian Mixture model is used to further detangle the latent space.
 
+## Prerequisites
+
+Python 3.9 or Python 3.10 is required to run the library. The library is tested on Linux and Windows operating systems.
+You can download Python from [the official website](https://www.python.org/downloads/) and install manually, or you can install Python [from your terminal](https://docs.python-guide.org/starting/installation/). After the installation of Python, please, check whether [pip is installed](https://pip.pypa.io/en/stable/getting-started/).
+
 ## Getting started
 
-Use pip to install the library:
+Before the installation of the library, you have to [set up the virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/).
 
-If you want to install the UI version with streamlit, run:
-
-```bash
-pip install syngen[ui]
-```
-*Note*: see details of the UI usage in the [corresponding section](#ui-web-interface)
-
-Otherwise, you can install the library with CLI input only:
+You can install the library with CLI only:
 
 ```bash
 pip install syngen
 ```
+
+Otherwise, if you want to install the UI version with streamlit, run:
+
+```bash
+pip install syngen[ui]
+```
+
+*Note*: see details of the UI usage in the [corresponding section](#ui-web-interface)
 
 
 The training and inference processes are separated with two cli entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters.<br>
@@ -48,7 +54,6 @@ This will create a csv file with the synthetic table in <i>./model_artifacts/tmp
 Here is a quick example:
 
 ```bash
-pip install syngen
 train --source ./examples/example-data/housing.csv –-table_name Housing
 infer --table_name Housing
 ```
@@ -366,13 +371,19 @@ You can access the streamlit UI web interface by running the following command a
 ```bash
 pip install syngen[ui]
 ```
-then use the code below in your python file:
+then create a python file and insert the code provided below into it:
 
 ```python
 from syngen import streamlit_app
 
 
 streamlit_app.start()
+```
+
+run the python file:
+
+```bash
+python your_file.py
 ```
 
 You also can access the streamlit UI web interface by launching the container with the following command:
