@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+import traceback
 
 import click
 from loguru import logger
@@ -7,7 +8,8 @@ from loguru import logger
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_logger,
-    create_log_file
+    set_log_path,
+    check_if_logs_available
 )
 
 
@@ -85,7 +87,7 @@ def launch_infer(
 
     """
     os.environ["LOGURU_LEVEL"] = log_level
-    create_log_file(type_of_process="infer", table_name=table_name, metadata_path=metadata_path)
+    set_log_path(type_of_process="infer", table_name=table_name, metadata_path=metadata_path)
     setup_logger()
     if not metadata_path and not table_name:
         raise AttributeError(
@@ -125,4 +127,15 @@ def launch_infer(
 
 
 if __name__ == "__main__":
-    launch_infer()
+    try:
+        launch_infer()
+    except Exception as e:
+        log_file = os.getenv("SUCCESS_LOG_FILE")
+        if not os.path.exists(log_file):
+            logger.error(
+                f"Generation failed on running stage. "
+                f"The traceback of the error - {traceback.format_exc()}"
+            )
+        raise e
+    finally:
+        check_if_logs_available()
