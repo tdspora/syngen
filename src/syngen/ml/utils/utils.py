@@ -66,8 +66,9 @@ class ProgressBarHandler:
 
     @classmethod
     def reset_instance(cls):
-        if hasattr(cls, "instance"):
-            del cls.instance
+        cls.instance._progress = 0
+        cls.instance._delta = None
+        cls.instance._message = None
 
 
 def is_format_first(date_format: str, format_type: str) -> bool:
@@ -371,7 +372,7 @@ def fetch_log_message(message):
     Fetch the log message
     """
     record = message.record
-    log_message = (f'{record["time"]} | {record["level"]}    | '
+    log_message = (f'{record["time"]} | {record["level"]} | '
                    f'{record["file"]}:{record["function"]}:{record["line"]} - {record["message"]}')
     return log_message
 
