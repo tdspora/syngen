@@ -1,4 +1,4 @@
-from threading import Thread, enumerate
+from threading import Thread
 import time
 import os
 
