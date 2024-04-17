@@ -1,8 +1,13 @@
-import threading
-import time
 import os
+import time
+import threading
+import datetime
+import uuid
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime import get_instance
 from streamlit_option_menu import option_menu
 
 from syngen.streamlit_app.handlers import StreamlitHandler
@@ -118,6 +123,7 @@ def run():
     Run the Streamlit app
     """
     setup_ui()
+    start_beating(uuid.uuid4())
     with st.sidebar:
         selected = option_menu("", ["Basic"],
                                icons=["'play'"],
@@ -129,6 +135,33 @@ def run():
                                )
     if selected == "Basic":
         run_basic_page()
+
+def heartbeat(user_id):
+    with open("writelog.log", 'a') as f:
+        f.write(f"User '{user_id}' Alive at {datetime.datetime.now()}\n")
+
+
+def start_beating(user_id):
+    thread = threading.Timer(interval=2, function=start_beating, args=(user_id,))
+
+    # insert context to the current thread, needed for
+    # getting session specific attributes like st.session_state
+
+    add_script_run_ctx(thread)
+
+    # context is required to get session_id of the calling
+    # thread (which would be the script thread)
+    ctx = get_script_run_ctx()
+
+    runtime = get_instance()  # this is the main runtime, contains all the sessions
+
+    if runtime.is_active_session(session_id=ctx.session_id):
+        # Session is running
+        thread.start()
+        heartbeat(user_id)
+    else:
+        cleanup_artifacts()
+        return
 
 
 if __name__ == "__main__":
