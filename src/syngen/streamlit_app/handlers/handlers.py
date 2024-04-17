@@ -84,7 +84,7 @@ class StreamlitHandler:
                 "epochs": self.epochs,
                 "row_limit": 10000,
                 "drop_null": False,
-                "batch_size": 1000,
+                "batch_size": 32,
                 "print_report": False
             }
             worker = Worker(
