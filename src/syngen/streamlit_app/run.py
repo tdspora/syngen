@@ -1,7 +1,6 @@
-import threading
+from threading import Thread, enumerate
 import time
 import os
-import ctypes
 
 import streamlit as st
 from streamlit_option_menu import option_menu
@@ -41,40 +40,6 @@ def setup_ui():
     )
 
 
-class ThreadWithException(threading.Thread):
-    """
-    A class for a thread with the ability to raise an exception
-    """
-
-    def get_id(self):
-        if hasattr(self, "_ident"):
-            return self._ident
-
-    def raise_exception(self):
-        thread_id = self.get_id()
-        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id,
-                                                         ctypes.py_object(SystemExit))
-        if res > 1:
-            ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
-
-
-def stop_running_thread():
-    """
-    Stop the running thread
-    """
-    thread = [
-        thread
-        for thread in threading.enumerate()
-        if thread.name == "train_and_infer"
-    ]
-    if thread:
-        runner = thread[0]
-        runner.raise_exception()
-        runner.join()
-        return runner
-    return None
-
-
 def handle_cross_icon():
     """
     Handle the behavior of disabling of the cross icon
@@ -106,9 +71,6 @@ def run_basic_page():
     )
     handle_cross_icon()
     if not uploaded_file:
-        runner = stop_running_thread()
-        if runner and not runner.is_alive():
-            st.warning("The training and the generation were interrupted")
         cleanup_artifacts()
         st.warning("Please upload a CSV file to proceed")
     if uploaded_file:
@@ -141,7 +103,7 @@ def run_basic_page():
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
-            runner = ThreadWithException(name="train_and_infer", target=app.train_and_infer)
+            runner = Thread(name="train_and_infer", target=app.train_and_infer)
             runner.start()
             current_progress = 0
             prg = st.progress(current_progress)
@@ -156,7 +118,6 @@ def run_basic_page():
                                 current_progress, message = app.progress_handler.info
                                 prg.progress(value=current_progress, text=message)
                         elif not app.log_error_queue.empty():
-                            runner.raise_exception()
                             runner.join()
                             break
                         elif not runner.is_alive():

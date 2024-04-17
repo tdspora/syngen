@@ -13,6 +13,7 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
 import streamlit.components.v1 as components
 
+
 UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -43,13 +44,6 @@ class StreamlitHandler:
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                f"draws/accuracy_report.html")
-
-    def reset_log_queues(self):
-        """
-        Clean up log queues
-        """
-        self.log_queue = Queue()
-        self.log_error_queue = Queue()
 
     def set_logger(self):
         """
@@ -90,7 +84,7 @@ class StreamlitHandler:
                 "epochs": self.epochs,
                 "row_limit": 10000,
                 "drop_null": False,
-                "batch_size": 32,
+                "batch_size": 1000,
                 "print_report": False
             }
             worker = Worker(
@@ -108,6 +102,7 @@ class StreamlitHandler:
                              f"{traceback.format_exc()}")
             logger.error(error_message)
             self.log_error_queue.put(e)
+            raise e
 
     def infer_model(self):
         """
@@ -137,13 +132,13 @@ class StreamlitHandler:
                              f"{traceback.format_exc()}")
             logger.error(error_message)
             self.log_error_queue.put(e)
+            raise e
 
     def train_and_infer(self):
         """
         Launch a model training and data generation
         """
         self.progress_handler.reset_instance()
-        self.reset_log_queues()
         self.set_logger()
         self.train_model()
         self.infer_model()
