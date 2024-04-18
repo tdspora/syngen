@@ -1036,7 +1036,7 @@ class Dataset(BaseDataset):
 
     def _assign_email_feature(self, feature):
         """
-        Assign text based feature to text columns
+        Assign email feature to text columns
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="email")
         max_len, rnn_units = 15, 32
