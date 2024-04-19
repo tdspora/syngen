@@ -1,8 +1,6 @@
 import os
 import time
 import threading
-import datetime
-import uuid
 
 import streamlit as st
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -143,7 +141,6 @@ def run():
     Run the Streamlit app
     """
     setup_ui()
-    start_beating(uuid.uuid4())
     with st.sidebar:
         selected = option_menu("", ["Basic"],
                                icons=["'play'"],
@@ -155,14 +152,14 @@ def run():
                                )
     if selected == "Basic":
         run_basic_page()
-
-def heartbeat(user_id):
-    with open("writelog.log", 'a') as f:
-        f.write(f"User '{user_id}' Alive at {datetime.datetime.now()}\n")
+    heart_beat()
 
 
-def start_beating(user_id):
-    thread = threading.Timer(interval=2, function=start_beating, args=(user_id,))
+def heart_beat():
+    """
+    Heartbeat function to track whether the session is alive
+    """
+    thread = threading.Timer(interval=2, function=heart_beat)
 
     # insert context to the current thread, needed for
     # getting session specific attributes like st.session_state
@@ -173,12 +170,11 @@ def start_beating(user_id):
     # thread (which would be the script thread)
     ctx = get_script_run_ctx()
 
-    runtime = get_instance()  # this is the main runtime, contains all the sessions
+    # this is the main runtime, contains all the sessions
+    runtime = get_instance()
 
     if runtime.is_active_session(session_id=ctx.session_id):
-        # Session is running
         thread.start()
-        heartbeat(user_id)
     else:
         cleanup_artifacts()
         return
