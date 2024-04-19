@@ -1,8 +1,11 @@
-from threading import Thread
-import time
 import os
+import time
+import threading
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime import get_instance
 from streamlit_option_menu import option_menu
 
 from syngen.streamlit_app.handlers import StreamlitHandler
@@ -103,7 +106,7 @@ def run_basic_page():
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
-            runner = Thread(name="train_and_infer", target=app.train_and_infer)
+            runner = threading.Thread(name="train_and_infer", target=app.train_and_infer)
             runner.start()
             current_progress = 0
             prg = st.progress(current_progress)
@@ -137,6 +140,7 @@ def run():
     """
     Run the Streamlit app
     """
+    heart_beat()
     setup_ui()
     with st.sidebar:
         selected = option_menu("", ["Basic"],
@@ -149,6 +153,31 @@ def run():
                                )
     if selected == "Basic":
         run_basic_page()
+
+
+def heart_beat():
+    """
+    Heartbeat function to track whether the session is alive
+    """
+    thread = threading.Timer(interval=2, function=heart_beat)
+
+    # insert context to the current thread, needed for
+    # getting session specific attributes like st.session_state
+
+    add_script_run_ctx(thread)
+
+    # context is required to get session_id of the calling
+    # thread (which would be the script thread)
+    ctx = get_script_run_ctx()
+
+    # this is the main runtime, contains all the sessions
+    runtime = get_instance()
+
+    if runtime.is_active_session(session_id=ctx.session_id):
+        thread.start()
+    else:
+        cleanup_artifacts()
+        return
 
 
 if __name__ == "__main__":
