@@ -1,15 +1,18 @@
 import os
 from datetime import datetime
-import traceback
 from queue import Queue
+import sys
+import traceback
 
 from loguru import logger
 from slugify import slugify
 import streamlit as st
+from streamlit.elements.widgets.file_uploader import UploadedFile
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
 import streamlit.components.v1 as components
+
 
 UPLOAD_DIRECTORY = "uploaded_files"
 TIMESTAMP = slugify(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -19,18 +22,24 @@ class StreamlitHandler:
     """
     A class for handling the Streamlit app
     """
-
-    def __init__(self, uploaded_file, epochs: int, size_limit: int, print_report: bool):
-        self.log_queue = Queue()
-        self.progress_handler = ProgressBarHandler()
-        self.log_error_queue = Queue()
+    def __init__(
+            self,
+            epochs: int,
+            size_limit: int,
+            print_report: bool,
+            uploaded_file: UploadedFile
+    ):
         self.epochs = epochs
         self.size_limit = size_limit
         self.print_report = print_report
-        self.file_name = uploaded_file.name
+        self.uploaded_file = uploaded_file
+        self.file_name = self.uploaded_file.name
         self.table_name = os.path.splitext(self.file_name)[0]
         self.file_path = os.path.join(UPLOAD_DIRECTORY, self.file_name)
         self.sl_table_name = slugify(self.table_name)
+        self.progress_handler = ProgressBarHandler()
+        self.log_queue = Queue()
+        self.log_error_queue = Queue()
         self.path_to_generated_data = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
@@ -41,14 +50,16 @@ class StreamlitHandler:
         Set a logger to see logs, and collect log messages
         with the log level - 'INFO' in a log file and stdout
         """
+        logger.remove()
+        logger.add(self.console_sink, colorize=True, level="INFO")
         logger.add(self.file_sink, level="INFO")
-        logger.add(self.log_sink, level="INFO")
 
-    def log_sink(self, message):
+    def console_sink(self, message):
         """
         Put log messages to a log queue
         """
         log_message = fetch_log_message(message)
+        sys.stdout.write(log_message + "\n")
         self.log_queue.put(log_message)
 
     def file_sink(self, message):
@@ -67,7 +78,6 @@ class StreamlitHandler:
         Launch a model training
         """
         try:
-            self.set_logger()
             logger.info("Starting model training...")
             settings = {
                 "source": self.file_path,
@@ -87,9 +97,12 @@ class StreamlitHandler:
             ProgressBarHandler().set_progress(0.01)
             worker.launch_train()
             logger.info("Model training completed")
-        except Exception:
-            logger.error(f"Error during train: {traceback.format_exc()}")
-            self.log_error_queue.put(f"Error during train: {traceback.format_exc()}")
+        except Exception as e:
+            error_message = (f"The error raised during the training process - "
+                             f"{traceback.format_exc()}")
+            logger.error(error_message)
+            self.log_error_queue.put(e)
+            raise e
 
     def infer_model(self):
         """
@@ -114,14 +127,19 @@ class StreamlitHandler:
             )
             worker.launch_infer()
             logger.info("Data generation completed")
-        except Exception:
-            logger.error(f"Error during infer: {traceback.format_exc()}")
-            self.log_error_queue.put(f"Error during infer: {traceback.format_exc()}")
+        except Exception as e:
+            error_message = (f"The error raised during the inference process - "
+                             f"{traceback.format_exc()}")
+            logger.error(error_message)
+            self.log_error_queue.put(e)
+            raise e
 
     def train_and_infer(self):
         """
         Launch a model training and data generation
         """
+        self.progress_handler.reset_instance()
+        self.set_logger()
         self.train_model()
         self.infer_model()
 
