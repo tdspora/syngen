@@ -2,11 +2,13 @@ import numpy as np
 import pytest
 from unittest.mock import patch
 import datetime
+import random
 
 import pandas as pd
 import pandavro as pdx
 
 from syngen.ml.vae.models.dataset import Dataset
+from syngen.ml.utils import generate_uuids
 from tests.conftest import SUCCESSFUL_MESSAGE
 
 CSV_SCHEMA = {"fields": {}, "format": "CSV"}
@@ -281,4 +283,54 @@ def test_define_date_format_with_extreme_values(
         setattr(mock_dataset, "non_existent_columns", set())
         mock_dataset._set_metadata()
         assert mock_dataset.date_mapping == {"Date": expected_date_format}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_is_valid_uuid(rp_logger):
+    rp_logger.info(
+        "Test the method 'is_valid_uuid' that checks if the given value is a valid UUID",
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+    data = {
+        "UUID_1": [str(i) for i in generate_uuids(1, 100)],
+        "UUID_2": [str(i) for i in generate_uuids(2, 100)],
+        "UUID_3": [str(i) for i in generate_uuids(3, 100)],
+        "UUID_4": [str(i) for i in generate_uuids(4, 100)],
+        "UUID_5": [str(i) for i in generate_uuids(5, 100)],
+        "ULID": [str(i) for i in generate_uuids("ulid", 100)],
+        "binary": [random.choice([b'0', b'1']) for _ in range(100)],
+        "boolean": [random.choice([True, False]) for _ in range(100)],
+        "integer": [random.randint(1, 20) for _ in range(100)],
+        "float": [random.uniform(1.0, 20.0) for _ in range(100)],
+    }
+    df = pd.DataFrame(
+        data,
+        columns=["UUID_1", "UUID_2", "UUID_3", "UUID_4", "UUID_5"]
+    )
+    with patch.object(Dataset, "__post_init__", lambda x: None):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={},
+            main_process="train"
+        )
+        setattr(mock_dataset, "dropped_columns", set())
+        setattr(mock_dataset, "non_existent_columns", set())
+        mock_dataset._set_metadata()
+        assert mock_dataset.uuid_columns == {
+            "UUID_1", "UUID_2", "UUID_3", "UUID_4", "UUID_5"
+        }
+        assert mock_dataset.uuid_columns_types == {
+            "UUID_1": 1,
+            "UUID_2": 2,
+            "UUID_3": 3,
+            "UUID_4": 4,
+            "UUID_5": 5
+        }
     rp_logger.info(SUCCESSFUL_MESSAGE)

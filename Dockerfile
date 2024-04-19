@@ -11,8 +11,9 @@ RUN apt-get update && \
     git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir streamlit \
+    pip install --no-cache-dir streamlit==1.31.* \
     pip install --no-cache-dir streamlit_option_menu
 
 COPY src/ .

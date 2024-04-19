@@ -1,10 +1,11 @@
 from setuptools import setup, find_packages
 
-with open("../src/syngen/VERSION", "r") as file:
-    version_info = file.read()
+from syngen import __version__
+
+
 setup(
     name="syngen",
-    version=version_info,
+    version=__version__,
     packages=find_packages(),
     include_package_data=True
 )

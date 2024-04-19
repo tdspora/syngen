@@ -25,7 +25,7 @@ from syngen.ml.validation_schema import (
     ExcelFormatSettingsSchema,
     CSVFormatSettingsSchema,
 )
-from syngen.ml.utils import decrypt, encrypt
+from syngen.ml.utils import decrypt
 
 DELIMITERS = {"\\t": "\t"}
 

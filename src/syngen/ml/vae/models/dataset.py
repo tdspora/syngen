@@ -31,6 +31,7 @@ from syngen.ml.utils import (
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import fetch_training_config, clean_up_metadata
+from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 @dataclass
@@ -478,8 +479,8 @@ class Dataset:
         """
         Check if uuid_to_test is a valid ULID (https://github.com/ulid/spec)
         """
-        ulid_timestamp = uuid[:10]
         try:
+            ulid_timestamp = uuid[:10]
             assert len(uuid) == 26
             ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
             datetime.fromtimestamp(ulid_timestamp_int / 1000.0)
@@ -498,7 +499,7 @@ class Dataset:
                     uuid_obj = UUID(i, version=v)
                     if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
                         result.append(v)
-                except ValueError:
+                except (ValueError, AttributeError, TypeError):
                     result.append(self._is_valid_ulid(i))
         if result:
             return max(set(result), key=result.count)
@@ -1092,5 +1093,8 @@ class Dataset:
         self.set_nan_params(columns_nan_labels)
 
         self.fit(self.df)
+
+        # The end of the run related to the preprocessing stage
+        MlflowTracker().end_run()
 
         return self.df
