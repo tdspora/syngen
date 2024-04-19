@@ -3,7 +3,6 @@ from datetime import datetime
 from queue import Queue
 import sys
 import traceback
-from cryptography.fernet import Fernet
 
 from loguru import logger
 from slugify import slugify
@@ -45,7 +44,6 @@ class StreamlitHandler:
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                f"draws/accuracy_report.html")
-        os.environ["FERNET_KEY"] = Fernet.generate_key().decode("utf-8")
 
     def set_logger(self):
         """
