@@ -140,6 +140,7 @@ def run():
     """
     Run the Streamlit app
     """
+    heart_beat()
     setup_ui()
     with st.sidebar:
         selected = option_menu("", ["Basic"],
@@ -152,7 +153,6 @@ def run():
                                )
     if selected == "Basic":
         run_basic_page()
-    heart_beat()
 
 
 def heart_beat():
