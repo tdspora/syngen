@@ -199,6 +199,18 @@ class MlflowTracker:
             )
             return run["run_id"][0] if run.shape[0] > 0 else None
 
+    def multiple_search_run(self, table_name: str, type_of_process: str):
+        if self.is_active:
+            run = mlflow.search_runs(
+                experiment_names=[self.experiment_name],
+                filter_string=f"run_name like '{table_name}-{type_of_process}%'"
+            )
+            try:
+                count_runs = 2 if run.at[0, "run_id"].endswith("-2") else 1
+                return run["run_id"][:count_runs].to_list()
+            except KeyError:
+                return []
+
     def get_run(self, run_id):
         if self.is_active:
             return mlflow.get_run(run_id)
