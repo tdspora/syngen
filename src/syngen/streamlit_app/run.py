@@ -1,4 +1,4 @@
-import threading
+from threading import Thread
 import time
 import os
 
@@ -10,7 +10,7 @@ from syngen.streamlit_app.utils import (
     show_data,
     get_running_status,
     set_session_state,
-    cleanup_artifacts,
+    cleanup_artifacts
 )
 from syngen import __version__
 
@@ -40,6 +40,24 @@ def setup_ui():
     )
 
 
+def handle_cross_icon():
+    """
+    Handle the behavior of disabling of the cross icon
+    """
+    running_status = get_running_status()
+
+    display_status = "none" if running_status else "block"
+
+    css = f"""
+    <style>
+        div[data-testid="fileDeleteBtn"] {{
+        display: {display_status};
+        }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+
 def run_basic_page():
     """
     Run the basic page of the Streamlit app
@@ -49,7 +67,9 @@ def run_basic_page():
         "Upload a CSV file",
         type="csv",
         accept_multiple_files=False,
+        disabled=get_running_status(),
     )
+    handle_cross_icon()
     if not uploaded_file:
         cleanup_artifacts()
         st.warning("Please upload a CSV file to proceed")
@@ -79,14 +99,12 @@ def run_basic_page():
             key="print_report",
             disabled=get_running_status()
         )
-        app = StreamlitHandler(uploaded_file, epochs, size_limit, print_report)
+        app = StreamlitHandler(epochs, size_limit, print_report, uploaded_file)
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
-            runner = threading.Thread(target=app.train_and_infer, name="train_and_infer")
-            lock = threading.Lock()
-            with lock:
-                runner.start()
+            runner = Thread(name="train_and_infer", target=app.train_and_infer)
+            runner.start()
             current_progress = 0
             prg = st.progress(current_progress)
 
@@ -99,14 +117,16 @@ def run_basic_page():
                                 st.text(log)
                                 current_progress, message = app.progress_handler.info
                                 prg.progress(value=current_progress, text=message)
+                        elif not app.log_error_queue.empty():
+                            runner.join()
+                            break
                         elif not runner.is_alive():
                             break
                         time.sleep(0.001)
-            if not app.log_error_queue.empty():
+            if not app.log_error_queue.empty() and not runner.is_alive():
                 st.exception(app.log_error_queue.get())
-            elif app.log_error_queue.empty() and not runner.is_alive():
+            elif app.log_queue.empty() and not runner.is_alive():
                 prg.progress(100)
-                app.progress_handler.reset_instance()
                 st.success("Data generation completed")
 
         with st.container():
