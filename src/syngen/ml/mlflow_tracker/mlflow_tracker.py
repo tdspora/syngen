@@ -206,10 +206,12 @@ class MlflowTracker:
                 filter_string=f"run_name like '{table_name}-{type_of_process}%'"
             )
             try:
-                count_runs = 2 if run.at[0, "run_id"].endswith("-2") else 1
+                count_runs = 2 if run.at[0, "tags.mlflow.runName"].endswith("-2") else 1
                 return run["run_id"][:count_runs].to_list()
             except KeyError:
                 return []
+        else:
+            return []
 
     def get_run(self, run_id):
         if self.is_active:
