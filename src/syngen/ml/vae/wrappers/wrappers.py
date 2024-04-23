@@ -112,6 +112,7 @@ class VAEWrapper(BaseWrapper):
                 main_process=self.main_process,
                 paths=self.paths,
             )
+            self.dataset.set_metadata()
         elif self.process == "infer":
             self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
             self._update_dataset()
