@@ -173,9 +173,11 @@ def heart_beat():
     # this is the main runtime, contains all the sessions
     runtime = get_instance()
 
+    print(f"The session id is {ctx.session_id}")
     if runtime.is_active_session(session_id=ctx.session_id):
         thread.start()
     else:
+        print(f"Exit of the current session - {ctx.session_id}...")
         cleanup_artifacts()
         return
 
