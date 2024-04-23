@@ -507,7 +507,9 @@ class Dataset(BaseDataset):
         if not data_subset.empty:
             # @ presents in more than 4/5 of not None values of every column
             email_pattern = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
-            count_emails = data_subset.apply(lambda col: col.str.contains(email_pattern), axis=1).sum()
+            count_emails = data_subset.apply(
+                lambda col: col.str.contains(email_pattern), axis=1
+            ).sum()
             adjusted_count = count_emails.values * 1.25  # inverse to 4/5
             non_na_values_count = data_subset.count().values
             filter_mask = adjusted_count > non_na_values_count
