@@ -44,6 +44,7 @@ class Reporter:
             dataset.binary_columns,
             dataset.categ_columns,
             dataset.long_text_columns,
+            dataset.email_columns,
         )
 
         # eliminate keys columns from the report
@@ -85,6 +86,7 @@ class Reporter:
             binary_columns,
             categ_columns,
             long_text_columns,
+            email_columns,
         ) = types
 
         original = original[[col for col in original.columns if col in set().union(*types)]]
@@ -99,7 +101,7 @@ class Reporter:
             )
 
         int_columns = date_columns | int_columns
-        text_columns = str_columns | long_text_columns
+        text_columns = str_columns | long_text_columns | email_columns
         original = text_to_continuous(original, text_columns).drop(text_columns, axis=1)
         synthetic = text_to_continuous(synthetic, text_columns).drop(text_columns, axis=1)
 

@@ -572,6 +572,43 @@ class CharBasedTextFeature(BaseFeature):
         )
 
 
+class EmailFeature(CharBasedTextFeature):
+    def __init__(
+        self,
+        name: str,
+        text_max_len: int,
+        rnn_units: int = 128,
+        dropout: int = 0,
+        domain: str = 'tdspora.ai'
+    ):
+        super().__init__(name=name,
+                         text_max_len=text_max_len,
+                         rnn_units=rnn_units,
+                         dropout=dropout)
+        self.domain = domain
+
+    def fit(self, data: pd.DataFrame, **kwargs):
+        super().fit(self.extract_email_name(data))
+
+    @staticmethod
+    def extract_email_name(data: pd.DataFrame) -> pd.DataFrame:
+        pattern = r'^([^@]+).*$'  # returns all the string if there's no "@" in it
+        return data.iloc[:, 0].str.extract(pattern).rename({0: data.columns[0]}, axis=1).fillna('')
+
+    def transform(self, data: pd.DataFrame) -> np.ndarray:
+        if len(data.columns) > 1:
+            raise Exception("CharBasedTextFeature can work only with one text column")
+
+        # TODO: add logic for emails to Dataset._preprocess_nan_cols
+        return super().transform(self.extract_email_name(data))
+
+    def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
+        return [
+            s + "@" +
+            self.domain for s in super().inverse_transform(data, **kwargs)
+        ]
+
+
 class DateFeature(BaseFeature):
     """
     A class to process datetime features

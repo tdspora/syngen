@@ -1,5 +1,4 @@
 from typing import Dict, Optional, List, Tuple, Set
-from dataclasses import dataclass, field
 import pickle
 from uuid import UUID
 from datetime import datetime
@@ -18,6 +17,7 @@ from loguru import logger
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
     CharBasedTextFeature,
+    EmailFeature,
     ContinuousFeature,
     DateFeature,
     BinaryFeature,
@@ -34,31 +34,81 @@ from syngen.ml.utils import fetch_training_config, clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
-@dataclass
-class Dataset:
-    df: pd.DataFrame
-    schema: Optional[Dict]
-    metadata: Dict
-    table_name: str
-    paths: Dict
-    main_process: str
-    features: Dict = field(init=False)
-    columns: Dict = field(init=False)
-    is_fitted: bool = field(init=False)
-    all_columns: List = field(init=False)
-    null_num_column_names: List = field(init=False)
-    zero_num_column_names: List = field(init=False)
-    nan_labels_dict: Dict = field(init=False)
-    uuid_columns: Set = field(init=False)
-    uuid_columns_types: Dict = field(init=False)
-    dropped_columns: Set = field(init=False)
-    order_of_columns: List = field(init=False)
-    non_existent_columns: Set = field(init=False)
-    format: Dict = field(init=False)
+class BaseDataset:
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        schema: Optional[Dict],
+        metadata: Dict,
+        table_name: str,
+        main_process: str,
+        paths: Dict
+    ):
+        self.df = df
+        self.schema = schema
+        self.metadata = metadata
+        self.table_name = table_name
+        self.paths = paths
+        self.main_process = main_process
+        self.features: Dict = dict()
+        self.columns: Dict = dict()
+        self.is_fitted: bool = False
+        self.all_columns: List = list()
+        self.null_num_column_names: List = list()
+        self.zero_num_column_names: List = list()
+        self.nan_labels_dict: Dict = dict()
+        self.uuid_columns: Set = set()
+        self.uuid_columns_types: Dict = dict()
+        self.dropped_columns: Set = set()
+        self.order_of_columns: List = list()
+        self.categ_columns: Set = set()
+        self.str_columns: Set = set()
+        self.float_columns: Set = set()
+        self.int_columns: Set = set()
+        self.date_columns: Set = set()
+        self.date_mapping: Dict = dict()
+        self.binary_columns: Set = set()
+        self.email_columns: Set = set()
+        self.long_text_columns: Set = set()
+        self.primary_keys_mapping: Dict = dict()
+        self.primary_keys_list: List = list()
+        self.primary_key_name: Optional[str] = None
+        self.pk_columns: List = list()
+        self.unique_keys_mapping: Dict = dict()
+        self.unique_keys_mapping_list: List = list()
+        self.unique_keys_list: List = list()
+        self.uq_columns_lists: List = list()
+        self.uq_columns: List = list()
+        self.foreign_keys_mapping: Dict = dict()
+        self.foreign_keys_list: List = list()
+        self.fk_columns: List = list()
+        self.dropped_columns: Set = fetch_training_config(
+            self.paths["train_config_pickle_path"]
+        ).dropped_columns
+        self.order_of_columns: List = fetch_training_config(
+            self.paths["train_config_pickle_path"]
+        ).columns
+        self.format = self.metadata[self.table_name].get("format", {})
 
-    def __post_init__(self):
-        self._predefine_fields()
-        self._set_metadata()
+
+class Dataset(BaseDataset):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        schema: Optional[Dict],
+        metadata: Dict,
+        table_name: str,
+        main_process: str,
+        paths: Dict
+    ):
+        super().__init__(
+            df,
+            schema,
+            metadata,
+            table_name,
+            main_process,
+            paths
+        )
 
     def __getstate__(self) -> Dict:
         """
@@ -71,27 +121,7 @@ class Dataset:
         for attr_key in attribute_keys_to_remove:
             if attr_key in dataset_instance:
                 del dataset_instance[attr_key]
-
         return dataset_instance
-
-    def _predefine_fields(self):
-        self.features = dict()
-        self.columns = dict()
-        self.is_fitted = False
-        self.all_columns = list()
-        self.null_num_column_names = list()
-        self.zero_num_column_names = list()
-        self.nan_labels_dict = dict()
-        self.uuid_columns = set()
-        self.uuid_columns_types = {}
-        self.dropped_columns = fetch_training_config(
-            self.paths["train_config_pickle_path"]
-        ).dropped_columns
-        self.non_existent_columns = set()
-        self.order_of_columns = fetch_training_config(
-            self.paths["train_config_pickle_path"]
-        ).columns
-        self.format = self.metadata[self.table_name].get("format", {})
 
     def __set_pk_key(self, config_of_keys: Dict):
         """
@@ -258,6 +288,7 @@ class Dataset:
                     if column
                     in (
                         self.str_columns
+                        | self.email_columns
                         | self.categ_columns
                         | self.date_columns
                         | self.long_text_columns
@@ -281,20 +312,8 @@ class Dataset:
             self.__set_pk_key(config_of_keys)
             self.__set_uq_keys(config_of_keys)
             self.__set_fk_keys(config_of_keys)
-        else:
-            self.primary_keys_mapping = {}
-            self.primary_keys_list = []
-            self.primary_key_name = None
-            self.pk_columns = []
-            self.unique_keys_mapping = {}
-            self.unique_keys_mapping_list = []
-            self.unique_keys_list = []
-            self.uq_columns = []
-            self.foreign_keys_mapping = {}
-            self.foreign_keys_list = []
-            self.fk_columns = []
 
-    def _set_metadata(self):
+    def set_metadata(self):
         table_config = self.metadata.get(self.table_name, {})
         self._set_non_existent_columns(table_config)
         self._update_table_config(table_config)
@@ -390,8 +409,6 @@ class Dataset:
         """
         metadata_of_table = self.metadata.get(self.table_name)
 
-        self.categ_columns = set()
-
         if metadata_of_table is not None:
             self.categ_columns = set(
                 metadata_of_table.get("train_settings", {})
@@ -432,17 +449,23 @@ class Dataset:
         )
         self.categ_columns.update(defined_columns)
 
-    def _select_str_columns(self, df):
+    # TODO: cache this function calls (?)
+    def _select_str_columns(self, df) -> List[str]:
+        """
+        Select the text columns
+        """
         if self.schema.get("format", "") == "CSV":
-            data_subset = df.select_dtypes(include=[pd.StringDtype(), "object"])
+            text_columns = [
+                col for col, dtype in dict(df.dtypes).items()
+                if dtype in ["object", "string"]
+            ]
         else:
             text_columns = [
                 col
                 for col, data_type in self.schema.get("fields", {}).items()
                 if data_type == "string"
             ]
-            data_subset = df[text_columns]
-        return data_subset
+        return text_columns
 
     def _set_categorical_columns(self, df: pd.DataFrame, schema: Dict):
         """
@@ -456,9 +479,9 @@ class Dataset:
         """
         Set up the list of columns with long texts (> 200 symbols)
         """
-        data_subset = self._select_str_columns(df)
+        text_columns = self._select_str_columns(df)
+        data_subset = df[text_columns]
 
-        self.long_text_columns = set()
         if not data_subset.empty:
             data_subset = data_subset.loc[
                 :, data_subset.apply(lambda x: (x.str.len() > 200).any())
@@ -473,6 +496,28 @@ class Dataset:
                     f"therefore this column(-s) will be generated using "
                     f"a simplified statistical approach"
                 )
+
+    def _set_email_columns(self, df: pd.DataFrame):
+        """
+        Set up the list of columns with emails (defined by count of @ symbols)
+        """
+        text_columns = self._select_str_columns(df)
+        data_subset = df[text_columns]
+
+        if not data_subset.empty:
+            # @ presents in more than 4/5 of not None values of every column
+            email_pattern = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
+            count_emails = data_subset.apply(
+                lambda col: col.str.contains(email_pattern), axis=1
+            ).sum()
+            adjusted_count = count_emails.values * 1.25  # inverse to 4/5
+            non_na_values_count = data_subset.count().values
+            filter_mask = adjusted_count > non_na_values_count
+            data_subset = data_subset.loc[
+                :, filter_mask
+            ]
+            self.email_columns = set(data_subset.columns)
+            self.email_columns -= self.categ_columns
 
     @staticmethod
     def _is_valid_ulid(uuid):
@@ -511,7 +556,8 @@ class Dataset:
         Set up the list of columns with UUIDs
         """
 
-        data_subset = self._select_str_columns(df)
+        text_columns = self._select_str_columns(df)
+        data_subset = df[text_columns]
 
         if not data_subset.empty:
             data_subset = data_subset.apply(self._is_valid_uuid)
@@ -524,6 +570,7 @@ class Dataset:
         """
         self.date_columns = (
             get_date_columns(df, list(self.str_columns))
+            - self.email_columns
             - self.categ_columns
             - self.binary_columns
             - self.long_text_columns
@@ -611,14 +658,13 @@ class Dataset:
             return Counter(types).most_common(2)[1][0]
         return Counter(types).most_common(1)[0][0]
 
-    def _set_date_format(self, df) -> Dict[str, str]:
+    def _set_date_format(self, df):
         """
         Define the date format for each date column
         """
-        date_mapping = {
+        self.date_mapping = {
             column: self.__define_date_format(df[column]) for column in self.date_columns
         }
-        return date_mapping
 
     def _general_data_pipeline(
         self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True
@@ -639,6 +685,7 @@ class Dataset:
         self._set_binary_columns(df)
         self._set_categorical_columns(df, schema)
         self._set_long_text_columns(df)
+        self._set_email_columns(df)
         tmp_df = get_tmp_df(df)
         self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
         self.int_columns = set(tmp_df.select_dtypes(include=["int", "int64"]).columns)
@@ -661,6 +708,7 @@ class Dataset:
             - self.int_columns
             - self.binary_columns
             - self.long_text_columns
+            - self.email_columns
             - self.uuid_columns
         )
         self.categ_columns -= self.long_text_columns
@@ -670,7 +718,7 @@ class Dataset:
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
-        self.date_mapping = self._set_date_format(df)
+        self._set_date_format(df)
 
     def _avro_data_pipeline(self, df, schema):
         """
@@ -682,6 +730,7 @@ class Dataset:
         self._set_binary_columns(df)
         self._set_categorical_columns(df, schema)
         self._set_long_text_columns(df)
+        self._set_email_columns(df)
         self.int_columns = set(
             column for column, data_type in schema.items() if data_type == "int"
         )
@@ -699,6 +748,7 @@ class Dataset:
             - self.categ_columns
             - self.binary_columns
             - self.long_text_columns
+            - self.email_columns
             - self.uuid_columns
         )
         self._set_date_columns(df)
@@ -707,7 +757,7 @@ class Dataset:
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
-        self.date_mapping = self._set_date_format(df)
+        self._set_date_format(df)
 
     def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
         if schema.get("format") == "CSV":
@@ -720,7 +770,7 @@ class Dataset:
             self.date_columns
         ) + len(self.categ_columns) + len(self.binary_columns) + len(self.long_text_columns) + len(
             self.uuid_columns
-        ) == len(
+        ) + len(self.email_columns) == len(
             df.columns
         ), (
             "According to number of columns with defined types, "
@@ -729,6 +779,7 @@ class Dataset:
 
         logger.debug(
             f"Count of string columns: {len(self.str_columns)}; "
+            + f"Count of email columns: {len(self.email_columns)}; "
             + f"Count of float columns: {len(self.float_columns)}; "
             + f"Count of int columns: {len(self.int_columns)}; "
             + f"Count of categorical columns: {len(self.categ_columns)}; "
@@ -864,7 +915,7 @@ class Dataset:
                 fillna_value = self.df[feature].mean()
             elif fillna_strategy == "mode":
                 fillna_value = self.df[feature].dropna().mode().sample(1).values[0]
-            elif fillna_strategy == "text":
+            elif (fillna_strategy == "text") or (fillna_strategy == "email"):
                 fillna_value = ""
             else:
                 fillna_value = 0
@@ -985,6 +1036,28 @@ class Dataset:
                 self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
                 logger.info(f"Column '{feature}' assigned as float based feature")
 
+    def _assign_email_feature(self, feature):
+        """
+        Assign email feature to text columns
+        """
+        features = self._preprocess_nan_cols(feature, fillna_strategy="email")
+        max_len, rnn_units = 15, 32
+        self.assign_feature(
+            EmailFeature(features[0], text_max_len=max_len, rnn_units=rnn_units),
+            features[0],
+        )
+        logger.info(f"Column '{features[0]}' assigned as email feature")
+
+        # TODO: encapsulate this logic in a separate function
+        if len(features) > 1:
+            for feature in features[1:]:
+                if feature.endswith("_null"):
+                    self.null_num_column_names.append(feature)
+                if feature.endswith("_zero"):
+                    self.zero_num_column_names.append(feature)
+                self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
+                logger.info(f"Column '{feature}' assigned as float based feature")
+
     def _assign_float_feature(self, feature):
         """
         Assign float based feature to float columns
@@ -1079,6 +1152,8 @@ class Dataset:
         for column in self.df.columns:
             if column in self.str_columns:
                 self._assign_char_feature(column)
+            if column in self.email_columns:
+                self._assign_email_feature(column)
             elif column in self.float_columns:
                 self._assign_float_feature(column)
             elif column in self.int_columns:
