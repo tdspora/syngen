@@ -1,9 +1,10 @@
 import os
 import shutil
-
-import pandas as pd
-import streamlit as st
 import threading
+
+import streamlit as st
+
+from syngen.ml.data_loaders import DataLoader
 
 
 UPLOAD_DIRECTORY = "uploaded_files"
@@ -20,7 +21,7 @@ def show_data(uploaded_file):
         os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
     with open(file_path, "wb") as file_object:
         file_object.write(uploaded_file.getvalue())
-    df = pd.read_csv(file_path)
+    df, schema = DataLoader(file_path).load_data()
     st.write(f"Preview of {file_name}:", df.head())
     st.write(f"Rows: {df.shape[0]}, columns: {df.shape[1]}")
 
