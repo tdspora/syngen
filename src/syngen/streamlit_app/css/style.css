@@ -46,6 +46,32 @@ div[class="st-emotion-cache-7e7wz2 e1y5xkzn2"]{
 div[role="tooltip"]{
     left:20%;
 }
+div[class="contact_us_container"]{
+    position: fixed;
+    right: 2rem;
+    bottom: 2rem;
+}
+a[class="contact_us"]{
+        position: relative;
+        display: inline-flex;
+        -webkit-box-align: center;
+        align-items: center;
+        -webkit-box-pack: center;
+        justify-content: center;
+        font-weight: 400;
+        border-radius: 0.5rem;
+        margin: 0px;
+        line-height: 1.6;
+        text-decoration: none;
+        width: auto;
+        user-select: none;
+        background-color: rgb(244, 246, 250);
+        color: rgb(38, 39, 48);
+        border: 1px solid rgba(38, 39, 48, 0.2);
+}
+a[class="contact_us"] > div > p{
+    margin: 0 auto;
+}
 #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         .stDeployButton {
