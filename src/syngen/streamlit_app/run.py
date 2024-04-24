@@ -39,6 +39,14 @@ def setup_ui():
         help=f"The current version of syngen library is {__version__}"
     )
 
+def render_feedback_form():
+    """
+    Create feedback button
+    """
+    html = "".join(open(f"{os.path.join(os.path.dirname(__file__))}/html/feedback_form.html").readlines())
+
+    st.markdown(html, unsafe_allow_html=True)
+
 
 def handle_cross_icon():
     """
@@ -131,6 +139,7 @@ def run_basic_page():
 
         with st.container():
             app.generate_buttons()
+    render_feedback_form()
 
 
 def run():
