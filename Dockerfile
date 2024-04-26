@@ -5,6 +5,7 @@ FROM python:3.9-bookworm
 WORKDIR src
 
 COPY requirements.txt .
+COPY requirements-streamlit.txt .
 
 RUN apt-get update && \
     apt-get install -y \
