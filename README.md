@@ -332,13 +332,13 @@ To run dockerized code (see parameters description in *Training* and *Inference*
 ```bash
 docker pull tdspora/syngen
 docker run --rm \
-  -v PATH_TO_LOCAL_FOLDER:/data/model_artifacts tdspora/syngen \
+  -v PATH_TO_LOCAL_FOLDER:/data tdspora/syngen \
   --task=train \
   --table_name=TABLE_NAME \
-  --source=./model_artifacts/YOUR_CSV_FILE.csv
+  --source=./data/YOUR_CSV_FILE.csv
 
 docker run --rm \
-  -v PATH_TO_LOCAL_FOLDER:/data/model_artifacts tdspora/syngen \
+  -v PATH_TO_LOCAL_FOLDER:/data tdspora/syngen \
   --task=infer \
   --table_name=TABLE_NAME
 ```
@@ -352,14 +352,14 @@ To run dockerized code by providing the metadata file simply call:
 ```bash
 docker pull tdspora/syngen
 docker run --rm \
-  -v PATH_TO_LOCAL_FOLDER:/data/model_artifacts tdspora/syngen \
+  -v PATH_TO_LOCAL_FOLDER:/data tdspora/syngen \
   --task=train \
-  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+  --metadata_path=./data/PATH_TO_METADATA_YAML
 
 docker run --rm \
-  -v PATH_TO_LOCAL_FOLDER:/data/model_artifacts tdspora/syngen \
+  -v PATH_TO_LOCAL_FOLDER:/data tdspora/syngen \
   --task=infer \
-  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+  --metadata_path=./data/PATH_TO_METADATA_YAML
 ```
 
 You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call, however, they will be
@@ -412,13 +412,13 @@ ensure that all necessary credentials are provided before using Mlflow.
 docker pull tdspora/syngen:latest
 docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
-  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/data/model_artifacts tdspora/syngen \
-  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/data tdspora/syngen \
+  --metadata_path=./data/PATH_TO_METADATA_YAML
 
 docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
-  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/data/model_artifacts tdspora/syngen \
-  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/data tdspora/syngen \
+  --metadata_path=./data/PATH_TO_METADATA_YAML
 ```
 
 ## Contribution
