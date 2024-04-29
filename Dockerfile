@@ -2,7 +2,8 @@
 
 FROM python:3.9-bookworm
 
-WORKDIR src
+WORKDIR ml_workdir
+WORKDIR data
 
 COPY requirements.txt .
 COPY requirements-streamlit.txt .
@@ -16,8 +17,8 @@ RUN apt-get update && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir -r requirements-streamlit.txt
 
-COPY src/ .
-COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
-COPY src/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
-ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
+COPY ml_workdir/ .
+COPY ml_workdir/syngen/streamlit_app/.streamlit syngen/.streamlit
+COPY ml_workdir/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
+ENV PYTHONPATH "${PYTHONPATH}:/ml_workdir/syngen"
 ENTRYPOINT ["python3", "-m", "start"]
