@@ -3,7 +3,7 @@ from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
-from statistics import mean 
+from statistics import mean, StatisticsError
 import os
 
 from syngen.ml.data_loaders import MetadataLoader
@@ -395,6 +395,8 @@ class Worker:
                                                            MlflowTracker().get_metric_history(run_id, metric)])
                                                )
                 except TypeError:
+                    pass
+                except StatisticsError:
                     pass
 
     def _generate_reports(self):
