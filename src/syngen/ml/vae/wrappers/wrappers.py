@@ -256,6 +256,12 @@ class VAEWrapper(BaseWrapper):
 
         self._train(train_dataset, epochs)
 
+        MlflowTracker().end_run()
+
+        MlflowTracker().start_run(
+            run_name=f"{self.table_name}-POSTPROCESS",
+            tags={"table_name": self.table_name, "process": "postprocess"},
+        )
         self.model.model = self.vae
         self.fit_sampler(df)
 
