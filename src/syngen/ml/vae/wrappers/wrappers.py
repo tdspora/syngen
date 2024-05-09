@@ -140,7 +140,6 @@ class VAEWrapper:
 
     def fit_on_df(
         self,
-        df: pd.DataFrame,
         epochs: int,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
     ):

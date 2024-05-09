@@ -177,10 +177,7 @@ class VaeTrainHandler(BaseHandler):
             f"drop_null={self.drop_null}, batch_size={self.batch_size}"
         )
 
-        self.model.fit_on_df(
-            data,
-            epochs=self.epochs,
-        )
+        self.model.fit_on_df(epochs=self.epochs)
 
         if not check_if_features_assigned(self.paths["dataset_pickle_path"]):
             return
