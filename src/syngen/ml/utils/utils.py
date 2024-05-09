@@ -244,15 +244,6 @@ def fetch_dataset(dataset_pickle_path: str):
     return dataset
 
 
-def define_existent_columns(columns, original_columns):
-    existent_columns = []
-    for column in columns:
-        if column in original_columns:
-            existent_columns.append(column)
-        continue
-    return existent_columns
-
-
 def slugify_attribute(**kwargs):
     """
     Slugify the value of the attribute of the instance
