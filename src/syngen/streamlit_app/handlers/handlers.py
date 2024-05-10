@@ -1,3 +1,4 @@
+from typing import Dict, Any
 import os
 from datetime import datetime
 from queue import Queue
@@ -54,7 +55,7 @@ class StreamlitHandler:
         logger.add(self.console_sink, colorize=True, level="INFO")
         logger.add(self.file_sink, level="INFO")
 
-    def console_sink(self, message):
+    def console_sink(self, message: str):
         """
         Put log messages to a log queue
         """
@@ -62,7 +63,7 @@ class StreamlitHandler:
         sys.stdout.write(log_message + "\n")
         self.log_queue.put(log_message)
 
-    def file_sink(self, message):
+    def file_sink(self, message: str):
         """
         Write log messages to a log file
         """
@@ -73,27 +74,38 @@ class StreamlitHandler:
             log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
-    def train_model(self):
+    def __set_worker(self, settings: Dict[str, Any], process_type: str):
+        """
+        Set a Worker object
+
+        Parameters
+        ----------
+        settings : dict
+            The settings for the worker.
+        process_type : str
+            The type of process ("train" or "infer").
+
+        Returns
+        -------
+        Worker
+            The Worker object.
+        """
+        worker = Worker(
+            table_name=self.table_name,
+            settings=settings,
+            metadata_path=None,
+            log_level="INFO",
+            type_of_process=process_type
+        )
+        return worker
+
+    def train_model(self, settings: Dict[str, Any]):
         """
         Launch a model training
         """
         try:
             logger.info("Starting model training...")
-            settings = {
-                "source": self.file_path,
-                "epochs": self.epochs,
-                "row_limit": 10000,
-                "drop_null": False,
-                "batch_size": 32,
-                "print_report": False
-            }
-            worker = Worker(
-                table_name=self.table_name,
-                settings=settings,
-                metadata_path=None,
-                log_level="INFO",
-                type_of_process="train"
-            )
+            worker = self.__set_worker(settings, "train")
             ProgressBarHandler().set_progress(0.01)
             worker.launch_train()
             logger.info("Model training completed")
@@ -104,27 +116,13 @@ class StreamlitHandler:
             self.log_error_queue.put(e)
             raise e
 
-    def infer_model(self):
+    def infer_model(self, settings: Dict[str, Any]):
         """
         Launch a data generation
         """
         try:
             logger.info("Starting data generation...")
-            settings = {
-                "size": self.size_limit,
-                "batch_size": 32,
-                "run_parallel": False,
-                "random_seed": None,
-                "print_report": self.print_report,
-                "get_infer_metrics": False
-            }
-            worker = Worker(
-                table_name=self.table_name,
-                settings=settings,
-                metadata_path=None,
-                log_level="INFO",
-                type_of_process="infer"
-            )
+            worker = self.__set_worker(settings, "infer")
             worker.launch_infer()
             logger.info("Data generation completed")
         except Exception as e:
@@ -134,17 +132,39 @@ class StreamlitHandler:
             self.log_error_queue.put(e)
             raise e
 
+    def set_monitoring(self):
+        """
+        Reset the progress bar and set up the logger
+        """
+        self.progress_handler.reset_instance()
+        self.set_logger()
+
     def train_and_infer(self):
         """
         Launch a model training and data generation
         """
-        self.progress_handler.reset_instance()
-        self.set_logger()
-        self.train_model()
-        self.infer_model()
+        self.set_monitoring()
+        train_settings = {
+            "source": self.file_path,
+            "epochs": self.epochs,
+            "row_limit": 10000,
+            "drop_null": False,
+            "batch_size": 32,
+            "print_report": False
+        }
+        self.train_model(train_settings)
+        infer_settings = {
+            "size": self.size_limit,
+            "batch_size": 32,
+            "run_parallel": False,
+            "random_seed": None,
+            "print_report": self.print_report,
+            "get_infer_metrics": False
+        }
+        self.infer_model(infer_settings)
 
     @staticmethod
-    def generate_button(label, path_to_file, download_name):
+    def generate_button(label: str, path_to_file: str, download_name: str):
         """
         Generate a download button
         """
