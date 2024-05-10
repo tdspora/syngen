@@ -76,7 +76,7 @@ class StreamlitHandler:
 
     def __get_worker(self, settings: Dict[str, Any], process_type: str):
         """
-        Set a Worker object
+        Get a Worker object
 
         Parameters
         ----------
