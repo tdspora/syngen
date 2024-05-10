@@ -61,7 +61,7 @@ class StreamlitApp:
         st.markdown(css, unsafe_allow_html=True)
 
     @staticmethod
-    def __get_streamlit_handler(epochs, size_limit, print_report, uploaded_file):
+    def _get_streamlit_handler(epochs, size_limit, print_report, uploaded_file):
         """
         Get the Streamlit handler
         """
@@ -108,7 +108,7 @@ class StreamlitApp:
                 key="print_report",
                 disabled=get_running_status()
             )
-            handler = self.__get_streamlit_handler(epochs, size_limit, print_report, uploaded_file)
+            handler = self._get_streamlit_handler(epochs, size_limit, print_report, uploaded_file)
             if st.button(
                     "Generate data", type="primary", key="gen_button", disabled=get_running_status()
             ):
