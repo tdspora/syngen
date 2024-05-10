@@ -74,7 +74,7 @@ class StreamlitHandler:
             log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
-    def __get_worker(self, settings: Dict[str, Any], process_type: str):
+    def _get_worker(self, settings: Dict[str, Any], process_type: str):
         """
         Get a Worker object
 
@@ -105,7 +105,7 @@ class StreamlitHandler:
         """
         try:
             logger.info("Starting model training...")
-            worker = self.__get_worker(settings, "train")
+            worker = self._get_worker(settings, "train")
             ProgressBarHandler().set_progress(0.01)
             worker.launch_train()
             logger.info("Model training completed")
@@ -122,7 +122,7 @@ class StreamlitHandler:
         """
         try:
             logger.info("Starting data generation...")
-            worker = self.__get_worker(settings, "infer")
+            worker = self._get_worker(settings, "infer")
             worker.launch_infer()
             logger.info("Data generation completed")
         except Exception as e:
