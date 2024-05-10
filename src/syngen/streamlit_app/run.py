@@ -58,6 +58,13 @@ def handle_cross_icon():
     st.markdown(css, unsafe_allow_html=True)
 
 
+def get_streamlit_handler(epochs, size_limit, print_report, uploaded_file):
+    """
+    Get the Streamlit handler
+    """
+    return StreamlitHandler(epochs, size_limit, print_report, uploaded_file)
+
+
 def run_basic_page():
     """
     Run the basic page of the Streamlit app
@@ -99,7 +106,7 @@ def run_basic_page():
             key="print_report",
             disabled=get_running_status()
         )
-        app = StreamlitHandler(epochs, size_limit, print_report, uploaded_file)
+        app = get_streamlit_handler(epochs, size_limit, print_report, uploaded_file)
         if st.button(
                 "Generate data", type="primary", key="gen_button", disabled=get_running_status()
         ):
