@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.9-bookworm
+FROM python:3.10-bookworm
 
-WORKDIR ml_workdir
-WORKDIR data
+WORKDIR src
 
 COPY requirements.txt .
 COPY requirements-streamlit.txt .
@@ -17,8 +16,8 @@ RUN apt-get update && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir -r requirements-streamlit.txt
 
-COPY ml_workdir/ .
-COPY ml_workdir/syngen/streamlit_app/.streamlit syngen/.streamlit
-COPY ml_workdir/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
-ENV PYTHONPATH "${PYTHONPATH}:/ml_workdir/syngen"
+COPY src/ .
+COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
+COPY src/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
+ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
 ENTRYPOINT ["python3", "-m", "start"]
