@@ -1,4 +1,3 @@
-from typing import Dict, Any
 import os
 from datetime import datetime
 from queue import Queue
@@ -45,6 +44,22 @@ class StreamlitHandler:
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                f"draws/accuracy_report.html")
+        self.train_settings = {
+            "source": self.file_path,
+            "epochs": self.epochs,
+            "row_limit": 10000,
+            "drop_null": False,
+            "batch_size": 32,
+            "print_report": False
+        }
+        self.infer_settings = {
+            "size": self.size_limit,
+            "batch_size": 32,
+            "run_parallel": False,
+            "random_seed": None,
+            "print_report": self.print_report,
+            "get_infer_metrics": False
+        }
 
     def set_logger(self):
         """
@@ -74,14 +89,12 @@ class StreamlitHandler:
             log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
-    def _get_worker(self, settings: Dict[str, Any], process_type: str):
+    def _get_worker(self, process_type: str):
         """
         Get a Worker object
 
         Parameters
         ----------
-        settings : dict
-            The settings for the worker.
         process_type : str
             The type of process ("train" or "infer").
 
@@ -92,20 +105,20 @@ class StreamlitHandler:
         """
         worker = Worker(
             table_name=self.table_name,
-            settings=settings,
+            settings=self.train_settings if process_type == "train" else self.infer_settings,
             metadata_path=None,
             log_level="INFO",
             type_of_process=process_type
         )
         return worker
 
-    def train_model(self, settings: Dict[str, Any]):
+    def train_model(self):
         """
         Launch a model training
         """
         try:
             logger.info("Starting model training...")
-            worker = self._get_worker(settings, "train")
+            worker = self._get_worker("train")
             ProgressBarHandler().set_progress(0.01)
             worker.launch_train()
             logger.info("Model training completed")
@@ -116,13 +129,13 @@ class StreamlitHandler:
             self.log_error_queue.put(e)
             raise e
 
-    def infer_model(self, settings: Dict[str, Any]):
+    def infer_model(self):
         """
         Launch a data generation
         """
         try:
             logger.info("Starting data generation...")
-            worker = self._get_worker(settings, "infer")
+            worker = self._get_worker("infer")
             worker.launch_infer()
             logger.info("Data generation completed")
         except Exception as e:
@@ -144,24 +157,8 @@ class StreamlitHandler:
         Launch a model training and data generation
         """
         self.set_monitoring()
-        train_settings = {
-            "source": self.file_path,
-            "epochs": self.epochs,
-            "row_limit": 10000,
-            "drop_null": False,
-            "batch_size": 32,
-            "print_report": False
-        }
-        self.train_model(train_settings)
-        infer_settings = {
-            "size": self.size_limit,
-            "batch_size": 32,
-            "run_parallel": False,
-            "random_seed": None,
-            "print_report": self.print_report,
-            "get_infer_metrics": False
-        }
-        self.infer_model(infer_settings)
+        self.train_model()
+        self.infer_model()
 
     @staticmethod
     def generate_button(label: str, path_to_file: str, download_name: str):
