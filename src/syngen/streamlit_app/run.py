@@ -110,7 +110,10 @@ class StreamlitApp:
             )
             handler = self._get_streamlit_handler(epochs, size_limit, print_report, uploaded_file)
             if st.button(
-                    "Generate data", type="primary", key="gen_button", disabled=get_running_status()
+                    "Generate data",
+                    type="primary",
+                    key="gen_button",
+                    disabled=get_running_status()
             ):
                 runner = Thread(name="train_and_infer", target=handler.train_and_infer)
                 runner.start()
