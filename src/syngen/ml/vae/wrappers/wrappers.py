@@ -49,7 +49,7 @@ class BaseWrapper(ABC):
 
 
 @dataclass
-class VAEWrapper:
+class VAEWrapper(BaseWrapper):
     df: pd.DataFrame
     schema: Optional[Dict]
     metadata: Dict
