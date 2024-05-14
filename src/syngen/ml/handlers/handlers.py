@@ -221,26 +221,10 @@ class VaeInferHandler(BaseHandler):
         self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
         self.has_vae = len(self.dataset.features) > 0
 
-        input_data_existed = DataLoader(self.paths["input_data_path"]).has_existed_path
-
-        if input_data_existed:
-            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
-        else:
-            data = pd.DataFrame()
-            schema = None
+        data, schema = self._get_data()
 
         if self.has_vae:
-            self.vae = self.create_wrapper(
-                self.wrapper_name,
-                data,
-                schema,
-                metadata=self.metadata,
-                table_name=self.table_name,
-                paths=self.paths,
-                batch_size=self.batch_size,
-                main_process=self.type_of_process,
-                process="infer",
-            )
+            self.vae = self.__get_wrapper(data, schema)
 
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
@@ -252,6 +236,35 @@ class VaeInferHandler(BaseHandler):
                 size=size,
                 p=np.array(list(counts.values())) / sum(np.array(list(counts.values()))),
             )
+        )
+
+    def _get_data(self) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Load the data from the input data path
+        """
+        input_data_existed = DataLoader(self.paths["input_data_path"]).has_existed_path
+
+        if input_data_existed:
+            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        else:
+            data = pd.DataFrame()
+            schema = None
+        return data, schema
+
+    def __get_wrapper(self, data: pd.DataFrame, schema: Dict):
+        """
+        Create and get the wrapper for the VAE model
+        """
+        return self.create_wrapper(
+            self.wrapper_name,
+            data,
+            schema,
+            metadata=self.metadata,
+            table_name=self.table_name,
+            paths=self.paths,
+            batch_size=self.batch_size,
+            main_process=self.type_of_process,
+            process="infer",
         )
 
     def _prepare_dir(self):

@@ -297,13 +297,12 @@ class VAEWrapper:
 
     def load_state(self, path: str):
         try:
-            state = self.model.load_state(path)
+            self.model.load_state(path)
 
         except FileNotFoundError:
             raise FileNotFoundError("Missing file with VAE state")
 
         logger.info(f"Loaded VAE state from {path}")
-        return state
 
 
 class VanillaVAEWrapper(VAEWrapper):
@@ -348,4 +347,4 @@ class VanillaVAEWrapper(VAEWrapper):
         )
         self.model.build_model()
         if self.process == "infer":
-            self.state = self.load_state(self.paths["state_path"])
+            self.load_state(self.paths["state_path"])

@@ -264,4 +264,3 @@ class CVAE:
 
         with open(str(pth / "latent_model.pkl"), "rb") as f:
             self.latent_model = pickle.loads(f.read())
-        return self
