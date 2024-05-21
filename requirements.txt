@@ -19,6 +19,7 @@ pandas==1.3.*
 pandavro==1.7.2
 pathos==0.2.*
 pillow==10.2.*
+psutil
 py-ulid
 pytest
 pytest-reportportal
