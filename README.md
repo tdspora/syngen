@@ -157,7 +157,7 @@ infer --size INT --table_name STR --log_level STR
 infer --metadata_path STR --log_level STR
 ```
 
-where <i>log_level</i> might be one of the following values: <i>DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
+where <i>log_level</i> might be one of the following values: <i>TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
 
 
 ### Linked tables generation
