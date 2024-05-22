@@ -395,9 +395,7 @@ def console_sink(record):
 
 def setup_logger():
     """
-    Set up logger with the specified level.
-    Log the messages with level 'INFO' and above to the log file,
-    redirect the messages to stderr with the level set in the environment variable "LOGURU_LEVEL".
+    Set up loggers with the specified level
     """
     logger.remove()
     logger.add(console_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
