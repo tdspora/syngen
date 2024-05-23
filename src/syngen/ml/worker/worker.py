@@ -3,8 +3,8 @@ from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
-from statistics import mean, StatisticsError
 import os
+from itertools import product
 
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
@@ -31,20 +31,17 @@ class Worker:
     infer_strategy = InferStrategy()
     metadata: Optional[Dict] = None
     divided: List = field(default=list())
+    initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
-    hardware_metrics: List = ['system/cpu_utilization_percentage', 'system/system_memory_usage_percentage', 
-                              'system/system_memory_usage_megabytes', 'system/gpu_utilization_percentage',
-                              'system/gpu_memory_usage_percentage', 'system/gpu_memory_usage_megabytes']
-    
     train_stages: List = ['PREPROCESS', 'TRAIN', 'POSTPROCESS']
     infer_stages: List = ['INFER', 'REPORT']
-
 
     def __attrs_post_init__(self):
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
         self._update_metadata()
         self.__validate_metadata()
+        self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
 
     def __validate_metadata(self):
@@ -294,37 +291,59 @@ class Worker:
 
                 logger.info(f"Infer process of the table - {table} has started")
                 
-                MlflowTracker().start_run(
+                with MlflowTracker().start_run(
                     run_name=f"{table}-INFER",
                     tags={"table_name": table, "process": "infer"},
-                )
+                ):
 
-                self.infer_strategy.run(
-                    destination=None,
-                    metadata=config_of_metadata_for_inference,
-                    size=None,
-                    table_name=table,
-                    metadata_path=self.metadata_path,
-                    run_parallel=False,
-                    batch_size=1000,
-                    random_seed=1,
-                    print_report=print_report,
-                    get_infer_metrics=False,
-                    log_level=self.log_level,
-                    both_keys=both_keys,
-                    type_of_process=self.type_of_process,
-                )
-                MlflowTracker().end_run()
+                    self.infer_strategy.run(
+                        destination=None,
+                        metadata=config_of_metadata_for_inference,
+                        size=None,
+                        table_name=table,
+                        metadata_path=self.metadata_path,
+                        run_parallel=False,
+                        batch_size=1000,
+                        random_seed=1,
+                        print_report=print_report,
+                        get_infer_metrics=False,
+                        log_level=self.log_level,
+                        both_keys=both_keys,
+                        type_of_process=self.type_of_process,
+                    )
 
         self._generate_reports()
-        MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
-        for stage in self.train_stages:
-            self.collect_metrics(chain_for_tables_for_training, stage)
-        if generation_of_reports:
-            for stage in self.infer_stages:
-                self.collect_metrics(chain_for_tables_for_inference, stage)
 
-        MlflowTracker().end_run()
+        with MlflowTracker().start_run(run_name="integral_metrics", tags={"process": "bottleneck"}):
+            for table, stage in product(chain_for_tables_for_training, self.train_stages):
+                MlflowTracker().collect_metrics(table, stage)
+            if generation_of_reports:
+                for table, stage in product(chain_for_tables_for_inference, self.infer_stages):
+                    MlflowTracker().collect_metrics(table, stage)
+
+    def _get_table_mapping(self):
+        """
+        Get the mapping of surrogate tables, which end with "_pk" and "_fk",
+        to the initial tables from which they were derived
+        """
+        return {
+            table: [t for t in self.divided if t.startswith(table)]
+            for table in self.initial_table_names
+            if any(t.startswith(table) for t in self.divided)
+        }
+
+    def _find_parent_table(self, table):
+        """
+        Find the initial table
+        from which the surrogate table was derived
+        """
+        return next(
+            (
+                parent
+                for parent, children in self._get_table_mapping().items()
+                if table in children
+            ), None
+        )
 
     def __infer_tables(self, tables: List, config_of_tables: Dict):
         """
@@ -339,7 +358,7 @@ class Worker:
             ]
         )
         delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
-        for table in tables:
+        for table in [table for table in tables if table not in self.divided]:
             config_of_table = config_of_tables[table]
             global_context(config_of_table.get("format", {}))
             log_message = f"Infer process of the table - '{table}' has started"
@@ -348,56 +367,71 @@ class Worker:
             both_keys = table in self.divided
             infer_settings = config_of_table["infer_settings"]
 
-            MlflowTracker().start_run(
+            with MlflowTracker().start_run(
                 run_name=f"{table}-INFER",
                 tags={"table_name": table, "process": "infer"},
-            )
-            self.infer_strategy.run(
-                destination=infer_settings.get("destination"),
-                metadata=config_of_tables,
-                size=infer_settings["size"],
-                table_name=table,
-                metadata_path=self.metadata_path,
-                run_parallel=infer_settings["run_parallel"],
-                batch_size=infer_settings["batch_size"],
-                random_seed=infer_settings["random_seed"],
-                print_report=infer_settings["print_report"],
-                get_infer_metrics=infer_settings["get_infer_metrics"],
-                log_level=self.log_level,
-                both_keys=both_keys,
-                type_of_process=self.type_of_process,
-            )
-            MlflowTracker().end_run()
-            ProgressBarHandler().set_progress(
-                delta=delta,
-                message=f"Infer process of the table - {table} was completed"
-            )
+            ):
+                self.infer_strategy.run(
+                    destination=infer_settings.get("destination"),
+                    metadata=config_of_tables,
+                    size=infer_settings["size"],
+                    table_name=table,
+                    metadata_path=self.metadata_path,
+                    run_parallel=infer_settings["run_parallel"],
+                    batch_size=infer_settings["batch_size"],
+                    random_seed=infer_settings["random_seed"],
+                    print_report=infer_settings["print_report"],
+                    get_infer_metrics=infer_settings["get_infer_metrics"],
+                    log_level=self.log_level,
+                    both_keys=both_keys,
+                    type_of_process=self.type_of_process,
+                )
+                ProgressBarHandler().set_progress(
+                    delta=delta,
+                    message=f"Infer process of the table - {table} was completed"
+                )
+        for table_root in self._get_table_mapping().keys():
+            with MlflowTracker().start_run(
+                run_name=f"{table_root}-INFER",
+                tags={"table_name": table_root, "process": "infer"}
+            ):
+                for table in self._get_table_mapping()[table_root]:
+                    config_of_table = config_of_tables[table]
+                    global_context(config_of_table.get("format", {}))
+                    log_message = f"Infer process of the table - '{table}' has started"
+                    logger.info(log_message)
+                    ProgressBarHandler().set_progress(delta=delta, message=log_message)
+                    both_keys = table in self.divided
+                    infer_settings = config_of_table["infer_settings"]
+                    with MlflowTracker().start_run(
+                        run_name=f"{table}-INFER",
+                        tags={"table_name": table, "process": "infer"},
+                        nested=True
+                    ):
+                        self.infer_strategy.run(
+                            destination=infer_settings.get("destination"),
+                            metadata=config_of_tables,
+                            size=infer_settings["size"],
+                            table_name=table,
+                            metadata_path=self.metadata_path,
+                            run_parallel=infer_settings["run_parallel"],
+                            batch_size=infer_settings["batch_size"],
+                            random_seed=infer_settings["random_seed"],
+                            print_report=infer_settings["print_report"],
+                            get_infer_metrics=infer_settings["get_infer_metrics"],
+                            log_level=self.log_level,
+                            both_keys=both_keys,
+                            type_of_process=self.type_of_process,
+                        )
+                        ProgressBarHandler().set_progress(
+                            delta=delta,
+                            message=f"Infer process of the table - {table} was completed"
+                        )
 
         self._generate_reports()
-        MlflowTracker().start_run(run_name='integral_metrics', tags={'process':'bottleneck'})
-        for stage in self.infer_stages:
-            self.collect_metrics(tables, stage)
-        MlflowTracker().end_run()
-
-    def collect_metrics(self, tables, stage):
-        for table in tables:
-            run_id = MlflowTracker().search_run(table, stage)
-            try:
-                run_info = MlflowTracker().get_run(run_id).info
-                MlflowTracker().log_metric(key=f'{table}-{stage}-duration',
-                                           value=(run_info.end_time - run_info.start_time) / 1000)
-            except AttributeError:
-                pass
-            for metric in self.hardware_metrics:
-                try:
-                    MlflowTracker().log_metric(key=f'{table}-{stage}-{metric}',
-                                               value=mean([m.value for m in
-                                                           MlflowTracker().get_metric_history(run_id, metric)])
-                                               )
-                except TypeError:
-                    pass
-                except StatisticsError:
-                    pass
+        with MlflowTracker().start_run(run_name="integral_metrics", tags={"process": "bottleneck"}):
+            for table, stage in product(tables, self.infer_stages):
+                MlflowTracker().collect_metrics(table, stage)
 
     def _generate_reports(self):
         """
@@ -429,7 +463,6 @@ class Worker:
         metadata_for_training = self._prepare_metadata_for_process()
         metadata_for_inference = self._prepare_metadata_for_process(type_of_process="infer")
         self.__train_tables(metadata_for_training, metadata_for_inference)
-        # self._generate_reports()
 
     def launch_infer(self):
         """
@@ -439,4 +472,3 @@ class Worker:
             type_of_process="infer"
         )
         self.__infer_tables(chain_of_tables, config_of_tables)
-        # self._generate_reports()
