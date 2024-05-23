@@ -44,6 +44,22 @@ class StreamlitHandler:
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                f"draws/accuracy_report.html")
+        self.train_settings = {
+            "source": self.file_path,
+            "epochs": self.epochs,
+            "row_limit": 10000,
+            "drop_null": False,
+            "batch_size": 32,
+            "print_report": False
+        }
+        self.infer_settings = {
+            "size": self.size_limit,
+            "batch_size": 32,
+            "run_parallel": False,
+            "random_seed": None,
+            "print_report": self.print_report,
+            "get_infer_metrics": False
+        }
 
     def set_logger(self):
         """
@@ -54,7 +70,7 @@ class StreamlitHandler:
         logger.add(self.console_sink, colorize=True, level="INFO")
         logger.add(self.file_sink, level="INFO")
 
-    def console_sink(self, message):
+    def console_sink(self, message: str):
         """
         Put log messages to a log queue
         """
@@ -62,7 +78,7 @@ class StreamlitHandler:
         sys.stdout.write(log_message + "\n")
         self.log_queue.put(log_message)
 
-    def file_sink(self, message):
+    def file_sink(self, message: str):
         """
         Write log messages to a log file
         """
@@ -73,27 +89,36 @@ class StreamlitHandler:
             log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
+    def _get_worker(self, process_type: str):
+        """
+        Get a Worker object
+
+        Parameters
+        ----------
+        process_type : str
+            The type of process ("train" or "infer").
+
+        Returns
+        -------
+        Worker
+            The Worker object.
+        """
+        worker = Worker(
+            table_name=self.table_name,
+            settings=self.train_settings if process_type == "train" else self.infer_settings,
+            metadata_path=None,
+            log_level="INFO",
+            type_of_process=process_type
+        )
+        return worker
+
     def train_model(self):
         """
         Launch a model training
         """
         try:
             logger.info("Starting model training...")
-            settings = {
-                "source": self.file_path,
-                "epochs": self.epochs,
-                "row_limit": 10000,
-                "drop_null": False,
-                "batch_size": 32,
-                "print_report": False
-            }
-            worker = Worker(
-                table_name=self.table_name,
-                settings=settings,
-                metadata_path=None,
-                log_level="INFO",
-                type_of_process="train"
-            )
+            worker = self._get_worker("train")
             ProgressBarHandler().set_progress(0.01)
             worker.launch_train()
             logger.info("Model training completed")
@@ -110,21 +135,7 @@ class StreamlitHandler:
         """
         try:
             logger.info("Starting data generation...")
-            settings = {
-                "size": self.size_limit,
-                "batch_size": 32,
-                "run_parallel": False,
-                "random_seed": None,
-                "print_report": self.print_report,
-                "get_infer_metrics": False
-            }
-            worker = Worker(
-                table_name=self.table_name,
-                settings=settings,
-                metadata_path=None,
-                log_level="INFO",
-                type_of_process="infer"
-            )
+            worker = self._get_worker("infer")
             worker.launch_infer()
             logger.info("Data generation completed")
         except Exception as e:
@@ -134,17 +145,23 @@ class StreamlitHandler:
             self.log_error_queue.put(e)
             raise e
 
+    def set_monitoring(self):
+        """
+        Reset the progress bar and set up the logger
+        """
+        self.progress_handler.reset_instance()
+        self.set_logger()
+
     def train_and_infer(self):
         """
         Launch a model training and data generation
         """
-        self.progress_handler.reset_instance()
-        self.set_logger()
+        self.set_monitoring()
         self.train_model()
         self.infer_model()
 
     @staticmethod
-    def generate_button(label, path_to_file, download_name):
+    def generate_button(label: str, path_to_file: str, download_name: str):
         """
         Generate a download button
         """
