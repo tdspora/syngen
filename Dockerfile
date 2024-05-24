@@ -15,10 +15,18 @@ RUN apt-get update && \
     pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir -r requirements-streamlit.txt && \
-    pip uninstall -y setuptools && pip uninstall -y pip
+    pip uninstall -y pip
 
 COPY src/ .
 COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
 COPY src/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
+ENV HOME=/tmp
+ENV MPLCONFIGDIR=/tmp
 ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
+RUN mkdir model_artifacts uploaded_files && \
+    groupadd syngen && \
+    useradd -g syngen syngen && \
+    chown -R syngen:syngen model_artifacts uploaded_files
+
+USER syngen
 ENTRYPOINT ["python3", "-m", "start"]
