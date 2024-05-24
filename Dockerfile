@@ -15,10 +15,11 @@ RUN apt-get update && \
     pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir -r requirements-streamlit.txt && \
-    pip uninstall -y setuptools && pip uninstall -y pip
+    pip uninstall -y pip
 
 COPY src/ .
 COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
 COPY src/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
+ENV MPLCONFIGDIR=/tmp
 ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
 ENTRYPOINT ["python3", "-m", "start"]
