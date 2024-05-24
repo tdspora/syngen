@@ -157,7 +157,7 @@ infer --size INT --table_name STR --log_level STR
 infer --metadata_path STR --log_level STR
 ```
 
-where <i>log_level</i> might be one of the following values: <i>DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
+where <i>log_level</i> might be one of the following values: <i>TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
 
 
 ### Linked tables generation
@@ -332,12 +332,14 @@ To run dockerized code (see parameters description in *Training* and *Inference*
 ```bash
 docker pull tdspora/syngen
 docker run --rm \
+  --user $(id -u):$(id -g) \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=train \
   --table_name=TABLE_NAME \
   --source=./model_artifacts/YOUR_CSV_FILE.csv
 
 docker run --rm \
+  --user $(id -u):$(id -g) \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=infer \
   --table_name=TABLE_NAME
@@ -352,11 +354,13 @@ To run dockerized code by providing the metadata file simply call:
 ```bash
 docker pull tdspora/syngen
 docker run --rm \
+  --user $(id -u):$(id -g) \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
 docker run --rm \
+  --user $(id -u):$(id -g) \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
@@ -410,14 +414,20 @@ ensure that all necessary credentials are provided before using Mlflow.
 
 ```bash
 docker pull tdspora/syngen:latest
-docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
-  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  -e MLFLOW_EXPERIMENT_NAME=test_name \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
-docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
-  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  -e MLFLOW_EXPERIMENT_NAME=test_name \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 

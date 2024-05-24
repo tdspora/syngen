@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.9-bookworm
+FROM python:3.10-bookworm
 
 WORKDIR src
 
 COPY requirements.txt .
+COPY requirements-streamlit.txt .
 
 RUN apt-get update && \
     apt-get install -y \
@@ -13,11 +14,19 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir streamlit==1.31.* \
-    pip install --no-cache-dir streamlit_option_menu
+    pip install --no-cache-dir -r requirements-streamlit.txt && \
+    pip uninstall -y pip
 
 COPY src/ .
 COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
 COPY src/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
+ENV HOME=/tmp
+ENV MPLCONFIGDIR=/tmp
 ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
+RUN mkdir model_artifacts uploaded_files && \
+    groupadd syngen && \
+    useradd -g syngen syngen && \
+    chown -R syngen:syngen model_artifacts uploaded_files
+
+USER syngen
 ENTRYPOINT ["python3", "-m", "start"]
