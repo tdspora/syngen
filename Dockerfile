@@ -14,7 +14,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir -r requirements-streamlit.txt
+    pip install --no-cache-dir -r requirements-streamlit.txt \
+    pip uninstall -y setuptools && pip uninstall -y pip
 
 COPY src/ .
 COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
