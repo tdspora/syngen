@@ -20,6 +20,7 @@ RUN apt-get update && \
 COPY src/ .
 COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
 COPY src/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
+ENV HOME=/tmp
 ENV MPLCONFIGDIR=/tmp
 ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
 RUN mkdir model_artifacts uploaded_files && \
