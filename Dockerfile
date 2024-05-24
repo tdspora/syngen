@@ -22,4 +22,10 @@ COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
 COPY src/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
 ENV MPLCONFIGDIR=/tmp
 ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
+RUN mkdir model_artifacts uploaded_files && \
+    groupadd syngen && \
+    useradd -g syngen syngen && \
+    chown -R syngen:syngen model_artifacts uploaded_files
+
+USER syngen
 ENTRYPOINT ["python3", "-m", "start"]
