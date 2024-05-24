@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import os
+import re
 import traceback
 from loguru import logger
 
@@ -54,6 +55,12 @@ class Strategy(ABC):
             return self
         else:
             raise AttributeError("Either table name or path to metadata MUST be provided")
+
+    def _get_initial_table_name(self) -> str:
+        """"
+        Get the initial table name without the suffix "_pk" or "_fk"
+        """
+        return re.sub(r"_pk$|_fk$", "", self.config.table_name)
 
 
 class TrainStrategy(Strategy, ABC):
@@ -113,9 +120,9 @@ class TrainStrategy(Strategy, ABC):
         return self
 
     def add_reporters(self, **kwargs):
-        if self.config.print_report:
+        if not self.config.table_name.endswith("_fk") and self.config.print_report:
             sample_reporter = SampleAccuracyReporter(
-                table_name=self.config.table_name,
+                table_name=self._get_initial_table_name(),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
             )
@@ -197,12 +204,10 @@ class InferStrategy(Strategy):
         return self
 
     def add_reporters(self):
-        if not self.config.table_name.endswith("_fk"):
-            if self.config.print_report or self.config.get_infer_metrics:
-                table_name = self.config.table_name
-                table_name = table_name.replace("_pk", "") if table_name.endswith("_pk") else table_name
+        if not self.config.table_name.endswith("_fk") and \
+                (self.config.print_report or self.config.get_infer_metrics):
                 accuracy_reporter = AccuracyReporter(
-                    table_name=table_name,
+                    table_name=self._get_initial_table_name(),
                     paths=self.config.paths,
                     config=self.config.to_dict(),
                 )
