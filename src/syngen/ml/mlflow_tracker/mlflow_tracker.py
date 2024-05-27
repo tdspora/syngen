@@ -104,12 +104,6 @@ class MlflowTracker:
             cls._instance.client = mlflow.tracking.MlflowClient()
         return cls._instance
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self):
-        self.end_run()
-
     def log_metric(self, key: str, value: float, step: Optional[int] = None):
         """
         Log a metric to the current run
