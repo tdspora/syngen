@@ -11,6 +11,7 @@ def test_log_metric_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'log_metric' of the class 'MlflowTracker' with the active status"
     )
+    mlflow_tracker.is_activet = True
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.log_metric"
     ) as mock_log_metric:
@@ -104,6 +105,7 @@ def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'search_run' of the class 'MlflowTracker' with the active status"
     )
+    mlflow_tracker.is_active = True
     data = {
         "run_id": ["6d2fa5df6ef14734a2dc03ab07e016f1"],
         "experiment_id": ["021287541001106206"],
@@ -111,6 +113,7 @@ def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
         "tags.mlflow.source.git.commit": ["49b9ae205e1cb10869070b07bf64efab1c68fcce"],
         "tags.process": ["train"],
         "tags.mlflow.source.type": ["LOCAL"],
+        "tags.mlflow.runName": ["test_table-TRAIN"],
     }
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_runs",
@@ -121,7 +124,8 @@ def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
             == ["6d2fa5df6ef14734a2dc03ab07e016f1"]
         )
         mock_search_run.assert_called_once_with(
-            filter_string="run_name = 'test_table-TRAIN'"
+            experiment_names=["test_experiment"],
+            filter_string="run_name like 'test_table-TRAIN%'"
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -290,6 +294,7 @@ def test_set_new_experiment_without_env_var_and_with_active_mlflow(
         "and with the active mlflow"
     )
     test_experiment_name = "test_experiment_third"
+    mlflow_tracker.is_active = True
     with caplog.at_level(level="WARNING"):
         mlflow_tracker.set_experiment(test_experiment_name)
         mock_search_experiment.assert_called_with(

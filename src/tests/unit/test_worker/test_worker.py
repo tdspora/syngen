@@ -1050,7 +1050,6 @@ def test_launch_infer_with_metadata_of_related_tables(
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
 def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     mock_infer_tables,
-    mock_generate_reports,
     mock_check_existence_of_destination,
     mock_validate_metadata,
     rp_logger,
