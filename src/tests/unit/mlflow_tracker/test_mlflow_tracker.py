@@ -23,7 +23,7 @@ def test_log_metric_with_inactive_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'log_metric' of the class 'MlflowTracker' with the inactive status"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.log_metric"
     ) as mock_log_metric:
@@ -36,6 +36,7 @@ def test_log_metrics_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'log_metrics' of the class 'MlflowTracker' with the active status"
     )
+    mlflow_tracker.is_active = True
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.log_metrics"
     ) as mock_log_metric:
@@ -48,7 +49,7 @@ def test_log_metrics_with_inactive_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'log_metrics' of the class 'MlflowTracker' with the inactive status"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.log_metrics"
     ) as mock_log_metric:
@@ -61,6 +62,7 @@ def test_log_artifact_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'log_artifact' of the class 'MlflowTracker' with the active status"
     )
+    mlflow_tracker.is_active = True
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.log_artifact"
     ) as mock_log_artifact:
@@ -75,7 +77,7 @@ def test_log_artifact_with_inactive_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'log_artifact' of the class 'MlflowTracker' with the inactive status"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.log_artifact"
     ) as mock_log_artifact:
@@ -88,6 +90,7 @@ def test_log_params_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'log_params' of the class 'MlflowTracker' with the active status"
     )
+    mlflow_tracker.is_active = True
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.log_params"
     ) as mock_log_params:
@@ -115,7 +118,7 @@ def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
     ) as mock_search_run:
         assert (
             mlflow_tracker.search_run("test_table", "TRAIN")
-            == "6d2fa5df6ef14734a2dc03ab07e016f1"
+            == ["6d2fa5df6ef14734a2dc03ab07e016f1"]
         )
         mock_search_run.assert_called_once_with(
             filter_string="run_name = 'test_table-TRAIN'"
@@ -127,7 +130,7 @@ def test_search_run_with_inactive_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'search_run' of the class 'MlflowTracker' with the inactive status"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_runs"
     ) as mock_search_run:
@@ -140,7 +143,7 @@ def test_log_params_with_inactive_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'log_params' of the class 'MlflowTracker' with the inactive status"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.log_params"
     ) as mock_log_params:
@@ -154,6 +157,7 @@ def test_start_run_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'start_run' of the class 'MlflowTracker' with the active mlflow"
     )
+    mlflow_tracker.is_active = True
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.start_run"
     ) as mock_start_run:
@@ -168,7 +172,7 @@ def test_start_run_with_inactive_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'start_run' of the class 'MlflowTracker' with the inactive mlflow"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.start_run"
     ) as mock_start_run:
@@ -181,6 +185,7 @@ def test_end_run_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'end_run' of the class 'MlflowTracker' with the active mlflow"
     )
+    mlflow_tracker.is_active = True
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.end_run"
     ) as mock_end_run:
@@ -193,7 +198,7 @@ def test_end_run_with_inactive_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'end_run' of the class 'MlflowTracker' with the inactive mlflow"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.end_run"
     ) as mock_end_run:
@@ -207,6 +212,7 @@ def test_set_tracking_uri_with_active_mlflow(mlflow_tracker, rp_logger):
         "Test the method 'set_tracking_uri' of the class 'MlflowTracker' "
         "with the active mlflow"
     )
+    mlflow_tracker.is_active = True
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_tracking_uri"
     ) as mock_set_tracking_uri:
@@ -221,7 +227,7 @@ def test_set_tracking_uri_with_inactive_mlflow(mlflow_tracker, rp_logger):
         "Test the method 'set_tracking_uri' of the class 'MlflowTracker' "
         "with the inactive mlflow"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.set_tracking_uri"
     ) as mock_set_tracking_uri:
@@ -236,6 +242,7 @@ def test_create_experiment_with_active_status(mlflow_tracker, rp_logger):
         "Test the method 'create_experiment' of the class 'MlflowTracker' "
         "with the active mlflow"
     )
+    mlflow_tracker.is_active = True
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment"
     ) as mock_create_experiment:
@@ -253,7 +260,7 @@ def test_create_experiment_with_inactive_mlflow(mlflow_tracker, rp_logger):
         "Test the method 'create_experiment' of the class 'MlflowTracker' "
         "with the inactive mlflow"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.create_experiment"
     ) as mock_create_experiment:
@@ -319,6 +326,7 @@ def test_set_new_experiment_with_env_var_and_with_active_mlflow(
     )
     monkeypatch.setenv("MLFLOW_EXPERIMENT_NAME", "test_experiment_sixth")
     test_experiment_name = "test_experiment_sixth"
+    mlflow_tracker.is_active = True
     with caplog.at_level(level="INFO"):
         mlflow_tracker.set_experiment(test_experiment_name)
         mock_search_experiment.assert_called_with(
@@ -347,7 +355,7 @@ def test_set_experiment_with_inactive_mlflow(
     rp_logger.info(
         "Test the method 'set_experiment' of the class 'MlflowTracker' with the inactive mlflow"
     )
-    MlflowTracker.reset_status(active_status=False)
+    mlflow_tracker.is_active = False
     test_experiment_name = "test_experiment_fourth"
     mlflow_tracker.set_experiment(test_experiment_name)
     mock_search_experiment.assert_not_called()

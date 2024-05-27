@@ -299,34 +299,12 @@ class Worker:
                                                              "train")
         if generation_of_reports:
             for table in chain_for_tables_for_inference:
-                config_of_table = config_of_metadata_for_inference[table]
-                global_context(config_of_table.get("format", {}))
-                train_settings = config_of_table["train_settings"]
-                print_report = train_settings.get("print_report")
-                both_keys = table in self.divided
-
-                logger.info(f"Infer process of the table - {table} has started")
-                
-                with MlflowTracker().start_run(
-                    run_name=f"{table}-INFER",
-                    tags={"table_name": table, "process": "infer"},
-                ):
-
-                    self.infer_strategy.run(
-                        destination=None,
-                        metadata=config_of_metadata_for_inference,
-                        size=None,
-                        table_name=table,
-                        metadata_path=self.metadata_path,
-                        run_parallel=False,
-                        batch_size=1000,
-                        random_seed=1,
-                        print_report=print_report,
-                        get_infer_metrics=False,
-                        log_level=self.log_level,
-                        both_keys=both_keys,
-                        type_of_process=self.type_of_process,
-                    )
+                self._infer_table(
+                    table=table,
+                    metadata=config_of_metadata_for_inference,
+                    type_of_process="train",
+                    delta=delta
+                )
 
         self._generate_reports()
         self._collect_integral_metrics(tables=chain_for_tables_for_training, type_of_process="train")
@@ -357,7 +335,7 @@ class Worker:
             ), None
         )
 
-    def _infer_table(self, table, metadata, delta, is_nested=False):
+    def _infer_table(self, table, metadata, type_of_process, delta, is_nested=False):
         """
         Infer process for a single table
         """
@@ -367,7 +345,7 @@ class Worker:
         logger.info(log_message)
         ProgressBarHandler().set_progress(delta=delta, message=log_message)
         both_keys = table in self.divided
-        infer_settings = config_of_table["infer_settings"]
+        settings = config_of_table[f"{type_of_process}_settings"]
 
         with MlflowTracker().start_run(
                 run_name=f"{table}-INFER",
@@ -375,16 +353,16 @@ class Worker:
                 nested=is_nested,
         ):
             self.infer_strategy.run(
-                destination=infer_settings.get("destination"),
+                destination=settings.get("destination") if type_of_process == "infer" else None,
                 metadata=metadata,
-                size=infer_settings["size"],
+                size=settings["size"] if type_of_process == "infer" else None,
                 table_name=table,
                 metadata_path=self.metadata_path,
-                run_parallel=infer_settings["run_parallel"],
-                batch_size=infer_settings["batch_size"],
-                random_seed=infer_settings["random_seed"],
-                print_report=infer_settings["print_report"],
-                get_infer_metrics=infer_settings["get_infer_metrics"],
+                run_parallel=settings["run_parallel"] if type_of_process == "infer" else False,
+                batch_size=settings["batch_size"] if type_of_process == "infer" else 1000,
+                random_seed=settings["random_seed"] if type_of_process == "infer" else 1,
+                print_report=settings["print_report"],
+                get_infer_metrics=settings["get_infer_metrics"] if type_of_process == "infer" else False,
                 log_level=self.log_level,
                 both_keys=both_keys,
                 type_of_process=self.type_of_process,
@@ -405,7 +383,12 @@ class Worker:
 
         non_surrogate_tables = [table for table in tables if table not in self.divided]
         for table in non_surrogate_tables:
-            self._infer_table(table, config_of_tables, delta)
+            self._infer_table(
+                table=table,
+                metadata=config_of_tables,
+                type_of_process="infer",
+                delta=delta
+            )
 
         tables_mapping = self._get_surrogate_tables_mapping()
         for table_root in tables_mapping.keys():
@@ -414,7 +397,13 @@ class Worker:
                 tags={"table_name": table_root, "process": "infer"}
             )
             for table in tables_mapping[table_root]:
-                self._infer_table(table, config_of_tables, delta, is_nested=True)
+                self._infer_table(
+                    table=table,
+                    metadata=config_of_tables,
+                    type_of_process="infer",
+                    delta=delta,
+                    is_nested=True
+                )
             MlflowTracker().end_run()
 
         self._generate_reports()

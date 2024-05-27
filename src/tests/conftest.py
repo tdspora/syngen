@@ -177,4 +177,4 @@ def caplog(caplog: LogCaptureFixture):
 @pytest.fixture(scope="function")
 def mlflow_tracker():
     yield MlflowTracker(experiment_name="test_experiment", is_active=True)
-    MlflowTracker.reset_status()
+    MlflowTracker.is_active = True
