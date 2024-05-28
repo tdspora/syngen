@@ -43,7 +43,7 @@ class StreamlitHandler:
         self.path_to_generated_data = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                        f"merged_infer_{self.sl_table_name}.csv")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
-                               f"draws/accuracy_report.html")
+                               f"reports/accuracy_report.html")
         self.train_settings = {
             "source": self.file_path,
             "epochs": self.epochs,

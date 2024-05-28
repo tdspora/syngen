@@ -29,13 +29,13 @@ class BaseMetric(ABC):
         self,
         original: pd.DataFrame,
         synthetic: pd.DataFrame,
-        draws_path: str = None,
+        reports_path: str = None,
         plot: bool = True,
     ):
         columns_nan_labels = get_nan_labels(original)
         self.original = nan_labels_to_float(original, columns_nan_labels)
         self.synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
-        self.draws_path = draws_path
+        self.reports_path = reports_path
         self.plot = plot
         self.value = None
 
@@ -49,11 +49,11 @@ class JensenShannonDistance(BaseMetric):
         original: pd.DataFrame,
         synthetic: pd.DataFrame,
         plot: bool,
-        draws_path: str,
+        reports_path: str,
     ):
         super().__init__(original, synthetic)
         self.plot = plot
-        self.draws_path = draws_path
+        self.reports_path = reports_path
         self.cmap = LinearSegmentedColormap.from_list(
             "rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"]
         )
@@ -89,7 +89,7 @@ class JensenShannonDistance(BaseMetric):
             heatmap.axes.tick_params(axis="y", rotation=0)
             heatmap.figure.tight_layout()
             plt.savefig(
-                f"{self.draws_path}/accuracy_heatmap.svg",
+                f"{self.reports_path}/accuracy_heatmap.svg",
                 bbox_inches="tight",
                 format="svg",
             )
@@ -238,11 +238,11 @@ class Correlations(BaseMetric):
         original: pd.DataFrame,
         synthetic: pd.DataFrame,
         plot: bool,
-        draws_path: str,
+        reports_path: str,
     ):
         super().__init__(original, synthetic)
         self.plot = plot
-        self.draws_path = draws_path
+        self.reports_path = reports_path
         self.cmap = LinearSegmentedColormap.from_list(
             "rg",
             list(reversed(["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"])),
@@ -286,7 +286,7 @@ class Correlations(BaseMetric):
 
             heatmap.figure.tight_layout()
             plt.savefig(
-                f"{self.draws_path}/correlations_heatmap.svg",
+                f"{self.reports_path}/correlations_heatmap.svg",
                 bbox_inches="tight",
                 format="svg",
             )
@@ -303,11 +303,11 @@ class BivariateMetric(BaseMetric):
         original: pd.DataFrame,
         synthetic: pd.DataFrame,
         plot: bool,
-        draws_path: str,
+        reports_path: str,
     ):
         super().__init__(original, synthetic)
         self.plot = plot
-        self.draws_path = draws_path
+        self.reports_path = reports_path
         self.cmap = LinearSegmentedColormap.from_list("rg", ["#0D5598", "#3E92E0", "#E8F4FF"])
 
     @staticmethod
@@ -416,7 +416,7 @@ class BivariateMetric(BaseMetric):
             # first_col is x axis, second_col is y axis
             title = f"{first_col} vs. {second_col}"
             path_to_image = (
-                f"{self.draws_path}/bivariate_{slugify(first_col)}_{slugify(second_col)}.svg"
+                f"{self.reports_path}/bivariate_{slugify(first_col)}_{slugify(second_col)}.svg"
             )
             bi_imgs[title] = path_to_image
             plt.savefig(path_to_image, format="svg")
@@ -647,11 +647,11 @@ class UnivariateMetric(BaseMetric):
         original: pd.DataFrame,
         synthetic: pd.DataFrame,
         plot: bool,
-        draws_path: str,
+        reports_path: str,
     ):
         super().__init__(original, synthetic)
         self.plot = plot
-        self.draws_path = draws_path
+        self.reports_path = reports_path
 
     def _calculate(self, column):
         pass
@@ -788,8 +788,8 @@ class UnivariateMetric(BaseMetric):
                 ncol=2,
                 frameon=False,
             )
-            if self.draws_path:
-                path_to_image = f"{self.draws_path}/univariate_{slugify(column)}.svg"
+            if self.reports_path:
+                path_to_image = f"{self.reports_path}/univariate_{slugify(column)}.svg"
                 plt.savefig(path_to_image, bbox_inches="tight", format="svg")
                 uni_images[column] = path_to_image
         return uni_images
@@ -840,8 +840,8 @@ class UnivariateMetric(BaseMetric):
                 x_ticks = np.linspace(lower_x, upper_x, len_x_labels)
                 x_ticks = [timestamp_to_datetime(i) for i in x_ticks]
                 ax.set_xticklabels(x_ticks, rotation=45, ha="right")
-            if self.draws_path:
-                path_to_image = f"{self.draws_path}/univariate_{slugify(column)}.svg"
+            if self.reports_path:
+                path_to_image = f"{self.reports_path}/univariate_{slugify(column)}.svg"
                 plt.savefig(path_to_image, bbox_inches="tight", format="svg")
                 uni_images[column] = path_to_image
         if print_nan:
@@ -856,11 +856,11 @@ class Clustering(BaseMetric):
         original: pd.DataFrame,
         synthetic: pd.DataFrame,
         plot: bool,
-        draws_path: str,
+        reports_path: str,
     ):
         super().__init__(original, synthetic)
         self.plot = plot
-        self.draws_path = draws_path
+        self.reports_path = reports_path
 
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
         for col in categ_columns:
@@ -920,7 +920,7 @@ class Clustering(BaseMetric):
                 frameon=False,
             )
             plt.savefig(
-                f"{self.draws_path}/clusters_barplot.svg",
+                f"{self.reports_path}/clusters_barplot.svg",
                 bbox_inches="tight",
                 format="svg",
             )
@@ -965,11 +965,11 @@ class Utility(BaseMetric):
         original: pd.DataFrame,
         synthetic: pd.DataFrame,
         plot: bool,
-        draws_path: str,
+        reports_path: str,
     ):
         super().__init__(original, synthetic)
         self.plot = plot
-        self.draws_path = draws_path
+        self.reports_path = reports_path
 
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
         for col in categ_columns:
@@ -1078,7 +1078,7 @@ class Utility(BaseMetric):
                     frameon=False,
                 )
                 plt.savefig(
-                    f"{self.draws_path}/utility_barplot.svg",
+                    f"{self.reports_path}/utility_barplot.svg",
                     bbox_inches="tight",
                     format="svg",
                 )
