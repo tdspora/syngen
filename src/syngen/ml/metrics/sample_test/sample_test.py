@@ -33,7 +33,7 @@ class SampleAccuracyTest(BaseTest):
         """
         Remove artifacts after creating Sample report
         """
-        shutil.rmtree(f"{self.paths['reports_path']}/sample_accuracy")
+        shutil.rmtree(self.reports_path)
 
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()

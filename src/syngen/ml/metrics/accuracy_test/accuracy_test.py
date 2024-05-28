@@ -210,7 +210,6 @@ class AccuracyTest(BaseTest):
         ) as file_:
             template = jinja2.Template(file_.read())
 
-        reports_acc_path = f"{self.paths['reports_path']}/accuracy"
         uni_images = {
             title: transform_to_base64(path) for title, path in uni_images.items()
         }
@@ -223,20 +222,20 @@ class AccuracyTest(BaseTest):
         html = template.render(
             accuracy_value=acc_median,
             accuracy_heatmap=transform_to_base64(
-                f"{reports_acc_path}/accuracy_heatmap.svg"
+                f"{self.reports_path}/accuracy_heatmap.svg"
             ),
             uni_imgs=uni_images,
             correlations_heatmap=transform_to_base64(
-                f"{reports_acc_path}/correlations_heatmap.svg"
+                f"{self.reports_path}/correlations_heatmap.svg"
             ),
             correlation_median=corr_result,
             clusters_barplot=transform_to_base64(
-                f"{reports_acc_path}/clusters_barplot.svg"
+                f"{self.reports_path}/clusters_barplot.svg"
             ),
             clustering_value=clustering_result,
             bi_imgs=bi_images,
             utility_barplot=transform_to_base64(
-                f"{reports_acc_path}/utility_barplot.svg"
+                f"{self.reports_path}/utility_barplot.svg"
             ),
             utility_table=utility_result.to_html(),
             is_data_available=False if utility_result.empty else True,
@@ -247,11 +246,12 @@ class AccuracyTest(BaseTest):
             round=round,
         )
 
+        path_to_accuracy_report = f"{self.paths['reports_path']}/accuracy_report.html"
         with open(
-            f"{self.paths['reports_path']}/accuracy_report.html", "w", encoding="utf-8"
+            path_to_accuracy_report, "w", encoding="utf-8"
         ) as f:
             f.write(html)
-        self._log_report_to_mlflow(f"{self.paths['reports_path']}/accuracy_report.html")
+        self._log_report_to_mlflow(path_to_accuracy_report)
         self._remove_artifacts()
 
     def report(self, *args, **kwargs):
