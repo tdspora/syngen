@@ -11,7 +11,7 @@ def test_log_metric_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
         "Test the method 'log_metric' of the class 'MlflowTracker' with the active status"
     )
-    mlflow_tracker.is_activet = True
+    mlflow_tracker.is_active = True
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.log_metric"
     ) as mock_log_metric:
@@ -101,9 +101,9 @@ def test_log_params_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
+def test_search_runs_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
-        "Test the method 'search_run' of the class 'MlflowTracker' with the active status"
+        "Test the method 'search_runs' of the class 'MlflowTracker' with the active status"
     )
     mlflow_tracker.is_active = True
     data = {
@@ -120,7 +120,7 @@ def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
         return_value=pd.DataFrame(data),
     ) as mock_search_run:
         assert (
-            mlflow_tracker.search_run("test_table", "TRAIN")
+            mlflow_tracker.search_runs("test_table", "TRAIN")
             == ["6d2fa5df6ef14734a2dc03ab07e016f1"]
         )
         mock_search_run.assert_called_once_with(
@@ -130,15 +130,15 @@ def test_search_run_with_active_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_search_run_with_inactive_mlflow(mlflow_tracker, rp_logger):
+def test_search_runs_with_inactive_mlflow(mlflow_tracker, rp_logger):
     rp_logger.info(
-        "Test the method 'search_run' of the class 'MlflowTracker' with the inactive status"
+        "Test the method 'search_runs' of the class 'MlflowTracker' with the inactive status"
     )
     mlflow_tracker.is_active = False
     with patch(
         "syngen.ml.mlflow_tracker.mlflow_tracker.mlflow.search_runs"
     ) as mock_search_run:
-        mlflow_tracker.search_run("test_table", "TRAIN")
+        mlflow_tracker.search_runs("test_table", "TRAIN")
         mock_search_run.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -307,6 +307,7 @@ def test_set_new_experiment_without_env_var_and_with_active_mlflow(
         mock_create_experiment.assert_called_once_with(
             test_experiment_name, "/mlflow_tracker"
         )
+        mock_set_experiment.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -344,6 +345,7 @@ def test_set_new_experiment_with_env_var_and_with_active_mlflow(
         mock_create_experiment.assert_called_once_with(
             test_experiment_name, "/mlflow_tracker"
         )
+        mock_set_experiment.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

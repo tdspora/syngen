@@ -138,9 +138,11 @@ class MlflowTracker:
         Collect the duration of the run
         and hardware metrics related to the run
         """
-        run_id = self.search_run(table_name=table, type_of_process=stage)
-        self.log_duration(run_id, table, stage)
-        self.log_hardware_metrics(run_id, table, stage)
+        runs = self.search_runs(table_name=table, type_of_process=stage)
+        if runs:
+            for run_id in runs:
+                self.log_duration(run_id, table, stage)
+                self.log_hardware_metrics(run_id, table, stage)
 
     def log_artifact(self, local_path: str, artifact_path: Optional[str] = None):
         """
@@ -243,7 +245,10 @@ class MlflowTracker:
         if self.is_active:
             mlflow.log_metrics(metrics, step)
 
-    def search_run(self, table_name: str, type_of_process: str):
+    def search_runs(self, table_name: str, type_of_process: str):
+        """
+        Get the list of runs related the certain experment
+        """
         if self.is_active:
             run = mlflow.search_runs(
                 experiment_names=[self.experiment_name],
@@ -258,6 +263,9 @@ class MlflowTracker:
             return []
 
     def get_run(self, run_id):
+        """
+        Get the run by the run_id
+        """
         if self.is_active:
             return mlflow.get_run(run_id)
 

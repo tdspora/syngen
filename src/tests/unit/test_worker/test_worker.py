@@ -384,54 +384,50 @@ def test_launch_train_with_metadata(
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        (
-            ["test_table"],
-            {
-                "test_table": {
-                    "train_settings": {
-                        "source": "./path/to/test_table.csv",
-                        "epochs": 100,
-                        "drop_null": False,
-                        "print_report": False,
-                        "row_limit": 800,
-                        "batch_size": 2000,
-                    },
-                    "infer_settings": {
-                        "size": 200,
-                        "run_parallel": True,
-                        "random_seed": 2,
-                        "print_report": True,
-                        "get_infer_metrics": False,
-                        "batch_size": 200,
-                    },
-                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
-                }
-            },
-        ),
-        (
-            ["test_table"],
-            {
-                "test_table": {
-                    "train_settings": {
-                        "source": "./path/to/test_table.csv",
-                        "epochs": 100,
-                        "drop_null": False,
-                        "print_report": False,
-                        "row_limit": 800,
-                        "batch_size": 2000,
-                    },
-                    "infer_settings": {
-                        "size": 200,
-                        "run_parallel": True,
-                        "random_seed": 2,
-                        "print_report": True,
-                        "get_infer_metrics": False,
-                        "batch_size": 200,
-                    },
-                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
-                }
-            },
-        ),
+        ["test_table"],
+        ["test_table"],
+        {
+            "test_table": {
+                "train_settings": {
+                    "source": "./path/to/test_table.csv",
+                    "epochs": 100,
+                    "drop_null": False,
+                    "print_report": False,
+                    "row_limit": 800,
+                    "batch_size": 2000,
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": True,
+                    "get_infer_metrics": False,
+                    "batch_size": 200,
+                },
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+            }
+        },
+        {
+            "test_table": {
+                "train_settings": {
+                    "source": "./path/to/test_table.csv",
+                    "epochs": 100,
+                    "drop_null": False,
+                    "print_report": False,
+                    "row_limit": 800,
+                    "batch_size": 2000,
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": True,
+                    "get_infer_metrics": False,
+                    "batch_size": 200,
+                },
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+            }
+        },
     )
     mock_check_existence_of_source.assert_called_once()
     mock_check_key_columns.assert_called_once()
@@ -474,94 +470,90 @@ def test_launch_train_with_metadata_of_related_tables(
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        (
-            ["pk_test", "fk_test"],
-            {
-                "pk_test": {
-                    "train_settings": {
-                        "source": "./path/to/pk_test.csv",
-                        "epochs": 1,
-                        "drop_null": False,
-                        "row_limit": 800,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "infer_settings": {
-                        "size": 200,
-                        "run_parallel": True,
-                        "print_report": True,
-                    },
-                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        {
+            "pk_test": {
+                "train_settings": {
+                    "source": "./path/to/pk_test.csv",
+                    "epochs": 1,
+                    "drop_null": False,
+                    "row_limit": 800,
+                    "batch_size": 1000,
+                    "print_report": True,
                 },
-                "fk_test": {
-                    "train_settings": {
-                        "source": "./path/to/fk_test.csv",
-                        "epochs": 5,
-                        "drop_null": True,
-                        "print_report": True,
-                        "row_limit": 600,
-                        "batch_size": 1000,
-                    },
-                    "infer_settings": {
-                        "size": 90,
-                        "run_parallel": True,
-                        "random_seed": 2,
-                        "print_report": False,
-                    },
-                    "keys": {
-                        "fk_id": {
-                            "type": "FK",
-                            "columns": ["Id"],
-                            "references": {"table": "pk_test", "columns": ["Id"]},
-                        }
-                    },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "print_report": True,
+                },
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+            },
+            "fk_test": {
+                "train_settings": {
+                    "source": "./path/to/fk_test.csv",
+                    "epochs": 5,
+                    "drop_null": True,
+                    "print_report": True,
+                    "row_limit": 600,
+                    "batch_size": 1000,
+                },
+                "infer_settings": {
+                    "size": 90,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": False,
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {"table": "pk_test", "columns": ["Id"]},
+                    }
                 },
             },
-        ),
-        (
-            ["pk_test", "fk_test"],
-            {
-                "pk_test": {
-                    "train_settings": {
-                        "source": "./path/to/pk_test.csv",
-                        "epochs": 1,
-                        "drop_null": False,
-                        "row_limit": 800,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "infer_settings": {
-                        "size": 200,
-                        "run_parallel": True,
-                        "print_report": True,
-                    },
-                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+        },
+        {
+            "pk_test": {
+                "train_settings": {
+                    "source": "./path/to/pk_test.csv",
+                    "epochs": 1,
+                    "drop_null": False,
+                    "row_limit": 800,
+                    "batch_size": 1000,
+                    "print_report": True,
                 },
-                "fk_test": {
-                    "train_settings": {
-                        "source": "./path/to/fk_test.csv",
-                        "epochs": 5,
-                        "drop_null": True,
-                        "print_report": True,
-                        "row_limit": 600,
-                        "batch_size": 1000,
-                    },
-                    "infer_settings": {
-                        "size": 90,
-                        "run_parallel": True,
-                        "random_seed": 2,
-                        "print_report": False,
-                    },
-                    "keys": {
-                        "fk_id": {
-                            "type": "FK",
-                            "columns": ["Id"],
-                            "references": {"table": "pk_test", "columns": ["Id"]},
-                        }
-                    },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "print_report": True,
+                },
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+            },
+            "fk_test": {
+                "train_settings": {
+                    "source": "./path/to/fk_test.csv",
+                    "epochs": 5,
+                    "drop_null": True,
+                    "print_report": True,
+                    "row_limit": 600,
+                    "batch_size": 1000,
+                },
+                "infer_settings": {
+                    "size": 90,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": False,
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {"table": "pk_test", "columns": ["Id"]},
+                    }
                 },
             },
-        ),
+        },
     )
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_key_columns.call_count == 2
@@ -606,108 +598,104 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        (
-            ["tdm_models", "tdm_clusters"],
-            {
-                "tdm_models": {
-                    "train_settings": {
-                        "source": "./path/to/tdm_models.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "keys": {
-                        "tdm_models_pkey": {"type": "PK", "columns": ["id"]},
-                        "tdm_models_fkey": {
-                            "type": "FK",
-                            "columns": ["cluster_id"],
-                            "references": {"table": "tdm_clusters", "columns": ["id"]},
-                        },
-                    },
-                    "infer_settings": {},
+        ["tdm_models", "tdm_clusters"],
+        ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
+        {
+            "tdm_models": {
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True,
                 },
-                "tdm_clusters": {
-                    "train_settings": {
-                        "source": "./path/to/tdm_clusters.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True,
+                "keys": {
+                    "tdm_models_pkey": {"type": "PK", "columns": ["id"]},
+                    "tdm_models_fkey": {
+                        "type": "FK",
+                        "columns": ["cluster_id"],
+                        "references": {"table": "tdm_clusters", "columns": ["id"]},
                     },
-                    "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
-                    "infer_settings": {},
                 },
+                "infer_settings": {},
             },
-        ),
-        (
-            ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
-            {
-                "tdm_models": {
-                    "train_settings": {
-                        "source": "./path/to/tdm_models.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "keys": {
-                        "tdm_models_pkey": {"type": "PK", "columns": ["id"]},
-                        "tdm_models_fkey": {
-                            "type": "FK",
-                            "columns": ["cluster_id"],
-                            "references": {"table": "tdm_clusters", "columns": ["id"]},
-                        },
-                    },
-                    "infer_settings": {},
+            "tdm_clusters": {
+                "train_settings": {
+                    "source": "./path/to/tdm_clusters.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True,
                 },
-                "tdm_clusters": {
-                    "train_settings": {
-                        "source": "./path/to/tdm_clusters.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
-                    "infer_settings": {},
-                },
-                "tdm_models_pk": {
-                    "train_settings": {
-                        "source": "./path/to/tdm_models.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "keys": {"tdm_models_pkey": {"type": "PK", "columns": ["id"]}},
-                    "infer_settings": {},
-                },
-                "tdm_models_fk": {
-                    "train_settings": {
-                        "source": "./path/to/tdm_models.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "keys": {
-                        "tdm_models_fkey": {
-                            "type": "FK",
-                            "columns": ["cluster_id"],
-                            "references": {"table": "tdm_clusters", "columns": ["id"]},
-                        }
-                    },
-                    "infer_settings": {},
-                },
+                "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
+                "infer_settings": {},
             },
-        ),
+        },
+        {
+            "tdm_models": {
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True,
+                },
+                "keys": {
+                    "tdm_models_pkey": {"type": "PK", "columns": ["id"]},
+                    "tdm_models_fkey": {
+                        "type": "FK",
+                        "columns": ["cluster_id"],
+                        "references": {"table": "tdm_clusters", "columns": ["id"]},
+                    },
+                },
+                "infer_settings": {},
+            },
+            "tdm_clusters": {
+                "train_settings": {
+                    "source": "./path/to/tdm_clusters.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True,
+                },
+                "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
+                "infer_settings": {},
+            },
+            "tdm_models_pk": {
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True,
+                },
+                "keys": {"tdm_models_pkey": {"type": "PK", "columns": ["id"]}},
+                "infer_settings": {},
+            },
+            "tdm_models_fk": {
+                "train_settings": {
+                    "source": "./path/to/tdm_models.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True,
+                },
+                "keys": {
+                    "tdm_models_fkey": {
+                        "type": "FK",
+                        "columns": ["cluster_id"],
+                        "references": {"table": "tdm_clusters", "columns": ["id"]},
+                    }
+                },
+                "infer_settings": {},
+            },
+        },
     )
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_key_columns.call_count == 2
@@ -750,40 +738,36 @@ def test_launch_train_without_metadata(
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        (
-            ["test_table"],
-            {
-                "test_table": {
-                    "train_settings": {
-                        "source": "./path/to/source.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "infer_settings": {},
-                    "keys": {},
-                }
-            },
-        ),
-        (
-            ["test_table"],
-            {
-                "test_table": {
-                    "train_settings": {
-                        "source": "./path/to/source.csv",
-                        "epochs": 20,
-                        "drop_null": True,
-                        "row_limit": 1000,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "infer_settings": {},
-                    "keys": {},
-                }
-            },
-        ),
+        ["test_table"],
+        ["test_table"],
+        {
+            "test_table": {
+                "train_settings": {
+                    "source": "./path/to/source.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True,
+                },
+                "infer_settings": {},
+                "keys": {},
+            }
+        },
+        {
+            "test_table": {
+                "train_settings": {
+                    "source": "./path/to/source.csv",
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True,
+                },
+                "infer_settings": {},
+                "keys": {},
+            }
+        },
     )
     mock_check_existence_of_source.assert_called_once()
     mock_check_key_columns.assert_called_once()
@@ -827,76 +811,72 @@ def test_launch_train_with_metadata_contained_global_settings(
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        (
-            ["pk_test", "fk_test"],
-            {
-                "pk_test": {
-                    "train_settings": {
-                        "source": "./path/to/pk_test.csv",
-                        "row_limit": 800,
-                        "epochs": 5,
-                        "drop_null": True,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "infer_settings": {"print_report": False},
-                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        {
+            "pk_test": {
+                "train_settings": {
+                    "source": "./path/to/pk_test.csv",
+                    "row_limit": 800,
+                    "epochs": 5,
+                    "drop_null": True,
+                    "batch_size": 1000,
+                    "print_report": True,
                 },
-                "fk_test": {
-                    "keys": {
-                        "fk_id": {
-                            "type": "FK",
-                            "columns": ["Id"],
-                            "references": {"table": "pk_test", "columns": ["Id"]},
-                        }
-                    },
-                    "train_settings": {
-                        "source": "./path/to/fk_test.csv",
-                        "epochs": 5,
-                        "drop_null": True,
-                        "row_limit": 500,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "infer_settings": {},
-                },
+                "infer_settings": {"print_report": False},
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
             },
-        ),
-        (
-            ["pk_test", "fk_test"],
-            {
-                "pk_test": {
-                    "train_settings": {
-                        "source": "./path/to/pk_test.csv",
-                        "row_limit": 800,
-                        "epochs": 5,
-                        "drop_null": True,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "infer_settings": {"print_report": False},
-                    "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+            "fk_test": {
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {"table": "pk_test", "columns": ["Id"]},
+                    }
                 },
-                "fk_test": {
-                    "keys": {
-                        "fk_id": {
-                            "type": "FK",
-                            "columns": ["Id"],
-                            "references": {"table": "pk_test", "columns": ["Id"]},
-                        }
-                    },
-                    "train_settings": {
-                        "source": "./path/to/fk_test.csv",
-                        "epochs": 5,
-                        "drop_null": True,
-                        "row_limit": 500,
-                        "batch_size": 1000,
-                        "print_report": True,
-                    },
-                    "infer_settings": {},
+                "train_settings": {
+                    "source": "./path/to/fk_test.csv",
+                    "epochs": 5,
+                    "drop_null": True,
+                    "row_limit": 500,
+                    "batch_size": 1000,
+                    "print_report": True,
                 },
+                "infer_settings": {},
             },
-        ),
+        },
+        {
+            "pk_test": {
+                "train_settings": {
+                    "source": "./path/to/pk_test.csv",
+                    "row_limit": 800,
+                    "epochs": 5,
+                    "drop_null": True,
+                    "batch_size": 1000,
+                    "print_report": True,
+                },
+                "infer_settings": {"print_report": False},
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+            },
+            "fk_test": {
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {"table": "pk_test", "columns": ["Id"]},
+                    }
+                },
+                "train_settings": {
+                    "source": "./path/to/fk_test.csv",
+                    "epochs": 5,
+                    "drop_null": True,
+                    "row_limit": 500,
+                    "batch_size": 1000,
+                    "print_report": True,
+                },
+                "infer_settings": {},
+            },
+        },
     )
     assert mock_validate_metadata.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
@@ -959,6 +939,8 @@ def test_launch_infer_with_metadata(
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
             }
         },
+        0.25,
+        type_of_process="infer"
     )
     mock_check_existence_of_destination.assert_called_once()
     mock_validate_metadata.assert_called_once()
@@ -1039,6 +1021,8 @@ def test_launch_infer_with_metadata_of_related_tables(
                 },
             },
         },
+        0.125,
+        type_of_process="infer"
     )
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
@@ -1140,6 +1124,8 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                 },
             },
         },
+        0.08333333333333333,
+        type_of_process="infer"
     )
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
@@ -1193,6 +1179,8 @@ def test_launch_infer_without_metadata(
                 "keys": {},
             }
         },
+        0.25,
+        type_of_process="infer"
     )
     mock_check_existence_of_destination.assert_called_once()
     mock_validate_metadata.assert_called_once()
@@ -1263,6 +1251,8 @@ def test_launch_infer_with_metadata_contained_global_settings(
                 },
             },
         },
+        0.125,
+        type_of_process="infer",
     )
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
