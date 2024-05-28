@@ -52,7 +52,6 @@ class BaseTest(ABC):
         """
         Create the directory where images and reports should be stored
         """
-        os.makedirs(self.paths["reports_path"], exist_ok=True)
         os.makedirs(self.reports_path, exist_ok=True)
 
     def _remove_artifacts(self):
@@ -71,7 +70,7 @@ class BaseTest(ABC):
             logger.warning(
                 f"Logging the report to mlflow has failed due to a permission error. "
                 f"File path: '{path}', Error details: {error}.\n"
-                f"The report will be saved locally in '{self.paths['reports_path']}'"
+                f"The report will be saved locally in '{self.reports_path}'"
             )
             pass
 
@@ -211,7 +210,7 @@ class AccuracyTest(BaseTest):
         ) as file_:
             template = jinja2.Template(file_.read())
 
-        draws_acc_path = f"{self.paths['reports_path']}/accuracy"
+        reports_acc_path = f"{self.paths['reports_path']}/accuracy"
         uni_images = {
             title: transform_to_base64(path) for title, path in uni_images.items()
         }
@@ -224,20 +223,20 @@ class AccuracyTest(BaseTest):
         html = template.render(
             accuracy_value=acc_median,
             accuracy_heatmap=transform_to_base64(
-                f"{draws_acc_path}/accuracy_heatmap.svg"
+                f"{reports_acc_path}/accuracy_heatmap.svg"
             ),
             uni_imgs=uni_images,
             correlations_heatmap=transform_to_base64(
-                f"{draws_acc_path}/correlations_heatmap.svg"
+                f"{reports_acc_path}/correlations_heatmap.svg"
             ),
             correlation_median=corr_result,
             clusters_barplot=transform_to_base64(
-                f"{draws_acc_path}/clusters_barplot.svg"
+                f"{reports_acc_path}/clusters_barplot.svg"
             ),
             clustering_value=clustering_result,
             bi_imgs=bi_images,
             utility_barplot=transform_to_base64(
-                f"{draws_acc_path}/utility_barplot.svg"
+                f"{reports_acc_path}/utility_barplot.svg"
             ),
             utility_table=utility_result.to_html(),
             is_data_available=False if utility_result.empty else True,
