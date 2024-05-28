@@ -29,8 +29,8 @@ class BaseMetric(ABC):
         self,
         original: pd.DataFrame,
         synthetic: pd.DataFrame,
-        reports_path: str = None,
-        plot: bool = True,
+        plot: bool,
+        reports_path: str,
     ):
         columns_nan_labels = get_nan_labels(original)
         self.original = nan_labels_to_float(original, columns_nan_labels)
@@ -51,9 +51,7 @@ class JensenShannonDistance(BaseMetric):
         plot: bool,
         reports_path: str,
     ):
-        super().__init__(original, synthetic)
-        self.plot = plot
-        self.reports_path = reports_path
+        super().__init__(original, synthetic, plot, reports_path)
         self.cmap = LinearSegmentedColormap.from_list(
             "rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"]
         )
@@ -240,9 +238,7 @@ class Correlations(BaseMetric):
         plot: bool,
         reports_path: str,
     ):
-        super().__init__(original, synthetic)
-        self.plot = plot
-        self.reports_path = reports_path
+        super().__init__(original, synthetic, plot, reports_path)
         self.cmap = LinearSegmentedColormap.from_list(
             "rg",
             list(reversed(["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"])),
@@ -305,9 +301,7 @@ class BivariateMetric(BaseMetric):
         plot: bool,
         reports_path: str,
     ):
-        super().__init__(original, synthetic)
-        self.plot = plot
-        self.reports_path = reports_path
+        super().__init__(original, synthetic, plot, reports_path)
         self.cmap = LinearSegmentedColormap.from_list("rg", ["#0D5598", "#3E92E0", "#E8F4FF"])
 
     @staticmethod
@@ -649,9 +643,7 @@ class UnivariateMetric(BaseMetric):
         plot: bool,
         reports_path: str,
     ):
-        super().__init__(original, synthetic)
-        self.plot = plot
-        self.reports_path = reports_path
+        super().__init__(original, synthetic, plot, reports_path)
 
     def _calculate(self, column):
         pass
@@ -858,9 +850,7 @@ class Clustering(BaseMetric):
         plot: bool,
         reports_path: str,
     ):
-        super().__init__(original, synthetic)
-        self.plot = plot
-        self.reports_path = reports_path
+        super().__init__(original, synthetic, plot, reports_path)
 
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
         for col in categ_columns:
@@ -967,9 +957,7 @@ class Utility(BaseMetric):
         plot: bool,
         reports_path: str,
     ):
-        super().__init__(original, synthetic)
-        self.plot = plot
-        self.reports_path = reports_path
+        super().__init__(original, synthetic, plot, reports_path)
 
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
         for col in categ_columns:
