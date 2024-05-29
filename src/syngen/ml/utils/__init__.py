@@ -23,5 +23,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     fetch_log_message,
     file_sink,
     ProgressBarHandler,
-    check_if_logs_available
+    check_if_logs_available,
+    get_initial_table_name
 )

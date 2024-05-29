@@ -13,6 +13,7 @@ from syngen.ml.handlers import LongTextsHandler, VaeTrainHandler, VaeInferHandle
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
 from syngen.ml.mlflow_tracker.mlflow_tracker import MlflowTracker
+from syngen.ml.utils import get_initial_table_name
 
 
 class Strategy(ABC):
@@ -55,12 +56,6 @@ class Strategy(ABC):
             return self
         else:
             raise AttributeError("Either table name or path to metadata MUST be provided")
-
-    def _get_initial_table_name(self) -> str:
-        """"
-        Get the initial table name without the suffix "_pk" or "_fk"
-        """
-        return re.sub(r"_pk$|_fk$", "", self.config.table_name)
 
 
 class TrainStrategy(Strategy, ABC):
@@ -120,13 +115,14 @@ class TrainStrategy(Strategy, ABC):
         return self
 
     def add_reporters(self, **kwargs):
-        if not self.config.table_name.endswith("_fk") and self.config.print_report:
+        table_name = self.config.table_name
+        if not table_name.endswith("_fk") and self.config.print_report:
             sample_reporter = SampleAccuracyReporter(
-                table_name=self._get_initial_table_name(),
+                table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
             )
-            Report().register_reporter(table=self.config.table_name, reporter=sample_reporter)
+            Report().register_reporter(table=table_name, reporter=sample_reporter)
 
         return self
 
@@ -204,14 +200,15 @@ class InferStrategy(Strategy):
         return self
 
     def add_reporters(self):
-        if not self.config.table_name.endswith("_fk") and \
+        table_name = self.config.table_name
+        if not table_name.endswith("_fk") and \
                 (self.config.print_report or self.config.get_infer_metrics):
                 accuracy_reporter = AccuracyReporter(
-                    table_name=self._get_initial_table_name(),
+                    table_name=get_initial_table_name(table_name),
                     paths=self.config.paths,
                     config=self.config.to_dict(),
                 )
-                Report().register_reporter(table=self.config.table_name, reporter=accuracy_reporter)
+                Report().register_reporter(table=table_name, reporter=accuracy_reporter)
 
         return self
 

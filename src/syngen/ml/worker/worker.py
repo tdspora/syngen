@@ -200,32 +200,44 @@ class Worker:
         chain_of_tables = [i for i in chain_of_tables for j in self.metadata if j in i]
         return chain_of_tables, config_of_tables
 
+    @staticmethod
+    def _split_keys(keys):
+        """
+        Split the keys into primary keys and unique keys, and foreign keys
+        """
+        pk_uq_keys = {k: v for k, v in keys.items() if v["type"] in ["PK", "UQ"]}
+        fk_keys = {k: v for k, v in keys.items() if v["type"] == "FK"}
+        return pk_uq_keys, fk_keys
+
+    @staticmethod
+    def _get_meta_copy(original_meta, new_keys):
+        """
+        Get updated metadata copy
+        """
+        meta_copy = original_meta.copy()
+        meta_copy["keys"] = new_keys
+        return meta_copy
+
     def _split_pk_fk_metadata(self, config, tables):
+        """
+        Split the metadata of tables into primary key and foreign key metadata
+        """
+
         for table in tables:
-            types_of_keys = [value["type"] for key, value in config[table].get("keys", {}).items()]
+            keys = config[table].get("keys", {})
+            types_of_keys = {k_type["type"] for k_type in keys.values()}
+
             if "PK" in types_of_keys and "FK" in types_of_keys:
-                self.divided += [table + "_pk", table + "_fk"]
-                pk_uq_part = {
-                    key: value
-                    for key, value in config[table]["keys"].items()
-                    if value["type"] in ["PK", "UQ"]
-                }
-                fk_part = {
-                    key: value
-                    for key, value in config[table]["keys"].items()
-                    if value["type"] == "FK"
-                }
+                self.divided.append(f"{table}_pk")
+                self.divided.append(f"{table}_fk")
 
-                # Do this to create a new object instead of a reference
-                as_pk_meta = {k: v for k, v in config[table].items()}
-                as_fk_meta = {k: v for k, v in config[table].items()}
+                pk_uq_keys, fk_keys = self._split_keys(keys)
 
-                as_pk_meta["keys"] = pk_uq_part
-                as_fk_meta["keys"] = fk_part
+                config[f"{table}_pk"] = self._get_meta_copy(config[table], pk_uq_keys)
+                config[f"{table}_fk"] = self._get_meta_copy(config[table], fk_keys)
 
-                config[table + "_pk"] = as_pk_meta
-                config[table + "_fk"] = as_fk_meta
                 config.pop(table)
+
         return config
 
     @staticmethod
