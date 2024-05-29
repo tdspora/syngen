@@ -1,6 +1,7 @@
 from typing import Tuple, Optional, Dict, List
 from abc import ABC, abstractmethod
 import os
+import re
 import math
 from ulid import ULID
 from uuid import UUID
@@ -380,10 +381,10 @@ class VaeInferHandler(BaseHandler):
                     f"model_artifacts/tmp_store/{slugify(pk_table)}/"
                     f"merged_infer_{slugify(pk_table)}.csv"
                 )
-
+        initial_table_name = re.sub(r"_pk$|_fk$", "", table_name)
         if self.type_of_process == "train":
             destination_to_pk_table = self.paths["path_to_merged_infer"].replace(
-                slugify(table_name), slugify(pk_table)
+                slugify(initial_table_name), slugify(pk_table)
             )
         if not os.path.exists(destination_to_pk_table):
             raise FileNotFoundError(

@@ -300,9 +300,14 @@ class Worker:
             )
 
         self._generate_reports()
+        MlflowTracker().start_run(
+            run_name="integral_metrics",
+            tags={"process": "bottleneck"}
+        )
         self._collect_integral_metrics(tables=tables_for_training, type_of_process="train")
         if generation_of_reports:
             self._collect_integral_metrics(tables=tables_for_inference, type_of_process="infer")
+        MlflowTracker().end_run()
 
     def _get_surrogate_tables_mapping(self):
         """
@@ -400,12 +405,9 @@ class Worker:
         self._generate_reports()
 
     def _collect_integral_metrics(self, tables, type_of_process):
-        MlflowTracker().start_run(run_name="integral_metrics", tags={"process": "bottleneck"})
-
         stages = self.train_stages if type_of_process == "train" else self.infer_stages
         for table, stage in product(tables, stages):
             MlflowTracker().collect_metrics(table, stage)
-        MlflowTracker().end_run()
 
     def _generate_reports(self):
         """
@@ -463,4 +465,9 @@ class Worker:
         delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
+        MlflowTracker().start_run(
+            run_name="integral_metrics",
+            tags={"process": "bottleneck"}
+        )
         self._collect_integral_metrics(tables=tables, type_of_process="infer")
+        MlflowTracker().end_run()
