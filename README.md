@@ -405,6 +405,8 @@ Set the `MLFLOW_TRACKING_URI` environment variable to the desired MLflow trackin
 http://localhost:5000/. You can also set the `MLFLOW_ARTIFACTS_DESTINATION` environment variable to your preferred path 
 (including the cloud path), where the artifacts should be stored. Additionally, set the `MLFLOW_EXPERIMENT_NAME` 
 environment variable to the name you prefer for the experiment. 
+To get the system metrics, please set the `MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING` environment variable to `true`.
+
 When using Docker, ensure the environmental variables are set before running the container.
 
 The provided environmental variables allow to track the training process, and the inference process, and store 
@@ -419,6 +421,7 @@ docker run --rm -it \
   -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
   -e MLFLOW_EXPERIMENT_NAME=test_name \
+  -e MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING=true \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
@@ -427,6 +430,7 @@ docker run --rm -it \
   -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
   -e MLFLOW_EXPERIMENT_NAME=test_name \
+  -e MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING=true \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
