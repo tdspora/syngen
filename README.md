@@ -431,6 +431,90 @@ docker run --rm -it \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
+## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10
+
+### Prerequisites
+
+Before you begin, make sure you have the following installed:
+
+- Python 3.10
+- Homebrew (optional but recommended for managing dependencies)
+
+### Installation Steps
+
+1. **Upgrade pip**: Ensure you have the latest version of `pip`.
+
+    ```sh
+    pip install --upgrade pip
+    ```
+
+2. **Install Setuptools, Wheel, and Cython**: These packages are necessary for building and installing other dependencies.
+
+    ```sh
+    pip install setuptools wheel 'Cython<3'
+    ```
+
+3. **Install Fastavro**: Install a specific version of `fastavro` to avoid build issues.
+
+    ```sh
+    pip install --no-build-isolation fastavro==1.5.1
+    ```
+
+4. **Install Syngen**: Now, you can install the Syngen package.
+
+    ```sh
+    pip install syngen
+    ```
+
+5. **Install TensorFlow Metal**: This package leverages the GPU capabilities of M1/M2 chips for TensorFlow.
+
+    ```sh
+    pip install tensorflow-metal
+    ```
+
+#### From source (development)
+
+Download repository from GitHub by cloning or zip file.
+Then install it in editable mode.
+
+```sh
+    pip install -e .
+```
+
+### Additional Information
+
+- **Homebrew**: If you do not have Homebrew installed, you can install it by running:
+
+    ```sh
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ```
+
+- **Python 3.10**: Ensure you have Python 3.10 installed. You can use pyenv to manage different Python versions:
+
+    ```sh
+    brew install pyenv
+    pyenv install 3.10.0
+    pyenv global 3.10.0
+    ```
+
+### Verifying Installation
+
+To verify the installation, run the following command to check if Syngen is installed correctly:
+
+```sh
+python -c "import syngen; print(syngen.__version__)"
+```
+
+If the command prints the version of Syngen without errors, the installation was successful.
+
+### Troubleshooting
+
+If you encounter any issues during installation, consider the following steps:
+
+- Ensure all dependencies are up to date.
+- Check for any compatibility issues with other installed packages.
+- Consult the Syngen [documentation](https://github.com/tdspora/syngen) or raise an issue on GitHub.
+
 ## Contribution
 
 We welcome contributions from the community to help us improve and maintain our public GitHub repository. We appreciate any feedback, bug reports, or feature requests, and we encourage developers to submit fixes or new features using issues.
