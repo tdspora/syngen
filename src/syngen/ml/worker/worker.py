@@ -306,6 +306,7 @@ class Worker:
         tables_for_inference: List,
         metadata_for_training: Dict,
         metadata_for_inference: Dict,
+        generation_of_reports: bool
     ):
         """
         Run training process for the list of tables
@@ -319,8 +320,6 @@ class Worker:
         for table in tables_for_training:
             self._train_table(table, metadata_for_training, delta)
 
-        generation_of_reports = self._should_generate_report(metadata_for_training, "train")
-
         if generation_of_reports:
             self.__infer_tables(
                 tables_for_inference,
@@ -330,11 +329,6 @@ class Worker:
             )
 
         self._generate_reports()
-        self.__collect_metrics_in_train(
-            tables_for_training,
-            tables_for_inference,
-            generation_of_reports
-        )
 
     def _get_surrogate_tables_mapping(self):
         """
@@ -430,7 +424,6 @@ class Worker:
             MlflowTracker().end_run()
 
         self._generate_reports()
-        self._collect_metrics_in_infer(tables)
 
     def _collect_integral_metrics(self, tables, type_of_process):
         """
@@ -479,11 +472,20 @@ class Worker:
             metadata_for_inference,
         ) = metadata_for_inference
 
+        generation_of_reports = self._should_generate_report(metadata_for_training, "train")
+
         self.__train_tables(
             tables_for_training,
             tables_for_inference,
             metadata_for_training,
             metadata_for_inference,
+            generation_of_reports
+        )
+
+        self.__collect_metrics_in_train(
+            tables_for_training,
+            tables_for_inference,
+            generation_of_reports
         )
 
     def _collect_metrics_in_infer(self, tables):
@@ -507,3 +509,4 @@ class Worker:
         delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
+        self._collect_metrics_in_infer(tables)

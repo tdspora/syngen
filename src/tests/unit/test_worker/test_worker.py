@@ -347,6 +347,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_Worker__collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -356,6 +357,7 @@ def test_launch_train_with_metadata(
     mock_check_existence_of_source,
     mock_check_key_columns,
     mock_validate_metadata,
+    mock_collect_metrics_in_train,
     rp_logger,
 ):
     """
@@ -428,13 +430,20 @@ def test_launch_train_with_metadata(
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
             }
         },
+        False
     )
     mock_check_existence_of_source.assert_called_once()
     mock_check_key_columns.assert_called_once()
     mock_validate_metadata.assert_called_once()
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["test_table"],
+        ["test_table"],
+        False
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_Worker__collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -444,6 +453,7 @@ def test_launch_train_with_metadata_of_related_tables(
     mock_check_existence_of_source,
     mock_check_key_columns,
     mock_validate_metadata,
+    mock_collect_metrics_in_train,
     rp_logger,
 ):
     """
@@ -554,13 +564,20 @@ def test_launch_train_with_metadata_of_related_tables(
                 },
             },
         },
+        True
     )
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_key_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        True
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_Worker__collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -570,6 +587,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     mock_check_existence_of_source,
     mock_check_key_columns,
     mock_validate_metadata,
+    mock_collect_metrics_in_train,
     rp_logger,
 ):
     """
@@ -696,13 +714,20 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                 "infer_settings": {},
             },
         },
+        True
     )
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_key_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["tdm_models", "tdm_clusters"],
+        ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
+        True
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_Worker__collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -712,6 +737,7 @@ def test_launch_train_without_metadata(
     mock_check_existence_of_source,
     mock_check_key_columns,
     mock_validate_metadata,
+    mock_collect_metrics_in_train,
     rp_logger,
 ):
     """
@@ -768,13 +794,20 @@ def test_launch_train_without_metadata(
                 "keys": {},
             }
         },
+        True
     )
     mock_check_existence_of_source.assert_called_once()
     mock_check_key_columns.assert_called_once()
     mock_validate_metadata.assert_called_once()
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["test_table"],
+        ["test_table"],
+        True
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_Worker__collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -784,6 +817,7 @@ def test_launch_train_with_metadata_contained_global_settings(
     mock_check_existence_of_source,
     mock_check_key_columns,
     mock_validate_metadata,
+    mock_collect_metrics_in_train,
     rp_logger,
 ):
     """
@@ -877,13 +911,20 @@ def test_launch_train_with_metadata_contained_global_settings(
                 "infer_settings": {},
             },
         },
+        True
     )
     assert mock_validate_metadata.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_key_columns.call_count == 2
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        True
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
@@ -891,6 +932,7 @@ def test_launch_infer_with_metadata(
     mock_infer_tables,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_collect_metrics_in_infer,
     rp_logger,
 ):
     """
@@ -944,9 +986,11 @@ def test_launch_infer_with_metadata(
     )
     mock_check_existence_of_destination.assert_called_once()
     mock_validate_metadata.assert_called_once()
+    mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
@@ -954,6 +998,7 @@ def test_launch_infer_with_metadata_of_related_tables(
     mock_infer_tables,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_collect_metrics_in_infer,
     rp_logger,
 ):
     """
@@ -1026,9 +1071,11 @@ def test_launch_infer_with_metadata_of_related_tables(
     )
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_collect_metrics_in_infer.assert_called_once_with(["pk_test", "fk_test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
@@ -1036,6 +1083,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     mock_infer_tables,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_collect_metrics_in_infer,
     rp_logger,
 ):
     """
@@ -1129,9 +1177,13 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     )
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_collect_metrics_in_infer.assert_called_once_with(
+        ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"]
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
@@ -1139,6 +1191,7 @@ def test_launch_infer_without_metadata(
     mock_infer_tables,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_collect_metrics_in_infer,
     rp_logger,
 ):
     """
@@ -1184,9 +1237,11 @@ def test_launch_infer_without_metadata(
     )
     mock_check_existence_of_destination.assert_called_once()
     mock_validate_metadata.assert_called_once()
+    mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Worker, "_Worker__infer_tables", return_value=None)
@@ -1194,6 +1249,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
     mock_infer_tables,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_collect_metrics_infer,
     rp_logger,
 ):
     """
@@ -1256,4 +1312,5 @@ def test_launch_infer_with_metadata_contained_global_settings(
     )
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_collect_metrics_infer.assert_called_once_with(["pk_test", "fk_test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
