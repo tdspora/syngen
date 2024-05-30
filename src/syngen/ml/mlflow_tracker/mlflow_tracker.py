@@ -101,7 +101,6 @@ class MlflowTracker:
             cls._instance.experiment_name = experiment_name
             cls._instance.connect_to_server = is_active
             cls._instance.is_active = is_active
-            cls._instance.client = mlflow.tracking.MlflowClient()
         return cls._instance
 
     def log_metric(self, key: str, value: float, step: Optional[int] = None):
@@ -277,4 +276,4 @@ class MlflowTracker:
 
     def get_metric_history(self, run_id, metric_key):
         if self.is_active:
-            return self.client.get_metric_history(run_id, metric_key)
+            return mlflow.tracking.MlflowClient().get_metric_history(run_id, metric_key)
