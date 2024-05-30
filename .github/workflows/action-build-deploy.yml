@@ -77,9 +77,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: tdspora/syngen
-          tag-custom: ${{ github.ref == 'refs/heads/main' && 'latest' || '' }}
-          tag-semver: |
-            {{raw}}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{raw}}
 
       - name: Build and push (BASE)
         uses: docker/build-push-action@v5
