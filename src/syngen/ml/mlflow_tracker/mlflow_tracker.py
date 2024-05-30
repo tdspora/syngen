@@ -139,10 +139,9 @@ class MlflowTracker:
         and hardware metrics related to the run
         """
         runs = self.search_runs(table_name=table, type_of_process=stage)
-        if runs:
-            for run_id in runs:
-                self.log_duration(run_id, table, stage)
-                self.log_hardware_metrics(run_id, table, stage)
+        for run_id in runs:
+            self.log_duration(run_id, table, stage)
+            self.log_hardware_metrics(run_id, table, stage)
 
     def log_artifact(self, local_path: str, artifact_path: Optional[str] = None):
         """
@@ -165,7 +164,14 @@ class MlflowTracker:
         description: Optional[str] = None,
     ):
         if self.is_active:
-            mlflow.start_run(run_id, experiment_id, run_name, nested, tags, description)
+            mlflow.start_run(
+                run_id,
+                experiment_id,
+                run_name,
+                nested,
+                tags,
+                description
+            )
 
     def get_last_run(self):
         if self.is_active:
