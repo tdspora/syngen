@@ -366,30 +366,31 @@ class Worker:
         both_keys = table in self.divided
         settings = config_of_table[f"{type_of_process}_settings"]
 
-        with mlflow.start_run(
+        MlflowTracker().start_run(
                 run_name=f"{table}-INFER",
                 tags={"table_name": table, "process": type_of_process},
                 nested=is_nested,
-        ):
-            self.infer_strategy.run(
-                destination=settings.get("destination") if type_of_process == "infer" else None,
-                metadata=metadata,
-                size=settings.get("size") if type_of_process == "infer" else None,
-                table_name=table,
-                metadata_path=self.metadata_path,
-                run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
-                batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
-                random_seed=settings.get("random_seed") if type_of_process == "infer" else 1,
-                print_report=settings["print_report"],
-                get_infer_metrics=settings.get("get_infer_metrics") if type_of_process == "infer" else False,
-                log_level=self.log_level,
-                both_keys=both_keys,
-                type_of_process=self.type_of_process,
-            )
-            ProgressBarHandler().set_progress(
-                delta=delta,
-                message=f"Infer process of the table - {table} was completed"
-            )
+        )
+        self.infer_strategy.run(
+            destination=settings.get("destination") if type_of_process == "infer" else None,
+            metadata=metadata,
+            size=settings.get("size") if type_of_process == "infer" else None,
+            table_name=table,
+            metadata_path=self.metadata_path,
+            run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
+            batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
+            random_seed=settings.get("random_seed") if type_of_process == "infer" else 1,
+            print_report=settings["print_report"],
+            get_infer_metrics=settings.get("get_infer_metrics") if type_of_process == "infer" else False,
+            log_level=self.log_level,
+            both_keys=both_keys,
+            type_of_process=self.type_of_process,
+        )
+        ProgressBarHandler().set_progress(
+            delta=delta,
+            message=f"Infer process of the table - {table} was completed"
+        )
+        MlflowTracker().end_run()
 
     def __infer_tables(self, tables: List, config_of_tables: Dict, delta: float, type_of_process: str):
         """
