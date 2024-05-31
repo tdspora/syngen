@@ -347,7 +347,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Worker, "_Worker__collect_metrics_in_train")
+@patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -443,7 +443,7 @@ def test_launch_train_with_metadata(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Worker, "_Worker__collect_metrics_in_train")
+@patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -577,7 +577,7 @@ def test_launch_train_with_metadata_of_related_tables(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Worker, "_Worker__collect_metrics_in_train")
+@patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -727,7 +727,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Worker, "_Worker__collect_metrics_in_train")
+@patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -807,7 +807,7 @@ def test_launch_train_without_metadata(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Worker, "_Worker__collect_metrics_in_train")
+@patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")

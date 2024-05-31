@@ -1,11 +1,10 @@
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Any
 from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
 import os
 from itertools import product
-import mlflow
 
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
@@ -253,7 +252,7 @@ class Worker:
             ]
         )
 
-    def __collect_metrics_in_train(
+    def _collect_metrics_in_train(
         self,
         tables_for_training: List[str],
         tables_for_inference: List[str],
@@ -483,7 +482,7 @@ class Worker:
             generation_of_reports
         )
 
-        self.__collect_metrics_in_train(
+        self._collect_metrics_in_train(
             tables_for_training,
             tables_for_inference,
             generation_of_reports
