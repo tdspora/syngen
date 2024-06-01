@@ -36,7 +36,7 @@ class BaseTest(ABC):
         self.table_name = table_name
         self.config = config
         self.plot_exists = self.config["print_report"]
-        self.draws_path = str()
+        self.reports_path = str()
 
     @abstractmethod
     def report(
@@ -52,14 +52,13 @@ class BaseTest(ABC):
         """
         Create the directory where images and reports should be stored
         """
-        os.makedirs(self.paths["draws_path"], exist_ok=True)
-        os.makedirs(self.draws_path, exist_ok=True)
+        os.makedirs(self.reports_path, exist_ok=True)
 
     def _remove_artifacts(self):
         """
         Remove artifacts after creating Accuracy report
         """
-        shutil.rmtree(self.draws_path)
+        shutil.rmtree(self.reports_path)
 
     def _log_report_to_mlflow(self, path):
         """
@@ -71,7 +70,7 @@ class BaseTest(ABC):
             logger.warning(
                 f"Logging the report to mlflow has failed due to a permission error. "
                 f"File path: '{path}', Error details: {error}.\n"
-                f"The report will be saved locally in '{self.paths['draws_path']}'"
+                f"The report will be saved locally in '{self.reports_path}'"
             )
             pass
 
@@ -110,24 +109,24 @@ class AccuracyTest(BaseTest):
         infer_config: Dict,
     ):
         super().__init__(original, synthetic, paths, table_name, infer_config)
-        self.draws_path = f"{self.paths['draws_path']}/accuracy"
+        self.reports_path = f"{self.paths['reports_path']}/accuracy"
         self.univariate = UnivariateMetric(
-            self.original, self.synthetic, self.plot_exists, self.draws_path
+            self.original, self.synthetic, self.plot_exists, self.reports_path
         )
         self.bivariate = BivariateMetric(
-            self.original, self.synthetic, self.plot_exists, self.draws_path
+            self.original, self.synthetic, self.plot_exists, self.reports_path
         )
         self.correlations = Correlations(
-            self.original, self.synthetic, self.plot_exists, self.draws_path
+            self.original, self.synthetic, self.plot_exists, self.reports_path
         )
         self.clustering = Clustering(
-            self.original, self.synthetic, self.plot_exists, self.draws_path
+            self.original, self.synthetic, self.plot_exists, self.reports_path
         )
         self.utility = Utility(
-            self.original, self.synthetic, self.plot_exists, self.draws_path
+            self.original, self.synthetic, self.plot_exists, self.reports_path
         )
         self.acc = JensenShannonDistance(
-            self.original, self.synthetic, self.plot_exists, self.draws_path
+            self.original, self.synthetic, self.plot_exists, self.reports_path
         )
         self._prepare_dir()
 
@@ -211,7 +210,6 @@ class AccuracyTest(BaseTest):
         ) as file_:
             template = jinja2.Template(file_.read())
 
-        draws_acc_path = f"{self.paths['draws_path']}/accuracy"
         uni_images = {
             title: transform_to_base64(path) for title, path in uni_images.items()
         }
@@ -224,20 +222,20 @@ class AccuracyTest(BaseTest):
         html = template.render(
             accuracy_value=acc_median,
             accuracy_heatmap=transform_to_base64(
-                f"{draws_acc_path}/accuracy_heatmap.svg"
+                f"{self.reports_path}/accuracy_heatmap.svg"
             ),
             uni_imgs=uni_images,
             correlations_heatmap=transform_to_base64(
-                f"{draws_acc_path}/correlations_heatmap.svg"
+                f"{self.reports_path}/correlations_heatmap.svg"
             ),
             correlation_median=corr_result,
             clusters_barplot=transform_to_base64(
-                f"{draws_acc_path}/clusters_barplot.svg"
+                f"{self.reports_path}/clusters_barplot.svg"
             ),
             clustering_value=clustering_result,
             bi_imgs=bi_images,
             utility_barplot=transform_to_base64(
-                f"{draws_acc_path}/utility_barplot.svg"
+                f"{self.reports_path}/utility_barplot.svg"
             ),
             utility_table=utility_result.to_html(),
             is_data_available=False if utility_result.empty else True,
@@ -248,11 +246,12 @@ class AccuracyTest(BaseTest):
             round=round,
         )
 
+        path_to_accuracy_report = f"{self.paths['reports_path']}/accuracy_report.html"
         with open(
-            f"{self.paths['draws_path']}/accuracy_report.html", "w", encoding="utf-8"
+            path_to_accuracy_report, "w", encoding="utf-8"
         ) as f:
             f.write(html)
-        self._log_report_to_mlflow(f"{self.paths['draws_path']}/accuracy_report.html")
+        self._log_report_to_mlflow(path_to_accuracy_report)
         self._remove_artifacts()
 
     def report(self, *args, **kwargs):

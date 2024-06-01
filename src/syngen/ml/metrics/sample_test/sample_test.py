@@ -20,20 +20,20 @@ class SampleAccuracyTest(BaseTest):
         train_config: Dict,
     ):
         super().__init__(original, sampled, paths, table_name, train_config)
-        self.draws_path = f"{self.paths['draws_path']}/sample_accuracy"
+        self.reports_path = f"{self.paths['reports_path']}/sample_accuracy"
 
     def __get_univariate_metric(self):
         """
         Do preparation work before creating the report
         """
         self._prepare_dir()
-        return UnivariateMetric(self.original, self.synthetic, True, self.draws_path)
+        return UnivariateMetric(self.original, self.synthetic, True, self.reports_path)
 
     def __remove_artifacts(self):
         """
         Remove artifacts after creating Sample report
         """
-        shutil.rmtree(f"{self.paths['draws_path']}/sample_accuracy")
+        shutil.rmtree(self.reports_path)
 
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()
@@ -63,7 +63,7 @@ class SampleAccuracyTest(BaseTest):
         )
 
         with open(
-            f"{self.paths['draws_path']}/sample_accuracy_report.html",
+            f"{self.paths['reports_path']}/sample_accuracy_report.html",
             "w",
             encoding="utf-8",
         ) as f:
