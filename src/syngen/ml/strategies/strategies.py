@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import os
+import re
 import traceback
 from loguru import logger
 
@@ -12,6 +13,7 @@ from syngen.ml.handlers import LongTextsHandler, VaeTrainHandler, VaeInferHandle
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
 from syngen.ml.mlflow_tracker.mlflow_tracker import MlflowTracker
+from syngen.ml.utils import get_initial_table_name
 
 
 class Strategy(ABC):
@@ -113,13 +115,14 @@ class TrainStrategy(Strategy, ABC):
         return self
 
     def add_reporters(self, **kwargs):
-        if self.config.print_report:
+        table_name = self.config.table_name
+        if not table_name.endswith("_fk") and self.config.print_report:
             sample_reporter = SampleAccuracyReporter(
-                table_name=self.config.table_name,
+                table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
             )
-            Report().register_reporter(table=self.config.table_name, reporter=sample_reporter)
+            Report().register_reporter(table=table_name, reporter=sample_reporter)
 
         return self
 
@@ -197,13 +200,15 @@ class InferStrategy(Strategy):
         return self
 
     def add_reporters(self):
-        if self.config.print_report or self.config.get_infer_metrics:
-            accuracy_reporter = AccuracyReporter(
-                table_name=self.config.table_name,
-                paths=self.config.paths,
-                config=self.config.to_dict(),
-            )
-            Report().register_reporter(table=self.config.table_name, reporter=accuracy_reporter)
+        table_name = self.config.table_name
+        if not table_name.endswith("_fk") and \
+                (self.config.print_report or self.config.get_infer_metrics):
+                accuracy_reporter = AccuracyReporter(
+                    table_name=get_initial_table_name(table_name),
+                    paths=self.config.paths,
+                    config=self.config.to_dict(),
+                )
+                Report().register_reporter(table=table_name, reporter=accuracy_reporter)
 
         return self
 
@@ -226,12 +231,11 @@ class InferStrategy(Strategy):
                 log_level=kwargs["log_level"],
                 both_keys=kwargs["both_keys"],
             )
-            type_of_process = kwargs["type_of_process"]
-            if type_of_process == "infer":
-                MlflowTracker().log_params(self.config.to_dict())
+
+            MlflowTracker().log_params(self.config.to_dict())
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler(
-                type_of_process=type_of_process
+                type_of_process=kwargs["type_of_process"]
             )
             self.handler.handle()
         except Exception:

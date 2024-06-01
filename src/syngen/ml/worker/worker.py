@@ -1,9 +1,10 @@
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Any
 from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
 import os
+from itertools import product
 
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
@@ -30,13 +31,17 @@ class Worker:
     infer_strategy = InferStrategy()
     metadata: Optional[Dict] = None
     divided: List = field(default=list())
+    initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
+    train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
+    infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
         self._update_metadata()
         self.__validate_metadata()
+        self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
 
     def __validate_metadata(self):
@@ -194,38 +199,113 @@ class Worker:
         chain_of_tables = [i for i in chain_of_tables for j in self.metadata if j in i]
         return chain_of_tables, config_of_tables
 
+    @staticmethod
+    def _split_keys(keys):
+        """
+        Split the keys into primary keys and unique keys, and foreign keys
+        """
+        pk_uq_keys = {k: v for k, v in keys.items() if v["type"] in ["PK", "UQ"]}
+        fk_keys = {k: v for k, v in keys.items() if v["type"] == "FK"}
+        return pk_uq_keys, fk_keys
+
+    @staticmethod
+    def _get_meta_copy(original_meta, new_keys):
+        """
+        Get updated metadata copy
+        """
+        meta_copy = original_meta.copy()
+        meta_copy["keys"] = new_keys
+        return meta_copy
+
     def _split_pk_fk_metadata(self, config, tables):
+        """
+        Split the metadata of tables into primary key and foreign key metadata
+        """
+
         for table in tables:
-            types_of_keys = [value["type"] for key, value in config[table].get("keys", {}).items()]
+            keys = config[table].get("keys", {})
+            types_of_keys = {k_type["type"] for k_type in keys.values()}
+
             if "PK" in types_of_keys and "FK" in types_of_keys:
-                self.divided += [table + "_pk", table + "_fk"]
-                pk_uq_part = {
-                    key: value
-                    for key, value in config[table]["keys"].items()
-                    if value["type"] in ["PK", "UQ"]
-                }
-                fk_part = {
-                    key: value
-                    for key, value in config[table]["keys"].items()
-                    if value["type"] == "FK"
-                }
+                self.divided.append(f"{table}_pk")
+                self.divided.append(f"{table}_fk")
 
-                # Do this to create a new object instead of a reference
-                as_pk_meta = {k: v for k, v in config[table].items()}
-                as_fk_meta = {k: v for k, v in config[table].items()}
+                pk_uq_keys, fk_keys = self._split_keys(keys)
 
-                as_pk_meta["keys"] = pk_uq_part
-                as_fk_meta["keys"] = fk_part
+                config[f"{table}_pk"] = self._get_meta_copy(config[table], pk_uq_keys)
+                config[f"{table}_fk"] = self._get_meta_copy(config[table], fk_keys)
 
-                config[table + "_pk"] = as_pk_meta
-                config[table + "_fk"] = as_fk_meta
                 config.pop(table)
+
         return config
+
+    @staticmethod
+    def _should_generate_report(config_of_tables: Dict, type_of_process: str):
+        """
+        Determine whether reports should be generated based
+        on the configurations of the tables
+        """
+        return any(
+            [
+                config.get(f"{type_of_process}_settings", {}).get("print_report", False)
+                for table, config in config_of_tables.items()
+            ]
+        )
+
+    def _collect_metrics_in_train(
+        self,
+        tables_for_training: List[str],
+        tables_for_inference: List[str],
+        generation_of_reports: bool
+    ):
+        """
+        Collect the integral metrics for the training process
+        """
+        MlflowTracker().start_run(
+            run_name="integral_metrics",
+            tags={"process": "bottleneck"}
+        )
+        self._collect_integral_metrics(tables=tables_for_training, type_of_process="train")
+        if generation_of_reports:
+            self._collect_integral_metrics(tables=tables_for_inference, type_of_process="infer")
+        MlflowTracker().end_run()
+
+    def _train_table(self, table, metadata, delta):
+        """"
+        Train process for a single table
+        """
+        config_of_table = metadata[table]
+        global_context(config_of_table.get("format", {}))
+        train_settings = config_of_table["train_settings"]
+        log_message = f"Training process of the table - '{table}' has started"
+        logger.info(log_message)
+        ProgressBarHandler().set_progress(delta=delta, message=log_message)
+
+        self.train_strategy.run(
+            metadata=metadata,
+            source=train_settings["source"],
+            epochs=train_settings["epochs"],
+            drop_null=train_settings["drop_null"],
+            row_limit=train_settings["row_limit"],
+            table_name=table,
+            metadata_path=self.metadata_path,
+            print_report=train_settings["print_report"],
+            batch_size=train_settings["batch_size"]
+        )
+        self._write_success_message(slugify(table))
+        self._save_metadata_file()
+        ProgressBarHandler().set_progress(
+            delta=delta,
+            message=f"Training of the table - {table} was completed"
+        )
 
     def __train_tables(
         self,
-        metadata_for_training: Tuple[List, Dict],
-        metadata_for_inference: Tuple[List, Dict],
+        tables_for_training: List,
+        tables_for_inference: List,
+        metadata_for_training: Dict,
+        metadata_for_inference: Dict,
+        generation_of_reports: bool
     ):
         """
         Run training process for the list of tables
@@ -234,120 +314,124 @@ class Worker:
         :param metadata_for_inference:
         the tuple included the list of tables and metadata for inference process
         """
-        (
-            chain_for_tables_for_training,
-            config_of_metadata_for_training,
-        ) = metadata_for_training
-        (
-            chain_for_tables_for_inference,
-            config_of_metadata_for_inference,
-        ) = metadata_for_inference
+        delta = 0.49 / len(tables_for_training)
 
-        delta = 0.49 / len(chain_for_tables_for_training)
+        for table in tables_for_training:
+            self._train_table(table, metadata_for_training, delta)
 
-        for table in chain_for_tables_for_training:
-            config_of_table = config_of_metadata_for_training[table]
-            global_context(config_of_table.get("format", {}))
-            train_settings = config_of_table["train_settings"]
-            log_message = f"Training process of the table - '{table}' has started"
-            logger.info(log_message)
-            ProgressBarHandler().set_progress(delta=delta, message=log_message)
-
-            self.train_strategy.run(
-                metadata=config_of_metadata_for_training,
-                source=train_settings["source"],
-                epochs=train_settings["epochs"],
-                drop_null=train_settings["drop_null"],
-                row_limit=train_settings["row_limit"],
-                table_name=table,
-                metadata_path=self.metadata_path,
-                print_report=train_settings["print_report"],
-                batch_size=train_settings["batch_size"]
-            )
-            self._write_success_message(slugify(table))
-            self._save_metadata_file()
-            ProgressBarHandler().set_progress(
-                delta=delta,
-                message=f"Training of the table - {table} was completed"
-            )
-        generation_of_reports = any(
-            [
-                config.get("train_settings", {}).get("print_report", False)
-                for table, config in config_of_metadata_for_training.items()
-            ]
-        )
         if generation_of_reports:
-            for table in chain_for_tables_for_inference:
-                config_of_table = config_of_metadata_for_inference[table]
-                global_context(config_of_table.get("format", {}))
-                train_settings = config_of_table["train_settings"]
-                print_report = train_settings.get("print_report")
-                both_keys = table in self.divided
+            self.__infer_tables(
+                tables_for_inference,
+                metadata_for_inference,
+                delta,
+                type_of_process="train"
+            )
 
-                logger.info(f"Infer process of the table - {table} has started")
+        self._generate_reports()
 
-                self.infer_strategy.run(
-                    destination=None,
-                    metadata=config_of_metadata_for_inference,
-                    size=None,
-                    table_name=table,
-                    metadata_path=self.metadata_path,
-                    run_parallel=False,
-                    batch_size=1000,
-                    random_seed=1,
-                    print_report=print_report,
-                    get_infer_metrics=False,
-                    log_level=self.log_level,
-                    both_keys=both_keys,
-                    type_of_process=self.type_of_process,
-                )
+    def _get_surrogate_tables_mapping(self):
+        """
+        Get the mapping of surrogate tables, which end with "_pk" and "_fk",
+        to the initial tables from which they were derived
+        """
+        return {
+            table: [t for t in self.divided if t.startswith(table)]
+            for table in self.initial_table_names
+            if any(t.startswith(table) for t in self.divided)
+        }
 
-    def __infer_tables(self, tables: List, config_of_tables: Dict):
+    def _find_parent_table(self, table):
+        """
+        Find the initial table
+        from which the surrogate table was derived
+        """
+        return next(
+            (
+                parent
+                for parent, children in self._get_surrogate_tables_mapping().items()
+                if table in children
+            ), None
+        )
+
+    def _infer_table(self, table, metadata, type_of_process, delta, is_nested=False):
+        """
+        Infer process for a single table
+        """
+        config_of_table = metadata[table]
+        global_context(config_of_table.get("format", {}))
+        log_message = f"Infer process of the table - '{table}' has started"
+        logger.info(log_message)
+        ProgressBarHandler().set_progress(delta=delta, message=log_message)
+        both_keys = table in self.divided
+        settings = config_of_table[f"{type_of_process}_settings"]
+
+        MlflowTracker().start_run(
+                run_name=f"{table}-INFER",
+                tags={"table_name": table, "process": type_of_process},
+                nested=is_nested,
+        )
+        self.infer_strategy.run(
+            destination=settings.get("destination") if type_of_process == "infer" else None,
+            metadata=metadata,
+            size=settings.get("size") if type_of_process == "infer" else None,
+            table_name=table,
+            metadata_path=self.metadata_path,
+            run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
+            batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
+            random_seed=settings.get("random_seed") if type_of_process == "infer" else 1,
+            print_report=settings["print_report"],
+            get_infer_metrics=settings.get("get_infer_metrics") if type_of_process == "infer" else False,
+            log_level=self.log_level,
+            both_keys=both_keys,
+            type_of_process=self.type_of_process,
+        )
+        ProgressBarHandler().set_progress(
+            delta=delta,
+            message=f"Infer process of the table - {table} was completed"
+        )
+        MlflowTracker().end_run()
+
+    def __infer_tables(self, tables: List, config_of_tables: Dict, delta: float, type_of_process: str):
         """
         Run infer process for the list of tables
         :param tables: the list of tables for infer process
         :param config_of_tables: configuration of tables declared in metadata file
         """
-        generation_of_reports = any(
-            [
-                config.get("infer_settings", {}).get("print_report", False)
-                for table, config in config_of_tables.items()
-            ]
-        )
-        delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
-        for table in tables:
-            config_of_table = config_of_tables[table]
-            global_context(config_of_table.get("format", {}))
-            log_message = f"Infer process of the table - '{table}' has started"
-            logger.info(log_message)
-            ProgressBarHandler().set_progress(delta=delta, message=log_message)
-            both_keys = table in self.divided
-            infer_settings = config_of_table["infer_settings"]
 
-            MlflowTracker().start_run(
-                run_name=f"{table}-INFER",
-                tags={"table_name": table, "process": "infer"},
-            )
-            self.infer_strategy.run(
-                destination=infer_settings.get("destination"),
+        non_surrogate_tables = [table for table in tables if table not in self.divided]
+        for table in non_surrogate_tables:
+            self._infer_table(
+                table=table,
                 metadata=config_of_tables,
-                size=infer_settings["size"],
-                table_name=table,
-                metadata_path=self.metadata_path,
-                run_parallel=infer_settings["run_parallel"],
-                batch_size=infer_settings["batch_size"],
-                random_seed=infer_settings["random_seed"],
-                print_report=infer_settings["print_report"],
-                get_infer_metrics=infer_settings["get_infer_metrics"],
-                log_level=self.log_level,
-                both_keys=both_keys,
-                type_of_process=self.type_of_process,
+                type_of_process=type_of_process,
+                delta=delta
             )
+
+        tables_mapping = self._get_surrogate_tables_mapping()
+        for table_root in tables_mapping.keys():
+            MlflowTracker().start_run(
+                run_name=f"{table_root}-INFER",
+                tags={"table_name": table_root, "process": type_of_process}
+            )
+            for table in tables_mapping[table_root]:
+                self._infer_table(
+                    table=table,
+                    metadata=config_of_tables,
+                    type_of_process=type_of_process,
+                    delta=delta,
+                    is_nested=True
+                )
             MlflowTracker().end_run()
-            ProgressBarHandler().set_progress(
-                delta=delta,
-                message=f"Infer process of the table - {table} was completed"
-            )
+
+        self._generate_reports()
+
+    def _collect_integral_metrics(self, tables, type_of_process):
+        """
+        Collect the integral metrics depending on the type of process
+        """
+        stages = self.train_stages if type_of_process == "train" else self.infer_stages
+        for table, stage in product(tables, stages):
+            MlflowTracker().collect_metrics(table, stage)
 
     def _generate_reports(self):
         """
@@ -376,17 +460,53 @@ class Worker:
         """
         Launch training process either for a single table or for several tables
         """
-        metadata_for_training = self._prepare_metadata_for_process()
+        metadata_for_training = self._prepare_metadata_for_process(type_of_process="train")
         metadata_for_inference = self._prepare_metadata_for_process(type_of_process="infer")
-        self.__train_tables(metadata_for_training, metadata_for_inference)
-        self._generate_reports()
+
+        (
+            tables_for_training,
+            metadata_for_training,
+        ) = metadata_for_training
+        (
+            tables_for_inference,
+            metadata_for_inference,
+        ) = metadata_for_inference
+
+        generation_of_reports = self._should_generate_report(metadata_for_training, "train")
+
+        self.__train_tables(
+            tables_for_training,
+            tables_for_inference,
+            metadata_for_training,
+            metadata_for_inference,
+            generation_of_reports
+        )
+
+        self._collect_metrics_in_train(
+            tables_for_training,
+            tables_for_inference,
+            generation_of_reports
+        )
+
+    def _collect_metrics_in_infer(self, tables):
+        """
+        Collect the integral metrics for the inference process
+        """
+        MlflowTracker().start_run(
+            run_name="integral_metrics",
+            tags={"process": "bottleneck"}
+        )
+        self._collect_integral_metrics(tables, type_of_process="infer")
+        MlflowTracker().end_run()
 
     def launch_infer(self):
         """
         Launch infer process either for a single table or for several tables
         """
-        chain_of_tables, config_of_tables = self._prepare_metadata_for_process(
-            type_of_process="infer"
-        )
-        self.__infer_tables(chain_of_tables, config_of_tables)
-        self._generate_reports()
+        tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
+
+        generation_of_reports = self._should_generate_report(config_of_tables, "infer")
+        delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
+
+        self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
+        self._collect_metrics_in_infer(tables)
