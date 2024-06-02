@@ -225,7 +225,7 @@ class VaeInferHandler(BaseHandler):
         data, schema = self._get_data()
 
         if self.has_vae:
-            self.vae = self.__get_wrapper(data, schema)
+            self.vae = self._get_wrapper(data, schema)
 
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
@@ -252,7 +252,7 @@ class VaeInferHandler(BaseHandler):
             schema = None
         return data, schema
 
-    def __get_wrapper(self, data: pd.DataFrame, schema: Dict):
+    def _get_wrapper(self, data: pd.DataFrame, schema: Dict):
         """
         Create and get the wrapper for the VAE model
         """
