@@ -1,0 +1,46 @@
+global:                                 # In this section you can specify training and inference settings which will be set for all tables
+  train_settings:
+    epochs: 20
+    drop_null: true
+
+  infer_settings:
+    run_parallel: false
+    random_seed: 10
+    print_report: true
+
+housing_properties:                       # Use table name here
+  train_settings:                         # Settings for training process
+    source: "/src/model_artifacts/housing_properties.csv" # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
+    epochs: 15                             # Number of epochs
+
+  infer_settings:                         # Settings for infer process
+    destination: "/src/model_artifacts/housing_properties_generated.csv" # The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
+    size: 800
+
+  keys:                                   # Keys of the table
+    households_pk:                        # Name of a key
+      type: "PK"                          # Type of key
+      columns:                            # Columns related to key
+        - households
+
+housing_conditions:
+  train_settings:
+    source: "/src/model_artifacts/housing_conditions.csv"
+    epochs: 20
+    column_types:
+      categorical:                        # Force listed columns to have categorical type (use dictionary of values)
+        - housing_median_age
+
+  infer_settings:
+    destination: "/src/model_artifacts/housing_conditions_generated.csv"
+    size: 1800
+
+  keys:
+    households_fk:
+      type: "FK"
+      columns:
+        - households
+      references:
+        table: housing_properties
+        columns:
+          - households

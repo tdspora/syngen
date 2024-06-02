@@ -1,10 +1,21 @@
 from typing import Optional, Dict, Any, Union
 import os
 import requests
+from statistics import mean, StatisticsError
 
 import mlflow
 from loguru import logger
 from syngen.ml.utils import fetch_unique_root
+
+
+HARDWARE_METRICS = [
+    "system/cpu_utilization_percentage",
+    "system/system_memory_usage_percentage",
+    "system/system_memory_usage_megabytes",
+    "system/gpu_utilization_percentage",
+    "system/gpu_memory_usage_percentage",
+    "system/gpu_memory_usage_megabytes"
+]
 
 
 class MlflowTrackerFactory:
@@ -92,16 +103,49 @@ class MlflowTracker:
             cls._instance.is_active = is_active
         return cls._instance
 
-    @classmethod
-    def reset_status(cls, active_status: bool = True):
-        if cls._instance.connect_to_server:
-            cls._instance.is_active = active_status
-
     def log_metric(self, key: str, value: float, step: Optional[int] = None):
+        """
+        Log a metric to the current run
+        """
         if self.is_active:
             mlflow.log_metric(key, value, step)
 
+    def log_duration(self, run_id, table, stage):
+        """
+        Log the duration of the run
+        """
+        try:
+            run_info = self.get_run(run_id).info
+            duration = (run_info.end_time - run_info.start_time) / 1000
+            self.log_metric(key=f'{table}-{stage}-duration', value=duration)
+        except AttributeError:
+            pass
+
+    def log_hardware_metrics(self, run_id, table, stage):
+        """
+        Log the hardware metrics of the run
+        """
+        for metric in HARDWARE_METRICS:
+            try:
+                mean_value = mean([m.value for m in self.get_metric_history(run_id, metric)])
+                self.log_metric(key=f'{table}-{stage}-{metric}', value=mean_value)
+            except (TypeError, StatisticsError):
+                pass
+
+    def collect_metrics(self, table, stage):
+        """
+        Collect the duration of the run
+        and hardware metrics related to the run
+        """
+        runs = self.search_runs(table_name=table, type_of_process=stage)
+        for run_id in runs:
+            self.log_duration(run_id, table, stage)
+            self.log_hardware_metrics(run_id, table, stage)
+
     def log_artifact(self, local_path: str, artifact_path: Optional[str] = None):
+        """
+        Log an artifact from the local path to the current run
+        """
         if self.is_active:
             mlflow.log_artifact(local_path, artifact_path)
 
@@ -119,13 +163,27 @@ class MlflowTracker:
         description: Optional[str] = None,
     ):
         if self.is_active:
-            mlflow.start_run(run_id, experiment_id, run_name, nested, tags, description)
+            mlflow.start_run(
+                run_id,
+                experiment_id,
+                run_name,
+                nested,
+                tags,
+                description
+            )
+
+    def get_last_run(self):
+        if self.is_active:
+            return mlflow.last_active_run()
 
     def end_run(self):
         if self.is_active:
             mlflow.end_run()
 
     def set_tracking_uri(self, uri: str):
+        """
+        Set the tracking URI
+        """
         if self.is_active:
             mlflow.set_tracking_uri(uri)
 
@@ -133,17 +191,24 @@ class MlflowTracker:
         if self.is_active:
             mlflow.create_experiment(name, artifact_location)
 
+    @staticmethod
+    def get_experiment(experiment_name: str):
+        """
+        Get the last matching of the experiment by name
+        """
+        experiments = mlflow.search_experiments(
+            filter_string=f"name LIKE '{experiment_name}'"
+        )
+        return experiments[0] if experiments else []
+
     def set_experiment(self, experiment_name: str = None, experiment_id: str = None):
         """
         Set the experiment for tracking.
         If the experiment name is not provided, the last experiment will be used.
         """
         if self.is_active:
-            experiments = mlflow.search_experiments(
-                filter_string=f"name LIKE '{experiment_name}'"
-            )
+            last_matching = self.get_experiment(experiment_name)
             env_value = os.getenv("MLFLOW_EXPERIMENT_NAME", "")
-            last_matching = experiments[0] if experiments else []
             if not last_matching:
                 MlflowTracker().create_experiment(
                     experiment_name,
@@ -185,9 +250,30 @@ class MlflowTracker:
         if self.is_active:
             mlflow.log_metrics(metrics, step)
 
-    def search_run(self, table_name: str, type_of_process: str):
+    def search_runs(self, table_name: str, type_of_process: str):
+        """
+        Get the list of runs related the certain experment
+        """
         if self.is_active:
             run = mlflow.search_runs(
-                filter_string=f"run_name = '{table_name}-{type_of_process}'"
+                experiment_names=[self.experiment_name],
+                filter_string=f"run_name like '{table_name}-{type_of_process}%'"
             )
-            return run["run_id"][0] if run.shape[0] > 0 else None
+            try:
+                count_runs = 2 if run.at[0, "tags.mlflow.runName"].endswith("-2") else 1
+                return run["run_id"][:count_runs].to_list()
+            except KeyError:
+                return []
+        else:
+            return []
+
+    def get_run(self, run_id):
+        """
+        Get the run by the run_id
+        """
+        if self.is_active:
+            return mlflow.get_run(run_id)
+
+    def get_metric_history(self, run_id, metric_key):
+        if self.is_active:
+            return mlflow.tracking.MlflowClient().get_metric_history(run_id, metric_key)

@@ -191,7 +191,7 @@ class TrainConfig:
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
             "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/",
             "source_path": self.source,
-            "draws_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/draws",
+            "reports_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/reports",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}.pkl",
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
@@ -287,7 +287,7 @@ class InferConfig:
         return {
             "original_data_path":
                 f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
-            "draws_path": f"model_artifacts/tmp_store/{dynamic_name}/draws",
+            "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
             "input_data_path":
                 f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
             "path_to_merged_infer": self.destination

@@ -57,7 +57,7 @@ from syngen.ml.utils import (
 @click.option(
     "--log_level",
     default="INFO",
-    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    type=click.Choice(["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     help="Set the logging level which will be used in the process. "
          "If absent, it's defaulted to 'INFO'",
 )

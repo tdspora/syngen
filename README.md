@@ -157,7 +157,7 @@ infer --size INT --table_name STR --log_level STR
 infer --metadata_path STR --log_level STR
 ```
 
-where <i>log_level</i> might be one of the following values: <i>DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
+where <i>log_level</i> might be one of the following values: <i>TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
 
 
 ### Linked tables generation
@@ -332,12 +332,14 @@ To run dockerized code (see parameters description in *Training* and *Inference*
 ```bash
 docker pull tdspora/syngen
 docker run --rm \
+  --user $(id -u):$(id -g) \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=train \
   --table_name=TABLE_NAME \
   --source=./model_artifacts/YOUR_CSV_FILE.csv
 
 docker run --rm \
+  --user $(id -u):$(id -g) \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=infer \
   --table_name=TABLE_NAME
@@ -352,11 +354,13 @@ To run dockerized code by providing the metadata file simply call:
 ```bash
 docker pull tdspora/syngen
 docker run --rm \
+  --user $(id -u):$(id -g) \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
 docker run --rm \
+  --user $(id -u):$(id -g) \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
@@ -401,6 +405,10 @@ Set the `MLFLOW_TRACKING_URI` environment variable to the desired MLflow trackin
 http://localhost:5000/. You can also set the `MLFLOW_ARTIFACTS_DESTINATION` environment variable to your preferred path 
 (including the cloud path), where the artifacts should be stored. Additionally, set the `MLFLOW_EXPERIMENT_NAME` 
 environment variable to the name you prefer for the experiment. 
+To get the system metrics, please set the `MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING` environment variable to `true`.
+By default, the metrics are logged every 10 seconds, but the interval may be changed by setting the environment variable 
+`MLFLOW_SYSTEM_METRICS_SAMPLING_INTERVAL` (for more detailed description look [here](https://mlflow.org/docs/latest/system-metrics/index.html))
+
 When using Docker, ensure the environmental variables are set before running the container.
 
 The provided environmental variables allow to track the training process, and the inference process, and store 
@@ -410,16 +418,110 @@ ensure that all necessary credentials are provided before using Mlflow.
 
 ```bash
 docker pull tdspora/syngen:latest
-docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
-  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  -e MLFLOW_EXPERIMENT_NAME=test_name \
+  -e MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING=true \
+  -e MLFLOW_SYSTEM_METRICS_SAMPLING_INTERVAL 10 \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
-docker run --rm -it -e MLFLOW_TRACKING_URI='http://localhost:5000' \
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -e MLFLOW_TRACKING_URI='http://localhost:5000' \
   -e MLFLOW_ARTIFACTS_DESTINATION=MLFLOW_ARTIFACTS_DESTINATION \
-  -e MLFLOW_EXPERIMENT_NAME=test_name -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  -e MLFLOW_EXPERIMENT_NAME=test_name \
+  -e MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING=true \
+  -e MLFLOW_SYSTEM_METRICS_SAMPLING_INTERVAL 10 \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
+
+## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10
+
+### Prerequisites
+
+Before you begin, make sure you have the following installed:
+
+- Python 3.10
+- Homebrew (optional but recommended for managing dependencies)
+
+### Installation Steps
+
+1. **Upgrade pip**: Ensure you have the latest version of `pip`.
+
+    ```sh
+    pip install --upgrade pip
+    ```
+
+2. **Install Setuptools, Wheel, and Cython**: These packages are necessary for building and installing other dependencies.
+
+    ```sh
+    pip install setuptools wheel 'Cython<3'
+    ```
+
+3. **Install Fastavro**: Install a specific version of `fastavro` to avoid build issues.
+
+    ```sh
+    pip install --no-build-isolation fastavro==1.5.1
+    ```
+
+4. **Install Syngen**: Now, you can install the Syngen package.
+
+    ```sh
+    pip install syngen
+    ```
+
+5. **Install TensorFlow Metal**: This package leverages the GPU capabilities of M1/M2 chips for TensorFlow.
+
+    ```sh
+    pip install tensorflow-metal
+    ```
+
+#### From source (development)
+
+Download repository from GitHub by cloning or zip file.
+Then install it in editable mode.
+
+```sh
+    pip install -e .
+```
+
+### Additional Information
+
+- **Homebrew**: If you do not have Homebrew installed, you can install it by running:
+
+    ```sh
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ```
+
+- **Python 3.10**: Ensure you have Python 3.10 installed. You can use pyenv to manage different Python versions:
+
+    ```sh
+    brew install pyenv
+    pyenv install 3.10.0
+    pyenv global 3.10.0
+    ```
+
+### Verifying Installation
+
+To verify the installation, run the following command to check if Syngen is installed correctly:
+
+```sh
+python -c "import syngen; print(syngen.__version__)"
+```
+
+If the command prints the version of Syngen without errors, the installation was successful.
+
+### Troubleshooting
+
+If you encounter any issues during installation, consider the following steps:
+
+- Ensure all dependencies are up to date.
+- Check for any compatibility issues with other installed packages.
+- Consult the Syngen [documentation](https://github.com/tdspora/syngen) or raise an issue on GitHub.
 
 ## Contribution
 

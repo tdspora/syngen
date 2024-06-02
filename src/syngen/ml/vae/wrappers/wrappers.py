@@ -11,6 +11,7 @@ from tensorflow.python.data.experimental import AutoShardPolicy
 import matplotlib.pyplot as plt
 import time
 import tqdm
+import psutil
 import pandas as pd
 import numpy as np
 from loguru import logger
@@ -174,6 +175,12 @@ class VAEWrapper(BaseWrapper):
 
         self._train(train_dataset, epochs)
 
+        MlflowTracker().end_run()
+
+        MlflowTracker().start_run(
+            run_name=f"{self.table_name}-POSTPROCESS",
+            tags={"table_name": self.table_name, "process": "postprocess"},
+        )
         self.model.model = self.vae
         self.fit_sampler(df)
 

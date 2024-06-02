@@ -23,6 +23,7 @@ from syngen.ml.utils import (
     fetch_dataset,
     check_if_features_assigned,
     generate_uuid,
+    get_initial_table_name,
     ProgressBarHandler
 )
 from syngen.ml.context import get_context
@@ -393,10 +394,10 @@ class VaeInferHandler(BaseHandler):
                     f"model_artifacts/tmp_store/{slugify(pk_table)}/"
                     f"merged_infer_{slugify(pk_table)}.csv"
                 )
-
+        initial_table_name = get_initial_table_name(table_name)
         if self.type_of_process == "train":
             destination_to_pk_table = self.paths["path_to_merged_infer"].replace(
-                slugify(table_name), slugify(pk_table)
+                slugify(initial_table_name), slugify(pk_table)
             )
         if not os.path.exists(destination_to_pk_table):
             raise FileNotFoundError(

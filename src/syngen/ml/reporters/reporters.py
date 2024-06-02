@@ -184,12 +184,10 @@ class Report:
         grouped_reporters = cls._group_reporters()
 
         for table_name, reporters in grouped_reporters.items():
-            MlflowTracker.reset_status(active_status=True)
-            run_id = MlflowTracker().search_run(
-                table_name=table_name, type_of_process=type_of_process
+            MlflowTracker().start_run(
+                run_name=f"{table_name}-REPORT",
+                tags={"table_name": table_name, "process": "report"},
             )
-            if run_id is not None:
-                MlflowTracker().start_run(run_id=run_id)
             delta = 0.25 / len(reporters)
             for reporter in reporters:
                 message = (f"The calculation of {reporter.__class__.report_type} metrics "
@@ -247,7 +245,7 @@ class AccuracyReporter(Reporter):
         )
         logger.info(
             f"Corresponding plot pickle files regarding to accuracy test were saved "
-            f"to folder '{self.paths['draws_path']}'."
+            f"to folder '{self.paths['reports_path']}'."
         )
 
 
@@ -285,5 +283,5 @@ class SampleAccuracyReporter(Reporter):
         )
         logger.info(
             f"Corresponding plot pickle files regarding to sampled data accuracy test were saved "
-            f"to folder {self.paths['draws_path']}."
+            f"to folder {self.paths['reports_path']}."
         )

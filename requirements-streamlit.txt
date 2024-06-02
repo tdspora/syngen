@@ -1,0 +1,2 @@
+streamlit==1.31.*
+streamlit_option_menu
