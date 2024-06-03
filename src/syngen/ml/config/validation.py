@@ -308,5 +308,8 @@ class Validator:
         logger.info("The validation of the metadata has been passed successfully")
 
     def run(self):
+        """
+        Run the validation process
+        """
         self._run()
         self._collect_errors()
