@@ -42,7 +42,6 @@ class TrainConfig:
         data = self._remove_empty_columns(data)
         self._mark_removed_columns(data)
         self._prepare_data(data)
-        self._set_batch_size()
 
     def to_dict(self) -> Dict:
         """
@@ -168,6 +167,7 @@ class TrainConfig:
         logger.info(f"The subset of rows was set to {len(data)}")
 
         self.row_subset = len(data)
+        self._set_batch_size()
         return data
 
     def _save_input_data(self, data: pd.DataFrame):

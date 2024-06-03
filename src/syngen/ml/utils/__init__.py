@@ -17,7 +17,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     setup_logger,
     datetime_to_timestamp,
     timestamp_to_datetime,
-    define_existent_columns,
     set_log_path,
     clean_up_metadata,
     fetch_log_message,

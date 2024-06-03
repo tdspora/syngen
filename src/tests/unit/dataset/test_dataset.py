@@ -170,7 +170,6 @@ def test_save_dataset(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.skip("The method should be refactored")
 @patch("syngen.ml.vae.models.dataset.fetch_training_config", return_value=MagicMock())
 def test_check_non_existent_columns(rp_logger):
     rp_logger.info("Test the process of checking non-existent columns")
@@ -203,6 +202,7 @@ def test_check_non_existent_columns(rp_logger):
         },
         main_process="train"
     )
+    mock_dataset.dropped_columns = set()
     mock_dataset.set_metadata()
     assert mock_dataset.non_existent_columns == {
         "non_existent_pk_column",

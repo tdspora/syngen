@@ -23,7 +23,6 @@ from syngen.ml.utils import (
     fetch_dataset,
     fetch_training_config,
     check_if_features_assigned,
-    define_existent_columns,
     ProgressBarHandler
 )
 
@@ -37,9 +36,6 @@ class BaseWrapper(ABC):
     Abstract class for wrappers
     """
 
-    def __init__(self):
-        self.model = None
-
     @abstractmethod
     def fit_on_df(self, df: pd.DataFrame, epochs: int, columns_subset: List[str] = None):
         pass
@@ -52,55 +48,19 @@ class BaseWrapper(ABC):
     def save_state(self, path: str):
         pass
 
-    @abstractmethod
-    def load_state(self, path: str):
-        pass
-
 
 @dataclass
 class VAEWrapper(BaseWrapper):
-    """Base class that implements end to end train and generation of structured data.
-
-    Attributes
-    ----------
-    df
-    schema
-    metadata
-    table_name
-    paths
-    process
-    batch_size
-    latent_dim
-    latent_components
-
-    Methods
-    -------
-    _pipeline()
-        data preprocessing
-
-    _train(dataset, row_subset, epochs)
-        train the VAE and save result in model
-
-    display_losses()
-        show train losses curve by each feature
-
-    predict_sampled_df(df, n)
-        generate new data based on df that consist of n rows and return the result as pd.DataFrame
-
-    predict_less_likely_samples(df, n, temp=0.05, variety=3)
-        generate new data based on df that consist of n which has less probability
-        computed as log likelihood and return the result as pd.DataFrame
-    """
     df: pd.DataFrame
     schema: Optional[Dict]
-    metadata: dict
+    metadata: Dict
     table_name: str
-    paths: dict
+    paths: Dict
     process: str
     main_process: str
     batch_size: int
-    latent_dim: int = field(init=False, default=10)
-    latent_components: int = field(init=False, default=30)
+    dataset: Dataset = field(init=False)
+    model: CVAE = field(init=False, default=None)
 
     def __post_init__(self):
         if self.process == "train":
@@ -113,46 +73,19 @@ class VAEWrapper(BaseWrapper):
                 paths=self.paths,
             )
             self.dataset.set_metadata()
+            self.df = self.dataset.pipeline()
+            self._save_dataset()
         elif self.process == "infer":
             self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
             self._update_dataset()
             self._save_dataset()
 
     def _update_dataset(self):
-        # Check if the serialized class has associated dataframe and
-        # drop it as it might contain sensitive data.
-        # Save columns from the dataframe for later use.
+        """
+        Update dataset object related to the current process
+        """
         self.dataset.paths = self.paths
         self.dataset.main_process = self.main_process
-        self.dataset.metadata = self.metadata
-        existed_columns = fetch_training_config(self.paths["train_config_pickle_path"]).columns
-
-        if hasattr(self.dataset, "df"):
-            self.dataset.order_of_columns = existed_columns
-            delattr(self, "df")
-
-            self.__update_attributes(existed_columns)
-
-    def __update_attributes(self, existed_columns: List[str]):
-        """
-        Update attributes of the dataset object
-        """
-        for attr in vars(self.dataset):
-            if attr in [
-                "primary_keys_mapping",
-                "unique_keys_mapping",
-                "foreign_keys_mapping",
-            ]:
-                attr_value = getattr(self.dataset, attr)
-                updated_attr_value = attr_value.copy()
-                for key, config in attr_value.items():
-                    updated_columns = define_existent_columns(
-                        config.get("columns", []), existed_columns
-                    )
-                    config["columns"] = updated_columns
-                    updated_attr_value[key] = config
-
-                setattr(self.dataset, attr, updated_attr_value)
 
     def _save_dataset(self):
         """
@@ -160,13 +93,6 @@ class VAEWrapper(BaseWrapper):
         """
         with open(self.paths["dataset_pickle_path"], "wb") as f:
             f.write(pickle.dumps(self.dataset))
-
-    def _pipeline(self):
-        """
-        Launch the pipeline in the dataset
-        """
-        self.df = self.dataset.pipeline()
-        self._save_dataset()
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
@@ -213,20 +139,13 @@ class VAEWrapper(BaseWrapper):
             df[column_name] = df[column_name].fillna(nan_label)
         return df
 
-    @abstractmethod
-    def _init_model(self):
-        pass
-
     def fit_on_df(
         self,
-        df: pd.DataFrame,
         epochs: int,
         columns_subset: List[str] = None,  # TODO columns_subset does not work
     ):
-        self._pipeline()
         if not check_if_features_assigned(self.paths["dataset_pickle_path"]):
             return
-        self._init_model()
 
         if columns_subset is None:
             columns_subset = self.df.columns
@@ -385,18 +304,12 @@ class VAEWrapper(BaseWrapper):
 
     def load_state(self, path: str):
         try:
-            with open(path + "/model_dataset.pkl", "rb") as f:
-                self.dataset = pickle.loads(f.read())
+            self.model.load_state(path)
 
-            self._init_model()
-
-            state = self.model.load_state(path)
-
-        except (FileNotFoundError, ValueError):
+        except FileNotFoundError:
             raise FileNotFoundError("Missing file with VAE state")
 
         logger.info(f"Loaded VAE state from {path}")
-        return state
 
 
 class VanillaVAEWrapper(VAEWrapper):
@@ -408,16 +321,37 @@ class VanillaVAEWrapper(VAEWrapper):
     model : CVAE
         final model that we will use to generate new data
     """
-
-    def _init_model(self):
-        latent_dim = min(self.latent_dim, int(len(self.dataset.columns) / 2))
+    def __init__(
+            self,
+            df: pd.DataFrame,
+            schema: Optional[Dict],
+            metadata: Dict,
+            table_name: str,
+            paths: Dict,
+            process: str,
+            main_process: str,
+            batch_size: int,
+            latent_dim: int = 10,
+            latent_components: int = 30):
+        super().__init__(
+            df,
+            schema,
+            metadata,
+            table_name,
+            paths,
+            process,
+            main_process,
+            batch_size
+        )
+        self.latent_dim = min(latent_dim, int(len(self.dataset.columns) / 2))
 
         self.model = CVAE(
             self.dataset,
             batch_size=self.batch_size,
             latent_dim=latent_dim,
-            latent_components=min(self.latent_components, latent_dim * 2),
+            latent_components=min(latent_components, latent_dim * 2),
             intermediate_dim=128,
         )
-
         self.model.build_model()
+        if self.process == "infer":
+            self.load_state(self.paths["state_path"])

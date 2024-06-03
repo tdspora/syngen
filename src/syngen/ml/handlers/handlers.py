@@ -178,10 +178,7 @@ class VaeTrainHandler(BaseHandler):
             f"drop_null={self.drop_null}, batch_size={self.batch_size}"
         )
 
-        self.model.fit_on_df(
-            data,
-            epochs=self.epochs,
-        )
+        self.model.fit_on_df(epochs=self.epochs)
 
         if not check_if_features_assigned(self.paths["dataset_pickle_path"]):
             return
@@ -224,6 +221,12 @@ class VaeInferHandler(BaseHandler):
         self.vae = None
         self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
         self.has_vae = len(self.dataset.features) > 0
+
+        data, schema = self._get_data()
+
+        if self.has_vae:
+            self.vae = self._get_wrapper(data, schema)
+
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
     @staticmethod
@@ -234,6 +237,35 @@ class VaeInferHandler(BaseHandler):
                 size=size,
                 p=np.array(list(counts.values())) / sum(np.array(list(counts.values()))),
             )
+        )
+
+    def _get_data(self) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Load the data from the input data path
+        """
+        input_data_existed = DataLoader(self.paths["input_data_path"]).has_existed_path
+
+        if input_data_existed:
+            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        else:
+            data = pd.DataFrame()
+            schema = None
+        return data, schema
+
+    def _get_wrapper(self, data: pd.DataFrame, schema: Dict):
+        """
+        Create and get the wrapper for the VAE model
+        """
+        return self.create_wrapper(
+            self.wrapper_name,
+            data,
+            schema,
+            metadata=self.metadata,
+            table_name=self.table_name,
+            paths=self.paths,
+            batch_size=self.batch_size,
+            main_process=self.type_of_process,
+            process="infer",
         )
 
     def _prepare_dir(self):
@@ -258,19 +290,7 @@ class VaeInferHandler(BaseHandler):
                         cumm_len += len(frame)
         return pd.concat(df_slices, ignore_index=True)
 
-    def generate_vae(self, size, data, schema):
-        self.vae = self.create_wrapper(
-            self.wrapper_name,
-            data,
-            schema,
-            metadata=self.metadata,
-            table_name=self.table_name,
-            paths=self.paths,
-            batch_size=self.batch_size,
-            main_process=self.type_of_process,
-            process="infer",
-        )
-        self.vae.load_state(self.paths["state_path"])
+    def generate_vae(self, size):
         synthetic_infer = self.vae.predict_sampled_df(size)
         return synthetic_infer
 
@@ -300,17 +320,10 @@ class VaeInferHandler(BaseHandler):
         if self.random_seed:
             seed(self.random_seeds_list[i])
 
-        input_data_existed = DataLoader(self.paths["input_data_path"]).has_existed_path
-
-        if input_data_existed:
-            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
-        else:
-            data = pd.DataFrame()
-            schema = None
-
         synthetic_infer = pd.DataFrame()
+
         if self.has_vae:
-            synthetic_infer = self.generate_vae(size, data, schema)
+            synthetic_infer = self.generate_vae(size)
         if self.has_no_ml:
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
 

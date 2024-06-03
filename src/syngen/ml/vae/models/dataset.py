@@ -812,9 +812,9 @@ class Dataset(BaseDataset):
         """
         self.nan_labels_dict = nan_labels
 
-    def fit(self, data):
+    def fit(self):
         for name, feature in self.features.items():
-            feature.fit(data[self.columns[name]], date_mapping=self.date_mapping)
+            feature.fit(self.df[self.columns[name]], date_mapping=self.date_mapping)
 
         self.all_columns = [col for col in self.columns]
         self.is_fitted = True
@@ -1167,7 +1167,7 @@ class Dataset(BaseDataset):
 
         self.set_nan_params(columns_nan_labels)
 
-        self.fit(self.df)
+        self.fit()
 
         # The end of the run related to the preprocessing stage
         MlflowTracker().end_run()
