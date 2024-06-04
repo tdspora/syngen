@@ -35,7 +35,7 @@ class BaseTest(ABC):
         self.paths = paths
         self.table_name = table_name
         self.config = config
-        self.plot_exists = self.config["print_report"]
+        self.plot_exists = self.config["print_report"] or self.config.get("privacy_report")
         self.reports_path = str()
 
     @abstractmethod
