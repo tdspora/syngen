@@ -254,7 +254,6 @@ class AccuracyTest(BaseTest):
         ) as f:
             f.write(html)
         self._log_report_to_mlflow(path_to_accuracy_report)
-        self._remove_artifacts()
 
     def report(self, *args, **kwargs):
         metrics = self._fetch_metrics(**kwargs)
@@ -284,3 +283,4 @@ class AccuracyTest(BaseTest):
                 uni_images,
                 bi_images,
             )
+        self._remove_artifacts()
