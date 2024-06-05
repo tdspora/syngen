@@ -57,9 +57,11 @@ class BaseTest(ABC):
 
     def _remove_artifacts(self):
         """
-        Remove artifacts after creating Accuracy report
+        Remove artifacts after creating the reports or fetching the metrics
         """
         shutil.rmtree(self.reports_path)
+        if os.basedir(self.reports_path):
+            os.rmdir(os.basedir(self.reports_path))
 
     def _log_report_to_mlflow(self, path):
         """
