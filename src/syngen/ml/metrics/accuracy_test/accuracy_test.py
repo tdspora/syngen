@@ -35,7 +35,8 @@ class BaseTest(ABC):
         self.paths = paths
         self.table_name = table_name
         self.config = config
-        self.plot_exists = self.config["print_report"]
+        self.plot_exists = (self.config.get("print_report", False)
+                            or self.config.get("privacy_report", False))
         self.reports_path = str()
 
     @abstractmethod
@@ -84,17 +85,18 @@ class BaseTest(ABC):
         """
         Get cleaned configs for the report
         """
+        filtered_fields = ["print_report", "get_infer_metrics", "privacy_report"]
         train_config = {
             k: v
             for k, v in fetch_training_config(self.paths["train_config_pickle_path"])
             .to_dict()
             .items()
-            if k != "print_report"
+            if k not in filtered_fields
         }
         infer_config = {
             k: v
             for k, v in self.config.items()
-            if k not in ["print_report", "get_infer_metrics"]
+            if k not in filtered_fields
         }
         return train_config, infer_config
 

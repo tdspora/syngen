@@ -272,7 +272,7 @@ class Validator:
         self._check_existence_of_columns(metadata_of_table, table_name, existed_columns)
         self._check_references_columns(table_name, metadata_of_table)
 
-    def run(self):
+    def _run(self):
         """
         Run the validation process
         """
@@ -289,6 +289,11 @@ class Validator:
                 self._check_existence_of_destination(table_name)
         for table_name in self.metadata.keys():
             self._validate_metadata(table_name)
+
+    def _collect_errors(self):
+        """
+        Collect the errors found during the validation process
+        """
         error_logs = []
         for section, errors_details in self.errors.items():
             error_log = f'"{section}": {json.dumps(errors_details, indent=4)}'
@@ -301,3 +306,10 @@ class Validator:
             logger.error(message)
             raise ValidationError(message)
         logger.info("The validation of the metadata has been passed successfully")
+
+    def run(self):
+        """
+        Run the validation process
+        """
+        self._run()
+        self._collect_errors()
