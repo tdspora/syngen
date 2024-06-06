@@ -243,10 +243,6 @@ class AccuracyReporter(Reporter):
             categ_columns=list(categ_columns),
             date_columns=list(date_columns),
         )
-        logger.info(
-            f"Corresponding plot pickle files regarding to accuracy test were saved "
-            f"to folder '{self.paths['reports_path']}'."
-        )
 
 
 class SampleAccuracyReporter(Reporter):
@@ -280,8 +276,4 @@ class SampleAccuracyReporter(Reporter):
             cont_columns=list(float_columns | int_columns),
             categ_columns=list(categ_columns),
             date_columns=list(date_columns),
-        )
-        logger.info(
-            f"Corresponding plot pickle files regarding to sampled data accuracy test were saved "
-            f"to folder {self.paths['reports_path']}."
         )
