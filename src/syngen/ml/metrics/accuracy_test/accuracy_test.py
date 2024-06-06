@@ -60,8 +60,9 @@ class BaseTest(ABC):
         Remove artifacts after creating the reports or fetching the metrics
         """
         shutil.rmtree(self.reports_path)
-        if os.basedir(self.reports_path):
-            os.rmdir(os.basedir(self.reports_path))
+        base_dir = os.path.dirname(self.reports_path)
+        if os.path.exists(base_dir) and not os.listdir(base_dir):
+            os.rmdir(base_dir)
 
     def _log_report_to_mlflow(self, path):
         """
