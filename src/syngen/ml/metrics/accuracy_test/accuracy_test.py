@@ -57,9 +57,12 @@ class BaseTest(ABC):
 
     def _remove_artifacts(self):
         """
-        Remove artifacts after creating Accuracy report
+        Remove artifacts after creating the reports or fetching the metrics
         """
         shutil.rmtree(self.reports_path)
+        base_dir = os.path.dirname(self.reports_path)
+        if os.path.exists(base_dir) and not os.listdir(base_dir):
+            os.rmdir(base_dir)
 
     def _log_report_to_mlflow(self, path):
         """
@@ -254,7 +257,6 @@ class AccuracyTest(BaseTest):
         ) as f:
             f.write(html)
         self._log_report_to_mlflow(path_to_accuracy_report)
-        self._remove_artifacts()
 
     def report(self, *args, **kwargs):
         metrics = self._fetch_metrics(**kwargs)
@@ -284,3 +286,4 @@ class AccuracyTest(BaseTest):
                 uni_images,
                 bi_images,
             )
+        self._remove_artifacts()
