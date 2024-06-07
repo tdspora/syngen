@@ -380,7 +380,8 @@ class Worker:
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
             random_seed=settings.get("random_seed") if type_of_process == "infer" else 1,
             print_report=settings["print_report"],
-            get_infer_metrics=settings.get("get_infer_metrics") if type_of_process == "infer" else False,
+            get_infer_metrics=settings.get("get_infer_metrics")
+            if type_of_process == "infer" else False,
             log_level=self.log_level,
             both_keys=both_keys,
             type_of_process=self.type_of_process,
@@ -391,7 +392,13 @@ class Worker:
         )
         MlflowTracker().end_run()
 
-    def __infer_tables(self, tables: List, config_of_tables: Dict, delta: float, type_of_process: str):
+    def __infer_tables(
+            self,
+            tables: List,
+            config_of_tables: Dict,
+            delta: float,
+            type_of_process: str
+    ):
         """
         Run infer process for the list of tables
         :param tables: the list of tables for infer process

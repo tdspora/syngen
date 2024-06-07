@@ -207,7 +207,10 @@ class Report:
                         message=message
                     )
 
-                if not reporter.config["print_report"] and reporter.config.get("get_infer_metrics") is not None:
+                if (
+                        not reporter.config["print_report"]
+                        and reporter.config.get("get_infer_metrics") is not None
+                ):
                     logger.info(
                         f"The metrics for the table - '{reporter.table_name}' have been evaluated"
                     )
