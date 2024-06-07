@@ -129,7 +129,7 @@ def generate_uuids(version: Union[int, str], size: int):
     for i in range(size):
         if version != "ulid":
             generated_uuid_column.append(
-                uuid.UUID(int=random.getrandbits(128), version=int(version))
+                str(uuid.UUID(int=random.getrandbits(128), version=int(version)))
             )
         else:
             generated_uuid_column.append(ulid.generate())
