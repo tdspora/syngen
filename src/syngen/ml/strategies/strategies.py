@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import os
-import re
 import traceback
 from loguru import logger
 
@@ -201,14 +200,16 @@ class InferStrategy(Strategy):
 
     def add_reporters(self):
         table_name = self.config.table_name
-        if not table_name.endswith("_fk") and \
-                (self.config.print_report or self.config.get_infer_metrics):
-                accuracy_reporter = AccuracyReporter(
-                    table_name=get_initial_table_name(table_name),
-                    paths=self.config.paths,
-                    config=self.config.to_dict(),
-                )
-                Report().register_reporter(table=table_name, reporter=accuracy_reporter)
+        if (
+                not table_name.endswith("_fk") and
+                (self.config.print_report or self.config.get_infer_metrics)
+        ):
+            accuracy_reporter = AccuracyReporter(
+                table_name=get_initial_table_name(table_name),
+                paths=self.config.paths,
+                config=self.config.to_dict(),
+            )
+            Report().register_reporter(table=table_name, reporter=accuracy_reporter)
 
         return self
 
