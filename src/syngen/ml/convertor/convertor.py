@@ -8,7 +8,9 @@ from loguru import logger
 
 
 class Convertor(ABC):
-    """Abstract class for converting fetched schema in Avro, Parquet or Delta formats"""
+    """
+    Abstract class for converting fetched schema in Avro, Parquet or Delta formats
+    """
 
     def __init__(self, schema, df):
         self.converted_schema, self.preprocessed_df = self._convert_schema_and_df(schema, df)

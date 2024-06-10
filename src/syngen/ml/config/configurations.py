@@ -231,6 +231,12 @@ class InferConfig:
 
     def __post_init__(self):
         self.paths = self._get_paths()
+        if self.destination is None:
+            logger.warning(
+                f"As the destination path wasn't provided for the table - "
+                f"'{self.table_name}', the synthetic data will be saved "
+                f"in the path - '{self.paths['path_to_merged_infer']}'"
+            )
         self._set_up_reporting()
         self._set_up_size()
         self._set_up_batch_size()
