@@ -200,8 +200,10 @@ class InferStrategy(Strategy):
 
     def add_reporters(self):
         table_name = self.config.table_name
-        if (not table_name.endswith("_fk") and
-                (self.config.print_report or self.config.get_infer_metrics)):
+        if (
+                not table_name.endswith("_fk") and
+                (self.config.print_report or self.config.get_infer_metrics)
+        ):
             accuracy_reporter = AccuracyReporter(
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
