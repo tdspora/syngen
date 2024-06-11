@@ -268,7 +268,7 @@ ORDER:                                      # Table name. Required parameter
       - marital_status
 
   infer_settings:                           # Settings for infer process. Optional parameter
-    destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. Supported formats include local files in 'csv', '.avro' formats. Required parameter
+    destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. If the information about 'destination' isn't provided, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in 'csv', '.avro' formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
@@ -523,7 +523,7 @@ If the command prints the version of Syngen without errors, the installation was
 
 If you encounter any issues during installation, consider the following steps:
 
-- Ensure all dependencies are up to date.
+- Ensure all dependencies are up-to-date.
 - Check for any compatibility issues with other installed packages.
 - Consult the Syngen [documentation](https://github.com/tdspora/syngen) or raise an issue on GitHub.
 
