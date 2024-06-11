@@ -191,7 +191,7 @@ global:                                     # Global settings. Optional paramete
 
 CUSTOMER:                                   # Table name. Required parameter
   train_settings:                           # Settings for training process. Required parameter
-    source: "./files/customer.csv"          # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
+    source: "./files/customer.csv"          # The path to the original data. Supported formats include local files in '.csv', '.avro' formats. Required parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
@@ -202,20 +202,20 @@ CUSTOMER:                                   # Table name. Required parameter
         - gender
         - marital_status
 
-  format:                                   # Settings for reading and writing data in 'csv', 'psv', 'tsv', 'txt', 'xls', 'xlsx' format. Optional parameter
-    sep: ','                                # Delimiter to use. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    quoting: minimal                        # Control field quoting behavior per constants - ["all", "minimal", "non-numeric", "none"]. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    escapechar: '"'                         # One-character string used to escape other characters. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    encoding: null                          # A string representing the encoding to use in the output file. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    header: infer                           # Row number(s) to use as the column names, and the start of the data. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    skiprows: null                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    na_values: null                         # Additional strings to recognize as NA/NaN. The first value of the array will be used to replace NA/NaN values. Optional parameter. Applicable for 'csv', 'psv', 'tsv', 'txt' formats
-    sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter. Applicable for 'xls', 'xlsx' formats
+  format:                                   # Settings for reading and writing data in '.csv', '.psv', '.tsv', '.txt', '.xls', '.xlsx' format. Optional parameter
+    sep: ','                                # Delimiter to use. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    quoting: minimal                        # Control field quoting behavior per constants - ["all", "minimal", "non-numeric", "none"]. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    escapechar: '"'                         # One-character string used to escape other characters. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    encoding: null                          # A string representing the encoding to use in the output file. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    header: infer                           # Row number(s) to use as the column names, and the start of the data. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    skiprows: null                          # Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    na_values: null                         # Additional strings to recognize as NA/NaN. The first value of the array will be used to replace NA/NaN values. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
+    sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter. Applicable for '.xls', '.xlsx' formats
   infer_settings:                           # Settings for infer process. Optional parameter
-    destination: "./files/generated_data_customer.csv" # The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
+    destination: "./files/generated_data_customer.csv" # The path where the generated data will be stored. If the information about 'destination' isn't provided, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in '.csv', '.avro' formats. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
@@ -256,7 +256,7 @@ CUSTOMER:                                   # Table name. Required parameter
 
 ORDER:                                      # Table name. Required parameter
   train_settings:                           # Settings for training process. Required parameter
-    source: "./files/order.csv"             # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
+    source: "./files/order.csv"             # The path to the original data. Supported formats include local files in 'csv', '.avro' formats. Required parameter
     epochs: 10                              # Number of epochs if different from the default in the command line options. Optional parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
@@ -268,7 +268,7 @@ ORDER:                                      # Table name. Required parameter
       - marital_status
 
   infer_settings:                           # Settings for infer process. Optional parameter
-    destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
+    destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. Supported formats include local files in 'csv', '.avro' formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
@@ -302,7 +302,11 @@ ORDER:                                      # Table name. Required parameter
           - customer_id
 ```
 
-<i>Note:</i>In the section <i>"global"</i> you can specify training and inference settings for all tables. If the same settings are specified for a specific table, they will override the global settings.<br>
+<i>Note</i>:
+<ul>
+<li>In the section <i>"global"</i> you can specify training and inference settings for all tables. If the same settings are specified for a specific table, they will override the global settings</li>
+<li>If the information about <i>"destination"</i> isn't provided in <i>"infer_settings"</i>, by default the synthetic data will be stored locally in <i>".csv"</i> format</li>
+</ul>
 
 <i>You can find the example of metadata file in [examples/example-metadata/housing_metadata.yaml](examples/example-metadata/housing_metadata.yaml)</i><br>
 
