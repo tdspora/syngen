@@ -444,7 +444,7 @@ class Dataset(BaseDataset):
             [
                 col
                 for col in df.columns
-                if df[col].dropna().nunique() <= 50 and col not in self.binary_columns
+                if 2 < df[col].dropna().nunique() <= 50
             ]
         )
         self.categ_columns.update(defined_columns)
