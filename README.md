@@ -215,7 +215,7 @@ CUSTOMER:                                   # Table name. Required parameter
     na_values: null                         # Additional strings to recognize as NA/NaN. The first value of the array will be used to replace NA/NaN values. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
     sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter. Applicable for '.xls', '.xlsx' formats
   infer_settings:                           # Settings for infer process. Optional parameter
-    destination: "./files/generated_data_customer.csv" # The path where the generated data will be stored. If the information about 'destination' isn't provided, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in '.csv', '.avro' formats. Optional parameter
+    destination: "./files/generated_data_customer.csv" # The path where the generated data will be stored. If the information about 'destination' isn't specified, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in '.csv', '.avro' formats. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
@@ -268,7 +268,7 @@ ORDER:                                      # Table name. Required parameter
       - marital_status
 
   infer_settings:                           # Settings for infer process. Optional parameter
-    destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. If the information about 'destination' isn't provided, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in 'csv', '.avro' formats. Required parameter
+    destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. If the information about 'destination' isn't specified, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in 'csv', '.avro' formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
     print_report: False                     # Turn on or turn off generation of the report. Optional parameter
@@ -305,7 +305,7 @@ ORDER:                                      # Table name. Required parameter
 <i>Note</i>:
 <ul>
 <li>In the section <i>"global"</i> you can specify training and inference settings for all tables. If the same settings are specified for a specific table, they will override the global settings</li>
-<li>If the information about <i>"destination"</i> isn't provided in <i>"infer_settings"</i>, by default the synthetic data will be stored locally in <i>".csv"</i> format</li>
+<li>If the information about <i>"destination"</i> isn't specified in <i>"infer_settings"</i>, by default the synthetic data will be stored locally in <i>".csv"</i> format</li>
 </ul>
 
 <i>You can find the example of metadata file in [examples/example-metadata/housing_metadata.yaml](examples/example-metadata/housing_metadata.yaml)</i><br>
