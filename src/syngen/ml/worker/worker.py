@@ -393,11 +393,11 @@ class Worker:
         MlflowTracker().end_run()
 
     def __infer_tables(
-            self,
-            tables: List,
-            config_of_tables: Dict,
-            delta: float,
-            type_of_process: str
+        self,
+        tables: List,
+        config_of_tables: Dict,
+        delta: float,
+        type_of_process: str
     ):
         """
         Run infer process for the list of tables
