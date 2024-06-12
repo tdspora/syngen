@@ -190,12 +190,8 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
             "ptd_dt",
             "email",
             "id",
-            "timestamp"
-        }
-        assert mock_dataset.int_columns == {
-            "ensure"
-        }
-        assert mock_dataset.date_columns == {
+            "timestamp",
+            "ensure",
             "upd_dt"
         }
 
@@ -227,7 +223,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
             "id",
             "timestamp"
         }
-        assert mock_dataset.int_columns == {
+        assert mock_dataset.categ_columns == {
             "ensure"
         }
 
