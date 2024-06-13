@@ -170,6 +170,66 @@ def test_save_dataset(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_is_valid_categ_defined_in_csv_table(rp_logger):
+    rp_logger.info("Test the process of the detection of the categorical columns in the table in '.csv' format")
+    df = pd.read_csv(f"./tests/unit/dataset/fixtures/table_with_categ_columns.csv")
+    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata={"mock_table": {}},
+            table_name="mock_table",
+            paths={
+                "train_config_pickle_path": "mock_path",
+            },
+            main_process="train"
+        )
+        mock_dataset._general_data_pipeline(df, CSV_SCHEMA)
+        assert mock_dataset.categ_columns == {
+            "time",
+            "ptd_dt",
+            "email",
+            "id",
+            "timestamp",
+            "ensure",
+            "upd_dt"
+        }
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_is_valid_binary_defined_in_csv_table(rp_logger):
+    rp_logger.info(
+        "Test the process of the detection of the binary columns in the table in '.csv' format"
+    )
+    df = pd.read_csv(f"./tests/unit/dataset/fixtures/table_with_binary_columns.csv")
+    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata={"mock_table": {}},
+            table_name="mock_table",
+            paths={
+                "train_config_pickle_path": "mock_path",
+            },
+            main_process="train"
+        )
+        mock_dataset._general_data_pipeline(df, CSV_SCHEMA)
+        assert mock_dataset.binary_columns == {
+            "time",
+            "upd_dt",
+            "ptd_dt",
+            "email",
+            "id",
+            "timestamp"
+        }
+        assert mock_dataset.categ_columns == {
+            "ensure"
+        }
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @patch("syngen.ml.vae.models.dataset.fetch_training_config", return_value=MagicMock())
 def test_check_non_existent_columns(rp_logger):
     rp_logger.info("Test the process of checking non-existent columns")
