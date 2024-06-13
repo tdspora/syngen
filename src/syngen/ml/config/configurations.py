@@ -139,13 +139,14 @@ class TrainConfig:
         """
         if self.drop_null:
             if not data.dropna().empty:
-                selected_data = data.dropna()
-                if count_of_dropped_rows := data.shape[0] - selected_data.shape[0]:
+                initial_data = data
+                data = data.dropna()
+                if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
                     logger.info(
                         f"As the parameter 'drop_null' set to 'True', "
                         f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
                         f"that have empty values have been dropped. "
-                        f"The count of remained rows is {selected_data.shape[0]}."
+                        f"The count of remained rows is {data.shape[0]}."
                     )
             else:
                 logger.warning(
