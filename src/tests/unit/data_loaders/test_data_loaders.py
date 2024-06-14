@@ -295,7 +295,7 @@ def test_get_columns_from_empty_table_in_avro_format(caplog, rp_logger):
 def test_save_data_in_avro_format(test_avro_path, test_df, rp_logger):
     rp_logger.info("Saving data in avro format locally")
     data_loader = DataLoader(test_avro_path)
-    data_loader.save_data(test_avro_path, test_df)
+    data_loader.save_data(test_avro_path, test_df, schema=None)
 
     assert isinstance(data_loader.file_loader, AvroLoader)
     assert os.path.exists(test_avro_path) is True
