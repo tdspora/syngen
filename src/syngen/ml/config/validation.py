@@ -158,6 +158,13 @@ class Validator:
         Check if the destination of the certain table exists
         """
         destination = self.merged_metadata[table_name].get("infer_settings", {}).get("destination")
+        if destination is None:
+            logger.warning(
+                f"As the destination path wasn't specified for the table - "
+                f"'{table_name}', the synthetic data will be stored "
+                f"at the default path - './model_artifacts/tmp_store/{slugify(table_name)}/"
+                f"merged_infer_{slugify(table_name)}.csv'"
+            )
         if destination is not None and not DataLoader(destination).has_existed_destination:
             message = (
                 f"It seems that the directory path for storing the generated data of table "
