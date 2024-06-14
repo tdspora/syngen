@@ -85,6 +85,7 @@ class Convertor(ABC):
                 self._update_data_types(schema, df)
             except Exception as e:
                 logger.error(e)
+                raise e
             else:
                 df = self._set_none_values_to_nan(df)
                 df = self._cast_values_to_string(df)
