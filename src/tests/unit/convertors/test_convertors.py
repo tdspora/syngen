@@ -182,7 +182,7 @@ def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog
                 "tests/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
             )
 
-            schema = {"Test": ["test", "null"]}
+            schema = {"Test": "test"}
 
             AvroConvertor(schema, df)
 

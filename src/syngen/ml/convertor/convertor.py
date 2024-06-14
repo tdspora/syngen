@@ -46,6 +46,21 @@ class Convertor(ABC):
                     )
 
     @staticmethod
+    def _set_none_values_to_nan(df: pd.DataFrame):
+        """
+        Set 'None' values contained in columns as 'np.NaN'
+        """
+        df_object_subset = df.select_dtypes(["object"])
+        for column in df_object_subset:
+            df[column] = [
+                np.NaN
+                if i is None
+                else i
+                for i in df[column]
+            ]
+        return df
+
+    @staticmethod
     def _cast_values_to_string(df: pd.DataFrame) -> pd.DataFrame:
         """
         Cast the values contained in columns with the data type 'object'
@@ -71,7 +86,8 @@ class Convertor(ABC):
             except Exception as e:
                 logger.error(e)
             else:
-                self._cast_values_to_string(df)
+                df = self._set_none_values_to_nan(df)
+                df = self._cast_values_to_string(df)
                 return df
         else:
             return df
@@ -117,6 +133,8 @@ class AvroConvertor(Convertor):
                 fields[column] = "string"
             elif "bytes" in data_type:
                 fields[column] = "string"
+            elif "null" in data_type:
+                fields[column] = "null"
             else:
                 message = (
                     f"It seems that the column - '{column}' has unsupported data type - "
