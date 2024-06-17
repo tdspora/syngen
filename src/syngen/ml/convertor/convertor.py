@@ -27,15 +27,13 @@ class Convertor(ABC):
         Update data types related to the fetched schema
         """
         for column, data_type in schema.get("fields", {}).items():
-            if data_type in ["binary", "date"]:
+            if data_type in ["binary", "date", "string"]:
                 df[column] = df[column].astype("string")
             elif data_type == "int":
                 if any(df[column].isnull()):
                     df[column] = df[column].astype("float64")
                 else:
                     df[column] = df[column].astype("int64")
-            elif data_type == "string":
-                df[column] = df[column].astype("string")
             elif data_type == "null":
                 if df[column].isnull().all():
                     continue
