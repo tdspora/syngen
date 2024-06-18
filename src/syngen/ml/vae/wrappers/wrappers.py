@@ -8,6 +8,7 @@ import warnings
 import pickle
 import tensorflow as tf
 from tensorflow.python.data.experimental import AutoShardPolicy
+from tensorflow.keras.models import Model
 import matplotlib.pyplot as plt
 import time
 import tqdm
@@ -59,7 +60,11 @@ class VAEWrapper(BaseWrapper):
     main_process: str
     batch_size: int
     dataset: Dataset = field(init=False)
-    model: CVAE = field(init=False, default=None)
+    vae: CVAE = field(init=False, default=None)
+    model: Model = field(init=False, default=None)
+    feature_order: List = field(init=False, default=list)
+    feature_losses: Dict = field(init=False, default=dict)
+    feature_types: Dict = field(init=False, default=dict)
 
     def __post_init__(self):
         if self.process == "train":
@@ -159,7 +164,10 @@ class VAEWrapper(BaseWrapper):
         df = self.df.loc[:, list(set(columns_subset))]
 
         train_dataset = self._create_batched_dataset(df)
-        self.vae = self.model.model
+        self.model = self.vae.model
+        self.feature_order = self.vae.feature_order
+        self.feature_losses = self.vae.feature_losses
+        self.feature_types = self.vae.feature_types
 
         self.optimizer = self._create_optimizer()
         self.loss_metric = self._create_loss()
@@ -180,7 +188,6 @@ class VAEWrapper(BaseWrapper):
             run_name=f"{self.table_name}-POSTPROCESS",
             tags={"table_name": self.table_name, "process": "postprocess"},
         )
-        self.model.model = self.vae
         self.fit_sampler(df)
 
     def _train(self, dataset, epochs: int):
@@ -217,7 +224,7 @@ class VAEWrapper(BaseWrapper):
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
             else:
-                self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                self.model.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 loss_grows_num_epochs = 0
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
@@ -234,7 +241,7 @@ class VAEWrapper(BaseWrapper):
             prev_total_loss = mean_loss
 
             if loss_grows_num_epochs == es_patience:
-                self.vae.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                self.model.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 logger.info(
                     f"The loss does not become lower for "
                     f"{loss_grows_num_epochs} epochs in a row. "
@@ -265,14 +272,62 @@ class VAEWrapper(BaseWrapper):
         dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
         return dataset.batch(self.batch_size, drop_remainder=True)
 
+    def _calculate_loss_by_type(self, feature_losses: Dict, feature_type: str) -> float:
+        """
+        Group features and calculate the loss by the type
+        """
+        return sum(
+            loss for name, loss in feature_losses.items()
+            if self.vae.feature_types[name] == feature_type
+        )
+
     def _train_step(self, batch: Tuple[tf.Tensor]) -> tf.Tensor:
         with tf.GradientTape() as tape:
-            self.vae(batch)
+            self.model(batch)
 
             # Compute reconstruction loss
-            loss = sum(self.vae.losses)
+            loss = sum(self.model.losses)
 
-        self.optimizer.minimize(loss=loss, var_list=self.vae.trainable_weights, tape=tape)
+            feature_losses = {
+                name: loss.numpy().mean()
+                for name, loss in
+                zip(self.vae.feature_order, self.model.losses[:-1])
+            }
+
+            formatted_feature_losses = ", ".join(
+                f"'{name}': {loss:.4f}"
+                for name, loss
+                in feature_losses.items()
+            )
+
+            num_loss = self._calculate_loss_by_type(
+                feature_losses,
+                feature_type="numeric"
+            )
+
+            categorical_loss = self._calculate_loss_by_type(
+                feature_losses,
+                feature_type="categorical"
+            )
+
+            text_loss = self._calculate_loss_by_type(
+                feature_losses,
+                feature_type="text"
+            )
+
+            logger.trace(f"The loss of features - {formatted_feature_losses}")
+            logger.trace(
+                f"The numeric loss - {num_loss}, "
+                f"categorical loss - {categorical_loss}, "
+                f"text_loss - {text_loss}"
+            )
+
+
+        self.optimizer.minimize(
+            loss=loss,
+            var_list=self.model.trainable_weights,
+            tape=tape
+        )
         self.loss_metric(loss)
         return loss
 
@@ -285,25 +340,25 @@ class VAEWrapper(BaseWrapper):
         return plt.show()
 
     def fit_sampler(self, df: pd.DataFrame):
-        self.model.fit_sampler(df)
+        self.vae.fit_sampler(df)
 
     def predict_sampled_df(self, n: int) -> pd.DataFrame:
-        sampled_df = self.model.sample(n)
+        sampled_df = self.vae.sample(n)
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)
         return sampled_df
 
     def predict_less_likely_samples(self, df: pd.DataFrame, n: int, temp=0.05, variaty=3):
         self.fit_sampler(df)
-        return self.model.less_likely_sample(n, temp, variaty)
+        return self.vae.less_likely_sample(n, temp, variaty)
 
     def save_state(self, path: str):
-        self.model.save_state(path)
+        self.vae.save_state(path)
         logger.info(f"Saved VAE state in {path}")
 
     def load_state(self, path: str):
         try:
-            self.model.load_state(path)
+            self.vae.load_state(path)
 
         except FileNotFoundError:
             raise FileNotFoundError("Missing file with VAE state")
@@ -344,13 +399,13 @@ class VanillaVAEWrapper(VAEWrapper):
         )
         self.latent_dim = min(latent_dim, int(len(self.dataset.columns) / 2))
 
-        self.model = CVAE(
+        self.vae = CVAE(
             self.dataset,
             batch_size=self.batch_size,
             latent_dim=latent_dim,
             latent_components=min(latent_components, latent_dim * 2),
             intermediate_dim=128,
         )
-        self.model.build_model()
+        self.vae.build_model()
         if self.process == "infer":
             self.load_state(self.paths["state_path"])

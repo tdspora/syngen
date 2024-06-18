@@ -105,6 +105,7 @@ class BinaryFeature(BaseFeature):
 
     def __init__(self, name: str):
         super().__init__(name=name)
+        self.feature_type = "categorical"
 
     def fit(self, data: pd.DataFrame, **kwargs):
         self.mapping = {k: n for n, k in enumerate(np.unique(data))}
@@ -176,6 +177,7 @@ class ContinuousFeature(BaseFeature):
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
         self.column_type = column_type
+        self.feature_type = "numeric"
 
     def fit(self, data: pd.DataFrame, **kwargs):
         self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
@@ -279,6 +281,7 @@ class CategoricalFeature(BaseFeature):
         self.decoder = None
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
+        self.feature_type = "categorical"
 
     def fit(self, data: pd.DataFrame, **kwargs):
         data = data.astype(object)
@@ -380,6 +383,7 @@ class CharBasedTextFeature(BaseFeature):
         self.rnn_units = rnn_units
         self.rnn_unit = LSTM
         self.dropout = dropout
+        self.feature_type = "text"
 
     def fit(self, data: pd.DataFrame, **kwargs):
         from tensorflow.keras.preprocessing.text import Tokenizer
@@ -632,6 +636,7 @@ class DateFeature(BaseFeature):
         super().__init__(name=name)
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
+        self.feature_type = "numeric"
 
     def fit(self, data, **kwargs):
         self.date_format = kwargs["date_mapping"][self.original_name]
