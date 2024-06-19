@@ -43,7 +43,6 @@ class CVAE:
         self.feature_decoders = list()
         self.feature_losses = dict()
         self.feature_types = dict()
-        self.feature_order = list()
         self.loss_models = dict()
         self.cond_inputs = list()
         self.global_decoder = None
@@ -114,7 +113,6 @@ class CVAE:
             feature_tensor = feature_decoder
             self.feature_losses[name] = feature.loss
             self.feature_types[name] = feature.feature_type
-            self.feature_order.append(name)
 
             self.feature_decoders.append(feature_tensor)
 

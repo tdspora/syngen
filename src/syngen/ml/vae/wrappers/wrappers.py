@@ -62,7 +62,6 @@ class VAEWrapper(BaseWrapper):
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
-    feature_order: List = field(init=False, default=list)
     feature_losses: Dict = field(init=False, default=dict)
     feature_types: Dict = field(init=False, default=dict)
 
@@ -165,7 +164,6 @@ class VAEWrapper(BaseWrapper):
 
         train_dataset = self._create_batched_dataset(df)
         self.model = self.vae.model
-        self.feature_order = self.vae.feature_order
         self.feature_losses = self.vae.feature_losses
         self.feature_types = self.vae.feature_types
 
@@ -287,11 +285,11 @@ class VAEWrapper(BaseWrapper):
 
             # Compute reconstruction loss
             loss = sum(self.model.losses)
-
+            order_of_features = list(self.vae.feature_losses.keys())
             feature_losses = {
                 name: loss.numpy().mean()
                 for name, loss in
-                zip(self.vae.feature_order, self.model.losses[:-1])
+                zip(order_of_features, self.model.losses[:-1])
             }
 
             formatted_feature_losses = ", ".join(
