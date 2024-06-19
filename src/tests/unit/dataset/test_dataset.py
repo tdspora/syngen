@@ -34,7 +34,9 @@ AVRO_SCHEMA = {
     ],
 )
 def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_table, rp_logger):
-    rp_logger.info("Test the process of the detection of UUID columns in the table in csv format")
+    rp_logger.info(
+        "Test the process of the detection of UUID columns in the table in csv format"
+    )
     df = pd.read_csv(path_to_test_table)
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
@@ -76,7 +78,9 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
     ],
 )
 def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test_table, rp_logger):
-    rp_logger.info("Test the process of the detection of UUID columns in the table in avro format")
+    rp_logger.info(
+        "Test the process of the detection of UUID columns in the table in avro format"
+    )
     df = pdx.from_avro(path_to_test_table)
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
@@ -171,8 +175,11 @@ def test_save_dataset(rp_logger):
 
 
 def test_is_valid_categ_defined_in_csv_table(rp_logger):
-    rp_logger.info("Test the process of the detection of the categorical columns in the table in '.csv' format")
-    df = pd.read_csv(f"./tests/unit/dataset/fixtures/table_with_categ_columns.csv")
+    rp_logger.info(
+        "Test the process of the detection of "
+        "the categorical columns in the table in '.csv' format"
+    )
+    df = pd.read_csv("./tests/unit/dataset/fixtures/table_with_categ_columns.csv")
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
@@ -202,7 +209,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
     rp_logger.info(
         "Test the process of the detection of the binary columns in the table in '.csv' format"
     )
-    df = pd.read_csv(f"./tests/unit/dataset/fixtures/table_with_binary_columns.csv")
+    df = pd.read_csv("./tests/unit/dataset/fixtures/table_with_binary_columns.csv")
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,

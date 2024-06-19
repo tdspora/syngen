@@ -139,7 +139,15 @@ class TrainConfig:
         """
         if self.drop_null:
             if not data.dropna().empty:
+                initial_data = data
                 data = data.dropna()
+                if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
+                    logger.info(
+                        f"As the parameter 'drop_null' set to 'True', "
+                        f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
+                        f"that have empty values have been dropped. "
+                        f"The count of remained rows is {data.shape[0]}."
+                    )
             else:
                 logger.warning(
                     "The specified 'drop_null' argument results in the empty dataframe, "
@@ -231,12 +239,6 @@ class InferConfig:
 
     def __post_init__(self):
         self.paths = self._get_paths()
-        if self.destination is None:
-            logger.warning(
-                f"As the destination path wasn't specified for the table - "
-                f"'{self.table_name}', the synthetic data will be stored "
-                f"at the default path - '{self.paths['path_to_merged_infer']}'"
-            )
         self._set_up_reporting()
         self._set_up_size()
         self._set_up_batch_size()
