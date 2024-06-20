@@ -484,7 +484,7 @@ class Dataset(BaseDataset):
 
         if not data_subset.empty:
             data_subset = data_subset.loc[
-                :, data_subset.apply(lambda x: (x.str.len() > 200).any())
+                :, data_subset.apply(lambda x: (x.dropna().str.len() > 200).any())
             ]
             self.long_text_columns = set(data_subset.columns)
             self.long_text_columns = (self.long_text_columns - self.categ_columns
