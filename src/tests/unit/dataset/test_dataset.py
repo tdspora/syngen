@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import datetime
 import random
+import string
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
@@ -454,4 +455,41 @@ def test_set_email_columns(rp_logger):
         )
         mock_dataset.set_metadata()
     assert mock_dataset.email_columns == {"ExtractedFrom"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_set_long_text_columns(rp_logger):
+    rp_logger.info(
+        "Test the method '_set_long_text_columns' of the class Dataset",
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    alphabet = string.ascii_letters + string.digits + string.punctuation + " "
+    df = pd.DataFrame({
+        "column1": range(1, 101),
+        "column2": range(101, 201),
+        "column3": range(201, 301),
+        "column4": range(301, 401),
+        "long_text_column":
+            ["".join(random.choice(alphabet)
+                     for _ in range(250))
+             for _ in range(1, 100)] + [np.NaN]
+    })
+    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={
+                "train_config_pickle_path": "mock_path"
+            },
+            main_process="train"
+        )
+        mock_dataset.set_metadata()
+    assert mock_dataset.long_text_columns == {"long_text_column"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
