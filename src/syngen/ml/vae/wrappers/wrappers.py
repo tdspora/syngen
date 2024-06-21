@@ -224,7 +224,7 @@ class VAEWrapper(BaseWrapper):
         logger.trace(
             f"The numeric loss - {num_loss}, "
             f"the categorical loss - {categorical_loss}, "
-            f"the text_loss - {text_loss}"
+            f"the text_loss - {text_loss} in the {epoch} epoch"
         )
         MlflowTracker().log_metric(
             "the numeric loss", num_loss, step=epoch
@@ -257,8 +257,13 @@ class VAEWrapper(BaseWrapper):
             in mean_feature_losses.items()
         )
 
-        logger.trace(f"The loss of features - {formatted_feature_losses}")
-        logger.trace(f"The mean of the 'kl_loss' is {mean_kl_loss}")
+        logger.trace(
+            f"The loss of features - {formatted_feature_losses} "
+            f"in the {epoch} epoch"
+        )
+        logger.trace(
+            f"The mean of the 'kl_loss' in the {epoch} epoch is {mean_kl_loss}"
+        )
         for name, loss in mean_feature_losses.items():
             MlflowTracker().log_metric(
                 f"loss of the feature - '{name}'", loss, step=epoch
