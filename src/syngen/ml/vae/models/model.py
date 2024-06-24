@@ -116,7 +116,6 @@ class CVAE:
             generator_outputs.append(feature.create_decoder(self.generator))
 
         self.model = Model(self.inputs, self.feature_decoders)
-
         self.model.add_loss(feature_losses)
         self.model.add_loss(kl_loss * 0)
 

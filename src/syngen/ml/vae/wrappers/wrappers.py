@@ -19,8 +19,7 @@ from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import (
-    fetch_dataset,
-    fetch_training_config,
+    fetch_config,
     check_if_features_assigned,
     ProgressBarHandler
 )
@@ -75,7 +74,7 @@ class VAEWrapper(BaseWrapper):
             self.df = self.dataset.pipeline()
             self._save_dataset()
         elif self.process == "infer":
-            self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+            self.dataset = fetch_config(self.paths["dataset_pickle_path"])
             self._update_dataset()
             self._save_dataset()
 
@@ -169,7 +168,7 @@ class VAEWrapper(BaseWrapper):
             run_name=f"{self.table_name}-TRAIN",
             tags={"table_name": self.table_name, "process": "train"},
         )
-        config = fetch_training_config(self.paths["train_config_pickle_path"])
+        config = fetch_config(self.paths["train_config_pickle_path"])
         MlflowTracker().log_params(config.to_dict())
 
         self._train(train_dataset, epochs)
