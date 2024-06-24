@@ -9,7 +9,7 @@ from loguru import logger
 from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
-    fetch_dataset,
+    fetch_config,
     datetime_to_timestamp,
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
@@ -35,7 +35,7 @@ class Reporter:
         return original, synthetic
 
     def fetch_data_types(self):
-        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        dataset = fetch_config(self.paths["dataset_pickle_path"])
         types = (
             dataset.str_columns,
             dataset.date_columns,
@@ -76,7 +76,7 @@ class Reporter:
         columns_nan_labels = get_nan_labels(original)
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
-        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        dataset = fetch_config(self.paths["dataset_pickle_path"])
         types = self.fetch_data_types()
         (
             str_columns,
