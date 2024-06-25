@@ -45,7 +45,8 @@ class BaseDataset:
         paths: Dict
     ):
         self.df = df
-        self.schema = schema
+        self.schema = schema.get("fields", {})
+        self.file_format = schema.get("format")
         self.metadata = metadata
         self.table_name = table_name
         self.paths = paths
@@ -325,9 +326,9 @@ class Dataset(BaseDataset):
         """
         Synchronize the schema of the table with dataframe
         """
-        self.schema["fields"] = {
+        self.schema = {
             column: data_type
-            for column, data_type in self.schema.get("fields").items()
+            for column, data_type in self.schema.items()
             if column in self.df.columns
         }
 
@@ -456,7 +457,7 @@ class Dataset(BaseDataset):
         """
         Select the text columns
         """
-        if self.schema.get("format", "") == "CSV":
+        if self.file_format == "CSV":
             text_columns = [
                 col for col, dtype in dict(self.df.dtypes).items()
                 if dtype in ["object", "string"]
@@ -722,7 +723,6 @@ class Dataset(BaseDataset):
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
         in case metadata of the table in Avro format is present
         """
-        logger.info(f"The schema of table - {self.table_name} was received")
         self._set_uuid_columns()
         self._set_binary_columns()
         self._set_categorical_columns()
@@ -757,9 +757,9 @@ class Dataset(BaseDataset):
         self._set_date_format()
 
     def __data_pipeline(self):
-        if self.schema.get("format") == "CSV":
+        if self.file_format == "CSV":
             self._general_data_pipeline()
-        elif self.schema.get("format") == "Avro":
+        elif self.file_format == "Avro":
             self._update_schema()
             self._avro_data_pipeline()
 

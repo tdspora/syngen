@@ -134,6 +134,7 @@ def test_save_dataset(rp_logger):
     assert "df" not in fetched_dataset
     assert list(fetched_dataset.keys()) == [
         "schema",
+        "file_format",
         "metadata",
         "table_name",
         "paths",
