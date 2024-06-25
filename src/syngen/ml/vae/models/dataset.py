@@ -109,6 +109,8 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
+        self.nan_labels_dict = get_nan_labels(self.df)
+        self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
     def __getstate__(self) -> Dict:
         """
@@ -667,21 +669,12 @@ class Dataset(BaseDataset):
             column: self.__define_date_format(df[column]) for column in self.date_columns
         }
 
-    def _general_data_pipeline(
-        self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True
-    ):
+    def _general_data_pipeline(self, df: pd.DataFrame, schema: Dict):
         """
-        Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
+        Divide columns in dataframe into groups -
+        binary, categorical, integer, float, string, date
         in case metadata of the table is absent
-
-        :param df: dataframe
-        :param schema: metadata of the table
-        :param check_object_on_float: if True, check if object columns can be converted to float
         """
-        if check_object_on_float:
-            columns_nan_labels = get_nan_labels(df)
-            df = nan_labels_to_float(df, columns_nan_labels)
-
         self._set_uuid_columns(df)
         self._set_binary_columns(df)
         self._set_categorical_columns(df, schema)
@@ -803,15 +796,6 @@ class Dataset(BaseDataset):
 
         self.features[name] = feature
         self.columns[name] = columns
-
-    def set_nan_params(self, nan_labels: dict):
-        """Save params that are used to keep and replicate nan and empty values
-
-        Args:
-            nan_labels (dict): dictionary that matches column name to the label of missing value
-                               (e.g. {'Score': 'Not available'})
-        """
-        self.nan_labels_dict = nan_labels
 
     def fit(self):
         for name, feature in self.features.items():
@@ -1136,9 +1120,6 @@ class Dataset(BaseDataset):
                         )
 
     def pipeline(self) -> pd.DataFrame:
-        columns_nan_labels = get_nan_labels(self.df)
-        self.df = nan_labels_to_float(self.df, columns_nan_labels)
-
         if self.foreign_keys_list:
             self._assign_fk_feature()
             self._preprocess_fk_params()
@@ -1165,8 +1146,6 @@ class Dataset(BaseDataset):
                 self._assign_date_feature(column)
             elif column in self.binary_columns:
                 self._assign_binary_feature(column)
-
-        self.set_nan_params(columns_nan_labels)
 
         self.fit()
 

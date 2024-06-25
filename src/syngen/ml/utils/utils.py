@@ -199,18 +199,19 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
 
 def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFrame:
     """
-    Replace str nan labels in float/int columns with actual np.nan
+    Replace str nan labels in float/int columns with actual np.NaN
     and casting the column to float type.
 
     Args:
         df (pd.DataFrame): table data
 
     Returns:
-        pd.DataFrame: DataFrame with str NaN labels in float/int columns replaced with np.nan
+        pd.DataFrame: DataFrame with str NaN labels
+        in float/int columns replaced with np.NaN
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
-        df_with_nan[column].replace(label, np.NaN, inplace=True)
+        df_with_nan = pd.to_numeric(df_with_nan[column].replace(label, np.NaN))
     return df_with_nan
 
 
