@@ -51,7 +51,7 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
             main_process="train"
         )
         mock_dataset.set_metadata()
-        mock_dataset._set_uuid_columns(df)
+        mock_dataset._set_uuid_columns()
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
             "UUIDv2",
@@ -95,7 +95,7 @@ def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test
             main_process="train"
         )
         mock_dataset.set_metadata()
-        mock_dataset._set_uuid_columns(df)
+        mock_dataset._set_uuid_columns()
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
             "UUIDv2",
@@ -192,7 +192,7 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
             },
             main_process="train"
         )
-        mock_dataset._general_data_pipeline(df, CSV_SCHEMA)
+        mock_dataset._general_data_pipeline()
         assert mock_dataset.categ_columns == {
             "time",
             "ptd_dt",
@@ -222,7 +222,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
             },
             main_process="train"
         )
-        mock_dataset._general_data_pipeline(df, CSV_SCHEMA)
+        mock_dataset._general_data_pipeline()
         assert mock_dataset.binary_columns == {
             "time",
             "upd_dt",
@@ -514,7 +514,7 @@ def test_handle_missing_values_in_numeric_columns(rp_logger):
         "column2": range(101, 201),
         "column3": range(201, 301),
         "column4": range(301, 401),
-        "column5": [i for i in range(401, 491)] + ["Not available" for i in range(10)]
+        "column5": [str(i) for i in range(401, 491)] + ["Not available" for i in range(10)]
     }
     df = pd.DataFrame(data)
 
