@@ -500,9 +500,10 @@ def test_set_long_text_columns(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_handle_missing_values_in_numeric_columns(rp_logger):
+def test_handle_missing_values_in_numeric_columns_in_csv_file(rp_logger):
     rp_logger.info(
-        "Test the process of handling missing values in numeric columns",
+        "Test the process of handling missing values "
+        "in numeric columns in a '.csv' file",
     )
     metadata = {
         "mock_table": {
@@ -523,6 +524,52 @@ def test_handle_missing_values_in_numeric_columns(rp_logger):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={
+                "train_config_pickle_path": "mock_path"
+            },
+            main_process="train"
+        )
+        mock_dataset.set_metadata()
+    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
+    rp_logger.info(
+        "Test the process of handling missing values "
+        "in numeric columns in a '.avro' file",
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    data = {
+        "column1": range(1, 101),
+        "column2": range(101, 201),
+        "column3": range(201, 301),
+        "column4": range(301, 401),
+        "column5": [str(i) for i in range(401, 491)] + ["Not available" for i in range(10)]
+    }
+    df = pd.DataFrame(data)
+
+    schema = {
+        "format": "Avro",
+        "fields": {
+            "column1": "int",
+            "column2": "int",
+            "column3": "int",
+            "column4": "int",
+            "column5": "string"
+        }
+    }
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
+        mock_dataset = Dataset(
+            df=df,
+            schema=schema,
             metadata=metadata,
             table_name="mock_table",
             paths={

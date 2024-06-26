@@ -111,6 +111,8 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
+        self.nan_labels_dict = get_nan_labels(self.df)
+        self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
     def __getstate__(self) -> Dict:
         """
@@ -326,6 +328,14 @@ class Dataset(BaseDataset):
         """
         Synchronize the schema of the table with dataframe
         """
+        for column in list(self.df.columns):
+            if pd.api.types.is_integer_dtype(self.df[column]):
+                self.schema[column] = "int"
+            elif pd.api.types.is_float_dtype(self.df[column]):
+                if all(x.is_integer() for x in self.df[column].dropna()):
+                    self.schema[column] = "int"
+                else:
+                    self.schema[column] = "float"
         self.schema = {
             column: data_type
             for column, data_type in self.schema.items()
@@ -677,8 +687,6 @@ class Dataset(BaseDataset):
         binary, categorical, integer, float, string, date
         in case metadata of the table is absent
         """
-        self.nan_labels_dict = get_nan_labels(self.df)
-        self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
         self._set_uuid_columns()
         self._set_binary_columns()
         self._set_categorical_columns()
