@@ -7,12 +7,15 @@ import random
 
 import tqdm
 from sklearn.cluster import KMeans
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.metrics import r2_score, accuracy_score
 import matplotlib
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Patch
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -22,8 +25,7 @@ from slugify import slugify
 from loguru import logger
 
 from syngen.ml.utils import get_nan_labels, nan_labels_to_float, timestamp_to_datetime
-
-from datetime import datetime
+matplotlib.use("Agg")
 
 
 class BaseMetric(ABC):
@@ -1186,7 +1188,6 @@ class Utility(BaseMetric):
         return best_target, best_score, synthetic_score
 
     def __create_sample_for_utility_metric(self, data, model_y, sample_size):
-        from sklearn.model_selection import train_test_split
         #check if the target column has more than 1 class
         if np.min(np.bincount(model_y)) > 1:
             data, _, model_y, _ = train_test_split(
@@ -1210,8 +1211,6 @@ class Utility(BaseMetric):
         return data, model_y
 
     def __create_binary_class_models(self, binary_targets):
-        from sklearn.linear_model import LogisticRegression
-
         best_target, score, synthetic_score = self.__model_process(
             LogisticRegression(n_jobs=-1, random_state=10),
             binary_targets, "binary classification"
@@ -1219,8 +1218,6 @@ class Utility(BaseMetric):
         return best_target, score, synthetic_score
 
     def __create_multi_class_models(self, multiclass_targets):
-        from sklearn.ensemble import RandomForestClassifier
-
         best_target, score, synthetic_score = self.__model_process(
             RandomForestClassifier(n_jobs=-1, random_state=10),
             multiclass_targets,
@@ -1229,8 +1226,6 @@ class Utility(BaseMetric):
         return best_target, score, synthetic_score
 
     def __create_regression_models(self, cont_targets):
-        from sklearn.ensemble import RandomForestRegressor
-
         best_target, score, synthetic_score = self.__model_process(
             RandomForestRegressor(n_jobs=-1, random_state=10), cont_targets, "regression"
         )
