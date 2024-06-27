@@ -1159,6 +1159,7 @@ class Utility(BaseMetric):
     #             )
     #     return best_target, best_score, synthetic_score
 
+
     def __model_process(self, model_object, targets, task_type, sample_size=100000):
         best_score = -1
         best_target = None
