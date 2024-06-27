@@ -1159,8 +1159,6 @@ class Utility(BaseMetric):
     #             )
     #     return best_target, best_score, synthetic_score
 
-    from sklearn.model_selection import train_test_split
-
     def __model_process(self, model_object, targets, task_type, sample_size=100000):
         best_score = -1
         best_target = None
@@ -1208,24 +1206,9 @@ class Utility(BaseMetric):
             # Create a stratified sample if the original dataset is large
             if is_big_original_data:
                 # Check if each class has at least two instances
-                original, model_y = self.__create_sample_for_utility_metric(original, model_y, sample_size)
-                # if np.min(np.bincount(model_y)) > 1:
-                #     original, _, model_y, _ = train_test_split(
-                #         original,
-                #         model_y,
-                #         train_size=sample_size,
-                #         stratify=model_y,
-                #         random_state=10
-                #     )
-                #     logger.info(f"Created a stratified sample of the original data with size {sample_size}.")
-                # else:
-                #     original, _, model_y, _ = train_test_split(
-                #         original,
-                #         model_y,
-                #         train_size=sample_size,
-                #         random_state=10
-                #     )
-                #     logger.info(f"Created a random sample of the original data with size {sample_size}.")
+                original, model_y = self.__create_sample_for_utility_metric(
+                    original, model_y, sample_size
+                )
 
             model = model_object.fit(X=original[: int(original.shape[0] * 0.8), :], y=model_y)
             score = self.__get_accuracy_score(
@@ -1248,9 +1231,6 @@ class Utility(BaseMetric):
             synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
             synthetic = StandardScaler().fit_transform(synthetic)
             synthetic_y = self.synthetic[best_target].values
-
-            logger.debug(f"Before sampling synthetic data shape: {synthetic.shape}")
-            logger.debug(f"Before sampling synthetic target shape: {synthetic_y.shape}")
 
             # Create a stratified sample of the synthetic data if it's large
             if is_big_synthetic_data:
