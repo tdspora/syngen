@@ -23,6 +23,8 @@ from loguru import logger
 
 from syngen.ml.utils import get_nan_labels, nan_labels_to_float, timestamp_to_datetime
 
+from datetime import datetime
+
 
 class BaseMetric(ABC):
     def __init__(
@@ -1100,11 +1102,88 @@ class Utility(BaseMetric):
             score = r2_score(y_true=y_true, y_pred=y_pred)
         return score
 
-    def __model_process(self, model_object, targets, task_type):
+    # def __model_process(self, model_object, targets, task_type):
+    #     best_score = -1
+    #     best_target = None
+    #     best_model = None
+    #     synthetic_score = -1
+
+    #     starttime = datetime.now()
+    #     for i, col in tqdm.tqdm(
+    #         iterable=enumerate(targets),
+    #         desc="Calculating utility metric...",
+    #         total=len(targets),
+    #     ):
+    #         if self.original.shape[1] < 2:
+    #             logger.info(
+    #                 "There is only one column in the dataset. "
+    #                 "It will not be used in utility metric."
+    #             )
+    #             continue
+    #         original = pd.get_dummies(self.original.drop(col, axis=1))
+    #         original = StandardScaler().fit_transform(original)
+    #         model_y = self.original[col].values[: int(original.shape[0] * 0.8)]
+    #         if len(set(model_y)) < 2:
+    #             logger.info(
+    #                 f"Column {col} has less than 2 classes as target. "
+    #                 f"It will not be used in metric that measures regression results."
+    #             )
+    #             continue
+
+    #         model = model_object.fit(X=original[: int(original.shape[0] * 0.8), :], y=model_y)
+    #         score = self.__get_accuracy_score(
+    #             self.original[col].values[int(original.shape[0] * 0.8):],
+    #             model.predict(original[int(original.shape[0] * 0.8):, :]),
+    #             task_type,
+    #         )
+    #         if score > best_score:
+    #             best_score = score
+    #             best_target = col
+    #             best_model = model
+
+    #     if best_score > -1:
+    #         if best_score < 0.6:
+    #             logger.info(
+    #                 f"The best score for all possible {task_type} models for the original data is "
+    #                 f"{best_score}, which is below 0.6. The utility metric is unreliable"
+    #             )
+    #         synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
+    #         synthetic = StandardScaler().fit_transform(synthetic)
+    #         synthetic_score = self.__get_accuracy_score(
+    #             self.synthetic[best_target].values,
+    #             best_model.predict(synthetic),
+    #             task_type,
+    #         )
+    #     logger.debug(f"With infer size: {self.synthetic.shape[0]} "
+    #                  f"time taken to calculate utility metric: {datetime.now() - starttime}"
+    #             )
+    #     return best_target, best_score, synthetic_score
+
+    from sklearn.model_selection import train_test_split
+
+    def __model_process(self, model_object, targets, task_type, sample_size=100000):
         best_score = -1
         best_target = None
         best_model = None
         synthetic_score = -1
+
+        starttime = datetime.now()
+        #Check if the datasets have more than sample_size rows and stratify sampling is needed
+        is_big_original_data = len(self.original) > sample_size
+        is_big_synthetic_data = len(self.synthetic) > sample_size
+
+        # if is_big_original_data or is_big_synthetic_data:
+        #     from sklearn.model_selection import train_test_split
+        if is_big_original_data:
+            logger.info(
+                f"Original data size is {len(self.original)}. "
+                f"Creating stratified samples of size {sample_size} to calculate utility metric."
+            )
+        if is_big_synthetic_data:
+            logger.info(
+                f"Synthetic data size is {len(self.synthetic)}. "
+                f"Creating stratified samples of size {sample_size} to calculate utility metric."
+            )
         for i, col in tqdm.tqdm(
             iterable=enumerate(targets),
             desc="Calculating utility metric...",
@@ -1126,6 +1205,28 @@ class Utility(BaseMetric):
                 )
                 continue
 
+            # Create a stratified sample if the original dataset is large
+            if is_big_original_data:
+                # Check if each class has at least two instances
+                original, model_y = self.__create_sample_for_utility_metric(original, model_y, sample_size)
+                # if np.min(np.bincount(model_y)) > 1:
+                #     original, _, model_y, _ = train_test_split(
+                #         original,
+                #         model_y,
+                #         train_size=sample_size,
+                #         stratify=model_y,
+                #         random_state=10
+                #     )
+                #     logger.info(f"Created a stratified sample of the original data with size {sample_size}.")
+                # else:
+                #     original, _, model_y, _ = train_test_split(
+                #         original,
+                #         model_y,
+                #         train_size=sample_size,
+                #         random_state=10
+                #     )
+                #     logger.info(f"Created a random sample of the original data with size {sample_size}.")
+
             model = model_object.fit(X=original[: int(original.shape[0] * 0.8), :], y=model_y)
             score = self.__get_accuracy_score(
                 self.original[col].values[int(original.shape[0] * 0.8):],
@@ -1137,6 +1238,7 @@ class Utility(BaseMetric):
                 best_target = col
                 best_model = model
 
+        # Calculate synthetic score
         if best_score > -1:
             if best_score < 0.6:
                 logger.info(
@@ -1145,35 +1247,137 @@ class Utility(BaseMetric):
                 )
             synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
             synthetic = StandardScaler().fit_transform(synthetic)
+            synthetic_y = self.synthetic[best_target].values
+
+            logger.debug(f"Before sampling synthetic data shape: {synthetic.shape}")
+            logger.debug(f"Before sampling synthetic target shape: {synthetic_y.shape}")
+
+            # Create a stratified sample of the synthetic data if it's large
+            if is_big_synthetic_data:
+                synthetic, synthetic_y = self.__create_sample_for_utility_metric(
+                    synthetic, synthetic_y, sample_size
+                )
+                # # Check if each class has at least two instances
+                # if np.min(np.bincount(synthetic_y)) > 1:
+                #     synthetic, _, synthetic_y, _ = train_test_split(
+                #         synthetic,
+                #         synthetic_y,
+                #         train_size=sample_size,
+                #         stratify=synthetic_y,
+                #         random_state=10
+                #     )
+                #     logger.info(f"Created a stratified sample of the synthetic data with size {sample_size}.")
+
+                #     logger.debug(f"Synthetic data shape after random sampling: {synthetic.shape}")
+                #     logger.debug(f"Synthetic target shape after random sampling: {synthetic_y.shape}")
+                # else:
+                #     synthetic, _, synthetic_y, _ = train_test_split(
+                #         synthetic,
+                #         synthetic_y,
+                #         train_size=sample_size,
+                #         random_state=10
+                #     )
+                #     logger.info(f"Since there is a feature with single unique value, "
+                #                 f"stratified sample of the synthetic data cannot be created. "
+                #                 f"Creating a random sample with size {sample_size}.")
+
+                #     logger.debug(f"Synthetic data shape after random sampling: {synthetic.shape}")
+                #     logger.debug(f"Synthetic target shape after random sampling: {synthetic_y.shape}")
+
             synthetic_score = self.__get_accuracy_score(
-                self.synthetic[best_target].values,
+                synthetic_y,
                 best_model.predict(synthetic),
                 task_type,
             )
+        logger.debug(f"With infer size: {self.synthetic.shape[0]} "
+                    f"time taken to calculate utility metric: {datetime.now() - starttime}"
+                )
         return best_target, best_score, synthetic_score
+
+    def __create_sample_for_utility_metric(self, data, model_y, sample_size):
+        from sklearn.model_selection import train_test_split
+        if np.min(np.bincount(model_y)) > 1:
+            data, _, model_y, _ = train_test_split(
+                data,
+                model_y,
+                train_size=sample_size,
+                stratify=model_y,
+                random_state=10
+            )
+            logger.info(f"Created a stratified sample with size {sample_size}.")
+        else:
+            data, _, model_y, _ = train_test_split(
+                data,
+                model_y,
+                train_size=sample_size,
+                random_state=10
+            )
+            logger.info(f"Created a random sample with size {sample_size}.")
+
+        return data, model_y
+
+
+    # #OLD VERSION
+    # def __create_binary_class_models(self, binary_targets):
+    #     starttime = datetime.now()
+    #     from sklearn.linear_model import LogisticRegression
+
+    #     best_target, score, synthetic_score = self.__model_process(
+    #         LogisticRegression(random_state=10), binary_targets, "binary classification"
+    #     )
+    #     logger.debug(f"OLD Time for binary classification models: {datetime.now() - starttime}")
+    #     return best_target, score, synthetic_score
+
+    # #OLD VERSION
+    # def __create_multi_class_models(self, multiclass_targets):
+    #     starttime = datetime.now()
+    #     from sklearn.ensemble import GradientBoostingClassifier
+
+    #     best_target, score, synthetic_score = self.__model_process(
+    #         GradientBoostingClassifier(random_state=10),
+    #         multiclass_targets,
+    #         "multiclass classification",
+    #     )
+    #     logger.debug(f"OLD Time for multiclass classification models: {datetime.now() - starttime}")
+    #     return best_target, score, synthetic_score
+
+    # #OLD VERSION
+    # def __create_regression_models(self, cont_targets):
+    #     starttime = datetime.now()
+    #     from sklearn.ensemble import GradientBoostingRegressor
+
+    #     best_target, score, synthetic_score = self.__model_process(
+    #         GradientBoostingRegressor(random_state=10), cont_targets, "regression"
+    #     )
+    #     logger.debug(f"OLD Time for regression models: {datetime.now() - starttime}")
+    #     return best_target, score, synthetic_score
 
     def __create_binary_class_models(self, binary_targets):
         from sklearn.linear_model import LogisticRegression
-
+        starttime = datetime.now()
         best_target, score, synthetic_score = self.__model_process(
-            LogisticRegression(random_state=10), binary_targets, "binary classification"
+            LogisticRegression(random_state=10, n_jobs = -1),
+            binary_targets, "binary classification"
         )
+        logger.debug(f"Binary classification model initialization time: {datetime.now() - starttime}")
         return best_target, score, synthetic_score
 
     def __create_multi_class_models(self, multiclass_targets):
-        from sklearn.ensemble import GradientBoostingClassifier
-
+        starttime = datetime.now()
+        from sklearn.ensemble import RandomForestClassifier
         best_target, score, synthetic_score = self.__model_process(
-            GradientBoostingClassifier(random_state=10),
+            RandomForestClassifier(n_jobs=-1, random_state=10),
             multiclass_targets,
             "multiclass classification",
         )
+        logger.debug(f"Multiclass classification model initialization time: {datetime.now() - starttime}")
         return best_target, score, synthetic_score
 
     def __create_regression_models(self, cont_targets):
-        from sklearn.ensemble import GradientBoostingRegressor
-
+        starttime = datetime.now()
+        from sklearn.ensemble import RandomForestRegressor
         best_target, score, synthetic_score = self.__model_process(
-            GradientBoostingRegressor(random_state=10), cont_targets, "regression"
+            RandomForestRegressor(n_jobs=-1, random_state=10), cont_targets, "regression"
         )
+        logger.debug(f"Regression model initialization time: {datetime.now() - starttime}")
         return best_target, score, synthetic_score
