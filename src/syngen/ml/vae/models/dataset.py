@@ -112,7 +112,6 @@ class Dataset(BaseDataset):
             paths
         )
         self.nan_labels_dict = get_nan_labels(self.df)
-        self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
     def __getstate__(self) -> Dict:
         """

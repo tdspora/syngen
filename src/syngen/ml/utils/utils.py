@@ -208,7 +208,7 @@ def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFr
     for column, label in columns_nan_labels.items():
         if label is not None:
             df_with_nan[column] = df_with_nan[column].replace(label, np.NaN)
-        df_with_nan[column] = pd.to_numeric(df_with_nan[column])
+        df_with_nan[column] = pd.to_numeric(df_with_nan[column], errors="coerce")
     return df_with_nan
 
 
