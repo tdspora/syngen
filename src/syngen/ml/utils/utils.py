@@ -193,8 +193,6 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
         if (float_val is not None) and (not np.isnan(float_val)) and len(str_values) == 1:
             nan_label = str_values[0]
             columns_nan_labels[column] = nan_label
-        elif (float_val is not None) and (not np.isnan(float_val)):
-            columns_nan_labels[column] = None
 
     return columns_nan_labels
 
@@ -206,8 +204,7 @@ def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFr
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
-        if label is not None:
-            df_with_nan[column] = df_with_nan[column].replace(label, np.NaN)
+        df_with_nan[column] = df_with_nan[column].replace(label, np.NaN)
         df_with_nan[column] = pd.to_numeric(df_with_nan[column], errors="coerce")
     return df_with_nan
 
