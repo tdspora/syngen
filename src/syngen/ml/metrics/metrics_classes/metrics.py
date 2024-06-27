@@ -1182,9 +1182,7 @@ class Utility(BaseMetric):
                 best_model.predict(synthetic),
                 task_type,
             )
-        logger.debug(f"With infer size: {self.synthetic.shape[0]} "
-                    f"time taken to calculate utility metric: {datetime.now() - starttime}"
-                )
+
         return best_target, best_score, synthetic_score
 
     def __create_sample_for_utility_metric(self, data, model_y, sample_size):
