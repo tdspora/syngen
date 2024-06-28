@@ -1078,19 +1078,19 @@ class Utility(BaseMetric):
         if best_binary is not None:
             logger.info(
                 f"The ratio of synthetic binary accuracy to original is "
-                f"{round(score_binary/synth_score_binary, 3)}. The model considers "
+                f"{round(synth_score_binary/score_binary, 3)}. The model considers "
                 f"the {best_binary} column as a target and other columns as predictors"
             )
         if best_categ is not None:
             logger.info(
                 f"The ratio of synthetic multiclass accuracy to original is "
-                f"{round(score_categ / synth_score_categ, 3)}. The model considers "
+                f"{round(synth_score_categ/score_categ, 3)}. The model considers "
                 f"the {best_categ} column as a target and other columns as predictors"
             )
         if best_regres is not None:
             logger.info(
                 f"The ratio of synthetic regression accuracy to original is "
-                f"{round(score_regres / synth_regres_score, 3)}. The model considers "
+                f"{round(synth_regres_score/score_regres, 3)}. The model considers "
                 f"the {best_regres} column as a target and other columns as predictors"
             )
 
@@ -1188,8 +1188,9 @@ class Utility(BaseMetric):
         return best_target, best_score, synthetic_score
 
     def __create_sample_for_utility_metric(self, data, model_y, sample_size):
-        #check if the target column has more than 1 class
-        if np.min(np.bincount(model_y)) > 1:
+        #check if the target column has more than 1 instances for each class
+        _, counts = np.unique(model_y, return_counts=True)
+        if np.all(counts > 1):
             data, _, model_y, _ = train_test_split(
                 data,
                 model_y,
