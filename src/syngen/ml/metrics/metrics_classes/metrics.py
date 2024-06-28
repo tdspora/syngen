@@ -964,6 +964,7 @@ class Utility(BaseMetric):
         super().__init__(original, synthetic, plot, reports_path)
 
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
+        logger.info("Calculating utility metric")
         for col in categ_columns:
             map_dict = {
                 k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
@@ -1093,7 +1094,7 @@ class Utility(BaseMetric):
                 f"{round(synth_regres_score/score_regres, 3)}. The model considers "
                 f"the {best_regres} column as a target and other columns as predictors"
             )
-
+        logger.info("Utility metric is calculated.")
         return result
 
     @staticmethod
