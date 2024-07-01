@@ -1090,7 +1090,7 @@ class Utility(BaseMetric):
             )
         if best_regres is not None:
             logger.info(
-                f"synth_regres_score {synth_regres_score} ,"
+                f"NEW synth_regres_score {synth_regres_score} ,"
                 f"score_regres {score_regres} ,"
                 f"The ratio of synthetic regression accuracy to original is "
                 f"{round(synth_regres_score/score_regres, 3)}. The model considers "
