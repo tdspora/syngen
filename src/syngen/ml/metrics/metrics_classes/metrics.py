@@ -7,12 +7,15 @@ import random
 
 import tqdm
 from sklearn.cluster import KMeans
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.metrics import r2_score, accuracy_score
 import matplotlib
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Patch
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -22,6 +25,7 @@ from slugify import slugify
 from loguru import logger
 
 from syngen.ml.utils import get_nan_labels, nan_labels_to_float, timestamp_to_datetime
+matplotlib.use("Agg")
 
 
 class BaseMetric(ABC):
@@ -960,6 +964,7 @@ class Utility(BaseMetric):
         super().__init__(original, synthetic, plot, reports_path)
 
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
+        logger.info("Calculating utility metric")
         for col in categ_columns:
             map_dict = {
                 k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
@@ -1074,22 +1079,22 @@ class Utility(BaseMetric):
         if best_binary is not None:
             logger.info(
                 f"The ratio of synthetic binary accuracy to original is "
-                f"{round(score_binary/synth_score_binary, 3)}. The model considers "
+                f"{round(synth_score_binary/score_binary, 3)}. The model considers "
                 f"the {best_binary} column as a target and other columns as predictors"
             )
         if best_categ is not None:
             logger.info(
                 f"The ratio of synthetic multiclass accuracy to original is "
-                f"{round(score_categ / synth_score_categ, 3)}. The model considers "
+                f"{round(synth_score_categ/score_categ, 3)}. The model considers "
                 f"the {best_categ} column as a target and other columns as predictors"
             )
         if best_regres is not None:
             logger.info(
                 f"The ratio of synthetic regression accuracy to original is "
-                f"{round(score_regres / synth_regres_score, 3)}. The model considers "
+                f"{round(max(0, synth_regres_score) / score_regres, 3)}. The model considers "
                 f"the {best_regres} column as a target and other columns as predictors"
             )
-
+        logger.info("Utility metric is calculated")
         return result
 
     @staticmethod
@@ -1100,11 +1105,26 @@ class Utility(BaseMetric):
             score = r2_score(y_true=y_true, y_pred=y_pred)
         return score
 
-    def __model_process(self, model_object, targets, task_type):
+    def __model_process(self, model_object, targets, task_type, sample_size=100000):
         best_score = -1
         best_target = None
         best_model = None
         synthetic_score = -1
+
+        #Check if the datasets have more than sample_size rows to make stratify sample for utility metric
+        is_big_original_data = len(self.original) > sample_size
+        is_big_synthetic_data = len(self.synthetic) > sample_size
+
+        if is_big_original_data:
+            logger.info(
+                f"Original data has {len(self.original)} records. "
+                f"Creating stratified samples with {sample_size} records to calculate utility metric"
+            )
+        if is_big_synthetic_data:
+            logger.info(
+                f"Synthetic data has {len(self.synthetic)} records. "
+                f"Creating stratified samples with {sample_size} records to calculate utility metric"
+            )
         for i, col in tqdm.tqdm(
             iterable=enumerate(targets),
             desc="Calculating utility metric...",
@@ -1126,6 +1146,12 @@ class Utility(BaseMetric):
                 )
                 continue
 
+            # Create a stratified sample if the original dataset is large
+            if is_big_original_data:
+                original, model_y = self.__create_sample_for_utility_metric(
+                    original, model_y, sample_size
+                )
+
             model = model_object.fit(X=original[: int(original.shape[0] * 0.8), :], y=model_y)
             score = self.__get_accuracy_score(
                 self.original[col].values[int(original.shape[0] * 0.8):],
@@ -1137,6 +1163,7 @@ class Utility(BaseMetric):
                 best_target = col
                 best_model = model
 
+        # Calculate synthetic score
         if best_score > -1:
             if best_score < 0.6:
                 logger.info(
@@ -1145,35 +1172,65 @@ class Utility(BaseMetric):
                 )
             synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
             synthetic = StandardScaler().fit_transform(synthetic)
+            synthetic_y = self.synthetic[best_target].values
+
+            # Create a stratified sample of the synthetic data if it's large
+            if is_big_synthetic_data:
+                synthetic, synthetic_y = self.__create_sample_for_utility_metric(
+                    synthetic, synthetic_y, sample_size
+                )
+
             synthetic_score = self.__get_accuracy_score(
-                self.synthetic[best_target].values,
+                synthetic_y,
                 best_model.predict(synthetic),
                 task_type,
             )
+
         return best_target, best_score, synthetic_score
 
-    def __create_binary_class_models(self, binary_targets):
-        from sklearn.linear_model import LogisticRegression
+    def __create_sample_for_utility_metric(self, data, model_y, sample_size):
+        #check if the target column has more than 1 instances for each class
+        _, counts = np.unique(model_y, return_counts=True)
+        if np.all(counts > 1):
+            data, _, model_y, _ = train_test_split(
+                data,
+                model_y,
+                train_size=sample_size,
+                stratify=model_y,
+                random_state=10
+            )
 
+        else:
+            data, _, model_y, _ = train_test_split(
+                data,
+                model_y,
+                train_size=sample_size,
+                random_state=10
+            )
+
+        logger.debug(f"Samples of size={sample_size} for utility metric calculation "
+                     f"have been created"
+        )
+
+        return data, model_y
+
+    def __create_binary_class_models(self, binary_targets):
         best_target, score, synthetic_score = self.__model_process(
-            LogisticRegression(random_state=10), binary_targets, "binary classification"
+            LogisticRegression(n_jobs=-1, random_state=10),
+            binary_targets, "binary classification"
         )
         return best_target, score, synthetic_score
 
     def __create_multi_class_models(self, multiclass_targets):
-        from sklearn.ensemble import GradientBoostingClassifier
-
         best_target, score, synthetic_score = self.__model_process(
-            GradientBoostingClassifier(random_state=10),
+            RandomForestClassifier(n_jobs=-1, random_state=10),
             multiclass_targets,
             "multiclass classification",
         )
         return best_target, score, synthetic_score
 
     def __create_regression_models(self, cont_targets):
-        from sklearn.ensemble import GradientBoostingRegressor
-
         best_target, score, synthetic_score = self.__model_process(
-            GradientBoostingRegressor(random_state=10), cont_targets, "regression"
+            RandomForestRegressor(n_jobs=-1, random_state=10), cont_targets, "regression"
         )
         return best_target, score, synthetic_score
