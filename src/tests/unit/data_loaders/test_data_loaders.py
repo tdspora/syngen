@@ -261,7 +261,8 @@ def test_load_data_from_table_with_null_column(rp_logger):
     rp_logger.info(
         "Loading data from local table in avro format with a column that has a data type - 'null'"
     )
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/avro_tables/table_with_null_column.avro")
+    data_loader = DataLoader("tests/unit/data_loaders/fixtures/"
+                             "avro_tables/table_with_null_column.avro")
     df, schema = data_loader.load_data()
 
     assert isinstance(data_loader.file_loader, AvroLoader)
