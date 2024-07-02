@@ -332,7 +332,10 @@ class Dataset(BaseDataset):
             if pd.api.types.is_integer_dtype(self.df[column]):
                 self.schema[column] = "int"
             elif pd.api.types.is_float_dtype(self.df[column]):
-                self.schema[column] = "float"
+                if all(x - int(x) == 0 for x in self.df[column].dropna()):
+                    self.schema[column] = "int"
+                else:
+                    self.schema[column] = "float"
         self.schema = {
             column: data_type
             for column, data_type in self.schema.items()

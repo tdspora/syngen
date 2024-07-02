@@ -578,6 +578,5 @@ def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
             main_process="train"
         )
         mock_dataset.set_metadata()
-    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4"}
-    assert mock_dataset.float_columns == {"column5"}
+    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
