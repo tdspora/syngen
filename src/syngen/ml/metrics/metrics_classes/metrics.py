@@ -1208,7 +1208,7 @@ class Utility(BaseMetric):
                 random_state=10
             )
 
-        logger.debug(f"Samples of size={sample_size} for utility metric calculation"
+        logger.debug(f"Samples of size={sample_size} for utility metric calculation "
                      f"have been created"
         )
 
