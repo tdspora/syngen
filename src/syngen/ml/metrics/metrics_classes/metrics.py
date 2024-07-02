@@ -1090,10 +1090,8 @@ class Utility(BaseMetric):
             )
         if best_regres is not None:
             logger.info(
-                f"NEW synth_regres_score {synth_regres_score} ,"
-                f"score_regres {score_regres} ,"
                 f"The ratio of synthetic regression accuracy to original is "
-                f"{round(synth_regres_score/score_regres, 3)}. The model considers "
+                f"{round(max(0, synth_regres_score) / score_regres, 3)}. The model considers "
                 f"the {best_regres} column as a target and other columns as predictors"
             )
         logger.info("Utility metric is calculated")
@@ -1120,12 +1118,12 @@ class Utility(BaseMetric):
         if is_big_original_data:
             logger.info(
                 f"Original data has {len(self.original)} records. "
-                f"Creating stratified samples with {sample_size} records to calculate utility metric."
+                f"Creating stratified samples with {sample_size} records to calculate utility metric"
             )
         if is_big_synthetic_data:
             logger.info(
                 f"Synthetic data has {len(self.synthetic)} records. "
-                f"Creating stratified samples with {sample_size} records to calculate utility metric."
+                f"Creating stratified samples with {sample_size} records to calculate utility metric"
             )
         for i, col in tqdm.tqdm(
             iterable=enumerate(targets),
@@ -1210,7 +1208,9 @@ class Utility(BaseMetric):
                 random_state=10
             )
 
-        logger.debug(f"Sample of size={sample_size} for utility metric calculation is created.")
+        logger.debug(f"Samples of size={sample_size} for utility metric calculation"
+                     f"have been created"
+        )
 
         return data, model_y
 
