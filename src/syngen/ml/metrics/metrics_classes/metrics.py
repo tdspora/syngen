@@ -988,7 +988,9 @@ class Utility(BaseMetric):
 
         for col in categ_columns:
             map_dict = {
-                k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
+                k: i + 1 for i, k in enumerate(
+                    set(self.original[col]) | set(self.synthetic[col])
+                )
             }
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
@@ -1160,7 +1162,7 @@ class Utility(BaseMetric):
             # Create a stratified sample if the original dataset is large
             if self.is_big_original_data:
                 original, model_y = self.__create_sample_for_utility_metric(
-                    original, model_y, sample_size
+                    original, model_y
                 )
 
             model = model_object.fit(
