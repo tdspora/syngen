@@ -147,6 +147,7 @@ class TrainStrategy(Strategy, ABC):
                 metadata_path=kwargs["metadata_path"],
                 print_report=kwargs["print_report"],
                 batch_size=kwargs["batch_size"],
+                loader=kwargs["loader"]
             )
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()

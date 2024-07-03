@@ -1,6 +1,5 @@
 from typing import Dict
 import json
-from dataclasses import dataclass
 from pathlib import Path
 
 from marshmallow import (
@@ -80,12 +79,16 @@ class TrainingSettingsSchema(Schema):
     print_report = fields.Boolean(required=False)
 
 
-class ExtendedTrainingSettingsSchema(TrainingSettingsSchema):
+class ExtendedRestrictedTrainingSettingsSchema(TrainingSettingsSchema):
     source = fields.String(required=True, allow_none=False)
     column_types = fields.Dict(
         keys=fields.String(validate=validate.OneOf(["categorical"])),
         values=fields.List(fields.String()),
     )
+
+
+class ExtendedTrainingSettingsSchema(ExtendedRestrictedTrainingSettingsSchema):
+    source = fields.String(required=False, allow_none=True)
 
 
 class InferSettingsSchema(Schema):
@@ -146,7 +149,11 @@ class GlobalSettingsSchema(Schema):
 
 
 class ConfigurationSchema(Schema):
-    train_settings = fields.Nested(ExtendedTrainingSettingsSchema, required=True, allow_none=False)
+    train_settings = fields.Nested(
+        ExtendedTrainingSettingsSchema,
+        required=False,
+        allow_none=True
+    )
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
     format = fields.Raw(required=False, allow_none=True)
     keys = fields.Dict(
@@ -165,18 +172,29 @@ class ConfigurationSchema(Schema):
 
     @post_load
     def process_format_field(self, data, **kwargs):
-        format_schema = self.get_format_schema(data.get("train_settings", {}).get("source", ""))
+        path_to_source = data.get("train_settings", {}).get("source", "")
+        format_schema = self.get_format_schema(path_to_source)
         if format_schema is not None and data.get("format") is not None:
             data["format"] = format_schema().load(data["format"])
         return data
 
 
-@dataclass
+class ConfigurationRestrictedSchema(ConfigurationSchema):
+    train_settings = fields.Nested(
+        ExtendedRestrictedTrainingSettingsSchema,
+        required=True,
+        allow_none=False
+    )
+
+
 class ValidationSchema:
-    metadata: Dict
-    metadata_path: str
-    global_schema = GlobalSettingsSchema()
-    configuration_schema = ConfigurationSchema()
+    def __init__(self, metadata: Dict, metadata_path: str, validation_source: bool):
+        self.metadata = metadata
+        self.metadata_path = metadata_path
+        self.validation_source = validation_source
+        self.global_schema = GlobalSettingsSchema()
+        self.configuration_schema = ConfigurationSchema() \
+            if self.validation_source else ConfigurationRestrictedSchema()
 
     def validate_schema(self):
         """

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set, List
+from typing import Optional, Dict, Tuple, Set, List, Union
 import os
 import shutil
 
@@ -24,6 +24,7 @@ class TrainConfig:
     metadata_path: Optional[str]
     print_report: bool
     batch_size: int
+    loader: Optional[object]
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
@@ -86,10 +87,27 @@ class TrainConfig:
         os.makedirs(self.paths["state_path"], exist_ok=True)
         os.makedirs(self.paths["tmp_store_path"], exist_ok=True)
 
+    def fetch_dataframe(self):
+        logger.info(
+            "Due to the absence of the information about the path to the source, "
+            "the attempt to fetch it has been done"
+        )
+        df, schema = self.loader(table_name=self.table_name)
+        if schema is None:
+            schema = {"fields": {}, "format": "CSV"}
+            return df, schema
+        else:
+            message = ("The callback function has been provided "
+                       "to fetch the dataframe for the training process")
+            logger.error(message)
+            raise ValueError(message)
+
     def _load_source(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Return dataframe and schema of original data
         """
+        if self.loader is not None:
+            return self.fetch_dataframe()
         return DataLoader(self.source).load_data()
 
     def _remove_empty_columns(self, data: pd.DataFrame) -> pd.DataFrame:

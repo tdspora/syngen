@@ -30,6 +30,7 @@ class Worker:
     train_strategy = TrainStrategy()
     infer_strategy = InferStrategy()
     metadata: Optional[Dict] = None
+    loader: Optional[object] = None
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
@@ -52,6 +53,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
+            validation_source=False if self.loader else True
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -290,7 +292,8 @@ class Worker:
             table_name=table,
             metadata_path=self.metadata_path,
             print_report=train_settings["print_report"],
-            batch_size=train_settings["batch_size"]
+            batch_size=train_settings["batch_size"],
+            loader=self.loader
         )
         self._write_success_message(slugify(table))
         self._save_metadata_file()
