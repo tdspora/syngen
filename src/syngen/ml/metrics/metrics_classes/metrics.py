@@ -960,11 +960,32 @@ class Utility(BaseMetric):
         synthetic: pd.DataFrame,
         plot: bool,
         reports_path: str,
+        sample_size: int = 100000,
     ):
         super().__init__(original, synthetic, plot, reports_path)
 
+        self.sample_size = sample_size
+
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
         logger.info("Calculating utility metric")
+
+        # Check if the datasets have more than sample_size rows to make stratify sample for utility metric
+        self.is_big_original_data = len(self.original) > self.sample_size
+        self.is_big_synthetic_data = len(self.synthetic) > self.sample_size
+
+        if self.is_big_original_data:
+            logger.info(
+                f"Original data has {len(self.original)} records. "
+                f"Creating stratified samples with {self.sample_size} records "
+                f"to calculate utility metric"
+            )
+        if self.is_big_synthetic_data:
+            logger.info(
+                f"Synthetic data has {len(self.synthetic)} records. "
+                f"Creating stratified samples with {self.sample_size} records "
+                f"to calculate utility metric"
+            )
+
         for col in categ_columns:
             map_dict = {
                 k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
@@ -1079,20 +1100,23 @@ class Utility(BaseMetric):
         if best_binary is not None:
             logger.info(
                 f"The ratio of synthetic binary accuracy to original is "
-                f"{round(synth_score_binary/score_binary, 3)}. The model considers "
-                f"the {best_binary} column as a target and other columns as predictors"
+                f"{round(synth_score_binary/score_binary, 3)}. "
+                f"The model considers the {best_binary} column "
+                f"as a target and other columns as predictors"
             )
         if best_categ is not None:
             logger.info(
                 f"The ratio of synthetic multiclass accuracy to original is "
-                f"{round(synth_score_categ/score_categ, 3)}. The model considers "
-                f"the {best_categ} column as a target and other columns as predictors"
+                f"{round(synth_score_categ/score_categ, 3)}. "
+                f"The model considers the {best_categ} column "
+                f"as a target and other columns as predictors"
             )
         if best_regres is not None:
             logger.info(
                 f"The ratio of synthetic regression accuracy to original is "
-                f"{round(max(0, synth_regres_score) / score_regres, 3)}. The model considers "
-                f"the {best_regres} column as a target and other columns as predictors"
+                f"{round(max(0, synth_regres_score) / score_regres, 3)}. "
+                f"The model considers the {best_regres} column "
+                f"as a target and other columns as predictors"
             )
         logger.info("Utility metric is calculated")
         return result
@@ -1105,26 +1129,12 @@ class Utility(BaseMetric):
             score = r2_score(y_true=y_true, y_pred=y_pred)
         return score
 
-    def __model_process(self, model_object, targets, task_type, sample_size=100000):
+    def __model_process(self, model_object, targets, task_type):
         best_score = -1
         best_target = None
         best_model = None
         synthetic_score = -1
 
-        #Check if the datasets have more than sample_size rows to make stratify sample for utility metric
-        is_big_original_data = len(self.original) > sample_size
-        is_big_synthetic_data = len(self.synthetic) > sample_size
-
-        if is_big_original_data:
-            logger.info(
-                f"Original data has {len(self.original)} records. "
-                f"Creating stratified samples with {sample_size} records to calculate utility metric"
-            )
-        if is_big_synthetic_data:
-            logger.info(
-                f"Synthetic data has {len(self.synthetic)} records. "
-                f"Creating stratified samples with {sample_size} records to calculate utility metric"
-            )
         for i, col in tqdm.tqdm(
             iterable=enumerate(targets),
             desc="Calculating utility metric...",
@@ -1142,17 +1152,20 @@ class Utility(BaseMetric):
             if len(set(model_y)) < 2:
                 logger.info(
                     f"Column {col} has less than 2 classes as target. "
-                    f"It will not be used in metric that measures regression results."
+                    f"It will not be used in metric "
+                    f"that measures regression results."
                 )
                 continue
 
             # Create a stratified sample if the original dataset is large
-            if is_big_original_data:
+            if self.is_big_original_data:
                 original, model_y = self.__create_sample_for_utility_metric(
                     original, model_y, sample_size
                 )
 
-            model = model_object.fit(X=original[: int(original.shape[0] * 0.8), :], y=model_y)
+            model = model_object.fit(
+                X=original[: int(original.shape[0] * 0.8), :], y=model_y
+            )
             score = self.__get_accuracy_score(
                 self.original[col].values[int(original.shape[0] * 0.8):],
                 model.predict(original[int(original.shape[0] * 0.8):, :]),
@@ -1167,17 +1180,19 @@ class Utility(BaseMetric):
         if best_score > -1:
             if best_score < 0.6:
                 logger.info(
-                    f"The best score for all possible {task_type} models for the original data is "
-                    f"{best_score}, which is below 0.6. The utility metric is unreliable"
+                    f"The best score for all possible {task_type} models "
+                    f"for the original data is "
+                    f"{best_score}, which is below 0.6. "
+                    f"The utility metric is unreliable"
                 )
             synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
             synthetic = StandardScaler().fit_transform(synthetic)
             synthetic_y = self.synthetic[best_target].values
 
             # Create a stratified sample of the synthetic data if it's large
-            if is_big_synthetic_data:
+            if self.is_big_synthetic_data:
                 synthetic, synthetic_y = self.__create_sample_for_utility_metric(
-                    synthetic, synthetic_y, sample_size
+                    synthetic, synthetic_y
                 )
 
             synthetic_score = self.__get_accuracy_score(
@@ -1188,14 +1203,14 @@ class Utility(BaseMetric):
 
         return best_target, best_score, synthetic_score
 
-    def __create_sample_for_utility_metric(self, data, model_y, sample_size):
-        #check if the target column has more than 1 instances for each class
+    def __create_sample_for_utility_metric(self, data, model_y):
+        # check if the target column has more than 1 instances for each class
         _, counts = np.unique(model_y, return_counts=True)
         if np.all(counts > 1):
             data, _, model_y, _ = train_test_split(
                 data,
                 model_y,
-                train_size=sample_size,
+                train_size=self.sample_size,
                 stratify=model_y,
                 random_state=10
             )
@@ -1204,13 +1219,12 @@ class Utility(BaseMetric):
             data, _, model_y, _ = train_test_split(
                 data,
                 model_y,
-                train_size=sample_size,
+                train_size=self.sample_size,
                 random_state=10
             )
 
-        logger.debug(f"Samples of size={sample_size} for utility metric calculation "
-                     f"have been created"
-        )
+        logger.debug(f"Samples of size={self.sample_size} for "
+                     f"utility metric calculation have been created")
 
         return data, model_y
 
@@ -1231,6 +1245,7 @@ class Utility(BaseMetric):
 
     def __create_regression_models(self, cont_targets):
         best_target, score, synthetic_score = self.__model_process(
-            RandomForestRegressor(n_jobs=-1, random_state=10), cont_targets, "regression"
+            RandomForestRegressor(n_jobs=-1, random_state=10),
+            cont_targets, "regression"
         )
         return best_target, score, synthetic_score
