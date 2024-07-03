@@ -191,10 +191,9 @@ class ValidationSchema:
     def __init__(self, metadata: Dict, metadata_path: str, validation_source: bool):
         self.metadata = metadata
         self.metadata_path = metadata_path
-        self.validation_source = validation_source
         self.global_schema = GlobalSettingsSchema()
-        self.configuration_schema = ConfigurationSchema() \
-            if self.validation_source else ConfigurationRestrictedSchema()
+        self.configuration_schema = ConfigurationRestrictedSchema() \
+            if validation_source else ConfigurationSchema()
 
     def validate_schema(self):
         """
