@@ -34,40 +34,45 @@ AVRO_SCHEMA = {
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.csv",
     ],
 )
-def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_table, rp_logger):
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+@patch.object(Dataset, "_set_categorical_columns")
+def test_is_valid_uuid_defined_in_csv_table_without_missing_values(
+        mock_set_categorical_columns,
+        mock_fetch_config,
+        path_to_test_table,
+        rp_logger
+):
     rp_logger.info(
         "Test the process of the detection of UUID columns in the table in csv format"
     )
     df = pd.read_csv(path_to_test_table)
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata={"mock_table": {}},
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path",
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
-        mock_dataset._set_uuid_columns()
-        assert mock_dataset.uuid_columns == {
-            "UUIDv1",
-            "UUIDv2",
-            "UUIDv3",
-            "UUIDv4",
-            "UUIDv5",
-            "ULID",
-        }
-        assert mock_dataset.uuid_columns_types == {
-            "UUIDv1": 1,
-            "UUIDv2": 2,
-            "UUIDv3": 3,
-            "UUIDv4": 4,
-            "UUIDv5": 5,
-            "ULID": "ulid",
-        }
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path",
+        },
+        main_process="train"
+    )
+    mock_dataset._set_uuid_columns()
+    assert mock_dataset.uuid_columns == {
+        "UUIDv1",
+        "UUIDv2",
+        "UUIDv3",
+        "UUIDv4",
+        "UUIDv5",
+        "ULID",
+    }
+    assert mock_dataset.uuid_columns_types == {
+        "UUIDv1": 1,
+        "UUIDv2": 2,
+        "UUIDv3": 3,
+        "UUIDv4": 4,
+        "UUIDv5": 5,
+        "ULID": "ulid",
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -78,58 +83,72 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.avro",
     ],
 )
-def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test_table, rp_logger):
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+@patch.object(Dataset, "_set_categorical_columns")
+def test_is_valid_uuid_defined_in_avro_table_without_missing_values(
+        mock_set_categorical_columns,
+        mock_fetch_config,
+        path_to_test_table,
+        rp_logger
+):
     rp_logger.info(
         "Test the process of the detection of UUID columns in the table in avro format"
     )
     df = pdx.from_avro(path_to_test_table)
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata={"mock_table": {}},
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path",
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
-        mock_dataset._set_uuid_columns()
-        assert mock_dataset.uuid_columns == {
-            "UUIDv1",
-            "UUIDv2",
-            "UUIDv3",
-            "UUIDv4",
-            "UUIDv5",
-            "ULID",
-        }
-        assert mock_dataset.uuid_columns_types == {
-            "UUIDv1": 1,
-            "UUIDv2": 2,
-            "UUIDv3": 3,
-            "UUIDv4": 4,
-            "UUIDv5": 5,
-            "ULID": "ulid",
-        }
+    mock_dataset = Dataset(
+        df=df,
+        schema={
+            "format": "Avro",
+            "fields": {
+                "UUIDv1": "string",
+                "UUIDv2": "string",
+                "UUIDv3": "string",
+                "UUIDv4": "string",
+                "UUIDv5": "string",
+                "ULID": "string",
+            }
+        },
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path",
+        },
+        main_process="train"
+    )
+    mock_dataset._set_uuid_columns()
+    assert mock_dataset.uuid_columns == {
+        "UUIDv1",
+        "UUIDv2",
+        "UUIDv3",
+        "UUIDv4",
+        "UUIDv5",
+        "ULID",
+    }
+    assert mock_dataset.uuid_columns_types == {
+        "UUIDv1": 1,
+        "UUIDv2": 2,
+        "UUIDv3": 3,
+        "UUIDv4": 4,
+        "UUIDv5": 5,
+        "ULID": "ulid",
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_save_dataset(rp_logger):
     rp_logger.info("Test the process of saving the dataset")
     df = pd.read_csv("./tests/unit/dataset/fixtures/data.csv")
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata={"mock_table": {}},
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path"
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
     fetched_dataset = mock_dataset.__getstate__()
     assert "df" not in fetched_dataset
     assert list(fetched_dataset.keys()) == [
@@ -176,65 +195,63 @@ def test_save_dataset(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_is_valid_categ_defined_in_csv_table(rp_logger):
     rp_logger.info(
         "Test the process of the detection of "
         "the categorical columns in the table in '.csv' format"
     )
     df = pd.read_csv("./tests/unit/dataset/fixtures/table_with_categ_columns.csv")
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata={"mock_table": {}},
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path",
-            },
-            main_process="train"
-        )
-        mock_dataset._general_data_pipeline()
-        assert mock_dataset.categ_columns == {
-            "time",
-            "ptd_dt",
-            "email",
-            "id",
-            "timestamp",
-            "ensure",
-            "upd_dt"
-        }
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path",
+        },
+        main_process="train"
+    )
+    mock_dataset._general_data_pipeline()
+    assert mock_dataset.categ_columns == {
+        "time",
+        "ptd_dt",
+        "email",
+        "id",
+        "timestamp",
+        "ensure",
+        "upd_dt"
+    }
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_is_valid_binary_defined_in_csv_table(rp_logger):
     rp_logger.info(
         "Test the process of the detection of the binary columns in the table in '.csv' format"
     )
     df = pd.read_csv("./tests/unit/dataset/fixtures/table_with_binary_columns.csv")
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata={"mock_table": {}},
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path",
-            },
-            main_process="train"
-        )
-        mock_dataset._general_data_pipeline()
-        assert mock_dataset.binary_columns == {
-            "time",
-            "upd_dt",
-            "ptd_dt",
-            "email",
-            "id",
-            "timestamp"
-        }
-        assert mock_dataset.categ_columns == {
-            "ensure"
-        }
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path",
+        },
+        main_process="train"
+    )
+    mock_dataset._general_data_pipeline()
+    assert mock_dataset.binary_columns == {
+        "time",
+        "upd_dt",
+        "ptd_dt",
+        "email",
+        "id",
+        "timestamp"
+    }
+    assert mock_dataset.categ_columns == {"ensure"}
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -272,7 +289,6 @@ def test_check_non_existent_columns(rp_logger):
         main_process="train"
     )
     mock_dataset.dropped_columns = set()
-    mock_dataset.set_metadata()
     assert mock_dataset.non_existent_columns == {
         "non_existent_pk_column",
         "non_existent_uq_column",
@@ -306,7 +322,13 @@ def test_check_non_existent_columns(rp_logger):
         ("%m-%b-%y", "%d-%m-%Y"),
     ]
 )
-def test_define_date_format_with_diff_format(initial_date_format, expected_date_format, rp_logger):
+@patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock())
+def test_define_date_format_with_diff_format(
+    mock_fetch_config,
+    initial_date_format,
+    expected_date_format,
+    rp_logger
+):
     rp_logger.info(
         "Test the process of identifying the date format in the date column "
         "where the initial date format - %s and expected date format: %s",
@@ -323,18 +345,16 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
                  strftime(initial_date_format) for x in range(10000)]
     }
     df = pd.DataFrame(data, columns=["Date"])
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata=metadata,
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path"
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
     assert mock_dataset.date_mapping == {"Date": expected_date_format}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -348,8 +368,13 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
         ("%d-%m-%Y", "%d-%m-%Y", [np.nan, np.nan, np.nan])
     ]
 )
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_define_date_format_with_extreme_values(
-        initial_date_format, expected_date_format, extreme_values, rp_logger
+        mock_fetch_config,
+        initial_date_format,
+        expected_date_format,
+        extreme_values,
+        rp_logger
 ):
     rp_logger.info(
         "Test the process of identifying the date format in the date column "
@@ -370,22 +395,21 @@ def test_define_date_format_with_extreme_values(
         {"Date": data['Date'] + extreme_values}
     )
     df = pd.DataFrame(data, columns=["Date"])
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata=metadata,
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path"
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
     assert mock_dataset.date_mapping == {"Date": expected_date_format}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_is_valid_uuid(rp_logger):
     rp_logger.info(
         "Test the method 'is_valid_uuid' that checks if the given value is a valid UUID",
@@ -411,18 +435,17 @@ def test_is_valid_uuid(rp_logger):
         data,
         columns=["UUID_1", "UUID_2", "UUID_3", "UUID_4", "UUID_5"]
     )
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata=metadata,
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path"
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
+    mock_dataset._set_uuid
     assert mock_dataset.uuid_columns == {
         "UUID_1", "UUID_2", "UUID_3", "UUID_4", "UUID_5"
     }
@@ -436,6 +459,7 @@ def test_is_valid_uuid(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_set_email_columns(rp_logger):
     rp_logger.info(
         "Test the method '_set_email_columns' of the class Dataset",
@@ -447,22 +471,21 @@ def test_set_email_columns(rp_logger):
     }
 
     df = pd.read_csv("./tests/unit/dataset/fixtures/data_with_emails.csv")
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata=metadata,
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path"
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
     assert mock_dataset.email_columns == {"ExtractedFrom"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_set_long_text_columns(rp_logger):
     rp_logger.info(
         "Test the method '_set_long_text_columns' of the class Dataset",
@@ -484,22 +507,20 @@ def test_set_long_text_columns(rp_logger):
                      for _ in range(250))
              for _ in range(1, 100)] + [np.NaN]
     })
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata=metadata,
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path"
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata=metadata,
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
     assert mock_dataset.long_text_columns == {"long_text_column"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_handle_missing_values_in_numeric_columns_in_csv_file(rp_logger):
     rp_logger.info(
         "Test the process of handling missing values "
@@ -520,22 +541,21 @@ def test_handle_missing_values_in_numeric_columns_in_csv_file(rp_logger):
     }
     df = pd.DataFrame(data)
 
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=CSV_SCHEMA,
-            metadata=metadata,
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path"
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
     assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
     rp_logger.info(
         "Test the process of handling missing values "
@@ -566,17 +586,15 @@ def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
             "column5": "string"
         }
     }
-    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
-        mock_dataset = Dataset(
-            df=df,
-            schema=schema,
-            metadata=metadata,
-            table_name="mock_table",
-            paths={
-                "train_config_pickle_path": "mock_path"
-            },
-            main_process="train"
-        )
-        mock_dataset.set_metadata()
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
     assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     rp_logger.info(SUCCESSFUL_MESSAGE)

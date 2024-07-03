@@ -111,7 +111,9 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
-        self.nan_labels_dict = get_nan_labels(self.df)
+        self._set_metadata()
+        self._set_categorical_columns()
+        self.nan_labels_dict = get_nan_labels(self.df.drop(columns=self.categ_columns))
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
     def __getstate__(self) -> Dict:
@@ -317,7 +319,7 @@ class Dataset(BaseDataset):
             self.__set_uq_keys(config_of_keys)
             self.__set_fk_keys(config_of_keys)
 
-    def set_metadata(self):
+    def _set_metadata(self):
         table_config = self.metadata.get(self.table_name, {})
         self._set_non_existent_columns(table_config)
         self._update_table_config(table_config)
@@ -328,14 +330,6 @@ class Dataset(BaseDataset):
         """
         Synchronize the schema of the table with dataframe
         """
-        for column in list(self.df.columns):
-            if pd.api.types.is_integer_dtype(self.df[column]):
-                self.schema[column] = "int"
-            elif pd.api.types.is_float_dtype(self.df[column]):
-                if all(x - int(x) == 0 for x in self.df[column].dropna()):
-                    self.schema[column] = "int"
-                else:
-                    self.schema[column] = "float"
         self.schema = {
             column: data_type
             for column, data_type in self.schema.items()
@@ -689,7 +683,6 @@ class Dataset(BaseDataset):
         """
         self._set_uuid_columns()
         self._set_binary_columns()
-        self._set_categorical_columns()
         self._set_long_text_columns()
         self._set_email_columns()
         tmp_df = get_tmp_df(self.df)
@@ -733,7 +726,6 @@ class Dataset(BaseDataset):
         """
         self._set_uuid_columns()
         self._set_binary_columns()
-        self._set_categorical_columns()
         self._set_long_text_columns()
         self._set_email_columns()
         self.int_columns = set(

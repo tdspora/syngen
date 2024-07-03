@@ -70,7 +70,6 @@ class VAEWrapper(BaseWrapper):
                 main_process=self.main_process,
                 paths=self.paths,
             )
-            self.dataset.set_metadata()
             self.df = self.dataset.pipeline()
             self._save_dataset()
         elif self.process == "infer":
