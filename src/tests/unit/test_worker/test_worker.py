@@ -1376,7 +1376,8 @@ def test_launch_train_with_metadata_without_source_paths(
     """
     Test that 'launch_train' method calls all necessary methods
     in case the metadata file of related tables was provided,
-    and it contains global settings
+    and as the data will be loaded by using the callback loader,
+    it doesn't contain source paths for tables
     """
     rp_logger.info(
         "Test that 'launch_train' method calls all necessary methods "
@@ -1477,6 +1478,150 @@ def test_launch_train_with_metadata_without_source_paths(
                     "print_report": True,
                     "row_limit": 600,
                     "batch_size": 1000
+                },
+                "infer_settings": {
+                    "size": 90,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": False
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {
+                            "table": "pk_test",
+                            "columns": ["Id"]
+                        }
+                    }
+                }
+            }
+        },
+        True
+    )
+    assert mock_validate_metadata.call_count == 2
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        True
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Worker, "_Worker__train_tables", return_value=None)
+def test_launch_train_with_metadata_without_train_settings(
+    mock_train_tables,
+    mock_validate_metadata,
+    mock_collect_metrics_in_train,
+    rp_logger,
+):
+    """
+    Test that 'launch_train' method calls all necessary methods
+    in case the metadata file of related tables was provided,
+    and as the data will be loaded by using the callback loader,
+    it might not contain training settings for tables
+    """
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "in case the metadata file of related tables was provided, "
+        "and as the data will be loaded by using the callback loader, "
+        "it might not contain training settings for tables"
+    )
+    worker = Worker(
+        table_name=None,
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_without_train_settings.yaml",
+        settings={
+            "epochs": 20,
+            "drop_null": True,
+            "row_limit": 1000,
+            "batch_size": 1000,
+            "print_report": True,
+        },
+        log_level="INFO",
+        type_of_process="train",
+        loader=MagicMock()
+    )
+    worker.launch_train()
+    mock_train_tables.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        {
+            "pk_test": {
+                "train_settings": {
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "print_report": True
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "fk_test": {
+                "train_settings": {
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "size": 90,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": False
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {
+                            "table": "pk_test",
+                            "columns": ["Id"]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "pk_test": {
+                "train_settings": {
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "print_report": True
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "fk_test": {
+                "train_settings": {
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
                 },
                 "infer_settings": {
                     "size": 90,

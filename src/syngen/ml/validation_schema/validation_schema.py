@@ -172,8 +172,9 @@ class ConfigurationSchema(Schema):
 
     @post_load
     def process_format_field(self, data, **kwargs):
-        path_to_source = data.get("train_settings", {}).get("source")
-        if path_to_source:
+        train_settings = data.get("train_settings", {})
+        path_to_source = train_settings.get("source") if train_settings else None
+        if train_settings and path_to_source:
             format_schema = self.get_format_schema(path_to_source)
             if format_schema is not None and data.get("format") is not None:
                 data["format"] = format_schema().load(data["format"])

@@ -128,7 +128,6 @@ class Worker:
             return metadata
         if self.table_name:
             source = self.settings.get("source", "absent")
-            # Set a metadata for training or infer process if a metadata file wasn't provided
             metadata = {
                 self.table_name: {
                     "train_settings": {

@@ -40,7 +40,7 @@ def test_valid_metadata_file_with_source_contained_path_to_excel_table(
         "the parameter 'source' which is the path to excel table"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_for_excel_table.yaml"
+        "./tests/unit/validation_schema/fixtures/valid_metadata_file_for_excel_table.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     with caplog.at_level(level="DEBUG"):
@@ -516,7 +516,7 @@ def test_metadata_file_with_invalid_format_settings_for_excel_table(
         "Test the validation of the schema of the metadata with format settings set to Excel table"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_for_excel_table.yaml"
+        "./tests/unit/validation_schema/fixtures/valid_metadata_file_for_excel_table.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     metadata["pk_test"]["format"].update(wrong_setting)
@@ -651,7 +651,7 @@ def test_metadata_file_with_invalid_FK_key_without_references_section(rp_logger)
         ),
         (
             "./tests/unit/validation_schema/fixtures/"
-            "metadata_of_related_tables_with_absent_ref_columns.yaml",
+            "metadata_file_of_related_tables_with_absent_ref_columns.yaml",
             "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {"
             "'fk_id': {'value': {'references': {'columns': ["
             "'Missing data for required field.']}}}})}}",
@@ -705,3 +705,42 @@ def test_validation_schema_of_keys(rp_logger, path_to_metadata, expected_error):
     assert str(error.value) == (
         f"Validation error(s) found in the schema of the metadata. {expected_error}"
     )
+
+
+def test_valid_metadata_file_without_sources(rp_logger, caplog):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file without provided sources "
+        "in case the section 'train_settings' and the parameter 'source' are optional"
+    )
+    path_to_metadata = (
+        "./tests/unit/validation_schema/fixtures/valid_metadata_file_without_sources.yaml"
+    )
+    metadata = load_metadata_file(path_to_metadata)
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            metadata_path=path_to_metadata,
+            validation_source=False
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_valid_metadata_file_without_training_settings(rp_logger, caplog):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file "
+        "without provided 'training_settings' in case the section 'train_settings' is optional"
+    )
+    path_to_metadata = (
+        "./tests/unit/validation_schema/fixtures/"
+        "valid_metadata_file_without_training_settings.yaml"
+    )
+    metadata = load_metadata_file(path_to_metadata)
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            metadata_path=path_to_metadata,
+            validation_source=False
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
