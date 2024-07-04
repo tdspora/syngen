@@ -24,7 +24,7 @@ class TrainConfig:
     metadata_path: Optional[str]
     print_report: bool
     batch_size: int
-    loader: Callable[[str], pd.DataFrame]
+    loader: Optional[Callable[[str], pd.DataFrame]]
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
