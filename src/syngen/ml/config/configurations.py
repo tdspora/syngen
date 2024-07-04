@@ -95,7 +95,7 @@ class TrainConfig:
             return DataFrameFetcher(
                 loader=self.loader,
                 table_name=self.table_name
-            ).fetch_dataframe()
+            ).fetch_data()
         else:
             return DataLoader(self.source).load_data()
 

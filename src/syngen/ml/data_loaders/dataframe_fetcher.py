@@ -13,7 +13,7 @@ class DataFrameFetcher:
     loader: Callable[[str], pd.DataFrame]
     table_name: str
 
-    def fetch_dataframe(self) -> Tuple[pd.DataFrame, Dict]:
+    def fetch_data(self) -> Tuple[pd.DataFrame, Dict]:
         logger.info(
             "Attempting to fetch the dataframe due "
             "to the absence of the information about the path to the source."

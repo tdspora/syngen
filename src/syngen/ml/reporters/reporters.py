@@ -258,7 +258,7 @@ class SampleAccuracyReporter(Reporter):
     def _extract_report_data(self):
         loader = fetch_config(self.paths["train_config_pickle_path"]).loader
         original, schema = (
-            DataFrameFetcher(table_name=self.table_name, loader=loader).fetch_dataframe()
+            DataFrameFetcher(table_name=self.table_name, loader=loader).fetch_data()
             if loader is not None
             else DataLoader(self.paths["source_path"]).load_data()
         )
