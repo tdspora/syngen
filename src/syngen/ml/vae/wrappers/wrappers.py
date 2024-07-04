@@ -104,8 +104,8 @@ class VAEWrapper(BaseWrapper):
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
                 logger.info(
-                    f"Column {column} has {num_zero_values} "
-                    f"({round(num_zero_values * 100 / len(num_column))}%) "
+                    f"Column {num_column_name} has {num_zero_values} "
+                    f"({round(num_zero_values * 100 / len(num_column), 2)}%) "
                     f"zero values generated"
                 )
         return df
@@ -123,7 +123,7 @@ class VAEWrapper(BaseWrapper):
                 num_nan_values = num_column.isna().sum()
                 logger.info(
                     f"Column {num_column_name} has {num_nan_values} "
-                    f"({round(num_nan_values * 100 / len(num_column))}%) "
+                    f"({round(num_nan_values * 100 / len(num_column), 2)}%) "
                     f"empty values generated"
                 )
         return df

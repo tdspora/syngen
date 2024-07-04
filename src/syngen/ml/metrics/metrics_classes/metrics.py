@@ -969,23 +969,6 @@ class Utility(BaseMetric):
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
         logger.info("Calculating utility metric")
 
-        # Check if the datasets have more than sample_size rows to make stratify sample for utility metric
-        self.is_big_original_data = len(self.original) > self.sample_size
-        self.is_big_synthetic_data = len(self.synthetic) > self.sample_size
-
-        if self.is_big_original_data:
-            logger.info(
-                f"Original data has {len(self.original)} records. "
-                f"Creating stratified samples with {self.sample_size} records "
-                f"to calculate utility metric"
-            )
-        if self.is_big_synthetic_data:
-            logger.info(
-                f"Synthetic data has {len(self.synthetic)} records. "
-                f"Creating stratified samples with {self.sample_size} records "
-                f"to calculate utility metric"
-            )
-
         for col in categ_columns:
             map_dict = {
                 k: i + 1 for i, k in enumerate(
@@ -1041,7 +1024,7 @@ class Utility(BaseMetric):
                 "synthetic": [
                     round(synth_score_binary, 3) if best_binary is not None else np.nan,
                     round(synth_score_categ, 3) if best_categ is not None else np.nan,
-                    round(max(0, synth_regres_score), 3) if best_regres is not None else np.nan,
+                    abs(round(max(0, synth_regres_score), 3)) if best_regres is not None else np.nan,
                 ],
                 "synth_to_orig_ratio": [
                     round(synth_score_binary / score_binary, 3)
@@ -1050,7 +1033,7 @@ class Utility(BaseMetric):
                     round(synth_score_categ / score_categ, 3)
                     if best_categ is not None
                     else np.nan,
-                    round(max(0, synth_regres_score) / score_regres, 3)
+                    abs(round(max(0, synth_regres_score) / score_regres, 3))
                     if best_regres is not None
                     else np.nan,
                 ],
@@ -1102,21 +1085,21 @@ class Utility(BaseMetric):
         if best_binary is not None:
             logger.info(
                 f"The ratio of synthetic binary accuracy to original is "
-                f"{round(synth_score_binary/score_binary, 3)}. "
+                f"{round(synth_score_binary/score_binary, 4)}. "
                 f"The model considers the {best_binary} column "
                 f"as a target and other columns as predictors"
             )
         if best_categ is not None:
             logger.info(
                 f"The ratio of synthetic multiclass accuracy to original is "
-                f"{round(synth_score_categ/score_categ, 3)}. "
+                f"{round(synth_score_categ/score_categ, 4)}. "
                 f"The model considers the {best_categ} column "
                 f"as a target and other columns as predictors"
             )
         if best_regres is not None:
             logger.info(
                 f"The ratio of synthetic regression accuracy to original is "
-                f"{round(max(0, synth_regres_score) / score_regres, 3)}. "
+                f"{abs(round(max(0, synth_regres_score) / score_regres, 4))}. "
                 f"The model considers the {best_regres} column "
                 f"as a target and other columns as predictors"
             )
@@ -1136,6 +1119,44 @@ class Utility(BaseMetric):
         best_target = None
         best_model = None
         synthetic_score = -1
+
+        # Check if the datasets after drop.na() have more than
+        # self.sample_size rows and stratified sampling is needed
+        is_big_original_data_after_drop_na = (
+            len(self.original) > self.sample_size
+        )
+        is_big_synthetic_data_after_drop_na = (
+            len(self.synthetic) > self.sample_size
+        )
+
+        if is_big_original_data_after_drop_na:
+            logger.debug(
+                f"There are {len(self.original)} records left "
+                f"in original data after dropping rows with null values "
+                f"in numeric columns. "
+                f"Creating stratified samples of size {self.sample_size} "
+                f"to calculate utility metric"
+            )
+            logger.info(
+                f"There are more than {self.sample_size} records "
+                f"in original data. "
+                f"Creating stratified samples of size {self.sample_size} "
+                f"to calculate utility metric"
+            )
+        if is_big_synthetic_data_after_drop_na:
+            logger.debug(
+                f"There are {len(self.synthetic)} records left "
+                f"in synthetic data after dropping rows with null values "
+                f"in numeric columns. "
+                f"Creating stratified samples of size {self.sample_size} "
+                f"to calculate utility metric"
+            )
+            logger.info(
+                f"There are more than {self.sample_size} records "
+                f"in synthetic data. "
+                f"Creating stratified samples of size {self.sample_size} "
+                f"to calculate utility metric"
+            )
 
         for i, col in tqdm.tqdm(
             iterable=enumerate(targets),
@@ -1160,7 +1181,7 @@ class Utility(BaseMetric):
                 continue
 
             # Create a stratified sample if the original dataset is large
-            if self.is_big_original_data:
+            if is_big_original_data_after_drop_na:
                 original, model_y = self.__create_sample_for_utility_metric(
                     original, model_y
                 )
@@ -1192,7 +1213,7 @@ class Utility(BaseMetric):
             synthetic_y = self.synthetic[best_target].values
 
             # Create a stratified sample of the synthetic data if it's large
-            if self.is_big_synthetic_data:
+            if is_big_synthetic_data_after_drop_na:
                 synthetic, synthetic_y = self.__create_sample_for_utility_metric(
                     synthetic, synthetic_y
                 )
