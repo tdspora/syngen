@@ -1,4 +1,6 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
+
+import pandas as pd
 from attrs import define, field
 from copy import deepcopy
 from loguru import logger
@@ -30,7 +32,7 @@ class Worker:
     train_strategy = TrainStrategy()
     infer_strategy = InferStrategy()
     metadata: Optional[Dict] = None
-    loader: Optional[object] = None
+    loader: Optional[Callable[[str], pd.DataFrame]] = None
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
