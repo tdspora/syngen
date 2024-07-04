@@ -8,3 +8,4 @@ from syngen.ml.data_loaders.data_loaders import (  # noqa: F401;
     BinaryLoader,
     ExcelLoader,
 )
+from syngen.ml.data_loaders.dataframe_fetcher import DataFrameFetcher

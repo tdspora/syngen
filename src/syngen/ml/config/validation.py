@@ -290,7 +290,7 @@ class Validator:
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
         for table_name in self.merged_metadata.keys():
-            if self.type_of_process == "train":
+            if self.type_of_process == "train" and self.validation_source:
                 if self._check_existence_of_source(table_name):
                     self._check_key_columns(table_name)
             elif self.type_of_process == "infer":
