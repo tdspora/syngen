@@ -20,17 +20,20 @@ class Validator:
     metadata: Dict
     metadata_path: str
     type_of_process: str
+    validation_source: bool = True
     type_of_fk_keys = ["FK"]
     merged_metadata: Dict = field(default_factory=dict)
     mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
 
-    def _launch_validation_of_schema(self, metadata: Dict, metadata_path: str):
+    def _launch_validation_of_schema(self):
         """
         Launch the validation of the schema of the metadata
         """
         return ValidationSchema(
-            metadata=self.metadata, metadata_path=self.metadata_path
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            validation_source=self.validation_source
         ).validate_schema()
 
     def _define_mapping(self):
@@ -200,9 +203,7 @@ class Validator:
                 metadata = MetadataLoader(path_to_metadata_file).load_data()
                 if parent_table not in metadata:
                     continue
-                self._launch_validation_of_schema(
-                    metadata=metadata, metadata_path=path_to_metadata_file
-                )
+                self._launch_validation_of_schema()
                 self.merged_metadata.update(metadata)
                 logger.info(
                     f"The metadata located in the path - '{path_to_metadata_storage}' "
@@ -283,13 +284,13 @@ class Validator:
         """
         Run the validation process
         """
-        self._launch_validation_of_schema(metadata=self.metadata, metadata_path=self.metadata_path)
+        self._launch_validation_of_schema()
         self._define_mapping()
         self._merge_metadata()
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
         for table_name in self.merged_metadata.keys():
-            if self.type_of_process == "train":
+            if self.type_of_process == "train" and self.validation_source:
                 if self._check_existence_of_source(table_name):
                     self._check_key_columns(table_name)
             elif self.type_of_process == "infer":

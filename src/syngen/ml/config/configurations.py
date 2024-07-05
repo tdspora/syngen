@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set, List
+from typing import Optional, Dict, Tuple, Set, List, Callable
 import os
 import shutil
 
 import pandas as pd
 from loguru import logger
 
-from syngen.ml.data_loaders import DataLoader
+from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute
 
 
@@ -24,6 +24,7 @@ class TrainConfig:
     metadata_path: Optional[str]
     print_report: bool
     batch_size: int
+    loader: Optional[Callable[[str], pd.DataFrame]]
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
@@ -90,7 +91,13 @@ class TrainConfig:
         """
         Return dataframe and schema of original data
         """
-        return DataLoader(self.source).load_data()
+        if self.loader is not None:
+            return DataFrameFetcher(
+                loader=self.loader,
+                table_name=self.table_name
+            ).fetch_data()
+        else:
+            return DataLoader(self.source).load_data()
 
     def _remove_empty_columns(self, data: pd.DataFrame) -> pd.DataFrame:
         """

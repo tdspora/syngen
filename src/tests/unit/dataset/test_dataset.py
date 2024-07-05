@@ -483,7 +483,7 @@ def test_set_long_text_columns(rp_logger):
                      for _ in range(250))
              for _ in range(1, 100)] + [np.NaN]
     })
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
