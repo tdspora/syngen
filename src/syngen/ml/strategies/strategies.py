@@ -64,7 +64,8 @@ class TrainStrategy(Strategy, ABC):
 
     def _save_training_config(self):
         BinaryLoader().save_data(
-            path=self.config.paths["train_config_pickle_path"], data=self.config
+            path=self.config.paths["train_config_pickle_path"],
+            data=self.config
         )
 
     def set_config(self, **kwargs):
@@ -147,6 +148,7 @@ class TrainStrategy(Strategy, ABC):
                 metadata_path=kwargs["metadata_path"],
                 print_report=kwargs["print_report"],
                 batch_size=kwargs["batch_size"],
+                loader=kwargs["loader"]
             )
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()
