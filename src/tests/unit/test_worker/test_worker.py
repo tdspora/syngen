@@ -31,8 +31,6 @@ def test_init_worker_for_training_process_with_absent_metadata(mock_validator_ru
         log_level="INFO",
         type_of_process="train",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "table": {
             "train_settings": {
@@ -75,8 +73,6 @@ def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run, 
         log_level="INFO",
         type_of_process="infer",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "test_table": {
             "train_settings": {"source": "absent"},
@@ -121,8 +117,6 @@ def test_init_worker_with_metadata(mock_validator_run, rp_logger):
         log_level="INFO",
         type_of_process="train",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {},
         "test_table": {
@@ -175,8 +169,6 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validator_run, rp_logg
         log_level="INFO",
         type_of_process="train",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {},
         "test_table": {
@@ -222,8 +214,6 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
         log_level="INFO",
         type_of_process="train",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {
             "train_settings": {"drop_null": True, "epochs": 5, "row_limit": 500},
@@ -294,8 +284,6 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
         log_level="INFO",
         type_of_process="infer",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {
             "train_settings": {
@@ -1348,8 +1336,6 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
         type_of_process="train",
         loader=MagicMock()
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "test_table": {
             "train_settings": {

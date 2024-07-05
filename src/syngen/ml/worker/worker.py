@@ -29,8 +29,6 @@ class Worker:
     settings: Dict = field(kw_only=True)
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
-    train_strategy = TrainStrategy()
-    infer_strategy = InferStrategy()
     metadata: Optional[Dict] = None
     loader: Optional[Callable[[str], pd.DataFrame]] = None
     divided: List = field(default=list())
@@ -284,7 +282,7 @@ class Worker:
         logger.info(log_message)
         ProgressBarHandler().set_progress(delta=delta, message=log_message)
 
-        self.train_strategy.run(
+        TrainStrategy().run(
             metadata=metadata,
             source=train_settings["source"],
             epochs=train_settings["epochs"],
@@ -374,7 +372,7 @@ class Worker:
                 tags={"table_name": table, "process": type_of_process},
                 nested=is_nested,
         )
-        self.infer_strategy.run(
+        InferStrategy().run(
             destination=settings.get("destination") if type_of_process == "infer" else None,
             metadata=metadata,
             size=settings.get("size") if type_of_process == "infer" else None,
