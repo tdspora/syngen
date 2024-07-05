@@ -181,7 +181,7 @@ class ConfigurationSchema(Schema):
         return data
 
 
-class ConfigurationRestrictedSchema(ConfigurationSchema):
+class RestrictedConfigurationSchema(ConfigurationSchema):
     train_settings = fields.Nested(
         ExtendedRestrictedTrainingSettingsSchema,
         required=True,
@@ -194,7 +194,7 @@ class ValidationSchema:
         self.metadata = metadata
         self.metadata_path = metadata_path
         self.global_schema = GlobalSettingsSchema()
-        self.configuration_schema = ConfigurationRestrictedSchema() \
+        self.configuration_schema = RestrictedConfigurationSchema() \
             if validation_source else ConfigurationSchema()
 
     def validate_schema(self):
