@@ -1111,19 +1111,22 @@ class Utility(BaseMetric):
         best_model = None
         synthetic_score = -1
 
-        #Check if the datasets have more than sample_size rows to make stratify sample for utility metric
+        # Check if the datasets have more than sample_size rows
+        # to make stratify sample for utility metric
         is_big_original_data = len(self.original) > sample_size
         is_big_synthetic_data = len(self.synthetic) > sample_size
 
         if is_big_original_data:
             logger.info(
                 f"Original data has {len(self.original)} records. "
-                f"Creating stratified samples with {sample_size} records to calculate utility metric"
+                f"Creating stratified samples with {sample_size} "
+                f"records to calculate utility metric"
             )
         if is_big_synthetic_data:
             logger.info(
                 f"Synthetic data has {len(self.synthetic)} records. "
-                f"Creating stratified samples with {sample_size} records to calculate utility metric"
+                f"Creating stratified samples with {sample_size} "
+                f"records to calculate utility metric"
             )
         for i, col in tqdm.tqdm(
             iterable=enumerate(targets),
@@ -1188,8 +1191,11 @@ class Utility(BaseMetric):
 
         return best_target, best_score, synthetic_score
 
-    def __create_sample_for_utility_metric(self, data, model_y, sample_size):
-        #check if the target column has more than 1 instances for each class
+    @staticmethod
+    def __create_sample_for_utility_metric(data, model_y, sample_size):
+        """
+        Check if the target column has more than 1 instances for each class
+        """
         _, counts = np.unique(model_y, return_counts=True)
         if np.all(counts > 1):
             data, _, model_y, _ = train_test_split(
@@ -1208,8 +1214,8 @@ class Utility(BaseMetric):
                 random_state=10
             )
 
-        logger.debug(f"Samples of size={sample_size} for utility metric calculation "
-                     f"have been created"
+        logger.debug(
+            f"Samples of size={sample_size} for utility metric calculation have been created"
         )
 
         return data, model_y
