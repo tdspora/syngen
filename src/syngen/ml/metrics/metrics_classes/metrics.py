@@ -1005,6 +1005,61 @@ class Utility(BaseMetric):
         categ_cols = [
             col for col in categ_columns if col not in binary_cols and col not in excluded_cols
         ]
+
+        # Check if the datasets after dropna() have more than
+        # self.sample_size rows and stratified sampling is needed
+        self.is_big_original_data_after_drop_na = (
+            len(self.original) > self.sample_size
+        )
+        self.is_big_synthetic_data_after_drop_na = (
+            len(self.synthetic) > self.sample_size
+        )
+
+        log_debug_msg = (
+            "There are {} records left "
+            "in {} data after dropping rows with null values "
+            "in numeric columns. "
+            "Creating stratified samples of size {} "
+            "to calculate utility metric"
+        )
+
+        log_info_msg = (
+            "There are more than {} records "
+            "in {} data. "
+            "Creating stratified samples of size {} "
+            "to calculate utility metric"
+        )
+
+        if self.is_big_original_data_after_drop_na:
+            logger.debug(log_debug_msg.format(
+                len(self.original),
+                'original',
+                self.sample_size
+                )
+            )
+            logger.info(
+                log_info_msg.format(
+                    self.sample_size,
+                    'original',
+                    self.sample_size
+                )
+            )
+
+        if self.is_big_synthetic_data_after_drop_na:
+            logger.debug(log_debug_msg.format(
+                len(self.synthetic),
+                'synthetic',
+                self.sample_size
+                )
+            )
+            logger.info(
+                log_info_msg.format(
+                    self.sample_size,
+                    'synthetic',
+                    self.sample_size
+                )
+            )
+
         best_categ, score_categ, synth_score_categ = self.__create_multi_class_models(categ_cols)
         (
             best_binary,
@@ -1081,27 +1136,31 @@ class Utility(BaseMetric):
                     bbox_inches="tight",
                     format="svg",
                 )
-
+        log_msg = (
+            "The ratio of synthetic {} accuracy to original is "
+            "{}. The model considers the {} column "
+            "as a target and other columns as predictors"
+        )
         if best_binary is not None:
-            logger.info(
-                f"The ratio of synthetic binary accuracy to original is "
-                f"{round(synth_score_binary/score_binary, 4)}. "
-                f"The model considers the {best_binary} column "
-                f"as a target and other columns as predictors"
+            logger.info(log_msg.format(
+                'binary',
+                round(synth_score_binary/score_binary, 4),
+                best_binary
+                )
             )
         if best_categ is not None:
-            logger.info(
-                f"The ratio of synthetic multiclass accuracy to original is "
-                f"{round(synth_score_categ/score_categ, 4)}. "
-                f"The model considers the {best_categ} column "
-                f"as a target and other columns as predictors"
+            logger.info(log_msg.format(
+                'multiclass',
+                round(synth_score_categ/score_categ, 4),
+                best_categ
+                )
             )
         if best_regres is not None:
-            logger.info(
-                f"The ratio of synthetic regression accuracy to original is "
-                f"{abs(round(max(0, synth_regres_score) / score_regres, 4))}. "
-                f"The model considers the {best_regres} column "
-                f"as a target and other columns as predictors"
+            logger.info(log_msg.format(
+                'regression',
+                abs(round(max(0, synth_regres_score) / score_regres, 4)),
+                best_regres
+                )
             )
         logger.info("Utility metric is calculated")
         return result
@@ -1119,44 +1178,6 @@ class Utility(BaseMetric):
         best_target = None
         best_model = None
         synthetic_score = -1
-
-        # Check if the datasets after drop.na() have more than
-        # self.sample_size rows and stratified sampling is needed
-        is_big_original_data_after_drop_na = (
-            len(self.original) > self.sample_size
-        )
-        is_big_synthetic_data_after_drop_na = (
-            len(self.synthetic) > self.sample_size
-        )
-
-        if is_big_original_data_after_drop_na:
-            logger.debug(
-                f"There are {len(self.original)} records left "
-                f"in original data after dropping rows with null values "
-                f"in numeric columns. "
-                f"Creating stratified samples of size {self.sample_size} "
-                f"to calculate utility metric"
-            )
-            logger.info(
-                f"There are more than {self.sample_size} records "
-                f"in original data. "
-                f"Creating stratified samples of size {self.sample_size} "
-                f"to calculate utility metric"
-            )
-        if is_big_synthetic_data_after_drop_na:
-            logger.debug(
-                f"There are {len(self.synthetic)} records left "
-                f"in synthetic data after dropping rows with null values "
-                f"in numeric columns. "
-                f"Creating stratified samples of size {self.sample_size} "
-                f"to calculate utility metric"
-            )
-            logger.info(
-                f"There are more than {self.sample_size} records "
-                f"in synthetic data. "
-                f"Creating stratified samples of size {self.sample_size} "
-                f"to calculate utility metric"
-            )
 
         for i, col in tqdm.tqdm(
             iterable=enumerate(targets),
@@ -1181,7 +1202,7 @@ class Utility(BaseMetric):
                 continue
 
             # Create a stratified sample if the original dataset is large
-            if is_big_original_data_after_drop_na:
+            if self.is_big_original_data_after_drop_na:
                 original, model_y = self.__create_sample_for_utility_metric(
                     original, model_y
                 )
@@ -1213,7 +1234,7 @@ class Utility(BaseMetric):
             synthetic_y = self.synthetic[best_target].values
 
             # Create a stratified sample of the synthetic data if it's large
-            if is_big_synthetic_data_after_drop_na:
+            if self.is_big_synthetic_data_after_drop_na:
                 synthetic, synthetic_y = self.__create_sample_for_utility_metric(
                     synthetic, synthetic_y
                 )
@@ -1227,6 +1248,12 @@ class Utility(BaseMetric):
         return best_target, best_score, synthetic_score
 
     def __create_sample_for_utility_metric(self, data, model_y):
+        '''
+        Creates stratified (or random when stratified sampling is impossible)
+        sample of size self.sample_size
+        from data (predictors) and model_y (target)
+        '''
+
         # check if the target column has more than 1 instances for each class
         _, counts = np.unique(model_y, return_counts=True)
         if np.all(counts > 1):
@@ -1246,8 +1273,10 @@ class Utility(BaseMetric):
                 random_state=10
             )
 
-        logger.debug(f"Samples of size={self.sample_size} for "
-                     f"utility metric calculation have been created")
+        logger.debug(
+            f"Samples of size={self.sample_size} "
+            f"for utility metric calculation have been created"
+        )
 
         return data, model_y
 
