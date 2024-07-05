@@ -1316,9 +1316,13 @@ def test_launch_infer_with_metadata_contained_global_settings(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "run")
 def test_init_worker_for_training_process_with_absent_metadata_and_callback_loader(
         mock_validator_run,
+        mock_check_existence_of_source,
+        mock_check_key_columns,
         rp_logger
 ):
     """
@@ -1361,15 +1365,21 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
         }
     }
     mock_validator_run.assert_called_once()
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_key_columns.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_without_source_paths(
     mock_train_tables,
     mock_validate_metadata,
+    mock_check_existence_of_source,
+    mock_check_key_columns,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -1505,15 +1515,21 @@ def test_launch_train_with_metadata_without_source_paths(
         ["pk_test", "fk_test"],
         True
     )
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_key_columns.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_without_train_settings(
     mock_train_tables,
     mock_validate_metadata,
+    mock_check_existence_of_source,
+    mock_check_key_columns,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -1644,6 +1660,8 @@ def test_launch_train_with_metadata_without_train_settings(
         True
     )
     assert mock_validate_metadata.call_count == 2
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_key_columns.assert_not_called()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
