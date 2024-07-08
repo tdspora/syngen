@@ -182,7 +182,7 @@ def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog
                 "tests/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
             )
 
-            schema = {"Test": ["test", "null"]}
+            schema = {"Test": "test"}
 
             AvroConvertor(schema, df)
 
@@ -290,6 +290,42 @@ def test_preprocess_df_if_column_is_binary(rp_logger):
 
     convertor = AvroConvertor({"Test": ["bytes"]}, df)
     assert convertor.preprocessed_df.dtypes.to_dict() == {"Test": "string[python]"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_preprocess_df_if_column_is_null(rp_logger):
+    rp_logger.info(
+        "Preprocessing the dataframe contained the column "
+        "with data type - 'null' by the class AvroConvertor"
+    )
+    df = pd.DataFrame({"Test": [np.NaN, np.NaN, np.NaN]})
+
+    convertor = AvroConvertor({"Test": ["null"]}, df)
+    assert convertor.preprocessed_df.dtypes.to_dict() == {
+        "Test": dtype("float64")
+    }
+    assert convertor.converted_schema == {
+        "fields": {"Test": "null"},
+        "format": "Avro"
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_preprocess_df_if_column_is_invalid_null(rp_logger, caplog):
+    rp_logger.info(
+        "Preprocessing the dataframe contained the column "
+        "with data type - 'null' by the class AvroConvertor "
+        "in case this column isn't empty"
+    )
+    df = pd.DataFrame({"Test": [np.NaN, "value", np.NaN]})
+    error_message = ("It seems that the data type - 'null' isn't correct "
+                     "for the column - 'Test' as it's not empty")
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            AvroConvertor({"Test": ["null"]}, df)
+            assert str(error.value) == error_message
+            assert caplog.text == error_message
+
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

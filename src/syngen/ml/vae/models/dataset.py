@@ -30,7 +30,7 @@ from syngen.ml.utils import (
 )
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_parameters
-from syngen.ml.utils import fetch_training_config, clean_up_metadata
+from syngen.ml.utils import fetch_config, clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
@@ -82,10 +82,10 @@ class BaseDataset:
         self.foreign_keys_mapping: Dict = dict()
         self.foreign_keys_list: List = list()
         self.fk_columns: List = list()
-        self.dropped_columns: Set = fetch_training_config(
+        self.dropped_columns: Set = fetch_config(
             self.paths["train_config_pickle_path"]
         ).dropped_columns
-        self.order_of_columns: List = fetch_training_config(
+        self.order_of_columns: List = fetch_config(
             self.paths["train_config_pickle_path"]
         ).columns
         self.format = self.metadata[self.table_name].get("format", {})
@@ -484,7 +484,7 @@ class Dataset(BaseDataset):
 
         if not data_subset.empty:
             data_subset = data_subset.loc[
-                :, data_subset.apply(lambda x: (x.str.len() > 200).any())
+                :, data_subset.apply(lambda x: (x.dropna().str.len() > 200).any())
             ]
             self.long_text_columns = set(data_subset.columns)
             self.long_text_columns = (self.long_text_columns - self.categ_columns

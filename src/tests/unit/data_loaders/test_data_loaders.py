@@ -257,6 +257,32 @@ def test_load_data_from_table_in_avro_format(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_load_data_from_table_with_null_column(rp_logger):
+    rp_logger.info(
+        "Loading data from local table in avro format with a column that has a data type - 'null'"
+    )
+    data_loader = DataLoader(
+        "tests/unit/data_loaders/fixtures/avro_tables/table_with_null_column.avro"
+    )
+    df, schema = data_loader.load_data()
+
+    assert isinstance(data_loader.file_loader, AvroLoader)
+
+    assert isinstance(df, pd.DataFrame)
+    assert list(df.columns) == ["id", "name", "age", "email"]
+    assert df.shape == (10, 4)
+    assert schema == {
+        "fields": {
+            "id": "int",
+            "name": "string",
+            "age": "null",
+            "email": "string"
+        },
+        "format": "Avro"
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
     rp_logger.info("Loading data from local empty table in avro format")
     path = "tests/unit/data_loaders/fixtures/avro_tables/empty_table.avro"

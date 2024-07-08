@@ -1,4 +1,6 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
+
+import pandas as pd
 from attrs import define, field
 from copy import deepcopy
 from loguru import logger
@@ -27,9 +29,8 @@ class Worker:
     settings: Dict = field(kw_only=True)
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
-    train_strategy = TrainStrategy()
-    infer_strategy = InferStrategy()
     metadata: Optional[Dict] = None
+    loader: Optional[Callable[[str], pd.DataFrame]] = None
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
@@ -52,6 +53,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
+            validation_source=False if self.loader else True
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -126,7 +128,6 @@ class Worker:
             return metadata
         if self.table_name:
             source = self.settings.get("source", "absent")
-            # Set a metadata for training or infer process if a metadata file wasn't provided
             metadata = {
                 self.table_name: {
                     "train_settings": {
@@ -281,7 +282,7 @@ class Worker:
         logger.info(log_message)
         ProgressBarHandler().set_progress(delta=delta, message=log_message)
 
-        self.train_strategy.run(
+        TrainStrategy().run(
             metadata=metadata,
             source=train_settings["source"],
             epochs=train_settings["epochs"],
@@ -290,7 +291,8 @@ class Worker:
             table_name=table,
             metadata_path=self.metadata_path,
             print_report=train_settings["print_report"],
-            batch_size=train_settings["batch_size"]
+            batch_size=train_settings["batch_size"],
+            loader=self.loader
         )
         self._write_success_message(slugify(table))
         self._save_metadata_file()
@@ -370,7 +372,7 @@ class Worker:
                 tags={"table_name": table, "process": type_of_process},
                 nested=is_nested,
         )
-        self.infer_strategy.run(
+        InferStrategy().run(
             destination=settings.get("destination") if type_of_process == "infer" else None,
             metadata=metadata,
             size=settings.get("size") if type_of_process == "infer" else None,

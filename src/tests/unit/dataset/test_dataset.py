@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import datetime
 import random
+import string
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
@@ -34,9 +35,11 @@ AVRO_SCHEMA = {
     ],
 )
 def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_table, rp_logger):
-    rp_logger.info("Test the process of the detection of UUID columns in the table in csv format")
+    rp_logger.info(
+        "Test the process of the detection of UUID columns in the table in csv format"
+    )
     df = pd.read_csv(path_to_test_table)
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
@@ -76,9 +79,11 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
     ],
 )
 def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test_table, rp_logger):
-    rp_logger.info("Test the process of the detection of UUID columns in the table in avro format")
+    rp_logger.info(
+        "Test the process of the detection of UUID columns in the table in avro format"
+    )
     df = pdx.from_avro(path_to_test_table)
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
@@ -113,7 +118,7 @@ def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test
 def test_save_dataset(rp_logger):
     rp_logger.info("Test the process of saving the dataset")
     df = pd.read_csv("./tests/unit/dataset/fixtures/data.csv")
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
@@ -176,7 +181,7 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
         "the categorical columns in the table in '.csv' format"
     )
     df = pd.read_csv("./tests/unit/dataset/fixtures/table_with_categ_columns.csv")
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
@@ -206,7 +211,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
         "Test the process of the detection of the binary columns in the table in '.csv' format"
     )
     df = pd.read_csv("./tests/unit/dataset/fixtures/table_with_binary_columns.csv")
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
@@ -233,7 +238,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch("syngen.ml.vae.models.dataset.fetch_training_config", return_value=MagicMock())
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_check_non_existent_columns(rp_logger):
     rp_logger.info("Test the process of checking non-existent columns")
     df = pd.read_csv("./tests/unit/dataset/fixtures/data.csv")
@@ -317,7 +322,7 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
                  strftime(initial_date_format) for x in range(10000)]
     }
     df = pd.DataFrame(data, columns=["Date"])
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
@@ -364,7 +369,7 @@ def test_define_date_format_with_extreme_values(
         {"Date": data['Date'] + extreme_values}
     )
     df = pd.DataFrame(data, columns=["Date"])
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
@@ -405,7 +410,7 @@ def test_is_valid_uuid(rp_logger):
         data,
         columns=["UUID_1", "UUID_2", "UUID_3", "UUID_4", "UUID_5"]
     )
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
@@ -441,7 +446,7 @@ def test_set_email_columns(rp_logger):
     }
 
     df = pd.read_csv("./tests/unit/dataset/fixtures/data_with_emails.csv")
-    with patch("syngen.ml.vae.models.dataset.fetch_training_config", lambda x: MagicMock()):
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
             schema=CSV_SCHEMA,
@@ -454,4 +459,41 @@ def test_set_email_columns(rp_logger):
         )
         mock_dataset.set_metadata()
     assert mock_dataset.email_columns == {"ExtractedFrom"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_set_long_text_columns(rp_logger):
+    rp_logger.info(
+        "Test the method '_set_long_text_columns' of the class Dataset",
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    alphabet = string.ascii_letters + string.digits + string.punctuation + " "
+    df = pd.DataFrame({
+        "column1": range(1, 101),
+        "column2": range(101, 201),
+        "column3": range(201, 301),
+        "column4": range(301, 401),
+        "long_text_column":
+            ["".join(random.choice(alphabet)
+                     for _ in range(250))
+             for _ in range(1, 100)] + [np.NaN]
+    })
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={
+                "train_config_pickle_path": "mock_path"
+            },
+            main_process="train"
+        )
+        mock_dataset.set_metadata()
+    assert mock_dataset.long_text_columns == {"long_text_column"}
     rp_logger.info(SUCCESSFUL_MESSAGE)

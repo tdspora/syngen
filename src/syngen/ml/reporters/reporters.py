@@ -9,11 +9,11 @@ from loguru import logger
 from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
-    fetch_dataset,
+    fetch_config,
     datetime_to_timestamp,
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
-from syngen.ml.data_loaders import DataLoader
+from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.metrics.utils import text_to_continuous
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import ProgressBarHandler
@@ -35,7 +35,7 @@ class Reporter:
         return original, synthetic
 
     def fetch_data_types(self):
-        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        dataset = fetch_config(self.paths["dataset_pickle_path"])
         types = (
             dataset.str_columns,
             dataset.date_columns,
@@ -76,7 +76,7 @@ class Reporter:
         columns_nan_labels = get_nan_labels(original)
         original = nan_labels_to_float(original, columns_nan_labels)
         synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
-        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        dataset = fetch_config(self.paths["dataset_pickle_path"])
         types = self.fetch_data_types()
         (
             str_columns,
@@ -256,7 +256,12 @@ class SampleAccuracyReporter(Reporter):
     report_type = "sample"
 
     def _extract_report_data(self):
-        original, schema = DataLoader(self.paths["source_path"]).load_data()
+        loader = fetch_config(self.paths["train_config_pickle_path"]).loader
+        original, schema = (
+            DataFrameFetcher(table_name=self.table_name, loader=loader).fetch_data()
+            if loader is not None
+            else DataLoader(self.paths["source_path"]).load_data()
+        )
         sampled, schema = DataLoader(self.paths["input_data_path"]).load_data()
         return original, sampled
 

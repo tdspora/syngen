@@ -17,7 +17,7 @@ from syngen.ml.metrics import (
     Utility,
 )
 from syngen.ml.metrics.utils import transform_to_base64
-from syngen.ml.utils import fetch_training_config, ProgressBarHandler
+from syngen.ml.utils import fetch_config, ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
@@ -91,7 +91,7 @@ class BaseTest(ABC):
         filtered_fields = ["print_report", "get_infer_metrics", "privacy_report"]
         train_config = {
             k: v
-            for k, v in fetch_training_config(self.paths["train_config_pickle_path"])
+            for k, v in fetch_config(self.paths["train_config_pickle_path"])
             .to_dict()
             .items()
             if k not in filtered_fields

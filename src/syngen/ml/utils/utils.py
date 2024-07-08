@@ -3,7 +3,6 @@ import sys
 import re
 from typing import List, Dict, Optional, Union
 from dateutil import parser
-import pickle
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -211,9 +210,7 @@ def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFr
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
-        df_with_nan[column] = pd.to_numeric(
-            df_with_nan[column].where(df_with_nan[column] != label, np.nan)
-        )  # casting from object to int/float
+        df_with_nan[column].replace(label, np.NaN, inplace=True)
     return df_with_nan
 
 
@@ -233,15 +230,6 @@ def fillnan(df, str_columns, float_columns, categ_columns):
         df[c] = df[c].fillna("NaN")
 
     return df
-
-
-def fetch_dataset(dataset_pickle_path: str):
-    """
-    Deserialize and return the object of class Dataset
-    """
-    with open(dataset_pickle_path, "rb") as f:
-        dataset = pickle.loads(f.read())
-    return dataset
 
 
 def slugify_attribute(**kwargs):
@@ -317,18 +305,18 @@ def check_if_features_assigned(dataset_pickle_path: str):
     """
     Check if features are assigned in the dataset
     """
-    features = fetch_dataset(dataset_pickle_path).features
+    features = fetch_config(dataset_pickle_path).features
     if len(features) == 0:
         logger.info("No features to train VAE on")
         return False
     return True
 
 
-def fetch_training_config(train_config_pickle_path):
+def fetch_config(config_pickle_path: str):
     """
-    Fetch the parameters of the training configuration
+    Fetch the configuration from the disk
     """
-    with open(train_config_pickle_path, "rb") as f:
+    with open(config_pickle_path, "rb") as f:
         return pkl.load(f)
 
 

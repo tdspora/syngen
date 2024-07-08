@@ -20,7 +20,7 @@ from loguru import logger
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import (
-    fetch_dataset,
+    fetch_config,
     check_if_features_assigned,
     generate_uuid,
     get_initial_table_name,
@@ -99,7 +99,7 @@ class LongTextsHandler(BaseHandler):
     def handle(self, data: pd.DataFrame, **kwargs):
         self._prepare_dir()
 
-        dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        dataset = fetch_config(self.paths["dataset_pickle_path"])
         long_text_columns = dataset.long_text_columns
 
         if len(long_text_columns) > 0:
@@ -219,7 +219,7 @@ class VaeInferHandler(BaseHandler):
             seed(self.random_seed)
         self.random_seeds_list = list()
         self.vae = None
-        self.dataset = fetch_dataset(self.paths["dataset_pickle_path"])
+        self.dataset = fetch_config(self.paths["dataset_pickle_path"])
         self.has_vae = len(self.dataset.features) > 0
 
         data, schema = self._get_data()
