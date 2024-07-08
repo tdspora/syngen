@@ -1181,7 +1181,7 @@ class Utility(BaseMetric):
 
         for i, col in tqdm.tqdm(
             iterable=enumerate(targets),
-            desc="Calculating utility metric...",
+            desc=f"Calculating utility metric for {task_type}",
             total=len(targets),
         ):
             if self.original.shape[1] < 2:
