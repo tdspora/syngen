@@ -2,7 +2,6 @@ from unittest.mock import patch, MagicMock
 
 from syngen.ml.worker import Worker
 from syngen.ml.config import Validator
-from syngen.ml.strategies.strategies import TrainStrategy, InferStrategy
 
 from tests.conftest import SUCCESSFUL_MESSAGE
 
