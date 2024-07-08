@@ -221,9 +221,9 @@ class VAEWrapper(BaseWrapper):
         )
 
         logger.trace(
-            f"The numeric loss - {num_loss}, "
-            f"the categorical loss - {categorical_loss}, "
-            f"the text_loss - {text_loss} in the {epoch} epoch"
+            f"The numeric loss - {num_loss:.4f}, "
+            f"the categorical loss - {categorical_loss:.4f}, "
+            f"the text_loss - {text_loss} in the {epoch:.4f} epoch"
         )
         MlflowTracker().log_metric(
             "the numeric loss", num_loss, step=epoch
@@ -329,12 +329,6 @@ class VAEWrapper(BaseWrapper):
                 total_feature_losses,
                 num_batches
             )
-            self._monitor_feature_losses(
-                mean_feature_losses,
-                mean_kl_loss,
-                epoch
-            )
-            self._monitor_grouped_losses(mean_feature_losses, epoch)
 
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
@@ -350,6 +344,16 @@ class VAEWrapper(BaseWrapper):
                 message=log_message
             )
             logger.info(log_message)
+            mean_feature_losses = self._get_mean_feature_losses(
+                total_feature_losses,
+                num_batches
+            )
+            self._monitor_feature_losses(
+                mean_feature_losses,
+                mean_kl_loss,
+                epoch
+            )
+            self._monitor_grouped_losses(mean_feature_losses, epoch)
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
 
