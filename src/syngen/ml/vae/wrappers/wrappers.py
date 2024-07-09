@@ -15,6 +15,7 @@ import tqdm
 import pandas as pd
 import numpy as np
 from loguru import logger
+from slugify import slugify
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
@@ -226,13 +227,13 @@ class VAEWrapper(BaseWrapper):
             f"the text_loss - {text_loss} in the {epoch} epoch"
         )
         MlflowTracker().log_metric(
-            "the numeric loss", num_loss, step=epoch
+            "numeric_loss", num_loss, step=epoch
         )
         MlflowTracker().log_metric(
-            "the categorical loss", categorical_loss, step=epoch
+            "categorical_loss", categorical_loss, step=epoch
         )
         MlflowTracker().log_metric(
-            "the text loss", text_loss, step=epoch
+            "text_loss", text_loss, step=epoch
         )
 
     @staticmethod
@@ -265,7 +266,7 @@ class VAEWrapper(BaseWrapper):
         )
         for name, loss in mean_feature_losses.items():
             MlflowTracker().log_metric(
-                f"loss of the feature - '{name}'", loss, step=epoch
+                f"{slugify(name)}_loss", loss, step=epoch
             )
         MlflowTracker().log_metric(
             "kl_loss", mean_kl_loss, step=epoch
@@ -338,7 +339,7 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec"
+            log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
                 message=log_message
