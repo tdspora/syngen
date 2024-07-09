@@ -1,3 +1,4 @@
+import os
 from typing import Tuple, List, Optional, Dict
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -59,6 +60,7 @@ class VAEWrapper(BaseWrapper):
     process: str
     main_process: str
     batch_size: int
+    log_level: str = os.getenv("LOGURU_LEVEL")
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
@@ -318,18 +320,15 @@ class VAEWrapper(BaseWrapper):
                 loss, kl_loss, feature_losses = step(x_batch_train)
                 total_loss += loss
                 total_kl_loss += kl_loss
-                total_feature_losses = self._accumulate_feature_losses(
-                    total_feature_losses,
-                    feature_losses
-                )
+                if self.log_level == "TRACE":
+                    total_feature_losses = self._accumulate_feature_losses(
+                        total_feature_losses,
+                        feature_losses
+                    )
                 num_batches += 1
 
             mean_loss = np.mean(total_loss / num_batches)
             mean_kl_loss = np.mean(total_kl_loss / num_batches)
-            mean_feature_losses = self._get_mean_feature_losses(
-                total_feature_losses,
-                num_batches
-            )
 
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
@@ -345,16 +344,18 @@ class VAEWrapper(BaseWrapper):
                 message=log_message
             )
             logger.info(log_message)
-            mean_feature_losses = self._get_mean_feature_losses(
-                total_feature_losses,
-                num_batches
-            )
-            self._monitor_feature_losses(
-                mean_feature_losses,
-                mean_kl_loss,
-                epoch
-            )
-            self._monitor_grouped_losses(mean_feature_losses, epoch)
+            if self.log_level == "TRACE":
+                mean_feature_losses = self._get_mean_feature_losses(
+                    total_feature_losses,
+                    num_batches
+                )
+                self._monitor_feature_losses(
+                    mean_feature_losses,
+                    mean_kl_loss,
+                    epoch
+                )
+                self._monitor_grouped_losses(mean_feature_losses, epoch)
+
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
 
@@ -406,7 +407,7 @@ class VAEWrapper(BaseWrapper):
                 name: loss.numpy().mean()
                 for name, loss in
                 zip(order_of_features, self.model.losses[:-1])
-            }
+            } if self.log_level == "TRACE" else dict()
 
         self.optimizer.minimize(
             loss=loss,
