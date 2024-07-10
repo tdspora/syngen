@@ -898,17 +898,24 @@ class Dataset(BaseDataset):
             and new null feature name.
         """
         isnull_feature = pd.isnull(self.df[feature])
-        many_zeros_feature = (self.df[feature] == 0).sum() / (len(self.df[feature])) > zero_cutoff
+        num_zeros = (self.df[feature] == 0).sum()
+        many_zeros_feature = (num_zeros / (len(self.df[feature]))) > zero_cutoff
         if many_zeros_feature:
             feature_zero = feature + "_zero"
             self.df[feature_zero] = self.df[feature].apply(lambda x: 0 if x == 0 else 1)
             if not isnull_feature.any():
+                logger.info(
+                    f"Column '{feature}' contains {num_zeros} "
+                    f"({round(num_zeros * 100 / (len(self.df[feature])))}%) "
+                    f"zero values out of {(len(self.df[feature]))}. "
+                    f"Ratio of zeros will be preserved in synthetic data."
+                )
                 return (feature, feature_zero)
         if isnull_feature.any():
             nan_number = isnull_feature.sum()
             logger.info(
                 f"Column '{feature}' contains {nan_number} "
-                f"({round(nan_number * 100 / len(isnull_feature))}%) "
+                f"({round(nan_number * 100 / len(isnull_feature), 2)}%) "
                 f"empty values out of {len(isnull_feature)}. "
                 f"Filling them with {fillna_strategy or 'zero'}."
             )
