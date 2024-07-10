@@ -35,3 +35,4 @@ tqdm==4.66.3
 Werkzeug==3.0.3
 xlrd
 xlwt
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
