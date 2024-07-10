@@ -275,16 +275,15 @@ class VAEWrapper(BaseWrapper):
         )
 
     @staticmethod
-    def _accumulate_feature_losses(total_feature_losses, *feature_losses):
+    def _accumulate_feature_losses(total_feature_losses, feature_losses):
         """
         Accumulate the loss for every feature
         """
-        for i in feature_losses:
-            for key, value in i.items():
-                if key in total_feature_losses:
-                    total_feature_losses[key] += value
-                else:
-                    total_feature_losses[key] = value
+        for key, value in feature_losses.items():
+            if key in total_feature_losses:
+                total_feature_losses[key] += value
+            else:
+                total_feature_losses[key] = value
         return total_feature_losses
 
     def _train(self, dataset, epochs: int):
