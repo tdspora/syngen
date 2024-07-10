@@ -60,7 +60,7 @@ class VAEWrapper(BaseWrapper):
     process: str
     main_process: str
     batch_size: int
-    log_level: str = os.getenv("LOGURU_LEVEL")
+    log_level: str
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
@@ -473,6 +473,9 @@ class VanillaVAEWrapper(VAEWrapper):
             batch_size: int,
             latent_dim: int = 10,
             latent_components: int = 30):
+
+        log_level = os.getenv("LOGURU_LEVEL")
+
         super().__init__(
             df,
             schema,
@@ -481,10 +484,10 @@ class VanillaVAEWrapper(VAEWrapper):
             paths,
             process,
             main_process,
-            batch_size
+            batch_size,
+            log_level
         )
         self.latent_dim = min(latent_dim, int(len(self.dataset.columns) / 2))
-
         self.vae = CVAE(
             self.dataset,
             batch_size=self.batch_size,
