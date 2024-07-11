@@ -241,7 +241,7 @@ class VAEWrapper(BaseWrapper):
     @staticmethod
     def _get_mean_feature_losses(total_feature_losses, num_batches):
         """
-        Get the mean loss of every feature for every batch
+        Get the mean loss of every feature for every epoch
         """
         return {
             name: np.mean(loss / num_batches)
