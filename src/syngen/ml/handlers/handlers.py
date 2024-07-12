@@ -336,6 +336,15 @@ class VaeInferHandler(BaseHandler):
         return synthetic_infer
 
     def split_by_batches(self):
+        """
+        Split the total size into batches
+        based on the specified number of nodes.
+
+        This method divides the total size
+        into a specified number of batches (nodes).
+        Each batch will have a size equal to batch_size,
+        except for the last batch, which will contain the remaining size
+        """
         quote = self.batch_size
         nodes = self.batch_num
         data = [quote] * (nodes - 1)
