@@ -1192,7 +1192,8 @@ class Utility(BaseMetric):
                 continue
             original = pd.get_dummies(self.original.drop(col, axis=1))
             original = StandardScaler().fit_transform(original)
-            model_y = self.original[col].values[: int(original.shape[0] * 0.8)]
+            model_y = self.original[col].values
+
             if len(set(model_y)) < 2:
                 logger.info(
                     f"Column {col} has less than 2 classes as target. "
@@ -1207,12 +1208,23 @@ class Utility(BaseMetric):
                     original, model_y
                 )
 
+            (
+                original_train,
+                original_test,
+                model_y_train,
+                model_y_test
+            ) = self.__perform_train_test_split(
+                original,
+                model_y,
+                train_size=0.8
+            )
+
             model = model_object.fit(
-                X=original[: int(original.shape[0] * 0.8), :], y=model_y
+                X=original_train, y=model_y_train
             )
             score = self.__get_accuracy_score(
-                self.original[col].values[int(original.shape[0] * 0.8):],
-                model.predict(original[int(original.shape[0] * 0.8):, :]),
+                model_y_test,
+                model.predict(original_test),
                 task_type,
             )
             if score > best_score:
@@ -1254,24 +1266,8 @@ class Utility(BaseMetric):
         from data (predictors) and model_y (target)
         '''
 
-        # check if the target column has more than 1 instances for each class
-        _, counts = np.unique(model_y, return_counts=True)
-        if np.all(counts > 1):
-            data, _, model_y, _ = train_test_split(
-                data,
-                model_y,
-                train_size=self.sample_size,
-                stratify=model_y,
-                random_state=10
-            )
-
-        else:
-            data, _, model_y, _ = train_test_split(
-                data,
-                model_y,
-                train_size=self.sample_size,
-                random_state=10
-            )
+        data, _, model_y, _ = self.__perform_train_test_split(
+            self, data, model_y, self.sample_size)
 
         logger.debug(
             f"Samples of size={self.sample_size} "
@@ -1279,6 +1275,28 @@ class Utility(BaseMetric):
         )
 
         return data, model_y
+
+    def __perform_train_test_split(self, data, model_y, train_size):
+        '''
+        Splits the data into train and test sets
+        with stratified sampling if possible
+        '''
+        # check if the target column has more than 1 instances for each class
+        _, counts = np.unique(model_y, return_counts=True)
+
+        # Set split_strategy to stratified or random
+        # based on counts of target classes
+        split_strategy = model_y if np.all(counts > 1) else None
+
+        data_train, data_test, model_y_train, model_y_test = train_test_split(
+            data,
+            model_y,
+            train_size=train_size,
+            stratify=split_strategy,
+            random_state=10
+        )
+
+        return data_train, data_test, model_y_train, model_y_test
 
     def __create_binary_class_models(self, binary_targets):
         best_target, score, synthetic_score = self.__model_process(
