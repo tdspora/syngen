@@ -4,6 +4,7 @@ import math
 
 from syngen.ml.handlers import VaeInferHandler
 from syngen.ml.data_loaders import MetadataLoader
+from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 @patch("os.path.exists", return_value=True)
@@ -32,10 +33,13 @@ from syngen.ml.data_loaders import MetadataLoader
         ),
     ],
 )
-def test_get_pk_path(mock_os_path_exists, path_to_metadata, expected_path, type_of_process):
+def test_get_pk_path(
+        mock_os_path_exists, path_to_metadata, expected_path, type_of_process, rp_logger
+):
     """
-    Test set_pk method
+    Test the method '_get_pk_path' of the class VaeInferHandler
     """
+    rp_logger.info("Test the method '_get_pk_path' of the class VaeInferHandler")
     with patch.object(VaeInferHandler, "__post_init__", lambda x: None):
         metadata = MetadataLoader(path_to_metadata).load_data()
         handler = VaeInferHandler(
@@ -54,6 +58,7 @@ def test_get_pk_path(mock_os_path_exists, path_to_metadata, expected_path, type_
             type_of_process=type_of_process,
         )
         assert handler._get_pk_path("parent_table", "child_table") == expected_path
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @pytest.mark.parametrize(
@@ -75,11 +80,13 @@ def test_split_by_batches(
         size,
         batch_size,
         nodes,
-        expected_result
+        expected_result,
+        rp_logger
 ):
     """
-    Test the method 'split_by_batches'
+    Test the method 'split_by_batches' of the class VaeInferHandler
     """
+    rp_logger.info("Test the method 'split_by_batches' of the class VaeInferHandler")
     path_to_metadata = "tests/unit/handlers/fixtures/metadata.yaml"
     metadata = MetadataLoader(path_to_metadata).load_data()
     handler = VaeInferHandler(
@@ -99,3 +106,4 @@ def test_split_by_batches(
         )
     handler.batch_num = math.ceil(handler.size / handler.batch_size)
     assert handler.split_by_batches() == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
