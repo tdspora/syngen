@@ -213,10 +213,12 @@ class VaeInferHandler(BaseHandler):
     vae: Optional[VAEWrapper] = field(init=False)  # noqa: F405
     has_vae: bool = field(init=False)
     has_no_ml: bool = field(init=False)
+    batch_num: int = field(init=False)
 
     def __post_init__(self):
         if self.random_seed:
             seed(self.random_seed)
+        self.batch_num = math.ceil(self.size / self.batch_size)
         self.random_seeds_list = list()
         self.vae = None
         self.dataset = fetch_config(self.paths["dataset_pickle_path"])
@@ -333,10 +335,11 @@ class VaeInferHandler(BaseHandler):
 
         return synthetic_infer
 
-    def split_by_batches(self, size, nodes):
+    def split_by_batches(self):
         quote = self.batch_size
+        nodes = self.batch_num
         data = [quote] * (nodes - 1)
-        data.append(size - quote * (nodes - 1))
+        data.append(self.size - quote * (nodes - 1))
         return data
 
     def run(self, size: int, run_parallel: bool):
@@ -445,20 +448,18 @@ class VaeInferHandler(BaseHandler):
 
     def handle(self, **kwargs):
         self._prepare_dir()
-
-        batch_num = math.ceil(self.size / self.batch_size)
         logger.debug(
             f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}, "
             f"batch_size={self.batch_size}, random_seed={self.random_seed}, "
             f"print_report={self.print_report}, get_infer_metrics={self.get_infer_metrics}"
         )
-        logger.info(f"Total of {batch_num} batch(es)")
-        batches = self.split_by_batches(self.size, batch_num)
-        delta = ProgressBarHandler().delta / batch_num
+        logger.info(f"Total of {self.batch_num} batch(es)")
+        batches = self.split_by_batches()
+        delta = ProgressBarHandler().delta / self.batch_num
         prepared_batches = []
         for i, batch in enumerate(batches):
             log_message = (f"Data synthesis for the table - '{self.table_name}'. "
-                           f"Generating the batch {i + 1} of {batch_num}")
+                           f"Generating the batch {i + 1} of {self.batch_num}")
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
                 delta=delta,
