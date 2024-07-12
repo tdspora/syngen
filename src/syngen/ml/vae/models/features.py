@@ -1,6 +1,7 @@
 from itertools import chain
 from typing import Union, List
 from lazy import lazy
+from loguru import logger
 
 import category_encoders as ce
 import numpy as np
@@ -499,7 +500,8 @@ class CharBasedTextFeature(BaseFeature):
 
         return logits_removed
 
-    def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
+    def inverse_transform_old(self, data: np.ndarray, **kwargs) -> List[str]:
+        logger.trace(f'Shape of data: {data.shape}.')
         top_p = 0.9
         if len(kwargs) > 0:
             top_p = kwargs["top_p"]
@@ -521,6 +523,53 @@ class CharBasedTextFeature(BaseFeature):
             )
             out.append(word)
         return out
+
+    def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
+
+        def top_p_filtering(
+                logits: np.ndarray,
+                top_p: float = 0,
+                filter_value: int = -1e8,
+        ):
+            pass
+
+            return logits
+
+        def top_k_filtering(
+                logits: np.ndarray,
+                top_k: int = 0
+        ):
+            indices_to_remove = logits < tf.math.top_k(logits, top_k)[0][..., -1, None]
+            logits[indices_to_remove] = 0.0
+            return logits
+
+        def process_batch(batch: np.ndarray) -> List[str]:
+            probs = tf.nn.softmax(batch, axis=-1).numpy().astype(float)
+            probs = top_k_filtering(probs, top_k=6)
+
+            probs /= probs.sum(axis=2, keepdims=True)
+
+            multinomial_samples = np.apply_along_axis(
+                lambda x: np.argmax(np.random.multinomial(1, x)), 2, probs
+            )
+
+            chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ''))(
+                multinomial_samples)
+
+            # Convert tokens to words
+            words = ["".join(sample) for sample in chars_array]
+
+            return words
+
+        batch_size = 10000
+        num_batches = (len(data) + batch_size - 1) // batch_size
+        feature_values = []
+
+        for i in range(num_batches):
+            batch = data[i * batch_size: (i + 1) * batch_size]
+            feature_values.extend(process_batch(batch))
+
+        return feature_values
 
     @lazy
     def input(self) -> tf.Tensor:
