@@ -1,3 +1,4 @@
+import os
 from typing import Tuple, List, Optional, Dict
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -8,12 +9,14 @@ import warnings
 import pickle
 import tensorflow as tf
 from tensorflow.python.data.experimental import AutoShardPolicy
+from tensorflow.keras.models import Model
 import matplotlib.pyplot as plt
 import time
 import tqdm
 import pandas as pd
 import numpy as np
 from loguru import logger
+from slugify import slugify
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
@@ -57,8 +60,12 @@ class VAEWrapper(BaseWrapper):
     process: str
     main_process: str
     batch_size: int
+    log_level: str
     dataset: Dataset = field(init=False)
-    model: CVAE = field(init=False, default=None)
+    vae: CVAE = field(init=False, default=None)
+    model: Model = field(init=False, default=None)
+    feature_losses: Dict = field(init=False, default=dict)
+    feature_types: Dict = field(init=False, default=dict)
 
     def __post_init__(self):
         if self.process == "train":
@@ -158,7 +165,9 @@ class VAEWrapper(BaseWrapper):
         df = self.df.loc[:, list(set(columns_subset))]
 
         train_dataset = self._create_batched_dataset(df)
-        self.vae = self.model.model
+        self.model = self.vae.model
+        self.feature_losses = self.vae.feature_losses
+        self.feature_types = self.vae.feature_types
 
         self.optimizer = self._create_optimizer()
         self.loss_metric = self._create_loss()
@@ -179,8 +188,103 @@ class VAEWrapper(BaseWrapper):
             run_name=f"{self.table_name}-POSTPROCESS",
             tags={"table_name": self.table_name, "process": "postprocess"},
         )
-        self.model.model = self.vae
         self.fit_sampler(df)
+
+    def _calculate_loss_by_type(
+            self,
+            feature_losses: Dict,
+            feature_type: str
+    ) -> float:
+        """
+        Group features and calculate the loss by the type
+        """
+        return sum(
+            loss for name, loss in feature_losses.items()
+            if self.vae.feature_types[name] == feature_type
+        )
+
+    def _monitor_grouped_losses(self, total_feature_losses, epoch):
+        """
+        Monitor the mean numerical, categorical, and text losses for every epoch
+        """
+
+        num_loss = self._calculate_loss_by_type(
+            total_feature_losses,
+            feature_type="numeric"
+        )
+
+        categorical_loss = self._calculate_loss_by_type(
+            total_feature_losses,
+            feature_type="categorical"
+        )
+
+        text_loss = self._calculate_loss_by_type(
+            total_feature_losses,
+            feature_type="text"
+        )
+
+        logger.trace(
+            f"The numeric loss - {num_loss}, "
+            f"the categorical loss - {categorical_loss}, "
+            f"the text_loss - {text_loss} in the {epoch} epoch"
+        )
+        MlflowTracker().log_metric(
+            "numeric_loss", num_loss, step=epoch
+        )
+        MlflowTracker().log_metric(
+            "categorical_loss", categorical_loss, step=epoch
+        )
+        MlflowTracker().log_metric(
+            "text_loss", text_loss, step=epoch
+        )
+
+    @staticmethod
+    def _get_mean_feature_losses(total_feature_losses, num_batches):
+        """
+        Get the mean loss of every feature for every epoch
+        """
+        return {
+            name: np.mean(loss / num_batches)
+            for name, loss in total_feature_losses.items()
+        }
+
+    @staticmethod
+    def _monitor_feature_losses(mean_feature_losses, mean_kl_loss, epoch):
+        """
+        Monitor the mean value of the loss of every feature for every epoch
+        """
+        formatted_feature_losses = ", ".join(
+            f"'{name}': {loss}"
+            for name, loss
+            in mean_feature_losses.items()
+        )
+
+        logger.trace(
+            f"The loss of features - {formatted_feature_losses} "
+            f"in the {epoch} epoch"
+        )
+        logger.trace(
+            f"The mean of the 'kl_loss' in the {epoch} epoch is {mean_kl_loss}"
+        )
+        for name, loss in mean_feature_losses.items():
+            MlflowTracker().log_metric(
+                f"{slugify(name)}_loss", loss, step=epoch
+            )
+        MlflowTracker().log_metric(
+            "kl_loss", mean_kl_loss, step=epoch
+        )
+
+    @staticmethod
+    def _accumulate_feature_losses(total_feature_losses, feature_losses):
+        """
+        Accumulate the loss for every feature
+        """
+        for key, value in feature_losses.items():
+            if key in total_feature_losses:
+                total_feature_losses[key] += value
+            else:
+                total_feature_losses[key] = value
+        return total_feature_losses
 
     def _train(self, dataset, epochs: int):
         step = self._train_step
@@ -196,44 +300,68 @@ class VAEWrapper(BaseWrapper):
 
         delta = ProgressBarHandler().delta / (epochs * 2)
         for epoch in range(epochs):
-            log_message = (f"Training process of the table - '{self.table_name}' "
-                           f"on the epoch: {epoch}")
+            log_message = (
+                f"Training process of the table - '{self.table_name}' "
+                f"on the epoch: {epoch}"
+            )
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
                 message=log_message
             )
             num_batches = 0.0
             total_loss = 0.0
+            total_kl_loss = 0.0
+            total_feature_losses = dict()
             t1 = time.time()
 
             # Iterate over the batches of the dataset.
             for i, x_batch_train in tqdm.tqdm(iterable=enumerate(dataset)):
-                total_loss += step(x_batch_train)
+                loss, kl_loss, feature_losses = step(x_batch_train)
+                total_loss += loss
+                total_kl_loss += kl_loss
+                if self.log_level == "TRACE":
+                    total_feature_losses = self._accumulate_feature_losses(
+                        total_feature_losses,
+                        feature_losses
+                    )
                 num_batches += 1
 
             mean_loss = np.mean(total_loss / num_batches)
+            mean_kl_loss = np.mean(total_kl_loss / num_batches)
 
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
             else:
-                self.vae.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                self.model.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 loss_grows_num_epochs = 0
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {time.time() - t1}, sec"
+            log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
                 message=log_message
             )
             logger.info(log_message)
+            if self.log_level == "TRACE":
+                mean_feature_losses = self._get_mean_feature_losses(
+                    total_feature_losses,
+                    num_batches
+                )
+                self._monitor_feature_losses(
+                    mean_feature_losses,
+                    mean_kl_loss,
+                    epoch
+                )
+                self._monitor_grouped_losses(mean_feature_losses, epoch)
+
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
 
             prev_total_loss = mean_loss
 
             if loss_grows_num_epochs == es_patience:
-                self.vae.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                self.model.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
                 logger.info(
                     f"The loss does not become lower for "
                     f"{loss_grows_num_epochs} epochs in a row. "
@@ -251,7 +379,9 @@ class VAEWrapper(BaseWrapper):
         return tf.keras.metrics.Mean()
 
     def _create_batched_dataset(self, df: pd.DataFrame):
-        """Define batched dataset for training vae"""
+        """
+        Define batched dataset for training vae
+        """
         transformed_data = self.dataset.transform(df)
 
         feature_datasets = []
@@ -264,16 +394,27 @@ class VAEWrapper(BaseWrapper):
         dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
         return dataset.batch(self.batch_size, drop_remainder=True)
 
-    def _train_step(self, batch: Tuple[tf.Tensor]) -> tf.Tensor:
+    def _train_step(self, batch: Tuple[tf.Tensor]):
         with tf.GradientTape() as tape:
-            self.vae(batch)
+            self.model(batch)
 
             # Compute reconstruction loss
-            loss = sum(self.vae.losses)
+            loss = sum(self.model.losses)
+            order_of_features = list(self.vae.feature_losses.keys())
+            kl_loss = self.model.losses[-1].numpy().mean()
+            feature_losses = {
+                name: loss.numpy().mean()
+                for name, loss in
+                zip(order_of_features, self.model.losses[:-1])
+            } if self.log_level == "TRACE" else dict()
 
-        self.optimizer.minimize(loss=loss, var_list=self.vae.trainable_weights, tape=tape)
+        self.optimizer.minimize(
+            loss=loss,
+            var_list=self.model.trainable_weights,
+            tape=tape
+        )
         self.loss_metric(loss)
-        return loss
+        return loss, kl_loss, feature_losses
 
     def display_losses(self):
         for name, l in self.feature_losses.items():
@@ -284,25 +425,25 @@ class VAEWrapper(BaseWrapper):
         return plt.show()
 
     def fit_sampler(self, df: pd.DataFrame):
-        self.model.fit_sampler(df)
+        self.vae.fit_sampler(df)
 
     def predict_sampled_df(self, n: int) -> pd.DataFrame:
-        sampled_df = self.model.sample(n)
+        sampled_df = self.vae.sample(n)
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)
         return sampled_df
 
     def predict_less_likely_samples(self, df: pd.DataFrame, n: int, temp=0.05, variaty=3):
         self.fit_sampler(df)
-        return self.model.less_likely_sample(n, temp, variaty)
+        return self.vae.less_likely_sample(n, temp, variaty)
 
     def save_state(self, path: str):
-        self.model.save_state(path)
+        self.vae.save_state(path)
         logger.info(f"Saved VAE state in {path}")
 
     def load_state(self, path: str):
         try:
-            self.model.load_state(path)
+            self.vae.load_state(path)
 
         except FileNotFoundError:
             raise FileNotFoundError("Missing file with VAE state")
@@ -331,6 +472,9 @@ class VanillaVAEWrapper(VAEWrapper):
             batch_size: int,
             latent_dim: int = 10,
             latent_components: int = 30):
+
+        log_level = os.getenv("LOGURU_LEVEL")
+
         super().__init__(
             df,
             schema,
@@ -339,17 +483,17 @@ class VanillaVAEWrapper(VAEWrapper):
             paths,
             process,
             main_process,
-            batch_size
+            batch_size,
+            log_level
         )
         self.latent_dim = min(latent_dim, int(len(self.dataset.columns) / 2))
-
-        self.model = CVAE(
+        self.vae = CVAE(
             self.dataset,
             batch_size=self.batch_size,
             latent_dim=latent_dim,
             latent_components=min(latent_components, latent_dim * 2),
             intermediate_dim=128,
         )
-        self.model.build_model()
+        self.vae.build_model()
         if self.process == "infer":
             self.load_state(self.paths["state_path"])
