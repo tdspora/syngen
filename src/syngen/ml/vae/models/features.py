@@ -505,7 +505,6 @@ class CharBasedTextFeature(BaseFeature):
         return logits_removed
 
     def inverse_transform_old(self, data: np.ndarray, **kwargs) -> List[str]:
-        logger.trace(f'Shape of data: {data.shape}.')
         top_p = 0.9
         if len(kwargs) > 0:
             top_p = kwargs["top_p"]
@@ -535,7 +534,7 @@ class CharBasedTextFeature(BaseFeature):
                 top_p: float = 0,
                 filter_value: int = -1e8,
         ):
-            pass
+            pass  # TODO: add vectorised algorythm of top_p filtering
 
             return logits
 
