@@ -545,7 +545,7 @@ class CharBasedTextFeature(BaseFeature):
 
         def process_batch(batch: np.ndarray) -> List[str]:
             probs = tf.nn.softmax(batch, axis=-1).numpy().astype(float)
-            probs = top_k_filtering(probs, top_k=6)
+            probs = top_k_filtering(probs, top_k=6)  # TODO: select filtering
 
             probs /= probs.sum(axis=2, keepdims=True)
 
