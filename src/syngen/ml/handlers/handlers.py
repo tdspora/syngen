@@ -333,11 +333,10 @@ class VaeInferHandler(BaseHandler):
 
         return synthetic_infer
 
-    @staticmethod
-    def split_by_batches(size, nodes):
-        quote = int(size / nodes)
-        data = [quote] * nodes
-        data.append((size - nodes * quote) + data.pop())
+    def split_by_batches(self, size, nodes):
+        quote = self.batch_size
+        data = [quote] * (nodes - 1)
+        data.append(size - quote * (nodes - 1))
         return data
 
     def run(self, size: int, run_parallel: bool):
