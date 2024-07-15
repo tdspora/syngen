@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Tuple, List, Optional, Dict
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -26,6 +27,7 @@ from syngen.ml.utils import (
     check_if_features_assigned,
     ProgressBarHandler
 )
+from syngen.ml.data_loaders import DataLoader
 
 warnings.filterwarnings("ignore")
 
@@ -248,31 +250,51 @@ class VAEWrapper(BaseWrapper):
             for name, loss in total_feature_losses.items()
         }
 
-    @staticmethod
-    def _monitor_feature_losses(mean_feature_losses, mean_kl_loss, epoch):
+    def _get_ending(self, feature_name):
+        """
+        Get the appropriate ending for the loss name of the certain feature
+        """
+        endings = {
+            "categorical": "cat",
+            "numeric": "num",
+            "text": "text"
+        }
+        feature_type = self.vae.feature_types[feature_name]
+        return endings[feature_type]
+
+    def _monitor_feature_losses(self, mean_feature_losses, mean_kl_loss, epoch):
         """
         Monitor the mean value of the loss of every feature for every epoch
         """
-        formatted_feature_losses = ", ".join(
-            f"'{name}': {loss}"
-            for name, loss
-            in mean_feature_losses.items()
-        )
-
-        logger.trace(
-            f"The loss of features - {formatted_feature_losses} "
-            f"in the {epoch} epoch"
-        )
-        logger.trace(
-            f"The mean of the 'kl_loss' in the {epoch} epoch is {mean_kl_loss}"
-        )
         for name, loss in mean_feature_losses.items():
+            ending = self._get_ending(feature_name=name)
             MlflowTracker().log_metric(
-                f"{slugify(name)}_loss", loss, step=epoch
+                f"{slugify(name)}_loss_{ending}", loss, step=epoch
             )
         MlflowTracker().log_metric(
             "kl_loss", mean_kl_loss, step=epoch
         )
+
+    def _fetch_feature_metrics(self, mean_feature_losses, epoch):
+        """
+        Fetch the metric of loss for every feature on a certain epoch
+        """
+        timestamp = slugify(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        table_name = f"{self.table_name}_{timestamp}"
+
+        rows = [
+            {
+                "table_name": table_name,
+                "column_name": name,
+                "loss_name": f"{name}_loss_{self._get_ending(feature_name=name)}",
+                "value": loss,
+                "epoch": epoch,
+                "column_type": self.vae.feature_types[name]
+            }
+            for name, loss in mean_feature_losses.items()
+        ]
+
+        return pd.DataFrame(rows)
 
     @staticmethod
     def _accumulate_feature_losses(total_feature_losses, feature_losses):
@@ -299,6 +321,9 @@ class VAEWrapper(BaseWrapper):
         saved_weights_loss = float("inf")
 
         delta = ProgressBarHandler().delta / (epochs * 2)
+        metrics = pd.DataFrame(
+            columns=["table_name", "column_name", "loss_name", "value", "epoch", "column_type"]
+        )
         for epoch in range(epochs):
             log_message = (
                 f"Training process of the table - '{self.table_name}' "
@@ -319,11 +344,10 @@ class VAEWrapper(BaseWrapper):
                 loss, kl_loss, feature_losses = step(x_batch_train)
                 total_loss += loss
                 total_kl_loss += kl_loss
-                if self.log_level == "TRACE":
-                    total_feature_losses = self._accumulate_feature_losses(
-                        total_feature_losses,
-                        feature_losses
-                    )
+                total_feature_losses = self._accumulate_feature_losses(
+                    total_feature_losses,
+                    feature_losses
+                )
                 num_batches += 1
 
             mean_loss = np.mean(total_loss / num_batches)
@@ -343,16 +367,18 @@ class VAEWrapper(BaseWrapper):
                 message=log_message
             )
             logger.info(log_message)
+            mean_feature_losses = self._get_mean_feature_losses(
+                total_feature_losses,
+                num_batches
+            )
             if self.log_level == "TRACE":
-                mean_feature_losses = self._get_mean_feature_losses(
-                    total_feature_losses,
-                    num_batches
-                )
                 self._monitor_feature_losses(
                     mean_feature_losses,
                     mean_kl_loss,
                     epoch
                 )
+                data = self._fetch_feature_metrics(mean_feature_losses, epoch)
+                metrics = pd.concat([metrics, data])
                 self._monitor_grouped_losses(mean_feature_losses, epoch)
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
@@ -369,6 +395,8 @@ class VAEWrapper(BaseWrapper):
                 )
                 break
             epoch += 1
+        path_to_metrics = self.paths["losses_path"]
+        DataLoader(path_to_metrics).save_data(path_to_metrics, metrics)
 
     def _create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
@@ -406,7 +434,7 @@ class VAEWrapper(BaseWrapper):
                 name: loss.numpy().mean()
                 for name, loss in
                 zip(order_of_features, self.model.losses[:-1])
-            } if self.log_level == "TRACE" else dict()
+            }
 
         self.optimizer.minimize(
             loss=loss,
