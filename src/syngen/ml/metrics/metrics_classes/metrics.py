@@ -1195,10 +1195,10 @@ class Utility(BaseMetric):
             original = StandardScaler().fit_transform(original)
             model_y = self.original[col].values
 
-            # Create a stratified sample if the original dataset is large
+            # If the original dataset is large create a stratified sample
             if self.is_big_original_data_after_drop_na:
-                original, model_y = self.__create_sample_for_utility_metric(
-                    original, model_y
+                original, _, model_y, _ = self.__perform_train_test_split(
+                    original, model_y, self.sample_size
                 )
 
             if len(set(model_y)) < 2:
@@ -1246,10 +1246,11 @@ class Utility(BaseMetric):
             synthetic = StandardScaler().fit_transform(synthetic)
             synthetic_y = self.synthetic[best_target].values
 
-            # Create a stratified sample of the synthetic data if it's large
+            # If the synthetic dataset is large
+            # create a stratified sample
             if self.is_big_synthetic_data_after_drop_na:
-                synthetic, synthetic_y = self.__create_sample_for_utility_metric(
-                    synthetic, synthetic_y
+                synthetic, _, synthetic_y, _ = self.__perform_train_test_split(
+                    synthetic, synthetic_y, self.sample_size
                 )
 
             synthetic_score = self.__get_accuracy_score(
@@ -1259,23 +1260,6 @@ class Utility(BaseMetric):
             )
 
         return best_target, best_score, synthetic_score
-
-    def __create_sample_for_utility_metric(self, data, model_y):
-        '''
-        Creates stratified (or random when stratified sampling is impossible)
-        sample of size self.sample_size
-        from data (predictors) and model_y (target)
-        '''
-
-        data, _, model_y, _ = self.__perform_train_test_split(
-            data, model_y, self.sample_size)
-
-        logger.debug(
-            f"Samples of size={self.sample_size} "
-            f"for utility metric calculation have been created"
-        )
-
-        return data, model_y
 
     def __perform_train_test_split(self, data, model_y, train_size):
         '''
