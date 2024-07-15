@@ -371,14 +371,14 @@ class VAEWrapper(BaseWrapper):
                 total_feature_losses,
                 num_batches
             )
+            data = self._fetch_feature_metrics(mean_feature_losses, epoch)
+            metrics = pd.concat([metrics, data])
             if self.log_level == "TRACE":
                 self._monitor_feature_losses(
                     mean_feature_losses,
                     mean_kl_loss,
                     epoch
                 )
-                data = self._fetch_feature_metrics(mean_feature_losses, epoch)
-                metrics = pd.concat([metrics, data])
                 self._monitor_grouped_losses(mean_feature_losses, epoch)
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
