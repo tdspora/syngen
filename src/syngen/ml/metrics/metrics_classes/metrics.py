@@ -1195,6 +1195,12 @@ class Utility(BaseMetric):
             original = StandardScaler().fit_transform(original)
             model_y = self.original[col].values
 
+            # Create a stratified sample if the original dataset is large
+            if self.is_big_original_data_after_drop_na:
+                original, model_y = self.__create_sample_for_utility_metric(
+                    original, model_y
+                )
+
             if len(set(model_y)) < 2:
                 logger.info(
                     f"Column {col} has less than 2 classes as target. "
@@ -1202,12 +1208,6 @@ class Utility(BaseMetric):
                     f"that measures regression results."
                 )
                 continue
-
-            # Create a stratified sample if the original dataset is large
-            if self.is_big_original_data_after_drop_na:
-                original, model_y = self.__create_sample_for_utility_metric(
-                    original, model_y
-                )
 
             (
                 original_train,
@@ -1268,7 +1268,7 @@ class Utility(BaseMetric):
         '''
 
         data, _, model_y, _ = self.__perform_train_test_split(
-            self, data, model_y, self.sample_size)
+            data, model_y, self.sample_size)
 
         logger.debug(
             f"Samples of size={self.sample_size} "
