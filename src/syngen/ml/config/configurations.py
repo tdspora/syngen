@@ -268,14 +268,33 @@ class InferConfig:
         """
         Check whether it is possible to generate the report
         """
-        if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
-            self.print_report = False
-            logger.warning(
-                f"It seems that the path to original data of the table - {self.table_name} "
-                f"doesn't exist. In this case, the accuracy report of the table - "
-                f"'{self.table_name}' won't be generated. The parameter '--print_report' "
-                f"of the table - '{self.table_name}' will be set to False"
+        if (
+                (self.print_report or self.get_infer_metrics)
+                and not DataLoader(self.paths["input_data_path"]).has_existed_path
+        ):
+            message = (
+                f"It seems that the path to original data "
+                f"of the table - '{self.table_name}' doesn't exist. "
             )
+            logger.warning(message)
+            if self.print_report:
+                self.print_report = False
+                log_message = (
+                    "As a result, the accuracy report of the table - "
+                    f"'{self.table_name}' won't be generated. "
+                    "The parameter '--print_report' of the table - "
+                    f"'{self.table_name}' has been set to False"
+                )
+                logger.warning(log_message)
+            if self.get_infer_metrics:
+                self.get_infer_metrics = False
+                log_message = (
+                    "As a result, the infer metrics related to the table - "
+                    f"'{self.table_name}' won't be fetched. "
+                    "The parameter '--get_infer_metrics' of the table - "
+                    f"'{self.table_name}' has been set to False"
+                )
+                logger.warning(log_message)
 
     def _set_up_size(self):
         """
