@@ -1079,7 +1079,8 @@ class Utility(BaseMetric):
                 "synthetic": [
                     round(synth_score_binary, 3) if best_binary is not None else np.nan,
                     round(synth_score_categ, 3) if best_categ is not None else np.nan,
-                    abs(round(max(0, synth_regres_score), 3)) if best_regres is not None else np.nan,
+                    abs(round(max(0, synth_regres_score), 3))
+                    if best_regres is not None else np.nan,
                 ],
                 "synth_to_orig_ratio": [
                     round(synth_score_binary / score_binary, 3)
