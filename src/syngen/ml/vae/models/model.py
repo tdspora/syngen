@@ -38,6 +38,15 @@ class CVAE:
         self.metrics = {}
         self.cond_features = {}
         self.is_cond = False
+        self.inputs = list()
+        self.encoders = list()
+        self.feature_decoders = list()
+        self.feature_losses = dict()
+        self.feature_types = dict()
+        self.loss_models = dict()
+        self.cond_inputs = list()
+        self.global_decoder = None
+        self.generator = None
 
     def sample_z(self, args):
         mu, log_sigma = args
@@ -50,12 +59,6 @@ class CVAE:
         FeatureLossLayer(feature, name=name)
 
     def build_model(self):
-        self.inputs = list()
-        self.encoders = list()
-        self.feature_decoders = list()
-        self.loss_models = dict()
-        self.cond_inputs = list()
-
         for name, feature in self.dataset.features.items():
             if name in self.cond_features and self.is_cond:
                 self.cond_inputs.append(feature.input)
@@ -100,23 +103,24 @@ class CVAE:
 
         generator_input = Input(shape=(gen_inp_shape,))
 
-        self.global_decoder, self.generator = self.__build_decoder(decoder_input, generator_input)
+        self.__build_decoder(decoder_input, generator_input)
 
         generator_outputs = list()
-        feature_losses = list()
         for i, (name, feature) in enumerate(self.dataset.features.items()):
             feature_decoder = feature.create_decoder(self.global_decoder)
 
             self._create_feature_loss_layer(feature=feature, name=name)
             feature_tensor = feature_decoder
-            feature_losses.append(feature.loss)
+            self.feature_losses[name] = feature.loss
+            self.feature_types[name] = feature.feature_type
 
             self.feature_decoders.append(feature_tensor)
 
             generator_outputs.append(feature.create_decoder(self.generator))
 
         self.model = Model(self.inputs, self.feature_decoders)
-        self.model.add_loss(feature_losses)
+        losses = list(self.feature_losses.values())
+        self.model.add_loss(losses)
         self.model.add_loss(kl_loss * 0)
 
         self.encoder_model = Model(self.inputs, encoder_output)
@@ -160,13 +164,11 @@ class CVAE:
 
         h_decoded0 = Dropout(0.2)(decoder_h0(input_z))
         h_decoded1 = Dropout(0.2)(decoder_h1(h_decoded0))
-        decoder_output = Dropout(0.2)(decoder_h2(h_decoded1))
+        self.global_decoder = Dropout(0.2)(decoder_h2(h_decoded1))
 
         generator0 = decoder_h0(generator_input)
         generator1 = decoder_h1(generator0)
-        generator_output = decoder_h2(generator1)
-
-        return decoder_output, generator_output
+        self.generator = decoder_h2(generator1)
 
     def fit(self, data: pd.DataFrame, **kwargs) -> dict:
         transformed_data = self.dataset.transform(data)
