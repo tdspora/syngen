@@ -349,6 +349,9 @@ class VaeInferHandler(BaseHandler):
         nodes = self.batch_num
         data = [quote] * (nodes - 1)
         data.append(self.size - quote * (nodes - 1))
+        logger.trace(
+            f"The total size will be split by batches by using this frame - {data}"
+        )
         return data
 
     def run(self, size: int, run_parallel: bool):
