@@ -237,7 +237,7 @@ class VAEWrapper(BaseWrapper):
 
     def _set_mean_feature_losses(self):
         """
-        Set the mean loss of every feature for every epoch
+        Set the mean loss of every feature
         """
         self.mean_feature_losses = {
             name: np.mean(loss / self.num_batches)
