@@ -68,10 +68,7 @@ class VAEWrapper(BaseWrapper):
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
     num_batches: int = field(init=False)
-    feature_losses: Dict = field(init=False, default_factory=dict)
     feature_types: Dict = field(init=False, default_factory=dict)
-    total_feature_losses: Dict = field(init=False, default_factory=dict)
-    mean_feature_losses: Dict = field(init=False, default_factory=dict)
 
     def __post_init__(self):
         if self.process == "train":
@@ -173,7 +170,6 @@ class VAEWrapper(BaseWrapper):
         train_dataset = self._create_batched_dataset(df)
         self.num_batches = len(train_dataset)
         self.model = self.vae.model
-        self.feature_losses = self.vae.feature_losses
         self.feature_types = self.vae.feature_types
 
         self.optimizer = self._create_optimizer()
@@ -198,27 +194,37 @@ class VAEWrapper(BaseWrapper):
         self.fit_sampler(df)
 
     def _calculate_loss_by_type(
-            self,
-            feature_type: str
+        self,
+        feature_losses: Dict,
+        feature_type: str
     ) -> float:
         """
         Group features and calculate the loss by the type
         """
         return sum(
-            loss for name, loss in self.feature_losses.items()
+            loss for name, loss in feature_losses.items()
             if self.feature_types[name] == feature_type
         )
 
-    def _monitor_grouped_losses(self, epoch):
+    def _monitor_grouped_losses(self, feature_losses, epoch):
         """
         Monitor the mean numerical, categorical, and text losses for every epoch
         """
 
-        num_loss = self._calculate_loss_by_type(feature_type="numeric")
+        num_loss = self._calculate_loss_by_type(
+            feature_losses,
+            feature_type="numeric"
+        )
 
-        categorical_loss = self._calculate_loss_by_type(feature_type="categorical")
+        categorical_loss = self._calculate_loss_by_type(
+            feature_losses,
+            feature_type="categorical"
+        )
 
-        text_loss = self._calculate_loss_by_type(feature_type="text")
+        text_loss = self._calculate_loss_by_type(
+            feature_losses,
+            feature_type="text"
+        )
 
         logger.trace(
             f"The numeric loss - {num_loss}, "
@@ -235,13 +241,13 @@ class VAEWrapper(BaseWrapper):
             "text_loss", text_loss, step=epoch
         )
 
-    def _set_mean_feature_losses(self):
+    def _get_mean_feature_losses(self, total_feature_losses: Dict):
         """
-        Set the mean loss of every feature
+        Get the mean loss of every feature
         """
-        self.mean_feature_losses = {
+        return {
             name: np.mean(loss / self.num_batches)
-            for name, loss in self.total_feature_losses.items()
+            for name, loss in total_feature_losses.items()
         }
 
     def _get_ending(self, feature_name):
@@ -256,11 +262,11 @@ class VAEWrapper(BaseWrapper):
         feature_type = self.feature_types[feature_name]
         return endings[feature_type]
 
-    def _monitor_feature_losses(self, mean_kl_loss, epoch):
+    def _monitor_feature_losses(self, mean_feature_losses, mean_kl_loss, epoch):
         """
         Monitor the mean value of the loss of every feature for every epoch
         """
-        for name, loss in self.mean_feature_losses.items():
+        for name, loss in mean_feature_losses.items():
             ending = self._get_ending(feature_name=name)
             MlflowTracker().log_metric(
                 f"{slugify(name)}_loss_{ending}", loss, step=epoch
@@ -269,7 +275,7 @@ class VAEWrapper(BaseWrapper):
             "kl_loss", mean_kl_loss, step=epoch
         )
 
-    def _fetch_feature_losses_info(self, epoch: int) -> pd.DataFrame:
+    def _fetch_feature_losses_info(self, mean_feature_losses: Dict, epoch: int) -> pd.DataFrame:
         """
         Fetch the information related to the loss for every feature in a certain epoch
         """
@@ -285,27 +291,28 @@ class VAEWrapper(BaseWrapper):
                 "epoch": epoch,
                 "column_type": self.feature_types[name]
             }
-            for name, loss in self.mean_feature_losses.items()
+            for name, loss in mean_feature_losses.items()
         ]
 
         return pd.DataFrame(rows)
 
-    def _accumulate_feature_losses(self):
+    @staticmethod
+    def _accumulate_feature_losses(feature_losses: Dict, total_feature_losses: Dict):
         """
         Accumulate the loss for every feature
         """
-        for key, value in self.feature_losses.items():
-            if key in self.total_feature_losses:
-                self.total_feature_losses[key] += value
+        for key, value in feature_losses.items():
+            if key in total_feature_losses:
+                total_feature_losses[key] += value
             else:
-                self.total_feature_losses[key] = value
+                total_feature_losses[key] = value
+        return total_feature_losses
 
-    def _update_losses_info(self, epoch):
+    def _update_losses_info(self, mean_feature_losses, total_feature_losses, epoch):
         """
         Add the information about losses of all features fetched during the certain epoch
         """
-        self._set_mean_feature_losses()
-        data = self._fetch_feature_losses_info(epoch)
+        data = self._fetch_feature_losses_info(mean_feature_losses, epoch)
         self.losses_info = pd.concat([self.losses_info, data])
 
     def _save_losses(self):
@@ -318,7 +325,6 @@ class VAEWrapper(BaseWrapper):
     def _train(self, dataset, epochs: int):
         step = self._train_step
 
-        self.feature_losses = defaultdict(list)
         loss_grows_num_epochs = 0
         prev_total_loss = float("inf")
         es_min_delta = 0.005
@@ -338,15 +344,20 @@ class VAEWrapper(BaseWrapper):
                 message=log_message
             )
             total_loss = 0.0
+            feature_losses = defaultdict(list)
+            total_feature_losses = dict()
             total_kl_loss = 0.0
             t1 = time.time()
 
             # Iterate over the batches of the dataset.
             for i, x_batch_train in tqdm.tqdm(iterable=enumerate(dataset)):
-                loss, kl_loss = step(x_batch_train)
+                loss, kl_loss, feature_losses = step(x_batch_train)
                 total_loss += loss
                 total_kl_loss += kl_loss
-                self._accumulate_feature_losses()
+                total_feature_losses = self._accumulate_feature_losses(
+                    feature_losses,
+                    total_feature_losses
+                )
 
             mean_loss = np.mean(total_loss / self.num_batches)
             mean_kl_loss = np.mean(total_kl_loss / self.num_batches)
@@ -367,13 +378,15 @@ class VAEWrapper(BaseWrapper):
                 message=log_message
             )
 
-            self._update_losses_info(epoch)
+            mean_feature_losses = self._get_mean_feature_losses(total_feature_losses)
+            self._update_losses_info(mean_feature_losses, total_feature_losses, epoch)
             if self.log_level == "TRACE":
                 self._monitor_feature_losses(
+                    mean_feature_losses,
                     mean_kl_loss,
                     epoch
                 )
-                self._monitor_grouped_losses(epoch)
+                self._monitor_grouped_losses(feature_losses, epoch)
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
@@ -423,7 +436,7 @@ class VAEWrapper(BaseWrapper):
             loss = sum(self.model.losses)
             order_of_features = list(self.vae.feature_losses.keys())
             kl_loss = self.model.losses[-1].numpy().mean()
-            self.feature_losses = {
+            feature_losses = {
                 name: loss.numpy().mean()
                 for name, loss in
                 zip(order_of_features, self.model.losses[:-1])
@@ -435,10 +448,11 @@ class VAEWrapper(BaseWrapper):
             tape=tape
         )
         self.loss_metric(loss)
-        return loss, kl_loss
+        return loss, kl_loss, feature_losses
 
-    def display_losses(self):
-        for name, l in self.feature_losses.items():
+    @staticmethod
+    def display_losses(feature_losses: Dict):
+        for name, l in feature_losses.items():
             plt.plot(l, label=name)
 
         plt.legend()
