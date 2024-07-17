@@ -344,7 +344,6 @@ class VAEWrapper(BaseWrapper):
                 message=log_message
             )
             total_loss = 0.0
-            feature_losses = defaultdict(list)
             total_feature_losses = dict()
             total_kl_loss = 0.0
             t1 = time.time()
@@ -386,7 +385,7 @@ class VAEWrapper(BaseWrapper):
                     mean_kl_loss,
                     epoch
                 )
-                self._monitor_grouped_losses(feature_losses, epoch)
+                self._monitor_grouped_losses(mean_feature_losses, epoch)
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
