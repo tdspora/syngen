@@ -308,7 +308,7 @@ class VAEWrapper(BaseWrapper):
                 total_feature_losses[key] = value
         return total_feature_losses
 
-    def _update_losses_info(self, mean_feature_losses, total_feature_losses, epoch):
+    def _update_losses_info(self, mean_feature_losses, epoch):
         """
         Add the information about losses of all features fetched during the certain epoch
         """
@@ -378,7 +378,7 @@ class VAEWrapper(BaseWrapper):
             )
 
             mean_feature_losses = self._get_mean_feature_losses(total_feature_losses)
-            self._update_losses_info(mean_feature_losses, total_feature_losses, epoch)
+            self._update_losses_info(mean_feature_losses, epoch)
             if self.log_level == "TRACE":
                 self._monitor_feature_losses(
                     mean_feature_losses,
