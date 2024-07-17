@@ -330,6 +330,22 @@ class VAEWrapper(BaseWrapper):
         path = self.paths["losses_path"]
         DataLoader(path).save_data(path, df=self.losses_info)
 
+    def _gather_losses_info(self, total_feature_losses, mean_loss, mean_kl_loss, epoch):
+        """
+        Gather the information of losses related to every feature,
+        numeric loss, categorical loss and text loss
+        """
+        mean_feature_losses = self._get_mean_feature_losses(total_feature_losses)
+        self._update_losses_info(mean_feature_losses, epoch)
+        self._monitor_feature_losses(
+            mean_feature_losses,
+            mean_kl_loss,
+            epoch
+        )
+        grouped_losses = self._get_grouped_losses(mean_feature_losses, epoch)
+        grouped_losses.update({"loss": mean_loss})
+        self._update_losses_info(grouped_losses, epoch)
+
     def _train(self, dataset, epochs: int):
         step = self._train_step
 
@@ -385,16 +401,7 @@ class VAEWrapper(BaseWrapper):
                 message=log_message
             )
 
-            mean_feature_losses = self._get_mean_feature_losses(total_feature_losses)
-            self._update_losses_info(mean_feature_losses, epoch)
-            self._monitor_feature_losses(
-                mean_feature_losses,
-                mean_kl_loss,
-                epoch
-            )
-            grouped_losses = self._get_grouped_losses(mean_feature_losses, epoch)
-            grouped_losses.update({"loss": mean_loss})
-            self._update_losses_info(grouped_losses, epoch)
+            self._gather_losses_info(total_feature_losses, mean_loss, mean_kl_loss, epoch)
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
@@ -443,7 +450,7 @@ class VAEWrapper(BaseWrapper):
             # Compute reconstruction loss
             loss = sum(self.model.losses)
             order_of_features = list(self.vae.feature_losses.keys())
-            kl_loss = self.model.losses[-1].numpy().mean()
+            kl_loss = self.model.losses[-1].numpy()
             feature_losses = {
                 name: loss.numpy()
                 for name, loss in
