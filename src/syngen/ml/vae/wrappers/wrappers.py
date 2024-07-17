@@ -315,7 +315,7 @@ class VAEWrapper(BaseWrapper):
         data = self._fetch_feature_losses_info(mean_feature_losses, epoch)
         self.losses_info = pd.concat([self.losses_info, data])
 
-    def _save_losses(self):
+    def __save_losses(self):
         """
         Save the information about losses of every feature in every epoch
         """
@@ -402,7 +402,7 @@ class VAEWrapper(BaseWrapper):
                 )
                 break
             epoch += 1
-        self._save_losses()
+        self.__save_losses()
 
     def _create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
