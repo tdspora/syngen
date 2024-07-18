@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set, List, Callable, Union
+from typing import Optional, Dict, Tuple, Set, List, Callable
 import os
 import shutil
 
@@ -102,13 +102,6 @@ class TrainConfig:
             ).fetch_data()
         else:
             return DataLoader(self.source).load_data()
-
-    def update_state(self):
-        """
-        Replace the value of the attribute 'loader'
-        when the information isn't necessary to use for further processes
-        """
-        self.loader = True if self.loader else False
 
     def _remove_empty_columns(self, data: pd.DataFrame) -> pd.DataFrame:
         """
