@@ -531,12 +531,42 @@ class CharBasedTextFeature(BaseFeature):
 
         def top_p_filtering(
                 logits: np.ndarray,
-                top_p: float = 0,
-                filter_value: int = -1e8,
+                top_p: float = 0.9
         ):
-            pass  # TODO: add vectorised algorythm of top_p filtering
+            # Convert logits to TensorFlow tensor
+            logits = tf.convert_to_tensor(logits, dtype=tf.float32)
 
-            return logits
+            # Sort logits and get sorted indices
+            sorted_logits = tf.sort(logits, direction="DESCENDING", axis=-1)
+            sorted_indices = tf.argsort(logits, direction="DESCENDING", axis=-1)
+
+            # Calculate cumulative probabilities
+            cumulative_probs = tf.cumsum(sorted_logits, axis=-1)
+
+            # Remove tokens with cumulative probability above the threshold
+            sorted_indices_to_remove = cumulative_probs >= top_p
+
+            # Shift the indices to the right to keep also the first token above the threshold
+            zeros_for_shift = tf.zeros_like(sorted_indices_to_remove[:, :, :1], dtype=tf.bool)
+            sorted_indices_to_remove = tf.concat([zeros_for_shift, sorted_indices_to_remove[:, :, :-1]], axis=-1)
+
+            # Create a mask for indices to remove
+            batch_size, seq_length, vocab_size = logits.shape
+            update_indices = tf.stack([tf.repeat(tf.range(batch_size), seq_length * vocab_size),
+                                       tf.tile(tf.repeat(tf.range(seq_length), vocab_size), [batch_size]),
+                                       tf.reshape(sorted_indices, [-1])], axis=1)
+            flattened_update_values = tf.reshape(sorted_indices_to_remove, [-1])
+            indices_to_remove = tf.tensor_scatter_nd_update(
+                tf.zeros_like(logits, dtype=sorted_indices_to_remove.dtype),
+                update_indices,
+                flattened_update_values,
+            )
+
+            # Apply the filter value to the logits
+            logits_removed = tf.where(indices_to_remove, tf.fill(indices_to_remove.shape, filter_value), logits)
+
+            return logits_removed.numpy().astype(np.float64)
+
 
         def top_k_filtering(
                 logits: np.ndarray,
@@ -548,14 +578,13 @@ class CharBasedTextFeature(BaseFeature):
 
         def process_batch(batch: np.ndarray) -> List[str]:
             probs = tf.nn.softmax(batch, axis=-1).numpy().astype(float)
-            # TODO: select filtering
-            # probs = top_k_filtering(probs, top_k=6)  # TODO: select top_k based on inverse_dict length
             probs = top_p_filtering(probs, top_p=0.9)
+            # probs = top_k_filtering(probs, top_k=6)  # TODO: select top_k based on inverse_dict length
 
             probs /= probs.sum(axis=2, keepdims=True)
 
             multinomial_samples = np.apply_along_axis(
-                lambda x: np.argmax(np.random.multinomial(1, x)), 2, probs
+                lambda x: np.argmax(np.random.multinomial(1, x)), -1, probs
             )
 
             chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ''))(
