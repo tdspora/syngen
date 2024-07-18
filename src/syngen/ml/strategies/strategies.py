@@ -116,8 +116,11 @@ class TrainStrategy(Strategy, ABC):
 
     def add_reporters(self, **kwargs):
         table_name = self.config.table_name
+        source = self.config.paths["source_path"]
         if (
-                not table_name.endswith("_fk") and self.config.paths["source_path"] is not None
+                not table_name.endswith("_fk")
+                and source is not None
+                and os.path.exists(source)
                 and self.config.print_report
         ):
             sample_reporter = SampleAccuracyReporter(
