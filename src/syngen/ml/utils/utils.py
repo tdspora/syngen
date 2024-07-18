@@ -146,6 +146,8 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     def date_finder(x, fuzzy=False):
         x_wo_na = x.dropna()
         count = 0
+        print(f'!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"x_wo_na: {x_wo_na}")
         for x in x_wo_na.values:
             try:
                 date_for_check = datetime(8557, 7, 20)
@@ -155,10 +157,16 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
                 count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
                 continue
-        if count > len(x_wo_na) * 0.8:
+        # if count > len(x_wo_na) * 0.8:
+        if count == len(x_wo_na):
             return 1
         else:
             return np.nan
+
+    # temp
+    date_columns = df[str_columns].apply(date_finder)
+    print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+    print(f"date_columns: \n{date_columns}")
 
     date_columns = df[str_columns].apply(date_finder).dropna()
 
@@ -183,6 +191,8 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
     columns_nan_labels = {}
     object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
     for column in object_columns:
+        if df[column].isna().sum() > 0:
+            continue
         str_values = []
         float_val = None
         for val in df[column].unique():
@@ -211,9 +221,13 @@ def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFr
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
         df_with_nan[column].replace(label, np.NaN, inplace=True)
+        df_with_nan[column] = df_with_nan[column].astype(float)
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"Inside nan_labels column: {column} dtype: {df_with_nan[column].dtype}")
     return df_with_nan
 
 
+# not used
 def get_tmp_df(df):
     tmp_col_len_min = float("inf")
     tmp_cols = {}

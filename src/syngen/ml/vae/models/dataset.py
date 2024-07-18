@@ -687,14 +687,37 @@ class Dataset(BaseDataset):
         self._set_categorical_columns(df, schema)
         self._set_long_text_columns(df)
         self._set_email_columns(df)
-        tmp_df = get_tmp_df(df)
-        self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
-        self.int_columns = set(tmp_df.select_dtypes(include=["int", "int64"]).columns)
+        #tmp_df = get_tmp_df(df)
+
+        self.float_columns = set()
+        self.int_columns = set()
+        for col in df.columns:
+            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print(f"col {col} dtype: {df[col].dropna().dtype}")
+        for col in df.columns:
+            if df[col].dropna().dtype in ["int", "int64"]:
+                self.int_columns.add(col)
+                print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                print(f"int col: {col}")
+            elif df[col].dropna().dtype in ["float", "float64"]:
+                self.float_columns.add(col)
+                print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                print(f"float col: {col}")
+
+        # self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
+        # self.int_columns = set(tmp_df.select_dtypes(include=["int", "int64"]).columns)
 
         float_to_int_cols = set()
         for col in self.float_columns:
-            if all(x.is_integer() for x in tmp_df[col]):
+            if all(x.is_integer() for x in df[col].dropna()):
                 float_to_int_cols.add(col)
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"float_to_int_cols: {float_to_int_cols}")
+
+        # float_to_int_cols = set()
+        # for col in self.float_columns:
+        #     if all(x.is_integer() for x in tmp_df[col]):
+        #         float_to_int_cols.add(col)
 
         self.int_columns = (self.int_columns | float_to_int_cols) - (
             self.categ_columns | self.binary_columns
@@ -703,7 +726,8 @@ class Dataset(BaseDataset):
             self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
         )
         self.str_columns = (
-            set(tmp_df.columns)
+            # set(tmp_df.columns)
+            set(df.columns)
             - self.float_columns
             - self.categ_columns
             - self.int_columns
@@ -713,7 +737,15 @@ class Dataset(BaseDataset):
             - self.uuid_columns
         )
         self.categ_columns -= self.long_text_columns
+
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"self.str_columns: {self.str_columns}")
+
         self._set_date_columns(df)
+
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"self.date_columns: {self.date_columns}")
+
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
         self.uuid_columns_types = {
