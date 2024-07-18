@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set, List, Callable
+from typing import Optional, Dict, Tuple, Set, List, Callable, Union
 import os
 import shutil
 
@@ -24,7 +24,7 @@ class TrainConfig:
     metadata_path: Optional[str]
     print_report: bool
     batch_size: int
-    loader: Optional[Callable[[str], pd.DataFrame]]
+    loader: Union[Callable[[str], pd.DataFrame], bool, None]
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
@@ -98,6 +98,13 @@ class TrainConfig:
             ).fetch_data()
         else:
             return DataLoader(self.source).load_data()
+
+    def update_state(self):
+        """
+        Replace the value of the attribute 'loader'
+        when the information isn't necessary to use for further processes
+        """
+        self.loader = True if self.loader else False
 
     def _remove_empty_columns(self, data: pd.DataFrame) -> pd.DataFrame:
         """

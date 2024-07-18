@@ -155,6 +155,8 @@ class TrainStrategy(Strategy, ABC):
             self.handler.handle()
             # End the separate run for the training stage
             MlflowTracker().end_run()
+            self.config.update_state()
+            self._save_training_config()
         except Exception:
             logger.error(
                 f"Training of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
