@@ -24,7 +24,7 @@ class TrainConfig:
     metadata_path: Optional[str]
     print_report: bool
     batch_size: int
-    loader: Union[Callable[[str], pd.DataFrame], bool, None]
+    loader: Optional[Callable[[str], pd.DataFrame]]
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
@@ -36,6 +36,10 @@ class TrainConfig:
         self.paths = self._get_paths()
         self._remove_existed_artifacts()
         self._prepare_dirs()
+
+    def __getstate__(self):
+        del self.loader
+        return self
 
     def preprocess_data(self):
         data, self.schema = self._extract_data()
