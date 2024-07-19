@@ -25,7 +25,6 @@ from syngen.ml.vae.models.features import (
 from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
-    get_tmp_df,
     get_date_columns,
 )
 from syngen.ml.data_loaders import DataLoader
