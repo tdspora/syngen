@@ -563,7 +563,7 @@ class CharBasedTextFeature(BaseFeature):
             )
 
             # Apply the filter value to the logits
-            logits_removed = tf.where(indices_to_remove, tf.fill(indices_to_remove.shape, filter_value), logits)
+            logits_removed = tf.where(indices_to_remove, tf.fill(indices_to_remove.shape, 0.0), logits)
 
             return logits_removed.numpy().astype(np.float64)
 
