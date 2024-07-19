@@ -146,27 +146,21 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     def date_finder(x, fuzzy=False):
         x_wo_na = x.dropna()
         count = 0
-        print(f'!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"x_wo_na: {x_wo_na}")
         for x in x_wo_na.values:
             try:
                 date_for_check = datetime(8557, 7, 20)
                 datetime_object = parser.parse(x, default=date_for_check)
+
                 # Check if the parsed date contains only the time component.
                 # If it does, then skip it.
                 count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
                 continue
-        # if count > len(x_wo_na) * 0.8:
+
         if count == len(x_wo_na):
             return 1
         else:
             return np.nan
-
-    # temp
-    date_columns = df[str_columns].apply(date_finder)
-    print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-    print(f"date_columns: \n{date_columns}")
 
     date_columns = df[str_columns].apply(date_finder).dropna()
 
@@ -222,21 +216,8 @@ def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFr
     for column, label in columns_nan_labels.items():
         df_with_nan[column].replace(label, np.NaN, inplace=True)
         df_with_nan[column] = df_with_nan[column].astype(float)
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"Inside nan_labels column: {column} dtype: {df_with_nan[column].dtype}")
+
     return df_with_nan
-
-
-# not used
-def get_tmp_df(df):
-    tmp_col_len_min = float("inf")
-    tmp_cols = {}
-    for col in df.columns:
-        tmp_cols[col] = pd.Series(df[col].dropna().values)
-        tmp_col_len = len(tmp_cols[col])
-        if tmp_col_len < tmp_col_len_min:
-            tmp_col_len_min = tmp_col_len
-    return pd.DataFrame(tmp_cols).iloc[:tmp_col_len_min, :]
 
 
 def fillnan(df, str_columns, float_columns, categ_columns):
