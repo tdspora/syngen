@@ -39,7 +39,7 @@ class TrainConfig:
 
     def __getstate__(self) -> Dict:
         """
-        Return an update config's instance
+        Return an updated config's instance
         """
         instance = self.__dict__.copy()
         attribute_keys_to_remove = ["loader"]
