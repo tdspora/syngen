@@ -687,13 +687,12 @@ class Dataset(BaseDataset):
         self._set_long_text_columns(df)
         self._set_email_columns(df)
 
-        self.float_columns = set()
-        self.int_columns = set()
-
         for col in df.columns:
-            if df[col].dropna().dtype in ["int", "int64"]:
+            col_no_na = df[col].dropna()
+
+            if col_no_na.dtype in ["int", "int64"]:
                 self.int_columns.add(col)
-            elif df[col].dropna().dtype in ["float", "float64"]:
+            elif col_no_na.dtype in ["float", "float64"]:
                 self.float_columns.add(col)
 
         float_to_int_cols = set()
