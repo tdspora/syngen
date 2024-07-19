@@ -1,5 +1,3 @@
-from unittest.mock import Mock
-
 import pandas as pd
 
 from syngen.ml.config import TrainConfig
@@ -33,3 +31,4 @@ def test_get_state_of_train_config(rp_logger):
     for attr in expected_attributes:
         assert attr in state
     assert "loader" not in state
+    rp_logger.info(SUCCESSFUL_MESSAGE)
