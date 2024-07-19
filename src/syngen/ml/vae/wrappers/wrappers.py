@@ -342,9 +342,9 @@ class VAEWrapper(BaseWrapper):
             mean_kl_loss,
             epoch
         )
-        grouped_losses = self._get_grouped_losses(mean_feature_losses, epoch)
-        grouped_losses.update({"loss": mean_loss})
-        self._update_losses_info(grouped_losses, epoch)
+        losses = self._get_grouped_losses(mean_feature_losses, epoch)
+        losses.update({"kl_loss": mean_kl_loss, "loss": mean_loss})
+        self._update_losses_info(losses, epoch)
 
     def _train(self, dataset, epochs: int):
         step = self._train_step
