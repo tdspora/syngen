@@ -169,7 +169,7 @@ class VAEWrapper(BaseWrapper):
         self.feature_losses = self.vae.feature_losses
         self.feature_types = self.vae.feature_types
 
-        self.optimizer = self._create_optimizer()
+        self.optimizer = self.__create_optimizer()
         self.loss_metric = self._create_loss()
 
         # Start of the run of training process
@@ -370,15 +370,17 @@ class VAEWrapper(BaseWrapper):
                 break
             epoch += 1
 
-    def _create_optimizer(self, learning_rate=None):
-        if not learning_rate:
-            learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
+    def _create_optimizer(self, learning_rate):
         import platform
         if platform.processor() == 'arm':
             logger.info('Mac ARM processor is detected. Legacy Adam optimizer has been created.')
             return tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
         else:
             return tf.keras.optimizers.Adam(learning_rate=learning_rate)
+
+    def __create_optimizer(self):
+        learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
+        return self._create_optimizer(learning_rate)
 
     @staticmethod
     def _create_loss():
