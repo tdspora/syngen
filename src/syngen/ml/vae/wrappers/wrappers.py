@@ -370,7 +370,8 @@ class VAEWrapper(BaseWrapper):
                 break
             epoch += 1
 
-    def _create_optimizer(self, learning_rate):
+    @staticmethod
+    def _create_optimizer(learning_rate):
         import platform
         if platform.processor() == 'arm':
             logger.info('Mac ARM processor is detected. Legacy Adam optimizer has been created.')
