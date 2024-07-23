@@ -1139,7 +1139,7 @@ class Utility(BaseMetric):
                 )
         log_msg = (
             "The ratio of synthetic {} accuracy to original is "
-            "{}. The model considers the {} column "
+            "{}. The model considers the '{}' column "
             "as a target and other columns as predictors"
         )
         if best_binary is not None:
