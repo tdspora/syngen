@@ -294,11 +294,11 @@ class VAEWrapper(BaseWrapper):
             ending = self._get_ending(feature_name=name)
             row = {
                 "table_name": table_name,
+                "epoch": epoch,
                 "column_name": name if ending else "",
+                "column_type": self.feature_types.get(name, "general"),
                 "loss_name": f"{name}_loss_{ending}" if ending else name,
                 "value": loss,
-                "epoch": epoch,
-                "column_type": self.feature_types.get(name, "general")
             }
             rows.append(row)
 
@@ -402,6 +402,7 @@ class VAEWrapper(BaseWrapper):
             )
 
             self._gather_losses_info(total_feature_losses, mean_loss, mean_kl_loss, epoch)
+            logger.trace(f"The 'kl_loss' - {mean_kl_loss} in {epoch} epoch")
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
