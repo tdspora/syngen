@@ -346,6 +346,21 @@ class VAEWrapper(BaseWrapper):
         losses.update({"kl_loss": mean_kl_loss, "loss": mean_loss})
         self._update_losses_info(losses, epoch)
 
+    def _log_losses_info_to_mlflow(self):
+        """
+        Log 'losses.csv' to mlflow
+        """
+        path = self.paths["losses_path"]
+        try:
+            MlflowTracker().log_artifact(path)
+        except Exception as error:
+            logger.warning(
+                f"Logging the report to mlflow has failed due to a permission error. "
+                f"Error details: {error}.\n"
+                f"The report will be saved locally in '{path}'"
+            )
+            pass
+
     def _train(self, dataset, epochs: int):
         step = self._train_step
 
@@ -419,6 +434,7 @@ class VAEWrapper(BaseWrapper):
                 break
             epoch += 1
         self.__save_losses()
+        self._log_losses_info_to_mlflow()
 
     def _create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
