@@ -69,8 +69,10 @@ class VAEWrapper(BaseWrapper):
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
+
     def __post_init__(self):
         if self.process == "train":
+            self._prepare_dir()
             self.dataset = Dataset(
                 df=self.df,
                 schema=self.schema,
@@ -100,6 +102,10 @@ class VAEWrapper(BaseWrapper):
         """
         with open(self.paths["dataset_pickle_path"], "wb") as f:
             f.write(pickle.dumps(self.dataset))
+
+    @staticmethod
+    def _prepare_dir():
+        os.makedirs(f"model_artifacts/tmp_store/losses", exist_ok=True)
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
@@ -326,7 +332,6 @@ class VAEWrapper(BaseWrapper):
         """
         Save the information about losses of every feature in every epoch
         """
-        os.makedirs(f"model_artifacts/tmp_store/losses", exist_ok=True)
         path = self.paths["losses_path"]
         DataLoader(path).save_data(path, df=self.losses_info)
 
@@ -343,7 +348,7 @@ class VAEWrapper(BaseWrapper):
             epoch
         )
         losses = self._get_grouped_losses(mean_feature_losses, epoch)
-        losses.update({"kl_loss": mean_kl_loss, "loss": mean_loss})
+        losses.update({"kl_loss": mean_kl_loss, "total_loss": mean_loss})
         self._update_losses_info(losses, epoch)
 
     def _log_losses_info_to_mlflow(self):
@@ -408,7 +413,7 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            log_message = f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
             logger.info(log_message)
 
             ProgressBarHandler().set_progress(
