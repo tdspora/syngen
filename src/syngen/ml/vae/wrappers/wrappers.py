@@ -270,7 +270,7 @@ class VAEWrapper(BaseWrapper):
         feature_type = self.feature_types.get(feature_name)
         return endings.get(feature_type)
 
-    def _monitor_feature_losses(self, mean_feature_losses, mean_kl_loss, epoch):
+    def _monitor_feature_losses(self, mean_feature_losses, epoch):
         """
         Monitor the mean value of the loss of every feature for every epoch
         """
@@ -279,9 +279,6 @@ class VAEWrapper(BaseWrapper):
             MlflowTracker().log_metric(
                 f"{slugify(name)}_loss_{ending}", loss, step=epoch
             )
-        MlflowTracker().log_metric(
-            "kl_loss", mean_kl_loss, step=epoch
-        )
 
     def _fetch_feature_losses_info(
             self,
@@ -344,7 +341,6 @@ class VAEWrapper(BaseWrapper):
         self._update_losses_info(mean_feature_losses, epoch)
         self._monitor_feature_losses(
             mean_feature_losses,
-            mean_kl_loss,
             epoch
         )
         losses = self._get_grouped_losses(mean_feature_losses, epoch)
@@ -426,6 +422,7 @@ class VAEWrapper(BaseWrapper):
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
+            MlflowTracker().log_metric("kl_loss", mean_kl_loss, step=epoch)
 
             prev_total_loss = mean_loss
 
