@@ -2,9 +2,11 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Tuple, Set, List, Callable
 import os
 import shutil
+from datetime import datetime
 
 import pandas as pd
 from loguru import logger
+from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute
@@ -200,7 +202,7 @@ class TrainConfig:
         """
         Create the paths which used in training process
         """
-
+        losses_file_name = f"{self.table_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         return {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -222,7 +224,8 @@ class TrainConfig:
                                     f"merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path":
                 f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
-            "losses_path": f"model_artifacts/resources/{self.slugify_table_name}/losses.csv"
+            "losses_path": f"model_artifacts/tmp_store/losses/"
+                           f"losses_{slugify(losses_file_name)}.csv"
         }
 
 

@@ -224,9 +224,9 @@ class VAEWrapper(BaseWrapper):
             feature_type="text"
         )
         logger.trace(
-            f"The numeric loss - {num_loss}, "
-            f"the categorical loss - {categorical_loss}, "
-            f"the text_loss - {text_loss} in the {epoch} epoch"
+            f"The 'numeric_loss' - {num_loss}, "
+            f"the 'categorical_loss' - {categorical_loss}, "
+            f"the 'text_loss' - {text_loss} in the {epoch} epoch"
         )
         MlflowTracker().log_metric(
             "numeric_loss", num_loss, step=epoch
@@ -239,7 +239,7 @@ class VAEWrapper(BaseWrapper):
         )
         return {
             "numeric_loss": num_loss,
-            "categorical": categorical_loss,
+            "categorical_loss": categorical_loss,
             "text_loss": text_loss
         }
 
@@ -326,6 +326,7 @@ class VAEWrapper(BaseWrapper):
         """
         Save the information about losses of every feature in every epoch
         """
+        os.makedirs(f"model_artifacts/tmp_store/losses", exist_ok=True)
         path = self.paths["losses_path"]
         DataLoader(path).save_data(path, df=self.losses_info)
 
