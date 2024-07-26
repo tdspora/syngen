@@ -269,7 +269,23 @@ class Correlations(BaseMetric):
             )
         )
         self.corr_score = self.original_heatmap - self.synthetic_heatmap
-        self.corr_score = self.corr_score.dropna(how="all").dropna(how="all", axis=1)
+        self.corr_score = (
+            self.corr_score
+            .dropna(how="all")
+            .dropna(how="all", axis=1)
+        )
+
+        # check if there are any nans left in corr_score
+        if self.corr_score.isna().values.any():
+            # mask for NaNs in both original_heatmap and synthetic_heatmap
+            nan_mask = (
+                np.isnan(self.original_heatmap) &
+                np.isnan(self.synthetic_heatmap)
+            )
+
+            # Set the NaN values in corr_score to 0 where both
+            # original_heatmap and synthetic_heatmap have NaNs
+            self.corr_score[nan_mask] = 0
 
         if self.plot:
             plt.clf()
@@ -294,7 +310,7 @@ class Correlations(BaseMetric):
 
     @staticmethod
     def __calculate_correlations(data):
-        return abs(data.corr())
+        return abs(data.corr(method="spearman"))
 
 
 class BivariateMetric(BaseMetric):
