@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 from typing import Tuple, List, Optional, Dict
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from pathlib import Path
 from dataclasses import dataclass, field
 
