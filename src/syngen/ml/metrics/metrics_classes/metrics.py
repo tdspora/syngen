@@ -289,6 +289,11 @@ class Correlations(BaseMetric):
 
         if self.plot:
             plt.clf()
+            # set color for NaN values
+            nan_mask = self.corr_score.isna()
+            # Color for NaNs
+            self.cmap.set_bad('gray')
+
             sns.set(rc={"figure.figsize": self.corr_score.shape}, font_scale=2)
             heatmap = sns.heatmap(
                 self.corr_score,
@@ -298,6 +303,7 @@ class Correlations(BaseMetric):
                 vmax=1.0,
                 center=0.5,
                 square=True,
+                mask=nan_mask
             )
 
             heatmap.figure.tight_layout()
