@@ -514,7 +514,11 @@
 						operation
 						is performed for the synthetic dataset. The resulting matrix is the difference between original
 						correlation
-						matrix and the synthetic one.</p>
+						matrix and the synthetic one.
+						{% if correlation_median != correlation_median %}
+						NaN values in the resulting matrix are represented with gray color.
+						{% endif %}</p>
+
 					<img class="heatmap"
 						style="width: 100%;"
 						src="{{correlations_heatmap}}">
