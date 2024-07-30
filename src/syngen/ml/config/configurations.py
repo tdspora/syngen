@@ -37,6 +37,17 @@ class TrainConfig:
         self._remove_existed_artifacts()
         self._prepare_dirs()
 
+    def __getstate__(self) -> Dict:
+        """
+        Return an updated config's instance
+        """
+        instance = self.__dict__.copy()
+        attribute_keys_to_remove = ["loader"]
+        for attr_key in attribute_keys_to_remove:
+            if attr_key in instance:
+                del instance[attr_key]
+        return instance
+
     def preprocess_data(self):
         data, self.schema = self._extract_data()
         self.columns = list(data.columns)
