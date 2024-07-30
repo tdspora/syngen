@@ -1,7 +1,6 @@
 from syngen.ml.utils.utils import (  # noqa: F401;
     get_date_columns,
     nan_labels_to_float,
-    get_tmp_df,
     fillnan,
     slugify_attribute,
     slugify_parameters,

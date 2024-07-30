@@ -232,7 +232,8 @@ class TrainConfig:
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path":
-                f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
+                f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
+            "losses_path": f"model_artifacts/resources/{self.slugify_table_name}/losses.csv"
         }
 
 
