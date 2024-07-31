@@ -505,18 +505,10 @@
 							<div>BAD</div>
 						</div>
 					</div>
-					<p class="text-description">The correlation metric is calculated in the following manner: for each
-						pair
-						of
-						numeric columns in
-						original
-						dataset a pairwise correlations is measured thus resulting in the correlations matrix. The same
-						operation
-						is performed for the synthetic dataset. The resulting matrix is the difference between original
-						correlation
-						matrix and the synthetic one.
+					<p class="text-description">The correlation metric is calculated in the following manner: for each pair of numeric and categorical columns in the original dataset, a pairwise correlation is measured, thus resulting in the correlation matrix. The same operation is performed for the synthetic dataset. The resulting matrix is the difference between the original correlation matrix and the synthetic one.
+						<!-- if there are NaN values in resulting matrix, we add text below. NaN is the only element such that NaN != NaN -->
 						{% if correlation_median != correlation_median %}
-						NaN values in the resulting matrix are represented with gray color.
+						NaN values, shown in gray, indicate that correlations could be computed in one dataset but not the other. This suggests significant differences in data characteristics between original and synthetic datasets.
 						{% endif %}</p>
 
 					<img class="heatmap"
