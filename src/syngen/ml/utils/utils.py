@@ -97,7 +97,10 @@ def datetime_to_timestamp(dt, date_format):
             return MIN_ALLOWED_TIME_MS
 
 
-def timestamp_to_datetime(timestamp):
+def timestamp_to_datetime(timestamp, delta=False):
+    """
+    Convert the timestamp to the datetime object or timedelta object
+    """
     # Calculate the number of seconds in the UNIX epoch and the number of seconds left
     if pd.isnull(timestamp):
         return np.nan
@@ -116,10 +119,11 @@ def timestamp_to_datetime(timestamp):
     # Calculate the timedelta for the number of seconds in the UNIX epoch
     epoch_timedelta = timedelta(seconds=seconds_since_epoch)
 
-    # Add the timedelta to the epoch datetime, and add the remaining fraction of a second
-    result_datetime = epoch_datetime + epoch_timedelta + timedelta(seconds=remaining_seconds)
+    if delta:
+        return epoch_timedelta + timedelta(seconds=remaining_seconds)
 
-    return result_datetime
+    else:
+        return epoch_datetime + epoch_timedelta + timedelta(seconds=remaining_seconds)
 
 
 def generate_uuids(version: Union[int, str], size: int):
