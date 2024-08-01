@@ -431,6 +431,7 @@ class VAEWrapper(BaseWrapper):
         sampled_df = self.vae.sample(n)
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)
+        sampled_df = self._restore_nan_labels(sampled_df)
         return sampled_df
 
     def predict_less_likely_samples(self, df: pd.DataFrame, n: int, temp=0.05, variaty=3):
