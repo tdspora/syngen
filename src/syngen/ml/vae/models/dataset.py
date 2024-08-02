@@ -536,20 +536,63 @@ class Dataset(BaseDataset):
     def _is_valid_uuid(self, x):
         """
         Check if uuid_to_test is a valid UUID
+        If there are no NaNs and single non UUID/ULID value,
+        it is treated as nan_label and set as NaN.
         """
         result = []
-        for i in x.dropna():
+        non_uuid_values = set()
+        contain_nan = x.isnull().sum() > 0
+
+        for i in x.dropna().unique():
+            is_uuid = False
             for v in [1, 2, 3, 4, 5]:
                 try:
                     uuid_obj = UUID(i, version=v)
                     if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
                         result.append(v)
+                        is_uuid = True
+                        break
                 except (ValueError, AttributeError, TypeError):
-                    result.append(self._is_valid_ulid(i))
-        if result:
-            return max(set(result), key=result.count)
+                    continue
+
+            if not is_uuid:
+                ulid_result = self._is_valid_ulid(i)
+                if ulid_result:
+                    result.append(ulid_result)
+                elif not contain_nan:
+                    non_uuid_values.add(i)
+
+        if (len(non_uuid_values) <= 1) and result:
+            self.__handle_nan_values_in_uuid(x, non_uuid_values)
+            return max(set(result), key=result.count) if isinstance(result[0], int) else 'ulid'
         else:
             return 0
+
+    def __handle_nan_values_in_uuid(self, x, non_uuid_values):
+        if x.isnull().sum() > 0:
+            null_mask = x.isnull()
+            self.df[f"{x.name}_null"] = null_mask.astype(float)
+        elif len(non_uuid_values) == 1:
+            unique_non_uuid = next(iter(non_uuid_values))
+
+            logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
+                        f"value '{unique_non_uuid}'. It will be treated "
+                        f"as a null label and replaced with NaN."
+                        )
+
+            # add column name and label to the dict of nan_labels
+            self.nan_labels_in_uuid[x.name] = unique_non_uuid
+            x.replace(unique_non_uuid, np.nan, inplace=True)
+            null_mask = x.isnull()
+            null_column_name = f"{x.name}_null"
+            self.df[null_column_name] = null_mask.astype(float)
+
+            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print(f"null_column_name: {null_column_name}")
+            print(f"self.df[null_column_name]unique(): {self.df[null_column_name].unique()}")
+
+            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print(f"self.nan_labels_in_uuid: {self.nan_labels_in_uuid}")
 
     def _set_uuid_columns(self, df: pd.DataFrame):
         """
@@ -560,9 +603,17 @@ class Dataset(BaseDataset):
         data_subset = df[text_columns]
 
         if not data_subset.empty:
+            self.nan_labels_in_uuid = {}
             data_subset = data_subset.apply(self._is_valid_uuid)
+
+            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print(f"data_subset: {data_subset}")
+
             self.uuid_columns_types = dict(data_subset[data_subset.isin([1, 2, 3, 4, 5, "ulid"])])
             self.uuid_columns = set(self.uuid_columns_types.keys())
+
+            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print(f"self.uuid_columns: {self.uuid_columns}")
 
     def _set_date_columns(self, df: pd.DataFrame):
         """
@@ -677,9 +728,9 @@ class Dataset(BaseDataset):
         :param schema: metadata of the table
         :param check_object_on_float: if True, check if object columns can be converted to float
         """
-        if check_object_on_float:
-            columns_nan_labels = get_nan_labels(df)
-            df = nan_labels_to_float(df, columns_nan_labels)
+        # if check_object_on_float:
+        #     columns_nan_labels = get_nan_labels(df)
+        #     df = nan_labels_to_float(df, columns_nan_labels)
 
         self._set_uuid_columns(df)
         self._set_binary_columns(df)
@@ -1151,6 +1202,15 @@ class Dataset(BaseDataset):
     def pipeline(self) -> pd.DataFrame:
         columns_nan_labels = get_nan_labels(self.df)
         self.df = nan_labels_to_float(self.df, columns_nan_labels)
+
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"columns_nan_labels: {columns_nan_labels}")
+        print(f"nan_labels_in_uuid to be merged: {self.nan_labels_in_uuid}")
+
+        columns_nan_labels.update(self.nan_labels_in_uuid)
+
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"After update columns_nan_labels: {columns_nan_labels}")
 
         if self.foreign_keys_list:
             self._assign_fk_feature()
