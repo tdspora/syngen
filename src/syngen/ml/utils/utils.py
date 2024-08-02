@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 from dateutil import parser
 from datetime import datetime, timedelta
 
@@ -197,20 +197,16 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
         if (float_val is not None) and (not np.isnan(float_val)) and len(str_values) == 1:
             nan_label = str_values[0]
             columns_nan_labels[column] = nan_label
+        elif (float_val is not None) and (not np.isnan(float_val)) and not str_values:
+            columns_nan_labels[column] = None
 
     return columns_nan_labels
 
 
 def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFrame:
     """
-    Replace str nan labels in float/int columns with actual np.nan
+    Replace str nan labels in float/int columns with actual np.NaN
     and casting the column to float type.
-
-    Args:
-        df (pd.DataFrame): table data
-
-    Returns:
-        pd.DataFrame: DataFrame with str NaN labels in float/int columns replaced with np.nan
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
