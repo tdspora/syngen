@@ -211,6 +211,14 @@ def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFr
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
         df_with_nan[column].replace(label, np.NaN, inplace=True)
+        df_with_nan[column] = df_with_nan[column].astype(float)
+
+        logger.info(f"Column '{column}' contains unique "
+                    f"non-numeric value: '{label}'. "
+                    "It will be treated as null label "
+                    "and repalced with nulls."
+                    )
+
     return df_with_nan
 
 

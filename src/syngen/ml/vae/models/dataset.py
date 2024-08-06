@@ -25,7 +25,6 @@ from syngen.ml.vae.models.features import (
 from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
-    get_tmp_df,
     get_date_columns,
 )
 from syngen.ml.data_loaders import DataLoader
@@ -45,7 +44,8 @@ class BaseDataset:
         paths: Dict
     ):
         self.df = df
-        self.schema = schema
+        self.schema = schema.get("fields", {})
+        self.file_format = schema.get("format")
         self.metadata = metadata
         self.table_name = table_name
         self.paths = paths
@@ -89,6 +89,7 @@ class BaseDataset:
             self.paths["train_config_pickle_path"]
         ).columns
         self.format = self.metadata[self.table_name].get("format", {})
+        self.nan_labels_dict = dict()
 
 
 class Dataset(BaseDataset):
@@ -109,6 +110,8 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
+        self.nan_labels_dict = get_nan_labels(self.df)
+        self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
     def __getstate__(self) -> Dict:
         """
@@ -305,8 +308,8 @@ class Dataset(BaseDataset):
                 with open(f"{self.paths['fk_kde_path']}{pk}_mapper.pkl", "wb") as file:
                     pickle.dump(mapper, file)
 
-    def __set_metadata(self, metadata: dict, table_name: str):
-        config_of_keys = metadata.get(table_name, {}).get("keys")
+    def __set_metadata(self):
+        config_of_keys = self.metadata.get(self.table_name, {}).get("keys")
 
         if config_of_keys is not None:
             self.__set_pk_key(config_of_keys)
@@ -317,28 +320,36 @@ class Dataset(BaseDataset):
         table_config = self.metadata.get(self.table_name, {})
         self._set_non_existent_columns(table_config)
         self._update_table_config(table_config)
-        self.__set_metadata(self.metadata, self.table_name)
-        self.__data_pipeline(self.df, self.schema)
+        self.__set_metadata()
+        self.__data_pipeline()
 
-    @staticmethod
-    def _update_schema(schema: Dict[str, Dict[str, str]], df: pd.DataFrame):
+    def _update_schema(self):
         """
         Synchronize the schema of the table with dataframe
         """
-        schema["fields"] = {
+        for column in list(self.df.columns):
+            if pd.api.types.is_integer_dtype(self.df[column]):
+                self.schema[column] = "int"
+            elif pd.api.types.is_float_dtype(self.df[column]):
+                if all(x - int(x) == 0 for x in self.df[column].dropna()):
+                    self.schema[column] = "int"
+                else:
+                    self.schema[column] = "float"
+        self.schema = {
             column: data_type
-            for column, data_type in schema.get("fields").items()
-            if column in df.columns
+            for column, data_type in self.schema.items()
+            if column in self.df.columns
         }
-        return schema
 
-    def _check_if_column_in_removed(self, schema: Dict):
+    def _check_if_column_in_removed(self):
         """
         Exclude the column from the list of categorical columns
         if it was removed previously as empty column
         """
         removed = [
-            col for col, data_type in schema.get("fields", {}).items() if data_type == "removed"
+            col
+            for col, data_type in self.schema.get("fields", {}).items()
+            if data_type == "removed"
         ]
         for col in list(self.categ_columns):
             if col in removed:
@@ -421,42 +432,43 @@ class Dataset(BaseDataset):
                 f"due to the information from the metadata of the table - '{self.table_name}'"
             )
 
-    def _check_if_column_categorical(self, schema: Dict):
+    def _check_if_column_categorical(self):
         if self.categ_columns:
-            self._check_if_column_in_removed(schema=schema)
+            self._check_if_column_in_removed()
             self._check_if_column_existed()
             self._check_if_not_key_column()
             self._check_if_column_binary()
 
-    def _set_binary_columns(self, df: pd.DataFrame):
+    def _set_binary_columns(self):
         """
         Set up the list of binary columns based on the count of unique values in the column
         """
         self.binary_columns = set(
-            [col for col in df.columns if df[col].fillna("?").nunique() == 2]
+            [col for col in self.df.columns if self.df[col].fillna("?").nunique() == 2]
         )
 
-    def _define_categorical_columns(self, df):
+    def _define_categorical_columns(self):
         """
         Define the list of categorical columns based on the count of unique values in the column
         """
         defined_columns = set(
             [
                 col
-                for col in df.columns
-                if df[col].dropna().nunique() <= 50 and col not in self.binary_columns
+                for col in self.df.columns
+                if self.df[col].dropna().nunique() <= 50
+                   and col not in self.binary_columns
             ]
         )
         self.categ_columns.update(defined_columns)
 
     # TODO: cache this function calls (?)
-    def _select_str_columns(self, df) -> List[str]:
+    def _select_str_columns(self) -> List[str]:
         """
         Select the text columns
         """
-        if self.schema.get("format", "") == "CSV":
+        if self.file_format == "CSV":
             text_columns = [
-                col for col, dtype in dict(df.dtypes).items()
+                col for col, dtype in dict(self.df.dtypes).items()
                 if dtype in ["object", "string"]
             ]
         else:
@@ -467,20 +479,20 @@ class Dataset(BaseDataset):
             ]
         return text_columns
 
-    def _set_categorical_columns(self, df: pd.DataFrame, schema: Dict):
+    def _set_categorical_columns(self):
         """
         Set up the list of categorical columns
         """
         self._fetch_categorical_columns()
-        self._define_categorical_columns(df)
-        self._check_if_column_categorical(schema=schema)
+        self._define_categorical_columns()
+        self._check_if_column_categorical()
 
-    def _set_long_text_columns(self, df: pd.DataFrame):
+    def _set_long_text_columns(self):
         """
         Set up the list of columns with long texts (> 200 symbols)
         """
-        text_columns = self._select_str_columns(df)
-        data_subset = df[text_columns]
+        text_columns = self._select_str_columns()
+        data_subset = self.df[text_columns]
 
         if not data_subset.empty:
             data_subset = data_subset.loc[
@@ -498,12 +510,12 @@ class Dataset(BaseDataset):
                     f"a simplified statistical approach"
                 )
 
-    def _set_email_columns(self, df: pd.DataFrame):
+    def _set_email_columns(self):
         """
         Set up the list of columns with emails (defined by count of @ symbols)
         """
-        text_columns = self._select_str_columns(df)
-        data_subset = df[text_columns]
+        text_columns = self._select_str_columns()
+        data_subset = self.df[text_columns]
 
         if not data_subset.empty:
             # @ presents in more than 4/5 of not None values of every column
@@ -537,40 +549,108 @@ class Dataset(BaseDataset):
     def _is_valid_uuid(self, x):
         """
         Check if uuid_to_test is a valid UUID
+        If there are no NaNs and single non UUID/ULID value,
+        it is treated as nan_label and set as NaN.
         """
         result = []
-        for i in x.dropna():
+        non_uuid_values = set()
+        contain_nan = x.isnull().sum() > 0
+
+        for i in x.dropna().unique():
+            is_uuid = False
             for v in [1, 2, 3, 4, 5]:
                 try:
                     uuid_obj = UUID(i, version=v)
                     if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
                         result.append(v)
+                        is_uuid = True
+                        break
                 except (ValueError, AttributeError, TypeError):
-                    result.append(self._is_valid_ulid(i))
-        if result:
-            return max(set(result), key=result.count)
+                    continue
+
+            if not is_uuid:
+                ulid_result = self._is_valid_ulid(i)
+                if ulid_result:
+                    result.append(ulid_result)
+                elif not contain_nan:
+                    non_uuid_values.add(i)
+
+        if (len(non_uuid_values) <= 1) and result:
+            self.__handle_nan_values_in_uuid(x, non_uuid_values)
+            return max(set(result), key=result.count) if isinstance(result[0], int) else 'ulid'
         else:
             return 0
 
-    def _set_uuid_columns(self, df: pd.DataFrame):
+    def __handle_nan_values_in_uuid(self, x, non_uuid_values):
+        if len(non_uuid_values) == 1:
+            unique_non_uuid = next(iter(non_uuid_values))
+
+            logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
+                        f"value '{unique_non_uuid}'. It will be treated "
+                        f"as a null label and replaced with nulls."
+                        )
+            self.nan_labels_in_uuid[x.name] = unique_non_uuid
+            self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
+
+            # #ANCHOR - CHANGE HERE
+            # features = self._preprocess_nan_cols(x.name, fillna_strategy="mode")
+            # if len(features) == 2:
+            #     self.null_num_column_names.append(features[1])
+            #     self.assign_feature(ContinuousFeature(features[1], column_type=float), features[1])
+            #     logger.info(f"Column '{features[1]}' assigned as float based feature")
+            #     self.uuid_null_columns.add(features[1])
+        #features = self._preprocess_nan_cols(feature, fillna_strategy="text")
+        # if x.isnull().sum() > 0:
+        #     self._preprocess_nan_cols(x, fillna_strategy="mode")
+        #     # null_mask = x.isnull()
+        #     # self.df[f"{x.name}_null"] = null_mask.astype(float)
+        # elif len(non_uuid_values) == 1:
+        #     unique_non_uuid = next(iter(non_uuid_values))
+
+        #     logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
+        #                 f"value '{unique_non_uuid}'. It will be treated "
+        #                 f"as a null label and replaced with nulls."
+        #                 )
+        #     # add column name and label to the dict of nan_labels
+        #     self.nan_labels_in_uuid[x.name] = unique_non_uuid
+        #     self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
+        #     features = self._preprocess_nan_cols(x.name, fillna_strategy="mode")
+        #     if len(features) == 2:
+
+
+
+            # null_mask = x.isnull()
+            # null_column_name = f"{x.name}_null"
+            # self.df[null_column_name] = null_mask.astype(float)
+            # self.uuid_null_columns.add(null_column_name)
+
+            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print(f"self.nan_labels_in_uuid: {self.nan_labels_in_uuid}")
+
+    def _set_uuid_columns(self):
         """
         Set up the list of columns with UUIDs
         """
 
-        text_columns = self._select_str_columns(df)
-        data_subset = df[text_columns]
+        text_columns = self._select_str_columns()
+        data_subset = self.df[text_columns]
 
         if not data_subset.empty:
+            self.nan_labels_in_uuid = {}
             data_subset = data_subset.apply(self._is_valid_uuid)
+
             self.uuid_columns_types = dict(data_subset[data_subset.isin([1, 2, 3, 4, 5, "ulid"])])
             self.uuid_columns = set(self.uuid_columns_types.keys())
 
-    def _set_date_columns(self, df: pd.DataFrame):
+            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print(f"self.uuid_columns: {self.uuid_columns}")
+
+    def _set_date_columns(self):
         """
         Set up the list of date columns
         """
         self.date_columns = (
-            get_date_columns(df, list(self.str_columns))
+            get_date_columns(self.df, list(self.str_columns))
             - self.email_columns
             - self.categ_columns
             - self.binary_columns
@@ -659,41 +739,39 @@ class Dataset(BaseDataset):
             return Counter(types).most_common(2)[1][0]
         return Counter(types).most_common(1)[0][0]
 
-    def _set_date_format(self, df):
+    def _set_date_format(self):
         """
         Define the date format for each date column
         """
         self.date_mapping = {
-            column: self.__define_date_format(df[column]) for column in self.date_columns
+            column: self.__define_date_format(self.df[column])
+            for column in self.date_columns
         }
 
-    def _general_data_pipeline(
-        self, df: pd.DataFrame, schema: Dict, check_object_on_float: bool = True
-    ):
+    def _general_data_pipeline(self):
         """
-        Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
+        Divide columns in dataframe into groups -
+        binary, categorical, integer, float, string, date
         in case metadata of the table is absent
 
-        :param df: dataframe
-        :param schema: metadata of the table
-        :param check_object_on_float: if True, check if object columns can be converted to float
         """
-        if check_object_on_float:
-            columns_nan_labels = get_nan_labels(df)
-            df = nan_labels_to_float(df, columns_nan_labels)
+        self._set_uuid_columns()
+        self._set_binary_columns()
+        self._set_categorical_columns()
+        self._set_long_text_columns()
+        self._set_email_columns()
 
-        self._set_uuid_columns(df)
-        self._set_binary_columns(df)
-        self._set_categorical_columns(df, schema)
-        self._set_long_text_columns(df)
-        self._set_email_columns(df)
-        tmp_df = get_tmp_df(df)
-        self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
-        self.int_columns = set(tmp_df.select_dtypes(include=["int", "int64"]).columns)
+        for col in self.df.columns:
+            col_no_na = self.df[col].dropna()
+
+            if col_no_na.dtype in ["int", "int64"]:
+                self.int_columns.add(col)
+            elif col_no_na.dtype in ["float", "float64"]:
+                self.float_columns.add(col)
 
         float_to_int_cols = set()
         for col in self.float_columns:
-            if all(x.is_integer() for x in tmp_df[col]):
+            if all(x.is_integer() for x in self.df[col].dropna()):
                 float_to_int_cols.add(col)
 
         self.int_columns = (self.int_columns | float_to_int_cols) - (
@@ -703,7 +781,7 @@ class Dataset(BaseDataset):
             self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
         )
         self.str_columns = (
-            set(tmp_df.columns)
+            set(self.df.columns)
             - self.float_columns
             - self.categ_columns
             - self.int_columns
@@ -713,35 +791,34 @@ class Dataset(BaseDataset):
             - self.uuid_columns
         )
         self.categ_columns -= self.long_text_columns
-        self._set_date_columns(df)
+        self._set_date_columns()
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
-        self._set_date_format(df)
+        self._set_date_format()
 
-    def _avro_data_pipeline(self, df, schema):
+    def _avro_data_pipeline(self):
         """
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
         in case metadata of the table in Avro format is present
         """
-        logger.info(f"The schema of table - {self.table_name} was received")
-        self._set_uuid_columns(df)
-        self._set_binary_columns(df)
-        self._set_categorical_columns(df, schema)
-        self._set_long_text_columns(df)
-        self._set_email_columns(df)
+        self._set_uuid_columns()
+        self._set_binary_columns()
+        self._set_categorical_columns()
+        self._set_long_text_columns()
+        self._set_email_columns()
         self.int_columns = set(
-            column for column, data_type in schema.items() if data_type == "int"
+            column for column, data_type in self.schema.items() if data_type == "int"
         )
-        self.int_columns = self.int_columns - self.categ_columns - self.binary_columns
+        self.int_columns = (self.int_columns - self.categ_columns - self.binary_columns)
         self.float_columns = set(
-            column for column, data_type in schema.items() if data_type == "float"
+            column for column, data_type in self.schema.items() if data_type == "float"
         )
         self.float_columns = self.float_columns - self.categ_columns - self.binary_columns
         self.str_columns = set(
-            column for column, data_type in schema.items() if data_type == "string"
+            column for column, data_type in self.schema.items() if data_type == "string"
         )
         self.categ_columns -= self.long_text_columns
         self.str_columns = (
@@ -752,27 +829,27 @@ class Dataset(BaseDataset):
             - self.email_columns
             - self.uuid_columns
         )
-        self._set_date_columns(df)
+        self._set_date_columns()
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
-        self._set_date_format(df)
+        self._set_date_format()
 
-    def __data_pipeline(self, df: pd.DataFrame, schema: Optional[Dict]):
-        if schema.get("format") == "CSV":
-            self._general_data_pipeline(df, schema)
-        elif schema.get("format") == "Avro":
-            schema = self._update_schema(schema, df)
-            self._avro_data_pipeline(df, schema.get("fields"))
+    def __data_pipeline(self):
+        if self.file_format == "CSV":
+            self._general_data_pipeline()
+        elif self.file_format == "Avro":
+            self._update_schema()
+            self._avro_data_pipeline()
 
         assert len(self.str_columns) + len(self.float_columns) + len(self.int_columns) + len(
             self.date_columns
         ) + len(self.categ_columns) + len(self.binary_columns) + len(self.long_text_columns) + len(
             self.uuid_columns
         ) + len(self.email_columns) == len(
-            df.columns
+            self.df.columns
         ), (
             "According to number of columns with defined types, "
             "column types are not identified correctly"
@@ -791,6 +868,17 @@ class Dataset(BaseDataset):
         )
         for column in self.uuid_columns:
             logger.info(f"Column '{column}' defined as UUID column")
+            if column in self.nan_labels_in_uuid.keys():
+                logger.info(f"HELLO Column '{column}' contains a unique non-UUID/ULID value "
+                            f"'{self.nan_labels_in_uuid[column]}'. It will be treated as a null label "
+                            f"and replaced with nulls.")
+            self.assign_uuid_null_feature(column)
+            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print(f"self.nan_labels_dict: {self.nan_labels_dict}")
+
+            self.nan_labels_dict.update(self.nan_labels_in_uuid)
+            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print(f"self.nan_labels_dict: {self.nan_labels_dict}")
 
     def assign_feature(self, feature, columns):
         name = feature.original_name
@@ -803,15 +891,6 @@ class Dataset(BaseDataset):
 
         self.features[name] = feature
         self.columns[name] = columns
-
-    def set_nan_params(self, nan_labels: dict):
-        """Save params that are used to keep and replicate nan and empty values
-
-        Args:
-            nan_labels (dict): dictionary that matches column name to the label of missing value
-                               (e.g. {'Score': 'Not available'})
-        """
-        self.nan_labels_dict = nan_labels
 
     def fit(self):
         for name, feature in self.features.items():
@@ -832,7 +911,7 @@ class Dataset(BaseDataset):
         return transformed_features
 
     def fit_transform(self, data):
-        self.fit(data)
+        self.fit()
         return self.transform(data)
 
     def _check_count_features(self, data):
@@ -1142,9 +1221,21 @@ class Dataset(BaseDataset):
                             ContinuousFeature(features[1], column_type=int), features[1]
                         )
 
+    def assign_uuid_null_feature(self, feature):
+        """
+        Assign corresponding to uuid column null column and preprocess if required.
+        """
+        features = self._preprocess_nan_cols(feature, fillna_strategy="")
+        if len(features) == 2:
+            self.null_num_column_names.append(features[1])
+            self.assign_feature(ContinuousFeature(features[1]), features[1])
+            logger.info(f"Column '{features[1]}' assigned as float feature")
+
     def pipeline(self) -> pd.DataFrame:
         columns_nan_labels = get_nan_labels(self.df)
         self.df = nan_labels_to_float(self.df, columns_nan_labels)
+
+        columns_nan_labels.update(self.nan_labels_in_uuid)
 
         if self.foreign_keys_list:
             self._assign_fk_feature()
@@ -1172,8 +1263,6 @@ class Dataset(BaseDataset):
                 self._assign_date_feature(column)
             elif column in self.binary_columns:
                 self._assign_binary_feature(column)
-
-        self.set_nan_params(columns_nan_labels)
 
         self.fit()
 
