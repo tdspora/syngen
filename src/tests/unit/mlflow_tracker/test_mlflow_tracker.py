@@ -167,7 +167,12 @@ def test_start_run_with_active_mlflow(mlflow_tracker, rp_logger):
     ) as mock_start_run:
         mlflow_tracker.start_run(run_name="test_run-TRAIN")
         mock_start_run.assert_called_once_with(
-            None, None, "test_run-TRAIN", False, None, None
+            run_id=None,
+            experiment_id=None,
+            run_name="test_run-TRAIN",
+            nested=False,
+            tags=None,
+            description=None
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
