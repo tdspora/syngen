@@ -592,41 +592,6 @@ class Dataset(BaseDataset):
             self.nan_labels_in_uuid[x.name] = unique_non_uuid
             self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
 
-            # #ANCHOR - CHANGE HERE
-            # features = self._preprocess_nan_cols(x.name, fillna_strategy="mode")
-            # if len(features) == 2:
-            #     self.null_num_column_names.append(features[1])
-            #     self.assign_feature(ContinuousFeature(features[1], column_type=float), features[1])
-            #     logger.info(f"Column '{features[1]}' assigned as float based feature")
-            #     self.uuid_null_columns.add(features[1])
-        #features = self._preprocess_nan_cols(feature, fillna_strategy="text")
-        # if x.isnull().sum() > 0:
-        #     self._preprocess_nan_cols(x, fillna_strategy="mode")
-        #     # null_mask = x.isnull()
-        #     # self.df[f"{x.name}_null"] = null_mask.astype(float)
-        # elif len(non_uuid_values) == 1:
-        #     unique_non_uuid = next(iter(non_uuid_values))
-
-        #     logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
-        #                 f"value '{unique_non_uuid}'. It will be treated "
-        #                 f"as a null label and replaced with nulls."
-        #                 )
-        #     # add column name and label to the dict of nan_labels
-        #     self.nan_labels_in_uuid[x.name] = unique_non_uuid
-        #     self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
-        #     features = self._preprocess_nan_cols(x.name, fillna_strategy="mode")
-        #     if len(features) == 2:
-
-
-
-            # null_mask = x.isnull()
-            # null_column_name = f"{x.name}_null"
-            # self.df[null_column_name] = null_mask.astype(float)
-            # self.uuid_null_columns.add(null_column_name)
-
-            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print(f"self.nan_labels_in_uuid: {self.nan_labels_in_uuid}")
-
     def _set_uuid_columns(self):
         """
         Set up the list of columns with UUIDs
@@ -868,10 +833,10 @@ class Dataset(BaseDataset):
         )
         for column in self.uuid_columns:
             logger.info(f"Column '{column}' defined as UUID column")
-            if column in self.nan_labels_in_uuid.keys():
-                logger.info(f"HELLO Column '{column}' contains a unique non-UUID/ULID value "
-                            f"'{self.nan_labels_in_uuid[column]}'. It will be treated as a null label "
-                            f"and replaced with nulls.")
+            # if column in self.nan_labels_in_uuid.keys():
+            #     logger.info(f"HELLO Column '{column}' contains a unique non-UUID/ULID value "
+            #                 f"'{self.nan_labels_in_uuid[column]}'. It will be treated as a null label "
+            #                 f"and replaced with nulls.")
             self.assign_uuid_null_feature(column)
             print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             print(f"self.nan_labels_dict: {self.nan_labels_dict}")
@@ -1232,11 +1197,6 @@ class Dataset(BaseDataset):
             logger.info(f"Column '{features[1]}' assigned as float feature")
 
     def pipeline(self) -> pd.DataFrame:
-        columns_nan_labels = get_nan_labels(self.df)
-        self.df = nan_labels_to_float(self.df, columns_nan_labels)
-
-        columns_nan_labels.update(self.nan_labels_in_uuid)
-
         if self.foreign_keys_list:
             self._assign_fk_feature()
             self._preprocess_fk_params()

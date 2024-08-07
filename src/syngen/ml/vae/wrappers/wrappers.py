@@ -23,7 +23,6 @@ from syngen.ml.vae.models import Dataset
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import (
     generate_uuid,
-    generate_uuids,
     fetch_config,
     check_if_features_assigned,
     ProgressBarHandler
