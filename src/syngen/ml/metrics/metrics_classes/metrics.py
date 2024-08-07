@@ -1143,23 +1143,32 @@ class Utility(BaseMetric):
             "as a target and other columns as predictors"
         )
         if best_binary is not None:
+            score = (0 if score_binary == 0 else
+                     round(synth_score_binary/score_binary, 4)
+                     )
             logger.info(log_msg.format(
                 'binary',
-                round(synth_score_binary/score_binary, 4),
+                score,
                 best_binary
                 )
             )
         if best_categ is not None:
+            score = (0 if score_categ == 0 else
+                     round(synth_score_categ/score_categ, 4)
+                     )
             logger.info(log_msg.format(
                 'multiclass',
-                round(synth_score_categ/score_categ, 4),
+                score,
                 best_categ
                 )
             )
         if best_regres is not None:
+            score = (0 if score_regres == 0 else
+                     abs(round(max(0, synth_regres_score) / score_regres, 4))
+                     )
             logger.info(log_msg.format(
                 'regression',
-                abs(round(max(0, synth_regres_score) / score_regres, 4)),
+                score,
                 best_regres
                 )
             )
