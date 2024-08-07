@@ -24,7 +24,7 @@ import seaborn as sns
 from slugify import slugify
 from loguru import logger
 
-from syngen.ml.utils import get_nan_labels, nan_labels_to_float, timestamp_to_datetime
+from syngen.ml.utils import timestamp_to_datetime
 matplotlib.use("Agg")
 
 
@@ -36,9 +36,8 @@ class BaseMetric(ABC):
         plot: bool,
         reports_path: str,
     ):
-        columns_nan_labels = get_nan_labels(original)
-        self.original = nan_labels_to_float(original, columns_nan_labels)
-        self.synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
+        self.original = original
+        self.synthetic = synthetic
         self.reports_path = reports_path
         self.plot = plot
         self.value = None

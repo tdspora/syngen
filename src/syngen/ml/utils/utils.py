@@ -203,21 +203,27 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
     return columns_nan_labels
 
 
-def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFrame:
+def nan_labels_to_float(
+    df: pd.DataFrame,
+    columns_nan_labels: dict,
+    exclude_columns: set = set()
+) -> pd.DataFrame:
     """
     Replace str nan labels in float/int columns with actual np.NaN
     and casting the column to float type.
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
-        df_with_nan[column].replace(label, np.NaN, inplace=True)
-        df_with_nan[column] = df_with_nan[column].astype(float)
+        if column not in exclude_columns:
+            df_with_nan[column].replace(label, np.NaN, inplace=True)
+            df_with_nan[column] = df_with_nan[column].astype(float)
 
-        logger.info(f"Column '{column}' contains unique "
-                    f"non-numeric value: '{label}'. "
-                    "It will be treated as null label "
-                    "and repalced with nulls."
-                    )
+            logger.info(
+                f"Column '{column}' contains unique "
+                f"non-numeric value: '{label}'. "
+                "It will be treated as null label "
+                "and replaced with nulls."
+            )
 
     return df_with_nan
 
