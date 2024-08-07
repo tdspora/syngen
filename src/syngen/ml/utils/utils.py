@@ -331,12 +331,13 @@ def set_log_path(type_of_process: str, table_name: Optional[str], metadata_path:
     """
     Set the log path for storing the logs of main processes
     """
-    os.makedirs("model_artifacts/tmp_store", exist_ok=True)
+    logs_dir_name = "model_artifacts/tmp_store/logs"
+    os.makedirs(logs_dir_name, exist_ok=True)
     unique_name = fetch_unique_root(table_name, metadata_path)
     unique_name = f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     file_name_without_extension = f"logs_{type_of_process}_{unique_name}"
     file_path = os.path.join(
-        "model_artifacts/tmp_store", f"{slugify(file_name_without_extension)}.log"
+        logs_dir_name, f"{slugify(file_name_without_extension)}.log"
     )
     os.environ["SUCCESS_LOG_FILE"] = file_path
 
