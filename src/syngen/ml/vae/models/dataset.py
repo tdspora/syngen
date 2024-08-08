@@ -572,25 +572,52 @@ class Dataset(BaseDataset):
                 ulid_result = self._is_valid_ulid(i)
                 if ulid_result:
                     result.append(ulid_result)
-                elif not contain_nan:
+                else:
                     non_uuid_values.add(i)
 
-        if (len(non_uuid_values) <= 1) and result:
-            self.__handle_nan_values_in_uuid(x, non_uuid_values)
-            return max(set(result), key=result.count) if isinstance(result[0], int) else 'ulid'
+        if result:
+            most_common_uuid_type = (
+                max(set(result), key=result.count)
+                if isinstance(result[0], int) else 'ulid'
+            )
+
+            if not non_uuid_values:
+                return most_common_uuid_type
+
+            if not contain_nan and len(non_uuid_values) == 1:
+                self.__handle_nan_labels_in_uuid(x, non_uuid_values)
+                return most_common_uuid_type
+
+            if len(non_uuid_values) > 1:
+                logger.warning(
+                    f"Column '{x.name}' contains UUID/ULID values "
+                    f"and multiple non-UUID/ULID values "
+                    f"{non_uuid_values}. It will be treated as a text column"
+                )
+                return 0
+            if contain_nan and non_uuid_values:
+                logger.warning(
+                    f"Column '{x.name}' contains UUID/ULID values, "
+                    f"null value a unique non-UUID/ULID value "
+                    f"{next(iter(non_uuid_values))}. "
+                    f"It will be treated as a text column"
+                )
         else:
             return 0
 
-    def __handle_nan_values_in_uuid(self, x, non_uuid_values):
-        if len(non_uuid_values) == 1:
-            unique_non_uuid = next(iter(non_uuid_values))
+    def __handle_nan_labels_in_uuid(self, x, non_uuid_values):
+        """
+        Replaces the unique non-UUID/ULID value with NaNs
+        Updates the nan_labels_in_uuid dictionary
+        """
+        unique_non_uuid = next(iter(non_uuid_values))
 
-            logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
-                        f"value '{unique_non_uuid}'. It will be treated "
-                        f"as a null label and replaced with nulls."
-                        )
-            self.nan_labels_in_uuid[x.name] = unique_non_uuid
-            self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
+        logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
+                    f"value '{unique_non_uuid}'. It will be treated "
+                    f"as a null label and replaced with nulls."
+                    )
+        self.nan_labels_in_uuid[x.name] = unique_non_uuid
+        self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
 
     def _set_uuid_columns(self):
         """
@@ -606,9 +633,6 @@ class Dataset(BaseDataset):
 
             self.uuid_columns_types = dict(data_subset[data_subset.isin([1, 2, 3, 4, 5, "ulid"])])
             self.uuid_columns = set(self.uuid_columns_types.keys())
-
-            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print(f"self.uuid_columns: {self.uuid_columns}")
 
     def _set_date_columns(self):
         """
@@ -833,17 +857,9 @@ class Dataset(BaseDataset):
         )
         for column in self.uuid_columns:
             logger.info(f"Column '{column}' defined as UUID column")
-            # if column in self.nan_labels_in_uuid.keys():
-            #     logger.info(f"HELLO Column '{column}' contains a unique non-UUID/ULID value "
-            #                 f"'{self.nan_labels_in_uuid[column]}'. It will be treated as a null label "
-            #                 f"and replaced with nulls.")
             self.assign_uuid_null_feature(column)
-            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print(f"self.nan_labels_dict: {self.nan_labels_dict}")
-
             self.nan_labels_dict.update(self.nan_labels_in_uuid)
-            print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print(f"self.nan_labels_dict: {self.nan_labels_dict}")
+            self.__check_uniqueness_of_values(column)
 
     def assign_feature(self, feature, columns):
         name = feature.original_name
@@ -1230,3 +1246,14 @@ class Dataset(BaseDataset):
         MlflowTracker().end_run()
 
         return self.df
+
+    def __check_uniqueness_of_values(self, column):
+        num_unique_values = column.dropna().nunique()
+        if num_unique_values != len(column.dropna()):
+            logger.warning(
+                f"Column '{column.name}' contains "
+                f"{len(column.dropna()) - num_unique_values} "
+                f"duplicate values. "
+                f"In synthetic data, the column will be generated "
+                f"with unique values"
+            )

@@ -1059,13 +1059,21 @@ class Utility(BaseMetric):
                 )
             )
 
-        best_categ, score_categ, synth_score_categ = self.__create_multi_class_models(categ_cols)
+        (
+            best_categ,
+            score_categ,
+            synth_score_categ
+        ) = self.__create_multi_class_models(categ_cols)
         (
             best_binary,
             score_binary,
             synth_score_binary,
         ) = self.__create_binary_class_models(binary_cols)
-        best_regres, score_regres, synth_regres_score = self.__create_regression_models(cont_cols)
+        (
+            best_regres,
+            score_regres,
+            synth_regres_score
+        ) = self.__create_regression_models(cont_cols)
 
         result = pd.DataFrame(
             {
@@ -1247,7 +1255,7 @@ class Utility(BaseMetric):
                 logger.info(
                     f"The best score for all possible {task_type} models "
                     f"for the original data is "
-                    f"{best_score}, which is below 0.6. "
+                    f"{round(best_score, 4)}, which is below 0.6. "
                     f"The utility metric is unreliable"
                 )
             synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
