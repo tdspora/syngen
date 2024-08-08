@@ -121,9 +121,6 @@ class VAEWrapper(BaseWrapper):
         return df
 
     def _restore_nan_values(self, df):
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"self.dataset.null_num_column_names: {self.dataset.null_num_column_names}")
-
         for column in self.dataset.null_num_column_names:
             if column.endswith("_null"):
                 # remove _null to get original column name
@@ -142,9 +139,6 @@ class VAEWrapper(BaseWrapper):
         return df
 
     def _restore_nan_labels(self, df):
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"self.dataset.nan_labels_dict: {self.dataset.nan_labels_dict}")
-
         for column_name, nan_label in self.dataset.nan_labels_dict.items():
             if nan_label is None:
                 nan_label = np.nan
@@ -503,16 +497,11 @@ class VAEWrapper(BaseWrapper):
     def predict_sampled_df(self, n: int) -> pd.DataFrame:
         sampled_df = self.vae.sample(n)
 
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(sampled_df.columns)
-
+        # uuid columns are generated here to restore nan values
         uuid_columns = self.dataset.uuid_columns
         if uuid_columns:
             sampled_df = generate_uuid(n, self.dataset,
                                        uuid_columns, sampled_df)
-
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(sampled_df.columns)
 
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)

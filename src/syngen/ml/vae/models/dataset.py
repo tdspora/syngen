@@ -857,9 +857,12 @@ class Dataset(BaseDataset):
         )
         for column in self.uuid_columns:
             logger.info(f"Column '{column}' defined as UUID column")
-            self.assign_uuid_null_feature(column)
-            self.nan_labels_dict.update(self.nan_labels_in_uuid)
+
             self.__check_uniqueness_of_values(column)
+
+            self._assign_uuid_null_feature(column)
+            # update the nan_labels_dict with nan_labels_in_uuid
+            self.nan_labels_dict.update(self.nan_labels_in_uuid)
 
     def assign_feature(self, feature, columns):
         name = feature.original_name
@@ -1202,7 +1205,7 @@ class Dataset(BaseDataset):
                             ContinuousFeature(features[1], column_type=int), features[1]
                         )
 
-    def assign_uuid_null_feature(self, feature):
+    def _assign_uuid_null_feature(self, feature):
         """
         Assign corresponding to uuid column null column and preprocess if required.
         """
@@ -1248,12 +1251,13 @@ class Dataset(BaseDataset):
         return self.df
 
     def __check_uniqueness_of_values(self, column):
-        num_unique_values = column.dropna().nunique()
-        if num_unique_values != len(column.dropna()):
+        column_no_na = self.df[column].dropna()
+        num_unique_values = column_no_na.nunique()
+        if num_unique_values != len(column_no_na):
             logger.warning(
-                f"Column '{column.name}' contains "
-                f"{len(column.dropna()) - num_unique_values} "
-                f"duplicate values. "
+                f"Column '{column}' contains "
+                f"{len(column_no_na) - num_unique_values} "
+                f"duplicated values. "
                 f"In synthetic data, the column will be generated "
                 f"with unique values"
             )
