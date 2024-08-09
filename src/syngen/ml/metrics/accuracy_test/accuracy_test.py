@@ -116,22 +116,40 @@ class AccuracyTest(BaseTest):
         super().__init__(original, synthetic, paths, table_name, infer_config)
         self.reports_path = f"{self.paths['reports_path']}/accuracy"
         self.univariate = UnivariateMetric(
-            self.original, self.synthetic, self.plot_exists, self.reports_path
+            self.original,
+            self.synthetic,
+            self.plot_exists,
+            self.reports_path
         )
         self.bivariate = BivariateMetric(
-            self.original, self.synthetic, self.plot_exists, self.reports_path
+            self.original,
+            self.synthetic,
+            self.plot_exists,
+            self.reports_path
         )
         self.correlations = Correlations(
-            self.original, self.synthetic, self.plot_exists, self.reports_path
+            self.original,
+            self.synthetic,
+            self.plot_exists,
+            self.reports_path
         )
         self.clustering = Clustering(
-            self.original, self.synthetic, self.plot_exists, self.reports_path
+            self.original,
+            self.synthetic,
+            self.plot_exists,
+            self.reports_path
         )
         self.utility = Utility(
-            self.original, self.synthetic, self.plot_exists, self.reports_path
+            self.original,
+            self.synthetic,
+            self.plot_exists,
+            self.reports_path
         )
         self.acc = JensenShannonDistance(
-            self.original, self.synthetic, self.plot_exists, self.reports_path
+            self.original,
+            self.synthetic,
+            self.plot_exists,
+            self.reports_path
         )
         self._prepare_dir()
 

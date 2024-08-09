@@ -329,10 +329,6 @@ class VaeInferHandler(BaseHandler):
         if self.has_no_ml:
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
 
-        uuid_columns = self.dataset.uuid_columns
-        if uuid_columns:
-            synthetic_infer = generate_uuid(size, self.dataset, uuid_columns, synthetic_infer)
-
         return synthetic_infer
 
     def split_by_batches(self):
