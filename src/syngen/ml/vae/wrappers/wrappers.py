@@ -70,8 +70,10 @@ class VAEWrapper(BaseWrapper):
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
+
     def __post_init__(self):
         if self.process == "train":
+            self._prepare_dir()
             self.dataset = Dataset(
                 df=self.df,
                 schema=self.schema,
@@ -101,6 +103,10 @@ class VAEWrapper(BaseWrapper):
         """
         with open(self.paths["dataset_pickle_path"], "wb") as f:
             f.write(pickle.dumps(self.dataset))
+
+    @staticmethod
+    def _prepare_dir():
+        os.makedirs(f"model_artifacts/tmp_store/losses", exist_ok=True)
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
@@ -225,9 +231,9 @@ class VAEWrapper(BaseWrapper):
             feature_type="text"
         )
         logger.trace(
-            f"The numeric loss - {num_loss}, "
-            f"the categorical loss - {categorical_loss}, "
-            f"the text_loss - {text_loss} in the {epoch} epoch"
+            f"The 'numeric_loss' - {num_loss}, "
+            f"the 'categorical_loss' - {categorical_loss}, "
+            f"the 'text_loss' - {text_loss} in the {epoch} epoch"
         )
         MlflowTracker().log_metric(
             "numeric_loss", num_loss, step=epoch
@@ -240,7 +246,7 @@ class VAEWrapper(BaseWrapper):
         )
         return {
             "numeric_loss": num_loss,
-            "categorical": categorical_loss,
+            "categorical_loss": categorical_loss,
             "text_loss": text_loss
         }
 
@@ -265,7 +271,7 @@ class VAEWrapper(BaseWrapper):
         feature_type = self.feature_types.get(feature_name)
         return endings.get(feature_type)
 
-    def _monitor_feature_losses(self, mean_feature_losses, mean_kl_loss, epoch):
+    def _monitor_feature_losses(self, mean_feature_losses, epoch):
         """
         Monitor the mean value of the loss of every feature for every epoch
         """
@@ -274,9 +280,6 @@ class VAEWrapper(BaseWrapper):
             MlflowTracker().log_metric(
                 f"{slugify(name)}_loss_{ending}", loss, step=epoch
             )
-        MlflowTracker().log_metric(
-            "kl_loss", mean_kl_loss, step=epoch
-        )
 
     def _fetch_feature_losses_info(
             self,
@@ -339,11 +342,10 @@ class VAEWrapper(BaseWrapper):
         self._update_losses_info(mean_feature_losses, epoch)
         self._monitor_feature_losses(
             mean_feature_losses,
-            mean_kl_loss,
             epoch
         )
         losses = self._get_grouped_losses(mean_feature_losses, epoch)
-        losses.update({"kl_loss": mean_kl_loss, "loss": mean_loss})
+        losses.update({"kl_loss": mean_kl_loss, "total_loss": mean_loss})
         self._update_losses_info(losses, epoch)
 
     def _log_losses_info_to_mlflow(self):
@@ -408,7 +410,7 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            log_message = f"epoch: {epoch}, loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            log_message = f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
             logger.info(log_message)
 
             ProgressBarHandler().set_progress(
@@ -421,6 +423,7 @@ class VAEWrapper(BaseWrapper):
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
             MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
+            MlflowTracker().log_metric("kl_loss", mean_kl_loss, step=epoch)
 
             prev_total_loss = mean_loss
 
