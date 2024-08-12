@@ -148,6 +148,7 @@ def test_save_dataset(rp_logger):
         "nan_labels_dict",
         "uuid_columns",
         "uuid_columns_types",
+        "nan_labels_in_uuid",
         "dropped_columns",
         "order_of_columns",
         "categ_columns",
