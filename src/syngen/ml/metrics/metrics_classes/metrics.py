@@ -46,6 +46,21 @@ class BaseMetric(ABC):
     def get_value(self) -> Union[float, List[float]]:
         return self.value
 
+    def _map_categorical_values_to_unique_identifiers(self, categ_columns):
+        """
+        Map values in categorical columns to unique integer identifiers
+        """
+        for col in categ_columns:
+            values = (
+                set(self.original[col].apply(lambda x: str(x)).fillna("?")) |
+                set(self.synthetic[col].apply(lambda x: str(x)).fillna("?"))
+            )
+            map_dict = {
+                k: i + 1 for i, k in enumerate(values)
+            }
+            self.original[col] = self.original[col].map(map_dict)
+            self.synthetic[col] = self.synthetic[col].map(map_dict)
+
 
 class JensenShannonDistance(BaseMetric):
     def __init__(
@@ -251,12 +266,8 @@ class Correlations(BaseMetric):
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
         categ_columns = [col for col in categ_columns if "word_count" not in col]
         cont_columns = [col for col in cont_columns if "word_count" not in col]
-        for col in categ_columns:
-            map_dict = {
-                k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
-            }
-            self.original[col] = self.original[col].map(map_dict)
-            self.synthetic[col] = self.synthetic[col].map(map_dict)
+
+        self._map_categorical_values_to_unique_identifiers(categ_columns)
 
         self.original_heatmap = self.__calculate_correlations(
             self.original[categ_columns + cont_columns].apply(
@@ -481,13 +492,11 @@ class BivariateMetric(BaseMetric):
         min_ticks = int(ticks_count * 0.2)
         max_ticks = int(ticks_count * 0.2)
         other_ticks = ticks_count - min_ticks - max_ticks
-
-        categ_ticks = sorted(
-            set(
-                set(self.original[col_name].fillna("?"))
-                | set(self.synthetic[col_name].fillna("?"))
-            )
+        values = set(
+            set(self.original[col_name].apply(lambda x: str(x)).fillna("?")) |
+            set(self.synthetic[col_name].apply(lambda x: str(x)).fillna("?"))
         )
+        categ_ticks = sorted(values)
         # Select the first min_ticks elements
         selected_min_ticks = categ_ticks[:min_ticks]
 
@@ -857,12 +866,7 @@ class Clustering(BaseMetric):
         super().__init__(original, synthetic, plot, reports_path)
 
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
-        for col in categ_columns:
-            map_dict = {
-                k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
-            }
-            self.original[col] = self.original[col].map(map_dict)
-            self.synthetic[col] = self.synthetic[col].map(map_dict)
+        self._map_categorical_values_to_unique_identifiers(categ_columns)
 
         row_limit = min(len(self.original), len(self.synthetic))
         self.merged = (
@@ -969,14 +973,7 @@ class Utility(BaseMetric):
     def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
         logger.info("Calculating utility metric")
 
-        for col in categ_columns:
-            map_dict = {
-                k: i + 1 for i, k in enumerate(
-                    set(self.original[col]) | set(self.synthetic[col])
-                )
-            }
-            self.original[col] = self.original[col].map(map_dict)
-            self.synthetic[col] = self.synthetic[col].map(map_dict)
+        self._map_categorical_values_to_unique_identifiers(categ_columns)
 
         self.original = self.original[cont_columns + categ_columns].apply(
             pd.to_numeric, axis=0, errors="ignore"

@@ -176,17 +176,18 @@ class AccuracyTest(BaseTest):
         self.update_progress_bar("The correlations heatmap has been generated", delta)
 
         self.update_progress_bar("Generation of the clustering metric...")
-        clustering_result = "%.4f" % self.clustering.calculate_all(
+        clustering_result = self.clustering.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
-        logger.info(f"Median clusters homogeneity is {clustering_result}")
+        if clustering_result is not None:
+            logger.info(f"Median clusters homogeneity is {'%.4f' % clustering_result}")
         self.update_progress_bar("The clustering metric has been calculated", delta)
 
         self.update_progress_bar("Generation of the utility metric...")
         utility_result = self.utility.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
-        logger.info(f"Median clusters homogeneity is {clustering_result}")
+        logger.info(f"Median utility is {utility_result}")
         self.update_progress_bar("The utility metric has been calculated", delta)
 
         return (
@@ -271,8 +272,8 @@ class AccuracyTest(BaseTest):
         MlflowTracker().log_metrics(
             {
                 "Utility_avg": utility_result["Synth to orig ratio"].mean(),
-                "Clustering": float(clustering_result),
-                "Accuracy": float(acc_median),
+                "Clustering": clustering_result,
+                "Accuracy": acc_median,
                 "Correlation": round(corr_result, 4),
             }
         )
