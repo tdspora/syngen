@@ -117,13 +117,13 @@ def timestamp_to_datetime(timestamp, delta=False):
     epoch_datetime = datetime(1970, 1, 1)
 
     # Calculate the timedelta for the number of seconds in the UNIX epoch
-    epoch_timedelta = timedelta(seconds=seconds_since_epoch)
+    delta_of_time = timedelta(seconds=seconds_since_epoch) + timedelta(seconds=remaining_seconds)
 
     if delta:
-        return epoch_timedelta + timedelta(seconds=remaining_seconds)
+        return delta_of_time
 
     else:
-        return epoch_datetime + epoch_timedelta + timedelta(seconds=remaining_seconds)
+        return epoch_datetime + delta_of_time
 
 
 def generate_uuids(version: Union[int, str], size: int):
