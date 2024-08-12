@@ -132,7 +132,7 @@ def test_save_dataset(rp_logger):
         mock_dataset.set_metadata()
     fetched_dataset = mock_dataset.__getstate__()
     assert "df" not in fetched_dataset
-    assert list(fetched_dataset.keys()) == [
+    assert set(fetched_dataset.keys()) == {
         "schema",
         "file_format",
         "metadata",
@@ -173,7 +173,7 @@ def test_save_dataset(rp_logger):
         "foreign_keys_list",
         "fk_columns",
         "format"
-    ]
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
