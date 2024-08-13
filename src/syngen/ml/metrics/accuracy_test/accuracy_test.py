@@ -272,7 +272,7 @@ class AccuracyTest(BaseTest):
             {
                 "Utility_avg": utility_result["Synth to orig ratio"].mean(),
                 "Clustering": clustering_result if clustering_result is not None
-                else clustering_result,
+                else np.NaN,
                 "Accuracy": round(acc_median, 4),
                 "Correlation": round(corr_result, 4),
             }
