@@ -6,6 +6,7 @@ import os
 
 import jinja2
 import pandas as pd
+import numpy as np
 from loguru import logger
 
 from syngen.ml.metrics import (
