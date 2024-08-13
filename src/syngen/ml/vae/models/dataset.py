@@ -683,7 +683,6 @@ class Dataset(BaseDataset):
         self._set_uuid_columns()
         self._set_binary_columns()
         self._set_long_text_columns()
-        self._set_categorical_columns()
         self._set_email_columns()
 
         for col in self.df.columns:
