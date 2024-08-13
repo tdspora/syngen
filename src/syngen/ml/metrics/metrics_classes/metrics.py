@@ -1261,25 +1261,29 @@ class Utility(BaseMetric):
 
         return best_target, best_score, synthetic_score
 
-    def __perform_train_test_split(self, data, model_y, train_size):
-        '''
-        Splits the data into train and test sets
-        with stratified sampling if possible
-        '''
-        # check if the target column has more than 1 instances for each class
-        _, counts = np.unique(model_y, return_counts=True)
-
-        # Set split_strategy to stratified or random
-        # based on counts of target classes
-        split_strategy = model_y if np.all(counts > 1) else None
-
-        data_train, data_test, model_y_train, model_y_test = train_test_split(
-            data,
-            model_y,
-            train_size=train_size,
-            stratify=split_strategy,
-            random_state=10
-        )
+    @staticmethod
+    def __perform_train_test_split(data, model_y, train_size):
+        """
+        Splits the data into train and test sets.
+        Tries stratified sampling first; if it fails,
+        perform random sampling.
+        """
+        try:
+            data_train, data_test, model_y_train, model_y_test = train_test_split(
+                data,
+                model_y,
+                train_size=train_size,
+                stratify=model_y,
+                random_state=10
+            )
+        except ValueError:
+            data_train, data_test, model_y_train, model_y_test = train_test_split(
+                data,
+                model_y,
+                train_size=train_size,
+                stratify=None,
+                random_state=10
+            )
 
         return data_train, data_test, model_y_train, model_y_test
 
