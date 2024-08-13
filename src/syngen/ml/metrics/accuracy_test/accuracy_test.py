@@ -6,6 +6,7 @@ import os
 
 import jinja2
 import pandas as pd
+import numpy as np
 from loguru import logger
 
 from syngen.ml.metrics import (
@@ -143,8 +144,8 @@ class AccuracyTest(BaseTest):
 
         self.update_progress_bar("Generation of the accuracy heatmap...")
         self.acc.calculate_all(kwargs["categ_columns"])
-        acc_median = "%.4f" % self.acc.calculate_heatmap_median(self.acc.heatmap)
-        logger.info(f"Median accuracy is {acc_median}")
+        acc_median = self.acc.calculate_heatmap_median(self.acc.heatmap)
+        logger.info(f"Median accuracy is {'%.4f' % acc_median}")
         self.update_progress_bar("The accuracy heatmap has been generated", delta)
 
         uni_images = dict()
@@ -272,8 +273,8 @@ class AccuracyTest(BaseTest):
         MlflowTracker().log_metrics(
             {
                 "Utility_avg": utility_result["Synth to orig ratio"].mean(),
-                "Clustering": clustering_result,
-                "Accuracy": acc_median,
+                "Clustering": clustering_result if clustering_result is not None else np.NaN,
+                "Accuracy": round(acc_median, 4),
                 "Correlation": round(corr_result, 4),
             }
         )
