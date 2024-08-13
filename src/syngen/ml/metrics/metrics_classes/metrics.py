@@ -1139,7 +1139,7 @@ class Utility(BaseMetric):
                 )
         log_msg = (
             "The ratio of synthetic {} accuracy to original is "
-            "{}. The model considers the {} column "
+            "{}. The model considers the '{}' column "
             "as a target and other columns as predictors"
         )
         if best_binary is not None:
@@ -1193,7 +1193,14 @@ class Utility(BaseMetric):
                 continue
             original = pd.get_dummies(self.original.drop(col, axis=1))
             original = StandardScaler().fit_transform(original)
-            model_y = self.original[col].values[: int(original.shape[0] * 0.8)]
+            model_y = self.original[col].values
+
+            # If the original dataset is large create a stratified sample
+            if self.is_big_original_data_after_drop_na:
+                original, _, model_y, _ = self.__perform_train_test_split(
+                    original, model_y, self.sample_size
+                )
+
             if len(set(model_y)) < 2:
                 logger.info(
                     f"Column {col} has less than 2 classes as target. "
@@ -1202,18 +1209,23 @@ class Utility(BaseMetric):
                 )
                 continue
 
-            # Create a stratified sample if the original dataset is large
-            if self.is_big_original_data_after_drop_na:
-                original, model_y = self.__create_sample_for_utility_metric(
-                    original, model_y
-                )
+            (
+                original_train,
+                original_test,
+                model_y_train,
+                model_y_test
+            ) = self.__perform_train_test_split(
+                original,
+                model_y,
+                train_size=0.8
+            )
 
             model = model_object.fit(
-                X=original[: int(original.shape[0] * 0.8), :], y=model_y
+                X=original_train, y=model_y_train
             )
             score = self.__get_accuracy_score(
-                self.original[col].values[int(original.shape[0] * 0.8):],
-                model.predict(original[int(original.shape[0] * 0.8):, :]),
+                model_y_test,
+                model.predict(original_test),
                 task_type,
             )
             if score > best_score:
@@ -1234,10 +1246,11 @@ class Utility(BaseMetric):
             synthetic = StandardScaler().fit_transform(synthetic)
             synthetic_y = self.synthetic[best_target].values
 
-            # Create a stratified sample of the synthetic data if it's large
+            # If the synthetic dataset is large
+            # create a stratified sample
             if self.is_big_synthetic_data_after_drop_na:
-                synthetic, synthetic_y = self.__create_sample_for_utility_metric(
-                    synthetic, synthetic_y
+                synthetic, _, synthetic_y, _ = self.__perform_train_test_split(
+                    synthetic, synthetic_y, self.sample_size
                 )
 
             synthetic_score = self.__get_accuracy_score(
@@ -1248,38 +1261,27 @@ class Utility(BaseMetric):
 
         return best_target, best_score, synthetic_score
 
-    def __create_sample_for_utility_metric(self, data, model_y):
+    def __perform_train_test_split(self, data, model_y, train_size):
         '''
-        Creates stratified (or random when stratified sampling is impossible)
-        sample of size self.sample_size
-        from data (predictors) and model_y (target)
+        Splits the data into train and test sets
+        with stratified sampling if possible
         '''
-
         # check if the target column has more than 1 instances for each class
         _, counts = np.unique(model_y, return_counts=True)
-        if np.all(counts > 1):
-            data, _, model_y, _ = train_test_split(
-                data,
-                model_y,
-                train_size=self.sample_size,
-                stratify=model_y,
-                random_state=10
-            )
 
-        else:
-            data, _, model_y, _ = train_test_split(
-                data,
-                model_y,
-                train_size=self.sample_size,
-                random_state=10
-            )
+        # Set split_strategy to stratified or random
+        # based on counts of target classes
+        split_strategy = model_y if np.all(counts > 1) else None
 
-        logger.debug(
-            f"Samples of size={self.sample_size} "
-            f"for utility metric calculation have been created"
+        data_train, data_test, model_y_train, model_y_test = train_test_split(
+            data,
+            model_y,
+            train_size=train_size,
+            stratify=split_strategy,
+            random_state=10
         )
 
-        return data, model_y
+        return data_train, data_test, model_y_train, model_y_test
 
     def __create_binary_class_models(self, binary_targets):
         best_target, score, synthetic_score = self.__model_process(

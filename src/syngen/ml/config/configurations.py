@@ -2,9 +2,11 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Tuple, Set, List, Callable
 import os
 import shutil
+from datetime import datetime
 
 import pandas as pd
 from loguru import logger
+from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute
@@ -36,6 +38,17 @@ class TrainConfig:
         self.paths = self._get_paths()
         self._remove_existed_artifacts()
         self._prepare_dirs()
+
+    def __getstate__(self) -> Dict:
+        """
+        Return an updated config's instance
+        """
+        instance = self.__dict__.copy()
+        attribute_keys_to_remove = ["loader"]
+        for attr_key in attribute_keys_to_remove:
+            if attr_key in instance:
+                del instance[attr_key]
+        return instance
 
     def preprocess_data(self):
         data, self.schema = self._extract_data()
@@ -200,7 +213,10 @@ class TrainConfig:
         """
         Create the paths which used in training process
         """
-
+        losses_file_name = (
+            f"losses_{self.table_name}_"
+            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         return {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -221,7 +237,8 @@ class TrainConfig:
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path":
-                f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
+                f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
+            "losses_path": f"model_artifacts/tmp_store/losses/{slugify(losses_file_name)}.csv"
         }
 
 
