@@ -684,13 +684,18 @@ class Dataset(BaseDataset):
         self._set_binary_columns()
         self._set_long_text_columns()
         self._set_email_columns()
-        tmp_df = get_tmp_df(self.df)
-        self.float_columns = set(tmp_df.select_dtypes(include=["float", "float64"]).columns)
-        self.int_columns = set(tmp_df.select_dtypes(include=["int", "int64"]).columns)
+
+        for col in self.df.columns:
+            col_no_na = self.df[col].dropna()
+
+            if col_no_na.dtype in ["int", "int64"]:
+                self.int_columns.add(col)
+            elif col_no_na.dtype in ["float", "float64"]:
+                self.float_columns.add(col)
 
         float_to_int_cols = set()
         for col in self.float_columns:
-            if all(x.is_integer() for x in tmp_df[col]):
+            if all(x.is_integer() for x in self.df[col].dropna()):
                 float_to_int_cols.add(col)
 
         self.int_columns = (self.int_columns | float_to_int_cols) - (
@@ -700,7 +705,7 @@ class Dataset(BaseDataset):
             self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
         )
         self.str_columns = (
-            set(tmp_df.columns)
+            set(self.df.columns)
             - self.float_columns
             - self.categ_columns
             - self.int_columns
