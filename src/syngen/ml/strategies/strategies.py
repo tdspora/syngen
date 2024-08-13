@@ -64,7 +64,8 @@ class TrainStrategy(Strategy, ABC):
 
     def _save_training_config(self):
         BinaryLoader().save_data(
-            path=self.config.paths["train_config_pickle_path"], data=self.config
+            path=self.config.paths["train_config_pickle_path"],
+            data=self.config
         )
 
     def set_config(self, **kwargs):
@@ -115,7 +116,13 @@ class TrainStrategy(Strategy, ABC):
 
     def add_reporters(self, **kwargs):
         table_name = self.config.table_name
-        if not table_name.endswith("_fk") and self.config.print_report:
+        source = self.config.paths["source_path"]
+        if (
+                not table_name.endswith("_fk")
+                and source is not None
+                and os.path.exists(source)
+                and self.config.print_report
+        ):
             sample_reporter = SampleAccuracyReporter(
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
@@ -147,6 +154,7 @@ class TrainStrategy(Strategy, ABC):
                 metadata_path=kwargs["metadata_path"],
                 print_report=kwargs["print_report"],
                 batch_size=kwargs["batch_size"],
+                loader=kwargs["loader"]
             )
 
             self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()

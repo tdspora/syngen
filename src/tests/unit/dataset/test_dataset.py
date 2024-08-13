@@ -364,7 +364,7 @@ def test_define_date_format_with_diff_format(
     [
         ("%Y-%m-%d", "%Y-%m-%d", ["4723-10-17T07:45:35Z", "9999-12-31T05:22:15Z"]),
         ("%Y/%m/%d", "%Y/%m/%d", ["3/10/17T07:45:35Z", "9/12/31T05:22:15Z"]),
-        ("%m/%d/%Y", "%m/%d/%Y", ["31/11/2017T07:45:35Z", "31/02/1999T05:22:15Z"]),
+        ("%m/%d/%Y", "%m/%d/%Y", ["11/30/2017T07:45:35Z", "02/27/1999T05:22:15Z"]),
         ("%d-%m-%Y", "%d-%m-%Y", [np.nan, np.nan, np.nan])
     ]
 )
@@ -507,15 +507,18 @@ def test_set_long_text_columns(rp_logger):
                      for _ in range(250))
              for _ in range(1, 100)] + [np.NaN]
     })
-    mock_dataset = Dataset(
-        df=df,
-        schema=CSV_SCHEMA,
-        metadata=metadata,
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
-        main_process="train"
-    )
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={
+                "train_config_pickle_path": "mock_path"
+            },
+            main_process="train"
+        )
+        mock_dataset.set_metadata()
     assert mock_dataset.long_text_columns == {"long_text_column"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

@@ -1,12 +1,14 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set, List
+from typing import Optional, Dict, Tuple, Set, List, Callable
 import os
 import shutil
+from datetime import datetime
 
 import pandas as pd
 from loguru import logger
+from slugify import slugify
 
-from syngen.ml.data_loaders import DataLoader
+from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute
 
 
@@ -24,6 +26,7 @@ class TrainConfig:
     metadata_path: Optional[str]
     print_report: bool
     batch_size: int
+    loader: Optional[Callable[[str], pd.DataFrame]]
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
@@ -35,6 +38,17 @@ class TrainConfig:
         self.paths = self._get_paths()
         self._remove_existed_artifacts()
         self._prepare_dirs()
+
+    def __getstate__(self) -> Dict:
+        """
+        Return an updated config's instance
+        """
+        instance = self.__dict__.copy()
+        attribute_keys_to_remove = ["loader"]
+        for attr_key in attribute_keys_to_remove:
+            if attr_key in instance:
+                del instance[attr_key]
+        return instance
 
     def preprocess_data(self):
         data, self.schema = self._extract_data()
@@ -90,7 +104,13 @@ class TrainConfig:
         """
         Return dataframe and schema of original data
         """
-        return DataLoader(self.source).load_data()
+        if self.loader is not None:
+            return DataFrameFetcher(
+                loader=self.loader,
+                table_name=self.table_name
+            ).fetch_data()
+        else:
+            return DataLoader(self.source).load_data()
 
     def _remove_empty_columns(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -193,7 +213,10 @@ class TrainConfig:
         """
         Create the paths which used in training process
         """
-
+        losses_file_name = (
+            f"losses_{self.table_name}_"
+            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         return {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -214,7 +237,8 @@ class TrainConfig:
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path":
-                f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/"
+                f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
+            "losses_path": f"model_artifacts/tmp_store/losses/{slugify(losses_file_name)}.csv"
         }
 
 
@@ -261,14 +285,33 @@ class InferConfig:
         """
         Check whether it is possible to generate the report
         """
-        if self.print_report and not DataLoader(self.paths["input_data_path"]).has_existed_path:
-            self.print_report = False
-            logger.warning(
-                f"It seems that the path to original data of the table - {self.table_name} "
-                f"doesn't exist. In this case, the accuracy report of the table - "
-                f"'{self.table_name}' won't be generated. The parameter '--print_report' "
-                f"of the table - '{self.table_name}' will be set to False"
+        if (
+                (self.print_report or self.get_infer_metrics)
+                and not DataLoader(self.paths["input_data_path"]).has_existed_path
+        ):
+            message = (
+                f"It seems that the path to original data "
+                f"of the table - '{self.table_name}' doesn't exist. "
             )
+            logger.warning(message)
+            if self.print_report:
+                self.print_report = False
+                log_message = (
+                    "As a result, the accuracy report of the table - "
+                    f"'{self.table_name}' won't be generated. "
+                    "The parameter '--print_report' of the table - "
+                    f"'{self.table_name}' has been set to False"
+                )
+                logger.warning(log_message)
+            if self.get_infer_metrics:
+                self.get_infer_metrics = False
+                log_message = (
+                    "As a result, the infer metrics related to the table - "
+                    f"'{self.table_name}' won't be fetched. "
+                    "The parameter '--get_infer_metrics' of the table - "
+                    f"'{self.table_name}' has been set to False"
+                )
+                logger.warning(log_message)
 
     def _set_up_size(self):
         """

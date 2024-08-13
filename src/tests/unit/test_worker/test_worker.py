@@ -1,8 +1,7 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from syngen.ml.worker import Worker
 from syngen.ml.config import Validator
-from syngen.ml.strategies.strategies import TrainStrategy, InferStrategy
 
 from tests.conftest import SUCCESSFUL_MESSAGE
 
@@ -31,8 +30,6 @@ def test_init_worker_for_training_process_with_absent_metadata(mock_validator_ru
         log_level="INFO",
         type_of_process="train",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "table": {
             "train_settings": {
@@ -75,8 +72,6 @@ def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run, 
         log_level="INFO",
         type_of_process="infer",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "test_table": {
             "train_settings": {"source": "absent"},
@@ -121,8 +116,6 @@ def test_init_worker_with_metadata(mock_validator_run, rp_logger):
         log_level="INFO",
         type_of_process="train",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {},
         "test_table": {
@@ -175,8 +168,6 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validator_run, rp_logg
         log_level="INFO",
         type_of_process="train",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {},
         "test_table": {
@@ -222,8 +213,6 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
         log_level="INFO",
         type_of_process="train",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {
             "train_settings": {"drop_null": True, "epochs": 5, "row_limit": 500},
@@ -294,8 +283,6 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
         log_level="INFO",
         type_of_process="infer",
     )
-    assert isinstance(worker.train_strategy, TrainStrategy) is True
-    assert isinstance(worker.infer_strategy, InferStrategy) is True
     assert worker.metadata == {
         "global": {
             "train_settings": {
@@ -1313,4 +1300,356 @@ def test_launch_infer_with_metadata_contained_global_settings(
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
     mock_collect_metrics_infer.assert_called_once_with(["pk_test", "fk_test"])
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "run")
+def test_init_worker_for_training_process_with_absent_metadata_and_callback_loader(
+        mock_validator_run,
+        mock_check_existence_of_source,
+        mock_check_key_columns,
+        rp_logger
+):
+    """
+    Test the initialization of 'Worker' class
+    with the absent metadata and provided callback function
+    during the training process
+    """
+    rp_logger.info(
+        "Test the initialization of the instance of 'Worker' class "
+        "with the absent metadata and provided callback function during the training process"
+    )
+    worker = Worker(
+        table_name="test_table",
+        metadata_path=None,
+        settings={
+            "epochs": 20,
+            "drop_null": True,
+            "row_limit": 1000,
+            "batch_size": 1000,
+            "print_report": True,
+        },
+        log_level="INFO",
+        type_of_process="train",
+        loader=MagicMock()
+    )
+    assert worker.metadata == {
+        "test_table": {
+            "train_settings": {
+                "source": "absent",
+                "batch_size": 1000,
+                "drop_null": True,
+                "epochs": 20,
+                "print_report": True,
+                "row_limit": 1000,
+            },
+            "infer_settings": {},
+            "keys": {},
+        }
+    }
+    mock_validator_run.assert_called_once()
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_key_columns.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Worker, "_Worker__train_tables", return_value=None)
+def test_launch_train_with_metadata_without_source_paths(
+    mock_train_tables,
+    mock_validate_metadata,
+    mock_check_existence_of_source,
+    mock_check_key_columns,
+    mock_collect_metrics_in_train,
+    rp_logger,
+):
+    """
+    Test that 'launch_train' method calls all necessary methods
+    in case the metadata file of related tables was provided,
+    and as the data will be loaded by using the callback loader,
+    it doesn't contain source paths for tables
+    """
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "in case the metadata file of related tables was provided, "
+        "and as the data will be loaded by using the callback loader, "
+        "it doesn't contain source paths for tables"
+    )
+    worker = Worker(
+        table_name=None,
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_without_sources.yaml",
+        settings={
+            "epochs": 20,
+            "drop_null": True,
+            "row_limit": 1000,
+            "batch_size": 1000,
+            "print_report": True,
+        },
+        log_level="INFO",
+        type_of_process="train",
+        loader=MagicMock()
+    )
+    worker.launch_train()
+    mock_train_tables.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        {
+            "pk_test": {
+                "train_settings": {
+                    "epochs": 1,
+                    "drop_null": False,
+                    "row_limit": 800,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "print_report": True
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "fk_test": {
+                "train_settings": {
+                    "epochs": 5,
+                    "drop_null": True,
+                    "print_report": True,
+                    "row_limit": 600,
+                    "batch_size": 1000
+                },
+                "infer_settings": {
+                    "size": 90,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": False
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {
+                            "table": "pk_test",
+                            "columns": ["Id"]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "pk_test": {
+                "train_settings": {
+                    "epochs": 1,
+                    "drop_null": False,
+                    "row_limit": 800,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "print_report": True
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "fk_test": {
+                "train_settings": {
+                    "epochs": 5,
+                    "drop_null": True,
+                    "print_report": True,
+                    "row_limit": 600,
+                    "batch_size": 1000
+                },
+                "infer_settings": {
+                    "size": 90,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": False
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {
+                            "table": "pk_test",
+                            "columns": ["Id"]
+                        }
+                    }
+                }
+            }
+        },
+        True
+    )
+    assert mock_validate_metadata.call_count == 2
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        True
+    )
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_key_columns.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Worker, "_Worker__train_tables", return_value=None)
+def test_launch_train_with_metadata_without_train_settings(
+    mock_train_tables,
+    mock_validate_metadata,
+    mock_check_existence_of_source,
+    mock_check_key_columns,
+    mock_collect_metrics_in_train,
+    rp_logger,
+):
+    """
+    Test that 'launch_train' method calls all necessary methods
+    in case the metadata file of related tables was provided,
+    and as the data will be loaded by using the callback loader,
+    it might not contain training settings for tables
+    """
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "in case the metadata file of related tables was provided, "
+        "and as the data will be loaded by using the callback loader, "
+        "it might not contain training settings for tables"
+    )
+    worker = Worker(
+        table_name=None,
+        metadata_path="./tests/unit/test_worker/fixtures/metadata_without_train_settings.yaml",
+        settings={
+            "epochs": 20,
+            "drop_null": True,
+            "row_limit": 1000,
+            "batch_size": 1000,
+            "print_report": True,
+        },
+        log_level="INFO",
+        type_of_process="train",
+        loader=MagicMock()
+    )
+    worker.launch_train()
+    mock_train_tables.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        {
+            "pk_test": {
+                "train_settings": {
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "print_report": True
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "fk_test": {
+                "train_settings": {
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "size": 90,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": False
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {
+                            "table": "pk_test",
+                            "columns": ["Id"]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "pk_test": {
+                "train_settings": {
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "print_report": True
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "fk_test": {
+                "train_settings": {
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {
+                    "size": 90,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "print_report": False
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {
+                            "table": "pk_test",
+                            "columns": ["Id"]
+                        }
+                    }
+                }
+            }
+        },
+        True
+    )
+    assert mock_validate_metadata.call_count == 2
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_key_columns.assert_not_called()
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        ["pk_test", "fk_test"],
+        True
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)

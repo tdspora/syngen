@@ -150,12 +150,14 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
             try:
                 date_for_check = datetime(8557, 7, 20)
                 datetime_object = parser.parse(x, default=date_for_check)
+
                 # Check if the parsed date contains only the time component.
                 # If it does, then skip it.
                 count += 1 if datetime_object.date() != date_for_check.date() else 0
             except (ValueError, OverflowError):
                 continue
-        if count > len(x_wo_na) * 0.8:
+
+        if count == len(x_wo_na):
             return 1
         else:
             return np.nan
@@ -183,6 +185,8 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
     columns_nan_labels = {}
     object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
     for column in object_columns:
+        if df[column].isna().sum() > 0:
+            continue
         str_values = []
         float_val = None
         for val in df[column].unique():
@@ -201,26 +205,21 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
 
 def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFrame:
     """
-    Replace str nan labels in float/int columns with actual np.NaN
+    Replace str nan labels in float/int columns with actual np.nan
     and casting the column to float type.
+
+    Args:
+        df (pd.DataFrame): table data
+
+    Returns:
+        pd.DataFrame: DataFrame with str NaN labels in float/int columns replaced with np.nan
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
-        if label is not None:
-            df_with_nan[column] = df_with_nan[column].replace(label, np.NaN)
-        df_with_nan[column] = pd.to_numeric(df_with_nan[column], errors="coerce")
+        df_with_nan[column].replace(label, np.NaN, inplace=True)
+        df_with_nan[column] = df_with_nan[column].astype(float)
+
     return df_with_nan
-
-
-def get_tmp_df(df):
-    tmp_col_len_min = float("inf")
-    tmp_cols = {}
-    for col in df.columns:
-        tmp_cols[col] = pd.Series(df[col].dropna().values)
-        tmp_col_len = len(tmp_cols[col])
-        if tmp_col_len < tmp_col_len_min:
-            tmp_col_len_min = tmp_col_len
-    return pd.DataFrame(tmp_cols).iloc[:tmp_col_len_min, :]
 
 
 def fillnan(df, str_columns, float_columns, categ_columns):
@@ -334,12 +333,13 @@ def set_log_path(type_of_process: str, table_name: Optional[str], metadata_path:
     """
     Set the log path for storing the logs of main processes
     """
-    os.makedirs("model_artifacts/tmp_store", exist_ok=True)
+    logs_dir_name = "model_artifacts/tmp_store/logs"
+    os.makedirs(logs_dir_name, exist_ok=True)
     unique_name = fetch_unique_root(table_name, metadata_path)
     unique_name = f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     file_name_without_extension = f"logs_{type_of_process}_{unique_name}"
     file_path = os.path.join(
-        "model_artifacts/tmp_store", f"{slugify(file_name_without_extension)}.log"
+        logs_dir_name, f"{slugify(file_name_without_extension)}.log"
     )
     os.environ["SUCCESS_LOG_FILE"] = file_path
 
