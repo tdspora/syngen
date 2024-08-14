@@ -1,6 +1,9 @@
 import pytest
 
-from syngen.ml.vae.models.features import BaseFeature
+import pandas as pd
+import numpy as np
+
+from syngen.ml.vae.models.features import BaseFeature, CharBasedTextFeature
 from tests.conftest import SUCCESSFUL_MESSAGE
 
 
@@ -20,4 +23,43 @@ def test_init_base_feature(name, expected_name, rp_logger):
     assert feature.name == expected_name
     assert feature.original_name == name
     assert feature.weight == 1.0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_inverse_transform_of_char_based_text_feature(rp_logger):
+    rp_logger.info(
+        "Testing the method 'inverse_transform' of the class CharBasedTextFeature"
+    )
+    feature = CharBasedTextFeature(
+        name="text_column",
+        text_max_len=4
+    )
+    data = pd.DataFrame(
+        data=[
+            "C433", "C794", "0786", "7393", "C983", "9898", "9736",
+            "5819", "C472", "C646", "C749", "6698", "C777", "C367",
+            "0434", "9889", "C779", "C936", "C379", "C879"
+        ]
+    )
+    feature.fit(data=data)
+    feature.tokenizer.inverse_dict = {
+        1: "1",
+        2: "2",
+        3: "3",
+        4: "4",
+        5: "6",
+        6: "5",
+        7: "7",
+        8: "0",
+        9: "8",
+        10: "9",
+        11: "C",
+        12: "M"
+    }
+    data = np.loadtxt(
+        "tests/unit/features/fixtures/tensor.csv"
+    ).reshape((20, 4, 12)).astype(np.float32)
+    result = feature.inverse_transform(data=data)
+    assert len(result) == 20
+    assert np.mean([len(i) for i in result]) == 4
     rp_logger.info(SUCCESSFUL_MESSAGE)
