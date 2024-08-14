@@ -481,7 +481,8 @@ def test_set_long_text_columns(rp_logger):
         "long_text_column":
             ["".join(random.choice(alphabet)
                      for _ in range(250))
-             for _ in range(1, 96)] + [np.NaN, True, 23, 23.0, datetime.datetime(1900, 1, 1)]
+             for _ in range(1, 96)] +
+            [np.NaN, True, 23, 23.0, datetime.datetime(1900, 1, 1)]
     })
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(

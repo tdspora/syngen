@@ -69,7 +69,6 @@ class VAEWrapper(BaseWrapper):
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
-
     def __post_init__(self):
         if self.process == "train":
             self._prepare_dir()
@@ -105,7 +104,7 @@ class VAEWrapper(BaseWrapper):
 
     @staticmethod
     def _prepare_dir():
-        os.makedirs(f"model_artifacts/tmp_store/losses", exist_ok=True)
+        os.makedirs("model_artifacts/tmp_store/losses", exist_ok=True)
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
@@ -409,7 +408,9 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            log_message = f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            log_message = (
+                f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            )
             logger.info(log_message)
 
             ProgressBarHandler().set_progress(
