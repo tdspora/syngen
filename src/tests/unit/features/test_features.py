@@ -75,11 +75,11 @@ def test_top_k_filtering(rp_logger):
     )
     data = np.loadtxt(
         "tests/unit/features/fixtures/tensor.csv"
-    ).reshape((20, 4, 12)).astype(np.float32)
+    ).reshape((20, 4, 12))
     result = feature._top_k_filtering(data, top_k=3)
     ethalon = np.loadtxt(
         "tests/unit/features/fixtures/top_k-tensor.csv"
-    ).reshape((20, 4, 12)).astype(np.float32)
+    ).reshape((20, 4, 12))
     np.testing.assert_array_equal(result, ethalon)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -104,6 +104,6 @@ def test_top_p_filtering(rp_logger):
 
     ethalon = np.loadtxt(
         "tests/unit/features/fixtures/top_p-tensor.csv"
-    ).reshape((20, 4, 12)).astype(np.float32)
+    ).reshape((20, 4, 12))
     np.testing.assert_allclose(result, ethalon, rtol=1e-6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
