@@ -62,7 +62,7 @@ def test_inverse_transform_of_char_based_text_feature(rp_logger):
     ).reshape((20, 4, 12)).astype(np.float32)
     result = feature.inverse_transform(data=data)
     assert len(result) == 20
-    assert np.mean([len(i) for i in result]) == 4
+    assert np.all(np.array([len(i) for i in result]) == 4)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 def test_top_k_filtering(rp_logger):
@@ -81,6 +81,7 @@ def test_top_k_filtering(rp_logger):
         "tests/unit/features/fixtures/top_k-tensor.csv"
     ).reshape((20, 4, 12)).astype(np.float32)
     np.testing.assert_array_equal(result, ethalon)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_top_p_filtering(rp_logger):
@@ -104,3 +105,4 @@ def test_top_p_filtering(rp_logger):
         "tests/unit/features/fixtures/top_p-tensor.csv"
     ).reshape((20, 4, 12)).astype(np.float32)
     np.testing.assert_array_equal(result, ethalon)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
