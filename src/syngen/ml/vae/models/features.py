@@ -444,9 +444,11 @@ class CharBasedTextFeature(BaseFeature):
 
         # Create a mask for indices to remove
         batch_size, seq_length, vocab_size = logits.shape
-        update_indices = tf.stack([tf.repeat(tf.range(batch_size), seq_length * vocab_size),
-                                   tf.tile(tf.repeat(tf.range(seq_length), vocab_size), [batch_size]),
-                                   tf.reshape(sorted_indices, [-1])], axis=1)
+
+        batch_indices = tf.repeat(tf.range(batch_size), seq_length * vocab_size)
+        feature_length_indices = tf.tile(tf.repeat(tf.range(seq_length), vocab_size), [batch_size])
+        vocab_selection_indices = tf.reshape(sorted_indices, [-1])
+        update_indices = tf.stack([batch_indices, feature_length_indices, vocab_selection_indices], axis=1)
         flattened_update_values = tf.reshape(sorted_indices_to_remove, [-1])
         indices_to_remove = tf.tensor_scatter_nd_update(
             tf.zeros_like(logits, dtype=sorted_indices_to_remove.dtype),
