@@ -854,7 +854,8 @@ class Dataset(BaseDataset):
         )
         for column in self.uuid_columns:
             logger.info(f"Column '{column}' defined as UUID column")
-            self._assign_uuid_null_feature(column)
+            if column not in self.fk_columns:
+                self._assign_uuid_null_feature(column)
 
     def assign_feature(self, feature, columns):
         name = feature.original_name
