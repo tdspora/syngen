@@ -421,7 +421,7 @@ class CharBasedTextFeature(BaseFeature):
         return K.one_hot(K.cast(data_gen, "int32"), self.vocab_size)
 
     @staticmethod
-    def top_p_filtering(
+    def _top_p_filtering(
             logits: np.ndarray,
             top_p: float = 0.9
     ):
@@ -460,7 +460,7 @@ class CharBasedTextFeature(BaseFeature):
         return logits_removed.numpy().astype(np.float64)
 
     @staticmethod
-    def top_k_filtering(
+    def _top_k_filtering(
             logits: np.ndarray,
             top_k: int = 0
     ):
@@ -468,10 +468,10 @@ class CharBasedTextFeature(BaseFeature):
         logits[indices_to_remove] = 0.0
         return logits
 
-    def process_batch(self, batch: np.ndarray) -> List[str]:
+    def _process_batch(self, batch: np.ndarray) -> List[str]:
         probs = tf.nn.softmax(batch, axis=-1).numpy().astype(float)
-        probs = self.top_p_filtering(probs, top_p=0.9)
-        # probs = self.top_k_filtering(probs, top_k=6)  # TODO: select top_k based on inverse_dict length
+        probs = self._top_p_filtering(probs, top_p=0.9)
+        # probs = self._top_k_filtering(probs, top_k=6)  # TODO: select top_k based on inverse_dict length
 
         probs /= probs.sum(axis=2, keepdims=True)
 
@@ -495,7 +495,7 @@ class CharBasedTextFeature(BaseFeature):
 
         for i in range(num_batches):
             batch = data[i * batch_size: (i + 1) * batch_size]
-            feature_values.extend(self.process_batch(batch))
+            feature_values.extend(self._process_batch(batch))
 
         return feature_values
 
