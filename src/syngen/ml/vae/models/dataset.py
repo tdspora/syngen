@@ -44,7 +44,7 @@ class BaseDataset:
         paths: Dict
     ):
         self.df = df
-        self.schema = schema.get("fields", {})
+        self.fields = schema.get("fields", {})
         self.file_format = schema.get("format")
         self.metadata = metadata
         self.table_name = table_name
@@ -110,10 +110,10 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
-        self._set_metadata()
-        self._set_categorical_columns()
         self.nan_labels_dict = get_nan_labels(self.df.drop(columns=self.categ_columns))
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
+        self._set_categorical_columns()
+        self._pipeline()
 
     def __getstate__(self) -> Dict:
         """
@@ -318,7 +318,7 @@ class Dataset(BaseDataset):
             self.__set_uq_keys(config_of_keys)
             self.__set_fk_keys(config_of_keys)
 
-    def _set_metadata(self):
+    def _pipeline(self):
         table_config = self.metadata.get(self.table_name, {})
         self._set_non_existent_columns(table_config)
         self._update_table_config(table_config)
@@ -329,9 +329,9 @@ class Dataset(BaseDataset):
         """
         Synchronize the schema of the table with dataframe
         """
-        self.schema = {
+        self.fields = {
             column: data_type
-            for column, data_type in self.schema.items()
+            for column, data_type in self.fields.items()
             if column in self.df.columns
         }
 
@@ -342,7 +342,7 @@ class Dataset(BaseDataset):
         """
         removed = [
             col
-            for col, data_type in self.schema.get("fields", {}).items()
+            for col, data_type in self.fields.items()
             if data_type == "removed"
         ]
         for col in list(self.categ_columns):
@@ -468,7 +468,7 @@ class Dataset(BaseDataset):
         else:
             text_columns = [
                 col
-                for col, data_type in self.schema.get("fields", {}).items()
+                for col, data_type in self.fields.items()
                 if data_type == "string"
             ]
         return text_columns
@@ -733,15 +733,15 @@ class Dataset(BaseDataset):
         self._set_long_text_columns()
         self._set_email_columns()
         self.int_columns = set(
-            column for column, data_type in self.schema.items() if data_type == "int"
+            column for column, data_type in self.fields.items() if data_type == "int"
         )
         self.int_columns = self.int_columns - self.categ_columns - self.binary_columns
         self.float_columns = set(
-            column for column, data_type in self.schema.items() if data_type == "float"
+            column for column, data_type in self.fields.items() if data_type == "float"
         )
         self.float_columns = self.float_columns - self.categ_columns - self.binary_columns
         self.str_columns = set(
-            column for column, data_type in self.schema.items() if data_type == "string"
+            column for column, data_type in self.fields.items() if data_type == "string"
         )
         self.categ_columns -= self.long_text_columns
         self.str_columns = (
