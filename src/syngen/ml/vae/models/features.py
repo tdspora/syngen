@@ -424,7 +424,7 @@ class CharBasedTextFeature(BaseFeature):
         logits: np.ndarray,
         top_k: int = 0,
         top_p: float = 0,
-        filter_value: int = -1e8,
+        filter_value: float = -1e8,
     ):
         """
         Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
