@@ -860,6 +860,7 @@ class Dataset(BaseDataset):
         ):
             if name not in excluded_features and name not in self.fk_columns:
                 column_names.extend(self.columns[name])
+                logger.trace(f'Column {name} is being inverse transformed.')
                 inverse_transformed_data.append(feature.inverse_transform(transformed_data))
 
         stacked_data = np.column_stack(inverse_transformed_data)
