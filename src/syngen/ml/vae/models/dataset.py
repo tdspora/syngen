@@ -483,7 +483,7 @@ class Dataset(BaseDataset):
 
         if not data_subset.empty:
             data_subset = data_subset.loc[
-                :, data_subset.apply(lambda x: (x.dropna().str.len() > 200).any())
+                :, data_subset.apply(lambda x: (x.astype(str).str.len() > 200).any())
             ]
             self.long_text_columns = set(data_subset.columns)
             self.long_text_columns = (self.long_text_columns - self.categ_columns
@@ -860,6 +860,7 @@ class Dataset(BaseDataset):
         ):
             if name not in excluded_features and name not in self.fk_columns:
                 column_names.extend(self.columns[name])
+                logger.trace(f'Column {name} is being inverse transformed.')
                 inverse_transformed_data.append(feature.inverse_transform(transformed_data))
 
         stacked_data = np.column_stack(inverse_transformed_data)

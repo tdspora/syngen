@@ -1,6 +1,7 @@
 from itertools import chain
 from typing import Union, List
 from lazy import lazy
+from loguru import logger
 
 import category_encoders as ce
 import numpy as np
@@ -419,112 +420,86 @@ class CharBasedTextFeature(BaseFeature):
         # return data_gen
         return K.one_hot(K.cast(data_gen, "int32"), self.vocab_size)
 
-    def top_k_top_p_filtering(
-        self,
-        logits: np.ndarray,
-        top_k: int = 0,
-        top_p: float = 0,
-        filter_value: int = -1e8,
+    @staticmethod
+    def _top_p_filtering(
+            logits: np.ndarray,
+            top_p: float = 0.9
     ):
-        """
-        Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
-        https://gist.github.com/thomwolf/1a5a29f6962089e871b94cbd09daf317
-        https://github.com/ari-holtzman/degen
-        Args:
-            logits: logits distribution shape (..., vocabulary size)
-            top_k: >0 keep only top k tokens with the highest probability (top-k filtering).
-            top_p: >0.0 keep the top tokens with cumulative probability >= top_p
-            (nucleus filtering).
-            filter_value: value to replace small values with.
-        """
+        # Convert logits to TensorFlow tensor
+        logits = tf.convert_to_tensor(logits, dtype=tf.float32)
 
-        def custom_scatter_(zeros, index, src):
-            """Custom implementation of torch.Tensor.scatter_()
-            args:
-                zeros: np.ndarray placeholder for logits shape like logits
-                index: np.ndarray sorted indeces for scatters
-                src: np.ndarray indeces to remove
-            """
-            # zeros[i][index[i][j]] = src[i][j]
-            for i in range(len(index)):
-                for j in range(len(index[i])):
-                    zeros[i][index[i][j]] = src[i][j]
+        # Sort logits and get sorted indices
+        sorted_logits = tf.sort(logits, direction="DESCENDING", axis=-1)
+        sorted_indices = tf.argsort(logits, direction="DESCENDING", axis=-1)
 
-            return zeros
+        # Calculate cumulative probabilities
+        cumulative_probs = tf.cumsum(sorted_logits, axis=-1)
 
-        logits_removed = logits
-        # top_k = min(top_k, logits.size(-1)) # Safety check
-        if top_k > 0:
-            # Remove all tokens with a probability less than the last token of the top-k
-            indices_to_remove = logits < tf.math.top_k(logits, top_k)[0][..., -1, None]
-            logits[indices_to_remove] = filter_value
+        # Remove tokens with cumulative probability above the threshold
+        sorted_indices_to_remove = cumulative_probs >= top_p
 
-        if top_p > 0.0:
-            sorted_logits = tf.sort(logits, direction="DESCENDING")
-            sorted_indices = tf.argsort(logits, direction="DESCENDING")
-            cumulative_probs = tf.cumsum(tf.nn.softmax(sorted_logits, axis=-1), axis=-1)
+        # Shift the indices to the right to keep also the first token above the threshold
+        zeros_for_shift = tf.zeros_like(sorted_indices_to_remove[:, :, :1], dtype=tf.bool)
+        sorted_indices_to_remove = tf.concat([zeros_for_shift, sorted_indices_to_remove[:, :, :-1]], axis=-1)
 
-            # Remove tokens with cumulative probability above the threshold
-            sorted_indices_to_remove = cumulative_probs >= top_p
+        # Create a mask for indices to remove
+        batch_size, seq_length, vocab_size = logits.shape
 
-            # Shift the indices to the right to keep also the first token above the threshold
-            zeros_for_shift = tf.zeros([tf.shape(sorted_indices_to_remove)[0], 1], dtype=tf.bool)
-            sorted_indices_to_remove = tf.concat(
-                (zeros_for_shift, sorted_indices_to_remove[:, :-1]), axis=1
-            )
+        batch_indices = tf.repeat(tf.range(batch_size), seq_length * vocab_size)
+        feature_length_indices = tf.tile(tf.repeat(tf.range(seq_length), vocab_size), [batch_size])
+        vocab_selection_indices = tf.reshape(sorted_indices, [-1])
+        update_indices = tf.stack([batch_indices, feature_length_indices, vocab_selection_indices], axis=1)
+        flattened_update_values = tf.reshape(sorted_indices_to_remove, [-1])
+        indices_to_remove = tf.tensor_scatter_nd_update(
+            tf.zeros_like(logits, dtype=sorted_indices_to_remove.dtype),
+            update_indices,
+            flattened_update_values,
+        )
 
-            # sorted_indices - ids of columns to replace
-            # line in sorted_indices corresponds to line in sorted_indices_to_remove
+        # Apply the filter value to the logits
+        logits_removed = tf.where(indices_to_remove, tf.fill(indices_to_remove.shape, 0.0), logits)
 
-            # indices are row and column coordinates like
-            # [[0, 5], ... [0, 2], [1, 7], ..., [1, 6], ...]
-            row_numbers = tf.reshape(
-                tf.repeat(tf.range(sorted_indices.shape[0]), sorted_indices.shape[1]),
-                [sorted_indices.shape[0] * sorted_indices.shape[1]],
-            )
-            flattened_sorted_indices = tf.reshape(
-                sorted_indices, [sorted_indices.shape[0] * sorted_indices.shape[1]]
-            )
-            update_indices = tf.stack([row_numbers, flattened_sorted_indices], axis=1)
-            # update values correspond to indices [False, False, True, .... True]
-            flattened_update_values = tf.reshape(sorted_indices_to_remove, [-1])
-            # replace old index values with new update values
-            indices_to_remove = tf.tensor_scatter_nd_update(
-                tf.zeros_like(logits, dtype=sorted_indices_to_remove.dtype),
-                update_indices,
-                flattened_update_values,
-            )
-            # fill indices with one filter_value
-            logits_removed = tf.where(
-                indices_to_remove,
-                tf.fill(indices_to_remove.shape, filter_value),
-                logits,
-            )
+        return logits_removed.numpy().astype(np.float64)
 
-        return logits_removed
+    @staticmethod
+    def _top_k_filtering(
+            logits: np.ndarray,
+            top_k: int = 0
+    ):
+        indices_to_remove = logits < tf.math.top_k(logits, top_k)[0][..., -1, None]
+        logits[indices_to_remove] = 0.0
+        return logits
+
+    def _process_batch(self, batch: np.ndarray) -> List[str]:
+        probs = tf.nn.softmax(batch, axis=-1).numpy().astype(float)
+        probs = self._top_p_filtering(probs, top_p=0.9)
+        # probs = self._top_k_filtering(probs, top_k=6)  # TODO: select top_k based on inverse_dict length
+
+        probs /= probs.sum(axis=2, keepdims=True)
+
+        multinomial_samples = np.apply_along_axis(
+            lambda x: np.argmax(np.random.multinomial(1, x)), -1, probs
+        )
+
+        chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ''))(
+            multinomial_samples)
+
+        # Convert tokens to words
+        words = ["".join(sample) for sample in chars_array]
+
+        return words
 
     def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
-        top_p = 0.9
-        if len(kwargs) > 0:
-            top_p = kwargs["top_p"]
 
-        out = []
-        for batch in data:
-            # batch shape (self.text_max_len, self.vocab_size)
-            logits = self.top_k_top_p_filtering(tf.convert_to_tensor(batch), top_p=top_p)
-            probs = tf.nn.softmax(logits, axis=-1).numpy().astype(float)
-            probs /= probs.sum(axis=1)[:, None]
-            multinomial_samples = np.apply_along_axis(
-                lambda x: np.argmax(np.random.multinomial(1, x)), 1, probs
-            )
-            tokens = list(multinomial_samples)
-            word = "".join(
-                self.tokenizer.inverse_dict[x]
-                for x in tokens
-                if x in self.tokenizer.inverse_dict.keys()
-            )
-            out.append(word)
-        return out
+        batch_size = 10000
+        num_batches = (len(data) + batch_size - 1) // batch_size
+        feature_values = []
+
+        for i in range(num_batches):
+            batch = data[i * batch_size: (i + 1) * batch_size]
+            feature_values.extend(self._process_batch(batch))
+
+        return feature_values
 
     @lazy
     def input(self) -> tf.Tensor:
