@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict
 from dataclasses import dataclass
 
 import pandas as pd
@@ -105,7 +105,7 @@ class AvroConvertor(Convertor):
     def __init__(self, schema, df):
         super().__init__(schema, df)
         self.converted_schema = self._convert_schema(schema)
-        self.preprocessed_df =  self._preprocess_df(self.converted_schema, df)
+        self.preprocessed_df = self._preprocess_df(self.converted_schema, df)
 
     @staticmethod
     def _convert_schema(schema) -> Dict:
