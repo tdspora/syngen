@@ -6,7 +6,6 @@ import string
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
-import pandavro as pdx
 
 from syngen.ml.vae.models.dataset import Dataset
 from syngen.ml.data_loaders import DataLoader
@@ -128,7 +127,7 @@ def test_save_dataset(rp_logger):
     assert "df" not in fetched_dataset
     assert list(fetched_dataset.keys()) == [
         "fields",
-        "file_format",
+        "schema_format",
         "metadata",
         "table_name",
         "paths",
@@ -397,7 +396,7 @@ def test_set_email_columns(rp_logger):
         }
     }
 
-    df = pd.read_csv("./tests/unit/dataset/fixtures/data_with_emails.csv")
+    df = pd.read_csv(r"/home/Hanna_Imshenetska@epam.com/pycharm/syngen/src/tests/unit/dataset/fixtures/data_with_emails.csv")
     mock_dataset = Dataset(
         df=df,
         schema=CSV_SCHEMA,
@@ -432,7 +431,8 @@ def test_set_long_text_columns(rp_logger):
         "long_text_column":
             ["".join(random.choice(alphabet)
                      for _ in range(250))
-             for _ in range(1, 100)] + [np.NaN]
+             for _ in range(1, 96)] +
+            [np.NaN, True, 23, 23.0, datetime.datetime(1900, 1, 1)]
     })
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
@@ -525,5 +525,6 @@ def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
         },
         main_process="train"
     )
-    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4"}
+    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
+    assert mock_dataset.nan_labels_dict == {"column5": "Not available"}
     rp_logger.info(SUCCESSFUL_MESSAGE)

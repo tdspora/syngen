@@ -45,7 +45,7 @@ class BaseDataset:
     ):
         self.df = df
         self.fields = schema.get("fields", {})
-        self.file_format = schema.get("format")
+        self.schema_format = schema.get("format")
         self.metadata = metadata
         self.table_name = table_name
         self.paths = paths
@@ -112,7 +112,6 @@ class Dataset(BaseDataset):
         )
         self.nan_labels_dict = get_nan_labels(self.df.drop(columns=self.categ_columns))
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
-        self._set_categorical_columns()
         self._pipeline()
 
     def __getstate__(self) -> Dict:
@@ -321,9 +320,25 @@ class Dataset(BaseDataset):
     def _pipeline(self):
         table_config = self.metadata.get(self.table_name, {})
         self._set_non_existent_columns(table_config)
-        self._update_table_config(table_config)
+        self._update_metadata(table_config)
+        self._update_schema()
         self.__set_metadata()
+        self._common_pipeline()
         self.__data_pipeline()
+
+    def _common_pipeline(self):
+        """
+        Identify and classify data types within the dataset, including
+        binary columns, categorical columns, UUID columns, long text columns,
+        and email columns.
+
+        This process is agnostic to the file format of the dataset.
+        """
+        self._set_binary_columns()
+        self._set_categorical_columns()
+        self._set_uuid_columns()
+        self._set_long_text_columns()
+        self._set_email_columns()
 
     def _update_schema(self):
         """
@@ -334,6 +349,10 @@ class Dataset(BaseDataset):
             for column, data_type in self.fields.items()
             if column in self.df.columns
         }
+        for column in self.nan_labels_dict.keys():
+            self.fields[column] = (
+                "int" if all(x.is_integer() for x in self.df[column].dropna()) else "float"
+            )
 
     def _check_if_column_in_removed(self):
         """
@@ -449,8 +468,8 @@ class Dataset(BaseDataset):
             [
                 col
                 for col in self.df.columns
-                if self.df[col].dropna().nunique() <= 50
-                   and col not in self.binary_columns
+                if self.df[col].fillna("?").nunique() <= 50
+                and col not in self.binary_columns
             ]
         )
         self.categ_columns.update(defined_columns)
@@ -460,7 +479,7 @@ class Dataset(BaseDataset):
         """
         Select the text columns
         """
-        if self.file_format == "CSV":
+        if self.schema_format == "CSV":
             text_columns = [
                 col for col, dtype in dict(self.df.dtypes).items()
                 if dtype in ["object", "string"]
@@ -490,7 +509,7 @@ class Dataset(BaseDataset):
 
         if not data_subset.empty:
             data_subset = data_subset.loc[
-                :, data_subset.apply(lambda x: (x.dropna().str.len() > 200).any())
+                :, data_subset.apply(lambda x: (x.astype(str).str.len() > 200).any())
             ]
             self.long_text_columns = set(data_subset.columns)
             self.long_text_columns = (self.long_text_columns - self.categ_columns
@@ -599,9 +618,9 @@ class Dataset(BaseDataset):
                 updated_columns.append(column)
         return updated_columns
 
-    def _update_table_config(self, table_config: Dict):
+    def _update_metadata(self, table_config: Dict):
         """
-        Update the table metadata by removing the columns which are absent in the table
+        Update the metadata of the table by removing the columns which are absent in the table
         but mentioned in the metadata
         """
         table_metadata = table_config.get("keys", {})
@@ -680,11 +699,6 @@ class Dataset(BaseDataset):
         binary, categorical, integer, float, string, date
         in case metadata of the table is absent
         """
-        self._set_uuid_columns()
-        self._set_binary_columns()
-        self._set_long_text_columns()
-        self._set_email_columns()
-
         for col in self.df.columns:
             col_no_na = self.df[col].dropna()
 
@@ -728,10 +742,6 @@ class Dataset(BaseDataset):
         Divide columns in dataframe into groups - binary, categorical, integer, float, string, date
         in case metadata of the table in Avro format is present
         """
-        self._set_uuid_columns()
-        self._set_binary_columns()
-        self._set_long_text_columns()
-        self._set_email_columns()
         self.int_columns = set(
             column for column, data_type in self.fields.items() if data_type == "int"
         )
@@ -761,10 +771,9 @@ class Dataset(BaseDataset):
         self._set_date_format()
 
     def __data_pipeline(self):
-        if self.file_format == "CSV":
+        if self.schema_format == "CSV":
             self._general_data_pipeline()
-        elif self.file_format == "Avro":
-            self._update_schema()
+        elif self.schema_format == "Avro":
             self._avro_data_pipeline()
 
         assert len(self.str_columns) + len(self.float_columns) + len(self.int_columns) + len(

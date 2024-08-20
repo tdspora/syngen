@@ -174,13 +174,8 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
 
 
 def get_nan_labels(df: pd.DataFrame) -> dict:
-    """Get labels that represent nan values in float/int columns
-
-    Args:
-        df (pd.DataFrame): table data
-
-    Returns:
-        dict: dict that maps nan str label to column name
+    """
+    Get labels that represent nan values in float/int columns
     """
     columns_nan_labels = {}
     object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
@@ -197,28 +192,19 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
         if (float_val is not None) and (not np.isnan(float_val)) and len(str_values) == 1:
             nan_label = str_values[0]
             columns_nan_labels[column] = nan_label
-        elif (float_val is not None) and (not np.isnan(float_val)) and not str_values:
-            columns_nan_labels[column] = None
 
     return columns_nan_labels
 
 
 def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFrame:
     """
-    Replace str nan labels in float/int columns with actual np.nan
+    Replace str nan labels in float/int columns with actual np.NaN
     and casting the column to float type.
-
-    Args:
-        df (pd.DataFrame): table data
-
-    Returns:
-        pd.DataFrame: DataFrame with str NaN labels in float/int columns replaced with np.nan
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
         df_with_nan[column].replace(label, np.NaN, inplace=True)
         df_with_nan[column] = df_with_nan[column].astype(float)
-
     return df_with_nan
 
 

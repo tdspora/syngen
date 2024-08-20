@@ -65,9 +65,11 @@ def test_inverse_transform_of_char_based_text_feature(rp_logger):
     assert np.all(np.array([len(i) for i in result]) == 4)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
 def test_top_k_filtering(rp_logger):
     rp_logger.info(
-        "Testing the method 'top_k_top_p_filtering' of the class CharBasedTextFeature in top_k mode"
+        "Testing the method 'top_k_top_p_filtering' "
+        "of the class CharBasedTextFeature in top_k mode"
     )
     feature = CharBasedTextFeature(
         name="text_column",
@@ -86,7 +88,8 @@ def test_top_k_filtering(rp_logger):
 
 def test_top_p_filtering(rp_logger):
     rp_logger.info(
-        "Testing the method 'top_k_top_p_filtering' of the class CharBasedTextFeature in top_p mode"
+        "Testing the method 'top_k_top_p_filtering' "
+        "of the class CharBasedTextFeature in top_p mode"
     )
     feature = CharBasedTextFeature(
         name="text_column",

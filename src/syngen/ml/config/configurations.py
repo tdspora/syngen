@@ -27,9 +27,11 @@ class TrainConfig:
     print_report: bool
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
+    data: pd.DataFrame = field(init=False)
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
+    original_schema: Dict = field(init=False)
     slugify_table_name: str = field(init=False)
     columns: List = field(init=False)
     dropped_columns: Set = field(init=False)
@@ -51,11 +53,12 @@ class TrainConfig:
         return instance
 
     def preprocess_data(self):
-        data, self.schema = self._extract_data()
-        self.columns = list(data.columns)
-        data = self._remove_empty_columns(data)
-        self._mark_removed_columns(data)
-        self._prepare_data(data)
+        self._extract_data()
+        self._save_original_schema()
+        self.columns = list(self.data.columns)
+        self._remove_empty_columns()
+        self._mark_removed_columns()
+        self._prepare_data()
 
     def to_dict(self) -> Dict:
         """
@@ -110,21 +113,22 @@ class TrainConfig:
                 table_name=self.table_name
             ).fetch_data()
         else:
-            return DataLoader(self.source).load_data()
+            data_loader = DataLoader(self.source)
+            self.original_schema = data_loader.original_schema
+            return data_loader.load_data()
 
-    def _remove_empty_columns(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _remove_empty_columns(self):
         """
         Remove completely empty columns from dataframe
         """
-        data_columns = set(data.columns)
-        data = data.dropna(how="all", axis=1)
+        data_columns = set(self.data.columns)
+        self.data = self.data.dropna(how="all", axis=1)
 
-        self.dropped_columns = data_columns - set(data.columns)
+        self.dropped_columns = data_columns - set(self.data.columns)
         if len(self.dropped_columns) > 0:
             logger.info(f"Empty columns - {', '.join(self.dropped_columns)} were removed")
-        return data
 
-    def _mark_removed_columns(self, data: pd.DataFrame):
+    def _mark_removed_columns(self):
         """
         Mark removed columns in the schema
         """
@@ -133,40 +137,39 @@ class TrainConfig:
             self.schema["fields"] = {column: "removed" for column in self.dropped_columns}
         else:
             for column, data_type in self.schema.get("fields", {}).items():
-                if column not in data.columns:
+                if column not in self.data.columns:
                     self.schema["fields"][column] = "removed"
 
-    def _check_if_data_is_empty(self, data: pd.DataFrame):
+    def _check_if_data_is_empty(self):
         """
         Check if the provided data is empty
         """
-        if data.shape[0] < 1:
+        if self.data.shape[0] < 1:
             raise ValueError(
                 f"The empty table was provided. Unable to train the table - '{self.table_name}'"
             )
 
-    def _extract_data(self) -> Tuple[pd.DataFrame, Dict]:
+    def _extract_data(self):
         """
         Extract data and schema necessary for training process
         """
-        data, schema = self._load_source()
-        self._check_if_data_is_empty(data)
-        return data, schema
+        self.data, self.schema = self._load_source()
+        self._check_if_data_is_empty()
 
-    def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _preprocess_data(self):
         """
         Preprocess data and set the parameter "row_subset" for training process
         """
         if self.drop_null:
-            if not data.dropna().empty:
-                initial_data = data
-                data = data.dropna()
-                if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
+            if not self.data.dropna().empty:
+                initial_data = self.data
+                self.data = self.data.dropna()
+                if count_of_dropped_rows := initial_data.shape[0] - self.data.shape[0]:
                     logger.info(
                         f"As the parameter 'drop_null' set to 'True', "
                         f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
                         f"that have empty values have been dropped. "
-                        f"The count of remained rows is {data.shape[0]}."
+                        f"The count of remained rows is {self.data.shape[0]}."
                     )
             else:
                 logger.warning(
@@ -175,38 +178,46 @@ class TrainConfig:
                 )
 
         if self.row_limit:
-            self.row_subset = min(self.row_limit, len(data))
+            self.row_subset = min(self.row_limit, len(self.data))
 
-            data = data.sample(n=self.row_subset)
+            self.data = self.data.sample(n=self.row_subset)
 
-        if len(data) < 100:
+        if len(self.data) < 100:
             logger.warning(
                 "The input table is too small to provide any meaningful results. "
                 "Please consider 1) disable drop_null argument, 2) provide bigger table"
             )
-        elif len(data) < 500:
+        elif len(self.data) < 500:
             logger.warning(
-                f"The amount of data is {len(data)} rows. It seems that it isn't enough "
+                f"The amount of data is {len(self.data)} rows. It seems that it isn't enough "
                 f"to supply high-quality results. To improve the quality of generated data "
                 f"please consider any of the steps: 1) provide a bigger table, "
                 f"2) disable drop_null argument"
             )
 
-        logger.info(f"The subset of rows was set to {len(data)}")
+        logger.info(f"The subset of rows was set to {len(self.data)}")
 
-        self.row_subset = len(data)
+        self.row_subset = len(self.data)
         self._set_batch_size()
-        return data
 
-    def _save_input_data(self, data: pd.DataFrame):
-        DataLoader(self.paths["input_data_path"]).save_data(self.paths["input_data_path"], data)
+    def _save_input_data(self):
+        """
+        Save the subset of the original data
+        """
+        DataLoader(self.paths["input_data_path"]).save_data(self.data)
 
-    def _prepare_data(self, data: pd.DataFrame):
+    def _save_original_schema(self):
+        """
+        Save the schema of the original data
+        """
+        DataLoader(self.paths["original_schema_path"]).save_data(self.original_schema)
+
+    def _prepare_data(self):
         """
         Preprocess and save the data necessary for the training process
         """
-        data = self._preprocess_data(data)
-        self._save_input_data(data)
+        self._preprocess_data()
+        self._save_input_data()
 
     @slugify_attribute(table_name="slugify_table_name")
     def _get_paths(self) -> Dict:
@@ -234,6 +245,8 @@ class TrainConfig:
                            f"checkpoints/stat_keys/",
             "original_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                   f"input_data_{self.slugify_table_name}.pkl",
+            "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                                    f"original_schema_{self.slugify_table_name}.pkl",
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path":
@@ -347,6 +360,8 @@ class InferConfig:
             "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
             "train_config_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+            "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                                    f"original_schema_{self.slugify_table_name}.pkl",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
             "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
             "dataset_pickle_path":

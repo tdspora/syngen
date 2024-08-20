@@ -69,7 +69,6 @@ class VAEWrapper(BaseWrapper):
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
-
     def __post_init__(self):
         if self.process == "train":
             self._prepare_dir()
@@ -104,7 +103,7 @@ class VAEWrapper(BaseWrapper):
 
     @staticmethod
     def _prepare_dir():
-        os.makedirs(f"model_artifacts/tmp_store/losses", exist_ok=True)
+        os.makedirs("model_artifacts/tmp_store/losses", exist_ok=True)
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
@@ -328,8 +327,7 @@ class VAEWrapper(BaseWrapper):
         """
         Save the information about losses of every feature in every epoch
         """
-        path = self.paths["losses_path"]
-        DataLoader(path).save_data(path, df=self.losses_info)
+        DataLoader(self.paths["losses_path"]).save_data(self.losses_info)
 
     def _gather_losses_info(self, total_feature_losses, mean_loss, mean_kl_loss, epoch):
         """
@@ -408,7 +406,9 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            log_message = f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            log_message = (
+                f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            )
             logger.info(log_message)
 
             ProgressBarHandler().set_progress(
@@ -508,6 +508,7 @@ class VAEWrapper(BaseWrapper):
         sampled_df = self.vae.sample(n)
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)
+        sampled_df = self._restore_nan_labels(sampled_df)
         return sampled_df
 
     def predict_less_likely_samples(self, df: pd.DataFrame, n: int, temp=0.05, variaty=3):

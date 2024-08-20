@@ -461,9 +461,9 @@ class Worker:
         if self.metadata_path:
             os.makedirs("model_artifacts/metadata", exist_ok=True)
             metadata_file_name = os.path.basename(self.metadata_path)
-            MetadataLoader(self.metadata_path).save_data(
-                f"model_artifacts/metadata/{metadata_file_name}", self.metadata
-            )
+            MetadataLoader(
+                f"model_artifacts/metadata/{metadata_file_name}"
+            ).save_data(self.metadata)
 
     def launch_train(self):
         """
