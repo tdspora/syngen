@@ -537,11 +537,14 @@ class Dataset(BaseDataset):
         """
         Check if uuid_to_test is a valid ULID (https://github.com/ulid/spec)
         """
+        # ULID pattern check using regex
+        if not re.match(r'^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$', uuid):
+            return
         try:
             ulid_timestamp = uuid[:10]
-            assert len(uuid) == 26
             ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
             datetime.fromtimestamp(ulid_timestamp_int / 1000.0)
+            print()
             return "ulid"
         except Exception:
             return
