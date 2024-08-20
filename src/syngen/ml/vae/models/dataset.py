@@ -544,7 +544,6 @@ class Dataset(BaseDataset):
             ulid_timestamp = uuid[:10]
             ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
             datetime.fromtimestamp(ulid_timestamp_int / 1000.0)
-            print()
             return "ulid"
         except Exception:
             return
