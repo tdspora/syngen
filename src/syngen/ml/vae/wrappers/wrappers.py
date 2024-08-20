@@ -70,7 +70,6 @@ class VAEWrapper(BaseWrapper):
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
-
     def __post_init__(self):
         if self.process == "train":
             self._prepare_dir()
@@ -106,7 +105,7 @@ class VAEWrapper(BaseWrapper):
 
     @staticmethod
     def _prepare_dir():
-        os.makedirs(f"model_artifacts/tmp_store/losses", exist_ok=True)
+        os.makedirs("model_artifacts/tmp_store/losses", exist_ok=True)
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
@@ -178,7 +177,7 @@ class VAEWrapper(BaseWrapper):
         self.model = self.vae.model
         self.feature_types = self.vae.feature_types
 
-        self.optimizer = self._create_optimizer()
+        self.optimizer = self.__create_optimizer()
         self.loss_metric = self._create_loss()
 
         # Start of the run of training process
@@ -410,7 +409,9 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            log_message = f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            log_message = (
+                f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            )
             logger.info(log_message)
 
             ProgressBarHandler().set_progress(
@@ -439,9 +440,18 @@ class VAEWrapper(BaseWrapper):
         self.__save_losses()
         self._log_losses_info_to_mlflow()
 
-    def _create_optimizer(self):
+    @staticmethod
+    def _create_optimizer(learning_rate):
+        import platform
+        if platform.processor() == 'arm':
+            logger.info('Mac ARM processor is detected. Legacy Adam optimizer has been created.')
+            return tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
+        else:
+            return tf.keras.optimizers.Adam(learning_rate=learning_rate)
+
+    def __create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
-        return tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        return self._create_optimizer(learning_rate)
 
     @staticmethod
     def _create_loss():
