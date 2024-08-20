@@ -65,11 +65,9 @@ def test_inverse_transform_of_char_based_text_feature(rp_logger):
     assert np.all(np.array([len(i) for i in result]) == 4)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
-
 def test_top_k_filtering(rp_logger):
     rp_logger.info(
-        "Testing the method 'top_k_top_p_filtering' "
-        "of the class CharBasedTextFeature in top_k mode"
+        "Testing the method '_top_k_filtering' of the class CharBasedTextFeature"
     )
     feature = CharBasedTextFeature(
         name="text_column",
@@ -77,35 +75,35 @@ def test_top_k_filtering(rp_logger):
     )
     data = np.loadtxt(
         "tests/unit/features/fixtures/tensor.csv"
-    ).reshape((20, 4, 12)).astype(np.float32)
-    result = feature.top_k_top_p_filtering(data, top_k=3, filter_value=0.0)
+    ).reshape((20, 4, 12))
+    result = feature._top_k_filtering(data, top_k=3)
     ethalon = np.loadtxt(
         "tests/unit/features/fixtures/top_k-tensor.csv"
-    ).reshape((20, 4, 12)).astype(np.float32)
+    ).reshape((20, 4, 12))
     np.testing.assert_array_equal(result, ethalon)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_top_p_filtering(rp_logger):
     rp_logger.info(
-        "Testing the method 'top_k_top_p_filtering' "
-        "of the class CharBasedTextFeature in top_p mode"
+        "Testing the method '_top_p_filtering' of the class CharBasedTextFeature"
     )
     feature = CharBasedTextFeature(
         name="text_column",
         text_max_len=4
     )
-    data = np.loadtxt(
-        "tests/unit/features/fixtures/tensor.csv"
-    ).reshape((20, 4, 12)).astype(np.float32)
+    data = tf.nn.softmax(
+        np.loadtxt(
+            "tests/unit/features/fixtures/tensor.csv"
+        ).reshape((20, 4, 12)).astype(np.float32),
+        axis=-1
+    )
 
-    result = tf.nn.softmax(
-        np.stack(
-            [feature.top_k_top_p_filtering(matrix, top_p=0.7) for matrix in data],
-            axis=0),
-        axis=-1).numpy()
+    result = feature._top_p_filtering(data, top_p=0.7)
+    result /= result.sum(axis=2, keepdims=True)
+
     ethalon = np.loadtxt(
         "tests/unit/features/fixtures/top_p-tensor.csv"
-    ).reshape((20, 4, 12)).astype(np.float32)
-    np.testing.assert_array_equal(result, ethalon)
+    ).reshape((20, 4, 12))
+    np.testing.assert_allclose(result, ethalon, rtol=1e-6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
