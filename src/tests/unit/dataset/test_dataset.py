@@ -396,7 +396,7 @@ def test_set_email_columns(rp_logger):
         }
     }
 
-    df = pd.read_csv(r"/home/Hanna_Imshenetska@epam.com/pycharm/syngen/src/tests/unit/dataset/fixtures/data_with_emails.csv")
+    df = pd.read_csv("./tests/unit/dataset/fixtures/data_with_emails.csv")
     mock_dataset = Dataset(
         df=df,
         schema=CSV_SCHEMA,
