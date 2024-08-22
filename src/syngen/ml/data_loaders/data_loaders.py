@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Tuple, List
-import pickle
+import pickle as pkl
 import csv
 import inspect
 
@@ -45,18 +45,6 @@ class BaseDataLoader(ABC):
     @abstractmethod
     def save_data(self, path: str, df: pd.DataFrame, **kwargs):
         pass
-
-    @staticmethod
-    def _get_preprocessed_schema(schema: Dict) -> Dict:
-        """
-        Get the preprocessed schema
-        """
-        if schema is not None:
-            return {
-                field["name"]: field["type"]
-                for field
-                in schema.get("fields", {})
-            }
 
 
 class DataLoader(BaseDataLoader):
@@ -174,10 +162,13 @@ class CSVLoader(BaseDataLoader):
 
         return params
 
+    def __load_data(self, **params):
+        return pd.read_csv(self.path, **params).apply(trim_string, axis=0)
+
     def _load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         params = CSVLoader._get_csv_params(**kwargs)
         try:
-            df = pd.read_csv(self.path, **params).apply(trim_string, axis=0)
+            df = self.__load_data(**params)
             if all([isinstance(column, int) for column in df.columns]):
                 df.rename(
                     columns={
@@ -204,6 +195,10 @@ class CSVLoader(BaseDataLoader):
     def load_data(self, **kwargs):
         return self._load_data(format=self.format, **kwargs)
 
+    def __get_columns(self, **kwargs):
+        head_df = pd.read_csv(self.path, **kwargs, nrows=0)
+        return list(head_df.columns)
+
     def get_columns(self, **kwargs) -> List[str]:
         return self._get_columns(**kwargs)
 
@@ -212,14 +207,19 @@ class CSVLoader(BaseDataLoader):
         Get the column names of the table located in the path
         """
         try:
-            head_df = pd.read_csv(self.path, **kwargs, nrows=0)
-            return list(head_df.columns)
+            return self.__get_columns(**kwargs)
         except pd.errors.EmptyDataError as error:
             logger.error(
                 f"The empty file was provided. Unable to train this table located "
                 f"in the path - '{self.path}'. The details of the error - {error}"
             )
             raise error
+
+    def __save_data(self, df, **kwargs):
+        """
+        Save the dataframe in '.csv' format
+        """
+        df.to_csv(self.path, **kwargs, index=False)
 
     def _save_data(self, df: pd.DataFrame, **kwargs):
         """
@@ -263,8 +263,7 @@ class CSVLoader(BaseDataLoader):
                     "the first value from the 'na_values' parameter"
                 )
 
-            # Save the DataFrame to a CSV file
-            df.to_csv(self.path, **filtered_kwargs, index=False)
+            self.__save_data(df, **filtered_kwargs)
 
     def save_data(self, df: pd.DataFrame, **kwargs):
         self._save_data(df, **kwargs)
@@ -275,19 +274,31 @@ class AvroLoader(BaseDataLoader):
     Class for loading and saving data in '.avro' format
     """
 
-    def _load_df(self) -> pd.DataFrame:
+    def _load_data(self) -> pd.DataFrame:
         """
         Load data in '.avro' format
         """
         with open(self.path, "rb") as f:
             return pdx.from_avro(f)
 
+    @staticmethod
+    def _get_preprocessed_schema(schema: Dict) -> Dict:
+        """
+        Get the preprocessed schema
+        """
+        if schema is not None:
+            return {
+                field["name"]: field["type"]
+                for field
+                in schema.get("fields", {})
+            }
+
     def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
         Load data in '.avro' format
         """
         try:
-            df = self._load_df()
+            df = self._load_data()
             schema = self.load_schema()
             return self._preprocess_schema_and_df(schema, df)
         except FileNotFoundError as error:
@@ -299,7 +310,7 @@ class AvroLoader(BaseDataLoader):
             logger.error(message)
             raise FileNotFoundError(message)
 
-    def _save_df(self, df: pd.DataFrame, schema: Optional[Dict]):
+    def _save_data(self, df: pd.DataFrame, schema: Optional[Dict]):
         """
         Save data in Avro Format
         """
@@ -312,7 +323,7 @@ class AvroLoader(BaseDataLoader):
                 self._get_preprocessed_schema(schema) if schema is not None else schema
             )
             df = AvroConvertor(preprocessed_schema, df).preprocessed_df
-        self._save_df(df, schema)
+        self._save_data(df, schema)
 
     def load_original_schema(self) -> Dict:
         """
@@ -446,21 +457,25 @@ class BinaryLoader(BaseDataLoader):
     Class for loading and saving data using byte stream
     """
 
-    @staticmethod
-    def _load_data(f) -> Tuple[pd.DataFrame, None]:
-        return pickle.load(f), None
+    def _load_data(self) -> pd.DataFrame:
+        """
+        Load data in Binary format
+        """
+        with open(self.path, "rb") as f:
+            return pkl.load(f)
 
     def load_data(self) -> Tuple[pd.DataFrame, None]:
-        with open(self.path, "rb") as f:
-            return self._load_data(f)
+        return self._load_data(), None
 
-    @staticmethod
-    def _save_data(data, f):
-        pickle.dump(data, f)
+    def _save_data(self, data):
+        with open(self.path, "wb") as f:
+            pkl.dump(data, f)
 
     def save_data(self, data, **kwargs):
-        with open(self.path, "wb") as f:
-            self._save_data(data, f)
+        """
+        Save data in Binary format
+        """
+        self._save_data(data)
 
 
 class ExcelLoader(BaseDataLoader):
@@ -478,12 +493,15 @@ class ExcelLoader(BaseDataLoader):
             if k in ExcelFormatSettingsSchema._declared_fields.keys()
         }
 
+    def __load_data(self) -> pd.DataFrame:
+        return pd.read_excel(self.path, sheet_name=self.sheet_name)
+
     def _load_data(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Load data in Excel format
         """
         try:
-            df = pd.read_excel(self.path, sheet_name=self.sheet_name)
+            df = self.__load_data()
             if isinstance(self.sheet_name, list) or self.sheet_name is None:
                 dfs = [df for sheet_name, df in df.items()]
                 df = pd.concat(dfs, ignore_index=True)
@@ -511,12 +529,12 @@ class ExcelLoader(BaseDataLoader):
         if df is not None:
             df.to_excel(self.path, index=False)
 
-    def get_columns(self, **kwargs) -> List[str]:
-        return self._get_columns(**kwargs)
-
     def _get_columns(self, **kwargs) -> List[str]:
         """
         Get the column names of the table located in the path
         """
         head_df = pd.read_excel(self.path, **kwargs, nrows=0)
         return list(head_df.columns)
+
+    def get_columns(self, **kwargs) -> List[str]:
+        return self._get_columns(**kwargs)
