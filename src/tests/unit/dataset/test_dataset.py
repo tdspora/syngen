@@ -51,7 +51,7 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
             main_process="train"
         )
         mock_dataset.set_metadata()
-        mock_dataset._set_uuid_columns(df)
+        mock_dataset._set_uuid_columns()
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
             "UUIDv2",
@@ -95,7 +95,7 @@ def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test
             main_process="train"
         )
         mock_dataset.set_metadata()
-        mock_dataset._set_uuid_columns(df)
+        mock_dataset._set_uuid_columns()
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
             "UUIDv2",
@@ -132,8 +132,9 @@ def test_save_dataset(rp_logger):
         mock_dataset.set_metadata()
     fetched_dataset = mock_dataset.__getstate__()
     assert "df" not in fetched_dataset
-    assert list(fetched_dataset.keys()) == [
+    assert set(fetched_dataset.keys()) == {
         "schema",
+        "file_format",
         "metadata",
         "table_name",
         "paths",
@@ -147,6 +148,7 @@ def test_save_dataset(rp_logger):
         "nan_labels_dict",
         "uuid_columns",
         "uuid_columns_types",
+        "nan_labels_in_uuid",
         "dropped_columns",
         "order_of_columns",
         "categ_columns",
@@ -171,7 +173,7 @@ def test_save_dataset(rp_logger):
         "foreign_keys_list",
         "fk_columns",
         "format"
-    ]
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -192,7 +194,7 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
             },
             main_process="train"
         )
-        mock_dataset._general_data_pipeline(df, CSV_SCHEMA)
+        mock_dataset._general_data_pipeline()
         assert mock_dataset.categ_columns == {
             "time",
             "ptd_dt",
@@ -222,7 +224,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
             },
             main_process="train"
         )
-        mock_dataset._general_data_pipeline(df, CSV_SCHEMA)
+        mock_dataset._general_data_pipeline()
         assert mock_dataset.binary_columns == {
             "time",
             "upd_dt",
@@ -497,4 +499,86 @@ def test_set_long_text_columns(rp_logger):
         )
         mock_dataset._set_long_text_columns(df)
     assert mock_dataset.long_text_columns == {"long_text_column"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_handle_missing_values_in_numeric_columns_in_csv_file(rp_logger):
+    rp_logger.info(
+        "Test the process of handling missing values "
+        "in numeric columns in a '.csv' file",
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    data = {
+        "column1": range(1, 101),
+        "column2": range(101, 201),
+        "column3": range(201, 301),
+        "column4": range(301, 401),
+        "column5": [str(i) for i in range(401, 491)] + ["Not available" for i in range(10)]
+    }
+    df = pd.DataFrame(data)
+
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
+        mock_dataset = Dataset(
+            df=df,
+            schema=CSV_SCHEMA,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={
+                "train_config_pickle_path": "mock_path"
+            },
+            main_process="train"
+        )
+        mock_dataset.set_metadata()
+    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
+    rp_logger.info(
+        "Test the process of handling missing values "
+        "in numeric columns in a '.avro' file",
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    data = {
+        "column1": range(1, 101),
+        "column2": range(101, 201),
+        "column3": range(201, 301),
+        "column4": range(301, 401),
+        "column5": [str(i) for i in range(401, 491)] + ["Not available" for i in range(10)]
+    }
+    df = pd.DataFrame(data)
+
+    schema = {
+        "format": "Avro",
+        "fields": {
+            "column1": "int",
+            "column2": "int",
+            "column3": "int",
+            "column4": "int",
+            "column5": "string"
+        }
+    }
+    with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
+        mock_dataset = Dataset(
+            df=df,
+            schema=schema,
+            metadata=metadata,
+            table_name="mock_table",
+            paths={
+                "train_config_pickle_path": "mock_path"
+            },
+            main_process="train"
+        )
+        mock_dataset.set_metadata()
+    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     rp_logger.info(SUCCESSFUL_MESSAGE)

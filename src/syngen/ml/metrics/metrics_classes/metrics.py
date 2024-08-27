@@ -24,7 +24,7 @@ import seaborn as sns
 from slugify import slugify
 from loguru import logger
 
-from syngen.ml.utils import get_nan_labels, nan_labels_to_float, timestamp_to_datetime
+from syngen.ml.utils import timestamp_to_datetime
 matplotlib.use("Agg")
 
 
@@ -36,9 +36,8 @@ class BaseMetric(ABC):
         plot: bool,
         reports_path: str,
     ):
-        columns_nan_labels = get_nan_labels(original)
-        self.original = nan_labels_to_float(original, columns_nan_labels)
-        self.synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
+        self.original = original
+        self.synthetic = synthetic
         self.reports_path = reports_path
         self.plot = plot
         self.value = None
@@ -1093,13 +1092,21 @@ class Utility(BaseMetric):
                 )
             )
 
-        best_categ, score_categ, synth_score_categ = self.__create_multi_class_models(categ_cols)
+        (
+            best_categ,
+            score_categ,
+            synth_score_categ
+        ) = self.__create_multi_class_models(categ_cols)
         (
             best_binary,
             score_binary,
             synth_score_binary,
         ) = self.__create_binary_class_models(binary_cols)
-        best_regres, score_regres, synth_regres_score = self.__create_regression_models(cont_cols)
+        (
+            best_regres,
+            score_regres,
+            synth_regres_score
+        ) = self.__create_regression_models(cont_cols)
 
         result = pd.DataFrame(
             {
@@ -1176,23 +1183,32 @@ class Utility(BaseMetric):
             "as a target and other columns as predictors"
         )
         if best_binary is not None:
+            score = (0 if score_binary == 0 else
+                     round(synth_score_binary/score_binary, 4)
+                     )
             logger.info(log_msg.format(
                 'binary',
-                round(synth_score_binary/score_binary, 4),
+                score,
                 best_binary
                 )
             )
         if best_categ is not None:
+            score = (0 if score_categ == 0 else
+                     round(synth_score_categ/score_categ, 4)
+                     )
             logger.info(log_msg.format(
                 'multiclass',
-                round(synth_score_categ/score_categ, 4),
+                score,
                 best_categ
                 )
             )
         if best_regres is not None:
+            score = (0 if score_regres == 0 else
+                     abs(round(max(0, synth_regres_score) / score_regres, 4))
+                     )
             logger.info(log_msg.format(
                 'regression',
-                abs(round(max(0, synth_regres_score) / score_regres, 4)),
+                score,
                 best_regres
                 )
             )
@@ -1272,7 +1288,7 @@ class Utility(BaseMetric):
                 logger.info(
                     f"The best score for all possible {task_type} models "
                     f"for the original data is "
-                    f"{best_score}, which is below 0.6. "
+                    f"{round(best_score, 4)}, which is below 0.6. "
                     f"The utility metric is unreliable"
                 )
             synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
