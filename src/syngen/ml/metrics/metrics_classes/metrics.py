@@ -268,32 +268,65 @@ class Correlations(BaseMetric):
             )
         )
         self.corr_score = self.original_heatmap - self.synthetic_heatmap
-        self.corr_score = self.corr_score.dropna(how="all").dropna(how="all", axis=1)
+        self.corr_score = (
+            self.corr_score
+            .dropna(how="all")
+            .dropna(how="all", axis=1)
+        )
+
+        # check if there are any nans left in corr_score
+        if self.corr_score.isna().values.any():
+            # mask for NaNs in both original_heatmap and synthetic_heatmap
+            nan_mask = (
+                np.isnan(self.original_heatmap) &
+                np.isnan(self.synthetic_heatmap)
+            )
+
+            # Set the NaN values in corr_score to 0 where both
+            # original_heatmap and synthetic_heatmap have NaNs
+            self.corr_score[nan_mask] = 0
 
         if self.plot:
-            plt.clf()
-            sns.set(rc={"figure.figsize": self.corr_score.shape}, font_scale=2)
-            heatmap = sns.heatmap(
-                self.corr_score,
-                annot=False,
-                cmap=self.cmap,
-                vmin=0.0,
-                vmax=1.0,
-                center=0.5,
-                square=True,
-            )
+            self.__create_correlation_heatmap()
 
-            heatmap.figure.tight_layout()
-            plt.savefig(
-                f"{self.reports_path}/correlations_heatmap.svg",
-                bbox_inches="tight",
-                format="svg",
-            )
         return np.median(self.corr_score)
+
+    def __create_correlation_heatmap(self):
+        plt.clf()
+        # workaround for the issue not showing annotations for NaN values
+        # change NaN values to 2 that is not in the range 0-1
+        corr_score = self.corr_score.fillna(2)
+        # set mask for NaN values
+        nan_mask = corr_score == 2
+        # Color for values over vmax
+        self.cmap.set_over('gray')
+
+        # annotation matrix where 'NaN' is placed where the data is NaN
+        annotations = np.where(nan_mask, 'NaN', '')
+
+        sns.set(rc={"figure.figsize": self.corr_score.shape}, font_scale=2)
+        heatmap = sns.heatmap(
+            corr_score,
+            annot=annotations,
+            cmap=self.cmap,
+            vmin=0.0,
+            vmax=1.0,
+            center=0.5,
+            square=True,
+            fmt='s',
+            annot_kws={'color': 'white'}
+        )
+
+        heatmap.figure.tight_layout()
+        plt.savefig(
+            f"{self.reports_path}/correlations_heatmap.svg",
+            bbox_inches="tight",
+            format="svg",
+        )
 
     @staticmethod
     def __calculate_correlations(data):
-        return abs(data.corr())
+        return abs(data.corr(method="spearman"))
 
 
 class BivariateMetric(BaseMetric):
