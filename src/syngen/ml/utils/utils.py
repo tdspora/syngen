@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 from dateutil import parser
 from datetime import datetime, timedelta
 
@@ -201,25 +201,33 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
         if (float_val is not None) and (not np.isnan(float_val)) and len(str_values) == 1:
             nan_label = str_values[0]
             columns_nan_labels[column] = nan_label
+        elif (float_val is not None) and (not np.isnan(float_val)) and not str_values:
+            columns_nan_labels[column] = None
 
     return columns_nan_labels
 
 
-def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFrame:
+def nan_labels_to_float(
+    df: pd.DataFrame,
+    columns_nan_labels: dict,
+    exclude_columns: set = set()
+) -> pd.DataFrame:
     """
-    Replace str nan labels in float/int columns with actual np.nan
+    Replace str nan labels in float/int columns with actual np.NaN
     and casting the column to float type.
-
-    Args:
-        df (pd.DataFrame): table data
-
-    Returns:
-        pd.DataFrame: DataFrame with str NaN labels in float/int columns replaced with np.nan
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
-        df_with_nan[column].replace(label, np.NaN, inplace=True)
-        df_with_nan[column] = df_with_nan[column].astype(float)
+        if column not in exclude_columns:
+            df_with_nan[column].replace(label, np.NaN, inplace=True)
+            df_with_nan[column] = df_with_nan[column].astype(float)
+
+            logger.info(
+                f"Column '{column}' contains unique "
+                f"non-numeric value: '{label}'. "
+                "It will be treated as null label "
+                "and replaced with nulls."
+            )
 
     return df_with_nan
 
@@ -335,12 +343,13 @@ def set_log_path(type_of_process: str, table_name: Optional[str], metadata_path:
     """
     Set the log path for storing the logs of main processes
     """
-    os.makedirs("model_artifacts/tmp_store", exist_ok=True)
+    logs_dir_name = "model_artifacts/tmp_store/logs"
+    os.makedirs(logs_dir_name, exist_ok=True)
     unique_name = fetch_unique_root(table_name, metadata_path)
     unique_name = f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     file_name_without_extension = f"logs_{type_of_process}_{unique_name}"
     file_path = os.path.join(
-        "model_artifacts/tmp_store", f"{slugify(file_name_without_extension)}.log"
+        logs_dir_name, f"{slugify(file_name_without_extension)}.log"
     )
     os.environ["SUCCESS_LOG_FILE"] = file_path
 
