@@ -898,6 +898,7 @@ class Clustering(BaseMetric):
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
         row_limit = min(len(self.original), len(self.synthetic))
+        print(f"row_limit: {row_limit}")
         self.merged = (
             pd.concat(
                 [
@@ -909,6 +910,8 @@ class Clustering(BaseMetric):
             .dropna()
             .reset_index()
         )
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"len(self.merged): {len(self.merged)}")
         if len(self.merged) == 0:
             logger.warning("No clustering metric will be formed due to empty DataFrame")
             return None
@@ -920,6 +923,7 @@ class Clustering(BaseMetric):
 
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
+        print(f"statistics: \n {statistics}")
         self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
 
         if self.plot:
@@ -983,6 +987,8 @@ class Clustering(BaseMetric):
         clusters = KMeans(n_clusters=n, random_state=10).fit(self.merged_transformed)
         labels = clusters.labels_
         rows_labels = pd.DataFrame({"origin": self.merged["level_0"], "cluster": labels})
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"rows_labels: \n {rows_labels}")
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
 
 

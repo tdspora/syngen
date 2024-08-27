@@ -186,8 +186,6 @@ class AccuracyTest(BaseTest):
         utility_result = self.utility.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
-        logger.info(f"Median clusters homogeneity is {clustering_result}")
-        self.update_progress_bar("The utility metric has been calculated", delta)
 
         return (
             acc_median,
