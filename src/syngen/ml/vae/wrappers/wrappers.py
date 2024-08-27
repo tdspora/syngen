@@ -22,6 +22,7 @@ from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import (
+    generate_uuid,
     fetch_config,
     check_if_features_assigned,
     ProgressBarHandler
@@ -69,7 +70,6 @@ class VAEWrapper(BaseWrapper):
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
-
     def __post_init__(self):
         if self.process == "train":
             self._prepare_dir()
@@ -105,7 +105,7 @@ class VAEWrapper(BaseWrapper):
 
     @staticmethod
     def _prepare_dir():
-        os.makedirs(f"model_artifacts/tmp_store/losses", exist_ok=True)
+        os.makedirs("model_artifacts/tmp_store/losses", exist_ok=True)
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
@@ -409,7 +409,9 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            log_message = f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            log_message = (
+                f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
+            )
             logger.info(log_message)
 
             ProgressBarHandler().set_progress(
@@ -507,8 +509,17 @@ class VAEWrapper(BaseWrapper):
 
     def predict_sampled_df(self, n: int) -> pd.DataFrame:
         sampled_df = self.vae.sample(n)
+
+        # uuid columns are generated here to restore nan values
+        uuid_columns = self.dataset.uuid_columns
+        if uuid_columns:
+            sampled_df = generate_uuid(n, self.dataset,
+                                       uuid_columns, sampled_df)
+
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)
+        sampled_df = self._restore_nan_labels(sampled_df)
+
         return sampled_df
 
     def predict_less_likely_samples(self, df: pd.DataFrame, n: int, temp=0.05, variaty=3):

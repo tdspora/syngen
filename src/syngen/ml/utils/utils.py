@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 from dateutil import parser
 from datetime import datetime, timedelta
 
@@ -97,7 +97,10 @@ def datetime_to_timestamp(dt, date_format):
             return MIN_ALLOWED_TIME_MS
 
 
-def timestamp_to_datetime(timestamp):
+def timestamp_to_datetime(timestamp, delta=False):
+    """
+    Convert the timestamp to the datetime object or timedelta object
+    """
     # Calculate the number of seconds in the UNIX epoch and the number of seconds left
     if pd.isnull(timestamp):
         return np.nan
@@ -114,12 +117,13 @@ def timestamp_to_datetime(timestamp):
     epoch_datetime = datetime(1970, 1, 1)
 
     # Calculate the timedelta for the number of seconds in the UNIX epoch
-    epoch_timedelta = timedelta(seconds=seconds_since_epoch)
+    delta_of_time = timedelta(seconds=seconds_since_epoch) + timedelta(seconds=remaining_seconds)
 
-    # Add the timedelta to the epoch datetime, and add the remaining fraction of a second
-    result_datetime = epoch_datetime + epoch_timedelta + timedelta(seconds=remaining_seconds)
+    if delta:
+        return delta_of_time
 
-    return result_datetime
+    else:
+        return epoch_datetime + delta_of_time
 
 
 def generate_uuids(version: Union[int, str], size: int):
@@ -197,25 +201,33 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
         if (float_val is not None) and (not np.isnan(float_val)) and len(str_values) == 1:
             nan_label = str_values[0]
             columns_nan_labels[column] = nan_label
+        elif (float_val is not None) and (not np.isnan(float_val)) and not str_values:
+            columns_nan_labels[column] = None
 
     return columns_nan_labels
 
 
-def nan_labels_to_float(df: pd.DataFrame, columns_nan_labels: dict) -> pd.DataFrame:
+def nan_labels_to_float(
+    df: pd.DataFrame,
+    columns_nan_labels: dict,
+    exclude_columns: set = set()
+) -> pd.DataFrame:
     """
-    Replace str nan labels in float/int columns with actual np.nan
+    Replace str nan labels in float/int columns with actual np.NaN
     and casting the column to float type.
-
-    Args:
-        df (pd.DataFrame): table data
-
-    Returns:
-        pd.DataFrame: DataFrame with str NaN labels in float/int columns replaced with np.nan
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
-        df_with_nan[column].replace(label, np.NaN, inplace=True)
-        df_with_nan[column] = df_with_nan[column].astype(float)
+        if column not in exclude_columns:
+            df_with_nan[column].replace(label, np.NaN, inplace=True)
+            df_with_nan[column] = df_with_nan[column].astype(float)
+
+            logger.info(
+                f"Column '{column}' contains unique "
+                f"non-numeric value: '{label}'. "
+                "It will be treated as null label "
+                "and replaced with nulls."
+            )
 
     return df_with_nan
 
