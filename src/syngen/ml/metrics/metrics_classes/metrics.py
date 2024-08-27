@@ -910,21 +910,26 @@ class Clustering(BaseMetric):
             .dropna()
             .reset_index()
         )
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"len(self.merged): {len(self.merged)}")
         if len(self.merged) == 0:
             logger.warning("No clustering metric will be formed due to empty DataFrame")
             return None
         self.__preprocess_data()
         optimal_clust_num = self.__automated_elbow()
-
-        def diversity(x):
-            return min(x) / max(x)
-
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
-        print(f"statistics: \n {statistics}")
-        self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
+
+        def diversity(x):
+            """
+            Calculate the diversity score for each cluster.
+            If in cluster only one dataset is present, return 0.
+            """
+            if x['dataset'].nunique() == 2:
+                return min(x['count']) / max(x['count'])
+            else:
+                return 0
+
+        diversity_scores = statistics.groupby('cluster').apply(diversity)
+        self.mean_score = diversity_scores.mean()
 
         if self.plot:
             plt.clf()
@@ -955,7 +960,7 @@ class Clustering(BaseMetric):
                 bbox_inches="tight",
                 format="svg",
             )
-        return self.mean_score.values[0]
+        return self.mean_score
 
     def __automated_elbow(self):
         result_table = {"cluster_num": [], "metric": []}
@@ -987,8 +992,7 @@ class Clustering(BaseMetric):
         clusters = KMeans(n_clusters=n, random_state=10).fit(self.merged_transformed)
         labels = clusters.labels_
         rows_labels = pd.DataFrame({"origin": self.merged["level_0"], "cluster": labels})
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"rows_labels: \n {rows_labels}")
+
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
 
 
