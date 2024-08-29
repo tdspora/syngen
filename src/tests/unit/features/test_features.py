@@ -65,6 +65,7 @@ def test_inverse_transform_of_char_based_text_feature(rp_logger):
     assert np.all(np.array([len(i) for i in result]) == 4)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
 def test_top_k_filtering(rp_logger):
     rp_logger.info(
         "Testing the method '_top_k_filtering' of the class CharBasedTextFeature"

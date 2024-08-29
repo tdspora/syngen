@@ -348,7 +348,7 @@ class Dataset(BaseDataset):
         """
         removed = [
             col
-            for col, data_type in self.schema.get("fields", {}).items()
+            for col, data_type in self.schema.items()
             if data_type == "removed"
         ]
         for col in list(self.categ_columns):
@@ -455,8 +455,7 @@ class Dataset(BaseDataset):
             [
                 col
                 for col in self.df.columns
-                if self.df[col].dropna().nunique() <= 50
-                   and col not in self.binary_columns
+                if self.df[col].dropna().nunique() <= 50 and col not in self.binary_columns
             ]
         )
         self.categ_columns.update(defined_columns)
@@ -474,7 +473,7 @@ class Dataset(BaseDataset):
         else:
             text_columns = [
                 col
-                for col, data_type in self.schema.get("fields", {}).items()
+                for col, data_type in self.schema.items()
                 if data_type == "string"
             ]
         return text_columns
@@ -604,7 +603,7 @@ class Dataset(BaseDataset):
     def __handle_nan_label_in_uuid(self, x, non_uuid_values):
         """
         Replaces the unique non-UUID/ULID value with NaNs
-        Updates the nan_labels_in_uuid dictionary and 
+        Updates the nan_labels_in_uuid dictionary and
         adds it to nan_labels_dict dict
         """
         unique_non_uuid = next(iter(non_uuid_values))
