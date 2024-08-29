@@ -90,6 +90,7 @@ class BaseDataset:
         ).columns
         self.format = self.metadata[self.table_name].get("format", {})
         self.nan_labels_dict = dict()
+        self.nan_labels_in_uuid = dict()
 
 
 class Dataset(BaseDataset):
@@ -112,7 +113,6 @@ class Dataset(BaseDataset):
         )
         self.nan_labels_dict = get_nan_labels(self.df.drop(columns=self.categ_columns))
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
-        self._pipeline()
 
     def __getstate__(self) -> Dict:
         """
@@ -317,16 +317,16 @@ class Dataset(BaseDataset):
             self.__set_uq_keys(config_of_keys)
             self.__set_fk_keys(config_of_keys)
 
-    def _pipeline(self):
+    def launch_detection(self):
         table_config = self.metadata.get(self.table_name, {})
         self._set_non_existent_columns(table_config)
         self._update_metadata(table_config)
         self._update_schema()
         self.__set_metadata()
-        self._common_pipeline()
-        self.__data_pipeline()
+        self._common_detection()
+        self.__detection_pipeline()
 
-    def _common_pipeline(self):
+    def _common_detection(self):
         """
         Identify and classify data types within the dataset, including
         binary columns, categorical columns, UUID columns, long text columns,
@@ -550,9 +550,11 @@ class Dataset(BaseDataset):
         """
         Check if uuid_to_test is a valid ULID (https://github.com/ulid/spec)
         """
+        # ULID pattern check using regex
+        if not re.match(r'^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$', uuid):
+            return
         try:
             ulid_timestamp = uuid[:10]
-            assert len(uuid) == 26
             ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
             datetime.fromtimestamp(ulid_timestamp_int / 1000.0)
             return "ulid"
@@ -562,20 +564,72 @@ class Dataset(BaseDataset):
     def _is_valid_uuid(self, x):
         """
         Check if uuid_to_test is a valid UUID
+        If there are no NaNs and single non UUID/ULID value,
+        it is treated as nan_label and set as NaN.
         """
         result = []
-        for i in x.dropna():
+        non_uuid_values = set()
+        contain_nan = x.isnull().sum() > 0
+
+        for i in x.dropna().unique():
+            is_uuid = False
             for v in [1, 2, 3, 4, 5]:
                 try:
                     uuid_obj = UUID(i, version=v)
                     if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
                         result.append(v)
+                        is_uuid = True
+                        break
                 except (ValueError, AttributeError, TypeError):
-                    result.append(self._is_valid_ulid(i))
+                    continue
+
+            if not is_uuid:
+                ulid_result = self._is_valid_ulid(i)
+                if ulid_result:
+                    result.append(ulid_result)
+                else:
+                    non_uuid_values.add(i)
+
         if result:
-            return max(set(result), key=result.count)
+            most_common_uuid_type = (
+                max(set(result), key=result.count)
+            )
+
+            if not non_uuid_values:
+                return most_common_uuid_type
+
+            if not contain_nan and len(non_uuid_values) == 1:
+                self.__handle_nan_label_in_uuid(x, non_uuid_values)
+                return most_common_uuid_type
+
+            if len(non_uuid_values) > 1 or (contain_nan and non_uuid_values):
+                warning_msg = f"Column '{x.name}' contains UUID/ULID values"
+                if len(non_uuid_values) >= 1:
+                    warning_msg += f", and non-UUID/ULID value/s {non_uuid_values}"
+                if contain_nan:
+                    warning_msg += ", and null value/s"
+                warning_msg += ". The column will be treated as a text column."
+                logger.warning(warning_msg)
+                return
         else:
-            return 0
+            return
+
+    def __handle_nan_label_in_uuid(self, x, non_uuid_values):
+        """
+        Replaces the unique non-UUID/ULID value with NaNs
+        Updates the nan_labels_in_uuid dictionary and
+        adds it to nan_labels_dict dict
+        """
+        unique_non_uuid = next(iter(non_uuid_values))
+
+        logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
+                    f"value '{unique_non_uuid}'. It will be treated "
+                    f"as a null label and replaced with nulls."
+                    )
+        self.nan_labels_in_uuid[x.name] = unique_non_uuid
+        self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
+        # update the nan_labels_dict with nan_labels_in_uuid
+        self.nan_labels_dict.update(self.nan_labels_in_uuid)
 
     def _set_uuid_columns(self):
         """
@@ -587,6 +641,7 @@ class Dataset(BaseDataset):
 
         if not data_subset.empty:
             data_subset = data_subset.apply(self._is_valid_uuid)
+
             self.uuid_columns_types = dict(data_subset[data_subset.isin([1, 2, 3, 4, 5, "ulid"])])
             self.uuid_columns = set(self.uuid_columns_types.keys())
 
@@ -693,7 +748,7 @@ class Dataset(BaseDataset):
             for column in self.date_columns
         }
 
-    def _general_data_pipeline(self):
+    def _csv_data_pipeline(self):
         """
         Divide columns in dataframe into groups -
         binary, categorical, integer, float, string, date
@@ -745,7 +800,7 @@ class Dataset(BaseDataset):
         self.int_columns = set(
             column for column, data_type in self.fields.items() if data_type == "int"
         )
-        self.int_columns = self.int_columns - self.categ_columns - self.binary_columns
+        self.int_columns = (self.int_columns - self.categ_columns - self.binary_columns)
         self.float_columns = set(
             column for column, data_type in self.fields.items() if data_type == "float"
         )
@@ -770,9 +825,9 @@ class Dataset(BaseDataset):
         }
         self._set_date_format()
 
-    def __data_pipeline(self):
+    def __detection_pipeline(self):
         if self.schema_format == "CSV":
-            self._general_data_pipeline()
+            self._csv_data_pipeline()
         elif self.schema_format == "Avro":
             self._avro_data_pipeline()
 
@@ -798,8 +853,6 @@ class Dataset(BaseDataset):
             + f"Count of long text columns: {len(self.long_text_columns)}; "
             + f"Count of uuid columns: {len(self.uuid_columns)}"
         )
-        for column in self.uuid_columns:
-            logger.info(f"Column '{column}' defined as UUID column")
 
     def assign_feature(self, feature, columns):
         name = feature.original_name
@@ -1143,6 +1196,16 @@ class Dataset(BaseDataset):
                             ContinuousFeature(features[1], column_type=int), features[1]
                         )
 
+    def _assign_uuid_null_feature(self, feature):
+        """
+        Assign corresponding to uuid column null column and preprocess if required.
+        """
+        features = self._preprocess_nan_cols(feature, fillna_strategy="")
+        if len(features) == 2:
+            self.null_num_column_names.append(features[1])
+            self.assign_feature(ContinuousFeature(features[1]), features[1])
+            logger.info(f"Column '{features[1]}' assigned as float feature")
+
     def pipeline(self) -> pd.DataFrame:
         if self.foreign_keys_list:
             self._assign_fk_feature()
@@ -1170,7 +1233,9 @@ class Dataset(BaseDataset):
                 self._assign_date_feature(column)
             elif column in self.binary_columns:
                 self._assign_binary_feature(column)
-
+            elif column in self.uuid_columns:
+                logger.info(f"Column '{column}' defined as UUID column")
+                self._assign_uuid_null_feature(column)
         self.fit()
 
         # The end of the run related to the preprocessing stage
