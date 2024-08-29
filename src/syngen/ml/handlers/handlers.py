@@ -255,8 +255,9 @@ class VaeInferHandler(BaseHandler):
         """
         Load the data from the input data path
         """
-        if DataLoader(self.paths["input_data_path"]).has_existed_path:
-            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        data_loader = DataLoader(self.paths["input_data_path"])
+        if data_loader.has_existed_path:
+            data, schema = data_loader.load_data()
         elif self.loader:
             data, schema = DataFrameFetcher(
                 loader=self.loader,
