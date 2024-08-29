@@ -6,7 +6,6 @@ import string
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
-import pandavro as pdx
 
 from syngen.ml.vae.models.dataset import Dataset
 from syngen.ml.data_loaders import DataLoader
@@ -35,7 +34,10 @@ AVRO_SCHEMA = {
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.csv",
     ],
 )
-def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_table, rp_logger):
+def test_is_valid_uuid_defined_in_csv_table_without_missing_values(
+    path_to_test_table,
+    rp_logger
+):
     rp_logger.info(
         "Test the process of the detection of UUID columns in the table in csv format"
     )
@@ -51,7 +53,7 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
             },
             main_process="train"
         )
-        mock_dataset.set_metadata()
+        mock_dataset._set_uuid_columns()
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
             "UUIDv2",
@@ -74,11 +76,14 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
 @pytest.mark.parametrize(
     "path_to_test_table",
     [
-        "/home/Hanna_Imshenetska@epam.com/pycharm/syngen/src/tests/unit/dataset/fixtures/table_with_diff_uuid_columns.avro",
-        # "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.avro",
+        "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns.avro",
+        "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.avro",
     ],
 )
-def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test_table, rp_logger):
+def test_is_valid_uuid_defined_in_avro_table_without_missing_values(
+    path_to_test_table,
+    rp_logger
+):
     rp_logger.info(
         "Test the process of the detection of UUID columns in the table in avro format"
     )
@@ -94,7 +99,7 @@ def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test
             },
             main_process="train"
         )
-        mock_dataset.set_metadata()
+        mock_dataset._set_uuid_columns()
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
             "UUIDv2",

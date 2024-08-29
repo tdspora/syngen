@@ -162,8 +162,8 @@ class AccuracyTest(BaseTest):
 
         self.update_progress_bar("Generation of the accuracy heatmap...")
         self.acc.calculate_all(kwargs["categ_columns"])
-        acc_median = self.acc.calculate_heatmap_median(self.acc.heatmap)
-        logger.info(f"Median accuracy is {'%.4f' % acc_median}")
+        acc_median = round(self.acc.calculate_heatmap_median(self.acc.heatmap), 4)
+        logger.info(f"Median accuracy is {acc_median}")
         self.update_progress_bar("The accuracy heatmap has been generated", delta)
 
         uni_images = dict()
@@ -190,13 +190,13 @@ class AccuracyTest(BaseTest):
         corr_result = self.correlations.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
-        corr_result = int(corr_result) if corr_result == 0 else abs(corr_result)
-        logger.info(f"Median of differences of correlations is {round(corr_result, 4)}")
+        corr_result = round(int(corr_result) if corr_result == 0 else abs(corr_result), 4)
+        logger.info(f"Median of differences of correlations is {corr_result}")
         self.update_progress_bar("The correlations heatmap has been generated", delta)
 
         self.update_progress_bar("Generation of the clustering metric...")
-        clustering_result = self.clustering.calculate_all(
-            kwargs["categ_columns"], kwargs["cont_columns"]
+        clustering_result = round(
+            self.clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"]), 4
         )
         logger.info(f"Median clusters homogeneity is {clustering_result}")
         self.update_progress_bar("The clustering metric has been calculated", delta)
@@ -205,7 +205,6 @@ class AccuracyTest(BaseTest):
         utility_result = self.utility.calculate_all(
             kwargs["categ_columns"], kwargs["cont_columns"]
         )
-        logger.info(f"Median clusters homogeneity is {'%.4f' % clustering_result}")
         self.update_progress_bar("The utility metric has been calculated", delta)
 
         return (
@@ -292,8 +291,8 @@ class AccuracyTest(BaseTest):
                 "Utility_avg": utility_result["Synth to orig ratio"].mean(),
                 "Clustering": clustering_result if clustering_result is not None
                 else np.NaN,
-                "Accuracy": round(acc_median, 4),
-                "Correlation": round(corr_result, 4),
+                "Accuracy": acc_median,
+                "Correlation": corr_result,
             }
         )
 
