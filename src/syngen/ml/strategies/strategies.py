@@ -86,6 +86,7 @@ class TrainStrategy(Strategy, ABC):
             metadata=self.metadata,
             table_name=self.config.table_name,
             paths=self.config.paths,
+            loader=self.config.loader
         )
 
         vae_handler = VaeTrainHandler(
@@ -203,6 +204,7 @@ class InferStrategy(Strategy):
             get_infer_metrics=self.config.get_infer_metrics,
             log_level=self.config.log_level,
             type_of_process=type_of_process,
+            loader=self.config.loader
         )
         return self
 
@@ -216,6 +218,7 @@ class InferStrategy(Strategy):
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
+                loader=self.config.loader
             )
             Report().register_reporter(table=table_name, reporter=accuracy_reporter)
 
@@ -239,6 +242,7 @@ class InferStrategy(Strategy):
                 get_infer_metrics=kwargs["get_infer_metrics"],
                 log_level=kwargs["log_level"],
                 both_keys=kwargs["both_keys"],
+                loader=kwargs["loader"]
             )
 
             MlflowTracker().log_params(self.config.to_dict())

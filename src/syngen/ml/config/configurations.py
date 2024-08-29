@@ -157,7 +157,14 @@ class TrainConfig:
         """
         Preprocess data and set the parameter "row_subset" for training process
         """
-        if self.drop_null:
+        if self.loader:
+            if self.drop_null or self.row_limit is not None:
+                logger.warning(
+                    f"The {'drop_null' if self.drop_null else 'row_limit'} parameter "
+                    "will be ignored because the retrieval of the data "
+                    "is handled by a callback function."
+                )
+        if self.drop_null and not self.loader:
             if not data.dropna().empty:
                 initial_data = data
                 data = data.dropna()
@@ -174,7 +181,7 @@ class TrainConfig:
                     "so it will be ignored"
                 )
 
-        if self.row_limit:
+        if self.row_limit and not self.loader:
             self.row_subset = min(self.row_limit, len(data))
 
             data = data.sample(n=self.row_subset)
@@ -206,7 +213,8 @@ class TrainConfig:
         Preprocess and save the data necessary for the training process
         """
         data = self._preprocess_data(data)
-        self._save_input_data(data)
+        if not self.loader:
+            self._save_input_data(data)
 
     @slugify_attribute(table_name="slugify_table_name")
     def _get_paths(self) -> Dict:
@@ -259,6 +267,7 @@ class InferConfig:
     get_infer_metrics: bool
     both_keys: bool
     log_level: str
+    loader: Optional[Callable[[str], pd.DataFrame]]
     slugify_table_name: str = field(init=False)
 
     def __post_init__(self):
@@ -287,7 +296,10 @@ class InferConfig:
         """
         if (
                 (self.print_report or self.get_infer_metrics)
-                and not DataLoader(self.paths["input_data_path"]).has_existed_path
+                and (
+                    not DataLoader(self.paths["input_data_path"]).has_existed_path
+                    and not self.loader
+                )
         ):
             message = (
                 f"It seems that the path to original data "
@@ -317,8 +329,14 @@ class InferConfig:
         """
         Set up "size" of generated data
         """
-        if self.size is None and DataLoader(self.paths["input_data_path"]).has_existed_path:
-            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        if self.size is None:
+            if DataLoader(self.paths["input_data_path"]).has_existed_path:
+                data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+            elif self.loader:
+                data, schema = DataFrameFetcher(
+                    loader=self.loader,
+                    table_name=self.table_name
+                ).fetch_data()
             self.size = len(data)
 
     def _set_up_batch_size(self):

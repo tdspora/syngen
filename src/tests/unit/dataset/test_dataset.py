@@ -50,7 +50,6 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
             },
             main_process="train"
         )
-        mock_dataset.set_metadata()
         mock_dataset._set_uuid_columns()
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
@@ -497,7 +496,7 @@ def test_set_long_text_columns(rp_logger):
             },
             main_process="train"
         )
-        mock_dataset._set_long_text_columns(df)
+        mock_dataset._set_long_text_columns()
     assert mock_dataset.long_text_columns == {"long_text_column"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

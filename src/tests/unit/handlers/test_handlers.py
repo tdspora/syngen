@@ -56,6 +56,7 @@ def test_get_pk_path(
             wrapper_name="MMDVAEWrapper",
             log_level="INFO",
             type_of_process=type_of_process,
+            loader=None
         )
         assert handler._get_pk_path("parent_table", "child_table") == expected_path
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -103,6 +104,7 @@ def test_split_by_batches(
         wrapper_name="MMDVAEWrapper",
         log_level="INFO",
         type_of_process="infer",
+        loader=None
         )
     handler.batch_num = math.ceil(handler.size / handler.batch_size)
     assert handler.split_by_batches() == expected_result

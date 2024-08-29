@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Dict, List
+from typing import Tuple, Optional, Dict, List, Callable
 from abc import ABC, abstractmethod
 import os
 import math
@@ -76,8 +76,17 @@ class BaseHandler(AbstractHandler):
 
 @dataclass
 class RootHandler(BaseHandler):
+    loader: Optional[Callable[[str], pd.DataFrame]] = None
+
     def handle(self, **kwargs):
-        data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        data_loader = DataLoader(self.paths["input_data_path"])
+        if data_loader.has_existed_path:
+            data, schema = data_loader.load_data()
+        elif self.loader:
+            data, schema = DataFrameFetcher(
+                loader=self.loader,
+                table_name=self.table_name
+            ).fetch_data()
         return super().handle(data, **kwargs)
 
 
@@ -209,6 +218,7 @@ class VaeInferHandler(BaseHandler):
     wrapper_name: str
     log_level: str
     type_of_process: str
+    loader: Optional[Callable[[str], pd.DataFrame]]
     random_seed_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)  # noqa: F405
     has_vae: bool = field(init=False)
@@ -245,10 +255,13 @@ class VaeInferHandler(BaseHandler):
         """
         Load the data from the input data path
         """
-        input_data_existed = DataLoader(self.paths["input_data_path"]).has_existed_path
-
-        if input_data_existed:
+        if DataLoader(self.paths["input_data_path"]).has_existed_path:
             data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        elif self.loader:
+            data, schema = DataFrameFetcher(
+                loader=self.loader,
+                table_name=self.table_name
+            ).fetch_data()
         else:
             data = pd.DataFrame()
             schema = None
