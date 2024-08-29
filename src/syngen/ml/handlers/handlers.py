@@ -18,11 +18,10 @@ from slugify import slugify
 from loguru import logger
 
 from syngen.ml.vae import *  # noqa: F403
-from syngen.ml.data_loaders import DataLoader
+from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
-    generate_uuid,
     get_initial_table_name,
     ProgressBarHandler
 )
