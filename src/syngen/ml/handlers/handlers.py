@@ -22,7 +22,6 @@ from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
-    generate_uuid,
     get_initial_table_name,
     ProgressBarHandler
 )
@@ -357,7 +356,7 @@ class VaeInferHandler(BaseHandler):
                 )
 
             frames = pool.map(
-                self.run_separate, enumerate(self.split_by_batches(size, pool.nodes))
+                self.run_separate, enumerate(self.split_by_batches())
             )
             generated = self._concat_slices_with_unique_pk(frames)
         else:
