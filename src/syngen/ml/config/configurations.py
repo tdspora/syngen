@@ -158,12 +158,15 @@ class TrainConfig:
         Preprocess data and set the parameter "row_subset" for training process
         """
         if self.loader:
-            if self.drop_null or self.row_limit is not None:
-                logger.warning(
-                    f"The {'drop_null' if self.drop_null else 'row_limit'} parameter "
-                    "will be ignored because the retrieval of the data "
-                    "is handled by a callback function."
-                )
+            warning_message = (
+                "parameter will be ignored because the retrieval of the data "
+                "is handled by a callback function"
+            )
+            if self.drop_null:
+                logger.warning(f"The 'drop_null' {warning_message}")
+            if self.row_limit is not None:
+                logger.warning(f"The 'row_limit' {warning_message}")
+
         if self.drop_null and not self.loader:
             if not data.dropna().empty:
                 initial_data = data
