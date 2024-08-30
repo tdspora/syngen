@@ -318,6 +318,9 @@ class Dataset(BaseDataset):
             self.__set_fk_keys(config_of_keys)
 
     def launch_detection(self):
+        self._launch_detection()
+
+    def _launch_detection(self):
         table_config = self.metadata.get(self.table_name, {})
         self._set_non_existent_columns(table_config)
         self._update_metadata(table_config)

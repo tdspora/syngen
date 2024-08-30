@@ -162,13 +162,13 @@ class CSVLoader(BaseDataLoader):
 
         return params
 
-    def __load_data(self, **params):
+    def _fetch_data(self, **params):
         return pd.read_csv(self.path, **params).apply(trim_string, axis=0)
 
     def _load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         params = CSVLoader._get_csv_params(**kwargs)
         try:
-            df = self.__load_data(**params)
+            df = self._fetch_data(**params)
             if all([isinstance(column, int) for column in df.columns]):
                 df.rename(
                     columns={
@@ -215,7 +215,7 @@ class CSVLoader(BaseDataLoader):
             )
             raise error
 
-    def __save_data(self, df, **kwargs):
+    def _write_data(self, df, **kwargs):
         """
         Save the dataframe in '.csv' format
         """
@@ -263,7 +263,7 @@ class CSVLoader(BaseDataLoader):
                     "the first value from the 'na_values' parameter"
                 )
 
-            self.__save_data(df, **filtered_kwargs)
+            self._write_data(df, **filtered_kwargs)
 
     def save_data(self, df: pd.DataFrame, **kwargs):
         self._save_data(df, **kwargs)
@@ -493,7 +493,7 @@ class ExcelLoader(BaseDataLoader):
             if k in ExcelFormatSettingsSchema._declared_fields.keys()
         }
 
-    def __load_data(self) -> pd.DataFrame:
+    def _fetch_data(self) -> pd.DataFrame:
         return pd.read_excel(self.path, sheet_name=self.sheet_name)
 
     def _load_data(self) -> Tuple[pd.DataFrame, Dict]:
@@ -501,7 +501,7 @@ class ExcelLoader(BaseDataLoader):
         Load data in Excel format
         """
         try:
-            df = self.__load_data()
+            df = self._fetch_data()
             if isinstance(self.sheet_name, list) or self.sheet_name is None:
                 dfs = [df for sheet_name, df in df.items()]
                 df = pd.concat(dfs, ignore_index=True)
