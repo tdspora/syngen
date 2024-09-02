@@ -302,6 +302,7 @@ def test_check_non_existent_columns(rp_logger):
     "initial_date_format, expected_date_format",
     [
         ("%m-%d-%Y", "%m-%d-%Y"),
+        ("%d-%m-%y", "%d-%m-%Y"),
         ("%d-%m-%Y", "%d-%m-%Y"),
         ("%m/%d/%Y", "%m/%d/%Y"),
         ("%d/%m/%Y", "%d/%m/%Y"),
