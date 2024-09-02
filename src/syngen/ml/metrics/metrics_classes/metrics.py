@@ -7,6 +7,7 @@ import random
 
 import tqdm
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
@@ -898,6 +899,7 @@ class Clustering(BaseMetric):
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
         row_limit = min(len(self.original), len(self.synthetic))
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         print(f"row_limit: {row_limit}")
         self.merged = (
             pd.concat(
@@ -914,9 +916,11 @@ class Clustering(BaseMetric):
             logger.warning("No clustering metric will be formed due to empty DataFrame")
             return None
         self.__preprocess_data()
-        optimal_clust_num = self.__automated_elbow()
+        optimal_clust_num = self.__automated_silhouette()
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"statistics: \n {statistics}")
 
         def diversity(x):
             """
@@ -962,24 +966,22 @@ class Clustering(BaseMetric):
             )
         return self.mean_score
 
-    def __automated_elbow(self):
-        result_table = {"cluster_num": [], "metric": []}
+    def __automated_silhouette(self):
+        result_table = {"cluster_num": [], "silhouette_score": []}
         max_clusters = min(10, len(self.merged_transformed))
+
         for i in range(2, max_clusters):
-            clusters = KMeans(n_clusters=i, random_state=10).fit(self.merged_transformed)
-            metric = clusters.inertia_
+            clusters = KMeans(n_clusters=i, random_state=10).fit(
+                self.merged_transformed
+            )
+            labels = clusters.labels_
+            score = silhouette_score(self.merged_transformed, labels)
             result_table["cluster_num"].append(i)
-            result_table["metric"].append(metric)
+            result_table["silhouette_score"].append(score)
 
         result_table = pd.DataFrame(result_table)
-        result_table["d1"] = np.concatenate([[np.nan], np.diff(result_table["metric"])])
-        result_table["d2"] = np.concatenate([[np.nan], np.diff(result_table["d1"])])
-        result_table["certainty"] = result_table["d2"] - result_table["d1"]
-        result_table["certainty"] = (
-            np.concatenate([[np.nan], result_table["certainty"].values[:-1]])
-            / result_table["cluster_num"]
-        )
-        return result_table["cluster_num"].values[np.argmax(result_table["certainty"])]
+        optimal_clusters = result_table.loc[result_table['silhouette_score'].idxmax(), 'cluster_num']
+        return optimal_clusters
 
     def __preprocess_data(self):
         self.merged_transformed = self.merged.apply(
