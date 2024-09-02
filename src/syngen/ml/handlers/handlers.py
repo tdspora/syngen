@@ -370,7 +370,7 @@ class VaeInferHandler(BaseHandler):
                 )
 
             frames = pool.map(
-                self.run_separate, enumerate(self.split_by_batches(size, pool.nodes))
+                self.run_separate, enumerate(self.split_by_batches())
             )
             generated = self._concat_slices_with_unique_pk(frames)
         else:

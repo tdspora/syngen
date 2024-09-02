@@ -6,9 +6,9 @@ import string
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
-import pandavro as pdx
 
 from syngen.ml.vae.models.dataset import Dataset
+from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import generate_uuids
 from tests.conftest import SUCCESSFUL_MESSAGE
 
@@ -34,15 +34,18 @@ AVRO_SCHEMA = {
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.csv",
     ],
 )
-def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_table, rp_logger):
+def test_is_valid_uuid_defined_in_csv_table_without_missing_values(
+    path_to_test_table,
+    rp_logger
+):
     rp_logger.info(
         "Test the process of the detection of UUID columns in the table in csv format"
     )
-    df = pd.read_csv(path_to_test_table)
+    df, schema = DataLoader(path_to_test_table).load_data()
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
-            schema=CSV_SCHEMA,
+            schema=schema,
             metadata={"mock_table": {}},
             table_name="mock_table",
             paths={
@@ -77,15 +80,18 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(path_to_test_
         "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns_with_missing_values.avro",
     ],
 )
-def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test_table, rp_logger):
+def test_is_valid_uuid_defined_in_avro_table_without_missing_values(
+    path_to_test_table,
+    rp_logger
+):
     rp_logger.info(
         "Test the process of the detection of UUID columns in the table in avro format"
     )
-    df = pdx.from_avro(path_to_test_table)
+    df, schema = DataLoader(path_to_test_table).load_data()
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
-            schema=CSV_SCHEMA,
+            schema=schema,
             metadata={"mock_table": {}},
             table_name="mock_table",
             paths={
@@ -93,7 +99,6 @@ def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test
             },
             main_process="train"
         )
-        mock_dataset.set_metadata()
         mock_dataset._set_uuid_columns()
         assert mock_dataset.uuid_columns == {
             "UUIDv1",
@@ -116,11 +121,11 @@ def test_is_valid_uuid_defined_in_avro_table_without_missing_values(path_to_test
 
 def test_save_dataset(rp_logger):
     rp_logger.info("Test the process of saving the dataset")
-    df = pd.read_csv("./tests/unit/dataset/fixtures/data.csv")
+    df, schema = DataLoader("./tests/unit/dataset/fixtures/data.csv").load_data()
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
-            schema=CSV_SCHEMA,
+            schema=schema,
             metadata={"mock_table": {}},
             table_name="mock_table",
             paths={
@@ -181,11 +186,13 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
         "Test the process of the detection of "
         "the categorical columns in the table in '.csv' format"
     )
-    df = pd.read_csv("./tests/unit/dataset/fixtures/table_with_categ_columns.csv")
+    df, schema = DataLoader(
+        "./tests/unit/dataset/fixtures/table_with_categ_columns.csv"
+    ).load_data()
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
-            schema=CSV_SCHEMA,
+            schema=schema,
             metadata={"mock_table": {}},
             table_name="mock_table",
             paths={
@@ -211,11 +218,13 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
     rp_logger.info(
         "Test the process of the detection of the binary columns in the table in '.csv' format"
     )
-    df = pd.read_csv("./tests/unit/dataset/fixtures/table_with_binary_columns.csv")
+    df, schema = DataLoader(
+        "./tests/unit/dataset/fixtures/table_with_binary_columns.csv"
+    ).load_data()
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
-            schema=CSV_SCHEMA,
+            schema=schema,
             metadata={"mock_table": {}},
             table_name="mock_table",
             paths={
@@ -242,7 +251,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_check_non_existent_columns(rp_logger):
     rp_logger.info("Test the process of checking non-existent columns")
-    df = pd.read_csv("./tests/unit/dataset/fixtures/data.csv")
+    df, schema = DataLoader("./tests/unit/dataset/fixtures/data.csv").load_data()
     metadata = {
         "mock_table": {
             "keys": {
@@ -263,7 +272,7 @@ def test_check_non_existent_columns(rp_logger):
     }
     mock_dataset = Dataset(
         df=df,
-        schema=CSV_SCHEMA,
+        schema=schema,
         metadata=metadata,
         table_name="mock_table",
         paths={
@@ -446,11 +455,11 @@ def test_set_email_columns(rp_logger):
         }
     }
 
-    df = pd.read_csv("./tests/unit/dataset/fixtures/data_with_emails.csv")
+    df, schema = DataLoader("./tests/unit/dataset/fixtures/data_with_emails.csv").load_data()
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
             df=df,
-            schema=CSV_SCHEMA,
+            schema=schema,
             metadata=metadata,
             table_name="mock_table",
             paths={
