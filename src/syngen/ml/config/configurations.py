@@ -166,28 +166,28 @@ class TrainConfig:
                 logger.warning(f"The 'drop_null' {warning_message}")
             if self.row_limit is not None:
                 logger.warning(f"The 'row_limit' {warning_message}")
-
-        if self.drop_null and not self.loader:
-            if not data.dropna().empty:
-                initial_data = data
-                data = data.dropna()
-                if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
-                    logger.info(
-                        f"As the parameter 'drop_null' set to 'True', "
-                        f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
-                        f"that have empty values have been dropped. "
-                        f"The count of remained rows is {data.shape[0]}."
+        else:
+            if self.drop_null:
+                if not data.dropna().empty:
+                    initial_data = data
+                    data = data.dropna()
+                    if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
+                        logger.info(
+                            f"As the parameter 'drop_null' set to 'True', "
+                            f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
+                            f"that have empty values have been dropped. "
+                            f"The count of remained rows is {data.shape[0]}."
+                        )
+                else:
+                    logger.warning(
+                        "The specified 'drop_null' argument results in the empty dataframe, "
+                        "so it will be ignored"
                     )
-            else:
-                logger.warning(
-                    "The specified 'drop_null' argument results in the empty dataframe, "
-                    "so it will be ignored"
-                )
 
-        if self.row_limit and not self.loader:
-            self.row_subset = min(self.row_limit, len(data))
+            if self.row_limit:
+                self.row_subset = min(self.row_limit, len(data))
 
-            data = data.sample(n=self.row_subset)
+                data = data.sample(n=self.row_subset)
 
         if len(data) < 100:
             logger.warning(

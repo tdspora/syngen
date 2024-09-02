@@ -40,7 +40,7 @@ def test_get_pk_path(
     Test the method '_get_pk_path' of the class VaeInferHandler
     """
     rp_logger.info("Test the method '_get_pk_path' of the class VaeInferHandler")
-    with patch.object(VaeInferHandler, "__post_init__", lambda x: None):
+    with patch.object(VaeInferHandler, "__attrs_post_init__", lambda x: None):
         metadata = MetadataLoader(path_to_metadata).load_data()
         handler = VaeInferHandler(
             metadata=metadata,
@@ -74,7 +74,7 @@ def test_get_pk_path(
     ],
 )
 @patch("os.path.exists", return_value=True)
-@patch.object(VaeInferHandler, "__post_init__")
+@patch.object(VaeInferHandler, "__attrs_post_init__")
 def test_split_by_batches(
         mock_handler_post_init,
         mock_os_path_exists,
