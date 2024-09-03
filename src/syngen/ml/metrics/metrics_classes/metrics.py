@@ -899,8 +899,6 @@ class Clustering(BaseMetric):
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
         row_limit = min(len(self.original), len(self.synthetic))
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"row_limit: {row_limit}")
         self.merged = (
             pd.concat(
                 [
@@ -919,8 +917,6 @@ class Clustering(BaseMetric):
         optimal_clust_num = self.__automated_silhouette()
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"statistics: \n {statistics}")
 
         def diversity(x):
             """
@@ -980,7 +976,14 @@ class Clustering(BaseMetric):
             result_table["silhouette_score"].append(score)
 
         result_table = pd.DataFrame(result_table)
-        optimal_clusters = result_table.loc[result_table['silhouette_score'].idxmax(), 'cluster_num']
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(result_table)
+        optimal_clusters = (
+            result_table.loc[
+                result_table['silhouette_score'].idxmax(),
+                'cluster_num'
+                ]
+        )
         return optimal_clusters
 
     def __preprocess_data(self):
