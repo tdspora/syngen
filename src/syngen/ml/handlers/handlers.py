@@ -23,7 +23,6 @@ from syngen.ml.vae.models.dataset import Dataset
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
-    generate_uuid,
     get_initial_table_name,
     ProgressBarHandler
 )
@@ -320,6 +319,7 @@ class VaeInferHandler(BaseHandler):
                 )
                 for i, j in zip(*text_structures)
             ]
+            logger.debug(f'Long text for column {col} is generated.')
             synthetic_infer[col] = generated_column
         return synthetic_infer
 
@@ -332,8 +332,10 @@ class VaeInferHandler(BaseHandler):
         synthetic_infer = pd.DataFrame()
 
         if self.has_vae:
+            logger.info(f'VAE generation for {self.table_name} started.')
             synthetic_infer = self.generate_vae(size)
         if self.has_no_ml:
+            logger.info(f'Long texts generation for {self.table_name} started.')
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
 
         return synthetic_infer

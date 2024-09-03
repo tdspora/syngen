@@ -309,7 +309,7 @@ class Dataset(BaseDataset):
                 with open(f"{self.paths['fk_kde_path']}{pk}_mapper.pkl", "wb") as file:
                     pickle.dump(mapper, file)
 
-    def __set_metadata(self):
+    def _set_metadata(self):
         config_of_keys = self.metadata.get(self.table_name, {}).get("keys")
 
         if config_of_keys is not None:
@@ -325,9 +325,9 @@ class Dataset(BaseDataset):
         self._set_non_existent_columns(table_config)
         self._update_metadata(table_config)
         self._update_schema()
-        self.__set_metadata()
+        self._set_metadata()
         self._common_detection()
-        self.__detection_pipeline()
+        self._detection_pipeline()
 
     def _common_detection(self):
         """
@@ -828,7 +828,7 @@ class Dataset(BaseDataset):
         }
         self._set_date_format()
 
-    def __detection_pipeline(self):
+    def _detection_pipeline(self):
         if self.schema_format == "CSV":
             self._csv_data_pipeline()
         elif self.schema_format == "Avro":

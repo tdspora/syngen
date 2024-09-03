@@ -31,47 +31,47 @@ AVRO_SCHEMA = {
     "path_to_test_table, expected_schema",
     [
         (
-                "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns.csv",
-                {}
+            "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns.csv",
+            {}
         ),
         (
-                "./tests/unit/dataset/fixtures/"
-                "table_with_diff_uuid_columns_with_missing_values.csv",
-                {}
+            "./tests/unit/dataset/fixtures/"
+            "table_with_diff_uuid_columns_with_missing_values.csv",
+            {}
         ),
         (
-                "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns.avro",
-                {
-                    "UUIDv1": "string",
-                    "UUIDv2": "string",
-                    "UUIDv3": "string",
-                    "UUIDv4": "string",
-                    "UUIDv5": "string",
-                    "ULID": "string",
-                },
+            "./tests/unit/dataset/fixtures/table_with_diff_uuid_columns.avro",
+            {
+                "UUIDv1": "string",
+                "UUIDv2": "string",
+                "UUIDv3": "string",
+                "UUIDv4": "string",
+                "UUIDv5": "string",
+                "ULID": "string",
+            },
         ),
         (
-                "./tests/unit/dataset/fixtures/"
-                "table_with_diff_uuid_columns_with_missing_values.avro",
-                {
-                    "UUIDv1": "string",
-                    "UUIDv2": "string",
-                    "UUIDv3": "string",
-                    "UUIDv4": "string",
-                    "UUIDv5": "string",
-                    "ULID": "string",
-                },
+            "./tests/unit/dataset/fixtures/"
+            "table_with_diff_uuid_columns_with_missing_values.avro",
+            {
+                "UUIDv1": "string",
+                "UUIDv2": "string",
+                "UUIDv3": "string",
+                "UUIDv4": "string",
+                "UUIDv5": "string",
+                "ULID": "string",
+            },
         )
     ],
 )
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 @patch.object(Dataset, "_set_categorical_columns")
 def test_is_valid_uuid_defined_in_csv_table_without_missing_values(
-        mock_set_categorical_columns,
-        mock_fetch_config,
-        path_to_test_table,
-        expected_schema,
-        rp_logger
+    mock_set_categorical_columns,
+    mock_fetch_config,
+    path_to_test_table,
+    expected_schema,
+    rp_logger
 ):
     rp_logger.info(
         "Test the process of the detection of UUID columns"
@@ -232,6 +232,54 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
     }
     assert mock_dataset.categ_columns == {"ensure"}
 
+
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+def test_check_non_existent_columns(rp_logger):
+    rp_logger.info("Test the process of checking non-existent columns")
+    df, schema = DataLoader("./tests/unit/dataset/fixtures/data.csv").load_data()
+    metadata = {
+        "mock_table": {
+            "keys": {
+                "PK": {
+                    "type": "PK",
+                    "columns": [
+                        "id",
+                        "non_existent_pk_column",
+                        "non_existent_pk_column_2",
+                    ],
+                },
+                "UQ": {
+                    "type": "UQ",
+                    "columns": ["first_name", "non_existent_uq_column"],
+                },
+            }
+        }
+    }
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
+    mock_dataset.dropped_columns = set()
+    mock_dataset.launch_detection()
+    assert mock_dataset.non_existent_columns == {
+        "non_existent_pk_column",
+        "non_existent_uq_column",
+        "non_existent_pk_column_2",
+    }
+    assert mock_dataset.metadata == {
+        "mock_table": {
+            "keys": {
+                "PK": {"type": "PK", "columns": ["id"]},
+                "UQ": {"type": "UQ", "columns": ["first_name"]},
+            }
+        }
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -300,11 +348,11 @@ def test_define_date_format_with_diff_format(
 )
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_define_date_format_with_extreme_values(
-        mock_fetch_config,
-        initial_date_format,
-        expected_date_format,
-        extreme_values,
-        rp_logger
+    mock_fetch_config,
+    initial_date_format,
+    expected_date_format,
+    extreme_values,
+    rp_logger
 ):
     rp_logger.info(
         "Test the process of identifying the date format in the date column "
