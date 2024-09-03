@@ -319,7 +319,7 @@ def test_get_columns_from_empty_table_in_avro_format(caplog, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_save_data_in_avro_format(test_avro_path, test_df, test_avro_schema, rp_logger):
+def test_save_data_in_avro_format(test_avro_path, test_df, rp_logger):
     rp_logger.info("Saving data in avro format locally")
     data_loader = DataLoader(test_avro_path)
     data_loader.save_data(test_avro_path, test_df)
