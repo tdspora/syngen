@@ -171,15 +171,15 @@ class TrainConfig:
                 logger.warning(f"The 'row_limit' {warning_message}")
         else:
             if self.drop_null:
-                if not data.dropna().empty:
-                    initial_data = data
-                    data = data.dropna()
-                    if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
+                if not self.data.dropna().empty:
+                    initial_data = self.data
+                    self.data = self.data.dropna()
+                    if count_of_dropped_rows := initial_data.shape[0] - self.data.shape[0]:
                         logger.info(
                             f"As the parameter 'drop_null' set to 'True', "
                             f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
                             f"that have empty values have been dropped. "
-                            f"The count of remained rows is {data.shape[0]}."
+                            f"The count of remained rows is {self.data.shape[0]}."
                         )
                 else:
                     logger.warning(
@@ -188,9 +188,9 @@ class TrainConfig:
                     )
 
             if self.row_limit:
-                self.row_subset = min(self.row_limit, len(data))
+                self.row_subset = min(self.row_limit, len(self.data))
 
-                data = data.sample(n=self.row_subset)
+                self.data = self.data.sample(n=self.row_subset)
 
         if len(self.data) < 100:
             logger.warning(
