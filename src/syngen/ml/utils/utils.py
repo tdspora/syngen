@@ -178,8 +178,13 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
 
 
 def get_nan_labels(df: pd.DataFrame) -> dict:
-    """
-    Get labels that represent nan values in float/int columns
+    """Get labels that represent nan values in float/int columns
+
+    Args:
+        df (pd.DataFrame): table data
+
+    Returns:
+        dict: dict that maps nan str label to column name
     """
     columns_nan_labels = {}
     object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
