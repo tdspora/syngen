@@ -50,8 +50,8 @@ def test_initiate_csv_convertor(rp_logger):
     df, schema = DataLoader(
         f"{DIR_NAME}/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv"
     ).load_data()
-    convertor = CSVConvertor(df)
-    assert convertor.schema == {"fields": {}, "format": "CSV"}
+    convertor = CSVConvertor({"fields": {}, "format": "CSV"}, df)
+    assert convertor.converted_schema == {"fields": {}, "format": "CSV"}
     pd.testing.assert_frame_equal(convertor.preprocessed_df, df)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -179,8 +179,7 @@ def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
             df = pdx.from_avro(
-                f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/"
-                "table_with_diff_data_types.avro"
+                f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
             )
 
             schema = {"Test": "test"}

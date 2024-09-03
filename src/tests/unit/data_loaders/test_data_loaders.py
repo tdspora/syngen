@@ -30,7 +30,6 @@ def test_initialize_data_loader_for_local_csv_table_with_existed_path(rp_logger)
     test_data_loader = DataLoader(path_to_table)
     assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
-    assert test_data_loader.original_schema is None
     assert isinstance(test_data_loader.file_loader, CSVLoader)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -42,7 +41,6 @@ def test_initialize_data_loader_for_local_csv_table_with_not_existed_path(rp_log
     test_data_loader = DataLoader("path/to/table.csv")
     assert test_data_loader.path == "path/to/table.csv"
     assert test_data_loader.has_existed_path is False
-    assert test_data_loader.original_schema is None
     assert isinstance(test_data_loader.file_loader, CSVLoader)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -55,15 +53,6 @@ def test_initialize_data_loader_for_local_avro_table_with_existed_path(rp_logger
     test_data_loader = DataLoader(path_to_table)
     assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
-    assert test_data_loader.original_schema == {
-        "fields": [
-            {"name": "gender", "type": ["null", "long"]},
-            {"name": "height", "type": ["null", "double"]},
-            {"name": "id", "type": ["null", "long"]}
-        ],
-        "name": "Root",
-        "type": "record"
-    }
     assert isinstance(test_data_loader.file_loader, AvroLoader)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -89,7 +78,6 @@ def test_initialize_data_loader_for_local_pickle_table_with_existed_path(rp_logg
     test_data_loader = DataLoader(path_to_table)
     assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
-    assert test_data_loader.original_schema is None
     assert isinstance(test_data_loader.file_loader, BinaryLoader)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -102,7 +90,6 @@ def test_initialize_data_loader_for_local_pickle_table_with_not_existed_path(rp_
     test_data_loader = DataLoader("path/to/table.pkl")
     assert test_data_loader.path == "path/to/table.pkl"
     assert test_data_loader.has_existed_path is False
-    assert test_data_loader.original_schema is None
     assert isinstance(test_data_loader.file_loader, BinaryLoader)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -155,7 +142,6 @@ def test_load_data_from_table_in_csv_format(rp_logger):
 
     assert isinstance(df, pd.DataFrame)
     assert schema == CSV_SCHEMA
-    assert data_loader.original_schema is None
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -225,7 +211,7 @@ def test_get_columns_from_empty_table_in_csv_format(caplog, rp_logger):
 def test_save_data_in_csv_format(test_csv_path, test_df, rp_logger):
     rp_logger.info("Saving data in csv format locally")
     data_loader = DataLoader(test_csv_path)
-    data_loader.save_data(test_df)
+    data_loader.save_data(test_csv_path, test_df)
 
     assert isinstance(data_loader.file_loader, CSVLoader)
     assert os.path.exists(test_csv_path) is True
@@ -268,15 +254,6 @@ def test_load_data_from_table_in_avro_format(rp_logger):
         "fields": {"gender": "int", "height": "float", "id": "int"},
         "format": "Avro",
     }
-    assert data_loader.original_schema == {
-        "fields": [
-            {"name": "gender", "type": ["null", "long"]},
-            {"name": "height", "type": ["null", "double"]},
-            {"name": "id", "type": ["null", "long"]}
-        ],
-        "name": "Root",
-        "type": "record"
-    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -302,16 +279,6 @@ def test_load_data_from_table_in_avro_with_null_column(rp_logger):
         },
         "format": "Avro"
     }
-    assert data_loader.original_schema == {
-        "type": "record",
-        "name": "TestRecord",
-        "fields": [
-            {"name": "id", "type": "int"},
-            {"name": "name", "type": "string"},
-            {"name": "age", "type": "null"},
-            {"name": "email", "type": "string"}
-        ]
-    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -326,19 +293,6 @@ def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
         with caplog.at_level("ERROR"):
             data_loader.load_data()
             assert "cannot read header - is it an avro file?" in caplog.text
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_load_original_schema_from_empty_table_in_avro_format(caplog, rp_logger):
-    rp_logger.info("Loading the original schema from local empty table in avro format")
-    path = f"{DIR_NAME}/unit/data_loaders/fixtures/avro_tables/empty_table.avro"
-    data_loader = DataLoader(path)
-
-    with pytest.raises(InvalidAvroBinaryEncoding):
-        with caplog.at_level("ERROR"):
-            data_loader.file_loader.load_original_schema()
-            assert "Read 0 bytes, expected 4 bytes" in caplog.text
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -368,7 +322,7 @@ def test_get_columns_from_empty_table_in_avro_format(caplog, rp_logger):
 def test_save_data_in_avro_format(test_avro_path, test_df, test_avro_schema, rp_logger):
     rp_logger.info("Saving data in avro format locally")
     data_loader = DataLoader(test_avro_path)
-    data_loader.save_data(test_df, schema=test_avro_schema)
+    data_loader.save_data(test_avro_path, test_df)
 
     assert isinstance(data_loader.file_loader, AvroLoader)
     assert os.path.exists(test_avro_path) is True
@@ -429,7 +383,7 @@ def test_load_data_from_empty_table_in_pickle_format(caplog, rp_logger):
 def test_save_data_in_pickle_format(test_pickle_path, test_df, rp_logger):
     rp_logger.info("Saving data in pickle format locally")
     data_loader = DataLoader(test_pickle_path)
-    data_loader.save_data(test_df)
+    data_loader.save_data(test_pickle_path, test_df)
 
     assert isinstance(data_loader.file_loader, BinaryLoader)
     assert os.path.exists(test_pickle_path) is True
@@ -444,7 +398,7 @@ def test_initialize_metadata_loader(rp_logger):
     rp_logger.info("Initializing metadata loader")
     path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yaml"
     test_metadata_loader = MetadataLoader(path_to_metadata)
-    assert test_metadata_loader.path == path_to_metadata
+    assert test_metadata_loader.metadata_path == path_to_metadata
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -518,7 +472,7 @@ def test_load_metadata_in_yml_format(rp_logger):
 def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     rp_logger.info("Loading metadata by YAMLLoader in '.yaml' format")
     path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yaml"
-    loader = YAMLLoader(path_to_metadata)
+    loader = YAMLLoader()
 
     expected_metadata = {
         "pk_test": {
@@ -543,7 +497,7 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     with patch("builtins.open", mock_open(read_data="data")):
         with patch("yaml.load") as mock_yaml_load:
             mock_yaml_load.return_value = expected_metadata
-            metadata = loader.load_data()
+            metadata = loader.load_data(path_to_metadata)
             assert metadata == expected_metadata
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -554,7 +508,7 @@ def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger
         f"{DIR_NAME}/unit/data_loaders/fixtures/"
         "metadata/metadata_with_absent_destination.yaml"
     )
-    loader = YAMLLoader(path_to_metadata)
+    loader = YAMLLoader()
 
     expected_metadata = {
         "pk_test": {
@@ -579,7 +533,7 @@ def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger
     with patch("builtins.open", mock_open(read_data="data")):
         with patch("yaml.load") as mock_yaml_load:
             mock_yaml_load.return_value = expected_metadata
-            metadata = loader.load_data()
+            metadata = loader.load_data(path_to_metadata)
             assert metadata == expected_metadata
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -589,7 +543,7 @@ def test_save_metadata_in_yaml_format(test_yaml_path, test_metadata_file, rp_log
     metadata_loader = MetadataLoader(test_yaml_path)
     assert isinstance(metadata_loader.metadata_loader, YAMLLoader)
 
-    metadata_loader.save_data(test_metadata_file)
+    metadata_loader.save_data(test_yaml_path, test_metadata_file)
     assert metadata_loader.load_data() == {
         "global": {},
         "pk_test": {
@@ -617,7 +571,7 @@ def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logge
     metadata_loader = MetadataLoader(test_yml_path)
     assert isinstance(metadata_loader.metadata_loader, YAMLLoader)
 
-    metadata_loader.save_data(test_metadata_file)
+    metadata_loader.save_data(test_yml_path, test_metadata_file)
     assert metadata_loader.load_data() == {
         "global": {},
         "pk_test": {
@@ -664,7 +618,7 @@ def test_load_pipe_delimited_csv(rp_logger):
                       "csv_tables/pipe_delimited_text.csv")
     rp_logger.info("Loading CSV with pipe delimiter")
     global_context({"sep": "|", "quoting": "None"})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -675,10 +629,10 @@ def test_save_pipe_delimited_csv(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV with pipe delimiter")
     format_params = {"sep": "|", "quoting": "None"}
     global_context(format_params)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {"sep": "|", "quoting": 3, "skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -688,7 +642,7 @@ def test_load_semicolon_delimited_csv(rp_logger):
                       "csv_tables/semicolon_delimited_text.csv")
     rp_logger.info("Loading CSV with semicolon delimiter")
     global_context({"sep": ";", "quoting": "None"})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -699,10 +653,10 @@ def test_save_semicolon_delimited_csv(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV with semicolon delimiter")
     format_settings = {"sep": ";", "quoting": "None"}
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {"sep": ";", "quoting": 3, "skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -711,7 +665,7 @@ def test_load_tab_delimited_csv(rp_logger):
     path_to_source = f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.csv"
     rp_logger.info("Loading CSV with tab delimiter")
     global_context({"sep": "\t", "quoting": "None", "engine": "python"})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -722,10 +676,10 @@ def test_save_tab_delimited_csv(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV with tab delimiter")
     format_params = {"sep": "\t", "quoting": "None"}
     global_context(format_params)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {"sep": "\t", "quoting": 3, "skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -745,7 +699,7 @@ def test_load_multiline_bad_line_csv(rp_logger):
             "on_bad_lines": "skip",
         }
     )
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (12, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -764,7 +718,7 @@ def test_save_multiline_bad_line_csv(test_csv_path, rp_logger):
         "on_bad_lines": "skip",
     }
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": ",",
         "quoting": 1,
@@ -774,8 +728,8 @@ def test_save_multiline_bad_line_csv(test_csv_path, rp_logger):
         "encoding": "utf-8",
         "on_bad_lines": "skip",
     }
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (12, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -785,7 +739,7 @@ def test_load_double_quoted_csv(rp_logger):
                       "csv_tables/double_quoted_text.csv")
     rp_logger.info("Loading CSV with double quoted values")
     global_context({"sep": ",", "quotechar": '"'})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -796,15 +750,15 @@ def test_save_double_quoted_csv(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV with double quoted values")
     format_settings = {"sep": ",", "quotechar": '"'}
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": ",",
         "quotechar": '"',
         "quoting": 0,
         "skiprows": None,
     }
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -814,7 +768,7 @@ def test_load_escaped_quoted_csv(rp_logger):
                       "csv_tables/escaped_quoted_text.csv")
     rp_logger.info("Loading CSV with escaped quoted values")
     global_context({"sep": ",", "quotechar": '"'})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -825,15 +779,15 @@ def test_save_escaped_quoted_csv(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV with escaped quoted values")
     format_settings = {"sep": ",", "quotechar": '"'}
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": ",",
         "quotechar": '"',
         "quoting": 0,
         "skiprows": None,
     }
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -851,7 +805,7 @@ def test_load_csv_without_header(rp_logger):
             "quotechar": '"',
         }
     )
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (7, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -868,7 +822,7 @@ def test_save_csv_without_header(test_csv_path, rp_logger):
         "quotechar": '"',
     }
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "sep": ",",
         "header": None,
@@ -877,8 +831,8 @@ def test_save_csv_without_header(test_csv_path, rp_logger):
         "skiprows": None,
         "quotechar": '"',
     }
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (7, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -888,7 +842,7 @@ def test_load_csv_with_triple_colons(rp_logger):
                       "csv_tables/multicolon_delimited_text.csv")
     rp_logger.info("Loading CSV contained the fields separated by triple colons")
     global_context({"sep": ":::", "quotechar": "None"})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -899,11 +853,11 @@ def test_save_csv_with_triple_colons(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV contained the fields with triple colons")
     format_settings = {"sep": ":::"}
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {"sep": ",", "quoting": 0, "skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
     global_context(format_settings)
-    data, schema = CSVLoader(test_csv_path, sep=",").load_data()
+    data, schema = CSVLoader(sep=",").load_data(test_csv_path)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -914,7 +868,7 @@ def test_load_text_file(rp_logger):
     rp_logger.info("Loading table with data in '.txt' format")
     global_context({})
     assert get_context().get_config() == {}
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -924,10 +878,10 @@ def test_save_text_file(test_csv_path, rp_logger):
                       "csv_tables/table_with_data.txt")
     rp_logger.info("Saving CSV table in '.txt' format")
     global_context({})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {"skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -938,7 +892,7 @@ def test_load_pcv_file(rp_logger):
     rp_logger.info("Loading table with data in '.pcv' format")
     global_context({"sep": "|"})
     assert get_context().get_config() == {"sep": "|"}
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -948,10 +902,10 @@ def test_save_pcv_file(test_csv_path, rp_logger):
                       "csv_tables/pipe_delimited_text.psv")
     rp_logger.info("Saving CSV table in '.pcv' format")
     global_context({"sep": "|"})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {"sep": "|", "quoting": 0, "skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -962,7 +916,7 @@ def test_load_tcv_file(rp_logger):
     rp_logger.info("Loading table with data in '.tcv' format")
     global_context({"sep": "\t"})
     assert get_context().get_config() == {"sep": "\t"}
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -972,10 +926,10 @@ def test_save_tcv_file(test_csv_path, rp_logger):
                       "csv_tables/tab_delimited_text.tsv")
     rp_logger.info("Saving CSV table in '.tcv' format")
     global_context({"sep": "\t"})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {"sep": "\t", "quoting": 0, "skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -986,7 +940,7 @@ def test_load_csv_with_nested_field(rp_logger):
     )
     rp_logger.info("Loading CSV with nested field")
     global_context({"quotechar": '"', "quoting": "minimal"})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 5)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -997,14 +951,14 @@ def test_save_csv_with_nested_field(test_csv_path, rp_logger):
     )
     rp_logger.info("Saving CSV with nested field")
     global_context({"quotechar": '"', "quoting": "minimal"})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "quotechar": '"',
         "quoting": 0,
         "skiprows": None,
     }
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    data, schema = CSVLoader(test_csv_path).load_data()
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
+    data, schema = CSVLoader().load_data(test_csv_path)
     assert data.shape == (15, 5)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1014,7 +968,7 @@ def test_load_csv_with_double_pipe_delimited_text(rp_logger):
                       "csv_tables/double_pipe_delimited_text.csv")
     rp_logger.info("Loading CSV with double pipe delimited text")
     global_context({"sep": r"\|\|"})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1025,11 +979,11 @@ def test_save_csv_with_double_pipe_delimited_text(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV contained the fields with double pipe delimited text")
     format_settings = {"sep": r"\|\|"}
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {"sep": ",", "quoting": 0, "skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
     global_context(format_settings)
-    data, schema = CSVLoader(test_csv_path, sep=",").load_data()
+    data, schema = CSVLoader(sep=",").load_data(test_csv_path)
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1039,7 +993,7 @@ def test_load_csv_with_na_values(rp_logger):
                       "csv_tables/table_with_na_values.csv")
     rp_logger.info("Loading CSV contained NA values")
     global_context({"na_values": ["-", "Missing"]})
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
 
     assert data.shape == (10, 11)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1055,15 +1009,15 @@ def test_save_csv_with_na_values(test_csv_path, rp_logger):
         "skiprows": None,
     }
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, schema = CSVLoader().load_data(path_to_source)
     assert get_context().get_config() == {
         "na_values": ["-", "Missing", "NaN"],
         "quoting": 0,
         "skiprows": None,
     }
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
+    CSVLoader().save_data(test_csv_path, data, format=get_context().get_config())
     global_context(format_settings)
-    data, schema = CSVLoader(test_csv_path, sep=",").load_data()
+    data, schema = CSVLoader(sep=",").load_data(test_csv_path)
     assert data.shape == (10, 11)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1077,7 +1031,6 @@ def test_initialize_data_loader_for_local_excel_table_with_existed_path(rp_logge
     test_data_loader = DataLoader(path_to_table)
     assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
-    assert test_data_loader.original_schema is None
     assert isinstance(test_data_loader.file_loader, ExcelLoader)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1089,7 +1042,6 @@ def test_initialize_data_loader_for_local_excel_table_with_not_existed_path(rp_l
     test_data_loader = DataLoader("path/to/table.xlsx")
     assert test_data_loader.path == "path/to/table.xlsx"
     assert test_data_loader.has_existed_path is False
-    assert test_data_loader.original_schema is None
     assert isinstance(test_data_loader.file_loader, ExcelLoader)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1245,7 +1197,7 @@ def test_get_columns_from_empty_excel_table(caplog, rp_logger):
 def test_save_excel_table_in_xlx_format(test_xls_path, test_df, rp_logger):
     rp_logger.info("Saving the data to Excel table in '.xls' format")
     data_loader = DataLoader(test_xls_path)
-    data_loader.save_data(test_df)
+    data_loader.save_data(test_xls_path, test_df)
 
     assert isinstance(data_loader.file_loader, ExcelLoader)
     assert os.path.exists(test_xls_path) is True
@@ -1259,7 +1211,7 @@ def test_save_excel_table_in_xlx_format(test_xls_path, test_df, rp_logger):
 def test_save_excel_table_in_xlsx_format(test_xlsx_path, test_df, rp_logger):
     rp_logger.info("Saving the data to Excel table in '.xlsx' format")
     data_loader = DataLoader(test_xlsx_path)
-    data_loader.save_data(test_df)
+    data_loader.save_data(test_xlsx_path, test_df)
 
     assert isinstance(data_loader.file_loader, ExcelLoader)
     assert os.path.exists(test_xlsx_path) is True
