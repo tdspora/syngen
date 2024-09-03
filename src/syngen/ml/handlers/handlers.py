@@ -19,6 +19,7 @@ from attrs import define, field
 
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
+from syngen.ml.vae.models.dataset import Dataset
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
