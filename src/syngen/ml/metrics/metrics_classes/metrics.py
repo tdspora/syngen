@@ -976,8 +976,6 @@ class Clustering(BaseMetric):
             result_table["silhouette_score"].append(score)
 
         result_table = pd.DataFrame(result_table)
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(result_table)
         optimal_clusters = (
             result_table.loc[
                 result_table['silhouette_score'].idxmax(),
