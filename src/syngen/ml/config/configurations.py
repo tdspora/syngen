@@ -157,27 +157,37 @@ class TrainConfig:
         """
         Preprocess data and set the parameter "row_subset" for training process
         """
-        if self.drop_null:
-            if not data.dropna().empty:
-                initial_data = data
-                data = data.dropna()
-                if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
-                    logger.info(
-                        f"As the parameter 'drop_null' set to 'True', "
-                        f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
-                        f"that have empty values have been dropped. "
-                        f"The count of remained rows is {data.shape[0]}."
+        if self.loader:
+            warning_message = (
+                "parameter will be ignored because the retrieval of the data "
+                "is handled by a callback function"
+            )
+            if self.drop_null:
+                logger.warning(f"The 'drop_null' {warning_message}")
+            if self.row_limit is not None:
+                logger.warning(f"The 'row_limit' {warning_message}")
+        else:
+            if self.drop_null:
+                if not data.dropna().empty:
+                    initial_data = data
+                    data = data.dropna()
+                    if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
+                        logger.info(
+                            f"As the parameter 'drop_null' set to 'True', "
+                            f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
+                            f"that have empty values have been dropped. "
+                            f"The count of remained rows is {data.shape[0]}."
+                        )
+                else:
+                    logger.warning(
+                        "The specified 'drop_null' argument results in the empty dataframe, "
+                        "so it will be ignored"
                     )
-            else:
-                logger.warning(
-                    "The specified 'drop_null' argument results in the empty dataframe, "
-                    "so it will be ignored"
-                )
 
-        if self.row_limit:
-            self.row_subset = min(self.row_limit, len(data))
+            if self.row_limit:
+                self.row_subset = min(self.row_limit, len(data))
 
-            data = data.sample(n=self.row_subset)
+                data = data.sample(n=self.row_subset)
 
         if len(data) < 100:
             logger.warning(
@@ -206,7 +216,8 @@ class TrainConfig:
         Preprocess and save the data necessary for the training process
         """
         data = self._preprocess_data(data)
-        self._save_input_data(data)
+        if not self.loader:
+            self._save_input_data(data)
 
     @slugify_attribute(table_name="slugify_table_name")
     def _get_paths(self) -> Dict:
@@ -259,6 +270,7 @@ class InferConfig:
     get_infer_metrics: bool
     both_keys: bool
     log_level: str
+    loader: Optional[Callable[[str], pd.DataFrame]]
     slugify_table_name: str = field(init=False)
 
     def __post_init__(self):
@@ -287,7 +299,10 @@ class InferConfig:
         """
         if (
                 (self.print_report or self.get_infer_metrics)
-                and not DataLoader(self.paths["input_data_path"]).has_existed_path
+                and (
+                    not DataLoader(self.paths["input_data_path"]).has_existed_path
+                    and not self.loader
+                )
         ):
             message = (
                 f"It seems that the path to original data "
@@ -317,8 +332,15 @@ class InferConfig:
         """
         Set up "size" of generated data
         """
-        if self.size is None and DataLoader(self.paths["input_data_path"]).has_existed_path:
-            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        if self.size is None:
+            data_loader = DataLoader(self.paths["input_data_path"])
+            if data_loader.has_existed_path:
+                data, schema = data_loader.load_data()
+            elif self.loader:
+                data, schema = DataFrameFetcher(
+                    loader=self.loader,
+                    table_name=self.table_name
+                ).fetch_data()
             self.size = len(data)
 
     def _set_up_batch_size(self):
