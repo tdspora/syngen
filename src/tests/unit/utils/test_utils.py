@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 
 from syngen.ml.utils import (
@@ -50,7 +50,7 @@ def test_slugify_parameters(parameter, expected_parameter, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_datetime_to_timestamp():
+def test_datetime_to_timestamp(rp_logger):
     test_cases = [
         ("0001-01-01", -62135596800.0, "%Y-%m-%d"),
         ("1970-01-01", 0, "%Y-%m-%d"),
@@ -64,16 +64,17 @@ def test_datetime_to_timestamp():
         (np.nan, np.nan, "%Y-%m-%d"),
         ("31-11-28", 1953590400.0, "%Y-%m-%d")
     ]
-
+    rp_logger.info("Test the method 'datetime_to_timestamp'")
     for date_time, expected_timestamp, date_format in test_cases:
         calculated_timestamp = datetime_to_timestamp(date_time, date_format)
         if np.isnan(expected_timestamp):
             assert np.isnan(calculated_timestamp)
         else:
             assert int(calculated_timestamp) == int(expected_timestamp)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_timestamp_to_datetime():
+def test_timestamp_to_datetime(rp_logger):
     test_cases = [
         (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0)),
         (0, datetime(1970, 1, 1, 0, 0)),
@@ -81,11 +82,31 @@ def test_timestamp_to_datetime():
         (253402214400.0, datetime(9999, 12, 31, 23, 59, 59, 999999)),
         (253402537600.0, datetime(9999, 12, 31, 23, 59, 59, 999999)),
         (np.nan, np.nan),
+        (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0)),
     ]
-
+    rp_logger.info("Test the method 'timestamp_to_datetime'")
     for timestamp, expected_datetime in test_cases:
         calculated_datetime = timestamp_to_datetime(timestamp)
         if isinstance(expected_datetime, float) and np.isnan(expected_datetime):
             assert np.isnan(calculated_datetime)
         else:
             assert calculated_datetime == expected_datetime
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_timestamp_to_datetime_with_delta(rp_logger):
+    test_cases = [
+        (0, timedelta(0)),
+        (946684800, timedelta(days=10957)),
+        (-946684800, timedelta(days=-10957))
+    ]
+    rp_logger.info(
+        "Test the method 'timestamp_to_datetime' with the parameter 'delta' set to 'True'"
+    )
+    for timestamp, expected_datetime in test_cases:
+        calculated_datetime = timestamp_to_datetime(timestamp, delta=True)
+        if isinstance(expected_datetime, float) and np.isnan(expected_datetime):
+            assert np.isnan(calculated_datetime)
+        else:
+            assert calculated_datetime == expected_datetime
+    rp_logger.info(SUCCESSFUL_MESSAGE)

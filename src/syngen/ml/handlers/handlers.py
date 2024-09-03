@@ -22,7 +22,6 @@ from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
-    generate_uuid,
     get_initial_table_name,
     ProgressBarHandler
 )
@@ -313,6 +312,7 @@ class VaeInferHandler(BaseHandler):
                 )
                 for i, j in zip(*text_structures)
             ]
+            logger.debug(f'Long text for column {col} is generated.')
             synthetic_infer[col] = generated_column
         return synthetic_infer
 
@@ -325,13 +325,11 @@ class VaeInferHandler(BaseHandler):
         synthetic_infer = pd.DataFrame()
 
         if self.has_vae:
+            logger.info(f'VAE generation for {self.table_name} started.')
             synthetic_infer = self.generate_vae(size)
         if self.has_no_ml:
+            logger.info(f'Long texts generation for {self.table_name} started.')
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
-
-        uuid_columns = self.dataset.uuid_columns
-        if uuid_columns:
-            synthetic_infer = generate_uuid(size, self.dataset, uuid_columns, synthetic_infer)
 
         return synthetic_infer
 
@@ -361,7 +359,7 @@ class VaeInferHandler(BaseHandler):
                 )
 
             frames = pool.map(
-                self.run_separate, enumerate(self.split_by_batches(size, pool.nodes))
+                self.run_separate, enumerate(self.split_by_batches())
             )
             generated = self._concat_slices_with_unique_pk(frames)
         else:

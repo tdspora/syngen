@@ -24,7 +24,7 @@ import seaborn as sns
 from slugify import slugify
 from loguru import logger
 
-from syngen.ml.utils import get_nan_labels, nan_labels_to_float, timestamp_to_datetime
+from syngen.ml.utils import timestamp_to_datetime
 matplotlib.use("Agg")
 
 
@@ -36,9 +36,8 @@ class BaseMetric(ABC):
         plot: bool,
         reports_path: str,
     ):
-        columns_nan_labels = get_nan_labels(original)
-        self.original = nan_labels_to_float(original, columns_nan_labels)
-        self.synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
+        self.original = original
+        self.synthetic = synthetic
         self.reports_path = reports_path
         self.plot = plot
         self.value = None
@@ -269,32 +268,65 @@ class Correlations(BaseMetric):
             )
         )
         self.corr_score = self.original_heatmap - self.synthetic_heatmap
-        self.corr_score = self.corr_score.dropna(how="all").dropna(how="all", axis=1)
+        self.corr_score = (
+            self.corr_score
+            .dropna(how="all")
+            .dropna(how="all", axis=1)
+        )
+
+        # check if there are any nans left in corr_score
+        if self.corr_score.isna().values.any():
+            # mask for NaNs in both original_heatmap and synthetic_heatmap
+            nan_mask = (
+                np.isnan(self.original_heatmap) &
+                np.isnan(self.synthetic_heatmap)
+            )
+
+            # Set the NaN values in corr_score to 0 where both
+            # original_heatmap and synthetic_heatmap have NaNs
+            self.corr_score[nan_mask] = 0
 
         if self.plot:
-            plt.clf()
-            sns.set(rc={"figure.figsize": self.corr_score.shape}, font_scale=2)
-            heatmap = sns.heatmap(
-                self.corr_score,
-                annot=False,
-                cmap=self.cmap,
-                vmin=0.0,
-                vmax=1.0,
-                center=0.5,
-                square=True,
-            )
+            self.__create_correlation_heatmap()
 
-            heatmap.figure.tight_layout()
-            plt.savefig(
-                f"{self.reports_path}/correlations_heatmap.svg",
-                bbox_inches="tight",
-                format="svg",
-            )
         return np.median(self.corr_score)
+
+    def __create_correlation_heatmap(self):
+        plt.clf()
+        # workaround for the issue not showing annotations for NaN values
+        # change NaN values to 2 that is not in the range 0-1
+        corr_score = self.corr_score.fillna(2)
+        # set mask for NaN values
+        nan_mask = corr_score == 2
+        # Color for values over vmax
+        self.cmap.set_over('gray')
+
+        # annotation matrix where 'NaN' is placed where the data is NaN
+        annotations = np.where(nan_mask, 'NaN', '')
+
+        sns.set(rc={"figure.figsize": self.corr_score.shape}, font_scale=2)
+        heatmap = sns.heatmap(
+            corr_score,
+            annot=annotations,
+            cmap=self.cmap,
+            vmin=0.0,
+            vmax=1.0,
+            center=0.5,
+            square=True,
+            fmt='s',
+            annot_kws={'color': 'white'}
+        )
+
+        heatmap.figure.tight_layout()
+        plt.savefig(
+            f"{self.reports_path}/correlations_heatmap.svg",
+            bbox_inches="tight",
+            format="svg",
+        )
 
     @staticmethod
     def __calculate_correlations(data):
-        return abs(data.corr())
+        return abs(data.corr(method="spearman"))
 
 
 class BivariateMetric(BaseMetric):
@@ -1060,13 +1092,21 @@ class Utility(BaseMetric):
                 )
             )
 
-        best_categ, score_categ, synth_score_categ = self.__create_multi_class_models(categ_cols)
+        (
+            best_categ,
+            score_categ,
+            synth_score_categ
+        ) = self.__create_multi_class_models(categ_cols)
         (
             best_binary,
             score_binary,
             synth_score_binary,
         ) = self.__create_binary_class_models(binary_cols)
-        best_regres, score_regres, synth_regres_score = self.__create_regression_models(cont_cols)
+        (
+            best_regres,
+            score_regres,
+            synth_regres_score
+        ) = self.__create_regression_models(cont_cols)
 
         result = pd.DataFrame(
             {
@@ -1143,23 +1183,32 @@ class Utility(BaseMetric):
             "as a target and other columns as predictors"
         )
         if best_binary is not None:
+            score = (0 if score_binary == 0 else
+                     round(synth_score_binary/score_binary, 4)
+                     )
             logger.info(log_msg.format(
                 'binary',
-                round(synth_score_binary/score_binary, 4),
+                score,
                 best_binary
                 )
             )
         if best_categ is not None:
+            score = (0 if score_categ == 0 else
+                     round(synth_score_categ/score_categ, 4)
+                     )
             logger.info(log_msg.format(
                 'multiclass',
-                round(synth_score_categ/score_categ, 4),
+                score,
                 best_categ
                 )
             )
         if best_regres is not None:
+            score = (0 if score_regres == 0 else
+                     abs(round(max(0, synth_regres_score) / score_regres, 4))
+                     )
             logger.info(log_msg.format(
                 'regression',
-                abs(round(max(0, synth_regres_score) / score_regres, 4)),
+                score,
                 best_regres
                 )
             )
@@ -1239,7 +1288,7 @@ class Utility(BaseMetric):
                 logger.info(
                     f"The best score for all possible {task_type} models "
                     f"for the original data is "
-                    f"{best_score}, which is below 0.6. "
+                    f"{round(best_score, 4)}, which is below 0.6. "
                     f"The utility metric is unreliable"
                 )
             synthetic = pd.get_dummies(self.synthetic.drop(best_target, axis=1))
@@ -1261,12 +1310,13 @@ class Utility(BaseMetric):
 
         return best_target, best_score, synthetic_score
 
-    def __perform_train_test_split(self, data, model_y, train_size):
-        '''
+    @staticmethod
+    def __perform_train_test_split(data, model_y, train_size):
+        """
         Splits the data into train and test sets.
         Tries stratified sampling first; if it fails,
         perform random sampling.
-        '''
+        """
         try:
             data_train, data_test, model_y_train, model_y_test = train_test_split(
                 data,
