@@ -1,8 +1,9 @@
 from abc import abstractmethod
-from typing import Dict
+from typing import Dict, Optional, Callable
 import itertools
 from collections import defaultdict
 
+import pandas as pd
 import numpy as np
 from loguru import logger
 
@@ -12,7 +13,7 @@ from syngen.ml.utils import (
     datetime_to_timestamp,
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
-from syngen.ml.data_loaders import DataLoader
+from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.metrics.utils import text_to_continuous
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import ProgressBarHandler
@@ -23,15 +24,28 @@ class Reporter:
     Abstract class for reporters
     """
 
-    def __init__(self, table_name: str, paths: Dict[str, str], config: Dict[str, str]):
+    def __init__(
+        self,
+        table_name: str,
+        paths: Dict[str, str],
+        config: Dict[str, str],
+        loader: Optional[Callable[[str], pd.DataFrame]] = None
+    ):
         self.table_name = table_name
         self.paths = paths
         self.config = config
+        self.loader = loader
         self.dataset = None
         self.columns_nan_labels = dict()
 
     def _extract_report_data(self):
-        original, schema = DataLoader(self.paths["original_data_path"]).load_data()
+        if self.loader:
+            original, schema = DataFrameFetcher(
+                loader=self.loader,
+                table_name=self.table_name
+            ).fetch_data()
+        else:
+            original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
         return original, synthetic
 

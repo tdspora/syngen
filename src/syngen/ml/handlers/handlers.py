@@ -1,10 +1,9 @@
-from typing import Tuple, Optional, Dict, List
+from typing import Tuple, Optional, Dict, List, Callable
 from abc import ABC, abstractmethod
 import os
 import math
 from ulid import ULID
 from uuid import UUID
-from dataclasses import dataclass, field
 
 import pandas as pd
 import numpy as np
@@ -16,10 +15,10 @@ from collections import OrderedDict
 from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
+from attrs import define, field
 
 from syngen.ml.vae import *  # noqa: F403
-from syngen.ml.data_loaders import DataLoader
-from syngen.ml.vae.models.dataset import Dataset
+from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
@@ -39,15 +38,13 @@ class AbstractHandler(ABC):
         pass
 
 
-@dataclass
+@define
 class BaseHandler(AbstractHandler):
-    metadata: Dict
-    paths: Dict
-    table_name: str
-    _next_handler: Optional[AbstractHandler] = field(init=False)
-
-    def __post_init__(self):
-        self._next_handler = None
+    metadata: Dict = field(kw_only=True)
+    paths: Dict = field(kw_only=True)
+    table_name: str = field(kw_only=True)
+    loader: Optional[Callable[[str], pd.DataFrame]] = None
+    _next_handler: Optional[AbstractHandler] = None
 
     def set_next(self, handler: AbstractHandler) -> AbstractHandler:
         self._next_handler = handler
@@ -73,17 +70,34 @@ class BaseHandler(AbstractHandler):
             process=kwargs["process"],
         )
 
+    def fetch_data(self) -> Tuple[pd.DataFrame, Optional[Dict]]:
+        """
+        Fetch the data
+        """
+        data_loader = DataLoader(self.paths["input_data_path"])
+        data = pd.DataFrame()
+        schema = None
+        if data_loader.has_existed_path:
+            data, schema = data_loader.load_data()
+        elif self.loader:
+            data, schema = DataFrameFetcher(
+                loader=self.loader,
+                table_name=self.table_name
+            ).fetch_data()
+        return data, schema
 
-@dataclass
+
+@define
 class RootHandler(BaseHandler):
+
     def handle(self, **kwargs):
-        data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        data, schema = super().fetch_data()
         return super().handle(data, **kwargs)
 
 
-@dataclass
+@define
 class LongTextsHandler(BaseHandler):
-    schema: Optional[Dict]
+    schema: Optional[Dict] = field(kw_only=True)
 
     @staticmethod
     def series_count_words(x):
@@ -142,16 +156,16 @@ class LongTextsHandler(BaseHandler):
         return super().handle(data, **kwargs)
 
 
-@dataclass
+@define
 class VaeTrainHandler(BaseHandler):
-    wrapper_name: str
-    schema: Dict
-    epochs: int
-    row_subset: int
-    drop_null: bool
-    batch_size: int
-    type_of_process: str
-    print_report: bool
+    wrapper_name: str = field(kw_only=True)
+    schema: Dict = field(kw_only=True)
+    epochs: int = field(kw_only=True)
+    row_subset: int = field(kw_only=True)
+    drop_null: bool = field(kw_only=True)
+    batch_size: int = field(kw_only=True)
+    type_of_process: str = field(kw_only=True)
+    print_report: bool = field(kw_only=True)
 
     def __fit_model(self, data: pd.DataFrame):
         logger.info("Start VAE training")
@@ -197,18 +211,18 @@ class VaeTrainHandler(BaseHandler):
         return super().handle(data, **kwargs)
 
 
-@dataclass
+@define
 class VaeInferHandler(BaseHandler):
-    metadata_path: str
-    random_seed: Optional[int]
-    size: int
-    batch_size: int
-    run_parallel: bool
-    print_report: bool
-    get_infer_metrics: bool
-    wrapper_name: str
-    log_level: str
-    type_of_process: str
+    metadata_path: str = field(kw_only=True)
+    random_seed: Optional[int] = field(kw_only=True)
+    size: int = field(kw_only=True)
+    batch_size: int = field(kw_only=True)
+    run_parallel: bool = field(kw_only=True)
+    print_report: bool = field(kw_only=True)
+    get_infer_metrics: bool = field(kw_only=True)
+    wrapper_name: str = field(kw_only=True)
+    log_level: str = field(kw_only=True)
+    type_of_process: str = field(kw_only=True)
     random_seed_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)  # noqa: F405
     dataset: Dataset = field(init=False)
@@ -217,7 +231,7 @@ class VaeInferHandler(BaseHandler):
     has_no_ml: bool = field(init=False)
     batch_num: int = field(init=False)
 
-    def __post_init__(self):
+    def __attrs_post_init__(self):
         if self.random_seed:
             seed(self.random_seed)
         self.batch_num = math.ceil(self.size / self.batch_size)
@@ -230,7 +244,7 @@ class VaeInferHandler(BaseHandler):
         )
         self.has_vae = len(self.dataset.features) > 0
 
-        data, schema = self._get_data()
+        data, schema = self.fetch_data()
 
         if self.has_vae:
             self.vae = self._get_wrapper(data, schema)
@@ -246,19 +260,6 @@ class VaeInferHandler(BaseHandler):
                 p=np.array(list(counts.values())) / sum(np.array(list(counts.values()))),
             )
         )
-
-    def _get_data(self) -> Tuple[pd.DataFrame, Dict]:
-        """
-        Load the data from the input data path
-        """
-        input_data_existed = DataLoader(self.paths["input_data_path"]).has_existed_path
-
-        if input_data_existed:
-            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
-        else:
-            data = pd.DataFrame()
-            schema = None
-        return data, schema
 
     def _get_wrapper(self, data: pd.DataFrame, schema: Dict):
         """
