@@ -4,7 +4,7 @@ import math
 
 from syngen.ml.handlers import VaeInferHandler
 from syngen.ml.data_loaders import MetadataLoader
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 @patch("os.path.exists", return_value=True)
@@ -12,22 +12,22 @@ from tests.conftest import SUCCESSFUL_MESSAGE
     "path_to_metadata, expected_path, type_of_process",
     [
         (
-            "tests/unit/handlers/fixtures/metadata.yaml",
+            f"{DIR_NAME}/unit/handlers/fixtures/metadata.yaml",
             "path/to/merged_infer_parent-table.csv",
             "train",
         ),
         (
-            "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
+            f"{DIR_NAME}/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
             "path/to/merged_infer_parent-table.csv",
             "train",
         ),
         (
-            "tests/unit/handlers/fixtures/metadata.yaml",
+            f"{DIR_NAME}/unit/handlers/fixtures/metadata.yaml",
             "../data/parent_table_generated.csv",
             "infer",
         ),
         (
-            "tests/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
+            f"{DIR_NAME}/unit/handlers/fixtures/metadata_with_absent_destination.yaml",
             "model_artifacts/tmp_store/parent-table/merged_infer_parent-table.csv",
             "infer",
         ),
@@ -87,7 +87,7 @@ def test_split_by_batches(
     Test the method 'split_by_batches' of the class VaeInferHandler
     """
     rp_logger.info("Test the method 'split_by_batches' of the class VaeInferHandler")
-    path_to_metadata = "tests/unit/handlers/fixtures/metadata.yaml"
+    path_to_metadata = f"{DIR_NAME}/unit/handlers/fixtures/metadata.yaml"
     metadata = MetadataLoader(path_to_metadata).load_data()
     handler = VaeInferHandler(
         metadata=metadata,
