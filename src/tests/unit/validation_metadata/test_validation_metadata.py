@@ -777,6 +777,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_key_columns")
@@ -786,6 +787,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     mock_check_key_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
+    mock_check_existence_of_generated_data,
     test_metadata_storage,
     rp_logger
 ):
@@ -870,6 +872,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     assert mock_check_key_columns.call_count == 2
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
+    mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
