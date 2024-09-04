@@ -299,23 +299,30 @@ def test_check_non_existent_columns(rp_logger):
 
 
 @pytest.mark.parametrize(
-    "initial_date_format, expected_date_format",
+    "initial_date_format, expected_date_format, upper_case",
     [
-        ("%m-%d-%Y", "%m-%d-%Y"),
-        ("%d-%m-%Y", "%d-%m-%Y"),
-        ("%m/%d/%Y", "%m/%d/%Y"),
-        ("%d/%m/%Y", "%d/%m/%Y"),
-        ("%Y/%m/%d", "%Y/%m/%d"),
-        ("%Y-%m-%d", "%Y-%m-%d"),
-        ("%B %d, %Y", "%B %d, %Y"),
-        ("%b %d, %Y", "%b %d, %Y"),
-        ("%d %B %Y", "%d %B %Y"),
-        ("%b %d %Y", "%b %d %Y"),
-        ("%d.%m.%Y", "%d.%m.%Y"),
-        ("%m-%b-%y", "%d-%m-%Y"),
+        ("%m-%d-%Y", "%m-%d-%Y", False),
+        ("%d-%b-%y", "%d-%m-%Y", True),
+        ("%d-%m-%y", "%d-%m-%Y", False),
+        ("%d-%m-%Y", "%d-%m-%Y", False),
+        ("%m/%d/%Y", "%m/%d/%Y", False),
+        ("%d/%m/%Y", "%d/%m/%Y", False),
+        ("%Y/%m/%d", "%Y/%m/%d", False),
+        ("%Y-%m-%d", "%Y-%m-%d", False),
+        ("%B %d, %Y", "%B %d, %Y", False),
+        ("%b %d, %Y", "%b %d, %Y", False),
+        ("%d %B %Y", "%d %B %Y", False),
+        ("%b %d %Y", "%b %d %Y", False),
+        ("%d.%m.%Y", "%d.%m.%Y", False),
+        ("%m-%b-%y", "%d-%m-%Y", False),
     ]
 )
-def test_define_date_format_with_diff_format(initial_date_format, expected_date_format, rp_logger):
+def test_define_date_format_with_diff_format(
+    initial_date_format,
+    expected_date_format,
+    upper_case,
+    rp_logger
+):
     rp_logger.info(
         "Test the process of identifying the date format in the date column "
         "where the initial date format - %s and expected date format: %s",
@@ -327,10 +334,18 @@ def test_define_date_format_with_diff_format(initial_date_format, expected_date_
             "keys": {}
         }
     }
-    data = {
-        "Date": [(datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).
-                 strftime(initial_date_format) for x in range(10000)]
-    }
+
+    if upper_case:
+        data = {
+            "Date": [(datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).
+                     strftime(initial_date_format).upper() for x in range(10000)]
+        }
+    else:
+        data = {
+            "Date": [(datetime.datetime(2020, 1, 1) + datetime.timedelta(days=x)).
+                     strftime(initial_date_format) for x in range(10000)]
+        }
+
     df = pd.DataFrame(data, columns=["Date"])
     with patch("syngen.ml.vae.models.dataset.fetch_config", lambda x: MagicMock()):
         mock_dataset = Dataset(
