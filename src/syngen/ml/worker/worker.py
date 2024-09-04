@@ -387,6 +387,7 @@ class Worker:
             log_level=self.log_level,
             both_keys=both_keys,
             type_of_process=self.type_of_process,
+            loader=self.loader
         )
         ProgressBarHandler().set_progress(
             delta=delta,

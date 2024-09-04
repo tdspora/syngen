@@ -58,13 +58,22 @@ class Validator:
                     "parent_columns": key_data["references"]["columns"],
                 }
 
+    def _check_conditions(self, metadata: Dict) -> bool:
+        """
+        Check conditions whether to launch validation or not
+        """
+        print_report = metadata.get("train_settings", {}).get("print_report", False)
+        return (
+            self.type_of_process == "infer"
+            or (self.type_of_process == "train" and print_report is True)
+        )
+
     def _validate_metadata(self, table_name: str):
         """
         Validate the metadata
         """
         metadata_of_the_table = self.metadata[table_name]
         table_keys = metadata_of_the_table.get("keys", {})
-        print_report = metadata_of_the_table.get("train_settings", {}).get("print_report", False)
         for key, config in table_keys.items():
             if config["type"] not in self.type_of_fk_keys:
                 continue
@@ -75,9 +84,7 @@ class Validator:
             )
             parent_table = self.mapping[key]["parent_table"]
             if parent_table not in self.metadata:
-                if self.type_of_process == "infer" or (
-                    self.type_of_process == "train" and print_report is True
-                ):
+                if self._check_conditions(metadata_of_the_table):
                     self._check_existence_of_success_file(parent_table)
                     self._check_existence_of_generated_data(parent_table)
                 elif self.type_of_process == "train":

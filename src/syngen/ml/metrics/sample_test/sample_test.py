@@ -27,7 +27,12 @@ class SampleAccuracyTest(BaseTest):
         Do preparation work before creating the report
         """
         self._prepare_dir()
-        return UnivariateMetric(self.original, self.synthetic, True, self.reports_path)
+        return UnivariateMetric(
+            self.original,
+            self.synthetic,
+            True,
+            self.reports_path
+        )
 
     def __remove_artifacts(self):
         """

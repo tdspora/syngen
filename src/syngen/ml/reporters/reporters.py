@@ -1,19 +1,19 @@
 from abc import abstractmethod
-from typing import Dict
+from typing import Dict, Optional, Callable
 import itertools
 from collections import defaultdict
 
+import pandas as pd
 import numpy as np
 from loguru import logger
 
 from syngen.ml.utils import (
-    get_nan_labels,
     nan_labels_to_float,
     fetch_config,
     datetime_to_timestamp,
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
-from syngen.ml.data_loaders import DataLoader
+from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.metrics.utils import text_to_continuous
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import ProgressBarHandler
@@ -24,31 +24,51 @@ class Reporter:
     Abstract class for reporters
     """
 
-    def __init__(self, table_name: str, paths: Dict[str, str], config: Dict[str, str]):
+    def __init__(
+        self,
+        table_name: str,
+        paths: Dict[str, str],
+        config: Dict[str, str],
+        loader: Optional[Callable[[str], pd.DataFrame]] = None
+    ):
         self.table_name = table_name
         self.paths = paths
         self.config = config
+        self.loader = loader
+        self.dataset = None
+        self.columns_nan_labels = dict()
 
     def _extract_report_data(self):
-        original, schema = DataLoader(self.paths["original_data_path"]).load_data()
+        if self.loader:
+            original, schema = DataFrameFetcher(
+                loader=self.loader,
+                table_name=self.table_name
+            ).fetch_data()
+        else:
+            original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
         return original, synthetic
 
     def fetch_data_types(self):
-        dataset = fetch_config(self.paths["dataset_pickle_path"])
+        self.dataset = fetch_config(self.paths["dataset_pickle_path"])
+        self.columns_nan_labels = self.dataset.nan_labels_dict
         types = (
-            dataset.str_columns,
-            dataset.date_columns,
-            dataset.int_columns,
-            dataset.float_columns,
-            dataset.binary_columns,
-            dataset.categ_columns,
-            dataset.long_text_columns,
-            dataset.email_columns,
+            self.dataset.str_columns,
+            self.dataset.date_columns,
+            self.dataset.int_columns,
+            self.dataset.float_columns,
+            self.dataset.binary_columns,
+            self.dataset.categ_columns,
+            self.dataset.long_text_columns,
+            self.dataset.email_columns,
         )
 
         # eliminate keys columns from the report
-        keys_columns = set(dataset.pk_columns) | set(dataset.fk_columns) | set(dataset.uq_columns)
+        keys_columns = (
+            set(self.dataset.pk_columns) |
+            set(self.dataset.fk_columns) |
+            set(self.dataset.uq_columns)
+        )
         types = tuple(columns - keys_columns for columns in types)
 
         return types
@@ -69,15 +89,14 @@ class Reporter:
         Return original data, synthetic data, float columns, integer columns, categorical columns
         without keys columns
         """
+        types = self.fetch_data_types()
         original, synthetic = self._extract_report_data()
         missing_columns = set(original) - set(synthetic)
         for col in missing_columns:
             synthetic[col] = np.nan
-        columns_nan_labels = get_nan_labels(original)
-        original = nan_labels_to_float(original, columns_nan_labels)
-        synthetic = nan_labels_to_float(synthetic, columns_nan_labels)
-        dataset = fetch_config(self.paths["dataset_pickle_path"])
-        types = self.fetch_data_types()
+        exclude_columns = self.dataset.uuid_columns
+        original = nan_labels_to_float(original, self.columns_nan_labels, exclude_columns)
+        synthetic = nan_labels_to_float(synthetic, self.columns_nan_labels, exclude_columns)
         (
             str_columns,
             date_columns,
@@ -91,8 +110,8 @@ class Reporter:
 
         original = original[[col for col in original.columns if col in set().union(*types)]]
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
-        na_values = dataset.format.get("na_values", [])
-        for date_col, date_format in dataset.date_mapping.items():
+        na_values = self.dataset.format.get("na_values", [])
+        for date_col, date_format in self.dataset.date_mapping.items():
             original[date_col] = self.convert_to_timestamp(
                 original, date_col, date_format, na_values
             )
@@ -240,7 +259,13 @@ class AccuracyReporter(Reporter):
             categ_columns,
             date_columns,
         ) = self.preprocess_data()
-        accuracy_test = AccuracyTest(original, synthetic, self.paths, self.table_name, self.config)
+        accuracy_test = AccuracyTest(
+            original,
+            synthetic,
+            self.paths,
+            self.table_name,
+            self.config,
+        )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
             categ_columns=list(categ_columns),
@@ -273,7 +298,11 @@ class SampleAccuracyReporter(Reporter):
             date_columns,
         ) = self.preprocess_data()
         accuracy_test = SampleAccuracyTest(
-            original, sampled, self.paths, self.table_name, self.config
+            original,
+            sampled,
+            self.paths,
+            self.table_name,
+            self.config,
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),

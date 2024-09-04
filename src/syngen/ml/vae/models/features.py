@@ -1,7 +1,6 @@
 from itertools import chain
 from typing import Union, List
 from lazy import lazy
-from loguru import logger
 
 import category_encoders as ce
 import numpy as np
@@ -440,15 +439,24 @@ class CharBasedTextFeature(BaseFeature):
 
         # Shift the indices to the right to keep also the first token above the threshold
         zeros_for_shift = tf.zeros_like(sorted_indices_to_remove[:, :, :1], dtype=tf.bool)
-        sorted_indices_to_remove = tf.concat([zeros_for_shift, sorted_indices_to_remove[:, :, :-1]], axis=-1)
+        sorted_indices_to_remove = tf.concat(
+            [zeros_for_shift, sorted_indices_to_remove[:, :, :-1]],
+            axis=-1
+        )
 
         # Create a mask for indices to remove
         batch_size, seq_length, vocab_size = logits.shape
 
         batch_indices = tf.repeat(tf.range(batch_size), seq_length * vocab_size)
-        feature_length_indices = tf.tile(tf.repeat(tf.range(seq_length), vocab_size), [batch_size])
+        feature_length_indices = tf.tile(
+            tf.repeat(tf.range(seq_length), vocab_size),
+            [batch_size]
+        )
         vocab_selection_indices = tf.reshape(sorted_indices, [-1])
-        update_indices = tf.stack([batch_indices, feature_length_indices, vocab_selection_indices], axis=1)
+        update_indices = tf.stack(
+            [batch_indices, feature_length_indices, vocab_selection_indices],
+            axis=1
+        )
         flattened_update_values = tf.reshape(sorted_indices_to_remove, [-1])
         indices_to_remove = tf.tensor_scatter_nd_update(
             tf.zeros_like(logits, dtype=sorted_indices_to_remove.dtype),
@@ -473,7 +481,8 @@ class CharBasedTextFeature(BaseFeature):
     def _process_batch(self, batch: np.ndarray) -> List[str]:
         probs = tf.nn.softmax(batch, axis=-1).numpy().astype(float)
         probs = self._top_p_filtering(probs, top_p=0.9)
-        # probs = self._top_k_filtering(probs, top_k=6)  # TODO: select top_k based on inverse_dict length
+        # probs = self._top_k_filtering(probs, top_k=6)
+        # TODO: select top_k based on inverse_dict length
 
         probs /= probs.sum(axis=2, keepdims=True)
 
