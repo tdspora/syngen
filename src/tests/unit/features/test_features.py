@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from syngen.ml.vae.models.features import BaseFeature, CharBasedTextFeature
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 @pytest.mark.parametrize(
@@ -58,7 +58,7 @@ def test_inverse_transform_of_char_based_text_feature(rp_logger):
         12: "M"
     }
     data = np.loadtxt(
-        "tests/unit/features/fixtures/tensor.csv"
+        f"{DIR_NAME}/unit/features/fixtures/tensor.csv"
     ).reshape((20, 4, 12)).astype(np.float32)
     result = feature.inverse_transform(data=data)
     assert len(result) == 20
@@ -75,11 +75,11 @@ def test_top_k_filtering(rp_logger):
         text_max_len=4
     )
     data = np.loadtxt(
-        "tests/unit/features/fixtures/tensor.csv"
+        f"{DIR_NAME}/unit/features/fixtures/tensor.csv"
     ).reshape((20, 4, 12))
     result = feature._top_k_filtering(data, top_k=3)
     ethalon = np.loadtxt(
-        "tests/unit/features/fixtures/top_k-tensor.csv"
+        f"{DIR_NAME}/unit/features/fixtures/top_k-tensor.csv"
     ).reshape((20, 4, 12))
     np.testing.assert_array_equal(result, ethalon)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -95,7 +95,7 @@ def test_top_p_filtering(rp_logger):
     )
     data = tf.nn.softmax(
         np.loadtxt(
-            "tests/unit/features/fixtures/tensor.csv"
+            f"{DIR_NAME}/unit/features/fixtures/tensor.csv"
         ).reshape((20, 4, 12)).astype(np.float32),
         axis=-1
     )
@@ -104,7 +104,7 @@ def test_top_p_filtering(rp_logger):
     result /= result.sum(axis=2, keepdims=True)
 
     ethalon = np.loadtxt(
-        "tests/unit/features/fixtures/top_p-tensor.csv"
+        f"{DIR_NAME}/unit/features/fixtures/top_p-tensor.csv"
     ).reshape((20, 4, 12))
     np.testing.assert_allclose(result, ethalon, rtol=1e-6)
     rp_logger.info(SUCCESSFUL_MESSAGE)

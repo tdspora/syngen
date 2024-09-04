@@ -8,7 +8,7 @@ import pandavro as pdx
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.data_loaders import DataLoader
 
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 SCHEMA = {
     "EmployeeKey": ["int", "null"],
@@ -48,7 +48,7 @@ SCHEMA = {
 def test_initiate_csv_convertor(rp_logger):
     rp_logger.info("Initiating the instance of the class CSVConvertor")
     df, schema = DataLoader(
-        "tests/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv"
+        f"{DIR_NAME}/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv"
     ).load_data()
     convertor = CSVConvertor({"fields": {}, "format": "CSV"}, df)
     assert convertor.converted_schema == {"fields": {}, "format": "CSV"}
@@ -59,7 +59,7 @@ def test_initiate_csv_convertor(rp_logger):
 def test_initiate_avro_convertor(rp_logger):
     rp_logger.info("Initiating the instance of the class AvroConvertor")
     df = pdx.from_avro(
-        "tests/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
+        f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
     )
 
     convertor = AvroConvertor(SCHEMA, df)
@@ -179,7 +179,7 @@ def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
             df = pdx.from_avro(
-                "tests/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
+                f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
             )
 
             schema = {"Test": "test"}
