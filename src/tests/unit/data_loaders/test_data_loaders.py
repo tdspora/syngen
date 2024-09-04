@@ -16,7 +16,7 @@ from syngen.ml.data_loaders import (
     ExcelLoader,
 )
 from syngen.ml.context import global_context, get_context
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 CSV_SCHEMA = {"fields": {}, "format": "CSV"}
@@ -26,12 +26,9 @@ def test_initialize_data_loader_for_local_csv_table_with_existed_path(rp_logger)
     rp_logger.info(
         "Initializing the instance of the class DataLoader for local csv table with existed path"
     )
-    test_data_loader = DataLoader(
-        "tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
-    )
-    assert (
-        test_data_loader.path == "tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
-    )
+    path_to_table = f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+    test_data_loader = DataLoader(path_to_table)
+    assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
     assert test_data_loader.original_schema is None
     assert isinstance(test_data_loader.file_loader, CSVLoader)
@@ -54,13 +51,9 @@ def test_initialize_data_loader_for_local_avro_table_with_existed_path(rp_logger
     rp_logger.info(
         "Initializing the instance of the class DataLoader for local avro table with existed path"
     )
-    test_data_loader = DataLoader(
-        "tests/unit/data_loaders/fixtures/avro_tables/table_with_data.avro"
-    )
-    assert (
-        test_data_loader.path
-        == "tests/unit/data_loaders/fixtures/avro_tables/table_with_data.avro"
-    )
+    path_to_table = f"{DIR_NAME}/unit/data_loaders/fixtures/avro_tables/table_with_data.avro"
+    test_data_loader = DataLoader(path_to_table)
+    assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
     assert test_data_loader.original_schema == {
         "fields": [
@@ -91,13 +84,10 @@ def test_initialize_data_loader_for_local_pickle_table_with_existed_path(rp_logg
         "Initializing the instance of the class DataLoader "
         "for local pickle table with existed path"
     )
-    test_data_loader = DataLoader(
-        "tests/unit/data_loaders/fixtures/pickle_tables/table_with_data.pkl"
-    )
-    assert (
-        test_data_loader.path
-        == "tests/unit/data_loaders/fixtures/pickle_tables/table_with_data.pkl"
-    )
+    path_to_table = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                     "pickle_tables/table_with_data.pkl")
+    test_data_loader = DataLoader(path_to_table)
+    assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
     assert test_data_loader.original_schema is None
     assert isinstance(test_data_loader.file_loader, BinaryLoader)
@@ -140,7 +130,8 @@ def test_initialize_data_loader_for_local_table_with_empty_path(caplog, rp_logge
 
 def test_load_data_from_table_in_csv_format(rp_logger):
     rp_logger.info("Loading data from local table in csv format")
-    data_loader = DataLoader("./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "csv_tables/table_with_data.csv")
     df, schema = data_loader.load_data()
     assert isinstance(data_loader.file_loader, CSVLoader)
     assert (
@@ -170,7 +161,7 @@ def test_load_data_from_table_in_csv_format(rp_logger):
 
 def test_load_data_from_table_in_csv_format_in_not_utf_8(caplog, rp_logger):
     rp_logger.info("Loading data from local table in csv format in not 'utf-8' encoding")
-    path = "./tests/unit/data_loaders/fixtures/csv_tables/table_in_iso_encoding.csv"
+    path = f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/table_in_iso_encoding.csv"
     data_loader = DataLoader(path)
     assert isinstance(data_loader.file_loader, CSVLoader)
 
@@ -187,7 +178,8 @@ def test_load_data_from_table_in_csv_format_in_not_utf_8(caplog, rp_logger):
 
 def test_load_data_from_empty_table_in_csv_format(caplog, rp_logger):
     rp_logger.info("Loading data from local empty table in csv format")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/empty_table.csv")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "csv_tables/empty_table.csv")
     assert isinstance(data_loader.file_loader, CSVLoader)
     with pytest.raises(pd.errors.EmptyDataError):
         with caplog.at_level("ERROR"):
@@ -198,7 +190,8 @@ def test_load_data_from_empty_table_in_csv_format(caplog, rp_logger):
 
 def test_get_columns_from_table_in_csv_format(rp_logger):
     rp_logger.info("Get the list of the columns from the table in CSV format")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "csv_tables/table_with_data.csv")
     columns = data_loader.get_columns()
     assert isinstance(data_loader.file_loader, CSVLoader)
     assert columns == ["gender", "height", "id"]
@@ -209,7 +202,8 @@ def test_get_columns_from_table_in_csv_format_with_formatting_settings(rp_logger
     rp_logger.info(
         "Get the list of the columns from the table in CSV format where the separator is '|'"
     )
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.csv")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "csv_tables/pipe_delimited_text.csv")
     columns = data_loader.get_columns(sep="|")
     assert isinstance(data_loader.file_loader, CSVLoader)
     assert columns == ["id", "first_name", "last_name", "email", "gender", "ip_address"]
@@ -218,7 +212,8 @@ def test_get_columns_from_table_in_csv_format_with_formatting_settings(rp_logger
 
 def test_get_columns_from_empty_table_in_csv_format(caplog, rp_logger):
     rp_logger.info("Get the list of the columns from the empty table in csv format")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/csv_tables/empty_table.csv")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "csv_tables/empty_table.csv")
     assert isinstance(data_loader.file_loader, CSVLoader)
     with pytest.raises(pd.errors.EmptyDataError):
         with caplog.at_level("ERROR"):
@@ -244,7 +239,7 @@ def test_save_data_in_csv_format(test_csv_path, test_df, rp_logger):
 def test_load_data_from_table_in_avro_format(rp_logger):
     rp_logger.info("Loading data from local table in '.avro' format")
     data_loader = DataLoader(
-        "./tests/unit/data_loaders/fixtures/avro_tables/table_with_data.avro"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/avro_tables/table_with_data.avro"
     )
     df, schema = data_loader.load_data()
 
@@ -289,7 +284,7 @@ def test_load_data_from_table_in_avro_with_null_column(rp_logger):
     rp_logger.info(
         "Loading data from local table in avro format with a column that has a data type - 'null'"
     )
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/"
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
                              "avro_tables/table_with_null_column.avro")
     df, schema = data_loader.load_data()
 
@@ -322,7 +317,7 @@ def test_load_data_from_table_in_avro_with_null_column(rp_logger):
 
 def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
     rp_logger.info("Loading data from local empty table in avro format")
-    path = "tests/unit/data_loaders/fixtures/avro_tables/empty_table.avro"
+    path = f"{DIR_NAME}/unit/data_loaders/fixtures/avro_tables/empty_table.avro"
     data_loader = DataLoader(path)
 
     assert isinstance(data_loader.file_loader, AvroLoader)
@@ -350,7 +345,8 @@ def test_load_original_schema_from_empty_table_in_avro_format(caplog, rp_logger)
 
 def test_get_columns_from_table_in_avro_format(rp_logger):
     rp_logger.info("Get the list of the columns from the table in avro format")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/avro_tables/table_with_data.avro")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "avro_tables/table_with_data.avro")
     columns = data_loader.get_columns()
     assert isinstance(data_loader.file_loader, AvroLoader)
     assert columns == ["gender", "height", "id"]
@@ -359,7 +355,8 @@ def test_get_columns_from_table_in_avro_format(rp_logger):
 
 def test_get_columns_from_empty_table_in_avro_format(caplog, rp_logger):
     rp_logger.info("Get the list of the columns from the empty table in avro format")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/avro_tables/empty_table.avro")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "avro_tables/empty_table.avro")
     assert isinstance(data_loader.file_loader, AvroLoader)
     with pytest.raises(InvalidAvroBinaryEncoding):
         with caplog.at_level("ERROR"):
@@ -387,7 +384,8 @@ def test_save_data_in_avro_format(test_avro_path, test_df, test_avro_schema, rp_
 
 def test_load_data_from_table_in_pickle_format(rp_logger):
     rp_logger.info("Loading data from local table in pickle format")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/pickle_tables/table_with_data.pkl")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "pickle_tables/table_with_data.pkl")
     df, schema = data_loader.load_data()
 
     assert isinstance(data_loader.file_loader, BinaryLoader)
@@ -417,7 +415,7 @@ def test_load_data_from_table_in_pickle_format(rp_logger):
 
 def test_load_data_from_empty_table_in_pickle_format(caplog, rp_logger):
     rp_logger.info("Loading data from local empty table in pickle format")
-    path = "tests/unit/data_loaders/fixtures/pickle_tables/empty_table.pkl"
+    path = f"{DIR_NAME}/unit/data_loaders/fixtures/pickle_tables/empty_table.pkl"
     data_loader = DataLoader(path)
 
     assert isinstance(data_loader.file_loader, BinaryLoader)
@@ -444,13 +442,9 @@ def test_save_data_in_pickle_format(test_pickle_path, test_df, rp_logger):
 
 def test_initialize_metadata_loader(rp_logger):
     rp_logger.info("Initializing metadata loader")
-    test_metadata_loader = MetadataLoader(
-        "tests/unit/data_loaders/fixtures/metadata/metadata.yaml"
-    )
-    assert (
-        test_metadata_loader.path
-        == "tests/unit/data_loaders/fixtures/metadata/metadata.yaml"
-    )
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yaml"
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+    assert test_metadata_loader.path == path_to_metadata
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -465,7 +459,7 @@ def test_initialize_metadata_loader_in_unsupported_format(rp_logger):
 
 def test_load_metadata_in_yaml_format(rp_logger):
     rp_logger.info("Loading metadata in '.yaml' format")
-    path_to_metadata = "tests/unit/data_loaders/fixtures/metadata/metadata.yaml"
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yaml"
     test_metadata_loader = MetadataLoader(path_to_metadata)
 
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
@@ -494,7 +488,7 @@ def test_load_metadata_in_yaml_format(rp_logger):
 
 def test_load_metadata_in_yml_format(rp_logger):
     rp_logger.info("Loading metadata in yml format")
-    path_to_metadata = "tests/unit/data_loaders/fixtures/metadata/metadata.yml"
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yml"
     test_metadata_loader = MetadataLoader(path_to_metadata)
 
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
@@ -523,7 +517,7 @@ def test_load_metadata_in_yml_format(rp_logger):
 
 def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     rp_logger.info("Loading metadata by YAMLLoader in '.yaml' format")
-    path_to_metadata = "./tests/unit/data_loaders/fixtures/metadata/metadata.yaml"
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yaml"
     loader = YAMLLoader(path_to_metadata)
 
     expected_metadata = {
@@ -557,7 +551,8 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
 def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger):
     rp_logger.info("Loading metadata by YAMLLoader in '.yml' format")
     path_to_metadata = (
-        "tests/unit/data_loaders/fixtures/metadata/metadata_with_absent_destination.yaml"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/"
+        "metadata/metadata_with_absent_destination.yaml"
     )
     loader = YAMLLoader(path_to_metadata)
 
@@ -647,7 +642,8 @@ def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logge
 
 def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
     rp_logger.info("Loading metadata in yaml format with 'infer_settings', 'keys' defined as None")
-    path_to_metadata = "tests/unit/data_loaders/fixtures/metadata/metadata_with_none_params.yaml"
+    path_to_metadata = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                        "metadata/metadata_with_none_params.yaml")
     test_metadata_loader = MetadataLoader(path_to_metadata)
 
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
@@ -664,7 +660,8 @@ def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
 
 
 def test_load_pipe_delimited_csv(rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/pipe_delimited_text.csv")
     rp_logger.info("Loading CSV with pipe delimiter")
     global_context({"sep": "|", "quoting": "None"})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -673,7 +670,8 @@ def test_load_pipe_delimited_csv(rp_logger):
 
 
 def test_save_pipe_delimited_csv(test_csv_path, rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/"
+                      "fixtures/csv_tables/pipe_delimited_text.csv")
     rp_logger.info("Saving CSV with pipe delimiter")
     format_params = {"sep": "|", "quoting": "None"}
     global_context(format_params)
@@ -686,7 +684,8 @@ def test_save_pipe_delimited_csv(test_csv_path, rp_logger):
 
 
 def test_load_semicolon_delimited_csv(rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/semicolon_delimited_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/semicolon_delimited_text.csv")
     rp_logger.info("Loading CSV with semicolon delimiter")
     global_context({"sep": ";", "quoting": "None"})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -695,7 +694,8 @@ def test_load_semicolon_delimited_csv(rp_logger):
 
 
 def test_save_semicolon_delimited_csv(test_csv_path, rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/semicolon_delimited_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/semicolon_delimited_text.csv")
     rp_logger.info("Saving CSV with semicolon delimiter")
     format_settings = {"sep": ";", "quoting": "None"}
     global_context(format_settings)
@@ -708,7 +708,7 @@ def test_save_semicolon_delimited_csv(test_csv_path, rp_logger):
 
 
 def test_load_tab_delimited_csv(rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.csv"
+    path_to_source = f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.csv"
     rp_logger.info("Loading CSV with tab delimiter")
     global_context({"sep": "\t", "quoting": "None", "engine": "python"})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -717,7 +717,8 @@ def test_load_tab_delimited_csv(rp_logger):
 
 
 def test_save_tab_delimited_csv(test_csv_path, rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/"
+                      "fixtures/csv_tables/tab_delimited_text.csv")
     rp_logger.info("Saving CSV with tab delimiter")
     format_params = {"sep": "\t", "quoting": "None"}
     global_context(format_params)
@@ -730,7 +731,8 @@ def test_save_tab_delimited_csv(test_csv_path, rp_logger):
 
 
 def test_load_multiline_bad_line_csv(rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/multiline_bad_line_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/multiline_bad_line_text.csv")
     rp_logger.info("Loading CSV with multiline texts")
     global_context(
         {
@@ -749,7 +751,8 @@ def test_load_multiline_bad_line_csv(rp_logger):
 
 
 def test_save_multiline_bad_line_csv(test_csv_path, rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/multiline_bad_line_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/multiline_bad_line_text.csv")
     rp_logger.info("Saving CSV with multiline texts")
     format_settings = {
         "sep": ",",
@@ -778,7 +781,8 @@ def test_save_multiline_bad_line_csv(test_csv_path, rp_logger):
 
 
 def test_load_double_quoted_csv(rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/double_quoted_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/double_quoted_text.csv")
     rp_logger.info("Loading CSV with double quoted values")
     global_context({"sep": ",", "quotechar": '"'})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -787,7 +791,8 @@ def test_load_double_quoted_csv(rp_logger):
 
 
 def test_save_double_quoted_csv(test_csv_path, rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/double_quoted_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/double_quoted_text.csv")
     rp_logger.info("Saving CSV with double quoted values")
     format_settings = {"sep": ",", "quotechar": '"'}
     global_context(format_settings)
@@ -805,7 +810,8 @@ def test_save_double_quoted_csv(test_csv_path, rp_logger):
 
 
 def test_load_escaped_quoted_csv(rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/escaped_quoted_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/escaped_quoted_text.csv")
     rp_logger.info("Loading CSV with escaped quoted values")
     global_context({"sep": ",", "quotechar": '"'})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -814,7 +820,8 @@ def test_load_escaped_quoted_csv(rp_logger):
 
 
 def test_save_escaped_quoted_csv(test_csv_path, rp_logger):
-    path_to_source = "tests/unit/data_loaders/fixtures/csv_tables/escaped_quoted_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/escaped_quoted_text.csv")
     rp_logger.info("Saving CSV with escaped quoted values")
     format_settings = {"sep": ",", "quotechar": '"'}
     global_context(format_settings)
@@ -832,7 +839,8 @@ def test_save_escaped_quoted_csv(test_csv_path, rp_logger):
 
 
 def test_load_csv_without_header(rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_without_header.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/text_without_header.csv")
     rp_logger.info("Loading CSV without the header")
     global_context(
         {
@@ -849,7 +857,8 @@ def test_load_csv_without_header(rp_logger):
 
 
 def test_save_csv_without_header(test_csv_path, rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/text_without_header.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/text_without_header.csv")
     rp_logger.info("Saving CSV without the header")
     format_settings = {
         "sep": ",",
@@ -875,7 +884,8 @@ def test_save_csv_without_header(test_csv_path, rp_logger):
 
 
 def test_load_csv_with_triple_colons(rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/multicolon_delimited_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/multicolon_delimited_text.csv")
     rp_logger.info("Loading CSV contained the fields separated by triple colons")
     global_context({"sep": ":::", "quotechar": "None"})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -884,7 +894,8 @@ def test_load_csv_with_triple_colons(rp_logger):
 
 
 def test_save_csv_with_triple_colons(test_csv_path, rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/multicolon_delimited_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/multicolon_delimited_text.csv")
     rp_logger.info("Saving CSV contained the fields with triple colons")
     format_settings = {"sep": ":::"}
     global_context(format_settings)
@@ -898,7 +909,8 @@ def test_save_csv_with_triple_colons(test_csv_path, rp_logger):
 
 
 def test_load_text_file(rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.txt"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/table_with_data.txt")
     rp_logger.info("Loading table with data in '.txt' format")
     global_context({})
     assert get_context().get_config() == {}
@@ -908,7 +920,8 @@ def test_load_text_file(rp_logger):
 
 
 def test_save_text_file(test_csv_path, rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.txt"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/table_with_data.txt")
     rp_logger.info("Saving CSV table in '.txt' format")
     global_context({})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -920,7 +933,8 @@ def test_save_text_file(test_csv_path, rp_logger):
 
 
 def test_load_pcv_file(rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.psv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/pipe_delimited_text.psv")
     rp_logger.info("Loading table with data in '.pcv' format")
     global_context({"sep": "|"})
     assert get_context().get_config() == {"sep": "|"}
@@ -930,7 +944,8 @@ def test_load_pcv_file(rp_logger):
 
 
 def test_save_pcv_file(test_csv_path, rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.psv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/pipe_delimited_text.psv")
     rp_logger.info("Saving CSV table in '.pcv' format")
     global_context({"sep": "|"})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -942,7 +957,8 @@ def test_save_pcv_file(test_csv_path, rp_logger):
 
 
 def test_load_tcv_file(rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.tsv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/tab_delimited_text.tsv")
     rp_logger.info("Loading table with data in '.tcv' format")
     global_context({"sep": "\t"})
     assert get_context().get_config() == {"sep": "\t"}
@@ -952,7 +968,8 @@ def test_load_tcv_file(rp_logger):
 
 
 def test_save_tcv_file(test_csv_path, rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.tsv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/tab_delimited_text.tsv")
     rp_logger.info("Saving CSV table in '.tcv' format")
     global_context({"sep": "\t"})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -965,7 +982,7 @@ def test_save_tcv_file(test_csv_path, rp_logger):
 
 def test_load_csv_with_nested_field(rp_logger):
     path_to_source = (
-        "./tests/unit/data_loaders/fixtures/csv_tables/text_contained_nested_field.csv"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/text_contained_nested_field.csv"
     )
     rp_logger.info("Loading CSV with nested field")
     global_context({"quotechar": '"', "quoting": "minimal"})
@@ -976,7 +993,7 @@ def test_load_csv_with_nested_field(rp_logger):
 
 def test_save_csv_with_nested_field(test_csv_path, rp_logger):
     path_to_source = (
-        "./tests/unit/data_loaders/fixtures/csv_tables/text_contained_nested_field.csv"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/text_contained_nested_field.csv"
     )
     rp_logger.info("Saving CSV with nested field")
     global_context({"quotechar": '"', "quoting": "minimal"})
@@ -993,7 +1010,8 @@ def test_save_csv_with_nested_field(test_csv_path, rp_logger):
 
 
 def test_load_csv_with_double_pipe_delimited_text(rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/double_pipe_delimited_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/double_pipe_delimited_text.csv")
     rp_logger.info("Loading CSV with double pipe delimited text")
     global_context({"sep": r"\|\|"})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -1002,7 +1020,8 @@ def test_load_csv_with_double_pipe_delimited_text(rp_logger):
 
 
 def test_save_csv_with_double_pipe_delimited_text(test_csv_path, rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/double_pipe_delimited_text.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/double_pipe_delimited_text.csv")
     rp_logger.info("Saving CSV contained the fields with double pipe delimited text")
     format_settings = {"sep": r"\|\|"}
     global_context(format_settings)
@@ -1016,7 +1035,8 @@ def test_save_csv_with_double_pipe_delimited_text(test_csv_path, rp_logger):
 
 
 def test_load_csv_with_na_values(rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/table_with_na_values.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/table_with_na_values.csv")
     rp_logger.info("Loading CSV contained NA values")
     global_context({"na_values": ["-", "Missing"]})
     data, schema = CSVLoader(path_to_source).load_data()
@@ -1026,7 +1046,8 @@ def test_load_csv_with_na_values(rp_logger):
 
 
 def test_save_csv_with_na_values(test_csv_path, rp_logger):
-    path_to_source = "./tests/unit/data_loaders/fixtures/csv_tables/table_with_na_values.csv"
+    path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                      "csv_tables/table_with_na_values.csv")
     rp_logger.info("Saving CSV contained NA values")
     format_settings = {
         "na_values": ["-", "Missing", "NaN"],
@@ -1051,13 +1072,10 @@ def test_initialize_data_loader_for_local_excel_table_with_existed_path(rp_logge
     rp_logger.info(
         "Initializing the instance of the class DataLoader for local Excel table with existed path"
     )
-    test_data_loader = DataLoader(
-        "tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xlsx"
-    )
-    assert (
-        test_data_loader.path
-        == "tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xlsx"
-    )
+    path_to_table = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                     "excel_tables/table_with_data.xlsx")
+    test_data_loader = DataLoader(path_to_table)
+    assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
     assert test_data_loader.original_schema is None
     assert isinstance(test_data_loader.file_loader, ExcelLoader)
@@ -1079,8 +1097,8 @@ def test_initialize_data_loader_for_local_excel_table_with_not_existed_path(rp_l
 @pytest.mark.parametrize(
     "path_to_table",
     [
-        "tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xls",
-        "tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xlsx",
+        f"{DIR_NAME}/unit/data_loaders/fixtures/excel_tables/table_with_data.xls",
+        f"{DIR_NAME}/unit/data_loaders/fixtures/excel_tables/table_with_data.xlsx",
     ],
 )
 def test_load_data_from_table_in_excel_format(path_to_table, rp_logger):
@@ -1116,7 +1134,8 @@ def test_load_data_from_table_in_excel_format_from_1_sheet_of_2_sheets(rp_logger
     rp_logger.info("Loading data from local Excel table in '.xls' format from the certain sheet")
     global_context({"sheet_name": "TestName"})
     data_loader = DataLoader(
-        "tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_sheets.xls"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/"
+        "excel_tables/table_with_data_and_2_sheets.xls"
     )
     df, schema = data_loader.load_data()
     assert isinstance(data_loader.file_loader, ExcelLoader)
@@ -1145,7 +1164,8 @@ def test_load_data_from_table_in_excel_format_from_2_sheets_of_2_sheets(rp_logge
     )
     global_context({"sheet_name": None})
     data_loader = DataLoader(
-        "tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_nonempty_sheets.xlsx"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/"
+        "excel_tables/table_with_data_and_2_nonempty_sheets.xlsx"
     )
     df, schema = data_loader.load_data()
     assert isinstance(data_loader.file_loader, ExcelLoader)
@@ -1170,7 +1190,8 @@ def test_load_data_from_table_in_excel_format_from_2_sheets_of_2_sheets(rp_logge
 
 def test_load_data_from_empty_excel_table(rp_logger, caplog):
     rp_logger.info("Loading data from local empty Excel table in '.xlsx' format")
-    data_loader = DataLoader("./tests/unit/data_loaders/fixtures/excel_tables/empty_table.xlsx")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "excel_tables/empty_table.xlsx")
     assert isinstance(data_loader.file_loader, ExcelLoader)
     data, schema = data_loader.load_data()
     assert data.empty is True
@@ -1180,7 +1201,8 @@ def test_load_data_from_empty_excel_table(rp_logger, caplog):
 
 def test_get_column_from_table_in_xlsx_format(rp_logger):
     rp_logger.info("Get the list of the columns from the table in '.xlsx' format")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xlsx")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "excel_tables/table_with_data.xlsx")
     columns = data_loader.get_columns()
     assert isinstance(data_loader.file_loader, ExcelLoader)
     assert columns == ["gender", "height", "id"]
@@ -1189,7 +1211,8 @@ def test_get_column_from_table_in_xlsx_format(rp_logger):
 
 def test_get_column_from_table_in_xls_format(rp_logger):
     rp_logger.info("Get the list of the columns from the table in '.xls' format")
-    data_loader = DataLoader("tests/unit/data_loaders/fixtures/excel_tables/table_with_data.xls")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "excel_tables/table_with_data.xls")
     columns = data_loader.get_columns()
     assert isinstance(data_loader.file_loader, ExcelLoader)
     assert columns == ["gender", "height", "id"]
@@ -1201,7 +1224,8 @@ def test_get_column_from_table_in_xls_format_with_formatting_settings(rp_logger)
         "Get the list of the columns from the table in '.xls' format from the certain sheet"
     )
     data_loader = DataLoader(
-        "tests/unit/data_loaders/fixtures/excel_tables/table_with_data_and_2_sheets.xls"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/"
+        "excel_tables/table_with_data_and_2_sheets.xls"
     )
     columns = data_loader.get_columns(sheet_name="TestName")
     assert isinstance(data_loader.file_loader, ExcelLoader)
@@ -1211,7 +1235,8 @@ def test_get_column_from_table_in_xls_format_with_formatting_settings(rp_logger)
 
 def test_get_columns_from_empty_excel_table(caplog, rp_logger):
     rp_logger.info("Get the list of the columns from the empty table in '.xlsx' format")
-    data_loader = DataLoader("./tests/unit/data_loaders/fixtures/excel_tables/empty_table.xlsx")
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "excel_tables/empty_table.xlsx")
     assert isinstance(data_loader.file_loader, ExcelLoader)
     assert data_loader.get_columns() == []
     rp_logger.info(SUCCESSFUL_MESSAGE)

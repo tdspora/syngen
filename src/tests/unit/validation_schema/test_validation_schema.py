@@ -7,7 +7,7 @@ from marshmallow import ValidationError
 
 from syngen.ml.validation_schema import ValidationSchema
 
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 def load_metadata_file(metadata_path) -> Dict:
@@ -19,7 +19,7 @@ def load_metadata_file(metadata_path) -> Dict:
 def test_valid_metadata_file(rp_logger, caplog):
     rp_logger.info("Test the validation of the schema of the valid metadata file")
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     with caplog.at_level(level="DEBUG"):
@@ -40,7 +40,8 @@ def test_valid_metadata_file_with_source_contained_path_to_excel_table(
         "the parameter 'source' which is the path to excel table"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_file_for_excel_table.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
+        "valid_metadata_file_for_excel_table.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     with caplog.at_level(level="DEBUG"):
@@ -59,7 +60,7 @@ def test_valid_metadata_file_without_global_settings(rp_logger, caplog):
         "with absent 'global' settings"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "valid_metadata_file_with_absent_global_settings.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
@@ -79,7 +80,7 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
         "with absent 'global' settings"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "valid_metadata_file_only_with_required_fields.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
@@ -161,7 +162,7 @@ def test_metadata_file_with_invalid_training_settings(
         "Test the validation of the schema of the metadata  with invalid training settings"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     metadata["fk_test"]["train_settings"].update(wrong_setting)
@@ -235,7 +236,7 @@ def test_metadata_file_with_invalid_global_training_settings(
         "Test the validation of the schema of the metadata with invalid global training settings"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     metadata["global"]["train_settings"].update(wrong_setting)
@@ -302,7 +303,7 @@ def test_metadata_file_with_invalid_infer_settings(
 ):
     rp_logger.info("Test the validation of the metadata with invalid infer settings")
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     metadata["fk_test"]["infer_settings"].update(wrong_setting)
@@ -366,7 +367,7 @@ def test_metadata_file_with_invalid_global_infer_settings(
         "Test the validation of the schema of the metadata with invalid global infer settings"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     metadata["global"]["infer_settings"].update(wrong_setting)
@@ -454,7 +455,7 @@ def test_metadata_file_with_invalid_format_settings_for_csv_table(
         "Test the validation of the schema of the metadata with format settings set to CSV file"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     metadata["fk_test"]["format"].update(wrong_setting)
@@ -516,7 +517,8 @@ def test_metadata_file_with_invalid_format_settings_for_excel_table(
         "Test the validation of the schema of the metadata with format settings set to Excel table"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_file_for_excel_table.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
+        "valid_metadata_file_for_excel_table.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     metadata["pk_test"]["format"].update(wrong_setting)
@@ -537,7 +539,7 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with absent required fields"
     )
-    path_to_metadata = ("./tests/unit/validation_schema/fixtures/"
+    path_to_metadata = (f"{DIR_NAME}/unit/validation_schema/fixtures/"
                         "metadata_file_without_required_fields.yaml")
     metadata = load_metadata_file(path_to_metadata)
     with pytest.raises(ValidationError) as error:
@@ -561,7 +563,7 @@ def test_metadata_file_with_invalid_PK_key_contained_references_section(rp_logge
         "which contained 'references' section"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_PK_key.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/metadata_file_with_invalid_PK_key.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     with pytest.raises(ValidationError) as error:
@@ -585,7 +587,7 @@ def test_metadata_file_with_invalid_UQ_key_contained_references_section(rp_logge
         "contained 'references' section"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_UQ_key.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/metadata_file_with_invalid_UQ_key.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     with pytest.raises(ValidationError) as error:
@@ -609,7 +611,7 @@ def test_metadata_file_with_invalid_FK_key_without_references_section(rp_logger)
         "which doesn't contain 'references' section"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/metadata_file_with_invalid_FK_key.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/metadata_file_with_invalid_FK_key.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     with pytest.raises(ValidationError) as error:
@@ -631,59 +633,59 @@ def test_metadata_file_with_invalid_FK_key_without_references_section(rp_logger)
     "path_to_metadata, expected_error",
     [
         (
-            "./tests/unit/validation_schema/fixtures/"
+            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_absent_pk_columns.yaml",
             "The details are - {'table_a': {'keys': defaultdict(<class 'dict'>, {"
             "'pk_id': {'value': {'columns': ['Field may not be null.']}}})}}",
         ),
         (
-            "./tests/unit/validation_schema/fixtures/"
+            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_absent_fk_columns.yaml",
             "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {"
             "'fk_id': {'value': {'columns': ['Missing data for required field.']}}})}}",
         ),
         (
-            "./tests/unit/validation_schema/fixtures/"
+            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_absent_ref_table.yaml",
             "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {"
             "'fk_id': {'value': {'references': {'table': ["
             "'Missing data for required field.']}}}})}}",
         ),
         (
-            "./tests/unit/validation_schema/fixtures/"
+            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_absent_ref_columns.yaml",
             "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {"
             "'fk_id': {'value': {'references': {'columns': ["
             "'Missing data for required field.']}}}})}}",
         ),
         (
-            "./tests/unit/validation_schema/fixtures/"
+            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_duplicated_pk_columns.yaml",
             "The details are - {'table_a': {'keys': defaultdict(<class 'dict'>, {"
             "'pk_id': {'value': {'_schema': [\"The 'columns' field "
             'must contain unique values"]}}})}}',
         ),
         (
-            "./tests/unit/validation_schema/fixtures/"
+            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_duplicated_fk_columns.yaml",
             "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {'fk_id': {"
             "'value': {'_schema': [\"The 'columns' field must contain unique values\"]}}})}}",
         ),
         (
-            "./tests/unit/validation_schema/fixtures/"
+            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_absent_uq_columns.yaml",
             "The details are - {'table_a': {'keys': defaultdict(<class 'dict'>, {"
             "'pk_id': {'value': {'columns': ['Field may not be null.']}}})}}",
         ),
         (
-            "./tests/unit/validation_schema/fixtures/"
+            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_duplicated_uq_columns.yaml",
             "The details are - {'table_a': {'keys': defaultdict(<class 'dict'>, {"
             "'uq_id': {'value': {'_schema': [\"The 'columns' field "
             'must contain unique values"]}}})}}',
         ),
         (
-            "./tests/unit/validation_schema/fixtures/"
+            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_diff_length_of_columns.yaml",
             "The details are - {'table_b': {'keys': defaultdict(<class 'dict'>, {"
             "'fk_id': {'value': {'_schema': [\"The 'columns' field must have "
@@ -713,7 +715,8 @@ def test_valid_metadata_file_without_sources(rp_logger, caplog):
         "in case the section 'train_settings' and the parameter 'source' are optional"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/valid_metadata_file_without_sources.yaml"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
+        "valid_metadata_file_without_sources.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
     with caplog.at_level(level="DEBUG"):
@@ -732,7 +735,7 @@ def test_valid_metadata_file_without_training_settings(rp_logger, caplog):
         "without provided 'training_settings' in case the section 'train_settings' is optional"
     )
     path_to_metadata = (
-        "./tests/unit/validation_schema/fixtures/"
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "valid_metadata_file_without_training_settings.yaml"
     )
     metadata = load_metadata_file(path_to_metadata)
