@@ -11,9 +11,9 @@ lazy==1.4
 loguru
 MarkupSafe==2.1.1
 marshmallow==3.19.*
-matplotlib==3.5.*
+matplotlib==3.9.*
 mlflow==2.15.*
-numpy==1.23.*
+numpy==1.26.*
 openpyxl
 pandas==2.2.*
 pandavro==1.7.2
@@ -26,9 +26,9 @@ pytest-reportportal
 python-slugify[unidecode]>=7.0.0
 PyYAML==6.*
 reportportal-client
-scikit_learn==1.1.*
-scipy==1.11.*
-seaborn==0.11.*
+scikit_learn==1.5.*
+scipy==1.14.*
+seaborn==0.13.*
 setuptools>=65.5.1
 tensorflow==2.15.*
 tqdm==4.66.3
