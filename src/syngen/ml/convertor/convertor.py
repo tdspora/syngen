@@ -28,8 +28,6 @@ class Convertor(ABC):
         """
         for column, data_type in schema.get("fields", {}).items():
             if data_type in ["binary", "date", "string"]:
-                print("!!!!!!!!!!!!!!!!!!")
-                print(column)
                 df[column] = df[column].astype("string")
             elif data_type == "int":
                 if any(df[column].isnull()):
