@@ -910,25 +910,17 @@ class Clustering(BaseMetric):
             .reset_index()
         )
         if len(self.merged) == 0:
-            logger.warning("No clustering metric will be formed due to empty DataFrame")
+            logger.warning(
+                "No clustering metric will be formed due to empty DataFrame"
+            )
             return None
         self.__preprocess_data()
         optimal_clust_num = self.__automated_silhouette()
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
 
-        def diversity(x):
-            """
-            Calculate the diversity score for each cluster.
-            If in cluster only one dataset is present, return 0.
-            """
-            if x['dataset'].nunique() == 2:
-                return min(x['count']) / max(x['count'])
-            else:
-                return 0
-
-        diversity_scores = statistics.groupby('cluster').apply(diversity)
-        self.mean_score = diversity_scores.mean()
+        diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        mean_score = diversity_scores.mean()
 
         if self.plot:
             plt.clf()
@@ -959,10 +951,22 @@ class Clustering(BaseMetric):
                 bbox_inches="tight",
                 format="svg",
             )
-        return self.mean_score
+        return mean_score
+
+    @staticmethod
+    def diversity(statistics):
+        """
+        Calculate the diversity score for each cluster
+        from collected statistics.
+        If in cluster only one dataset is present, return 0.
+        """
+        if statistics['dataset'].nunique() == 2:
+            return min(statistics['count']) / max(statistics['count'])
+        else:
+            return 0
 
     def __automated_silhouette(self):
-        result_table = {"cluster_num": [], "silhouette_score": []}
+        silhouette_scores = []
         max_clusters = min(10, len(self.merged_transformed))
 
         for i in range(2, max_clusters):
@@ -971,16 +975,10 @@ class Clustering(BaseMetric):
             )
             labels = clusters.labels_
             score = silhouette_score(self.merged_transformed, labels)
-            result_table["cluster_num"].append(i)
-            result_table["silhouette_score"].append(score)
+            silhouette_scores.append(score)
 
-        result_table = pd.DataFrame(result_table)
-        optimal_clusters = (
-            result_table.loc[
-                result_table['silhouette_score'].idxmax(),
-                'cluster_num'
-                ]
-        )
+        optimal_clusters = np.argmax(silhouette_scores) + 2
+
         return optimal_clusters
 
     def __preprocess_data(self):
