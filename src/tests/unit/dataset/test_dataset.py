@@ -227,10 +227,10 @@ def test_set_custom_categ_columns(rp_logger):
                             "ExtractedFrom"
                         ]
                     }
-                }
                 },
                 "infer_settings": {}
-            },
+            }
+        },
         table_name="mock_table",
         paths={
             "train_config_pickle_path": "mock_path",
