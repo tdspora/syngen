@@ -61,6 +61,7 @@ class BaseDataset:
         self.uuid_columns_types: Dict = dict()
         self.dropped_columns: Set = set()
         self.order_of_columns: List = list()
+        self.custom_categ_columns: Set = set()
         self.categ_columns: Set = set()
         self.str_columns: Set = set()
         self.float_columns: Set = set()
@@ -437,14 +438,14 @@ class Dataset(BaseDataset):
         metadata_of_table = self.metadata.get(self.table_name)
 
         if metadata_of_table is not None:
-            self.categ_columns = set(
+            self.custom_categ_columns = set(
                 metadata_of_table.get("train_settings", {})
                 .get("column_types", {})
                 .get("categorical", [])
             )
-        if self.categ_columns:
+        if self.custom_categ_columns:
             logger.info(
-                f"The columns - {', '.join(self.categ_columns)} were defined as categorical "
+                f"The columns - {', '.join(self.custom_categ_columns)} were defined as categorical "
                 f"due to the information from the metadata of the table - '{self.table_name}'"
             )
 
@@ -467,15 +468,16 @@ class Dataset(BaseDataset):
         """
         Define the list of categorical columns based on the count of unique values in the column
         """
-        defined_columns = set(
+        self.categ_columns = set(
             [
                 col
                 for col in self.df.columns
                 if self.df[col].fillna("?").nunique() <= 50
                 and col not in self.binary_columns
+                and col not in self.custom_categ_columns
             ]
         )
-        self.categ_columns.update(defined_columns)
+        self.categ_columns.update(self.custom_categ_columns)
 
     # TODO: cache this function calls (?)
     def _select_str_columns(self) -> List[str]:

@@ -144,6 +144,7 @@ def test_save_dataset(rp_logger):
         "nan_labels_in_uuid",
         "dropped_columns",
         "order_of_columns",
+        "custom_categ_columns",
         "categ_columns",
         "str_columns",
         "float_columns",
@@ -200,6 +201,49 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
         "upd_dt"
     }
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+def test_set_custom_categ_columns(rp_logger):
+    rp_logger.info(
+        "Test the process of the detection of "
+        "the categorical columns that has been set by a user"
+    )
+    df, schema = DataLoader(
+        f"{DIR_NAME}/unit/dataset/fixtures/data_with_emails.csv"
+    ).load_data()
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata={
+            "mock_table": {
+                "train_settings": {
+                    "source": "path/to/source.csv",
+                    "column_types": {
+                        "categorical": [
+                            "DocNumber",
+                            "MetadataSubject",
+                            "ExtractedFrom"
+                        ]
+                    }
+                }
+                },
+                "infer_settings": {}
+            },
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path",
+        },
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+    assert mock_dataset.categ_columns == {
+        "SenderPersonId",
+        "DocNumber",
+        "MetadataSubject",
+        "ExtractedFrom"
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
