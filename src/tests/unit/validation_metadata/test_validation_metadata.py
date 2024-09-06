@@ -3,7 +3,7 @@ import pytest
 
 from marshmallow import ValidationError
 from syngen.ml.config.validation import Validator
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 FAKE_METADATA_PATH = "path/to/metadata.yaml"
 
@@ -125,7 +125,8 @@ def test_check_key_column_in_pk(rp_logger):
     test_metadata = {
             "table_a": {
                 "train_settings": {
-                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                              "csv_tables/table_with_data.csv"
                 },
                 "keys": {
                     "pk_id": {
@@ -156,7 +157,8 @@ def test_check_key_column_in_fk(rp_logger):
     test_metadata = {
         "table_a": {
             "train_settings": {
-                "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                          "csv_tables/table_with_data.csv"
             },
             "keys": {
                 "pk_id": {
@@ -167,7 +169,8 @@ def test_check_key_column_in_fk(rp_logger):
         },
         "table_b": {
             "train_settings": {
-                "source": "./tests/unit/data_loaders/fixtures/csv_tables/child_table_with_data.csv"
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                          "csv_tables/child_table_with_data.csv"
             },
             "keys": {
                 "fk_id": {
@@ -1661,7 +1664,8 @@ def test_check_not_existent_key_column_in_pk(rp_logger):
     test_metadata = {
             "table_a": {
                 "train_settings": {
-                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                              "csv_tables/table_with_data.csv"
                 },
                 "keys": {
                     "pk_id": {
@@ -1700,7 +1704,8 @@ def test_check_not_existent_key_column_in_uq(rp_logger):
     test_metadata = {
             "table_a": {
                 "train_settings": {
-                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                              "csv_tables/table_with_data.csv"
                 },
                 "keys": {
                     "uq_id": {
@@ -1739,7 +1744,8 @@ def test_check_not_existent_key_column_in_fk(rp_logger):
     test_metadata = {
             "table_a": {
                 "train_settings": {
-                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                              "csv_tables/table_with_data.csv"
                 },
                 "keys": {
                     "pk_id": {
@@ -1750,7 +1756,7 @@ def test_check_not_existent_key_column_in_fk(rp_logger):
             },
             "table_b": {
                 "train_settings": {
-                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/"
+                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/"
                               "child_table_with_data.csv"
                 },
                 "keys": {
@@ -1793,7 +1799,8 @@ def test_check_not_existent_referenced_table_in_fk(test_metadata_storage, rp_log
     test_metadata = {
             "table_a": {
                 "train_settings": {
-                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                              "csv_tables/table_with_data.csv"
                 },
                 "keys": {
                     "pk_id": {
@@ -1804,7 +1811,7 @@ def test_check_not_existent_referenced_table_in_fk(test_metadata_storage, rp_log
             },
             "table_b": {
                 "train_settings": {
-                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/"
+                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/"
                               "child_table_with_data.csv"
                 },
                 "keys": {
@@ -1847,7 +1854,8 @@ def test_check_not_existent_referenced_columns_in_fk(rp_logger):
     test_metadata = {
             "table_a": {
                 "train_settings": {
-                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                              "csv_tables/table_with_data.csv"
                 },
                 "keys": {
                     "pk_id": {
@@ -1858,7 +1866,7 @@ def test_check_not_existent_referenced_columns_in_fk(rp_logger):
             },
             "table_b": {
                 "train_settings": {
-                    "source": "./tests/unit/data_loaders/fixtures/csv_tables/"
+                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/"
                               "child_table_with_data.csv"
                 },
                 "keys": {
