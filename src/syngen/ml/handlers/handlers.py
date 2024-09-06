@@ -501,7 +501,11 @@ class VaeInferHandler(BaseHandler):
                     prepared_data, self.size, self.metadata, self.table_name
                 )
                 generated_data = generated_data[self.dataset.order_of_columns]
-
+                if self.original_schema:
+                    logger.trace(
+                        f"The synthetic data of the table - '{self.table_name}' "
+                        f"will be saved with the schema: {self.original_schema}"
+                    )
                 if generated_data is None:
                     DataLoader(self.paths["path_to_merged_infer"]).save_data(
                         prepared_data,
