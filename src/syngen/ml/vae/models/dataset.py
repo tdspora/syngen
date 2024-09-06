@@ -445,8 +445,9 @@ class Dataset(BaseDataset):
             )
         if self.custom_categ_columns:
             logger.info(
-                f"The columns - {', '.join(self.custom_categ_columns)} were defined as categorical "
-                f"due to the information from the metadata of the table - '{self.table_name}'"
+                f"The columns - {', '.join(self.custom_categ_columns)} were defined "
+                f"as categorical due to the information from the metadata of the table - "
+                f"'{self.table_name}'"
             )
 
     def _check_if_column_categorical(self):
