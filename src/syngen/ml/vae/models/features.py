@@ -287,7 +287,8 @@ class CategoricalFeature(BaseFeature):
         data = data.astype(object)
         self.one_hot_encoder.fit(data)
         self.mapping = {
-            k: v for k, v in self.one_hot_encoder.ordinal_encoder.category_mapping[0]["mapping"].items()
+            k: v for k, v
+            in self.one_hot_encoder.ordinal_encoder.category_mapping[0]["mapping"].items()
         }
 
         self.inverse_mapping = inverse_dict(self.mapping)
