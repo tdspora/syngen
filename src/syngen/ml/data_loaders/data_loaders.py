@@ -527,7 +527,7 @@ class ExcelLoader(BaseDataLoader):
         Save provided data frame in Excel format
         """
         if df is not None:
-            df.to_excel(self.path, index=False)
+            df.to_excel(self.path, index=False, engine="openpyxl")
 
     def _get_columns(self, **kwargs) -> List[str]:
         """

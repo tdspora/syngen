@@ -174,6 +174,7 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         names = date_columns.index
     else:
         names = []
+
     return set(names)
 
 
@@ -182,7 +183,8 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
     Get labels that represent nan values in float/int columns
     """
     columns_nan_labels = {}
-    object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
+    object_columns = df.select_dtypes(
+        include=[pd.StringDtype(), "object"]).columns
     for column in object_columns:
         if df[column].isna().sum() > 0:
             continue
