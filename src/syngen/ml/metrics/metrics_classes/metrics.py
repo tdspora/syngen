@@ -977,6 +977,8 @@ class Clustering(BaseMetric):
             score = silhouette_score(self.merged_transformed, labels)
             silhouette_scores.append(score)
 
+        # Get number of clusters with the highest silhouette score
+        # +2 because the range starts from 2
         optimal_clusters = np.argmax(silhouette_scores) + 2
 
         return optimal_clusters
