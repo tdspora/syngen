@@ -424,10 +424,10 @@ class BinaryLoader(BaseDataLoader):
     """
 
     @staticmethod
-    def _load_data(f) -> Tuple[pd.DataFrame, None]:
+    def _load_data(f) -> Tuple[object, None]:
         return pickle.load(f), None
 
-    def load_data(self, path: str) -> Tuple[pd.DataFrame, None]:
+    def load_data(self, path: str) -> Tuple[object, None]:
         with open(path, "rb") as f:
             return self._load_data(f)
 
@@ -486,7 +486,7 @@ class ExcelLoader:
         Save provided data frame in Excel format
         """
         if df is not None:
-            df.to_excel(path, index=False)
+            df.to_excel(path, index=False, engine="openpyxl")
 
     def get_columns(self, path: str, **kwargs) -> List[str]:
         return self._get_columns(path, **kwargs)
