@@ -334,18 +334,18 @@ def test_load_data_from_table_in_avro_with_nullable_column(rp_logger):
             "first_name": "string",
             "last_name": "string",
             "created_date": "string",
-            "Active": "boolean"
+            "Active": "int"
         },
         "format": "Avro"
     }
     assert data_loader.original_schema == {
         "type": "record",
-        "name": "TestRecord",
+        "name": "avro_format",
         "fields": [
             {"name": "id", "type": "int"},
             {"name": "first_name", "type": "string"},
             {"name": "last_name", "type": "string"},
-            {"name": "created_date", "type": ["string", "null"]},
+            {"name": "created_date", "type": ["string", "null"], "default": None},
             {"name": "Active", "type": "boolean"}
         ]
     }

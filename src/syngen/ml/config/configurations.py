@@ -226,7 +226,7 @@ class TrainConfig:
         """
         Preprocess and save the data necessary for the training process
         """
-        data = self._preprocess_data()
+        self._preprocess_data()
         if not self.loader:
             self._save_input_data()
 
