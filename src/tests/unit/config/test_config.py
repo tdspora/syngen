@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import patch
 
 from syngen.ml.config import TrainConfig
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 def test_get_state_of_train_config(rp_logger):
@@ -57,7 +57,7 @@ def test_preprocess_data(
 ):
     rp_logger.info("Test the method '_preprocess_data' of the class TrainConfig")
     train_config = TrainConfig(
-        source="tests/unit/config/fixtures/data_types_detection_set.csv",
+        source=f"{DIR_NAME}/unit/config/fixtures/data_types_detection_set.csv",
         epochs=10,
         drop_null=drop_null,
         row_limit=row_limit,
@@ -72,5 +72,5 @@ def test_preprocess_data(
     mock_save_original_schema.assert_called_once()
     mock_mark_removed_columns.assert_called_once()
     mock_remove_empty_columns.assert_called_once()
-    train_config.row_subset == expected_size
+    assert train_config.row_subset == expected_size
     rp_logger.info(SUCCESSFUL_MESSAGE)

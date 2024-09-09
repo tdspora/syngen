@@ -369,7 +369,7 @@ def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
 
 def test_load_original_schema_from_empty_table_in_avro_format(caplog, rp_logger):
     rp_logger.info("Loading the original schema from local empty table in avro format")
-    path = "tests/unit/data_loaders/fixtures/avro_tables/empty_table.avro"
+    path = f"{DIR_NAME}/unit/data_loaders/fixtures/avro_tables/empty_table.avro"
     data_loader = DataLoader(path)
 
     with pytest.raises(ValueError):
