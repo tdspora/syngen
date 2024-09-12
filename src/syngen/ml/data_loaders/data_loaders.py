@@ -324,13 +324,20 @@ class AvroLoader(BaseDataLoader):
             df = AvroConvertor(preprocessed_schema, df).preprocessed_df
         self._save_data(df, schema)
 
-    def load_original_schema(self) -> Dict:
+    def __load_original_schema(self):
+        with open(self.path, "rb") as f:
+            return self._load_original_schema(f)
+
+    @staticmethod
+    def _load_original_schema(f):
         """
         Load schema of the metadata of the table in '.avro' format
         """
-        with open(self.path, "rb") as f:
-            reader = fastavro.reader(f)
-            return reader.writer_schema
+        reader = fastavro.reader(f)
+        return reader.writer_schema
+
+    def load_original_schema(self) -> Dict:
+        return self.__load_original_schema()
 
     def load_schema(self) -> Dict[str, str]:
         """
