@@ -472,7 +472,7 @@ def test_define_date_format_with_diff_format_and_provided_data(
             },
             main_process="train"
         )
-        mock_dataset.set_metadata()
+    mock_dataset.launch_detection()
     assert mock_dataset.date_mapping == {"Date": expected_date_format}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
