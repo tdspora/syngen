@@ -35,8 +35,10 @@ class TrainConfig:
     slugify_table_name: str = field(init=False)
     columns: List = field(init=False)
     dropped_columns: Set = field(init=False)
+    data_loader: DataLoader = field(init=False)
 
     def __post_init__(self):
+        self.data_loader = DataLoader(self.source)
         self.paths = self._get_paths()
         self._remove_existed_artifacts()
         self._prepare_dirs()
@@ -113,13 +115,12 @@ class TrainConfig:
                 table_name=self.table_name
             ).fetch_data()
         else:
-            data_loader = DataLoader(self.source)
-            self.original_schema = data_loader.original_schema
+            self.original_schema = self.data_loader.original_schema
             if self.original_schema is not None:
                 logger.trace(
                     f"The schema of the table - '{self.table_name}': {self.original_schema}"
                 )
-            return data_loader.load_data()
+            return self.data_loader.load_data()
 
     def _remove_empty_columns(self):
         """
