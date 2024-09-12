@@ -98,6 +98,19 @@ def test_df():
 
 
 @pytest.fixture
+def test_avro_schema():
+    return {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]},
+            {"name": "id", "type": ["null", "long"]}
+        ]
+    }
+
+
+@pytest.fixture
 def test_metadata_storage():
     os.makedirs("model_artifacts", exist_ok=True)
     path_to_metadata_storage = "model_artifacts/metadata"

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Tuple, List
-import pickle
+import pickle as pkl
 import csv
 import inspect
 
@@ -33,6 +33,10 @@ class BaseDataLoader(ABC):
     """
     Abstract class for data loader
     """
+    def __init__(self, path: str):
+        if not path:
+            raise ValueError("It seems that the information of source is absent")
+        self.path = path
 
     @abstractmethod
     def load_data(self, *args, **kwargs):
@@ -45,16 +49,22 @@ class BaseDataLoader(ABC):
 
 class DataLoader(BaseDataLoader):
     """
-    Base class for loading and saving data either in csv or in avro format
+    Base class for loading and saving data
     """
 
     def __init__(self, path: str):
-        if not path:
-            raise ValueError("It seems that the information of source is absent")
-        self.path = path
+        super().__init__(path)
         self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
         self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
+
+    @property
+    def original_schema(self):
+        return (
+            self.file_loader.load_original_schema()
+            if hasattr(self.file_loader, "load_original_schema")
+            else None
+        )
 
     def __check_if_path_exists(self, type_of_path="source"):
         if (type_of_path == "source" and os.path.exists(self.path)) or (
@@ -66,23 +76,23 @@ class DataLoader(BaseDataLoader):
     def _get_file_loader(self):
         path = Path(self.path)
         if path.suffix == ".avro":
-            return AvroLoader()
+            return AvroLoader(self.path)
         elif path.suffix in [".csv", ".txt"]:
-            return CSVLoader()
+            return CSVLoader(self.path)
         elif path.suffix == ".tsv":
-            return CSVLoader(sep="\t")
+            return CSVLoader(self.path, sep="\t")
         elif path.suffix == ".psv":
-            return CSVLoader(sep="|")
+            return CSVLoader(self.path, sep="|")
         elif path.suffix == ".pkl":
-            return BinaryLoader()
+            return BinaryLoader(self.path)
         elif path.suffix in SUPPORTED_EXCEL_EXTENSIONS:
-            return ExcelLoader()
+            return ExcelLoader(self.path)
         else:
             raise NotImplementedError(f"File format not supported for extension {path.suffix}")
 
     def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         try:
-            df, schema = self.file_loader.load_data(self.path, **kwargs)
+            df, schema = self.file_loader.load_data(**kwargs)
             return df, schema
         except UnicodeDecodeError as error:
             message = (
@@ -100,20 +110,21 @@ class DataLoader(BaseDataLoader):
             logger.error(message, error)
             raise error
 
-    def save_data(self, path: Optional[str], df: pd.DataFrame, **kwargs):
-        if df is not None:
-            self.file_loader.save_data(path, df, **kwargs)
+    def save_data(self, data, **kwargs):
+        if data is not None:
+            self.file_loader.save_data(data, **kwargs)
 
     def get_columns(self, **kwargs) -> List[str]:
-        return self.file_loader.get_columns(self.path, **kwargs)
+        return self.file_loader.get_columns(**kwargs)
 
 
-class CSVLoader:
+class CSVLoader(BaseDataLoader):
     """
-    Class for loading and saving data in CSV format.
+    Class for loading and saving data in '.csv' format.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, path: str, **kwargs):
+        super().__init__(path)
         self.format = get_context().get_config()
         self.format.update(kwargs)
         self.format = {
@@ -151,11 +162,13 @@ class CSVLoader:
 
         return params
 
-    @staticmethod
-    def _load_data(path, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+    def _fetch_data(self, **params):
+        return pd.read_csv(self.path, **params).apply(trim_string, axis=0)
+
+    def _load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         params = CSVLoader._get_csv_params(**kwargs)
         try:
-            df = pd.read_csv(path, **params).apply(trim_string, axis=0)
+            df = self._fetch_data(**params)
             if all([isinstance(column, int) for column in df.columns]):
                 df.rename(
                     columns={
@@ -177,31 +190,38 @@ class CSVLoader:
             logger.error(message)
             raise FileNotFoundError(message)
 
-        return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
+        return df, CSVConvertor(df).schema
 
-    def load_data(self, path, **kwargs):
-        return self._load_data(path, format=self.format, **kwargs)
+    def load_data(self, **kwargs):
+        return self._load_data(format=self.format, **kwargs)
 
-    def get_columns(self, path: str, **kwargs) -> List[str]:
-        return self._get_columns(path, **kwargs)
+    def __get_columns(self, **kwargs):
+        head_df = pd.read_csv(self.path, **kwargs, nrows=0)
+        return list(head_df.columns)
 
-    @staticmethod
-    def _get_columns(path, **kwargs) -> List[str]:
+    def get_columns(self, **kwargs) -> List[str]:
+        return self._get_columns(**kwargs)
+
+    def _get_columns(self, **kwargs) -> List[str]:
         """
         Get the column names of the table located in the path
         """
         try:
-            head_df = pd.read_csv(path, **kwargs, nrows=0)
-            return list(head_df.columns)
+            return self.__get_columns(**kwargs)
         except pd.errors.EmptyDataError as error:
             logger.error(
                 f"The empty file was provided. Unable to train this table located "
-                f"in the path - '{path}'. The details of the error - {error}"
+                f"in the path - '{self.path}'. The details of the error - {error}"
             )
             raise error
 
-    @staticmethod
-    def _save_data(path: Optional[str], df: pd.DataFrame, **kwargs):
+    def _write_data(self, df, **kwargs):
+        """
+        Save the dataframe in '.csv' format
+        """
+        df.to_csv(self.path, **kwargs, index=False)
+
+    def _save_data(self, df: pd.DataFrame, **kwargs):
         """
         Save the provided DataFrame to a CSV file.
         :param path: The file path to save the DataFrame.
@@ -243,36 +263,44 @@ class CSVLoader:
                     "the first value from the 'na_values' parameter"
                 )
 
-            # Save the DataFrame to a CSV file
-            df.to_csv(path, **filtered_kwargs, index=False)
+            self._write_data(df, **filtered_kwargs)
 
-    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
-        self._save_data(path, df, **kwargs)
+    def save_data(self, df: pd.DataFrame, **kwargs):
+        self._save_data(df, **kwargs)
 
 
 class AvroLoader(BaseDataLoader):
     """
-    Class for loading and saving data in avro format
+    Class for loading and saving data in '.avro' format
     """
 
-    @staticmethod
-    def _load_df(path) -> pd.DataFrame:
+    def _load_data(self) -> pd.DataFrame:
         """
-        Load data in Avro format
-        :param path: the path to the file
-        :return: dataframe
+        Load data in '.avro' format
         """
-        return pdx.from_avro(path)
+        with open(self.path, "rb") as f:
+            return pdx.from_avro(f)
 
-    def load_data(self, path: str, **kwargs) -> Tuple[pd.DataFrame, Dict[str, str]]:
+    @staticmethod
+    def _get_preprocessed_schema(schema: Dict) -> Dict:
         """
-        Load data in Avro format
+        Get the preprocessed schema
+        """
+        if schema is not None:
+            return {
+                field["name"]: field["type"]
+                for field
+                in schema.get("fields", {})
+            }
+
+    def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Load data in '.avro' format
         """
         try:
-            with open(path, "rb") as f:
-                df = self._load_df(f)
-                schema = self._load_schema(f)
-                return self._preprocess_schema_and_df(schema, df)
+            df = self._load_data()
+            schema = self.load_schema()
+            return self._preprocess_schema_and_df(schema, df)
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"
@@ -282,29 +310,36 @@ class AvroLoader(BaseDataLoader):
             logger.error(message)
             raise FileNotFoundError(message)
 
-    @staticmethod
-    def _save_df(path: str, df: pd.DataFrame):
+    def _save_data(self, df: pd.DataFrame, schema: Optional[Dict]):
         """
         Save data in Avro Format
         """
         if df is not None:
-            pdx.to_avro(path, df)
+            pdx.to_avro(self.path, df, schema)
 
-    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
-        self._save_df(path, df)
+    def save_data(self, df: pd.DataFrame, schema: Optional[Dict] = None, **kwargs):
+        if schema is not None:
+            preprocessed_schema = (
+                self._get_preprocessed_schema(schema) if schema is not None else schema
+            )
+            df = AvroConvertor(preprocessed_schema, df).preprocessed_df
+        self._save_data(df, schema)
 
-    @staticmethod
-    def _load_schema(f) -> Dict[str, str]:
+    def load_original_schema(self) -> Dict:
         """
-        Load schema of the metadata of the table in Avro format
-        :param f: object of the class 'smart_open.Reader'
-        :return: dictionary where key is the name of the column,
-        value is the data type of the column
+        Load schema of the metadata of the table in '.avro' format
         """
-        reader = DataFileReader(f, DatumReader())
-        meta = eval(reader.meta["avro.schema"].decode())
-        schema = {field["name"]: field["type"] for field in meta.get("fields", {})}
-        return schema
+        with open(self.path, "rb") as f:
+            reader = DataFileReader(f, DatumReader())
+            return eval(reader.meta["avro.schema"].decode())
+
+    def load_schema(self) -> Dict[str, str]:
+        """
+        Load the custom schema of the metadata of the table in '.avro' format
+        used by the algorithm
+        """
+        original_schema = self.load_original_schema()
+        return self._get_preprocessed_schema(original_schema)
 
     @staticmethod
     def _preprocess_schema_and_df(
@@ -317,21 +352,20 @@ class AvroLoader(BaseDataLoader):
         schema, preprocessed_df = convertor.converted_schema, convertor.preprocessed_df
         return preprocessed_df, schema
 
-    def _get_columns(self, f, **kwargs) -> List[str]:
+    def _get_columns(self) -> List[str]:
         """
         Get the column names of the table located in the path
         """
-        schema = self._load_schema(f)
+        schema = self.load_schema()
         return list(schema.keys())
 
-    def get_columns(self, path: str, **kwargs) -> List[str]:
+    def get_columns(self, **kwargs) -> List[str]:
         try:
-            with open(path, "rb") as f:
-                return self._get_columns(f, **kwargs)
+            return self._get_columns()
         except InvalidAvroBinaryEncoding as error:
             logger.error(
                 f"The empty file was provided. Unable to train this table "
-                f"located in the path - '{path}'. "
+                f"located in the path - '{self.path}'. "
                 f"The details of the error - {error}"
             )
             raise error
@@ -342,23 +376,23 @@ class MetadataLoader(BaseDataLoader):
     Metadata class for loading and saving metadata in YAML format
     """
 
-    def __init__(self, metadata_path: str):
-        self.metadata_path = metadata_path
+    def __init__(self, path: str):
+        super().__init__(path)
         self.metadata_loader = self.get_metadata_loader()
 
     def get_metadata_loader(self):
-        if self.metadata_path is not None:
-            path = Path(self.metadata_path)
+        if self.path is not None:
+            path = Path(self.path)
             if path.suffix in [".yaml", ".yml"]:
-                return YAMLLoader()
+                return YAMLLoader(self.path)
             else:
                 raise NotImplementedError("The format of metadata isn't supported")
 
-    def load_data(self) -> dict:
-        return self.metadata_loader.load_data(self.metadata_path)
+    def load_data(self) -> Dict:
+        return self.metadata_loader.load_data()
 
-    def save_data(self, path: str, metadata: Dict, **kwargs):
-        self.metadata_loader.save_data(path, metadata, **kwargs)
+    def save_data(self, metadata: Dict, **kwargs):
+        self.metadata_loader.save_data(metadata, **kwargs)
 
 
 class YAMLLoader(BaseDataLoader):
@@ -384,8 +418,8 @@ class YAMLLoader(BaseDataLoader):
             logger.error(error)
             raise ValueError(message)
 
-    def load_data(self, metadata_path: str) -> Dict:
-        with open(metadata_path, "r", encoding="utf-8") as f:
+    def load_data(self) -> Dict:
+        with open(self.path, "r", encoding="utf-8") as f:
             return self._load_data(f)
 
     @staticmethod
@@ -409,8 +443,8 @@ class YAMLLoader(BaseDataLoader):
                     metadata[key][parameter] = {}
         return metadata
 
-    def save_data(self, path: str, metadata: Dict, **kwargs):
-        with open(path, "w") as f:
+    def save_data(self, metadata: Dict, **kwargs):
+        with open(self.path, "w") as f:
             self._save_data(metadata, f)
 
     @staticmethod
@@ -423,29 +457,34 @@ class BinaryLoader(BaseDataLoader):
     Class for loading and saving data using byte stream
     """
 
-    @staticmethod
-    def _load_data(f) -> Tuple[object, None]:
-        return pickle.load(f), None
+    def _load_data(self) -> pd.DataFrame:
+        """
+        Load data in Binary format
+        """
+        with open(self.path, "rb") as f:
+            return pkl.load(f)
 
-    def load_data(self, path: str) -> Tuple[object, None]:
-        with open(path, "rb") as f:
-            return self._load_data(f)
+    def load_data(self) -> Tuple[pd.DataFrame, None]:
+        return self._load_data(), None
 
-    @staticmethod
-    def _save_data(data, f):
-        pickle.dump(data, f)
+    def _save_data(self, data):
+        with open(self.path, "wb") as f:
+            pkl.dump(data, f)
 
-    def save_data(self, path: str, data, **kwargs):
-        with open(path, "wb") as f:
-            self._save_data(data, f)
+    def save_data(self, data, **kwargs):
+        """
+        Save data in Binary format
+        """
+        self._save_data(data)
 
 
-class ExcelLoader:
+class ExcelLoader(BaseDataLoader):
     """
     Class for loading and saving data in Excel format
     """
 
-    def __init__(self):
+    def __init__(self, path: str):
+        super().__init__(path)
         self.format = get_context().get_config()
         self.sheet_name = self.format.get("sheet_name", 0)
         self.format = {
@@ -454,17 +493,20 @@ class ExcelLoader:
             if k in ExcelFormatSettingsSchema._declared_fields.keys()
         }
 
-    def _load_data(self, path: str) -> Tuple[pd.DataFrame, Dict]:
+    def _fetch_data(self) -> pd.DataFrame:
+        return pd.read_excel(self.path, sheet_name=self.sheet_name)
+
+    def _load_data(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Load data in Excel format
         """
         try:
-            df = pd.read_excel(path, sheet_name=self.sheet_name)
+            df = self._fetch_data()
             if isinstance(self.sheet_name, list) or self.sheet_name is None:
                 dfs = [df for sheet_name, df in df.items()]
                 df = pd.concat(dfs, ignore_index=True)
             global_context({})
-            return df, CSVConvertor({"fields": {}, "format": "CSV"}, df).schema
+            return df, CSVConvertor(df).schema
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"
@@ -474,27 +516,25 @@ class ExcelLoader:
             logger.error(message, error)
             raise error
 
-    def load_data(self, path):
-        return self._load_data(path)
+    def load_data(self) -> Tuple[pd.DataFrame, Dict]:
+        return self._load_data()
 
-    def save_data(self, path: str, df: pd.DataFrame, **kwargs):
-        self._save_data(path, df)
+    def save_data(self, df: pd.DataFrame, **kwargs):
+        self._save_data(df)
 
-    @staticmethod
-    def _save_data(path: str, df: pd.DataFrame):
+    def _save_data(self, df: pd.DataFrame):
         """
         Save provided data frame in Excel format
         """
         if df is not None:
-            df.to_excel(path, index=False, engine="openpyxl")
+            df.to_excel(self.path, index=False, engine="openpyxl")
 
-    def get_columns(self, path: str, **kwargs) -> List[str]:
-        return self._get_columns(path, **kwargs)
-
-    @staticmethod
-    def _get_columns(path, **kwargs) -> List[str]:
+    def _get_columns(self, **kwargs) -> List[str]:
         """
         Get the column names of the table located in the path
         """
-        head_df = pd.read_excel(path, **kwargs, nrows=0)
+        head_df = pd.read_excel(self.path, **kwargs, nrows=0)
         return list(head_df.columns)
+
+    def get_columns(self, **kwargs) -> List[str]:
+        return self._get_columns(**kwargs)
