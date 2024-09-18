@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple, Set
+from typing import Dict, Optional, List, Tuple, Set, Literal
 import pickle
 from uuid import UUID
 from datetime import datetime
@@ -91,6 +91,8 @@ class BaseDataset:
         self.format = self.metadata[self.table_name].get("format", {})
         self.nan_labels_dict = dict()
         self.nan_labels_in_uuid = dict()
+        self.cast_to_integer = set()
+        self.cast_to_float = set()
 
 
 class Dataset(BaseDataset):
@@ -111,8 +113,28 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
+        self._cast_to_numeric("integer")
+        self._cast_to_numeric("float")
         self.nan_labels_dict = get_nan_labels(self.df.drop(columns=self.categ_columns))
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
+
+    def _cast_to_numeric(self, data_type: Literal["integer", "float"]):
+        """
+        Cast the values in the column to 'integer' or 'float' data type
+        in case all of them might be cast to this data type
+        """
+        for column in self.df:
+            try:
+                if data_type == "integer":
+                    self.df[column] = pd.to_numeric(self.df[column], downcast=data_type)
+                    self.cast_to_integer.add(column)
+                    logger.info(f"The column - '{column}' is casted to '{data_type}' data type")
+                elif data_type == "float" and column not in self.cast_to_integer:
+                    self.df[column] = pd.to_numeric(self.df[column], downcast=data_type)
+                    self.cast_to_float.add(column)
+                    logger.info(f"The column - '{column}' is casted to '{data_type}' data type")
+            except ValueError:
+                continue
 
     def __getstate__(self) -> Dict:
         """
@@ -352,6 +374,18 @@ class Dataset(BaseDataset):
             for column, data_type in self.fields.items()
             if column in self.df.columns
         }
+        int_fields = {
+            column: "int"
+            for column, dtype in self.fields.items()
+            if column in self.cast_to_integer
+        }
+        self.fields.update(int_fields)
+        float_fields = {
+            column: "float"
+            for column, dtype in self.fields.items()
+            if column in self.cast_to_float
+        }
+        self.fields.update(float_fields)
         for column in self.nan_labels_dict.keys():
             self.fields[column] = (
                 "int" if all(x.is_integer() for x in self.df[column].dropna()) else "float"
@@ -761,9 +795,9 @@ class Dataset(BaseDataset):
         for col in self.df.columns:
             col_no_na = self.df[col].dropna()
 
-            if col_no_na.dtype in ["int", "int64"]:
+            if col_no_na.dtype in ["int", "int64"] or col in self.cast_to_integer:
                 self.int_columns.add(col)
-            elif col_no_na.dtype in ["float", "float64"]:
+            elif col_no_na.dtype in ["float", "float64"] or col in self.cast_to_float:
                 self.float_columns.add(col)
 
         float_to_int_cols = set()

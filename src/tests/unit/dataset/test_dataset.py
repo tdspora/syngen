@@ -165,7 +165,9 @@ def test_save_dataset(rp_logger):
         "foreign_keys_mapping",
         "foreign_keys_list",
         "fk_columns",
-        "format"
+        "format",
+        "cast_to_float",
+        "cast_to_integer",
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

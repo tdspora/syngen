@@ -95,6 +95,20 @@ class Reporter:
         for col in missing_columns:
             synthetic[col] = np.nan
         exclude_columns = self.dataset.uuid_columns
+        for column in self.dataset.cast_to_integer:
+            original[column] = pd.to_numeric(
+                original[column], errors="coerce", downcast="integer"
+            )
+            synthetic[column] = pd.to_numeric(
+                synthetic[column], errors="coerce", downcast="integer"
+            )
+        for column in self.dataset.cast_to_float:
+            original[column] = pd.to_numeric(
+                original[column], errors="coerce", downcast="float"
+            )
+            synthetic[column] = pd.to_numeric(
+                synthetic[column], errors="coerce", downcast="float"
+            )
         original = nan_labels_to_float(original, self.columns_nan_labels, exclude_columns)
         synthetic = nan_labels_to_float(synthetic, self.columns_nan_labels, exclude_columns)
         (
