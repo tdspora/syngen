@@ -698,6 +698,42 @@ def test_handle_missing_values_in_numeric_columns_in_csv_file(rp_logger):
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+def test_cast_to_numeric_in_csv_file(rp_logger):
+    rp_logger.info(
+        "Test the process of casting the string values to numeric provided in a '.csv' file"
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    data = {
+        "column1": range(1, 101),
+        "column2": [str(i) for i in range(101, 201)],
+        "column3": range(201, 301),
+        "column4": range(301, 401),
+        "column5": [str(i) for i in np.linspace(0, 1, 100)]
+    }
+    df = pd.DataFrame(data)
+
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4"}
+    assert mock_dataset.float_columns == {"column5"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
     rp_logger.info(
         "Test the process of handling missing values "
@@ -742,3 +778,52 @@ def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
     assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     assert mock_dataset.nan_labels_dict == {"column5": "Not available"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+def test_cast_to_numeric_in_avro_file(rp_logger):
+    rp_logger.info(
+        "Test the process of casting the string values to numeric provided in a '.avro' file"
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    data = {
+        "column1": range(1, 101),
+        "column2": range(101, 201),
+        "column3": range(201, 301),
+        "column4": range(301, 401),
+        "column5": [str(i) for i in range(401, 491)] + [np.NaN for i in range(10)],
+        "column6": [str(i) for i in np.linspace(0, 1, 100)]
+    }
+    df = pd.DataFrame(data)
+
+    schema = {
+        "format": "Avro",
+        "fields": {
+            "column1": "int",
+            "column2": "int",
+            "column3": "int",
+            "column4": "int",
+            "column5": "string",
+            "column6": "string"
+        }
+    }
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
+    assert mock_dataset.float_columns == {"column6"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+

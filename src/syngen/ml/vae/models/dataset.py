@@ -113,28 +113,33 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
-        self._cast_to_numeric("integer")
-        self._cast_to_numeric("float")
+        self._cast_to_numeric()
         self.nan_labels_dict = get_nan_labels(self.df.drop(columns=self.categ_columns))
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
-    def _cast_to_numeric(self, data_type: Literal["integer", "float"]):
+    def _cast_to_numeric(self):
         """
         Cast the values in the column to 'integer' or 'float' data type
         in case all of them might be cast to this data type
         """
         for column in self.df:
             try:
-                if data_type == "integer":
-                    self.df[column] = pd.to_numeric(self.df[column], downcast=data_type)
+                if self.df[column].dropna().apply(lambda x: float(x).is_integer()).all():
+                    self.df[column] = pd.to_numeric(self.df[column], downcast="integer")
                     self.cast_to_integer.add(column)
-                    logger.info(f"The column - '{column}' is casted to '{data_type}' data type")
-                elif data_type == "float" and column not in self.cast_to_integer:
-                    self.df[column] = pd.to_numeric(self.df[column], downcast=data_type)
+                elif self.df[column].dropna().apply(lambda x: not float(x).is_integer()).any():
+                    self.df[column] = pd.to_numeric(self.df[column], downcast="float")
                     self.cast_to_float.add(column)
-                    logger.info(f"The column - '{column}' is casted to '{data_type}' data type")
             except ValueError:
                 continue
+        logger.info(
+            f"The columns: {', '.join(self.cast_to_integer)} "
+            f"have been cast to the 'integer' data type"
+        )
+        logger.info(
+            f"The columns: {', '.join(self.cast_to_float)} "
+            f"have been cast to the 'float' data type"
+        )
 
     def __getstate__(self) -> Dict:
         """
