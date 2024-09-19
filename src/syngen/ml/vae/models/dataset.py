@@ -666,7 +666,7 @@ class Dataset(BaseDataset):
 
         logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
                     f"value '{unique_non_uuid}'. It will be treated "
-                    f"as a null label and replaced with nulls."
+                    f"as a null label and replaced with nulls during the training process"
                     )
         self.nan_labels_in_uuid[x.name] = unique_non_uuid
         self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
