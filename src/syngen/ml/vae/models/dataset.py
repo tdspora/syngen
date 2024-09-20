@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple, Set, Literal
+from typing import Dict, Optional, List, Tuple, Set
 import pickle
 from uuid import UUID
 from datetime import datetime
@@ -132,14 +132,16 @@ class Dataset(BaseDataset):
                     self.cast_to_float.add(column)
             except ValueError:
                 continue
-        logger.info(
-            f"The columns: {', '.join(self.cast_to_integer)} "
-            f"have been cast to the 'integer' data type"
-        )
-        logger.info(
-            f"The columns: {', '.join(self.cast_to_float)} "
-            f"have been cast to the 'float' data type"
-        )
+        if self.cast_to_integer:
+            logger.info(
+                f"The columns - {', '.join(self.cast_to_integer)} "
+                "have been cast to the 'integer' data type"
+            )
+        if self.cast_to_float:
+            logger.info(
+                f"The columns - {', '.join(self.cast_to_float)} "
+                "have been cast to the 'float' data type"
+            )
 
     def __getstate__(self) -> Dict:
         """
