@@ -1245,7 +1245,7 @@ class Dataset(BaseDataset):
         """
         Assign corresponding to uuid column null column and preprocess if required.
         """
-        features = self._preprocess_nan_cols(feature, fillna_strategy="")
+        features = self._preprocess_nan_cols(feature, fillna_strategy="text")
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
             self.assign_feature(ContinuousFeature(features[1]), features[1])
