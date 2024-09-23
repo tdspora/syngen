@@ -109,8 +109,12 @@ class Reporter:
             synthetic[column] = pd.to_numeric(
                 synthetic[column], errors="coerce", downcast="float"
             )
-        original = nan_labels_to_float(original, self.columns_nan_labels, exclude_columns)
-        synthetic = nan_labels_to_float(synthetic, self.columns_nan_labels, exclude_columns)
+        original = nan_labels_to_float(
+            original, self.columns_nan_labels, exclude_columns, process="report"
+        )
+        synthetic = nan_labels_to_float(
+            synthetic, self.columns_nan_labels, exclude_columns, process="report"
+        )
         (
             str_columns,
             date_columns,
