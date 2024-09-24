@@ -63,10 +63,9 @@ class TrainStrategy(Strategy, ABC):
     """
 
     def _save_training_config(self):
-        BinaryLoader().save_data(
-            path=self.config.paths["train_config_pickle_path"],
-            data=self.config
-        )
+        BinaryLoader(
+            path=self.config.paths["train_config_pickle_path"]
+        ).save_data(data=self.config)
 
     def set_config(self, **kwargs):
         """
