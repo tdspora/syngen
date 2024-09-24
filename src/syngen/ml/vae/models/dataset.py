@@ -133,13 +133,15 @@ class Dataset(BaseDataset):
             except ValueError:
                 continue
         if self.cast_to_integer:
+            columns = [f"'{item}'" for item in self.cast_to_integer]
             logger.info(
-                f"The columns - {', '.join(self.cast_to_integer)} "
+                f"The columns - {', '.join(columns)} "
                 "have been cast to the 'integer' data type"
             )
         if self.cast_to_float:
+            columns = [f"'{item}'" for item in self.cast_to_float]
             logger.info(
-                f"The columns - {', '.join(self.cast_to_float)} "
+                f"The columns - {', '.join(columns)} "
                 "have been cast to the 'float' data type"
             )
 

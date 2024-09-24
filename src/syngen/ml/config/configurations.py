@@ -108,10 +108,12 @@ class TrainConfig:
         Return dataframe and schema of original data
         """
         if self.loader is not None:
-            return DataFrameFetcher(
+            dataframe_fetcher = DataFrameFetcher(
                 loader=self.loader,
                 table_name=self.table_name
-            ).fetch_data()
+            )
+            self.original_schema = dataframe_fetcher.original_schema
+            return dataframe_fetcher.fetch_data()
         else:
             data_loader = DataLoader(self.source)
             self.original_schema = data_loader.original_schema
@@ -347,6 +349,7 @@ class InferConfig:
         """
         if self.size is None:
             data_loader = DataLoader(self.paths["input_data_path"])
+            data = pd.DataFrame()
             if data_loader.has_existed_path:
                 data, schema = data_loader.load_data()
             elif self.loader:
