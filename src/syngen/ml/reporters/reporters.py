@@ -44,6 +44,11 @@ class Reporter:
                 loader=self.loader,
                 table_name=self.table_name
             ).fetch_data()
+            logger.warning(
+                f"The original data for table '{self.table_name}' "
+                "has been fetched using the callback function. "
+                "It may have been modified since the start of the current process"
+            )
         else:
             original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
