@@ -45,7 +45,7 @@ class Reporter:
                 table_name=self.table_name
             ).fetch_data()
             logger.warning(
-                f"The original data for table '{self.table_name}' "
+                f"The original data of table - '{self.table_name}' "
                 "has been fetched using the callback function. "
                 "It may have been modified since the start of the current process"
             )
