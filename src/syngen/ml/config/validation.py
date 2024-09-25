@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Literal
 import os
 from dataclasses import dataclass, field
 import json
@@ -19,7 +19,7 @@ class Validator:
 
     metadata: Dict
     metadata_path: str
-    type_of_process: str
+    type_of_process: Literal["train", "infer"]
     validation_source: bool = True
     type_of_fk_keys = ["FK"]
     merged_metadata: Dict = field(default_factory=dict)
@@ -33,7 +33,8 @@ class Validator:
         return ValidationSchema(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
-            validation_source=self.validation_source
+            validation_source=self.validation_source,
+            process=self.type_of_process
         ).validate_schema()
 
     def _define_mapping(self):
