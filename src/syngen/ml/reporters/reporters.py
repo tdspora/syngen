@@ -49,7 +49,7 @@ class Reporter:
         logger.warning(
             f"The original data of the table - '{self.table_name}' "
             "has been fetched using the callback function. "
-            "The data may have been modified since the start of the current process"
+            "The data may have been modified since the beginning of the training process."
         )
         return data
 

@@ -103,17 +103,23 @@ class TrainConfig:
         os.makedirs(self.paths["state_path"], exist_ok=True)
         os.makedirs(self.paths["tmp_store_path"], exist_ok=True)
 
+    def _fetch_dataframe(self) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Fetch the dataframe using the callback function
+        """
+        dataframe_fetcher = DataFrameFetcher(
+            loader=self.loader,
+            table_name=self.table_name
+        )
+        self.original_schema = dataframe_fetcher.original_schema
+        return dataframe_fetcher.fetch_data()
+
     def _load_source(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Return dataframe and schema of original data
         """
         if self.loader is not None:
-            dataframe_fetcher = DataFrameFetcher(
-                loader=self.loader,
-                table_name=self.table_name
-            )
-            self.original_schema = dataframe_fetcher.original_schema
-            return dataframe_fetcher.fetch_data()
+            return self._fetch_dataframe()
         else:
             data_loader = DataLoader(self.source)
             self.original_schema = data_loader.original_schema
@@ -320,8 +326,9 @@ class InferConfig:
                 )
         ):
             message = (
-                f"It seems that the path to original data "
-                f"of the table - '{self.table_name}' doesn't exist. "
+                f"It seems that the path to the sample of the original data "
+                f"of the table '{self.table_name}' - '{self.paths['input_data_path']}' "
+                f"doesn't exist."
             )
             logger.warning(message)
             if self.print_report:
