@@ -198,8 +198,6 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
         if (float_val is not None) and (not np.isnan(float_val)) and len(str_values) == 1:
             nan_label = str_values[0]
             columns_nan_labels[column] = nan_label
-        elif (float_val is not None) and (not np.isnan(float_val)) and not str_values:
-            columns_nan_labels[column] = None
 
     return columns_nan_labels
 
@@ -207,7 +205,8 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
 def nan_labels_to_float(
     df: pd.DataFrame,
     columns_nan_labels: dict,
-    exclude_columns: set = set()
+    exclude_columns: set = set(),
+    process="training"
 ) -> pd.DataFrame:
     """
     Replace str nan labels in float/int columns with actual np.NaN
@@ -218,13 +217,14 @@ def nan_labels_to_float(
         if column not in exclude_columns:
             df_with_nan[column].replace(label, np.NaN, inplace=True)
             df_with_nan[column] = df_with_nan[column].astype(float)
-
-            logger.info(
-                f"Column '{column}' contains unique "
-                f"non-numeric value: '{label}'. "
-                "It will be treated as null label "
-                "and replaced with nulls."
-            )
+            if process == "training":
+                logger.info(
+                    f"Column '{column}' contains unique "
+                    f"non-numeric value: '{label}'. "
+                    "It will be treated as null label "
+                    "and replaced with nulls "
+                    "during the training process."
+                )
 
     return df_with_nan
 

@@ -92,6 +92,8 @@ class BaseDataset:
         self.format = self.metadata[self.table_name].get("format", {})
         self.nan_labels_dict = dict()
         self.nan_labels_in_uuid = dict()
+        self.cast_to_integer = set()
+        self.cast_to_float = set()
 
 
 class Dataset(BaseDataset):
@@ -112,8 +114,37 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
+        self._cast_to_numeric()
         self.nan_labels_dict = get_nan_labels(self.df.drop(columns=self.categ_columns))
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
+
+    def _cast_to_numeric(self):
+        """
+        Cast the values in the column to 'integer' or 'float' data type
+        in case all of them might be cast to this data type
+        """
+        for column in self.df:
+            try:
+                if self.df[column].dropna().apply(lambda x: float(x).is_integer()).all():
+                    self.df[column] = pd.to_numeric(self.df[column], downcast="integer")
+                    self.cast_to_integer.add(column)
+                elif self.df[column].dropna().apply(lambda x: not float(x).is_integer()).any():
+                    self.df[column] = pd.to_numeric(self.df[column], downcast="float")
+                    self.cast_to_float.add(column)
+            except ValueError:
+                continue
+        if self.cast_to_integer:
+            columns = [f"'{item}'" for item in self.cast_to_integer]
+            logger.info(
+                f"The columns - {', '.join(columns)} "
+                "have been cast to the 'integer' data type"
+            )
+        if self.cast_to_float:
+            columns = [f"'{item}'" for item in self.cast_to_float]
+            logger.info(
+                f"The columns - {', '.join(columns)} "
+                "have been cast to the 'float' data type"
+            )
 
     def __getstate__(self) -> Dict:
         """
@@ -353,6 +384,18 @@ class Dataset(BaseDataset):
             for column, data_type in self.fields.items()
             if column in self.df.columns
         }
+        int_fields = {
+            column: "int"
+            for column, dtype in self.fields.items()
+            if column in self.cast_to_integer
+        }
+        self.fields.update(int_fields)
+        float_fields = {
+            column: "float"
+            for column, dtype in self.fields.items()
+            if column in self.cast_to_float
+        }
+        self.fields.update(float_fields)
         for column in self.nan_labels_dict.keys():
             self.fields[column] = (
                 "int" if all(x.is_integer() for x in self.df[column].dropna()) else "float"
@@ -630,7 +673,7 @@ class Dataset(BaseDataset):
 
         logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
                     f"value '{unique_non_uuid}'. It will be treated "
-                    f"as a null label and replaced with nulls."
+                    f"as a null label and replaced with nulls during the training process"
                     )
         self.nan_labels_in_uuid[x.name] = unique_non_uuid
         self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
@@ -764,9 +807,9 @@ class Dataset(BaseDataset):
         for col in self.df.columns:
             col_no_na = self.df[col].dropna()
 
-            if col_no_na.dtype in ["int", "int64"]:
+            if col_no_na.dtype in ["int", "int64"] or col in self.cast_to_integer:
                 self.int_columns.add(col)
-            elif col_no_na.dtype in ["float", "float64"]:
+            elif col_no_na.dtype in ["float", "float64"] or col in self.cast_to_float:
                 self.float_columns.add(col)
 
         float_to_int_cols = set()
@@ -1207,7 +1250,7 @@ class Dataset(BaseDataset):
         """
         Assign corresponding to uuid column null column and preprocess if required.
         """
-        features = self._preprocess_nan_cols(feature, fillna_strategy="")
+        features = self._preprocess_nan_cols(feature, fillna_strategy="text")
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
             self.assign_feature(ContinuousFeature(features[1]), features[1])

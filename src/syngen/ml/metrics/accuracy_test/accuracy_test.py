@@ -198,7 +198,7 @@ class AccuracyTest(BaseTest):
         clustering_result = round(
             self.clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"]), 4
         )
-        logger.info(f"Median clusters homogeneity is {clustering_result}")
+        logger.info(f"Mean clusters homogeneity is {clustering_result}")
         self.update_progress_bar("The clustering metric has been calculated", delta)
 
         self.update_progress_bar("Generation of the utility metric...")

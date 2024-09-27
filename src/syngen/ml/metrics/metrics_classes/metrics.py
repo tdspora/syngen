@@ -7,6 +7,7 @@ import random
 
 import tqdm
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
@@ -909,17 +910,17 @@ class Clustering(BaseMetric):
             .reset_index()
         )
         if len(self.merged) == 0:
-            logger.warning("No clustering metric will be formed due to empty DataFrame")
+            logger.warning(
+                "No clustering metric will be formed due to empty DataFrame"
+            )
             return None
         self.__preprocess_data()
-        optimal_clust_num = self.__automated_elbow()
-
-        def diversity(x):
-            return min(x) / max(x)
-
+        optimal_clust_num = self.__automated_silhouette()
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
-        self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
+
+        diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        mean_score = diversity_scores.mean()
 
         if self.plot:
             plt.clf()
@@ -950,26 +951,37 @@ class Clustering(BaseMetric):
                 bbox_inches="tight",
                 format="svg",
             )
-        return self.mean_score.values[0]
+        return mean_score
 
-    def __automated_elbow(self):
-        result_table = {"cluster_num": [], "metric": []}
+    @staticmethod
+    def diversity(statistics):
+        """
+        Calculate the diversity score for each cluster
+        from collected statistics.
+        If in cluster only one dataset is present, return 0.
+        """
+        if statistics['dataset'].nunique() == 2:
+            return min(statistics['count']) / max(statistics['count'])
+        else:
+            return 0
+
+    def __automated_silhouette(self):
+        silhouette_scores = []
         max_clusters = min(10, len(self.merged_transformed))
-        for i in range(2, max_clusters):
-            clusters = KMeans(n_clusters=i, random_state=10).fit(self.merged_transformed)
-            metric = clusters.inertia_
-            result_table["cluster_num"].append(i)
-            result_table["metric"].append(metric)
 
-        result_table = pd.DataFrame(result_table)
-        result_table["d1"] = np.concatenate([[np.nan], np.diff(result_table["metric"])])
-        result_table["d2"] = np.concatenate([[np.nan], np.diff(result_table["d1"])])
-        result_table["certainty"] = result_table["d2"] - result_table["d1"]
-        result_table["certainty"] = (
-            np.concatenate([[np.nan], result_table["certainty"].values[:-1]])
-            / result_table["cluster_num"]
-        )
-        return result_table["cluster_num"].values[np.argmax(result_table["certainty"])]
+        for i in range(2, max_clusters):
+            clusters = KMeans(n_clusters=i, random_state=10).fit(
+                self.merged_transformed
+            )
+            labels = clusters.labels_
+            score = silhouette_score(self.merged_transformed, labels)
+            silhouette_scores.append(score)
+
+        # Get number of clusters with the highest silhouette score
+        # +2 because the range starts from 2
+        optimal_clusters = np.argmax(silhouette_scores) + 2
+
+        return optimal_clusters
 
     def __preprocess_data(self):
         self.merged_transformed = self.merged.apply(
@@ -982,6 +994,7 @@ class Clustering(BaseMetric):
         clusters = KMeans(n_clusters=n, random_state=10).fit(self.merged_transformed)
         labels = clusters.labels_
         rows_labels = pd.DataFrame({"origin": self.merged["level_0"], "cluster": labels})
+
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
 
 
