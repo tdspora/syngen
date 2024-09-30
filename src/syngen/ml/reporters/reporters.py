@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict, Optional, Callable
+from typing import Dict, Tuple, Optional, Callable
 import itertools
 from collections import defaultdict
 
@@ -38,12 +38,24 @@ class Reporter:
         self.dataset = None
         self.columns_nan_labels = dict()
 
-    def _extract_report_data(self):
+    def _fetch_dataframe(self) -> pd.DataFrame:
+        """
+        Fetch the data using the callback function
+        """
+        data, schema = DataFrameFetcher(
+            loader=self.loader,
+            table_name=self.table_name
+        ).fetch_data()
+        logger.warning(
+            f"The original data of the table - '{self.table_name}' "
+            "has been fetched using the callback function. "
+            "The data may have been modified since the beginning of the training process."
+        )
+        return data
+
+    def _extract_report_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         if self.loader:
-            original, schema = DataFrameFetcher(
-                loader=self.loader,
-                table_name=self.table_name
-            ).fetch_data()
+            original = self._fetch_dataframe()
         else:
             original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
