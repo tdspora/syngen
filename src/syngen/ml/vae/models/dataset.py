@@ -114,16 +114,24 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
-        self._cast_to_numeric()
-        self.nan_labels_dict = get_nan_labels(self.df.drop(columns=self.categ_columns))
+        self._set_binary_columns()
+        self._set_categorical_columns()
+        excluded_columns = set().union(
+            self.categ_columns,
+            self.binary_columns
+        )
+        self._cast_to_numeric(excluded_columns)
+        self.nan_labels_dict = get_nan_labels(df, excluded_columns)
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
-    def _cast_to_numeric(self):
+    def _cast_to_numeric(self, excluded_columns: Set[str]):
         """
         Cast the values in the column to 'integer' or 'float' data type
         in case all of them might be cast to this data type
         """
-        for column in self.df:
+        text_columns = self._select_str_columns()
+        list_of_columns = set(text_columns) - excluded_columns
+        for column in list_of_columns:
             try:
                 if self.df[column].dropna().apply(lambda x: float(x).is_integer()).all():
                     self.df[column] = pd.to_numeric(self.df[column], downcast="integer")
@@ -369,8 +377,6 @@ class Dataset(BaseDataset):
 
         This process is agnostic to the file format of the dataset.
         """
-        self._set_binary_columns()
-        self._set_categorical_columns()
         self._set_uuid_columns()
         self._set_long_text_columns()
         self._set_email_columns()
