@@ -13,6 +13,7 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
+import time
 
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
@@ -407,3 +408,20 @@ def get_initial_table_name(table_name) -> str:
     Get the initial table name without the suffix "_pk" or "_fk"
     """
     return re.sub(r"_pk$|_fk$", "", table_name)
+
+
+def timing(func):
+    """
+    Decorator that logs the execution time of the function
+    """
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        logger.debug(
+            f"Function '{func.__name__}' executed in "
+            f"{elapsed_time:.2f} seconds."
+        )
+        return result
+    return wrapper

@@ -6,8 +6,12 @@ import re
 import random
 
 import tqdm
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, HDBSCAN
+import hdbscan
+from sklearn.metrics import davies_bouldin_score
+from sklearn.metrics import calinski_harabasz_score
 from sklearn.metrics import silhouette_score
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
@@ -25,7 +29,7 @@ import seaborn as sns
 from slugify import slugify
 from loguru import logger
 
-from syngen.ml.utils import timestamp_to_datetime
+from syngen.ml.utils import timestamp_to_datetime, timing
 matplotlib.use("Agg")
 
 
@@ -897,30 +901,188 @@ class Clustering(BaseMetric):
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
-        row_limit = min(len(self.original), len(self.synthetic))
+        # ratio = len(self.original) / len(self.synthetic)
+        # if ratio < 0.25 or ratio > 4:
+        #     logger.warning(
+        #         "Since the sizes of the synthetic and original datasets "
+        #         "are significantly different, "
+        #         "clustering results may be unreliable."
+        #     )
+
+        row_limit = max(len(self.original), len(self.synthetic))
+        are_equal_sizes = len(self.original) == len(self.synthetic)
+        is_smaller_original = len(self.original) < len(self.synthetic)
+        # TO DO ADD LOG MSG IF OVERSAMLING IS DONE
+        # and eliminate case of equal sizes
         self.merged = (
             pd.concat(
                 [
-                    self.original[cont_columns + categ_columns].sample(row_limit),
-                    self.synthetic[cont_columns + categ_columns].sample(row_limit),
+                    self.original[cont_columns + categ_columns].sample(
+                        row_limit,
+                        random_state=10,
+                        replace=(
+                            is_smaller_original and not are_equal_sizes
+                            ),
+                    ),
+                    self.synthetic[cont_columns + categ_columns].sample(
+                        row_limit,
+                        random_state=10,
+                        replace=(
+                            not is_smaller_original and not are_equal_sizes
+                            ),
+                    ),
                 ],
                 keys=["original", "synthetic"],
             )
             .dropna()
             .reset_index()
         )
+
+        # sample_size = 10000
+        # if len(self.merged) > sample_size:
+        #     _, self.merged = train_test_split(
+        #                 self.merged,
+        #                 test_size=sample_size,
+        #                 stratify=self.merged["level_0"],
+        #                 random_state=10,
+        #                 )
+        #     logger.debug("Data was downsampled to 10000 samples")
+
         if len(self.merged) == 0:
             logger.warning(
                 "No clustering metric will be formed due to empty DataFrame"
             )
             return None
         self.__preprocess_data()
-        optimal_clust_num = self.__automated_silhouette()
+
+        optimal_clust_num = self.__automated_davies_bouldin()
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
 
+        # calculate number of points from each dataset
+        total_counts = statistics.groupby('dataset')['count'].sum()
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"total_counts: \n {total_counts}")
+
         diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"statistics_davies: {statistics}")
+        print(f"diversity_scores: {diversity_scores}")
+
         mean_score = diversity_scores.mean()
+        logger.debug(f"Mean diversity score for clustering "
+                     f"with __automated_davies_bouldin method: {mean_score}")
+
+        # OLD VERSION OF MERGING
+        logger.debug("PERFORMING DOWNSAMPLING")
+        row_limit = min(len(self.original), len(self.synthetic))
+        self.merged = (
+            pd.concat(
+                [
+                    self.original[cont_columns + categ_columns].sample(
+                        row_limit,
+                        random_state=10
+                    ),
+                    self.synthetic[cont_columns + categ_columns].sample(
+                        row_limit,
+                        random_state=10
+                    ),
+                ],
+                keys=["original", "synthetic"],
+            )
+            .dropna()
+            .reset_index()
+        )
+
+        # sample_size = 10000
+        # if len(self.merged) > sample_size:
+        #     _, self.merged = train_test_split(
+        #                 self.merged,
+        #                 test_size=sample_size,
+        #                 stratify=self.merged["level_0"],
+        #                 random_state=10,
+        #                 )
+        #     logger.debug("Data was downsampled to 10000 samples")
+
+        if len(self.merged) == 0:
+            logger.warning(
+                "No clustering metric will be formed due to empty DataFrame"
+            )
+            return None
+        self.__preprocess_data()
+
+        optimal_clust_num = self.__automated_davies_bouldin()
+        statistics = self.__calculate_clusters(optimal_clust_num)
+        statistics.columns = ["cluster", "dataset", "count"]
+
+        # calculate number of points from each dataset
+        total_counts = statistics.groupby('dataset')['count'].sum()
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"total_counts: \n {total_counts}")
+
+        diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"statistics_davies: {statistics}")
+        print(f"diversity_scores: {diversity_scores}")
+
+        mean_score = diversity_scores.mean()
+        logger.debug(f"Mean diversity score for clustering "
+                     f"with __automated_davies_bouldin method: {mean_score}")
+        # # Silhouette method
+        # optimal_clust_num_silhouette = self.__automated_silhouette()
+        # statistics_silhouette = self.__calculate_clusters(optimal_clust_num_silhouette)
+        # statistics_silhouette.columns = ["cluster", "dataset", "count"]
+        # print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        # print(f"statistics_silhouette: {statistics_silhouette}")
+
+        # diversity_scores_silhouette = statistics_silhouette.groupby('cluster').apply(self.diversity)
+        # print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        # print(f"diversity_scores_silhouette: {diversity_scores_silhouette}")
+
+        # mean_score = diversity_scores_silhouette.mean()
+        # logger.debug(f"Mean diversity score for clustering "
+        #              f"with __automated_silhouette method: {mean_score}")
+
+        # # Elbow method
+        # optimal_clust_num = self.__automated_elbow()
+        # statistics = self.__calculate_clusters(optimal_clust_num)
+        # statistics.columns = ["cluster", "dataset", "count"]
+
+        # print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        # print(f"statistics_elbow: {statistics}")
+
+        # diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+
+        # print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        # print(f"diversity_scores: {diversity_scores}")
+
+        # mean_score = diversity_scores.mean()
+
+        # logger.debug(f"Mean diversity score for clustering "
+        #              f"with __automated_elbow method: {mean_score}")
+
+        # HDBSCAN method
+        # statistics = self.__calculate_clusters_other()
+        # statistics.columns = ["cluster", "dataset", "count"]
+        # diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        # print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        # print(f"statistics_HDBSCAN: {statistics}")
+        # print(f"diversity_scores: {diversity_scores}")
+
+        # mean_score = diversity_scores.mean()
+        # logger.debug(f"Mean diversity score for clustering "
+        #              f"with __original_HDBSCAN method: {mean_score}")
+
+        # statistics = self.__calculate_clusters_other_orig()
+        # statistics.columns = ["cluster", "dataset", "count"]
+        # diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        # print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        # print(f"statistics_HDBSCAN: {statistics}")
+        # print(f"diversity_scores: {diversity_scores}")
+
+        # mean_score = diversity_scores.mean()
+        # logger.debug(f"Mean diversity score for clustering "
+        #              f"with __automated_ORIG_HDBSCAN method: {mean_score}")
 
         if self.plot:
             plt.clf()
@@ -965,6 +1127,7 @@ class Clustering(BaseMetric):
         else:
             return 0
 
+    @timing
     def __automated_silhouette(self):
         silhouette_scores = []
         max_clusters = min(10, len(self.merged_transformed))
@@ -981,6 +1144,58 @@ class Clustering(BaseMetric):
         # +2 because the range starts from 2
         optimal_clusters = np.argmax(silhouette_scores) + 2
 
+        logger.debug(f"Optimal number of clusters for "
+                     f"__automated_silhouette: {optimal_clusters}")
+
+        return optimal_clusters
+
+    @timing
+    def __automated_elbow(self):
+        result_table = {"cluster_num": [], "metric": []}
+        max_clusters = min(10, len(self.merged_transformed))
+        for i in range(2, max_clusters):
+            clusters = KMeans(n_clusters=i, random_state=10).fit(self.merged_transformed)
+            metric = clusters.inertia_
+            result_table["cluster_num"].append(i)
+            result_table["metric"].append(metric)
+
+        result_table = pd.DataFrame(result_table)
+        result_table["d1"] = np.concatenate([[np.nan], np.diff(result_table["metric"])])
+        result_table["d2"] = np.concatenate([[np.nan], np.diff(result_table["d1"])])
+        result_table["certainty"] = result_table["d2"] - result_table["d1"]
+        result_table["certainty"] = (
+            np.concatenate([[np.nan], result_table["certainty"].values[:-1]])
+            / result_table["cluster_num"]
+        )
+
+        optimal_clusters = result_table["cluster_num"].values[
+            np.argmax(result_table["certainty"])
+            ]
+
+        logger.debug(f"Optimal number of clusters for "
+                     f"__automated_elbow: {optimal_clusters}")
+        return optimal_clusters
+
+    @timing
+    def __automated_davies_bouldin(self):
+        davies_bouldin_scores = []
+        max_clusters = min(10, len(self.merged_transformed))
+
+        for i in range(2, max_clusters):
+            clusters = KMeans(n_clusters=i, random_state=10).fit(
+                self.merged_transformed
+                )
+            labels = clusters.labels_
+            score = davies_bouldin_score(self.merged_transformed, labels)
+            davies_bouldin_scores.append(score)
+
+        # Get number of clusters with the lowest Davies-Bouldin score
+        # +2 because the range starts from 2
+        optimal_clusters = np.argmin(davies_bouldin_scores) + 2
+
+        logger.debug(f"Optimal number of clusters for "
+                     f"__automated_davies_bouldin: {optimal_clusters}")
+
         return optimal_clusters
 
     def __preprocess_data(self):
@@ -990,10 +1205,48 @@ class Clustering(BaseMetric):
         scaler = MinMaxScaler()
         self.merged_transformed = scaler.fit_transform(self.merged_transformed)
 
-    def __calculate_clusters(self, n):
-        clusters = KMeans(n_clusters=n, random_state=10).fit(self.merged_transformed)
+    @timing
+    def __calculate_clusters_other(self):
+        min_cluster_size = int(len(self.merged_transformed)/20)
+
+        clusters = HDBSCAN(
+            min_cluster_size=min_cluster_size,
+            min_samples=10,
+            n_jobs=-1).fit(self.merged_transformed)
         labels = clusters.labels_
-        rows_labels = pd.DataFrame({"origin": self.merged["level_0"], "cluster": labels})
+        rows_labels = pd.DataFrame(
+            {"origin": self.merged["level_0"], "cluster": labels}
+        )
+
+        logger.debug(f"Number of clusters for sklearn HDBSCAN: {len(set(labels))}")
+
+        return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
+
+    @timing
+    def __calculate_clusters_other_orig(self):
+        min_cluster_size = int(len(self.merged_transformed)/20)
+
+        clusters = hdbscan.HDBSCAN(
+            min_cluster_size=min_cluster_size,
+            min_samples=10).fit(self.merged_transformed)
+        labels = clusters.labels_
+        rows_labels = pd.DataFrame(
+            {"origin": self.merged["level_0"], "cluster": labels}
+        )
+
+        logger.debug(f"Number of clusters for HDBSCAN: {len(set(labels))}")
+
+        return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
+
+    @timing
+    def __calculate_clusters(self, n):
+        clusters = KMeans(n_clusters=n, random_state=10).fit(
+            self.merged_transformed
+        )
+        labels = clusters.labels_
+        rows_labels = pd.DataFrame(
+            {"origin": self.merged["level_0"], "cluster": labels}
+        )
 
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
 
