@@ -6,11 +6,8 @@ import re
 import random
 
 import tqdm
-from sklearn.cluster import KMeans, HDBSCAN
-import hdbscan
+from sklearn.cluster import KMeans
 from sklearn.metrics import davies_bouldin_score
-from sklearn.metrics import calinski_harabasz_score
-from sklearn.metrics import silhouette_score
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
