@@ -1,25 +1,18 @@
-from typing import Dict, Tuple
-from abc import ABC, abstractmethod
+from typing import Dict
+from dataclasses import dataclass
 
 import pandas as pd
 import numpy as np
 from loguru import logger
 
 
-class Convertor(ABC):
+@dataclass
+class Convertor:
     """
     Abstract class for converting fetched schema in Avro, Parquet or Delta formats
     """
-
-    def __init__(self, schema, df):
-        self.converted_schema, self.preprocessed_df = self._convert_schema_and_df(schema, df)
-
-    @abstractmethod
-    def _convert_schema_and_df(self, schema: Dict, df: pd.DataFrame) -> Tuple[Dict, pd.DataFrame]:
-        """
-        Convert the schema of file to unified format, preprocess dataframe
-        """
-        pass
+    schema: Dict
+    df: pd.DataFrame
 
     @staticmethod
     def _update_data_types(schema: Dict, df: pd.DataFrame):
@@ -78,7 +71,7 @@ class Convertor(ABC):
         """
         Preprocess data frame, update data types of columns
         """
-        if not df.empty and schema["format"] != "CSV":
+        if not df.empty:
             try:
                 self._update_data_types(schema, df)
             except Exception as e:
@@ -96,16 +89,12 @@ class CSVConvertor(Convertor):
     """
     Class for supporting custom schema for csv files
     """
-
-    df: pd.DataFrame()
     schema = {"fields": {}, "format": "CSV"}
 
-    def __init__(self, schema, df):
+    def __init__(self, df):
+        schema = {"fields": {}, "format": "CSV"}
         super().__init__(schema, df)
-
-    def _convert_schema_and_df(self, schema, df) -> Tuple[Dict, pd.DataFrame]:
-        preprocessed_df = self._preprocess_df(schema, df)
-        return schema, preprocessed_df
+        self.preprocessed_df = self._preprocess_df(schema, df)
 
 
 class AvroConvertor(Convertor):
@@ -115,8 +104,11 @@ class AvroConvertor(Convertor):
 
     def __init__(self, schema, df):
         super().__init__(schema, df)
+        self.converted_schema = self._convert_schema(schema)
+        self.preprocessed_df = self._preprocess_df(self.converted_schema, df)
 
-    def _convert_schema_and_df(self, schema, df) -> Tuple[Dict, pd.DataFrame]:
+    @staticmethod
+    def _convert_schema(schema) -> Dict:
         """
         Convert the schema of Avro file to unified format, preprocess dataframe
         """
@@ -142,5 +134,4 @@ class AvroConvertor(Convertor):
                 logger.error(message)
                 raise ValueError(message)
         converted_schema["format"] = "Avro"
-        preprocessed_df = self._preprocess_df(converted_schema, df)
-        return converted_schema, preprocessed_df
+        return converted_schema

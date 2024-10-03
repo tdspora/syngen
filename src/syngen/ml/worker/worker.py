@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any, Callable, Literal
 
 import pandas as pd
 from attrs import define, field
@@ -28,7 +28,7 @@ class Worker:
     metadata_path: Optional[str] = field(kw_only=True)
     settings: Dict = field(kw_only=True)
     log_level: str = field(kw_only=True)
-    type_of_process: str = field(kw_only=True)
+    type_of_process: Literal["train", "infer"] = field(kw_only=True)
     metadata: Optional[Dict] = None
     loader: Optional[Callable[[str], pd.DataFrame]] = None
     divided: List = field(default=list())
@@ -53,7 +53,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_source=False if self.loader else True
+            validation_source=False if self.loader and self.type_of_process == "train" else True
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -127,7 +127,7 @@ class Worker:
             metadata = MetadataLoader(self.metadata_path).load_data()
             return metadata
         if self.table_name:
-            source = self.settings.get("source", "absent")
+            source = self.settings.get("source")
             metadata = {
                 self.table_name: {
                     "train_settings": {
@@ -284,7 +284,7 @@ class Worker:
 
         TrainStrategy().run(
             metadata=metadata,
-            source=train_settings["source"],
+            source=train_settings.get("source"),
             epochs=train_settings["epochs"],
             drop_null=train_settings["drop_null"],
             row_limit=train_settings["row_limit"],
@@ -462,9 +462,9 @@ class Worker:
         if self.metadata_path:
             os.makedirs("model_artifacts/metadata", exist_ok=True)
             metadata_file_name = os.path.basename(self.metadata_path)
-            MetadataLoader(self.metadata_path).save_data(
-                f"model_artifacts/metadata/{metadata_file_name}", self.metadata
-            )
+            MetadataLoader(
+                f"model_artifacts/metadata/{metadata_file_name}"
+            ).save_data(self.metadata)
 
     def launch_train(self):
         """

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict, Optional, Callable
+from typing import Dict, Tuple, Optional, Callable
 import itertools
 from collections import defaultdict
 
@@ -38,12 +38,24 @@ class Reporter:
         self.dataset = None
         self.columns_nan_labels = dict()
 
-    def _extract_report_data(self):
+    def _fetch_dataframe(self) -> pd.DataFrame:
+        """
+        Fetch the data using the callback function
+        """
+        data, schema = DataFrameFetcher(
+            loader=self.loader,
+            table_name=self.table_name
+        ).fetch_data()
+        logger.warning(
+            f"The original data of the table - '{self.table_name}' "
+            "has been fetched using the callback function. "
+            "The data may have been modified since the beginning of the training process."
+        )
+        return data
+
+    def _extract_report_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         if self.loader:
-            original, schema = DataFrameFetcher(
-                loader=self.loader,
-                table_name=self.table_name
-            ).fetch_data()
+            original = self._fetch_dataframe()
         else:
             original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
@@ -95,8 +107,26 @@ class Reporter:
         for col in missing_columns:
             synthetic[col] = np.nan
         exclude_columns = self.dataset.uuid_columns
-        original = nan_labels_to_float(original, self.columns_nan_labels, exclude_columns)
-        synthetic = nan_labels_to_float(synthetic, self.columns_nan_labels, exclude_columns)
+        for column in self.dataset.cast_to_integer:
+            original[column] = pd.to_numeric(
+                original[column], errors="coerce", downcast="integer"
+            )
+            synthetic[column] = pd.to_numeric(
+                synthetic[column], errors="coerce", downcast="integer"
+            )
+        for column in self.dataset.cast_to_float:
+            original[column] = pd.to_numeric(
+                original[column], errors="coerce", downcast="float"
+            )
+            synthetic[column] = pd.to_numeric(
+                synthetic[column], errors="coerce", downcast="float"
+            )
+        original = nan_labels_to_float(
+            original, self.columns_nan_labels, exclude_columns, process="report"
+        )
+        synthetic = nan_labels_to_float(
+            synthetic, self.columns_nan_labels, exclude_columns, process="report"
+        )
         (
             str_columns,
             date_columns,
