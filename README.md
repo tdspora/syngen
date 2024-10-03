@@ -9,7 +9,7 @@ The tool is based on the variational autoencoder model (VAE). The Bayesian Gauss
 
 ## Prerequisites
 
-Python 3.10 is required to run the library. The library is tested on Linux and Windows operating systems.
+Python 3.10 or 3.11 is required to run the library. The library is tested on Linux and Windows operating systems.
 You can download Python from [the official website](https://www.python.org/downloads/) and install manually, or you can install Python [from your terminal](https://docs.python-guide.org/starting/installation/). After the installation of Python, please, check whether [pip is installed](https://pip.pypa.io/en/stable/getting-started/).
 
 ## Getting started
