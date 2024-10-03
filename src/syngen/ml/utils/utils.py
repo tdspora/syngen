@@ -414,7 +414,7 @@ def timing(func):
         result = func(*args, **kwargs)
         end_time = time.time()
         elapsed_time = end_time - start_time
-        logger.debug(
+        logger.trace(
             f"Function '{func.__name__}' executed in "
             f"{elapsed_time:.2f} seconds."
         )

@@ -978,6 +978,7 @@ class Clustering(BaseMetric):
         else:
             return 0
 
+    @timing
     def __automated_davies_bouldin(self):
         davies_bouldin_scores = []
         max_clusters = min(10, len(self.merged_transformed))
@@ -1003,6 +1004,7 @@ class Clustering(BaseMetric):
         scaler = MinMaxScaler()
         self.merged_transformed = scaler.fit_transform(self.merged_transformed)
 
+    @timing
     def __calculate_clusters(self, n):
         clusters = KMeans(n_clusters=n, random_state=10).fit(
             self.merged_transformed
