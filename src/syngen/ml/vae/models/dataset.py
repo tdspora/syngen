@@ -114,15 +114,39 @@ class Dataset(BaseDataset):
             main_process,
             paths
         )
+
+    def _detect_categorical_columns(self):
+        """
+        Define binary and categorical columns
+        """
         self._set_binary_columns()
         self._set_categorical_columns()
+        self.binary_columns -= self.categ_columns
+
+    def _preprocess_df(self, excluded_columns: Set[str]):
+        """
+        Preprocess the dataframe
+        """
+        self._cast_to_numeric(excluded_columns)
+        self.nan_labels_dict = get_nan_labels(self.df, excluded_columns)
+        self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
+
+    def _preparation_step(self):
+        """
+        Define binary and categorical columns,
+        preprocess the dataframe before the detection of data types of columns
+        """
+        table_config = self.metadata.get(self.table_name, {})
+        self._set_non_existent_columns(table_config)
+        self._update_metadata(table_config)
+        self._set_metadata()
+        self._detect_categorical_columns()
         excluded_columns = set().union(
             self.categ_columns,
             self.binary_columns
         )
-        self._cast_to_numeric(excluded_columns)
-        self.nan_labels_dict = get_nan_labels(df, excluded_columns)
-        self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
+        self._preprocess_df(excluded_columns)
+        self._update_schema()
 
     def _cast_to_numeric(self, excluded_columns: Set[str]):
         """
@@ -358,14 +382,10 @@ class Dataset(BaseDataset):
             self.__set_fk_keys(config_of_keys)
 
     def launch_detection(self):
+        self._preparation_step()
         self._launch_detection()
 
     def _launch_detection(self):
-        table_config = self.metadata.get(self.table_name, {})
-        self._set_non_existent_columns(table_config)
-        self._update_metadata(table_config)
-        self._update_schema()
-        self._set_metadata()
         self._common_detection()
         self._detection_pipeline()
 
@@ -407,7 +427,7 @@ class Dataset(BaseDataset):
                 "int" if all(x.is_integer() for x in self.df[column].dropna()) else "float"
             )
 
-    def _check_if_column_in_removed(self):
+    def _check_if_categorical_column_not_removed(self):
         """
         Exclude the column from the list of categorical columns
         if it was removed previously as empty column
@@ -427,7 +447,7 @@ class Dataset(BaseDataset):
                 )
             continue
 
-    def _check_if_column_existed(self):
+    def _check_if_categorical_column_existed(self):
         """
         Exclude the column from the list of categorical columns
         if it doesn't exist in the table
@@ -448,7 +468,7 @@ class Dataset(BaseDataset):
                 f"Please, check the metadata file"
             )
 
-    def _check_if_not_key(self, column: str, column_list: List, key_type: str):
+    def _check_if_categorical_column_not_key(self, column: str, column_list: List, key_type: str):
         """
         Exclude the column from the list of categorical columns
         if it relates to certain type of key
@@ -461,24 +481,27 @@ class Dataset(BaseDataset):
             )
             self.categ_columns.discard(column)
 
-    def _check_if_not_key_column(self):
+    def _check_if_categorical_column_not_key_column(self):
         """
         Exclude the column from the list of categorical columns
         if it relates to primary key, unique key or foreign key
         """
         for col in list(self.categ_columns):
-            self._check_if_not_key(column=col, column_list=self.pk_columns, key_type="primary key")
-            self._check_if_not_key(column=col, column_list=self.uq_columns, key_type="unique key")
-            self._check_if_not_key(column=col, column_list=self.fk_columns, key_type="foreign key")
-
-    def _check_if_column_binary(self):
-        """
-        Remove the column from the list of binary columns
-        """
-
-        self.binary_columns = set(
-            [col for col in self.binary_columns if col not in self.categ_columns]
-        )
+            self._check_if_categorical_column_not_key(
+                column=col,
+                column_list=self.pk_columns,
+                key_type="primary key"
+            )
+            self._check_if_categorical_column_not_key(
+                column=col,
+                column_list=self.uq_columns,
+                key_type="unique key"
+            )
+            self._check_if_categorical_column_not_key(
+                column=col,
+                column_list=self.fk_columns,
+                key_type="foreign key"
+            )
 
     def _fetch_categorical_columns(self):
         """
@@ -499,12 +522,14 @@ class Dataset(BaseDataset):
                 f"'{self.table_name}'"
             )
 
-    def _check_if_column_categorical(self):
+    def _validate_categorical_columns(self):
+        """
+        Validate categorical columns
+        """
         if self.categ_columns:
-            self._check_if_column_in_removed()
-            self._check_if_column_existed()
-            self._check_if_not_key_column()
-            self._check_if_column_binary()
+            self._check_if_categorical_column_not_removed()
+            self._check_if_categorical_column_existed()
+            self._check_if_categorical_column_not_key_column()
 
     def _set_binary_columns(self):
         """
@@ -524,7 +549,6 @@ class Dataset(BaseDataset):
                 for col in self.df.columns
                 if self.df[col].fillna("?").nunique() <= 50
                 and col not in self.binary_columns
-                and col not in self.custom_categ_columns
             ]
         )
         self.categ_columns.update(self.custom_categ_columns)
@@ -553,7 +577,7 @@ class Dataset(BaseDataset):
         """
         self._fetch_categorical_columns()
         self._define_categorical_columns()
-        self._check_if_column_categorical()
+        self._validate_categorical_columns()
 
     def _set_long_text_columns(self):
         """
