@@ -898,6 +898,20 @@ class Clustering(BaseMetric):
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
+        # Perform clustering of original dataset
+        # to get optimal number of clusters
+        original_for_clustering = self.original[
+            cont_columns + categ_columns
+            ].dropna()
+        original_transformed = self.__preprocess_data(original_for_clustering)
+
+        optimal_clust_num = self.__get_optimal_number_of_clusters(
+            original_transformed
+            )
+
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"Optimal number of clusters from original: {optimal_clust_num}")
+
         row_limit = min(len(self.original), len(self.synthetic))
 
         self.merged = (
@@ -923,7 +937,7 @@ class Clustering(BaseMetric):
                 "No clustering metric will be formed due to empty DataFrame"
             )
             return None
-        self.__preprocess_data()
+        self.__preprocess_data(self.merged)
 
         optimal_clust_num = self.__automated_davies_bouldin()
         statistics = self.__calculate_clusters(optimal_clust_num)
@@ -976,16 +990,19 @@ class Clustering(BaseMetric):
             return 0
 
     @timing
-    def __automated_davies_bouldin(self):
+    def __get_optimal_number_of_clusters(self, dataset):
+        """
+        Calculate the optimal number of clusters using Davies-Bouldin score
+        """
         davies_bouldin_scores = []
-        max_clusters = min(10, len(self.merged_transformed))
+        max_clusters = min(10, len(dataset))
 
         for i in range(2, max_clusters):
             clusters = KMeans(n_clusters=i, random_state=10).fit(
-                self.merged_transformed
+                dataset
                 )
             labels = clusters.labels_
-            score = davies_bouldin_score(self.merged_transformed, labels)
+            score = davies_bouldin_score(dataset, labels)
             davies_bouldin_scores.append(score)
 
         # Get number of clusters with the lowest Davies-Bouldin score
@@ -994,12 +1011,40 @@ class Clustering(BaseMetric):
 
         return optimal_clusters
 
-    def __preprocess_data(self):
-        self.merged_transformed = self.merged.apply(
+    # @timing
+    # def __automated_davies_bouldin(self):
+    #     davies_bouldin_scores = []
+    #     max_clusters = min(10, len(self.merged_transformed))
+
+    #     for i in range(2, max_clusters):
+    #         clusters = KMeans(n_clusters=i, random_state=10).fit(
+    #             self.merged_transformed
+    #             )
+    #         labels = clusters.labels_
+    #         score = davies_bouldin_score(self.merged_transformed, labels)
+    #         davies_bouldin_scores.append(score)
+
+    #     # Get number of clusters with the lowest Davies-Bouldin score
+    #     # +2 because the range starts from 2
+    #     optimal_clusters = np.argmin(davies_bouldin_scores) + 2
+
+    #     return optimal_clusters
+
+    # def __preprocess_data(self):
+    #     self.merged_transformed = self.merged.apply(
+    #         pd.to_numeric, axis=0, errors="ignore"
+    #     ).select_dtypes(include="number")
+    #     scaler = MinMaxScaler()
+    #     self.merged_transformed = scaler.fit_transform(self.merged_transformed)
+
+    def __preprocess_data(self, dataset):
+        transformed_dataset = dataset.apply(
             pd.to_numeric, axis=0, errors="ignore"
         ).select_dtypes(include="number")
         scaler = MinMaxScaler()
-        self.merged_transformed = scaler.fit_transform(self.merged_transformed)
+        transformed_dataset = scaler.fit_transform(transformed_dataset)
+
+        return transformed_dataset
 
     @timing
     def __calculate_clusters(self, n):
