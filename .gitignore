@@ -5,6 +5,11 @@ __pycache__/
 .idea/
 .pypirc
 
+# Build filse
+dist/
+build/
+src/syngen.egg*
+
 # .DS_Store
 *.DS_Store
 
