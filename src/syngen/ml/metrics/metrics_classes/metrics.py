@@ -909,12 +909,6 @@ class Clustering(BaseMetric):
             original_transformed
             )
 
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"Optimal number of clusters from original: {optimal_clust_num}")
-
-        print(f"original size: {len(self.original)}")
-        print(f"synthetic size: {len(self.synthetic)}")
-
         row_limit = min(len(self.original), len(self.synthetic))
 
         self.merged = (
@@ -942,19 +936,10 @@ class Clustering(BaseMetric):
             return None
         self.merged_transformed = self.__preprocess_data(self.merged)
 
-        #optimal_clust_num = self.__automated_davies_bouldin()
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
 
-        # calculate number of points from each dataset
-        total_counts = statistics.groupby('dataset')['count'].sum()
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"total_counts: \n {total_counts}")
-
         diversity_scores = statistics.groupby('cluster').apply(self.diversity)
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"statistics: {statistics}")
-        print(f"diversity_scores: {diversity_scores}")
         mean_score = diversity_scores.mean()
 
         if self.plot:
@@ -1021,32 +1006,6 @@ class Clustering(BaseMetric):
         optimal_clusters = np.argmin(davies_bouldin_scores) + 2
 
         return optimal_clusters
-
-    # @timing
-    # def __automated_davies_bouldin(self):
-    #     davies_bouldin_scores = []
-    #     max_clusters = min(10, len(self.merged_transformed))
-
-    #     for i in range(2, max_clusters):
-    #         clusters = KMeans(n_clusters=i, random_state=10).fit(
-    #             self.merged_transformed
-    #             )
-    #         labels = clusters.labels_
-    #         score = davies_bouldin_score(self.merged_transformed, labels)
-    #         davies_bouldin_scores.append(score)
-
-    #     # Get number of clusters with the lowest Davies-Bouldin score
-    #     # +2 because the range starts from 2
-    #     optimal_clusters = np.argmin(davies_bouldin_scores) + 2
-
-    #     return optimal_clusters
-
-    # def __preprocess_data(self):
-    #     self.merged_transformed = self.merged.apply(
-    #         pd.to_numeric, axis=0, errors="ignore"
-    #     ).select_dtypes(include="number")
-    #     scaler = MinMaxScaler()
-    #     self.merged_transformed = scaler.fit_transform(self.merged_transformed)
 
     def __preprocess_data(self, dataset):
         transformed_dataset = dataset.apply(
