@@ -912,6 +912,9 @@ class Clustering(BaseMetric):
         print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         print(f"Optimal number of clusters from original: {optimal_clust_num}")
 
+        print(f"original size: {len(self.original)}")
+        print(f"synthetic size: {len(self.synthetic)}")
+
         row_limit = min(len(self.original), len(self.synthetic))
 
         self.merged = (
@@ -937,13 +940,21 @@ class Clustering(BaseMetric):
                 "No clustering metric will be formed due to empty DataFrame"
             )
             return None
-        self.__preprocess_data(self.merged)
+        self.merged_transformed = self.__preprocess_data(self.merged)
 
-        optimal_clust_num = self.__automated_davies_bouldin()
+        #optimal_clust_num = self.__automated_davies_bouldin()
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
 
+        # calculate number of points from each dataset
+        total_counts = statistics.groupby('dataset')['count'].sum()
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"total_counts: \n {total_counts}")
+
         diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"statistics: {statistics}")
+        print(f"diversity_scores: {diversity_scores}")
         mean_score = diversity_scores.mean()
 
         if self.plot:
