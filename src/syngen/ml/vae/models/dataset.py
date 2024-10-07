@@ -61,8 +61,8 @@ class BaseDataset:
         self.uuid_columns_types: Dict = dict()
         self.dropped_columns: Set = set()
         self.order_of_columns: List = list()
-        self.custom_categ_columns: Set = set()
-        self.categ_columns: Set = set()
+        self.custom_categorical_columns: Set = set()
+        self.categorical_columns: Set = set()
         self.str_columns: Set = set()
         self.float_columns: Set = set()
         self.int_columns: Set = set()
@@ -121,7 +121,7 @@ class Dataset(BaseDataset):
         """
         self._set_binary_columns()
         self._set_categorical_columns()
-        self.binary_columns -= self.categ_columns
+        self.binary_columns -= self.categorical_columns
 
     def _preprocess_df(self, excluded_columns: Set[str]):
         """
@@ -142,7 +142,7 @@ class Dataset(BaseDataset):
         self._set_metadata()
         self._detect_categorical_columns()
         excluded_columns = set().union(
-            self.categ_columns,
+            self.categorical_columns,
             self.binary_columns
         )
         self._preprocess_df(excluded_columns)
@@ -357,7 +357,7 @@ class Dataset(BaseDataset):
                     in (
                         self.str_columns
                         | self.email_columns
-                        | self.categ_columns
+                        | self.categorical_columns
                         | self.date_columns
                         | self.long_text_columns
                         | self.uuid_columns
@@ -427,9 +427,9 @@ class Dataset(BaseDataset):
                 "int" if all(x.is_integer() for x in self.df[column].dropna()) else "float"
             )
 
-    def _check_if_categorical_column_not_removed(self):
+    def _check_if_column_not_removed(self, column_type: str):
         """
-        Exclude the column from the list of categorical columns
+        Exclude the column from the list of columns
         if it was removed previously as empty column
         """
         removed = [
@@ -437,71 +437,84 @@ class Dataset(BaseDataset):
             for col, data_type in self.fields.items()
             if data_type == "removed"
         ]
-        for col in list(self.categ_columns):
+        columns = getattr(self, f"{column_type}_columns")
+        for col in list(columns):
             if col in removed:
-                self.categ_columns.remove(col)
+                columns.remove(col)
                 logger.warning(
-                    f"The column '{col}' was excluded from the list of categorical columns "
+                    f"The column '{col}' was excluded from the list of {column_type} columns "
                     f"as far as this column is empty and was removed from the table - "
                     f"'{self.table_name}'"
                 )
             continue
+        setattr(self, f"{column_type}_columns", columns)
 
-    def _check_if_categorical_column_existed(self):
+    def _check_if_column_existed(self, column_type: str):
         """
-        Exclude the column from the list of categorical columns
+        Exclude the column from the list of columns
         if it doesn't exist in the table
         """
         removed_columns = []
-        for col in self.categ_columns:
+        columns = getattr(self, f"{column_type}_columns")
+        for col in columns:
             if col not in self.df.columns:
                 removed_columns.append(col)
             continue
 
-        self.categ_columns = set([i for i in self.categ_columns if i not in removed_columns])
+        setattr(
+            self,
+            f"{column_type}_columns",
+            set([i for i in columns if i not in removed_columns])
+        )
 
         if removed_columns:
             logger.warning(
-                f"The columns - {', '.join(removed_columns)} were mentioned as categorical "
+                f"The columns - {', '.join(removed_columns)} were mentioned as {column_type} "
                 f"in the metadata of the table - '{self.table_name}'. "
                 f"It seems that the columns are absent in the table - '{self.table_name}'. "
                 f"Please, check the metadata file"
             )
 
-    def _check_if_categorical_column_not_key(self, column: str, column_list: List, key_type: str):
+    def _check_if_column_not_key(self, column_type: str, column_list: List, key_type: str):
         """
-        Exclude the column from the list of categorical columns
+        Exclude the column from the list of columns
         if it relates to certain type of key
         """
-        if column in column_list:
+        columns = getattr(self, f"{column_type}_columns")
+        columns_to_remove = {column for column in columns if column in column_list}
+        for column in columns_to_remove:
             logger.warning(
-                f"The column '{column}' was excluded from the list of categorical columns "
+                f"The column '{column}' was excluded from the list of {column_type} columns "
                 f"as far as this column was set as the {key_type} of the table - "
                 f"'{self.table_name}'"
             )
-            self.categ_columns.discard(column)
+            columns.discard(column)
+        setattr(
+            self,
+            f"{column_type}_columns",
+            columns
+        )
 
-    def _check_if_categorical_column_not_key_column(self):
+    def _check_if_column_not_key_column(self, column_type: str):
         """
-        Exclude the column from the list of categorical columns
+        Exclude the column from the list of columns
         if it relates to primary key, unique key or foreign key
         """
-        for col in list(self.categ_columns):
-            self._check_if_categorical_column_not_key(
-                column=col,
-                column_list=self.pk_columns,
-                key_type="primary key"
-            )
-            self._check_if_categorical_column_not_key(
-                column=col,
-                column_list=self.uq_columns,
-                key_type="unique key"
-            )
-            self._check_if_categorical_column_not_key(
-                column=col,
-                column_list=self.fk_columns,
-                key_type="foreign key"
-            )
+        self._check_if_column_not_key(
+            column_type=column_type,
+            column_list=self.pk_columns,
+            key_type="primary key"
+        )
+        self._check_if_column_not_key(
+            column_type=column_type,
+            column_list=self.uq_columns,
+            key_type="unique key"
+        )
+        self._check_if_column_not_key(
+            column_type=column_type,
+            column_list=self.fk_columns,
+            key_type="foreign key"
+        )
 
     def _fetch_categorical_columns(self):
         """
@@ -510,26 +523,25 @@ class Dataset(BaseDataset):
         metadata_of_table = self.metadata.get(self.table_name)
 
         if metadata_of_table is not None:
-            self.custom_categ_columns = set(
+            self.custom_categorical_columns = set(
                 metadata_of_table.get("train_settings", {})
                 .get("column_types", {})
                 .get("categorical", [])
             )
-        if self.custom_categ_columns:
+        if self.custom_categorical_columns:
             logger.info(
-                f"The columns - {', '.join(self.custom_categ_columns)} were defined "
+                f"The columns - {', '.join(self.custom_categorical_columns)} were defined "
                 f"as categorical due to the information from the metadata of the table - "
                 f"'{self.table_name}'"
             )
 
-    def _validate_categorical_columns(self):
+    def _validate_columns(self, column_type: str):
         """
         Validate categorical columns
         """
-        if self.categ_columns:
-            self._check_if_categorical_column_not_removed()
-            self._check_if_categorical_column_existed()
-            self._check_if_categorical_column_not_key_column()
+        self._check_if_column_not_removed(column_type)
+        self._check_if_column_existed(column_type)
+        self._check_if_column_not_key_column(column_type)
 
     def _set_binary_columns(self):
         """
@@ -543,7 +555,7 @@ class Dataset(BaseDataset):
         """
         Define the list of categorical columns based on the count of unique values in the column
         """
-        self.categ_columns = set(
+        self.categorical_columns = set(
             [
                 col
                 for col in self.df.columns
@@ -551,7 +563,7 @@ class Dataset(BaseDataset):
                 and col not in self.binary_columns
             ]
         )
-        self.categ_columns.update(self.custom_categ_columns)
+        self.categorical_columns.update(self.custom_categorical_columns)
 
     # TODO: cache this function calls (?)
     def _select_str_columns(self) -> List[str]:
@@ -577,7 +589,8 @@ class Dataset(BaseDataset):
         """
         self._fetch_categorical_columns()
         self._define_categorical_columns()
-        self._validate_categorical_columns()
+        if self.categorical_columns:
+            self._validate_columns(column_type="categorical")
 
     def _set_long_text_columns(self):
         """
@@ -591,7 +604,7 @@ class Dataset(BaseDataset):
                 :, data_subset.apply(lambda x: (x.astype(str).str.len() > 200).any())
             ]
             self.long_text_columns = set(data_subset.columns)
-            self.long_text_columns = (self.long_text_columns - self.categ_columns
+            self.long_text_columns = (self.long_text_columns - self.categorical_columns
                                       - self.binary_columns)
             if self.long_text_columns:
                 logger.info(
@@ -622,7 +635,9 @@ class Dataset(BaseDataset):
                 :, filter_mask
             ]
             self.email_columns = set(data_subset.columns)
-            self.email_columns = self.email_columns - self.categ_columns - self.binary_columns
+            self.email_columns = (
+                self.email_columns - self.categorical_columns - self.binary_columns
+            )
 
     @staticmethod
     def _is_valid_ulid(uuid):
@@ -731,7 +746,7 @@ class Dataset(BaseDataset):
         self.date_columns = (
             get_date_columns(self.df, list(self.str_columns))
             - self.email_columns
-            - self.categ_columns
+            - self.categorical_columns
             - self.binary_columns
             - self.long_text_columns
         )
@@ -848,25 +863,25 @@ class Dataset(BaseDataset):
                 float_to_int_cols.add(col)
 
         self.int_columns = (self.int_columns | float_to_int_cols) - (
-            self.categ_columns | self.binary_columns
+            self.categorical_columns | self.binary_columns
         )
         self.float_columns = (
-            self.float_columns - self.categ_columns - self.int_columns - self.binary_columns
+            self.float_columns - self.categorical_columns - self.int_columns - self.binary_columns
         )
         self.str_columns = (
             set(self.df.columns)
             - self.float_columns
-            - self.categ_columns
+            - self.categorical_columns
             - self.int_columns
             - self.binary_columns
             - self.long_text_columns
             - self.email_columns
             - self.uuid_columns
         )
-        self.categ_columns -= self.long_text_columns
+        self.categorical_columns -= self.long_text_columns
         self._set_date_columns()
         self.str_columns -= self.date_columns
-        self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
+        self.uuid_columns = self.uuid_columns - self.categorical_columns - self.binary_columns
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
@@ -880,18 +895,18 @@ class Dataset(BaseDataset):
         self.int_columns = set(
             column for column, data_type in self.fields.items() if data_type == "int"
         )
-        self.int_columns = (self.int_columns - self.categ_columns - self.binary_columns)
+        self.int_columns = (self.int_columns - self.categorical_columns - self.binary_columns)
         self.float_columns = set(
             column for column, data_type in self.fields.items() if data_type == "float"
         )
-        self.float_columns = self.float_columns - self.categ_columns - self.binary_columns
+        self.float_columns = self.float_columns - self.categorical_columns - self.binary_columns
         self.str_columns = set(
             column for column, data_type in self.fields.items() if data_type == "string"
         )
-        self.categ_columns -= self.long_text_columns
+        self.categorical_columns -= self.long_text_columns
         self.str_columns = (
             self.str_columns
-            - self.categ_columns
+            - self.categorical_columns
             - self.binary_columns
             - self.long_text_columns
             - self.email_columns
@@ -899,7 +914,7 @@ class Dataset(BaseDataset):
         )
         self._set_date_columns()
         self.str_columns -= self.date_columns
-        self.uuid_columns = self.uuid_columns - self.categ_columns - self.binary_columns
+        self.uuid_columns = self.uuid_columns - self.categorical_columns - self.binary_columns
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
         }
@@ -911,13 +926,11 @@ class Dataset(BaseDataset):
         elif self.schema_format == "Avro":
             self._avro_data_pipeline()
 
-        assert len(self.str_columns) + len(self.float_columns) + len(self.int_columns) + len(
-            self.date_columns
-        ) + len(self.categ_columns) + len(self.binary_columns) + len(self.long_text_columns) + len(
-            self.uuid_columns
-        ) + len(self.email_columns) == len(
-            self.df.columns
-        ), (
+        assert (
+            len(self.str_columns) + len(self.float_columns) + len(self.int_columns)
+            + len(self.date_columns) + len(self.categorical_columns) + len(self.binary_columns)
+            + len(self.long_text_columns) + len(self.uuid_columns) + len(self.email_columns)
+        ) == len(self.df.columns), (
             "According to number of columns with defined types, "
             "column types are not identified correctly"
         )
@@ -927,7 +940,7 @@ class Dataset(BaseDataset):
             + f"Count of email columns: {len(self.email_columns)}; "
             + f"Count of float columns: {len(self.float_columns)}; "
             + f"Count of int columns: {len(self.int_columns)}; "
-            + f"Count of categorical columns: {len(self.categ_columns)}; "
+            + f"Count of categorical columns: {len(self.categorical_columns)}; "
             + f"Count of date columns: {len(self.date_columns)}; "
             + f"Count of binary columns: {len(self.binary_columns)}; "
             + f"Count of long text columns: {len(self.long_text_columns)}; "
@@ -1307,7 +1320,7 @@ class Dataset(BaseDataset):
                 self._assign_float_feature(column)
             elif column in self.int_columns:
                 self._assign_int_feature(column)
-            elif column in self.categ_columns:
+            elif column in self.categorical_columns:
                 self._assign_categ_feature(column)
             elif column in self.date_columns:
                 self._assign_date_feature(column)

@@ -144,8 +144,8 @@ def test_save_dataset(rp_logger):
         "nan_labels_in_uuid",
         "dropped_columns",
         "order_of_columns",
-        "custom_categ_columns",
-        "categ_columns",
+        "custom_categorical_columns",
+        "categorical_columns",
         "str_columns",
         "float_columns",
         "int_columns",
@@ -174,7 +174,7 @@ def test_save_dataset(rp_logger):
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
-def test_is_valid_categ_defined_in_csv_table(rp_logger):
+def test_is_valid_categorical_defined_in_csv_table(rp_logger):
     rp_logger.info(
         "Test the process of the detection of "
         "the categorical columns in the table in '.csv' format"
@@ -193,7 +193,7 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
         main_process="train"
     )
     mock_dataset.launch_detection()
-    assert mock_dataset.categ_columns == {
+    assert mock_dataset.categorical_columns == {
         "time",
         "ptd_dt",
         "email",
@@ -207,7 +207,7 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
-def test_set_custom_categ_columns(rp_logger):
+def test_set_custom_categorical_columns(rp_logger):
     rp_logger.info(
         "Test the process of the detection of "
         "the categorical columns that has been set by a user"
@@ -240,7 +240,7 @@ def test_set_custom_categ_columns(rp_logger):
         main_process="train"
     )
     mock_dataset.launch_detection()
-    assert mock_dataset.categ_columns == {
+    assert mock_dataset.categorical_columns == {
         "SenderPersonId",
         "DocNumber",
         "MetadataSubject",
@@ -276,7 +276,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
         "id",
         "timestamp"
     }
-    assert mock_dataset.categ_columns == {"ensure"}
+    assert mock_dataset.categorical_columns == {"ensure"}
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())

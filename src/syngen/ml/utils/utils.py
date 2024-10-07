@@ -229,8 +229,8 @@ def nan_labels_to_float(
     return df_with_nan
 
 
-def fillnan(df, str_columns, float_columns, categ_columns):
-    for c in str_columns | categ_columns:
+def fillnan(df, str_columns, float_columns, categorical_columns):
+    for c in str_columns | categorical_columns:
         df[c] = df[c].fillna("NaN")
 
     return df
