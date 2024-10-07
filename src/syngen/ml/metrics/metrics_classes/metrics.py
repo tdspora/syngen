@@ -1168,14 +1168,17 @@ class Utility(BaseMetric):
                 ],
                 "synth_to_orig_ratio": [
                     round(synth_score_binary / score_binary, 3)
-                    if best_binary is not None
-                    else np.nan,
+                    if best_binary is not None and score_binary != 0 else (
+                        0 if score_binary == 0 else np.nan
+                        ),
                     round(synth_score_categ / score_categ, 3)
-                    if best_categ is not None
-                    else np.nan,
+                    if best_categ is not None and score_categ != 0 else (
+                        0 if score_categ == 0 else np.nan
+                        ),
                     abs(round(max(0, synth_regres_score) / score_regres, 3))
-                    if best_regres is not None
-                    else np.nan,
+                    if best_regres is not None and score_regres != 0 else (
+                        0 if score_regres == 0 else np.nan
+                        ),
                 ],
                 "type": [
                     "Binary (" + f"{best_binary})" if best_binary is not None else "" + ")",
