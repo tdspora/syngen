@@ -638,7 +638,7 @@ class Dataset(BaseDataset):
 
             # Update the email_columns attribute
             self.email_columns = (
-                set(email_columns) - self.categ_columns - self.binary_columns
+                set(email_columns) - self.categorical_columns - self.binary_columns
             )
 
     @staticmethod
