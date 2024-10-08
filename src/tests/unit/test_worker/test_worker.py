@@ -74,7 +74,7 @@ def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run, 
     )
     assert worker.metadata == {
         "test_table": {
-            "train_settings": {"source": "absent"},
+            "train_settings": {"source": None},
             "infer_settings": {
                 "size": 100,
                 "run_parallel": False,
@@ -1214,7 +1214,7 @@ def test_launch_infer_without_metadata(
         ["test_table"],
         {
             "test_table": {
-                "train_settings": {"source": "absent"},
+                "train_settings": {"source": None},
                 "infer_settings": {
                     "size": 200,
                     "run_parallel": True,
@@ -1345,7 +1345,7 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
     assert worker.metadata == {
         "test_table": {
             "train_settings": {
-                "source": "absent",
+                "source": None,
                 "batch_size": 1000,
                 "drop_null": True,
                 "epochs": 20,

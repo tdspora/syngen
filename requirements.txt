@@ -16,7 +16,7 @@ mlflow==2.16.*
 numpy==1.26.*
 openpyxl
 pandas==2.2.*
-pandavro==1.7.2
+pandavro==1.8.*
 pathos==0.2.*
 pillow==10.3.*
 psutil
@@ -29,7 +29,7 @@ reportportal-client
 scikit_learn==1.5.*
 scipy==1.14.*
 seaborn==0.13.*
-setuptools>=70.0.0
+setuptools==74.1.*
 tensorflow==2.15.*
 tqdm==4.66.3
 Werkzeug==3.0.3
