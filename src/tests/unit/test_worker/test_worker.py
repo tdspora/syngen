@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from syngen.ml.worker import Worker
 from syngen.ml.config import Validator
 
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 @patch.object(Validator, "run")
@@ -74,7 +74,7 @@ def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run, 
     )
     assert worker.metadata == {
         "test_table": {
-            "train_settings": {"source": "absent"},
+            "train_settings": {"source": None},
             "infer_settings": {
                 "size": 100,
                 "run_parallel": False,
@@ -104,7 +104,7 @@ def test_init_worker_with_metadata(mock_validator_run, rp_logger):
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -156,7 +156,8 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validator_run, rp_logg
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_empty_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      "metadata_with_empty_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -201,7 +202,8 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      "metadata_with_global_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -271,7 +273,8 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      "metadata_with_global_settings.yaml",
         settings={
             "size": 200,
             "run_parallel": False,
@@ -359,7 +362,7 @@ def test_launch_train_with_metadata(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -453,7 +456,8 @@ def test_launch_train_with_metadata_of_related_tables(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      "metadata_of_related_tables.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -588,7 +592,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/"
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
                       "metadata_of_related_tables_with_diff_keys.yaml",
         settings={
             "source": None,
@@ -818,7 +822,8 @@ def test_launch_train_with_metadata_contained_global_settings(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      "metadata_with_global_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -932,7 +937,7 @@ def test_launch_infer_with_metadata(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata.yaml",
         settings={
             "size": 200,
             "run_parallel": True,
@@ -998,7 +1003,8 @@ def test_launch_infer_with_metadata_of_related_tables(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_of_related_tables.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      "metadata_of_related_tables.yaml",
         settings={
             "size": 300,
             "run_parallel": True,
@@ -1085,7 +1091,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/"
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
                       "metadata_of_related_tables_with_diff_keys.yaml",
         settings={
             "size": 300,
@@ -1208,7 +1214,7 @@ def test_launch_infer_without_metadata(
         ["test_table"],
         {
             "test_table": {
-                "train_settings": {"source": "absent"},
+                "train_settings": {"source": None},
                 "infer_settings": {
                     "size": 200,
                     "run_parallel": True,
@@ -1250,7 +1256,8 @@ def test_launch_infer_with_metadata_contained_global_settings(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      "metadata_with_global_settings.yaml",
         settings={
             "size": 300,
             "run_parallel": True,
@@ -1338,7 +1345,7 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
     assert worker.metadata == {
         "test_table": {
             "train_settings": {
-                "source": "absent",
+                "source": None,
                 "batch_size": 1000,
                 "drop_null": True,
                 "epochs": 20,
@@ -1382,7 +1389,7 @@ def test_launch_train_with_metadata_without_source_paths(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_without_sources.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_without_sources.yaml",
         settings={
             "epochs": 20,
             "drop_null": True,
@@ -1532,7 +1539,8 @@ def test_launch_train_with_metadata_without_train_settings(
     )
     worker = Worker(
         table_name=None,
-        metadata_path="./tests/unit/test_worker/fixtures/metadata_without_train_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      "metadata_without_train_settings.yaml",
         settings={
             "epochs": 20,
             "drop_null": True,

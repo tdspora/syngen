@@ -7,6 +7,7 @@ import random
 
 import tqdm
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
@@ -59,10 +60,10 @@ class JensenShannonDistance(BaseMetric):
             "rg", ["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"]
         )
 
-    def calculate_all(self, categ_columns: List[str]):
-        self.original[categ_columns] = self.original[categ_columns].fillna("")
-        self.synthetic[categ_columns] = self.synthetic[categ_columns].fillna("")
-        self.heatmap, self.labels = self.__compute_vs_columns(categ_columns)
+    def calculate_all(self, categorical_columns: List[str]):
+        self.original[categorical_columns] = self.original[categorical_columns].fillna("")
+        self.synthetic[categorical_columns] = self.synthetic[categorical_columns].fillna("")
+        self.heatmap, self.labels = self.__compute_vs_columns(categorical_columns)
 
         if self.plot:
             plt.clf()
@@ -178,9 +179,9 @@ class JensenShannonDistance(BaseMetric):
         )
         return 1 - abs(original_score - synthetic_score)
 
-    def __compute_vs_columns(self, categ_columns: List[str]):
+    def __compute_vs_columns(self, categorical_columns: List[str]):
         valid_cols = [col for col in self.original.columns if "word_count" not in col]
-        mask = list(map(lambda col: col in categ_columns, valid_cols))
+        mask = list(map(lambda col: col in categorical_columns, valid_cols))
         heatmap_matrix = []
         for i, c in enumerate(valid_cols):
             row = []
@@ -247,10 +248,10 @@ class Correlations(BaseMetric):
             list(reversed(["#96195C", "#C13666", "#B24E89", "#9075C1", "#3F93E1", "#E8F4FF"])),
         )
 
-    def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
-        categ_columns = [col for col in categ_columns if "word_count" not in col]
+    def calculate_all(self, categorical_columns: List[str], cont_columns: List[str]):
+        categorical_columns = [col for col in categorical_columns if "word_count" not in col]
         cont_columns = [col for col in cont_columns if "word_count" not in col]
-        for col in categ_columns:
+        for col in categorical_columns:
             map_dict = {
                 k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
             }
@@ -258,12 +259,12 @@ class Correlations(BaseMetric):
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
         self.original_heatmap = self.__calculate_correlations(
-            self.original[categ_columns + cont_columns].apply(
+            self.original[categorical_columns + cont_columns].apply(
                 pd.to_numeric, axis=0, errors="ignore"
             )
         )
         self.synthetic_heatmap = self.__calculate_correlations(
-            self.synthetic[categ_columns + cont_columns].apply(
+            self.synthetic[categorical_columns + cont_columns].apply(
                 pd.to_numeric, axis=0, errors="ignore"
             )
         )
@@ -359,14 +360,14 @@ class BivariateMetric(BaseMetric):
     def calculate_all(
         self,
         cont_columns: List[str],
-        categ_columns: List[str],
+        categorical_columns: List[str],
         date_columns: Optional[List[str]],
         num_not_na_cont_ticks: int = 10,
         max_num_combinations: int = 100,
     ):
         self.date_columns = date_columns if date_columns else []
         self.num_not_na_ticks = num_not_na_cont_ticks
-        fetched_columns = set(cont_columns) | set(categ_columns)
+        fetched_columns = set(cont_columns) | set(categorical_columns)
         excluded_cols = {
             col for col in fetched_columns if col.endswith(("_word_count", "_char_len"))
         }
@@ -393,13 +394,13 @@ class BivariateMetric(BaseMetric):
                     ) = self._calculate_pair_continuous_vs_continuous(
                         y_col=second_col, x_col=first_col  # x is first, y is second
                     )
-                elif second_col in categ_columns:
+                elif second_col in categorical_columns:
                     (
                         heatmap_orig_data,
                         heatmap_synthetic_data,
                     ) = self._calculate_pair_continuous_vs_categ(
                         cont_col=first_col,
-                        categ_col=second_col,  # x is second, y is first
+                        categorical_col=second_col,  # x is second, y is first
                     )
 
                     heatmap_orig_data = (
@@ -412,16 +413,16 @@ class BivariateMetric(BaseMetric):
                         heatmap_synthetic_data[2],
                         heatmap_synthetic_data[1],
                     )  # x is first, y is second
-            elif first_col in categ_columns:
+            elif first_col in categorical_columns:
                 if second_col in cont_columns:
                     (
                         heatmap_orig_data,
                         heatmap_synthetic_data,
                     ) = self._calculate_pair_continuous_vs_categ(
                         cont_col=second_col,
-                        categ_col=first_col,  # x is first, y is second
+                        categorical_col=first_col,  # x is first, y is second
                     )
-                elif second_col in categ_columns:
+                elif second_col in categorical_columns:
                     (
                         heatmap_orig_data,
                         heatmap_synthetic_data,
@@ -582,11 +583,11 @@ class BivariateMetric(BaseMetric):
         synthetic_heatmap = calc_heatmap_data(self.synthetic, y_col, x_col, xtick, ytick)
         return original_heatmap, synthetic_heatmap
 
-    def _calculate_pair_continuous_vs_categ(self, cont_col: str, categ_col: str):
+    def _calculate_pair_continuous_vs_categ(self, cont_col: str, categorical_col: str):
         def calc_heatmap_data(
             df: pd.DataFrame,
             cont_col: str,
-            categ_col: str,
+            categorical_col: str,
             xticks: List[float],
             yticks: List[str],
         ):
@@ -603,7 +604,7 @@ class BivariateMetric(BaseMetric):
                     x_index = df[cont_col].isna()
 
                 for val in yticks:
-                    count = df[x_index & df[categ_col].eq(val)].shape[0] / len(df)
+                    count = df[x_index & df[categorical_col].eq(val)].shape[0] / len(df)
                     heatmap_row.append(count)
                 heatmap.append(heatmap_row)
 
@@ -613,10 +614,22 @@ class BivariateMetric(BaseMetric):
             return heatmap, self._format_categorical_labels(yticks), xticks[1:]
 
         xtick = self._smooth(self._get_continuous_ticks(cont_col))
-        ytick = self._get_categorical_ticks(categ_col)
+        ytick = self._get_categorical_ticks(categorical_col)
 
-        original_heatmap = calc_heatmap_data(self.original, cont_col, categ_col, xtick, ytick)
-        synthetic_heatmap = calc_heatmap_data(self.synthetic, cont_col, categ_col, xtick, ytick)
+        original_heatmap = calc_heatmap_data(
+            self.original,
+            cont_col,
+            categorical_col,
+            xtick,
+            ytick
+        )
+        synthetic_heatmap = calc_heatmap_data(
+            self.synthetic,
+            cont_col,
+            categorical_col,
+            xtick,
+            ytick
+        )
 
         return original_heatmap, synthetic_heatmap
 
@@ -687,7 +700,7 @@ class UnivariateMetric(BaseMetric):
     def calculate_all(
         self,
         cont_columns: List[str],
-        categ_columns: List[str],
+        categorical_columns: List[str],
         date_columns: Optional[List[str]],
         print_nan: bool = False,
     ):
@@ -697,16 +710,16 @@ class UnivariateMetric(BaseMetric):
         }
         cont_columns = set(cont_columns) - excluded_cols
         excluded_cols = {
-            col for col in categ_columns if "word_count" if col.endswith("_word_count")
+            col for col in categorical_columns if "word_count" if col.endswith("_word_count")
         }
-        categ_columns = set(categ_columns) - excluded_cols
+        categorical_columns = set(categorical_columns) - excluded_cols
         images = {}
         uni_categ_images = {}
         for col in cont_columns:
             images.update(
                 self.__calc_continuous(column=col, print_nan=print_nan, isdate=col in date_columns)
             )
-        for col in categ_columns:
+        for col in categorical_columns:
             uni_categ_images.update(self.__calc_categ(col))
         images.update(uni_categ_images)
         return images
@@ -888,8 +901,8 @@ class Clustering(BaseMetric):
     ):
         super().__init__(original, synthetic, plot, reports_path)
 
-    def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
-        for col in categ_columns:
+    def calculate_all(self, categorical_columns: List[str], cont_columns: List[str]):
+        for col in categorical_columns:
             map_dict = {
                 k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
             }
@@ -900,8 +913,8 @@ class Clustering(BaseMetric):
         self.merged = (
             pd.concat(
                 [
-                    self.original[cont_columns + categ_columns].sample(row_limit),
-                    self.synthetic[cont_columns + categ_columns].sample(row_limit),
+                    self.original[cont_columns + categorical_columns].sample(row_limit),
+                    self.synthetic[cont_columns + categorical_columns].sample(row_limit),
                 ],
                 keys=["original", "synthetic"],
             )
@@ -909,17 +922,17 @@ class Clustering(BaseMetric):
             .reset_index()
         )
         if len(self.merged) == 0:
-            logger.warning("No clustering metric will be formed due to empty DataFrame")
+            logger.warning(
+                "No clustering metric will be formed due to empty DataFrame"
+            )
             return None
         self.__preprocess_data()
-        optimal_clust_num = self.__automated_elbow()
-
-        def diversity(x):
-            return min(x) / max(x)
-
+        optimal_clust_num = self.__automated_silhouette()
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
-        self.mean_score = statistics.groupby("cluster").agg({"count": diversity}).mean()
+
+        diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        mean_score = diversity_scores.mean()
 
         if self.plot:
             plt.clf()
@@ -950,26 +963,37 @@ class Clustering(BaseMetric):
                 bbox_inches="tight",
                 format="svg",
             )
-        return self.mean_score.values[0]
+        return mean_score
 
-    def __automated_elbow(self):
-        result_table = {"cluster_num": [], "metric": []}
+    @staticmethod
+    def diversity(statistics):
+        """
+        Calculate the diversity score for each cluster
+        from collected statistics.
+        If in cluster only one dataset is present, return 0.
+        """
+        if statistics['dataset'].nunique() == 2:
+            return min(statistics['count']) / max(statistics['count'])
+        else:
+            return 0
+
+    def __automated_silhouette(self):
+        silhouette_scores = []
         max_clusters = min(10, len(self.merged_transformed))
-        for i in range(2, max_clusters):
-            clusters = KMeans(n_clusters=i, random_state=10).fit(self.merged_transformed)
-            metric = clusters.inertia_
-            result_table["cluster_num"].append(i)
-            result_table["metric"].append(metric)
 
-        result_table = pd.DataFrame(result_table)
-        result_table["d1"] = np.concatenate([[np.nan], np.diff(result_table["metric"])])
-        result_table["d2"] = np.concatenate([[np.nan], np.diff(result_table["d1"])])
-        result_table["certainty"] = result_table["d2"] - result_table["d1"]
-        result_table["certainty"] = (
-            np.concatenate([[np.nan], result_table["certainty"].values[:-1]])
-            / result_table["cluster_num"]
-        )
-        return result_table["cluster_num"].values[np.argmax(result_table["certainty"])]
+        for i in range(2, max_clusters):
+            clusters = KMeans(n_clusters=i, random_state=10).fit(
+                self.merged_transformed
+            )
+            labels = clusters.labels_
+            score = silhouette_score(self.merged_transformed, labels)
+            silhouette_scores.append(score)
+
+        # Get number of clusters with the highest silhouette score
+        # +2 because the range starts from 2
+        optimal_clusters = np.argmax(silhouette_scores) + 2
+
+        return optimal_clusters
 
     def __preprocess_data(self):
         self.merged_transformed = self.merged.apply(
@@ -982,6 +1006,7 @@ class Clustering(BaseMetric):
         clusters = KMeans(n_clusters=n, random_state=10).fit(self.merged_transformed)
         labels = clusters.labels_
         rows_labels = pd.DataFrame({"origin": self.merged["level_0"], "cluster": labels})
+
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
 
 
@@ -998,10 +1023,10 @@ class Utility(BaseMetric):
 
         self.sample_size = sample_size
 
-    def calculate_all(self, categ_columns: List[str], cont_columns: List[str]):
+    def calculate_all(self, categorical_columns: List[str], cont_columns: List[str]):
         logger.info("Calculating utility metric")
 
-        for col in categ_columns:
+        for col in categorical_columns:
             map_dict = {
                 k: i + 1 for i, k in enumerate(
                     set(self.original[col]) | set(self.synthetic[col])
@@ -1010,10 +1035,10 @@ class Utility(BaseMetric):
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
-        self.original = self.original[cont_columns + categ_columns].apply(
+        self.original = self.original[cont_columns + categorical_columns].apply(
             pd.to_numeric, axis=0, errors="ignore"
         )
-        self.synthetic = self.synthetic[cont_columns + categ_columns].apply(
+        self.synthetic = self.synthetic[cont_columns + categorical_columns].apply(
             pd.to_numeric, axis=0, errors="ignore"
         )
 
@@ -1023,19 +1048,23 @@ class Utility(BaseMetric):
 
         excluded_cols = [
             col
-            for col in categ_columns + cont_columns
+            for col in categorical_columns + cont_columns
             if self.original[col].nunique() < 2 or col.endswith(("_word_count", "_char_len"))
         ]
         binary_cols = [
             col
-            for col in categ_columns
+            for col in categorical_columns
             if self.original[col].nunique() == 2 and col not in excluded_cols
         ]
         cont_cols = [
-            col for col in cont_columns if col not in binary_cols and col not in excluded_cols
+            col
+            for col in cont_columns
+            if col not in binary_cols and col not in excluded_cols
         ]
-        categ_cols = [
-            col for col in categ_columns if col not in binary_cols and col not in excluded_cols
+        categorical_cols = [
+            col
+            for col in categorical_columns
+            if col not in binary_cols and col not in excluded_cols
         ]
 
         # Check if the datasets after dropna() have more than
@@ -1096,7 +1125,7 @@ class Utility(BaseMetric):
             best_categ,
             score_categ,
             synth_score_categ
-        ) = self.__create_multi_class_models(categ_cols)
+        ) = self.__create_multi_class_models(categorical_cols)
         (
             best_binary,
             score_binary,

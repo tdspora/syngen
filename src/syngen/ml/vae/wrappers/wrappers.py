@@ -63,7 +63,7 @@ class VAEWrapper(BaseWrapper):
     main_process: str
     batch_size: int
     log_level: str
-    losses_info: pd.DataFrame = pd.DataFrame()
+    losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
@@ -81,7 +81,7 @@ class VAEWrapper(BaseWrapper):
                 main_process=self.main_process,
                 paths=self.paths,
             )
-            self.dataset.set_metadata()
+            self.dataset.launch_detection()
             self.df = self.dataset.pipeline()
             self._save_dataset()
         elif self.process == "infer":
@@ -329,8 +329,7 @@ class VAEWrapper(BaseWrapper):
         """
         Save the information about losses of every feature in every epoch
         """
-        path = self.paths["losses_path"]
-        DataLoader(path).save_data(path, df=self.losses_info)
+        DataLoader(self.paths["losses_path"]).save_data(self.losses_info)
 
     def _gather_losses_info(self, total_feature_losses, mean_loss, mean_kl_loss, epoch):
         """

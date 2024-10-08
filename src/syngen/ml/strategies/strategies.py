@@ -63,10 +63,9 @@ class TrainStrategy(Strategy, ABC):
     """
 
     def _save_training_config(self):
-        BinaryLoader().save_data(
-            path=self.config.paths["train_config_pickle_path"],
-            data=self.config
-        )
+        BinaryLoader(
+            path=self.config.paths["train_config_pickle_path"]
+        ).save_data(data=self.config)
 
     def set_config(self, **kwargs):
         """
@@ -118,9 +117,11 @@ class TrainStrategy(Strategy, ABC):
     def add_reporters(self, **kwargs):
         table_name = self.config.table_name
         source = self.config.paths["source_path"]
+        loader = self.config.loader
         if (
                 not table_name.endswith("_fk")
                 and source is not None
+                and loader is None
                 and os.path.exists(source)
                 and self.config.print_report
         ):

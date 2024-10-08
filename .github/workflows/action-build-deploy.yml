@@ -6,10 +6,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
@@ -31,7 +31,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt install python3.10-venv -y
+          sudo apt install python3.11-venv -y
           python -m pip install --upgrade pip
           pip install flake8 pytest build
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
@@ -42,9 +42,9 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-#      - name: Test with pytest
-#        run: |
-#          pytest
+      - name: Test with pytest
+        run: |
+          pip install -e . && pytest src/tests
       - name: Build Package
         run: |
           python3 -m build .

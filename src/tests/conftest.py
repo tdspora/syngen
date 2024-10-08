@@ -15,6 +15,16 @@ from syngen.ml.mlflow_tracker import MlflowTracker
 SUCCESSFUL_MESSAGE = "The test passed successfully"
 
 
+def get_dir_name():
+    """
+    Get the directory name for the current file
+    """
+    return os.path.abspath(os.path.dirname(__file__))
+
+
+DIR_NAME = get_dir_name()
+
+
 @pytest.fixture
 def test_csv_path():
     test_path = "test.csv"
@@ -85,6 +95,19 @@ def test_df():
             "id": [925, 84, 821, 383],
         }
     )
+
+
+@pytest.fixture
+def test_avro_schema():
+    return {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]},
+            {"name": "id", "type": ["null", "long"]}
+        ]
+    }
 
 
 @pytest.fixture

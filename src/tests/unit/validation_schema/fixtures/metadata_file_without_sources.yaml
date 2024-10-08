@@ -1,0 +1,66 @@
+global:
+  train_settings:                         # Settings for training process
+    epochs: 10
+    drop_null: False
+    row_limit: 500
+    print_report: false
+    batch_size: 100
+
+  infer_settings:                         # Settings for infer process
+    size: 300
+    run_parallel: False
+    batch_size: 100
+    random_seed: 5
+    print_report: true
+    get_infer_metrics: false
+
+pk_test:
+  train_settings:
+  keys:
+    pk_test_pk_id:
+      type: "PK"
+      columns:
+        - Id
+
+fk_test:
+  train_settings:
+    epochs: 10
+    drop_null: False
+    print_report: true
+    batch_size: 200
+
+  format:
+    sep: ","
+    quotechar: '"'
+    quoting: "All"
+    escapechar: '"'
+    encoding: "utf-8"
+    header: 0
+    skiprows: 0
+    on_bad_lines: skip
+
+  infer_settings:
+    size: 90
+    run_parallel: False
+    batch_size: 200
+    random_seed: 1
+    print_report: false
+    get_infer_metrics: false
+
+  keys:
+    fk_test_pk_id:
+      type: "PK"
+      columns:
+        - Id
+    fk_test_uq_name:
+      type: "UQ"
+      columns:
+        - Name
+    fk_test_fk_id:
+      type: "FK"
+      columns:
+        - Id
+      references:
+        table: pk_test
+        columns:
+          - Id

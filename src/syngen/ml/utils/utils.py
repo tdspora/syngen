@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Set
 from dateutil import parser
 from datetime import datetime, timedelta
 
@@ -174,21 +174,18 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         names = date_columns.index
     else:
         names = []
+
     return set(names)
 
 
-def get_nan_labels(df: pd.DataFrame) -> dict:
-    """Get labels that represent nan values in float/int columns
-
-    Args:
-        df (pd.DataFrame): table data
-
-    Returns:
-        dict: dict that maps nan str label to column name
+def get_nan_labels(df: pd.DataFrame, excluded_columns: Set[str]) -> Dict:
+    """
+    Get labels that represent nan values in float/int columns
     """
     columns_nan_labels = {}
     object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
-    for column in object_columns:
+    columns = set(object_columns) - excluded_columns
+    for column in columns:
         if df[column].isna().sum() > 0:
             continue
         str_values = []
@@ -201,8 +198,6 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
         if (float_val is not None) and (not np.isnan(float_val)) and len(str_values) == 1:
             nan_label = str_values[0]
             columns_nan_labels[column] = nan_label
-        elif (float_val is not None) and (not np.isnan(float_val)) and not str_values:
-            columns_nan_labels[column] = None
 
     return columns_nan_labels
 
@@ -210,7 +205,8 @@ def get_nan_labels(df: pd.DataFrame) -> dict:
 def nan_labels_to_float(
     df: pd.DataFrame,
     columns_nan_labels: dict,
-    exclude_columns: set = set()
+    exclude_columns: set = set(),
+    process="training"
 ) -> pd.DataFrame:
     """
     Replace str nan labels in float/int columns with actual np.NaN
@@ -221,19 +217,20 @@ def nan_labels_to_float(
         if column not in exclude_columns:
             df_with_nan[column].replace(label, np.NaN, inplace=True)
             df_with_nan[column] = df_with_nan[column].astype(float)
-
-            logger.info(
-                f"Column '{column}' contains unique "
-                f"non-numeric value: '{label}'. "
-                "It will be treated as null label "
-                "and replaced with nulls."
-            )
+            if process == "training":
+                logger.info(
+                    f"Column '{column}' contains unique "
+                    f"non-numeric value: '{label}'. "
+                    "It will be treated as null label "
+                    "and replaced with nulls "
+                    "during the training process."
+                )
 
     return df_with_nan
 
 
-def fillnan(df, str_columns, float_columns, categ_columns):
-    for c in str_columns | categ_columns:
+def fillnan(df, str_columns, float_columns, categorical_columns):
+    for c in str_columns | categorical_columns:
         df[c] = df[c].fillna("NaN")
 
     return df

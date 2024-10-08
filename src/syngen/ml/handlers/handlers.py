@@ -19,6 +19,7 @@ from attrs import define, field
 
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
+from syngen.ml.vae.models.dataset import Dataset
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
@@ -225,6 +226,8 @@ class VaeInferHandler(BaseHandler):
     type_of_process: str = field(kw_only=True)
     random_seed_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)  # noqa: F405
+    dataset: Dataset = field(init=False)
+    original_schema: Dict = field(init=False)
     has_vae: bool = field(init=False)
     has_no_ml: bool = field(init=False)
     batch_num: int = field(init=False)
@@ -236,6 +239,10 @@ class VaeInferHandler(BaseHandler):
         self.random_seeds_list = list()
         self.vae = None
         self.dataset = fetch_config(self.paths["dataset_pickle_path"])
+        path_to_schema = self.paths["original_schema_path"]
+        self.original_schema = (
+            fetch_config(path_to_schema) if os.path.exists(path_to_schema) else None
+        )
         self.has_vae = len(self.dataset.features) > 0
 
         data, schema = self.fetch_data()
@@ -451,8 +458,10 @@ class VaeInferHandler(BaseHandler):
         Restore empty columns in the generated table
         """
         empty_columns = self.dataset.dropped_columns
-        empty_df = pd.DataFrame(index=df.index, columns=empty_columns)
+
+        empty_df = pd.DataFrame(index=df.index, columns=list(empty_columns))
         df = pd.concat([df, empty_df], axis=1)
+
         return df
 
     def handle(self, **kwargs):
@@ -492,28 +501,29 @@ class VaeInferHandler(BaseHandler):
                     prepared_data, self.size, self.metadata, self.table_name
                 )
                 generated_data = generated_data[self.dataset.order_of_columns]
+
                 if generated_data is None:
                     DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                        self.paths["path_to_merged_infer"],
                         prepared_data,
+                        schema=self.original_schema,
                         format=get_context().get_config(),
                     )
                 else:
                     DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                        self.paths["path_to_merged_infer"],
                         generated_data,
+                        schema=self.original_schema,
                         format=get_context().get_config(),
                     )
             else:
                 DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                    self.paths["path_to_merged_infer"],
                     prepared_data,
+                    schema=self.original_schema,
                     format=get_context().get_config(),
                 )
         if self.metadata_path is None:
             prepared_data = prepared_data[self.dataset.order_of_columns]
             DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                self.paths["path_to_merged_infer"],
                 prepared_data,
+                schema=self.original_schema,
                 format=get_context().get_config(),
             )
