@@ -905,6 +905,12 @@ class Clustering(BaseMetric):
             ].dropna()
         original_transformed = self.__preprocess_data(original_for_clustering)
 
+        if len(original_transformed) == 0:
+            logger.warning(
+                "No clustering metric will be formed due to empty DataFrame"
+            )
+            return None
+
         optimal_clust_num = self.__get_optimal_number_of_clusters(
             original_transformed
             )
@@ -939,7 +945,9 @@ class Clustering(BaseMetric):
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
 
-        diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        diversity_scores = statistics.groupby('cluster').apply(
+            self.calculate_diversity
+            )
         mean_score = diversity_scores.mean()
 
         if self.plot:
@@ -974,7 +982,7 @@ class Clustering(BaseMetric):
         return mean_score
 
     @staticmethod
-    def diversity(statistics):
+    def calculate_diversity(statistics):
         """
         Calculate the diversity score for each cluster
         from collected statistics.
