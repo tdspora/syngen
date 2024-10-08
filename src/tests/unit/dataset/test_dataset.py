@@ -166,6 +166,7 @@ def test_save_dataset(rp_logger):
         "foreign_keys_mapping",
         "foreign_keys_list",
         "fk_columns",
+        "keys_mapping",
         "format",
         "cast_to_float",
         "cast_to_integer",
@@ -230,7 +231,13 @@ def test_set_custom_categorical_columns(rp_logger):
                         ]
                     }
                 },
-                "infer_settings": {}
+                "infer_settings": {},
+                "keys": {
+                    "pk_key": {
+                        "type": "PK",
+                        "columns": ["DocNumber"]
+                    }
+                }
             }
         },
         table_name="mock_table",
@@ -242,7 +249,6 @@ def test_set_custom_categorical_columns(rp_logger):
     mock_dataset.launch_detection()
     assert mock_dataset.categorical_columns == {
         "SenderPersonId",
-        "DocNumber",
         "MetadataSubject",
         "ExtractedFrom"
     }

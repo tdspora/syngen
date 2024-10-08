@@ -83,6 +83,7 @@ class BaseDataset:
         self.foreign_keys_mapping: Dict = dict()
         self.foreign_keys_list: List = list()
         self.fk_columns: List = list()
+        self.keys_mapping: Dict = dict()
         self.dropped_columns: Set = fetch_config(
             self.paths["train_config_pickle_path"]
         ).dropped_columns
@@ -381,6 +382,12 @@ class Dataset(BaseDataset):
             self.__set_uq_keys(config_of_keys)
             self.__set_fk_keys(config_of_keys)
 
+        self.keys_mapping = {
+            "primary key": self.pk_columns,
+            "unique key": self.uq_columns,
+            "foreign key": self.fk_columns
+        }
+
     def launch_detection(self):
         self._preparation_step()
         self._launch_detection()
@@ -495,27 +502,6 @@ class Dataset(BaseDataset):
             columns
         )
 
-    def _check_if_column_not_key_column(self, column_type: str):
-        """
-        Exclude the column from the list of columns
-        if it relates to primary key, unique key or foreign key
-        """
-        self._check_if_column_not_key(
-            column_type=column_type,
-            column_list=self.pk_columns,
-            key_type="primary key"
-        )
-        self._check_if_column_not_key(
-            column_type=column_type,
-            column_list=self.uq_columns,
-            key_type="unique key"
-        )
-        self._check_if_column_not_key(
-            column_type=column_type,
-            column_list=self.fk_columns,
-            key_type="foreign key"
-        )
-
     def _fetch_categorical_columns(self):
         """
         Fetch the categorical columns from the metadata
@@ -541,7 +527,12 @@ class Dataset(BaseDataset):
         """
         self._check_if_column_not_removed(column_type)
         self._check_if_column_existed(column_type)
-        self._check_if_column_not_key_column(column_type)
+        for key_type, key_list in self.keys_mapping.items():
+            self._check_if_column_not_key(
+                column_type=column_type,
+                column_list=key_list,
+                key_type=key_type
+            )
 
     def _set_binary_columns(self):
         """
