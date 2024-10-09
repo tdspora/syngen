@@ -18,9 +18,13 @@ jobs:
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
 
+      # Compare requirement files
       - name: Compare requirement files
         run: |
+          # Extract requirements from setup.cfg, remove leading spaces, and store in req_compare.txt
           sed -n '/install_requires/,/^\[/{//!p}' setup.cfg | awk '/^ *$/ { next; } { print; }' | sed 's/^    //' > req_compare.txt
+          # Compare req_compare.txt with requirements.txt
+          # If files are different, echo the differences and exit with error status
           if DIFF=$(diff req_compare.txt requirements.txt) ; then
               echo "Files are the same"
           else
@@ -37,7 +41,9 @@ jobs:
 
       - name: Lint with flake8
         run: |
+         # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with pytest
@@ -67,7 +73,7 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_TOKEN }}
+          password: ${{ secrets.PYPI_TOKEN }} # For testing purposes: use secrets.PYPI_TEST_TOKEN
           print_hash: true
           verbose: true
 
