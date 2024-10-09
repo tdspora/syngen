@@ -144,7 +144,8 @@ def test_save_dataset(rp_logger):
         "nan_labels_in_uuid",
         "dropped_columns",
         "order_of_columns",
-        "categ_columns",
+        "custom_categorical_columns",
+        "categorical_columns",
         "str_columns",
         "float_columns",
         "int_columns",
@@ -165,6 +166,7 @@ def test_save_dataset(rp_logger):
         "foreign_keys_mapping",
         "foreign_keys_list",
         "fk_columns",
+        "keys_mapping",
         "format",
         "cast_to_float",
         "cast_to_integer",
@@ -173,7 +175,7 @@ def test_save_dataset(rp_logger):
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
-def test_is_valid_categ_defined_in_csv_table(rp_logger):
+def test_is_valid_categorical_defined_in_csv_table(rp_logger):
     rp_logger.info(
         "Test the process of the detection of "
         "the categorical columns in the table in '.csv' format"
@@ -192,7 +194,7 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
         main_process="train"
     )
     mock_dataset.launch_detection()
-    assert mock_dataset.categ_columns == {
+    assert mock_dataset.categorical_columns == {
         "time",
         "ptd_dt",
         "email",
@@ -202,6 +204,54 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
         "upd_dt"
     }
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+def test_set_custom_categorical_columns(rp_logger):
+    rp_logger.info(
+        "Test the process of the detection of "
+        "the categorical columns that has been set by a user"
+    )
+    df, schema = DataLoader(
+        f"{DIR_NAME}/unit/dataset/fixtures/data_with_emails.csv"
+    ).load_data()
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata={
+            "mock_table": {
+                "train_settings": {
+                    "source": "path/to/source.csv",
+                    "column_types": {
+                        "categorical": [
+                            "DocNumber",
+                            "MetadataSubject",
+                            "ExtractedFrom"
+                        ]
+                    }
+                },
+                "infer_settings": {},
+                "keys": {
+                    "pk_key": {
+                        "type": "PK",
+                        "columns": ["DocNumber"]
+                    }
+                }
+            }
+        },
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path",
+        },
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+    assert mock_dataset.categorical_columns == {
+        "SenderPersonId",
+        "MetadataSubject",
+        "ExtractedFrom"
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -232,7 +282,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
         "id",
         "timestamp"
     }
-    assert mock_dataset.categ_columns == {"ensure"}
+    assert mock_dataset.categorical_columns == {"ensure"}
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
@@ -826,4 +876,3 @@ def test_cast_to_numeric_in_avro_file(rp_logger):
     assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     assert mock_dataset.float_columns == {"column6"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
-

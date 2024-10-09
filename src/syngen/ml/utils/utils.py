@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Set
 from dateutil import parser
 from datetime import datetime, timedelta
 
@@ -179,14 +179,14 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     return set(names)
 
 
-def get_nan_labels(df: pd.DataFrame) -> dict:
+def get_nan_labels(df: pd.DataFrame, excluded_columns: Set[str]) -> Dict:
     """
     Get labels that represent nan values in float/int columns
     """
     columns_nan_labels = {}
-    object_columns = df.select_dtypes(
-        include=[pd.StringDtype(), "object"]).columns
-    for column in object_columns:
+    object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
+    columns = set(object_columns) - excluded_columns
+    for column in columns:
         if df[column].isna().sum() > 0:
             continue
         str_values = []
@@ -230,8 +230,8 @@ def nan_labels_to_float(
     return df_with_nan
 
 
-def fillnan(df, str_columns, float_columns, categ_columns):
-    for c in str_columns | categ_columns:
+def fillnan(df, str_columns, float_columns, categorical_columns):
+    for c in str_columns | categorical_columns:
         df[c] = df[c].fillna("NaN")
 
     return df
