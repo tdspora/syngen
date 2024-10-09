@@ -927,6 +927,10 @@ class Clustering(BaseMetric):
             original_transformed
             )
 
+        logger.trace(f"Optimal number of clusters for "
+                     f"original dataset: {optimal_clust_num}"
+                     )
+
         row_limit = min(len(self.original), len(self.synthetic))
 
         self.merged = (
