@@ -3,7 +3,7 @@ test_table:
     source: ./path/to/test_table.csv
     epochs: 100
     drop_null: false
-    print_report: false
+    reports: none
     row_limit: 800
     batch_size: 2000
 
@@ -11,9 +11,8 @@ test_table:
     size: 200
     run_parallel: True
     random_seed: 2
-    print_report: true
+    reports: all
     batch_size: 200
-    get_infer_metrics: false
 
   keys:
     pk_id:

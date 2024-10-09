@@ -121,7 +121,7 @@ def test_metadata_storage():
                 "table_a": {
                     "train_settings": {
                         "source": "path/to/table_a.csv",
-                        "print_report": True,
+                        "reports": "all",
                     },
                     "infer_settings": {"destination": "path/to/generated_table_a.csv"},
                     "keys": {
@@ -139,7 +139,7 @@ def test_metadata_storage():
                 "table_d": {
                     "train_settings": {
                         "source": "path/to/table_d.csv",
-                        "print_report": True,
+                        "reports": "all",
                     },
                     "infer_settings": {"destination": "path/to/generated_table_d.csv"},
                     "keys": {
@@ -162,11 +162,11 @@ def test_metadata_file():
                 "source": "..\\data\\pk_test.csv",
                 "drop_null": False,
                 "epochs": 1,
-                "print_report": False,
+                "reports": "none",
                 "row_limit": 800,
             },
             "infer_settings": {
-                "print_report": True,
+                "reports": "all",
                 "random_seed": 1,
                 "run_parallel": False,
                 "size": 100,

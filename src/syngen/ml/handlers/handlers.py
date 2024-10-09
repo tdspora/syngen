@@ -166,7 +166,7 @@ class VaeTrainHandler(BaseHandler):
     drop_null: bool = field(kw_only=True)
     batch_size: int = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
-    print_report: bool = field(kw_only=True)
+    reports: str = field(kw_only=True)
 
     def __fit_model(self, data: pd.DataFrame):
         logger.info("Start VAE training")
@@ -189,7 +189,7 @@ class VaeTrainHandler(BaseHandler):
 
         logger.debug(
             f"Train model with parameters: epochs={self.epochs}, "
-            f"row_subset={self.row_subset}, print_report={self.print_report}, "
+            f"row_subset={self.row_subset}, reports='{self.reports}', "
             f"drop_null={self.drop_null}, batch_size={self.batch_size}"
         )
 
@@ -219,8 +219,7 @@ class VaeInferHandler(BaseHandler):
     size: int = field(kw_only=True)
     batch_size: int = field(kw_only=True)
     run_parallel: bool = field(kw_only=True)
-    print_report: bool = field(kw_only=True)
-    get_infer_metrics: bool = field(kw_only=True)
+    reports: str = field(kw_only=True)
     wrapper_name: str = field(kw_only=True)
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
@@ -467,9 +466,9 @@ class VaeInferHandler(BaseHandler):
     def handle(self, **kwargs):
         self._prepare_dir()
         logger.debug(
-            f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}, "
-            f"batch_size={self.batch_size}, random_seed={self.random_seed}, "
-            f"print_report={self.print_report}, get_infer_metrics={self.get_infer_metrics}"
+            f"Infer model with parameters: size={self.size}, "
+            f"run_parallel={self.run_parallel}, batch_size={self.batch_size}, "
+            f"random_seed={self.random_seed}, reports='{self.reports}'"
         )
         logger.info(f"Total of {self.batch_num} batch(es)")
         batches = self.split_by_batches()

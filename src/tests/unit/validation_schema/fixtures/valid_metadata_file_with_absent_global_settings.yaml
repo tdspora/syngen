@@ -12,7 +12,7 @@ fk_test:
     source: ./data/fk_test.csv
     epochs: 10
     drop_null: False
-    print_report: true
+    reports: all
     batch_size: 200
 
   infer_settings:
@@ -20,7 +20,7 @@ fk_test:
     run_parallel: False
     batch_size: 200
     random_seed: 1
-    print_report: false
+    reports: none
 
   keys:
     fk_test_pk_id:

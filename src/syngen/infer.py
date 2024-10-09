@@ -11,6 +11,7 @@ from syngen.ml.utils import (
     set_log_path,
     check_if_logs_available
 )
+from syngen.ml.validation_schema import INFER_REPORT_TYPES
 
 
 @click.command()
@@ -48,11 +49,15 @@ from syngen.ml.utils import (
     "use the same int in this command.",
 )
 @click.option(
-    "--print_report",
-    default=False,
-    type=click.BOOL,
-    help="Whether to print quality report. Might require significant time "
-    "for big generated tables (>1000 rows). If absent, it's defaulted to False",
+    "--reports",
+    default="none",
+    type=click.Choice(INFER_REPORT_TYPES),
+    help="Controls the generation of quality reports. "
+    "Might require significant time for big generated tables (>1000 rows). "
+    "If 'accuracy', generates an accuracy report. "
+    "If 'metrics_only', outputs the metrics information only to standard output. "
+    "If 'all', generates both sampling and accuracy reports. "
+    "If absent or 'none', no reports are generated.",
 )
 @click.option(
     "--log_level",
@@ -67,7 +72,7 @@ def launch_infer(
     table_name: Optional[str],
     run_parallel: bool,
     batch_size: Optional[int],
-    print_report: bool,
+    reports: str,
     random_seed: Optional[int],
     log_level: str,
 ):
@@ -80,7 +85,7 @@ def launch_infer(
     table_name
     run_parallel
     batch_size
-    print_report
+    reports
     random_seed
     log_level
     -------
@@ -111,9 +116,8 @@ def launch_infer(
         "size": size,
         "run_parallel": run_parallel,
         "batch_size": batch_size,
-        "print_report": print_report,
-        "random_seed": random_seed,
-        "get_infer_metrics": False
+        "reports": reports,
+        "random_seed": random_seed
     }
     worker = Worker(
         table_name=table_name,

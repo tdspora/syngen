@@ -1,8 +1,10 @@
 from unittest.mock import patch
+import pytest
 from click.testing import CliRunner
 
 from syngen.infer import launch_infer
 from syngen.ml.worker import Worker
+from syngen.ml.validation_schema import INFER_REPORT_TYPES
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
@@ -181,27 +183,34 @@ def test_infer_table_with_invalid_random_seed(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("valid_value", INFER_REPORT_TYPES)
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_valid_print_report(
-        mock_post_init, mock_launch_infer, rp_logger
+def test_infer_table_with_valid_parameter_reports(
+    mock_post_init, mock_launch_infer, valid_value, rp_logger
 ):
     rp_logger.info(
-        "Launch infer process through CLI with valid 'print_report' parameter equals True"
+        f"Launch infer process through CLI with valid 'reports' parameter equals '{valid_value}'"
     )
     runner = CliRunner()
-    result = runner.invoke(launch_infer, ["--print_report", True, "--table_name", TABLE_NAME])
+    result = runner.invoke(
+        launch_infer, ["--reports", valid_value, "--table_name", TABLE_NAME]
+    )
     assert result.exit_code == 0
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_infer_table_with_invalid_print_report(rp_logger):
+@pytest.mark.parametrize("invalid_value", ["sample", "test"])
+def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     rp_logger.info(
-        "Launch infer process through CLI with invalid 'print_report' parameter equals 'test'"
+        f"Launch infer process through CLI "
+        f"with invalid 'reports' parameter equals '{invalid_value}'"
     )
     runner = CliRunner()
-    result = runner.invoke(launch_infer, ["--print_report", "test", "--table_name", TABLE_NAME])
+    result = runner.invoke(
+        launch_infer, ["--reports", invalid_value, "--table_name", TABLE_NAME]
+    )
     assert result.exit_code == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)

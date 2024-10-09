@@ -142,20 +142,15 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
             "{'batch_size': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
+            {"reports": "not a valid type of a value"},
             "The details are - {'fk_test': {'train_settings': "
-            "{'print_report': ['Not a valid boolean.']}}}",
+            "{'reports': ['Must be one of: none, all, accuracy, metrics_only, sample.']}}}",
         ),
         (
             {"column_types": {"invalid_type": ["column_1", "column_2"]}},
             "The details are - {'fk_test': {'train_settings': {'column_types': "
             "defaultdict(<class 'dict'>, {'invalid_type': {"
             "'key': ['Must be one of: categorical.']}})}}}",
-        ),
-        (
-            {"get_infer_metrics": "invalid parameter"},
-            "The details are - {'fk_test': {'train_settings': {"
-            "'get_infer_metrics': ['Unknown field.']}}}",
         ),
     ],
 )
@@ -223,14 +218,9 @@ def test_metadata_file_with_invalid_training_settings(
             "{'batch_size': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
+            {"reports": "not a valid type of a value"},
             "The details are - {'global': {'train_settings': "
-            "{'print_report': ['Not a valid boolean.']}}}",
-        ),
-        (
-            {"get_infer_metrics": "invalid parameter"},
-            "The details are - {'global': {'train_settings': {"
-            "'get_infer_metrics': ['Unknown field.']}}}",
+            "{'reports': ['Must be one of: none, all, accuracy, metrics_only, sample.']}}}",
         ),
     ],
 )
@@ -293,14 +283,9 @@ def test_metadata_file_with_invalid_global_training_settings(
             "{'random_seed': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
+            {"reports": "not a valid type of a value"},
             "The details are - {'fk_test': {'infer_settings': {"
-            "'print_report': ['Not a valid boolean.']}}}",
-        ),
-        (
-            {"get_infer_metrics": "not a valid type of a value"},
-            "The details are - {'fk_test': {'infer_settings': {"
-            "'get_infer_metrics': ['Not a valid boolean.']}}}",
+            "'reports': ['Must be one of: none, all, accuracy, metrics_only.']}}}",
         ),
     ],
 )
@@ -356,14 +341,9 @@ def test_metadata_file_with_invalid_infer_settings(
             "{'random_seed': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
+            {"reports": "not a valid type of a value"},
             "The details are - {'global': {'infer_settings': {"
-            "'print_report': ['Not a valid boolean.']}}}",
-        ),
-        (
-            {"get_infer_metrics": "not a valid type of a value"},
-            "The details are - {'global': {'infer_settings': {"
-            "'get_infer_metrics': ['Not a valid boolean.']}}}",
+            "'reports': ['Must be one of: none, all, accuracy, metrics_only.']}}}",
         ),
     ],
 )

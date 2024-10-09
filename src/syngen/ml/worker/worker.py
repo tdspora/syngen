@@ -248,7 +248,7 @@ class Worker:
         """
         return any(
             [
-                config.get(f"{type_of_process}_settings", {}).get("print_report", False)
+                config.get(f"{type_of_process}_settings", {}).get("reports", "none") != "none"
                 for table, config in config_of_tables.items()
             ]
         )
@@ -290,7 +290,7 @@ class Worker:
             row_limit=train_settings["row_limit"],
             table_name=table,
             metadata_path=self.metadata_path,
-            print_report=train_settings["print_report"],
+            reports=train_settings["reports"],
             batch_size=train_settings["batch_size"],
             loader=self.loader
         )
@@ -381,7 +381,7 @@ class Worker:
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
             random_seed=settings.get("random_seed") if type_of_process == "infer" else 1,
-            print_report=settings["print_report"],
+            reports=settings["reports"],
             get_infer_metrics=settings.get("get_infer_metrics")
             if type_of_process == "infer" else False,
             log_level=self.log_level,

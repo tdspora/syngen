@@ -15,7 +15,7 @@ def test_get_state_of_train_config(rp_logger):
         row_limit=1000,
         table_name="test_table",
         metadata_path="metadata/path.yaml",
-        print_report=True,
+        reports="all",
         batch_size=32,
         loader=lambda x: pd.DataFrame()
     )
@@ -26,7 +26,7 @@ def test_get_state_of_train_config(rp_logger):
         "row_limit",
         "table_name",
         "metadata_path",
-        "print_report",
+        "reports",
         "batch_size"
     }
     state = train_config.__getstate__()
@@ -63,7 +63,7 @@ def test_preprocess_data(
         row_limit=row_limit,
         table_name="test_table",
         metadata_path="metadata/path.yaml",
-        print_report=True,
+        reports="all",
         batch_size=32,
         loader=None
     )

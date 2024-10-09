@@ -13,6 +13,8 @@ from marshmallow import (
 from loguru import logger
 
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
+INFER_REPORT_TYPES = ["none", "all", "accuracy", "metrics_only"]
+TRAIN_REPORT_TYPES = INFER_REPORT_TYPES + ["sample"]
 
 
 class ReferenceSchema(Schema):
@@ -76,7 +78,10 @@ class TrainingSettingsSchema(Schema):
     drop_null = fields.Boolean(required=False)
     row_limit = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), required=False)
-    print_report = fields.Boolean(required=False)
+    reports=fields.String(
+        required=False,
+        validate=validate.OneOf(TRAIN_REPORT_TYPES)
+    )
 
 
 class ExtendedRestrictedTrainingSettingsSchema(TrainingSettingsSchema):
@@ -97,8 +102,10 @@ class InferSettingsSchema(Schema):
     run_parallel = fields.Boolean(required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     random_seed = fields.Integer(validate=validate.Range(min=0), allow_none=True, required=False)
-    print_report = fields.Boolean(required=False)
-    get_infer_metrics = fields.Boolean(required=False)
+    reports = fields.String(
+        required=False,
+        validate=validate.OneOf(INFER_REPORT_TYPES)
+    )
 
 
 class CSVFormatSettingsSchema(Schema):

@@ -95,14 +95,13 @@ class Reporter:
             if d not in na_values else np.NaN for d in df[col_name]
         ]
 
-    def preprocess_data(self):
+    def preprocess_data(self, original: pd.DataFrame, synthetic: pd.DataFrame):
         """
         Preprocess original and synthetic data.
         Return original data, synthetic data, float columns, integer columns, categorical columns
         without keys columns
         """
         types = self.fetch_data_types()
-        original, synthetic = self._extract_report_data()
         missing_columns = set(original) - set(synthetic)
         for col in missing_columns:
             synthetic[col] = np.nan
@@ -243,23 +242,16 @@ class Report:
                            f"for the table - '{reporter.table_name}' has started")
                 ProgressBarHandler().set_progress(delta=delta, message=message)
                 reporter.report()
-                if reporter.config["print_report"]:
+                if reporter.config["reports"] != "metrics_only":
                     message = (f"The {reporter.__class__.report_type} report of the table - "
                                f"'{reporter.table_name}' has been generated")
-                    logger.info(
-                        f"The {reporter.__class__.report_type} report of the table - "
-                        f"'{reporter.table_name}' has been generated"
-                    )
+                    logger.info(message)
                     ProgressBarHandler().set_progress(
                         progress=ProgressBarHandler().progress + delta,
                         delta=delta,
                         message=message
                     )
-
-                if (
-                        not reporter.config["print_report"]
-                        and reporter.config.get("get_infer_metrics") is not None
-                ):
+                if reporter.config["reports"] == "metrics_only":
                     logger.info(
                         f"The metrics for the table - '{reporter.table_name}' have been evaluated"
                     )
@@ -281,6 +273,7 @@ class AccuracyReporter(Reporter):
         """
         Run the report
         """
+        original, synthetic = self._extract_report_data()
         (
             original,
             synthetic,
@@ -288,7 +281,7 @@ class AccuracyReporter(Reporter):
             int_columns,
             categorical_columns,
             date_columns,
-        ) = self.preprocess_data()
+        ) = self.preprocess_data(original, synthetic)
         accuracy_test = AccuracyTest(
             original,
             synthetic,
@@ -319,6 +312,7 @@ class SampleAccuracyReporter(Reporter):
         """
         Run the report
         """
+        original, sampled = self._extract_report_data()
         (
             original,
             sampled,
@@ -326,7 +320,12 @@ class SampleAccuracyReporter(Reporter):
             int_columns,
             categorical_columns,
             date_columns,
-        ) = self.preprocess_data()
+        ) = self.preprocess_data(original, sampled)
+        if original.shape == sampled.shape:
+            logger.warning(
+                "The generation of sampling report is unnecessary and will not be produced "
+                "as the source data and sampled data sizes are identical."
+            )
         accuracy_test = SampleAccuracyTest(
             original,
             sampled,

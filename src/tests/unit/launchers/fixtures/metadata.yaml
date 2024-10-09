@@ -3,11 +3,11 @@ test_table:                               # Use table name here
     source: ./tests/unit/launchers/metadata.yaml # Supported formats include cloud storage locations, local files
     epochs: 8                             # Number of epochs
     drop_null: false                      # Drop rows with NULL values
-    print_report: true                    # Turn on or turn off generation of the report
+    reports: all                          # Whether to generate accuracy, sampling reports or just fetch accuracy metrics
 
   infer_settings:                         # Settings for infer process
     size: 90                              # Size for generated data
-    print_report: true                    # Turn on or turn off generation of the report
+    reports: all                          # Whether to generate an accuracy report or just fetch accuracy metrics
 
   keys:                                   # Keys of the table
     pk_pk_tst:                            # Name of a key

@@ -1,8 +1,10 @@
 from unittest.mock import patch
+import pytest
 from click.testing import CliRunner
 
 from syngen.train import launch_train
 from syngen.ml.worker import Worker
+from syngen.ml.validation_schema import TRAIN_REPORT_TYPES
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 TABLE_NAME = "test_table"
@@ -262,18 +264,19 @@ def test_train_table_with_invalid_row_limit(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("valid_value", TRAIN_REPORT_TYPES)
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_print_report(
-        mock_post_init, mock_launch_train, rp_logger
+def test_train_table_with_valid_parameter_reports(
+        mock_post_init, mock_launch_train, valid_value, rp_logger
 ):
     rp_logger.info(
-        "Launch train process through CLI with valid 'print_report' parameter equals True"
+        f"Launch train process through CLI with valid 'reports' parameter equals '{valid_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
         launch_train,
-        ["--print_report", True, "--table_name", TABLE_NAME, "--source", PATH_TO_TABLE],
+        ["--reports", valid_value, "--table_name", TABLE_NAME, "--source", PATH_TO_TABLE],
     )
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
@@ -281,15 +284,15 @@ def test_train_table_with_valid_print_report(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_train_table_with_invalid_print_report(rp_logger):
+def test_train_table_with_invalid_parameter_reports(rp_logger):
     rp_logger.info(
-        "Launch train process through CLI with invalid 'print_report' parameter equals 'test'"
+        "Launch train process through CLI with invalid 'reports' parameter equals 'test'"
     )
     runner = CliRunner()
     result = runner.invoke(
         launch_train,
         [
-            "--print_report",
+            "--reports",
             "test",
             "--table_name",
             TABLE_NAME,

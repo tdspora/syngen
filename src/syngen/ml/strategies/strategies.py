@@ -98,7 +98,7 @@ class TrainStrategy(Strategy, ABC):
             row_subset=self.config.row_subset,
             drop_null=self.config.drop_null,
             batch_size=self.config.batch_size,
-            print_report=self.config.print_report,
+            reports=self.config.reports,
             type_of_process="train",
         )
 
@@ -123,7 +123,7 @@ class TrainStrategy(Strategy, ABC):
                 and source is not None
                 and loader is None
                 and os.path.exists(source)
-                and self.config.print_report
+                and self.config.reports in ["sample", "all"]
         ):
             sample_reporter = SampleAccuracyReporter(
                 table_name=get_initial_table_name(table_name),
@@ -154,7 +154,7 @@ class TrainStrategy(Strategy, ABC):
                 row_limit=kwargs["row_limit"],
                 table_name=table,
                 metadata_path=kwargs["metadata_path"],
-                print_report=kwargs["print_report"],
+                reports=kwargs["reports"],
                 batch_size=kwargs["batch_size"],
                 loader=kwargs["loader"]
             )
@@ -201,8 +201,7 @@ class InferStrategy(Strategy):
             random_seed=self.config.random_seed,
             batch_size=self.config.batch_size,
             run_parallel=self.config.run_parallel,
-            print_report=self.config.print_report,
-            get_infer_metrics=self.config.get_infer_metrics,
+            reports=self.config.reports,
             log_level=self.config.log_level,
             type_of_process=type_of_process,
             loader=self.config.loader
@@ -213,7 +212,7 @@ class InferStrategy(Strategy):
         table_name = self.config.table_name
         if (
                 not table_name.endswith("_fk") and
-                (self.config.print_report or self.config.get_infer_metrics)
+                (self.config.reports in ["all", "accuracy", "metrics_only"])
         ):
             accuracy_reporter = AccuracyReporter(
                 table_name=get_initial_table_name(table_name),
@@ -239,8 +238,7 @@ class InferStrategy(Strategy):
                 run_parallel=kwargs["run_parallel"],
                 batch_size=kwargs["batch_size"],
                 random_seed=kwargs["random_seed"],
-                print_report=kwargs["print_report"],
-                get_infer_metrics=kwargs["get_infer_metrics"],
+                reports=kwargs["reports"],
                 log_level=kwargs["log_level"],
                 both_keys=kwargs["both_keys"],
                 loader=kwargs["loader"]

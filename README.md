@@ -74,7 +74,7 @@ train --source PATH_TO_ORIGINAL_CSV \
     --epochs INT \
     --row_limit INT \
     --drop_null BOOL \
-    --print_report BOOL \
+    --reports STR \
     --batch_size INT
 ```
 
@@ -92,7 +92,7 @@ The parameters which you can set up for training process:
 - <i>row_limit</i> – a number of rows to train over. A number less than the original table length will randomly subset the specified number of rows
 - <i>drop_null</i> – whether to drop rows with at least one missing value
 - <i>batch_size</i> – if specified, the training is split into batches. This can save the RAM
-- <i>print_report</i> - whether to generate accuracy and sampling reports. Please note that the sampling report is generated only if the `row_limit` parameter is set.
+- <i>reports</i> - whether to generate accuracy, sampling reports or just fetch accuracy metrics
 - <i>metadata_path</i> – a path to the metadata file containing the metadata
 - <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
 
@@ -103,7 +103,7 @@ Requirements for parameters of training process:
 * <i>row_limit</i> - data type - integer
 * <i>drop_null</i> - data type - boolean, default value - False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1, default value - 32
-* <i>print_report</i> - data type - boolean, default value is False
+* <i>reports</i> - data type - string, the parameter can accept the following values: "none"(default), "all", "sample", "accuracy", "metrics_only"
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 
@@ -117,7 +117,7 @@ infer --size INT \
     --run_parallel BOOL \
     --batch_size INT \
     --random_seed INT \
-    --print_report BOOL
+    --reports STR
 ```
 
 To generate one or more tables using a metadata file, you can use the following command:
@@ -133,7 +133,7 @@ The parameters which you can set up for generation process:
 - <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 5000 rows)
 - <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
 - <i>random_seed</i> – if specified, generates a reproducible result
-- <i>print_report</i> – whether to generate accuracy and sampling reports. Please note that the sampling report is generated only if the row_limit parameter is set.
+- <i>reports</i> - whether to generate an accuracy report or just fetch accuracy metrics
 - <i>metadata_path</i> – a path to metadata file
 
 Requirements for parameters of generation process:
@@ -142,7 +142,7 @@ Requirements for parameters of generation process:
 * <i>run_parallel</i> - data type - boolean, default value is False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1
 * <i>random_seed</i> - data type - integer, must be equal to or more than 0
-* <i>print_report</i> - data type - boolean, default value is False
+* <i>reports</i> - data type - string, the parameter can accept the following values: "none"(default), "all", "accuracy", "metrics_only"
 * <i>metadata_path</i> - data type - string
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
@@ -179,15 +179,14 @@ global:                                     # Global settings. Optional paramete
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter
 
   infer_settings:                           # Settings for infer process. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    reports: none                           # Whether to generate an accuracy report or just fetch accuracy metrics. Optional parameter
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
-    get_infer_metrics: False                # Whether to fetch metrics for the inference process. If the parameter 'print_report' is set to True, the 'get_infer_metrics' parameter will be ignored and metrics will be fetched anyway. Optional parameter
 
 CUSTOMER:                                   # Table name. Required parameter
   train_settings:                           # Settings for training process. Required parameter
@@ -196,7 +195,7 @@ CUSTOMER:                                   # Table name. Required parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter
     column_types:
       categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
         - gender
@@ -218,10 +217,10 @@ CUSTOMER:                                   # Table name. Required parameter
     destination: "./files/generated_data_customer.csv" # The path where the generated data will be stored. If the information about 'destination' isn't specified, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in '.csv', '.avro' formats. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    reports: none                           # Whether to generate an accuracy report or just fetch accuracy metrics. Optional parameter
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
-    get_infer_metrics: False                # Whether to fetch metrics for the inference process. If the parameter 'print_report' is set to True, the 'get_infer_metrics' parameter will be ignored and metrics will be fetched anyway. Optional parameter
+
   keys:                                     # Keys of the table. Optional parameter
     PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
       type: "PK"                            # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
@@ -261,20 +260,19 @@ ORDER:                                      # Table name. Required parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter
     column_types:
-    categorical:                            # Force listed columns to have categorical type (use dictionary of values). Optional parameter
-      - gender
-      - marital_status
+      categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
+        - gender
+        - marital_status
 
   infer_settings:                           # Settings for infer process. Optional parameter
     destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. If the information about 'destination' isn't specified, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in 'csv', '.avro' formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    print_report: False                     # Turn on or turn off generation of the report. Optional parameter
+    reports: none                           # Whether to generate an accuracy report or just fetch accuracy metrics. Optional parameter
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
-    get_infer_metrics: False                # Whether to fetch metrics for the inference process. If the parameter 'print_report' is set to True, the 'get_infer_metrics' parameter will be ignored and metrics will be fetched anyway. Optional parameter
   format:                                   # Settings for reading and writing data in 'csv' format. Optional parameter
     sep: ','                                # Delimiter to use. Optional parameter
     quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter
@@ -298,7 +296,7 @@ ORDER:                                      # Table name. Required parameter
         - customer_id
       references:
         table: "CUSTOMER"
-        columns:
+        columns:          
           - customer_id
 ```
 
