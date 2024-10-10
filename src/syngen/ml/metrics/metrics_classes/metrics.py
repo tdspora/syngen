@@ -7,7 +7,8 @@ import random
 
 import tqdm
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import davies_bouldin_score
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
@@ -25,7 +26,7 @@ import seaborn as sns
 from slugify import slugify
 from loguru import logger
 
-from syngen.ml.utils import timestamp_to_datetime
+from syngen.ml.utils import timestamp_to_datetime, timing
 matplotlib.use("Agg")
 
 
@@ -909,29 +910,61 @@ class Clustering(BaseMetric):
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
+        # Perform clustering of original dataset
+        # to get optimal number of clusters
+        original_for_clustering = self.original[
+            cont_columns + categorical_columns
+            ].dropna()
+        original_transformed = self.__preprocess_data(original_for_clustering)
+
+        if len(original_transformed) == 0:
+            logger.warning(
+                "No clustering metric will be formed due to empty DataFrame"
+            )
+            return None
+
+        optimal_clust_num = self.__get_optimal_number_of_clusters(
+            original_transformed
+            )
+
+        logger.trace(f"Optimal number of clusters for "
+                     f"original dataset: {optimal_clust_num}"
+                     )
+
         row_limit = min(len(self.original), len(self.synthetic))
+
+        # TODO check whether random_state affects the results
         self.merged = (
             pd.concat(
                 [
-                    self.original[cont_columns + categorical_columns].sample(row_limit),
-                    self.synthetic[cont_columns + categorical_columns].sample(row_limit),
+                    self.original[cont_columns + categorical_columns].sample(
+                        row_limit,
+                        random_state=10
+                    ),
+                    self.synthetic[cont_columns + categorical_columns].sample(
+                        row_limit,
+                        random_state=10
+                    ),
                 ],
                 keys=["original", "synthetic"],
             )
             .dropna()
             .reset_index()
         )
+
         if len(self.merged) == 0:
             logger.warning(
                 "No clustering metric will be formed due to empty DataFrame"
             )
             return None
-        self.__preprocess_data()
-        optimal_clust_num = self.__automated_silhouette()
+        self.merged_transformed = self.__preprocess_data(self.merged)
+
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
 
-        diversity_scores = statistics.groupby('cluster').apply(self.diversity)
+        diversity_scores = statistics.groupby('cluster').apply(
+            self.calculate_diversity
+            )
         mean_score = diversity_scores.mean()
 
         if self.plot:
@@ -966,7 +999,7 @@ class Clustering(BaseMetric):
         return mean_score
 
     @staticmethod
-    def diversity(statistics):
+    def calculate_diversity(statistics):
         """
         Calculate the diversity score for each cluster
         from collected statistics.
@@ -977,35 +1010,46 @@ class Clustering(BaseMetric):
         else:
             return 0
 
-    def __automated_silhouette(self):
-        silhouette_scores = []
-        max_clusters = min(10, len(self.merged_transformed))
+    @timing
+    def __get_optimal_number_of_clusters(self, dataset):
+        """
+        Calculate the optimal number of clusters using Davies-Bouldin score
+        """
+        davies_bouldin_scores = []
+        max_clusters = min(10, len(dataset))
 
         for i in range(2, max_clusters):
             clusters = KMeans(n_clusters=i, random_state=10).fit(
-                self.merged_transformed
-            )
+                dataset
+                )
             labels = clusters.labels_
-            score = silhouette_score(self.merged_transformed, labels)
-            silhouette_scores.append(score)
+            score = davies_bouldin_score(dataset, labels)
+            davies_bouldin_scores.append(score)
 
-        # Get number of clusters with the highest silhouette score
+        # Get number of clusters with the lowest Davies-Bouldin score
         # +2 because the range starts from 2
-        optimal_clusters = np.argmax(silhouette_scores) + 2
+        optimal_clusters = np.argmin(davies_bouldin_scores) + 2
 
         return optimal_clusters
 
-    def __preprocess_data(self):
-        self.merged_transformed = self.merged.apply(
+    def __preprocess_data(self, dataset):
+        transformed_dataset = dataset.apply(
             pd.to_numeric, axis=0, errors="ignore"
         ).select_dtypes(include="number")
         scaler = MinMaxScaler()
-        self.merged_transformed = scaler.fit_transform(self.merged_transformed)
+        transformed_dataset = scaler.fit_transform(transformed_dataset)
 
+        return transformed_dataset
+
+    @timing
     def __calculate_clusters(self, n):
-        clusters = KMeans(n_clusters=n, random_state=10).fit(self.merged_transformed)
+        clusters = KMeans(n_clusters=n, random_state=10).fit(
+            self.merged_transformed
+        )
         labels = clusters.labels_
-        rows_labels = pd.DataFrame({"origin": self.merged["level_0"], "cluster": labels})
+        rows_labels = pd.DataFrame(
+            {"origin": self.merged["level_0"], "cluster": labels}
+        )
 
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
 
@@ -1153,14 +1197,17 @@ class Utility(BaseMetric):
                 ],
                 "synth_to_orig_ratio": [
                     round(synth_score_binary / score_binary, 3)
-                    if best_binary is not None
-                    else np.nan,
+                    if best_binary is not None and score_binary != 0 else (
+                        0 if score_binary == 0 else np.nan
+                        ),
                     round(synth_score_categ / score_categ, 3)
-                    if best_categ is not None
-                    else np.nan,
+                    if best_categ is not None and score_categ != 0 else (
+                        0 if score_categ == 0 else np.nan
+                        ),
                     abs(round(max(0, synth_regres_score) / score_regres, 3))
-                    if best_regres is not None
-                    else np.nan,
+                    if best_regres is not None and score_regres != 0 else (
+                        0 if score_regres == 0 else np.nan
+                        ),
                 ],
                 "type": [
                     "Binary (" + f"{best_binary})" if best_binary is not None else "" + ")",
