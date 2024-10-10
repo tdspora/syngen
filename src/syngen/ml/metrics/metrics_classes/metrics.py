@@ -933,6 +933,7 @@ class Clustering(BaseMetric):
 
         row_limit = min(len(self.original), len(self.synthetic))
 
+        # TODO check whether random_state affects the results
         self.merged = (
             pd.concat(
                 [
