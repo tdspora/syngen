@@ -443,13 +443,13 @@ docker run --rm -it \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
-## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10 (3.11)
+## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10 or 3.11
 
 ### Prerequisites
 
 Before you begin, make sure you have the following installed:
 
-- Python 3.10 (3.11)
+- Python 3.10 or 3.11
 - Homebrew (optional but recommended for managing dependencies)
 
 ### Installation Steps
