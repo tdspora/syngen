@@ -284,23 +284,87 @@ def test_train_table_with_valid_parameter_reports(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_train_table_with_invalid_parameter_reports(rp_logger):
+@pytest.mark.parametrize(
+    "first_value, second_value",
+    [
+        (pv, i) for pv in ["accuracy", "metrics_only", "sample"]
+        for i in ["accuracy", "metrics_only", "sample"]
+    ]
+)
+@patch.object(Worker, "launch_train")
+@patch.object(Worker, "__attrs_post_init__")
+def test_train_table_with_several_valid_parameter_reports(
+    mock_post_init, mock_launch_train, first_value, second_value, rp_logger
+):
     rp_logger.info(
-        "Launch train process through CLI with invalid 'reports' parameter equals 'test'"
+        f"Launch train process through CLI "
+        f"with several valid 'reports' parameters equals '{first_value}' and '{second_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
         launch_train,
         [
             "--reports",
-            "test",
+            first_value,
+            "--reports",
+            second_value,
+            "--table_name", TABLE_NAME, "--source", PATH_TO_TABLE],
+    )
+    mock_post_init.assert_called_once()
+    mock_launch_train.assert_called_once()
+    assert result.exit_code == 0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("invalid_value", ["test", ("none", "all"), ("none", "test"), ("all", "test")])
+def test_train_table_with_invalid_parameter_reports(invalid_value, rp_logger):
+    rp_logger.info(
+        f"Launch train process through CLI "
+        f"with invalid 'reports' parameter equals '{invalid_value}'"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_train,
+        [
+            "--reports",
+            invalid_value,
             "--table_name",
             TABLE_NAME,
             "--source",
             PATH_TO_TABLE,
         ],
     )
-    assert result.exit_code == 2
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "prior_value, value",
+    [(pv, i) for pv in ["all", "none"] for i in TRAIN_REPORT_TYPES]
+)
+def test_train_table_with_redundant_parameter_reports(prior_value, value, rp_logger):
+    rp_logger.info(
+        f"Launch train process through CLI "
+        f"with redundant 'reports' parameter: '{value}'"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_train, [
+            "--reports",
+            prior_value,
+            "--reports",
+            value,
+            "--table_name",
+            TABLE_NAME
+        ]
+    )
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+    assert result.exception.args == (
+        "Invalid input: When '--reports' option is set to 'none' or 'all', "
+        "no other values should be provided.",)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

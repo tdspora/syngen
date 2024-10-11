@@ -202,7 +202,43 @@ def test_infer_table_with_valid_parameter_reports(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("invalid_value", ["sample", "test"])
+@pytest.mark.parametrize(
+    "first_value, second_value",
+    [
+        (pv, i) for pv in ["accuracy", "metrics_only"]
+        for i in ["accuracy", "metrics_only"]
+    ]
+)
+@patch.object(Worker, "launch_infer")
+@patch.object(Worker, "__attrs_post_init__")
+def test_infer_table_with_several_valid_parameter_reports(
+    mock_post_init, mock_launch_infer, first_value, second_value, rp_logger
+):
+    rp_logger.info(
+        f"Launch infer process through CLI "
+        f"with several valid 'reports' parameters equals '{first_value}' and '{second_value}'"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_infer,
+        [
+            "--reports",
+            first_value,
+            "--reports",
+            second_value,
+            "--table_name",
+            TABLE_NAME,
+        ],
+    )
+    mock_post_init.assert_called_once()
+    mock_launch_infer.assert_called_once()
+    assert result.exit_code == 0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("invalid_value", [
+    "sample", "test", ("none", "all"), ("none", "test"), ("all", "test")
+])
 def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     rp_logger.info(
         f"Launch infer process through CLI "
@@ -212,5 +248,40 @@ def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     result = runner.invoke(
         launch_infer, ["--reports", invalid_value, "--table_name", TABLE_NAME]
     )
-    assert result.exit_code == 2
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+    assert result.exception.args == (
+        "Invalid input: Acceptable values for the parameter '--reports' "
+        "are none, all, accuracy, metrics_only.",
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "prior_value, value",
+    [(pv, i) for pv in ["all", "none"] for i in INFER_REPORT_TYPES]
+)
+def test_infer_table_with_redundant_parameter_reports(prior_value, value, rp_logger):
+    rp_logger.info(
+        f"Launch infer process through CLI "
+        f"with redundant 'reports' parameter: '{value}'"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_infer, [
+            "--reports",
+            prior_value,
+            "--reports",
+            value,
+            "--table_name",
+            TABLE_NAME
+        ]
+    )
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+    assert result.exception.args == (
+        "Invalid input: When '--reports' option is set to 'none' or 'all', "
+        "no other values should be provided.",)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
     rp_logger.info(SUCCESSFUL_MESSAGE)

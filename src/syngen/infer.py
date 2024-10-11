@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Union, List
 import traceback
 
 import click
@@ -12,6 +12,23 @@ from syngen.ml.utils import (
     check_if_logs_available
 )
 from syngen.ml.validation_schema import INFER_REPORT_TYPES
+
+
+def validate_parameter_reports(ctx, param, value):
+    if all([item in INFER_REPORT_TYPES for item in value]):
+        if "none" in value or "all" in value:
+            if len(value) > 1:
+                raise ValueError(
+                    "Invalid input: When '--reports' option is set to 'none' or 'all', "
+                    "no other values should be provided."
+                )
+            return value[0]
+        return list(value)
+    else:
+        raise ValueError(
+            f"Invalid input: Acceptable values for the parameter '--reports' "
+            f"are {', '.join(INFER_REPORT_TYPES)}."
+        )
 
 
 @click.command()
@@ -50,10 +67,13 @@ from syngen.ml.validation_schema import INFER_REPORT_TYPES
 )
 @click.option(
     "--reports",
-    default="none",
-    type=click.Choice(INFER_REPORT_TYPES),
+    default=("none",),
+    type=click.UNPROCESSED,
+    multiple=True,
+    callback=validate_parameter_reports,
     help="Controls the generation of quality reports. "
     "Might require significant time for big generated tables (>1000 rows). "
+    "If 'sample', generates a sampling report. "
     "If 'accuracy', generates an accuracy report. "
     "If 'metrics_only', outputs the metrics information only to standard output. "
     "If 'all', generates both sampling and accuracy reports. "
@@ -72,7 +92,7 @@ def launch_infer(
     table_name: Optional[str],
     run_parallel: bool,
     batch_size: Optional[int],
-    reports: str,
+    reports: Union[str, List[str]],
     random_seed: Optional[int],
     log_level: str,
 ):
@@ -94,6 +114,12 @@ def launch_infer(
     os.environ["LOGURU_LEVEL"] = log_level
     set_log_path(type_of_process="infer", table_name=table_name, metadata_path=metadata_path)
     setup_logger()
+    if "accuracy" in reports and "metrics_only" in reports:
+        reports.remove("metrics_only")
+        logger.warning(
+            "The '--reports' parameter value 'metrics_only' will be ignored "
+            "since the accuracy report includes fetching accuracy metrics."
+        )
     if not metadata_path and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "

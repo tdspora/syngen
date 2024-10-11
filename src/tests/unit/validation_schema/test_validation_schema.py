@@ -144,7 +144,7 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
         (
             {"reports": "not a valid type of a value"},
             "The details are - {'fk_test': {'train_settings': "
-            "{'reports': ['Must be one of: none, all, accuracy, metrics_only, sample.']}}}",
+            "{'reports': ['Invalid value.']}}}",
         ),
         (
             {"column_types": {"invalid_type": ["column_1", "column_2"]}},
@@ -220,7 +220,7 @@ def test_metadata_file_with_invalid_training_settings(
         (
             {"reports": "not a valid type of a value"},
             "The details are - {'global': {'train_settings': "
-            "{'reports': ['Must be one of: none, all, accuracy, metrics_only, sample.']}}}",
+            "{'reports': ['Invalid value.']}}}",
         ),
     ],
 )
@@ -285,7 +285,7 @@ def test_metadata_file_with_invalid_global_training_settings(
         (
             {"reports": "not a valid type of a value"},
             "The details are - {'fk_test': {'infer_settings': {"
-            "'reports': ['Must be one of: none, all, accuracy, metrics_only.']}}}",
+            "'reports': ['Invalid value.']}}}",
         ),
     ],
 )
@@ -343,7 +343,7 @@ def test_metadata_file_with_invalid_infer_settings(
         (
             {"reports": "not a valid type of a value"},
             "The details are - {'global': {'infer_settings': {"
-            "'reports': ['Must be one of: none, all, accuracy, metrics_only.']}}}",
+            "'reports': ['Invalid value.']}}}",
         ),
     ],
 )

@@ -78,9 +78,14 @@ class TrainingSettingsSchema(Schema):
     drop_null = fields.Boolean(required=False)
     row_limit = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), required=False)
-    reports=fields.String(
+    reports = fields.Raw(
         required=False,
-        validate=validate.OneOf(TRAIN_REPORT_TYPES)
+        validate=(
+            lambda x: isinstance(x, str) and x in TRAIN_REPORT_TYPES or (
+                    isinstance(x, list) and
+                    all(isinstance(elem, str) and elem in TRAIN_REPORT_TYPES for elem in x)
+            )
+        )
     )
 
 
@@ -102,9 +107,14 @@ class InferSettingsSchema(Schema):
     run_parallel = fields.Boolean(required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     random_seed = fields.Integer(validate=validate.Range(min=0), allow_none=True, required=False)
-    reports = fields.String(
+    reports = fields.Raw(
         required=False,
-        validate=validate.OneOf(INFER_REPORT_TYPES)
+        validate=(
+            lambda x: isinstance(x, str) and x in INFER_REPORT_TYPES or (
+                    isinstance(x, list) and
+                    all(isinstance(elem, str) and elem in INFER_REPORT_TYPES for elem in x)
+            )
+        )
     )
 
 
