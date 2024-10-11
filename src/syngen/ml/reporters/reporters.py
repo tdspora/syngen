@@ -70,7 +70,7 @@ class Reporter:
             self.dataset.int_columns,
             self.dataset.float_columns,
             self.dataset.binary_columns,
-            self.dataset.categ_columns,
+            self.dataset.categorical_columns,
             self.dataset.long_text_columns,
             self.dataset.email_columns,
         )
@@ -133,7 +133,7 @@ class Reporter:
             int_columns,
             float_columns,
             binary_columns,
-            categ_columns,
+            categorical_columns,
             long_text_columns,
             email_columns,
         ) = types
@@ -156,22 +156,22 @@ class Reporter:
 
         for col in [i + "_word_count" for i in text_columns]:
             if original[col].nunique() < 50:  # ToDo check if we need this
-                categ_columns = categ_columns | {col}
+                categorical_columns = categorical_columns | {col}
             else:
                 int_columns = int_columns | {col}
         int_columns = int_columns | {i + "_char_len" for i in text_columns}
 
-        categ_columns = categ_columns | binary_columns
+        categorical_columns = categorical_columns | binary_columns
 
-        for categ_col in categ_columns:
-            original[categ_col] = original[categ_col].astype(str)
-            synthetic[categ_col] = synthetic[categ_col].astype(str)
+        for col in categorical_columns:
+            original[col] = original[col].astype(str)
+            synthetic[col] = synthetic[col].astype(str)
         return (
             original,
             synthetic,
             float_columns,
             int_columns,
-            categ_columns,
+            categorical_columns,
             date_columns,
         )
 
@@ -286,7 +286,7 @@ class AccuracyReporter(Reporter):
             synthetic,
             float_columns,
             int_columns,
-            categ_columns,
+            categorical_columns,
             date_columns,
         ) = self.preprocess_data()
         accuracy_test = AccuracyTest(
@@ -298,7 +298,7 @@ class AccuracyReporter(Reporter):
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
-            categ_columns=list(categ_columns),
+            categorical_columns=list(categorical_columns),
             date_columns=list(date_columns),
         )
 
@@ -324,7 +324,7 @@ class SampleAccuracyReporter(Reporter):
             sampled,
             float_columns,
             int_columns,
-            categ_columns,
+            categorical_columns,
             date_columns,
         ) = self.preprocess_data()
         accuracy_test = SampleAccuracyTest(
@@ -336,6 +336,6 @@ class SampleAccuracyReporter(Reporter):
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
-            categ_columns=list(categ_columns),
+            categorical_columns=list(categorical_columns),
             date_columns=list(date_columns),
         )

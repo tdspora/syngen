@@ -43,7 +43,7 @@ class SampleAccuracyTest(BaseTest):
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()
         uni_images = univariate.calculate_all(
-            kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
+            kwargs["cont_columns"], kwargs["categorical_columns"], kwargs["date_columns"]
         )
 
         # Generate html report
