@@ -265,11 +265,11 @@ class Validator:
                         "check existence of the key columns in 'referenced.columns'"
                     ][key] = message
 
-    @staticmethod
-    def _fetch_existed_columns(metadata_of_table) -> List[str]:
+    def _fetch_existed_columns(self, table_name: str) -> List[str]:
         """
         Fetch the list of the columns of the source table
         """
+        metadata_of_table = self.merged_metadata[table_name]
         format_settings = metadata_of_table.get("format", {})
         return DataLoader(
             metadata_of_table["train_settings"]["source"]
@@ -280,8 +280,7 @@ class Validator:
         Fetch the list of the existed columns of the table
         and put it into the mapping of existed columns
         """
-        metadata_of_table = self.merged_metadata[table_name]
-        existed_columns = self._fetch_existed_columns(metadata_of_table)
+        existed_columns = self._fetch_existed_columns(table_name)
         self.existed_columns_mapping[table_name] = existed_columns
 
     def _run(self):
