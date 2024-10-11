@@ -221,7 +221,7 @@ class Validator:
 
     def _check_existence_of_key_columns(self, table_name):
         """
-        Check if the key columns of exist in the table
+        Check whether the key columns exist in the table
         """
         metadata_of_table = self.merged_metadata[table_name]
         existed_columns = self.existed_columns_mapping[table_name]
