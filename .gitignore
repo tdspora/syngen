@@ -49,3 +49,9 @@ pytest*.xml
 
 .vscode/
 .log*
+
+#build files
+build/
+dist/
+*.egg-info/
+*.egg
