@@ -103,7 +103,7 @@ Requirements for parameters of training process:
 * <i>row_limit</i> - data type - integer
 * <i>drop_null</i> - data type - boolean, default value - False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1, default value - 32
-* <i>reports</i> - data type - string, the parameter can accept the following values: "none"(default), "all", "sample", "accuracy", "metrics_only"
+* <i>reports</i> - accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - fetches only accuracy metrics without generating reports.
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 
@@ -142,7 +142,7 @@ Requirements for parameters of generation process:
 * <i>run_parallel</i> - data type - boolean, default value is False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1
 * <i>random_seed</i> - data type - integer, must be equal to or more than 0
-* <i>reports</i> - data type - string, the parameter can accept the following values: "none"(default), "all", "accuracy", "metrics_only"
+* <i>reports</i> - data type - string, accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - fetches only accuracy metrics without generating reports.
 * <i>metadata_path</i> - data type - string
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
@@ -179,12 +179,12 @@ global:                                     # Global settings. Optional paramete
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter
+    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - fetches only accuracy metrics without generating reports. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
 
   infer_settings:                           # Settings for infer process. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    reports: none                           # Whether to generate an accuracy report or just fetch accuracy metrics. Optional parameter
+    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - fetches only accuracy metrics without generating reports. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
 
@@ -195,7 +195,7 @@ CUSTOMER:                                   # Table name. Required parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter
+    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - fetches only accuracy metrics without generating reports. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
     column_types:
       categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
         - gender
@@ -217,7 +217,7 @@ CUSTOMER:                                   # Table name. Required parameter
     destination: "./files/generated_data_customer.csv" # The path where the generated data will be stored. If the information about 'destination' isn't specified, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in '.csv', '.avro' formats. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    reports: none                           # Whether to generate an accuracy report or just fetch accuracy metrics. Optional parameter
+    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - fetches only accuracy metrics without generating reports. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
 
@@ -260,7 +260,7 @@ ORDER:                                      # Table name. Required parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter
+    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - fetches only accuracy metrics without generating reports. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
     column_types:
       categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
         - gender
@@ -270,7 +270,7 @@ ORDER:                                      # Table name. Required parameter
     destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. If the information about 'destination' isn't specified, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in 'csv', '.avro' formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    reports: none                           # Whether to generate an accuracy report or just fetch accuracy metrics. Optional parameter
+    reports: none                           # Whether to generate accuracy, sampling reports or just fetch accuracy metrics. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - fetches only accuracy metrics without generating reports. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
   format:                                   # Settings for reading and writing data in 'csv' format. Optional parameter
