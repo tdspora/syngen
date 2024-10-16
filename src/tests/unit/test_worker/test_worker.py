@@ -1394,7 +1394,7 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
                     "drop_null": True,
                     "row_limit": 1000,
                     "batch_size": 1000,
-                    "print_report": True
+                    "reports": ["accuracy", "sample"]
                 },
                 "infer_settings": {},
                 "keys": {}
@@ -1408,7 +1408,7 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
                     "drop_null": True,
                     "row_limit": 1000,
                     "batch_size": 1000,
-                    "print_report": True
+                    "reports": ["accuracy", "sample"]
                 },
                 "infer_settings": {},
                 "keys": {}
