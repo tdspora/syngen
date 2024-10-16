@@ -103,7 +103,7 @@ Requirements for parameters of training process:
 * <i>row_limit</i> - data type - integer
 * <i>drop_null</i> - data type - boolean, default value - False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1, default value - 32
-* <i>reports</i> - data type - string or list (if the value is passed in the metadata file), accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - outputs the metrics information only to standard output.
+* <i>reports</i> - data type - - string (if the value is passed through CLI), string or list (if the value is passed in the metadata file), accepted values: "none" (default) - no reports will be generated, "sample" - generates a sampling report, "accuracy" - generates an accuracy report, "all" - generates both accuracy and sampling reports, "metrics_only" - outputs the metrics information only to standard output.
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 
