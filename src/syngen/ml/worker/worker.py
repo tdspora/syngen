@@ -241,14 +241,15 @@ class Worker:
         return config
 
     @staticmethod
-    def _should_generate_report(config_of_tables: Dict, type_of_process: str):
+    def _should_generate_data(config_of_tables: Dict, type_of_process: str):
         """
-        Determine whether reports should be generated based
-        on the configurations of the tables
+        Determine whether the synthetic data should be generated
+        in order to generate reports based on it
         """
         return any(
             [
-                config.get(f"{type_of_process}_settings", {}).get("reports", "none") != "none"
+                "accuracy" in config.get(f"{type_of_process}_settings", {}).get("reports", []) or
+                "metrics_only" in config.get(f"{type_of_process}_settings", {}).get("reports", [])
                 for table, config in config_of_tables.items()
             ]
         )
@@ -382,8 +383,6 @@ class Worker:
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
             random_seed=settings.get("random_seed") if type_of_process == "infer" else 1,
             reports=settings["reports"],
-            get_infer_metrics=settings.get("get_infer_metrics")
-            if type_of_process == "infer" else False,
             log_level=self.log_level,
             both_keys=both_keys,
             type_of_process=self.type_of_process,
@@ -482,7 +481,9 @@ class Worker:
             metadata_for_inference,
         ) = metadata_for_inference
 
-        generation_of_reports = self._should_generate_report(metadata_for_training, "train")
+        generation_of_reports = self._should_generate_data(
+            metadata_for_training, "train"
+        )
 
         self.__train_tables(
             tables_for_training,
@@ -515,7 +516,7 @@ class Worker:
         """
         tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
 
-        generation_of_reports = self._should_generate_report(config_of_tables, "infer")
+        generation_of_reports = self._should_generate_data(config_of_tables, "infer")
         delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")

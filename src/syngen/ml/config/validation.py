@@ -63,10 +63,13 @@ class Validator:
         """
         Check conditions whether to launch validation or not
         """
-        reports = metadata.get("train_settings", {}).get("reports", "none")
+        reports = metadata.get("train_settings", {}).get("reports", [])
         return (
             self.type_of_process == "infer"
-            or (self.type_of_process == "train" and reports in ["all", "accuracy", "metrics_only"])
+            or (
+                self.type_of_process == "train" and
+                any([item in ["accuracy", "metrics_only"] for item in reports])
+            )
         )
 
     def _validate_metadata(self, table_name: str):

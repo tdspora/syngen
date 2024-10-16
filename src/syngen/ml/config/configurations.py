@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set, List, Callable, Union
+from typing import Optional, Dict, Tuple, Set, List, Callable
 import os
 import shutil
 from datetime import datetime
@@ -24,7 +24,7 @@ class TrainConfig:
     row_limit: Optional[int]
     table_name: Optional[str]
     metadata_path: Optional[str]
-    reports: Union[str, List[str]]
+    reports: List[str]
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
     data: pd.DataFrame = field(init=False)
@@ -287,7 +287,7 @@ class InferConfig:
     batch_size: Optional[int]
     metadata_path: Optional[str]
     random_seed: Optional[int]
-    reports: Union[str, List[str]]
+    reports: List[str]
     both_keys: bool
     log_level: str
     loader: Optional[Callable[[str], pd.DataFrame]]
@@ -317,7 +317,7 @@ class InferConfig:
         Check whether it is possible to generate the report
         """
         if (
-                self.reports != "none"
+                self.reports
                 and (
                     not DataLoader(self.paths["input_data_path"]).has_existed_path
                     and not self.loader
@@ -329,8 +329,8 @@ class InferConfig:
                 f"doesn't exist."
             )
             logger.warning(message)
-            if any([item in ["all", "accuracy"] for item in self.reports]):
-                self.reports = "none"
+            if any([item == "accuracy" for item in self.reports]):
+                self.reports = list()
                 log_message = (
                     "As a result, the accuracy report of the table - "
                     f"'{self.table_name}' won't be generated. "
@@ -339,7 +339,7 @@ class InferConfig:
                 )
                 logger.warning(log_message)
             if any([item == "metrics_only" for item in self.reports]):
-                self.reports = "none"
+                self.reports = list()
                 log_message = (
                     "As a result, the infer metrics related to the table - "
                     f"'{self.table_name}' won't be fetched. "

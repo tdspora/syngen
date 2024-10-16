@@ -14,7 +14,6 @@ global:
     reports: all
 
 pk_test:
-  train_settings:
   keys:
     pk_test_pk_id:
       type: "PK"

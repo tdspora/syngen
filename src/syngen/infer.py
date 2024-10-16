@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Union, List
+from typing import Optional, List
 import traceback
 
 import click
@@ -11,24 +11,10 @@ from syngen.ml.utils import (
     set_log_path,
     check_if_logs_available
 )
-from syngen.ml.validation_schema import INFER_REPORT_TYPES
+from syngen.ml.utils import validate_parameter_reports
 
 
-def validate_parameter_reports(ctx, param, value):
-    if all([item in INFER_REPORT_TYPES for item in value]):
-        if "none" in value or "all" in value:
-            if len(value) > 1:
-                raise ValueError(
-                    "Invalid input: When '--reports' option is set to 'none' or 'all', "
-                    "no other values should be provided."
-                )
-            return value[0]
-        return list(value)
-    else:
-        raise ValueError(
-            f"Invalid input: Acceptable values for the parameter '--reports' "
-            f"are {', '.join(INFER_REPORT_TYPES)}."
-        )
+validate_reports = validate_parameter_reports("infer")
 
 
 @click.command()
@@ -70,7 +56,7 @@ def validate_parameter_reports(ctx, param, value):
     default=("none",),
     type=click.UNPROCESSED,
     multiple=True,
-    callback=validate_parameter_reports,
+    callback=validate_reports,
     help="Controls the generation of quality reports. "
     "Might require significant time for big generated tables (>1000 rows). "
     "If 'sample', generates a sampling report. "
@@ -92,7 +78,7 @@ def launch_infer(
     table_name: Optional[str],
     run_parallel: bool,
     batch_size: Optional[int],
-    reports: Union[str, List[str]],
+    reports: List[str],
     random_seed: Optional[int],
     log_level: str,
 ):
@@ -142,7 +128,7 @@ def launch_infer(
         "size": size,
         "run_parallel": run_parallel,
         "batch_size": batch_size,
-        "reports": reports,
+        "reports": list(reports),
         "random_seed": random_seed
     }
     worker = Worker(

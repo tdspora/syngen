@@ -242,7 +242,7 @@ class Report:
                            f"for the table - '{reporter.table_name}' has started")
                 ProgressBarHandler().set_progress(delta=delta, message=message)
                 reporter.report()
-                if reporter.config["reports"] != "metrics_only":
+                if "metrics_only" not in reporter.config["reports"]:
                     message = (f"The {reporter.__class__.report_type} report of the table - "
                                f"'{reporter.table_name}' has been generated")
                     logger.info(message)
@@ -251,7 +251,7 @@ class Report:
                         delta=delta,
                         message=message
                     )
-                if reporter.config["reports"] == "metrics_only":
+                if "metrics_only" in reporter.config["reports"]:
                     logger.info(
                         f"The metrics for the table - '{reporter.table_name}' have been evaluated"
                     )

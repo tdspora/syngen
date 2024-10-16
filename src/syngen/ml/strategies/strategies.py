@@ -123,7 +123,7 @@ class TrainStrategy(Strategy, ABC):
                 and source is not None
                 and loader is None
                 and os.path.exists(source)
-                and any([item in ["sample", "all"] for item in self.config.reports])
+                and any(["sample" in self.config.reports])
         ):
             sample_reporter = SampleAccuracyReporter(
                 table_name=get_initial_table_name(table_name),
@@ -212,7 +212,7 @@ class InferStrategy(Strategy):
         table_name = self.config.table_name
         if (
                 not table_name.endswith("_fk") and
-                any([item in ["all", "accuracy", "metrics_only"] for item in self.config.reports])
+                any([item in ["accuracy", "metrics_only"] for item in self.config.reports])
         ):
             accuracy_reporter = AccuracyReporter(
                 table_name=get_initial_table_name(table_name),

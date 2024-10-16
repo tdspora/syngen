@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set
+from typing import List, Dict, Optional, Union, Set, Callable, Literal
 from dateutil import parser
 from datetime import datetime, timedelta
 
@@ -13,6 +13,8 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
+
+from syngen.ml.validation_schema import TRAIN_REPORT_TYPES, INFER_REPORT_TYPES
 
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
@@ -402,3 +404,36 @@ def get_initial_table_name(table_name) -> str:
     Get the initial table name without the suffix "_pk" or "_fk"
     """
     return re.sub(r"_pk$|_fk$", "", table_name)
+
+
+def validate_parameter_reports(type_of_process: Literal["train", "infer"]) -> Callable:
+    """
+    Validate the values of the parameter 'reports'
+    """
+    def validator(ctx, param, value) -> List[str]:
+        input_values = set(value)
+        report_types: List = TRAIN_REPORT_TYPES if type_of_process == "train" else INFER_REPORT_TYPES
+        valid_values: List = ["none", "all"]
+        valid_values.extend(report_types)
+
+        if not input_values.issubset(set(valid_values)):
+            raise ValueError(
+                f"Invalid input: Acceptable values for the parameter '--reports' are "
+                f"{', '.join(valid_values)}."
+            )
+
+        if "none" in input_values or "all" in input_values:
+            if len(input_values) > 1:
+                raise ValueError(
+                    "Invalid input: When '--reports' option is set to 'none' or 'all', "
+                    "no other values should be provided."
+                )
+            if value[0] == "all" and type_of_process == "train":
+                return ["accuracy", "sample"]
+            if value[0] == "all" and type_of_process == "infer":
+                return ["accuracy"]
+            if value[0] == "none":
+                return list()
+
+        return list(input_values)
+    return validator

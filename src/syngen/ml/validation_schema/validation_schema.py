@@ -13,7 +13,7 @@ from marshmallow import (
 from loguru import logger
 
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
-INFER_REPORT_TYPES = ["none", "all", "accuracy", "metrics_only"]
+INFER_REPORT_TYPES = ["accuracy", "metrics_only"]
 TRAIN_REPORT_TYPES = INFER_REPORT_TYPES + ["sample"]
 
 
@@ -81,10 +81,8 @@ class TrainingSettingsSchema(Schema):
     reports = fields.Raw(
         required=False,
         validate=(
-            lambda x: isinstance(x, str) and x in TRAIN_REPORT_TYPES or (
-                    isinstance(x, list) and
-                    all(isinstance(elem, str) and elem in TRAIN_REPORT_TYPES for elem in x)
-            )
+            lambda x: isinstance(x, list) and
+            all(isinstance(elem, str) and elem in TRAIN_REPORT_TYPES for elem in x)
         )
     )
 
@@ -110,10 +108,8 @@ class InferSettingsSchema(Schema):
     reports = fields.Raw(
         required=False,
         validate=(
-            lambda x: isinstance(x, str) and x in INFER_REPORT_TYPES or (
-                    isinstance(x, list) and
-                    all(isinstance(elem, str) and elem in INFER_REPORT_TYPES for elem in x)
-            )
+            lambda x: isinstance(x, list) and
+            all(isinstance(elem, str) and elem in INFER_REPORT_TYPES for elem in x)
         )
     )
 

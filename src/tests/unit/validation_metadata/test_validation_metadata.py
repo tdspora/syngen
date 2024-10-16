@@ -808,7 +808,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
             "table_b": {
                 "train_settings": {
                     "source": "path/to/table_b.csv",
-                    "reports": "none"
+                    "reports": []
                 },
                 "keys": {
                     "fk_key": {
@@ -838,7 +838,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
         "table_a": {
                 "train_settings": {
                     "source": "path/to/table_a.csv",
-                    "reports": "all"
+                    "reports": ["accuracy", "sample"]
                 },
                 "infer_settings": {
                     "destination": "path/to/generated_table_a.csv"
@@ -857,7 +857,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
         "table_b": {
             "train_settings": {
                 "source": "path/to/table_b.csv",
-                "reports": "none"
+                "reports": []
             },
             "keys": {
                 "fk_key": {
@@ -879,13 +879,18 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("value", ["all", "accuracy", "metrics_only"])
+@pytest.mark.parametrize("value", [
+    ["accuracy", "sample"],
+    ["accuracy", "metrics_only"],
+    ["accuracy"],
+    ["metrics_only"]
+])
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
-def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_reports(
+def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen_data_and_reports(
     mock_check_existence_of_source,
     mock_check_key_columns,
     mock_validate_referential_integrity,
@@ -898,12 +903,13 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_rep
     """
     Test the validation of the incomplete metadata of one table
     contained the foreign key but not contained the information of the parent table.
-    It's used in the training process with the generation of reports
+    It's used in the training process with the generation 'accuracy' or 'metrics_only' reports
     """
     rp_logger.info(
         "Test the validation of the incomplete metadata of one table "
         "contained the foreign key but not contained the information of the parent table. "
-        "It used in the training process with the generation of reports"
+        "It's used in the training process with the generation 'accuracy' or 'metrics_only' "
+        "reports"
     )
     metadata = {
             "table_b": {
@@ -939,7 +945,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_rep
         "table_a": {
                 "train_settings": {
                     "source": "path/to/table_a.csv",
-                    "reports": "all"
+                    "reports": ["accuracy", "sample"]
                 },
                 "infer_settings": {
                     "destination": "path/to/generated_table_a.csv"
@@ -977,6 +983,212 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_rep
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
     mock_check_existence_of_generated_data.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("value", [
+    ["accuracy", "sample"],
+    ["accuracy", "metrics_only"],
+    ["accuracy"],
+    ["metrics_only"]
+])
+@patch.object(Validator, "_check_existence_of_generated_data")
+@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen_accuracy_report(
+    mock_check_existence_of_source,
+    mock_check_key_columns,
+    mock_validate_referential_integrity,
+    mock_check_existence_of_success_file,
+    mock_check_existence_of_generated_data,
+    test_metadata_storage,
+    value,
+    rp_logger
+):
+    """
+    Test the validation of the incomplete metadata of one table
+    contained the foreign key but not contained the information of the parent table.
+    It's used in the training process with the generation 'accuracy' or 'metrics_only' reports
+    """
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table "
+        "contained the foreign key but not contained the information of the parent table. "
+        "It's used in the training process with the generation 'accuracy' or 'metrics_only' "
+        "reports"
+    )
+    metadata = {
+            "table_b": {
+                "train_settings": {
+                    "source": "path/to/table_b.csv",
+                    "reports": value
+                },
+                "keys": {
+                    "fk_key": {
+                        "type": "FK",
+                        "columns": ["id"],
+                        "references": {
+                            "table": "table_a",
+                            "columns": ["id"]
+                        }
+                    }
+                }
+            }
+        }
+    validator = Validator(
+        metadata=metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    validator.run()
+    assert validator.mapping == {
+        "fk_key": {
+            "parent_columns": ["id"],
+            "parent_table": "table_a"
+        }
+    }
+    assert validator.merged_metadata == {
+        "table_a": {
+                "train_settings": {
+                    "source": "path/to/table_a.csv",
+                    "reports": ["accuracy", "sample"]
+                },
+                "infer_settings": {
+                    "destination": "path/to/generated_table_a.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    },
+                    "uq_id": {
+                        "type": "UQ",
+                        "columns": ["name"]
+                    }
+                }
+            },
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+                "reports": value
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                }
+            }
+        }
+    }
+    assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
+    mock_validate_referential_integrity.assert_called_once()
+    mock_check_existence_of_success_file.assert_called_once()
+    mock_check_existence_of_generated_data.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "_check_existence_of_generated_data")
+@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen_sample_report(
+    mock_check_existence_of_source,
+    mock_check_key_columns,
+    mock_validate_referential_integrity,
+    mock_check_existence_of_success_file,
+    mock_check_existence_of_generated_data,
+    test_metadata_storage,
+    rp_logger
+):
+    """
+    Test the validation of the incomplete metadata of one table
+    contained the foreign key but not contained the information of the parent table.
+    It's used in the training process with the generation a 'sample' report
+    """
+    rp_logger.info(
+        "Test the validation of the incomplete metadata of one table "
+        "contained the foreign key but not contained the information of the parent table. "
+        "It's used in the training process with the generation a 'sample' report"
+    )
+    metadata = {
+            "table_b": {
+                "train_settings": {
+                    "source": "path/to/table_b.csv",
+                    "reports": ["sample"]
+                },
+                "keys": {
+                    "fk_key": {
+                        "type": "FK",
+                        "columns": ["id"],
+                        "references": {
+                            "table": "table_a",
+                            "columns": ["id"]
+                        }
+                    }
+                }
+            }
+        }
+    validator = Validator(
+        metadata=metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    validator.run()
+    assert validator.mapping == {
+        "fk_key": {
+            "parent_columns": ["id"],
+            "parent_table": "table_a"
+        }
+    }
+    assert validator.merged_metadata == {
+        "table_a": {
+                "train_settings": {
+                    "source": "path/to/table_a.csv",
+                    "reports": ["accuracy", "sample"]
+                },
+                "infer_settings": {
+                    "destination": "path/to/generated_table_a.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    },
+                    "uq_id": {
+                        "type": "UQ",
+                        "columns": ["name"]
+                    }
+                }
+            },
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+                "reports": ["sample"]
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                }
+            }
+        }
+    }
+    assert mock_check_existence_of_source.call_count == 2
+    assert mock_check_key_columns.call_count == 2
+    mock_validate_referential_integrity.assert_called_once()
+    mock_check_existence_of_success_file.assert_called()
+    mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1035,7 +1247,7 @@ def test_validate_incomplete_metadata_in_infer_process(
         "table_a": {
                 "train_settings": {
                     "source": "path/to/table_a.csv",
-                    "reports": "all"
+                    "reports": ["accuracy", "sample"]
                 },
                 "infer_settings": {
                     "destination": "path/to/generated_table_a.csv"
@@ -1258,7 +1470,7 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
                 "table_d": {
                     "train_settings": {
                         "source": "path/to/table_a.csv",
-                        "reports": "all"
+                        "reports": ["accuracy", "sample"]
                     },
                     "infer_settings": {
                         "destination": "path/to/generated_table_a.csv"
@@ -1414,7 +1626,7 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
                 "table_a": {
                     "train_settings": {
                         "source": "path/to/table_a.csv",
-                        "reports": "all"
+                        "reports": ["accuracy", "sample"]
                     },
                     "infer_settings": {
                         "destination": "path/to/generated_table_a.csv"
@@ -1515,7 +1727,7 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
                 "table_a": {
                     "train_settings": {
                         "source": "path/to/table_a.csv",
-                        "reports": "all"
+                        "reports": ["accuracy", "sample"]
                     },
                     "infer_settings": {
                         "destination": "path/to/generated_table_a.csv"
@@ -1547,7 +1759,13 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("value", ["all", "accuracy", "metrics_only"])
+@pytest.mark.parametrize("value", [
+    ["accuracy", "sample"],
+    ["accuracy", "metrics_only"],
+    ["sample", "metrics_only"],
+    ["accuracy"],
+    ["metrics_only"],
+])
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
@@ -1564,13 +1782,14 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
 ):
     """
     Test the validation of the incomplete metadata of one table contained the foreign key
-    used in the training process with the generation of reports.
+    used in the training process with the generation of 'accuracy' or 'metrics_only' reports.
     The information of the parent table is present in the metadata storage,
     but the generated data of the parent table hasn't been generated previously
     """
     rp_logger.info(
-        "Test the validation of the incomplete metadata of one table contained the foreign key "
-        "used in the training process with the generation of reports. "
+        "Test the validation of the incomplete metadata of one table "
+        "contained the foreign key used in the training process with "
+        "the generation of 'accuracy' or 'metrics_only' reports. "
         "The information of the parent table is present in the metadata storage, "
         "but the generated data of the parent table hasn't been generated previously"
     )
@@ -1578,7 +1797,7 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
             "table_b": {
                 "train_settings": {
                     "source": "path/to/table_b.csv",
-                    "reports": "all"
+                    "reports": value
                 },
                 "keys": {
                     "fk_key": {
@@ -1625,7 +1844,7 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
                 "table_a": {
                     "train_settings": {
                         "source": "path/to/table_a.csv",
-                        "reports": "all"
+                        "reports": ["accuracy", "sample"]
                     },
                     "infer_settings": {
                         "destination": "path/to/generated_table_a.csv"

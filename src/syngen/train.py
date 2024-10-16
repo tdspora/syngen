@@ -1,6 +1,6 @@
 import os
 import traceback
-from typing import Optional, Union, List
+from typing import Optional, List
 
 import click
 from loguru import logger
@@ -12,24 +12,10 @@ from syngen.ml.utils import (
     set_log_path,
     check_if_logs_available
 )
-from syngen.ml.validation_schema import TRAIN_REPORT_TYPES
+from syngen.ml.utils import validate_parameter_reports
 
 
-def validate_parameter_reports(ctx, param, value):
-    if all([item in TRAIN_REPORT_TYPES for item in value]):
-        if "none" in value or "all" in value:
-            if len(value) > 1:
-                raise ValueError(
-                    "Invalid input: When '--reports' option is set to 'none' or 'all', "
-                    "no other values should be provided."
-                )
-            return value[0]
-        return list(value)
-    else:
-        raise ValueError(
-            f"Invalid input: Acceptable values for the parameter '--reports' "
-            f"are {', '.join(TRAIN_REPORT_TYPES)}."
-        )
+validate_reports = validate_parameter_reports("train")
 
 
 @click.command()
@@ -76,7 +62,7 @@ def validate_parameter_reports(ctx, param, value):
     default=("none",),
     type=click.UNPROCESSED,
     multiple=True,
-    callback=validate_parameter_reports,
+    callback=validate_reports,
     help="Controls the generation of quality reports. "
     "Might require significant time for big generated tables (>1000 rows). "
     "If 'sample', generates a sampling report. "
@@ -106,7 +92,7 @@ def launch_train(
     epochs: int,
     drop_null: bool,
     row_limit: Optional[int],
-    reports: Union[str, List[str]],
+    reports: List[str],
     log_level: str,
     batch_size: int = 32,
 ):

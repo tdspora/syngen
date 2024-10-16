@@ -166,7 +166,7 @@ class VaeTrainHandler(BaseHandler):
     drop_null: bool = field(kw_only=True)
     batch_size: int = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
-    reports: str = field(kw_only=True)
+    reports: List[str] = field(kw_only=True)
 
     def __fit_model(self, data: pd.DataFrame):
         logger.info("Start VAE training")
@@ -219,7 +219,7 @@ class VaeInferHandler(BaseHandler):
     size: int = field(kw_only=True)
     batch_size: int = field(kw_only=True)
     run_parallel: bool = field(kw_only=True)
-    reports: str = field(kw_only=True)
+    reports: List[str] = field(kw_only=True)
     wrapper_name: str = field(kw_only=True)
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)

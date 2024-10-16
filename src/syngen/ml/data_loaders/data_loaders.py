@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Tuple, List
+from typing import Optional, Dict, Tuple, List, Literal
 import pickle as pkl
 import csv
 import inspect
@@ -402,12 +402,28 @@ class YAMLLoader(BaseDataLoader):
 
     _metadata_sections = ["train_settings", "infer_settings", "keys"]
 
+    @staticmethod
+    def _normalize_reports(settings: dict, type_of_process: Literal["train", "infer"]):
+        reports = settings.get(f"{type_of_process}_settings", {}).get("reports", [])
+        if isinstance(reports, str):
+            if reports == "none":
+                settings[f"{type_of_process}_settings"]["reports"] = []
+            if reports == "all" and type_of_process == "train":
+                settings[f"{type_of_process}_settings"]["reports"] = ["accuracy", "sample"]
+            if reports == "all" and type_of_process == "infer":
+                settings[f"{type_of_process}_settings"]["reports"] = ["accuracy"]
+
+    def _normalize_parameter_reports(self, metadata: dict) -> dict:
+        for table, settings in metadata.items():
+            self._normalize_reports(settings, "train")
+            self._normalize_reports(settings, "infer")
+        return metadata
+
     def _load_data(self, metadata_file) -> Dict:
         try:
             metadata = yaml.load(metadata_file, Loader=SafeLoader)
-            metadata = self.replace_none_values_of_metadata_settings(
-                self._metadata_sections, metadata
-            )
+            metadata = self.replace_none_values_of_metadata_settings(metadata)
+            metadata = self._normalize_parameter_reports(metadata)
             return metadata
         except ScannerError as error:
             message = (
@@ -422,8 +438,7 @@ class YAMLLoader(BaseDataLoader):
         with open(self.path, "r", encoding="utf-8") as f:
             return self._load_data(f)
 
-    @staticmethod
-    def replace_none_values_of_metadata_settings(parameters, metadata: dict):
+    def replace_none_values_of_metadata_settings(self, metadata: dict):
         """
         Replace None values for parameters in the metadata
         """
@@ -438,7 +453,7 @@ class YAMLLoader(BaseDataLoader):
         for key in metadata.keys():
             if key == "global":
                 continue
-            for parameter in parameters:
+            for parameter in self._metadata_sections:
                 if metadata.get(key).get(parameter) is None:
                     metadata[key][parameter] = {}
         return metadata
