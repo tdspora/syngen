@@ -2,7 +2,7 @@
 
 FROM python:3.11-bookworm
 
-WORKDIR src
+WORKDIR /src
 
 COPY requirements.txt .
 COPY requirements-streamlit.txt .
@@ -22,7 +22,7 @@ COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
 COPY src/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
 ENV HOME=/tmp
 ENV MPLCONFIGDIR=/tmp
-ENV PYTHONPATH "${PYTHONPATH}:/src/syngen"
+ENV PYTHONPATH="${PYTHONPATH}:/src/syngen"
 RUN mkdir model_artifacts uploaded_files mlruns && \
     groupadd syngen && \
     useradd -mg syngen syngen && \

@@ -10,11 +10,15 @@ FAKE_METADATA_PATH = "path/to/metadata.yaml"
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
     rp_logger
@@ -48,8 +52,10 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
+    mock_gather_existed_columns.assert_called_once()
     mock_check_existence_of_source.assert_called_once()
-    mock_check_key_columns.assert_called_once()
+    mock_check_existence_of_key_columns.assert_called_once()
+    mock_check_existence_of_referenced_columns.assert_called_once()
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -57,11 +63,15 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_valid_of_source(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
     rp_logger
@@ -108,8 +118,10 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
+    mock_gather_existed_columns.assert_not_called()
     mock_check_existence_of_source.assert_not_called()
-    mock_check_key_columns.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -202,11 +214,15 @@ def test_check_key_column_in_fk(rp_logger):
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
     rp_logger
@@ -265,8 +281,10 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
         }
     }
     assert validator.merged_metadata == test_metadata
+    assert mock_gather_existed_columns.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_key_columns.call_count == 2
+    assert mock_check_existence_of_key_columns.call_count == 2
+    assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_referential_integrity.call_count == 1
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -274,11 +292,15 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_without_valid_source(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
     rp_logger
@@ -333,8 +355,10 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
         }
     }
     assert validator.merged_metadata == test_metadata
+    mock_gather_existed_columns.assert_not_called()
     mock_check_existence_of_source.assert_not_called()
-    mock_check_key_columns.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_validate_referential_integrity.call_count == 1
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -342,11 +366,15 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_process(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
     rp_logger
@@ -417,8 +445,10 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
         }
     }
     assert validator.merged_metadata == test_metadata
+    assert mock_gather_existed_columns.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_key_columns.call_count == 2
+    assert mock_check_existence_of_key_columns.call_count == 2
+    assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_referential_integrity.call_count == 2
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -426,11 +456,15 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
 
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
-@patch.object(Validator, "_check_existence_of_source", return_value=True)
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_without_valid_source(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
     rp_logger
@@ -497,8 +531,10 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
         }
     }
     assert validator.merged_metadata == test_metadata
+    mock_gather_existed_columns.assert_not_called()
     mock_check_existence_of_source.assert_not_called()
-    mock_check_key_columns.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_validate_referential_integrity.call_count == 2
     mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -508,7 +544,15 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_destination,
     mock_check_existence_of_success_file,
@@ -544,8 +588,12 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
-    mock_check_existence_of_destination.assert_called_once()
+    mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
     mock_validate_referential_integrity.assert_not_called()
+    mock_check_existence_of_destination.assert_called_once()
     mock_check_existence_of_success_file.assert_not_called()
     mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -555,7 +603,13 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
+    mock_gather_existed_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_check_existence_of_destination,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
@@ -610,11 +664,13 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
+    mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_existence_of_destination.call_count == 2
     mock_validate_referential_integrity.assert_not_called()
     mock_check_existence_of_success_file.assert_not_called()
     mock_check_existence_of_generated_data.assert_not_called()
-    mock_check_existence_of_success_file.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -622,7 +678,13 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
+    mock_gather_existed_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_check_existence_of_destination,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
@@ -686,6 +748,9 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
         }
     }
     assert validator.merged_metadata == test_metadata
+    mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_referential_integrity.call_count == 1
     mock_check_existence_of_success_file.assert_not_called()
@@ -697,7 +762,13 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_process(
+    mock_gather_existed_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_check_existence_of_destination,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
@@ -773,6 +844,9 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
         }
     }
     assert validator.merged_metadata == test_metadata
+    mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_referential_integrity.call_count == 2
     mock_check_existence_of_success_file.assert_not_called()
@@ -783,11 +857,15 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_reports(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
     mock_check_existence_of_generated_data,
@@ -871,8 +949,10 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
             }
         }
     }
+    assert mock_gather_existed_columns.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_key_columns.call_count == 2
+    assert mock_check_existence_of_key_columns.call_count == 2
+    assert mock_check_existence_of_referenced_columns.call_count == 2
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
     mock_check_existence_of_generated_data.assert_not_called()
@@ -888,11 +968,15 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen_data_and_reports(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
     mock_check_existence_of_generated_data,
@@ -978,8 +1062,10 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
             }
         }
     }
+    assert mock_gather_existed_columns.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_key_columns.call_count == 2
+    assert mock_check_existence_of_key_columns.call_count == 2
+    assert mock_check_existence_of_referenced_columns.call_count == 2
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
     mock_check_existence_of_generated_data.assert_called_once()
@@ -1196,7 +1282,15 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_incomplete_metadata_in_infer_process(
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_check_existence_of_destination,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
@@ -1279,6 +1373,10 @@ def test_validate_incomplete_metadata_in_infer_process(
             }
         }
     }
+    mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_existence_of_destination.call_count == 2
     mock_validate_referential_integrity.assert_called_once()
     mock_check_existence_of_success_file.assert_called_once()
@@ -1287,7 +1385,13 @@ def test_validate_incomplete_metadata_in_infer_process(
 
 
 @patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_with_not_existent_source(
+    mock_gather_existed_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     caplog,
     rp_logger
@@ -1323,7 +1427,10 @@ def test_validate_metadata_with_not_existent_source(
             validator.run()
             assert validator.mapping == {}
             assert validator.merged_metadata == test_metadata
-            mock_validate_referential_integrity.assert_called_once()
+            mock_gather_existed_columns.assert_called_once()
+            mock_check_existence_of_key_columns.assert_called_once()
+            mock_check_existence_of_referenced_columns.assert_called_once()
+            mock_validate_referential_integrity.assert_not_called()
             message = (
                 "The validation of the metadata has been failed. The error(s) found in - "
                 "\"check existence of the source\": {\"test_table\": \"It seems that the path "
@@ -1335,11 +1442,7 @@ def test_validate_metadata_with_not_existent_source(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
 def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_storage(
-    mock_check_existence_of_source,
-    mock_check_key_columns,
     test_metadata_storage,
     caplog,
     rp_logger
@@ -1363,7 +1466,7 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
                         "type": "FK",
                         "columns": ["id"],
                         "references": {
-                            "table": "table_a",
+                            "table": "table_c",
                             "columns": ["id"]
                         }
                     }
@@ -1378,8 +1481,6 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
                 metadata_path=FAKE_METADATA_PATH
             )
             validator.run()
-            mock_check_existence_of_source.assert_called_once()
-            mock_check_key_columns.assert_called_once()
             assert validator.mapping == {
                 "fk_key": {
                     "parent_columns": ["id"],
@@ -1398,11 +1499,15 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
 
 
 @patch.object(Validator, "_check_existence_of_success_file")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_incomplete_metadata_with_wrong_referential_integrity(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_check_existence_of_success_file,
     test_metadata_storage,
     caplog,
@@ -1483,8 +1588,10 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
                     }
                 }
             }
+            assert mock_gather_existed_columns.call_count == 2
             assert mock_check_existence_of_source.call_count == 2
-            assert mock_check_key_columns.call_count == 2
+            assert mock_check_existence_of_key_columns.call_count == 2
+            assert mock_check_existence_of_referenced_columns.call_count == 2
             mock_check_existence_of_success_file.assert_called_once()
             message = (
                 "The validation of the metadata has been failed. "
@@ -1549,13 +1656,21 @@ def test_validate_metadata_with_not_existent_destination(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_in_train_process(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
+    mock_check_existence_of_generated_data,
     test_metadata_storage,
     caplog,
     rp_logger
@@ -1594,13 +1709,17 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
         with caplog.at_level("ERROR"):
             validator = Validator(
                 metadata=metadata,
-                type_of_process="infer",
+                type_of_process="train",
                 metadata_path=FAKE_METADATA_PATH
             )
             validator.run()
+            assert mock_gather_existed_columns.call_count == 2
             assert mock_check_existence_of_source.call_count == 2
+            assert mock_check_existence_of_key_columns.call_count == 2
+            assert mock_check_existence_of_referenced_columns.call_count == 2
             mock_validate_referential_integrity.assert_called_once()
             mock_check_existence_of_success_file.assert_called_once()
+            mock_check_existence_of_generated_data.assert_not_called()
             assert validator.mapping == {
                 "fk_key": {
                     "parent_columns": ["id"],
@@ -1766,15 +1885,21 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
     ["accuracy"],
     ["metrics_only"],
 ])
-@patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_validate_referential_integrity")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_with_reports(
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_validate_referential_integrity,
     mock_check_existence_of_success_file,
     mock_check_existence_of_generated_data,
-    mock_validate_referential_integrity,
     test_metadata_storage,
     caplog,
     value,
@@ -1815,7 +1940,7 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
         with caplog.at_level("ERROR"):
             validator = Validator(
                 metadata=metadata,
-                type_of_process="infer",
+                type_of_process="train",
                 metadata_path=FAKE_METADATA_PATH
             )
             validator.run()
@@ -1861,9 +1986,13 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
                     }
                 }
             }
+            assert mock_gather_existed_columns.call_count == 2
             assert mock_check_existence_of_source.call_count == 2
-            assert mock_check_existence_of_generated_data.assert_called_once()
+            assert mock_check_existence_of_key_columns.call_count == 2
+            assert mock_check_existence_of_referenced_columns.call_count == 2
+            mock_check_existence_of_generated_data.assert_called_once()
             mock_check_existence_of_success_file.assert_called_once()
+            mock_check_existence_of_generated_data.assert_called_once()
             mock_validate_referential_integrity.assert_called_once()
             message = (
                 "The validation of the metadata has been failed. "

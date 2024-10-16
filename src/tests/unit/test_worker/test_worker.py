@@ -333,13 +333,17 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata(
     mock_train_tables,
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -414,8 +418,10 @@ def test_launch_train_with_metadata(
         },
         False
     )
+    mock_gather_existed_columns.assert_called_once()
     mock_check_existence_of_source.assert_called_once()
-    mock_check_key_columns.assert_called_once()
+    mock_check_existence_of_key_columns.assert_called_once()
+    mock_check_existence_of_referenced_columns.assert_called_once()
     mock_validate_metadata.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["test_table"],
@@ -427,13 +433,17 @@ def test_launch_train_with_metadata(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables(
     mock_train_tables,
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -549,8 +559,10 @@ def test_launch_train_with_metadata_of_related_tables(
         },
         True
     )
+    assert mock_gather_existed_columns.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_key_columns.call_count == 2
+    assert mock_check_existence_of_key_columns.call_count == 2
+    assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
@@ -562,13 +574,17 @@ def test_launch_train_with_metadata_of_related_tables(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     mock_train_tables,
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -699,8 +715,10 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
         },
         True
     )
+    assert mock_gather_existed_columns.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_key_columns.call_count == 2
+    assert mock_check_existence_of_key_columns.call_count == 2
+    assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
     mock_collect_metrics_in_train.assert_called_once_with(
         ["tdm_models", "tdm_clusters"],
@@ -712,13 +730,17 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_without_metadata(
     mock_train_tables,
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -779,8 +801,10 @@ def test_launch_train_without_metadata(
         },
         True
     )
+    mock_gather_existed_columns.assert_called_once()
     mock_check_existence_of_source.assert_called_once()
-    mock_check_key_columns.assert_called_once()
+    mock_check_existence_of_key_columns.assert_called_once()
+    mock_check_existence_of_referenced_columns.assert_called_once()
     mock_validate_metadata.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["test_table"],
@@ -792,13 +816,17 @@ def test_launch_train_without_metadata(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_contained_global_settings(
     mock_train_tables,
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -897,9 +925,11 @@ def test_launch_train_with_metadata_contained_global_settings(
         },
         True
     )
-    assert mock_validate_metadata.call_count == 2
+    assert mock_gather_existed_columns.call_count == 2
     assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_key_columns.call_count == 2
+    assert mock_check_existence_of_key_columns.call_count == 2
+    assert mock_check_existence_of_referenced_columns.call_count == 2
+    assert mock_validate_metadata.call_count == 2
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
@@ -1300,14 +1330,20 @@ def test_launch_infer_with_metadata_contained_global_settings(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_key_columns")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "run")
+@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_init_worker_for_training_process_with_absent_metadata_and_callback_loader(
-    mock_validator_run,
-    mock_check_existence_of_source,
-    mock_check_key_columns,
-    rp_logger
+        mock_train_tables,
+        mock_gather_existed_columns,
+        mock_check_existence_of_source,
+        mock_check_existence_of_key_columns,
+        mock_check_existence_of_referenced_columns,
+        mock_validate_metadata,
+        rp_logger
 ):
     """
     Test the initialization of 'Worker' class
@@ -1346,22 +1382,62 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
             "keys": {},
         }
     }
-    mock_validator_run.assert_called_once()
+    worker.launch_train()
+    mock_train_tables.assert_called_with(
+        ["test_table"],
+        ["test_table"],
+        {
+            "test_table": {
+                "train_settings": {
+                    "source": None,
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {},
+                "keys": {}
+            }
+        },
+        {
+            "test_table": {
+                "train_settings": {
+                    "source": None,
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "print_report": True
+                },
+                "infer_settings": {},
+                "keys": {}
+            }
+        },
+        True
+    )
+    mock_gather_existed_columns.assert_not_called()
     mock_check_existence_of_source.assert_not_called()
-    mock_check_key_columns.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
+    mock_validate_metadata.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Validator, "_check_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_without_source_paths(
     mock_train_tables,
-    mock_validate_metadata,
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_validate_metadata,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -1491,27 +1567,33 @@ def test_launch_train_with_metadata_without_source_paths(
         },
         True
     )
-    assert mock_validate_metadata.call_count == 2
+    mock_gather_existed_columns.assert_not_called()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
         True
     )
     mock_check_existence_of_source.assert_not_called()
-    mock_check_key_columns.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
+    assert mock_validate_metadata.call_count == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Validator, "_check_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables", return_value=None)
 def test_launch_train_with_metadata_without_train_settings(
     mock_train_tables,
-    mock_validate_metadata,
+    mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_key_columns,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_validate_metadata,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -1642,9 +1724,11 @@ def test_launch_train_with_metadata_without_train_settings(
         },
         True
     )
-    assert mock_validate_metadata.call_count == 2
+    mock_gather_existed_columns.assert_not_called()
     mock_check_existence_of_source.assert_not_called()
-    mock_check_key_columns.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
+    assert mock_validate_metadata.call_count == 2
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],

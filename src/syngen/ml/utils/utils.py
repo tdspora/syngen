@@ -4,6 +4,7 @@ import re
 from typing import List, Dict, Optional, Union, Set, Callable, Literal
 from dateutil import parser
 from datetime import datetime, timedelta
+import time
 
 import pandas as pd
 import numpy as np
@@ -404,6 +405,23 @@ def get_initial_table_name(table_name) -> str:
     Get the initial table name without the suffix "_pk" or "_fk"
     """
     return re.sub(r"_pk$|_fk$", "", table_name)
+
+
+def timing(func):
+    """
+    Decorator that logs the execution time of the function
+    """
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        logger.trace(
+            f"Function '{func.__name__}' executed in "
+            f"{elapsed_time:.2f} seconds."
+        )
+        return result
+    return wrapper
 
 
 def validate_parameter_reports(type_of_process: Literal["train", "infer"]) -> Callable:
