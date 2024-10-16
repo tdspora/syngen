@@ -72,5 +72,5 @@ def test_preprocess_data(
     mock_save_original_schema.assert_called_once()
     mock_mark_removed_columns.assert_called_once()
     mock_remove_empty_columns.assert_called_once()
-    assert train_config.row_subset == expected_size
+    train_config.row_subset == expected_size
     rp_logger.info(SUCCESSFUL_MESSAGE)

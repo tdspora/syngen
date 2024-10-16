@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Literal
 import json
 from pathlib import Path
 
@@ -190,12 +190,18 @@ class RestrictedConfigurationSchema(ConfigurationSchema):
 
 
 class ValidationSchema:
-    def __init__(self, metadata: Dict, metadata_path: str, validation_source: bool):
+    def __init__(
+        self,
+        metadata: Dict,
+        metadata_path: str,
+        validation_source: bool,
+        process: Literal["train", "infer"]
+    ):
         self.metadata = metadata
         self.metadata_path = metadata_path
         self.global_schema = GlobalSettingsSchema()
         self.configuration_schema = RestrictedConfigurationSchema() \
-            if validation_source else ConfigurationSchema()
+            if validation_source and process == "train" else ConfigurationSchema()
 
     def validate_schema(self):
         """

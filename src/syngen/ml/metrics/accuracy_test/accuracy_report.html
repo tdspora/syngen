@@ -525,16 +525,14 @@
 						clustering
 						using
 						K-means is performed on the concatenated dataset. The optimal number of clusters is chosen using
-						the
-						elbow
-						rule. For the good synthetic data the proportion of original to synthetic records in each cluster
+						the Davies-Bouldin Index. For the good synthetic data the proportion of original to synthetic records in each cluster
 						should be close to 1:1. The mean clusters homogeneity is calculated as a mean of ratios of
 						original
 						to
 						synthetic
 						records in each cluster.</p>
 					<p class="accuracy-report-value"
-						style="margin-bottom:36px">Median clusters homogeneity: <span>{{clustering_value}}</span> </p>
+						style="margin-bottom:36px">Mean clusters homogeneity: <span>{{clustering_value}}</span> </p>
 					<img style="width: 100%;"
 						src="{{clusters_barplot}}">
 

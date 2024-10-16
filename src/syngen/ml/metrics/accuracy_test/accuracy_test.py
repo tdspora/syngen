@@ -44,7 +44,7 @@ class BaseTest(ABC):
     def report(
         self,
         cont_columns: List[str],
-        categ_columns: List[str],
+        categorical_columns: List[str],
         text_columns: List[str],
         date_columns: Optional[List[str]],
     ):
@@ -161,7 +161,7 @@ class AccuracyTest(BaseTest):
         delta = ProgressBarHandler().delta / 6
 
         self.update_progress_bar("Generation of the accuracy heatmap...")
-        self.acc.calculate_all(kwargs["categ_columns"])
+        self.acc.calculate_all(kwargs["categorical_columns"])
         acc_median = round(self.acc.calculate_heatmap_median(self.acc.heatmap), 4)
         logger.info(f"Median accuracy is {acc_median}")
         self.update_progress_bar("The accuracy heatmap has been generated", delta)
@@ -172,7 +172,7 @@ class AccuracyTest(BaseTest):
         if self.plot_exists:
             self.update_progress_bar("Generation of the univariate distributions...")
             uni_images = self.univariate.calculate_all(
-                kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
+                kwargs["cont_columns"], kwargs["categorical_columns"], kwargs["date_columns"]
             )
             self.update_progress_bar(
                 "The univariate distributions have been generated", delta
@@ -180,7 +180,7 @@ class AccuracyTest(BaseTest):
 
             self.update_progress_bar("Generation of the bivariate distributions...")
             bi_images = self.bivariate.calculate_all(
-                kwargs["cont_columns"], kwargs["categ_columns"], kwargs["date_columns"]
+                kwargs["cont_columns"], kwargs["categorical_columns"], kwargs["date_columns"]
             )
             self.update_progress_bar(
                 "The bivariate distributions have been generated", delta
@@ -188,7 +188,7 @@ class AccuracyTest(BaseTest):
 
         self.update_progress_bar("Generation of the correlations heatmap...")
         corr_result = self.correlations.calculate_all(
-            kwargs["categ_columns"], kwargs["cont_columns"]
+            kwargs["categorical_columns"], kwargs["cont_columns"]
         )
         corr_result = round(int(corr_result) if corr_result == 0 else abs(corr_result), 4)
         logger.info(f"Median of differences of correlations is {corr_result}")
@@ -196,14 +196,14 @@ class AccuracyTest(BaseTest):
 
         self.update_progress_bar("Generation of the clustering metric...")
         clustering_result = round(
-            self.clustering.calculate_all(kwargs["categ_columns"], kwargs["cont_columns"]), 4
+            self.clustering.calculate_all(kwargs["categorical_columns"], kwargs["cont_columns"]), 4
         )
-        logger.info(f"Median clusters homogeneity is {clustering_result}")
+        logger.info(f"Mean clusters homogeneity is {clustering_result}")
         self.update_progress_bar("The clustering metric has been calculated", delta)
 
         self.update_progress_bar("Generation of the utility metric...")
         utility_result = self.utility.calculate_all(
-            kwargs["categ_columns"], kwargs["cont_columns"]
+            kwargs["categorical_columns"], kwargs["cont_columns"]
         )
         self.update_progress_bar("The utility metric has been calculated", delta)
 

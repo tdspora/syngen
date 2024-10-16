@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict, Optional, Callable
+from typing import Dict, Tuple, Optional, Callable
 import itertools
 from collections import defaultdict
 
@@ -38,12 +38,24 @@ class Reporter:
         self.dataset = None
         self.columns_nan_labels = dict()
 
-    def _extract_report_data(self):
+    def _fetch_dataframe(self) -> pd.DataFrame:
+        """
+        Fetch the data using the callback function
+        """
+        data, schema = DataFrameFetcher(
+            loader=self.loader,
+            table_name=self.table_name
+        ).fetch_data()
+        logger.warning(
+            f"The original data of the table - '{self.table_name}' "
+            "has been fetched using the callback function. "
+            "The data may have been modified since the beginning of the training process."
+        )
+        return data
+
+    def _extract_report_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         if self.loader:
-            original, schema = DataFrameFetcher(
-                loader=self.loader,
-                table_name=self.table_name
-            ).fetch_data()
+            original = self._fetch_dataframe()
         else:
             original, schema = DataLoader(self.paths["original_data_path"]).load_data()
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
@@ -58,7 +70,7 @@ class Reporter:
             self.dataset.int_columns,
             self.dataset.float_columns,
             self.dataset.binary_columns,
-            self.dataset.categ_columns,
+            self.dataset.categorical_columns,
             self.dataset.long_text_columns,
             self.dataset.email_columns,
         )
@@ -95,15 +107,33 @@ class Reporter:
         for col in missing_columns:
             synthetic[col] = np.nan
         exclude_columns = self.dataset.uuid_columns
-        original = nan_labels_to_float(original, self.columns_nan_labels, exclude_columns)
-        synthetic = nan_labels_to_float(synthetic, self.columns_nan_labels, exclude_columns)
+        for column in self.dataset.cast_to_integer:
+            original[column] = pd.to_numeric(
+                original[column], errors="coerce", downcast="integer"
+            )
+            synthetic[column] = pd.to_numeric(
+                synthetic[column], errors="coerce", downcast="integer"
+            )
+        for column in self.dataset.cast_to_float:
+            original[column] = pd.to_numeric(
+                original[column], errors="coerce", downcast="float"
+            )
+            synthetic[column] = pd.to_numeric(
+                synthetic[column], errors="coerce", downcast="float"
+            )
+        original = nan_labels_to_float(
+            original, self.columns_nan_labels, exclude_columns, process="report"
+        )
+        synthetic = nan_labels_to_float(
+            synthetic, self.columns_nan_labels, exclude_columns, process="report"
+        )
         (
             str_columns,
             date_columns,
             int_columns,
             float_columns,
             binary_columns,
-            categ_columns,
+            categorical_columns,
             long_text_columns,
             email_columns,
         ) = types
@@ -126,22 +156,22 @@ class Reporter:
 
         for col in [i + "_word_count" for i in text_columns]:
             if original[col].nunique() < 50:  # ToDo check if we need this
-                categ_columns = categ_columns | {col}
+                categorical_columns = categorical_columns | {col}
             else:
                 int_columns = int_columns | {col}
         int_columns = int_columns | {i + "_char_len" for i in text_columns}
 
-        categ_columns = categ_columns | binary_columns
+        categorical_columns = categorical_columns | binary_columns
 
-        for categ_col in categ_columns:
-            original[categ_col] = original[categ_col].astype(str)
-            synthetic[categ_col] = synthetic[categ_col].astype(str)
+        for col in categorical_columns:
+            original[col] = original[col].astype(str)
+            synthetic[col] = synthetic[col].astype(str)
         return (
             original,
             synthetic,
             float_columns,
             int_columns,
-            categ_columns,
+            categorical_columns,
             date_columns,
         )
 
@@ -256,7 +286,7 @@ class AccuracyReporter(Reporter):
             synthetic,
             float_columns,
             int_columns,
-            categ_columns,
+            categorical_columns,
             date_columns,
         ) = self.preprocess_data()
         accuracy_test = AccuracyTest(
@@ -268,7 +298,7 @@ class AccuracyReporter(Reporter):
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
-            categ_columns=list(categ_columns),
+            categorical_columns=list(categorical_columns),
             date_columns=list(date_columns),
         )
 
@@ -294,7 +324,7 @@ class SampleAccuracyReporter(Reporter):
             sampled,
             float_columns,
             int_columns,
-            categ_columns,
+            categorical_columns,
             date_columns,
         ) = self.preprocess_data()
         accuracy_test = SampleAccuracyTest(
@@ -306,6 +336,6 @@ class SampleAccuracyReporter(Reporter):
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
-            categ_columns=list(categ_columns),
+            categorical_columns=list(categorical_columns),
             date_columns=list(date_columns),
         )

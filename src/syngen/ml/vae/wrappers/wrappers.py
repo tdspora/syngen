@@ -63,7 +63,7 @@ class VAEWrapper(BaseWrapper):
     main_process: str
     batch_size: int
     log_level: str
-    losses_info: pd.DataFrame = pd.DataFrame()
+    losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
