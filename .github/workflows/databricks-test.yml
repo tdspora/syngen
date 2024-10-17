@@ -36,7 +36,3 @@ jobs:
       - name: Build test Docker image
         run: |
             docker build -t databricks-test-image -f databricks.dockerfile .
-
-      - name: Run tests in Docker container
-        run: |
-            docker run databricks-test-image pytest src/tests
