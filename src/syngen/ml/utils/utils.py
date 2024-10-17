@@ -15,8 +15,6 @@ from ulid import ULID
 import random
 from loguru import logger
 
-from syngen.ml.validation_schema import TRAIN_REPORT_TYPES, INFER_REPORT_TYPES
-
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
 
@@ -424,15 +422,12 @@ def timing(func):
     return wrapper
 
 
-def validate_parameter_reports(type_of_process: Literal["train", "infer"]) -> Callable:
+def validate_parameter_reports(report_types: list, full_list: list) -> Callable:
     """
     Validate the values of the parameter 'reports'
     """
     def validator(ctx, param, value) -> List[str]:
         input_values = set(value)
-        report_types: List = (
-            TRAIN_REPORT_TYPES if type_of_process == "train" else INFER_REPORT_TYPES
-        )
         valid_values: List = ["none", "all"]
         valid_values.extend(report_types)
 
@@ -448,10 +443,8 @@ def validate_parameter_reports(type_of_process: Literal["train", "infer"]) -> Ca
                     "Invalid input: When '--reports' option is set to 'none' or 'all', "
                     "no other values should be provided."
                 )
-            if value[0] == "all" and type_of_process == "train":
-                return ["accuracy", "sample"]
-            if value[0] == "all" and type_of_process == "infer":
-                return ["accuracy"]
+            if value[0] == "all":
+                return full_list
             if value[0] == "none":
                 return list()
 

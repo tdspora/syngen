@@ -12,9 +12,13 @@ from syngen.ml.utils import (
     check_if_logs_available
 )
 from syngen.ml.utils import validate_parameter_reports
+from syngen.ml.validation_schema import INFER_REPORT_TYPES
 
 
-validate_reports = validate_parameter_reports("infer")
+validate_reports = validate_parameter_reports(
+    report_types=INFER_REPORT_TYPES,
+    full_list=["accuracy"]
+)
 
 
 @click.command()
