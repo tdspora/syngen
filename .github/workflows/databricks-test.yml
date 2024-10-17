@@ -1,8 +1,8 @@
-name: CI/CD
+name: Databricks-compatibility
 on: [push]
 
 jobs:
-  test:
+  Databricks-compatibility-test:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
