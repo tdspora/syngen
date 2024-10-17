@@ -430,7 +430,9 @@ def validate_parameter_reports(type_of_process: Literal["train", "infer"]) -> Ca
     """
     def validator(ctx, param, value) -> List[str]:
         input_values = set(value)
-        report_types: List = TRAIN_REPORT_TYPES if type_of_process == "train" else INFER_REPORT_TYPES
+        report_types: List = (
+            TRAIN_REPORT_TYPES if type_of_process == "train" else INFER_REPORT_TYPES
+        )
         valid_values: List = ["none", "all"]
         valid_values.extend(report_types)
 
