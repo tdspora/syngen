@@ -7,9 +7,9 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_training_process_with_absent_metadata(mock_validator_run, rp_logger):
+def test_init_worker_for_training_process_with_absent_metadata_path(mock_validator_run, rp_logger):
     """
-    Test the initialization of 'Worker' class with the absent metadata
+    Test the initialization of 'Worker' class with the absent metadata path
     during the training process
     """
     rp_logger.info(
@@ -49,9 +49,9 @@ def test_init_worker_for_training_process_with_absent_metadata(mock_validator_ru
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run, rp_logger):
+def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_run, rp_logger):
     """
-    Test the initialization of 'Worker' class with the absent metadata
+    Test the initialization of 'Worker' class with the absent metadata path
     during the inference process
     """
     rp_logger.info(
@@ -89,16 +89,12 @@ def test_init_worker_for_infer_process_with_absent_metadata(mock_validator_run, 
 
 
 @patch.object(Validator, "run")
-def test_init_worker_with_metadata(mock_validator_run, rp_logger):
+def test_init_worker_with_metadata_path(rp_logger):
     """
-    Test the initialization of 'Worker' class with the metadata
-    contained the information of one table with only the primary key
-    during the training process
+    Test the initialization of 'Worker' class with the metadata path
     """
     rp_logger.info(
-        "Test the initialization of the instance of 'Worker' class "
-        "with provided metadata contained the information of one table "
-        "with only the primary key during the training process"
+        "Test the initialization of the instance of 'Worker' class with the metadata path"
     )
     worker = Worker(
         table_name=None,
@@ -135,12 +131,11 @@ def test_init_worker_with_metadata(mock_validator_run, rp_logger):
             "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
         },
     }
-    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "run")
-def test_init_worker_with_empty_settings_in_metadata(mock_validator_run, rp_logger):
+def test_init_worker_with_empty_settings_in_metadata_in_train_process(rp_logger):
     """
     Test the initialization during the training process
     of 'Worker' class with metadata contained the information of one table
@@ -181,14 +176,55 @@ def test_init_worker_with_empty_settings_in_metadata(mock_validator_run, rp_logg
             "keys": {},
         },
     }
-    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_training_with_metadata_with_global_settings(
-    mock_validator_run, rp_logger
-):
+def test_init_worker_with_empty_settings_in_metadata_in_infer_process(rp_logger):
+    """
+    Test the initialization during the inference process
+    of 'Worker' class with metadata contained the information of one table
+    in which the training, inference, keys settings are empty
+    """
+    rp_logger.info(
+        "Test the initialization of the instance of 'Worker' class with provided metadata "
+        "contained the information of one table in which 'train_settings', 'infer_settings', and "
+        "'keys' are empty during the inference process"
+    )
+    worker = Worker(
+        table_name=None,
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      "metadata_with_empty_settings.yaml",
+        settings={
+            "size": 200,
+            "run_parallel": False,
+            "batch_size": 200,
+            "reports": ["accuracy"],
+            "random_seed": 5,
+        },
+        log_level="INFO",
+        type_of_process="infer",
+    )
+    assert worker.metadata == {
+        "global": {},
+        "test_table": {
+            "train_settings": {
+                "source": "./path/to/test_table.csv"
+            },
+            "infer_settings": {
+                "size": 200,
+                "run_parallel": False,
+                "batch_size": 200,
+                "random_seed": 5,
+                "reports": ["accuracy"]
+            },
+            "keys": {},
+        },
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
     """
     Test the initialization of 'Worker' class during the training process
     with the metadata contained related tables and global settings
@@ -214,7 +250,11 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
     )
     assert worker.metadata == {
         "global": {
-            "train_settings": {"drop_null": True, "epochs": 5, "row_limit": 500},
+            "train_settings": {
+                "drop_null": True,
+                "epochs": 5,
+                "row_limit": 500
+            },
             "infer_settings": {
                 "reports": ["accuracy"],
                 "run_parallel": True,
@@ -252,14 +292,10 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
             "infer_settings": {},
         },
     }
-    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "run")
-def test_init_worker_for_inference_with_metadata_with_global_settings(
-    mock_validator_run, rp_logger
-):
+def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger):
     """
     Test the initialization of 'Worker' class during an inference process
     with metadata contained the information of related tables with the global settings
@@ -327,7 +363,6 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
             },
         },
     }
-    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

@@ -15,7 +15,7 @@ PATH_TO_METADATA = f"{DIR_NAME}/unit/launchers/fixtures/metadata.yaml"
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_table_name(
-        mock_post_init, mock_launch_infer, rp_logger
+    mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info("Launch infer process through CLI with parameter '--table_name'")
     runner = CliRunner()
@@ -29,7 +29,7 @@ def test_infer_table_with_table_name(
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_metadata_path(
-        mock_post_init, mock_launch_infer, rp_logger
+    mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info("Launch infer process through CLI with parameter '--metadata_path'")
     runner = CliRunner()
@@ -126,7 +126,9 @@ def test_infer_table_with_invalid_run_parallel(rp_logger):
         "Launch infer process through CLI with invalid 'run_parallel' parameter equals 'test'"
     )
     runner = CliRunner()
-    result = runner.invoke(launch_infer, ["--run_parallel", "test", "--table_name", TABLE_NAME])
+    result = runner.invoke(
+        launch_infer, ["--run_parallel", "test", "--table_name", TABLE_NAME]
+    )
     assert result.exit_code == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -160,7 +162,7 @@ def test_infer_table_with_invalid_batch_size(rp_logger):
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_valid_random_seed(
-        mock_post_init, mock_launch_infer, rp_logger
+    mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info(
         "Launch infer process through CLI with valid 'random_seed' parameter equals 1"
@@ -183,7 +185,7 @@ def test_infer_table_with_invalid_random_seed(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("valid_value", INFER_REPORT_TYPES)
+@pytest.mark.parametrize("valid_value", INFER_REPORT_TYPES + ["none", "all"])
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_valid_parameter_reports(
@@ -264,8 +266,7 @@ def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
 )
 def test_infer_table_with_redundant_parameter_reports(prior_value, value, rp_logger):
     rp_logger.info(
-        f"Launch infer process through CLI "
-        f"with redundant 'reports' parameter: '{value}'"
+        f"Launch infer process through CLI with redundant 'reports' parameter: '{value}'"
     )
     runner = CliRunner()
     result = runner.invoke(

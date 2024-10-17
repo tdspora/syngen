@@ -15,13 +15,16 @@ PATH_TO_METADATA = f"{DIR_NAME}/unit/launchers/fixtures/metadata.yaml"
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_source_and_table_name(
-        mock_post_init, mock_launch_train, rp_logger
+    mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with parameters '--source' and '--table_name'"
     )
     runner = CliRunner()
-    result = runner.invoke(launch_train, ["--source", PATH_TO_TABLE, "--table_name", TABLE_NAME])
+    result = runner.invoke(
+        launch_train,
+        ["--source", PATH_TO_TABLE, "--table_name", TABLE_NAME]
+    )
     assert result.exit_code == 0
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
@@ -31,7 +34,7 @@ def test_train_table_with_source_and_table_name(
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_metadata_path(
-        mock_post_init, mock_launch_train, rp_logger
+    mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info("Launch train process through CLI with parameters '--metadata_path'")
     runner = CliRunner()
@@ -171,7 +174,7 @@ def test_train_table_without_parameters(rp_logger):
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_epochs(
-        mock_post_init, mock_launch_train, monkeypatch, rp_logger
+    mock_post_init, mock_launch_train, monkeypatch, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with valid 'epochs' parameter"
@@ -203,7 +206,7 @@ def test_train_table_with_invalid_epochs(rp_logger):
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_drop_null(
-        mock_post_init, mock_launch_train, rp_logger
+    mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with valid 'drop_null' parameter equals 'True'"
@@ -235,7 +238,7 @@ def test_train_table_with_invalid_drop_null(rp_logger):
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_row_limit(
-        mock_post_init, mock_launch_train, rp_logger
+    mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with valid 'row_limit' parameter equals 100"
@@ -264,11 +267,11 @@ def test_train_table_with_invalid_row_limit(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("valid_value", TRAIN_REPORT_TYPES)
+@pytest.mark.parametrize("valid_value", TRAIN_REPORT_TYPES + ["none", "all"])
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_parameter_reports(
-        mock_post_init, mock_launch_train, valid_value, rp_logger
+    mock_post_init, mock_launch_train, valid_value, rp_logger
 ):
     rp_logger.info(
         f"Launch train process through CLI with valid 'reports' parameter equals '{valid_value}'"
@@ -316,7 +319,9 @@ def test_train_table_with_several_valid_parameter_reports(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("invalid_value", ["test", ("none", "all"), ("none", "test"), ("all", "test")])
+@pytest.mark.parametrize(
+    "invalid_value", ["test", ("none", "all"), ("none", "test"), ("all", "test")]
+)
 def test_train_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     rp_logger.info(
         f"Launch train process through CLI "
@@ -345,8 +350,7 @@ def test_train_table_with_invalid_parameter_reports(invalid_value, rp_logger):
 )
 def test_train_table_with_redundant_parameter_reports(prior_value, value, rp_logger):
     rp_logger.info(
-        f"Launch train process through CLI "
-        f"with redundant 'reports' parameter: '{value}'"
+        f"Launch train process through CLI with redundant 'reports' parameter: '{value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -371,7 +375,7 @@ def test_train_table_with_redundant_parameter_reports(prior_value, value, rp_log
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_batch_size(
-        mock_post_init, mock_launch_train, rp_logger
+    mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch train process through CLI with valid 'batch_size' parameter equals 100"
