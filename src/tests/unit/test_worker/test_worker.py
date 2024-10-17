@@ -224,6 +224,7 @@ def test_init_worker_with_empty_settings_in_metadata_in_infer_process(rp_logger)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "run")
 def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
     """
     Test the initialization of 'Worker' class during the training process
@@ -235,8 +236,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
     )
     worker = Worker(
         table_name=None,
-        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
-                      "metadata_with_global_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -295,6 +295,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(Validator, "run")
 def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger):
     """
     Test the initialization of 'Worker' class during an inference process
@@ -493,8 +494,7 @@ def test_launch_train_with_metadata_of_related_tables(
     )
     worker = Worker(
         table_name=None,
-        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
-                      "metadata_of_related_tables.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_of_related_tables.yaml",
         settings={
             "source": None,
             "epochs": 20,

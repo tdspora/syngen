@@ -27,7 +27,10 @@ fk_test:
     source: ./data/fk_test.csv
     epochs: 10
     drop_null: False
-    reports: all
+    reports:
+      - accuracy
+      - sample
+      - metrics_only
     batch_size: 200
 
   format:
@@ -45,7 +48,9 @@ fk_test:
     run_parallel: False
     batch_size: 200
     random_seed: 1
-    reports: none
+    reports:
+      - accuracy
+      - metrics_only
 
   keys:
     fk_test_pk_id:
