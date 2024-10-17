@@ -12,10 +12,9 @@ import pandavro as pdx
 import yaml
 from yaml import SafeLoader
 from yaml.scanner import ScannerError
-from avro.datafile import DataFileReader
-from avro.io import DatumReader
 from avro.errors import InvalidAvroBinaryEncoding
 from loguru import logger
+import fastavro
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
@@ -325,13 +324,20 @@ class AvroLoader(BaseDataLoader):
             df = AvroConvertor(preprocessed_schema, df).preprocessed_df
         self._save_data(df, schema)
 
-    def load_original_schema(self) -> Dict:
+    def __load_original_schema(self):
+        with open(self.path, "rb") as f:
+            return self._load_original_schema(f)
+
+    @staticmethod
+    def _load_original_schema(f):
         """
         Load schema of the metadata of the table in '.avro' format
         """
-        with open(self.path, "rb") as f:
-            reader = DataFileReader(f, DatumReader())
-            return eval(reader.meta["avro.schema"].decode())
+        reader = fastavro.reader(f)
+        return reader.writer_schema
+
+    def load_original_schema(self) -> Dict:
+        return self.__load_original_schema()
 
     def load_schema(self) -> Dict[str, str]:
         """
