@@ -123,6 +123,10 @@ class TrainConfig:
         else:
             data_loader = DataLoader(self.source)
             self.original_schema = data_loader.original_schema
+            if self.original_schema is not None:
+                logger.trace(
+                    f"The schema of the table - '{self.table_name}': {self.original_schema}"
+                )
             return data_loader.load_data()
 
     def _remove_empty_columns(self):
