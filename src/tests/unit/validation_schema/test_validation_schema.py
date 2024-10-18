@@ -1,19 +1,11 @@
 import pytest
-from typing import Dict
 
-import yaml
-from yaml import Loader
 from marshmallow import ValidationError
 
 from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.data_loaders import MetadataLoader
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
-
-
-def load_metadata_file(metadata_path) -> Dict:
-    with open(metadata_path, "r", encoding="utf-8") as metadata_file:
-        metadata = yaml.load(metadata_file, Loader=Loader)
-    return metadata
 
 
 def test_valid_metadata_file(rp_logger, caplog):
@@ -21,7 +13,7 @@ def test_valid_metadata_file(rp_logger, caplog):
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -44,7 +36,7 @@ def test_valid_metadata_file_with_source_contained_path_to_excel_table(
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "valid_metadata_file_for_excel_table.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -65,7 +57,7 @@ def test_valid_metadata_file_without_global_settings(rp_logger, caplog):
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "valid_metadata_file_with_absent_global_settings.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -86,7 +78,7 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "valid_metadata_file_only_with_required_fields.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -142,20 +134,15 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
             "{'batch_size': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
+            {"reports": "not a valid type of a value"},
             "The details are - {'fk_test': {'train_settings': "
-            "{'print_report': ['Not a valid boolean.']}}}",
+            "{'reports': ['Invalid value.']}}}",
         ),
         (
             {"column_types": {"invalid_type": ["column_1", "column_2"]}},
             "The details are - {'fk_test': {'train_settings': {'column_types': "
             "defaultdict(<class 'dict'>, {'invalid_type': {"
             "'key': ['Must be one of: categorical.']}})}}}",
-        ),
-        (
-            {"get_infer_metrics": "invalid parameter"},
-            "The details are - {'fk_test': {'train_settings': {"
-            "'get_infer_metrics': ['Unknown field.']}}}",
         ),
     ],
 )
@@ -168,7 +155,7 @@ def test_metadata_file_with_invalid_training_settings(
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["fk_test"]["train_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
@@ -223,14 +210,9 @@ def test_metadata_file_with_invalid_training_settings(
             "{'batch_size': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
+            {"reports": "not a valid type of a value"},
             "The details are - {'global': {'train_settings': "
-            "{'print_report': ['Not a valid boolean.']}}}",
-        ),
-        (
-            {"get_infer_metrics": "invalid parameter"},
-            "The details are - {'global': {'train_settings': {"
-            "'get_infer_metrics': ['Unknown field.']}}}",
+            "{'reports': ['Invalid value.']}}}",
         ),
     ],
 )
@@ -243,7 +225,7 @@ def test_metadata_file_with_invalid_global_training_settings(
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["global"]["train_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
@@ -293,14 +275,9 @@ def test_metadata_file_with_invalid_global_training_settings(
             "{'random_seed': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
+            {"reports": "not a valid type of a value"},
             "The details are - {'fk_test': {'infer_settings': {"
-            "'print_report': ['Not a valid boolean.']}}}",
-        ),
-        (
-            {"get_infer_metrics": "not a valid type of a value"},
-            "The details are - {'fk_test': {'infer_settings': {"
-            "'get_infer_metrics': ['Not a valid boolean.']}}}",
+            "'reports': ['Invalid value.']}}}",
         ),
     ],
 )
@@ -311,7 +288,7 @@ def test_metadata_file_with_invalid_infer_settings(
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["fk_test"]["infer_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
@@ -356,14 +333,14 @@ def test_metadata_file_with_invalid_infer_settings(
             "{'random_seed': ['Not a valid integer.']}}}",
         ),
         (
-            {"print_report": "not a valid type of a value"},
+            {"reports": "not a valid type of a value"},
             "The details are - {'global': {'infer_settings': {"
-            "'print_report': ['Not a valid boolean.']}}}",
+            "'reports': ['Invalid value.']}}}",
         ),
         (
-            {"get_infer_metrics": "not a valid type of a value"},
+            {"reports": 10},
             "The details are - {'global': {'infer_settings': {"
-            "'get_infer_metrics': ['Not a valid boolean.']}}}",
+            "'reports': ['Invalid value.']}}}",
         ),
     ],
 )
@@ -376,7 +353,7 @@ def test_metadata_file_with_invalid_global_infer_settings(
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["global"]["infer_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
@@ -465,7 +442,7 @@ def test_metadata_file_with_invalid_format_settings_for_csv_table(
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["fk_test"]["format"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
@@ -529,7 +506,7 @@ def test_metadata_file_with_invalid_format_settings_for_excel_table(
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "valid_metadata_file_for_excel_table.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["pk_test"]["format"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
@@ -551,7 +528,7 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
     )
     path_to_metadata = (f"{DIR_NAME}/unit/validation_schema/fixtures/"
                         "metadata_file_without_required_fields.yaml")
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
@@ -561,8 +538,8 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
         ).validate_schema()
     assert str(error.value) == (
         "Validation error(s) found in the schema of the metadata. "
-        "The details are - {'pk_test': {'train_settings': ["
-        "'Missing data for required field.']}, 'fk_test': {"
+        "The details are - {'pk_test': {'train_settings': "
+        "{'source': ['Missing data for required field.']}}, 'fk_test': {"
         "'train_settings': {'source': ['Missing data for required field.']}}}"
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -576,7 +553,7 @@ def test_metadata_file_with_invalid_PK_key_contained_references_section(rp_logge
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/metadata_file_with_invalid_PK_key.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
@@ -601,7 +578,7 @@ def test_metadata_file_with_invalid_UQ_key_contained_references_section(rp_logge
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/metadata_file_with_invalid_UQ_key.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
@@ -626,7 +603,7 @@ def test_metadata_file_with_invalid_FK_key_without_references_section(rp_logger)
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/metadata_file_with_invalid_FK_key.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
@@ -711,7 +688,7 @@ def test_validation_schema_of_keys(rp_logger, path_to_metadata, expected_error):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with invalid section 'keys'"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
@@ -735,7 +712,7 @@ def test_valid_metadata_file_without_sources_during_training_process_without_val
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "metadata_file_without_sources.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -758,7 +735,7 @@ def test_valid_metadata_file_without_sources_during_training_process_with_valida
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "metadata_file_without_sources.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as e:
         ValidationSchema(
             metadata=metadata,
@@ -768,7 +745,8 @@ def test_valid_metadata_file_without_sources_during_training_process_with_valida
         ).validate_schema()
     assert str(e.value) == (
         "Validation error(s) found in the schema of the metadata. "
-        "The details are - {'pk_test': {'train_settings': ['Field may not be null.']}, "
+        "The details are - {'pk_test': {'train_settings': {"
+        "'source': ['Missing data for required field.']}}, "
         "'fk_test': {'train_settings': {'source': ['Missing data for required field.']}}}"
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -785,7 +763,7 @@ def test_valid_metadata_file_without_sources_during_infer_process_without_valida
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "metadata_file_without_sources.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -808,7 +786,7 @@ def test_valid_metadata_file_without_sources_during_inference_process_with_valid
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "metadata_file_without_sources.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -831,7 +809,7 @@ def test_valid_metadata_file_without_training_settings_during_train_process_with
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "metadata_file_without_training_settings.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -854,7 +832,7 @@ def test_valid_metadata_file_without_training_settings_during_train_process_with
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "metadata_file_without_training_settings.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as e:
         ValidationSchema(
             metadata=metadata,
@@ -882,7 +860,7 @@ def test_valid_metadata_file_without_training_settings_during_infer_process_with
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "metadata_file_without_training_settings.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -906,7 +884,7 @@ def test_valid_metadata_file_without_training_settings_during_infer_process_with
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
         "metadata_file_without_training_settings.yaml"
     )
-    metadata = load_metadata_file(path_to_metadata)
+    metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,

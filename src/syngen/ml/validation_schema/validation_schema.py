@@ -13,6 +13,8 @@ from marshmallow import (
 from loguru import logger
 
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
+INFER_REPORT_TYPES = ["accuracy", "metrics_only"]
+TRAIN_REPORT_TYPES = INFER_REPORT_TYPES + ["sample"]
 
 
 class ReferenceSchema(Schema):
@@ -76,7 +78,13 @@ class TrainingSettingsSchema(Schema):
     drop_null = fields.Boolean(required=False)
     row_limit = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), required=False)
-    print_report = fields.Boolean(required=False)
+    reports = fields.Raw(
+        required=False,
+        validate=(
+            lambda x: isinstance(x, list) and
+            all(isinstance(elem, str) and elem in TRAIN_REPORT_TYPES for elem in x)
+        )
+    )
 
 
 class ExtendedRestrictedTrainingSettingsSchema(TrainingSettingsSchema):
@@ -97,8 +105,13 @@ class InferSettingsSchema(Schema):
     run_parallel = fields.Boolean(required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     random_seed = fields.Integer(validate=validate.Range(min=0), allow_none=True, required=False)
-    print_report = fields.Boolean(required=False)
-    get_infer_metrics = fields.Boolean(required=False)
+    reports = fields.Raw(
+        required=False,
+        validate=(
+            lambda x: isinstance(x, list) and
+            all(isinstance(elem, str) and elem in INFER_REPORT_TYPES for elem in x)
+        )
+    )
 
 
 class CSVFormatSettingsSchema(Schema):

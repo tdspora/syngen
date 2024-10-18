@@ -24,7 +24,7 @@ class TrainConfig:
     row_limit: Optional[int]
     table_name: Optional[str]
     metadata_path: Optional[str]
-    print_report: bool
+    reports: List[str]
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
     data: pd.DataFrame = field(init=False)
@@ -69,7 +69,7 @@ class TrainConfig:
             "drop_null": self.drop_null,
             "row_subset": self.row_subset,
             "batch_size": self.batch_size,
-            "print_report": self.print_report
+            "reports": self.reports
         }
 
     def _set_batch_size(self):
@@ -291,8 +291,7 @@ class InferConfig:
     batch_size: Optional[int]
     metadata_path: Optional[str]
     random_seed: Optional[int]
-    print_report: bool
-    get_infer_metrics: bool
+    reports: List[str]
     both_keys: bool
     log_level: str
     loader: Optional[Callable[[str], pd.DataFrame]]
@@ -314,8 +313,7 @@ class InferConfig:
             "run_parallel": self.run_parallel,
             "batch_size": self.batch_size,
             "random_seed": self.random_seed,
-            "print_report": self.print_report,
-            "get_infer_metrics": self.get_infer_metrics,
+            "reports": self.reports,
         }
 
     def _set_up_reporting(self):
@@ -323,7 +321,7 @@ class InferConfig:
         Check whether it is possible to generate the report
         """
         if (
-                (self.print_report or self.get_infer_metrics)
+                self.reports
                 and (
                     not DataLoader(self.paths["input_data_path"]).has_existed_path
                     and not self.loader
@@ -335,22 +333,22 @@ class InferConfig:
                 f"doesn't exist."
             )
             logger.warning(message)
-            if self.print_report:
-                self.print_report = False
+            if any([item == "accuracy" for item in self.reports]):
+                self.reports = list()
                 log_message = (
                     "As a result, the accuracy report of the table - "
                     f"'{self.table_name}' won't be generated. "
-                    "The parameter '--print_report' of the table - "
-                    f"'{self.table_name}' has been set to False"
+                    "The parameter 'reports' of the table - "
+                    f"'{self.table_name}' has been set to 'none'"
                 )
                 logger.warning(log_message)
-            if self.get_infer_metrics:
-                self.get_infer_metrics = False
+            if any([item == "metrics_only" for item in self.reports]):
+                self.reports = list()
                 log_message = (
                     "As a result, the infer metrics related to the table - "
                     f"'{self.table_name}' won't be fetched. "
-                    "The parameter '--get_infer_metrics' of the table - "
-                    f"'{self.table_name}' has been set to False"
+                    "The parameter 'reports' of the table - "
+                    f"'{self.table_name}' has been set to 'none'"
                 )
                 logger.warning(log_message)
 

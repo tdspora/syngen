@@ -22,5 +22,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     ProgressBarHandler,
     check_if_logs_available,
     get_initial_table_name,
+    validate_parameter_reports,
     timing
 )

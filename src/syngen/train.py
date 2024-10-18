@@ -1,6 +1,6 @@
 import os
 import traceback
-from typing import Optional
+from typing import Optional, List
 
 import click
 from loguru import logger
@@ -12,10 +12,23 @@ from syngen.ml.utils import (
     set_log_path,
     check_if_logs_available
 )
+from syngen.ml.utils import validate_parameter_reports
+from syngen.ml.validation_schema import TRAIN_REPORT_TYPES
+
+
+validate_reports = validate_parameter_reports(
+    report_types=TRAIN_REPORT_TYPES,
+    full_list=["accuracy", "sample"]
+)
 
 
 @click.command()
-@click.option("--metadata_path", type=str, default=None, help="Path to the metadata file")
+@click.option(
+    "--metadata_path",
+    type=str,
+    default=None,
+    help="Path to the metadata file"
+)
 @click.option(
     "--source",
     type=str,
@@ -49,11 +62,18 @@ from syngen.ml.utils import (
          "length will randomly subset the specified rows number",
 )
 @click.option(
-    "--print_report",
-    default=False,
-    type=click.BOOL,
-    help="Whether to print quality report. Might require significant time "
-    "for big generated tables (>1000 rows). If absent, it's defaulted to False",
+    "--reports",
+    default=("none",),
+    type=click.UNPROCESSED,
+    multiple=True,
+    callback=validate_reports,
+    help="Controls the generation of quality reports. "
+    "Might require significant time for big generated tables (>1000 rows). "
+    "If set to 'sample', generates a sampling report. "
+    "If set to 'accuracy', generates an accuracy report. "
+    "If set to 'metrics_only', outputs the metrics information only to standard output. "
+    "If set to 'all', generates both sampling and accuracy reports. "
+    "If it's absent or set to 'none', no reports are generated.",
 )
 @click.option(
     "--log_level",
@@ -76,7 +96,7 @@ def launch_train(
     epochs: int,
     drop_null: bool,
     row_limit: Optional[int],
-    print_report: bool,
+    reports: List[str],
     log_level: str,
     batch_size: int = 32,
 ):
@@ -91,7 +111,7 @@ def launch_train(
     epochs
     drop_null
     row_limit
-    print_report
+    reports
     log_level
     batch_size
     -------
@@ -100,6 +120,12 @@ def launch_train(
     os.environ["LOGURU_LEVEL"] = log_level
     set_log_path(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
     setup_logger()
+    if "accuracy" in reports and "metrics_only" in reports:
+        reports.remove("metrics_only")
+        logger.warning(
+            "The '--reports' parameter value 'metrics_only' will be ignored "
+            "since the accuracy report includes fetching accuracy metrics."
+        )
     if not metadata_path and not source and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' "
@@ -147,7 +173,7 @@ def launch_train(
         "drop_null": drop_null,
         "row_limit": row_limit,
         "batch_size": batch_size,
-        "print_report": print_report,
+        "reports": reports,
     }
     worker = Worker(
         table_name=table_name,
