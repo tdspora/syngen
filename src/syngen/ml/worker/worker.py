@@ -16,6 +16,7 @@ from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
+from syngen.ml.validation_schema import INFER_REPORT_TYPES
 
 
 @define
@@ -248,9 +249,8 @@ class Worker:
         """
         return any(
             [
-                "accuracy" in config.get(f"{type_of_process}_settings", {}).get("reports", []) or
-                "metrics_only" in config.get(f"{type_of_process}_settings", {}).get("reports", [])
-                for table, config in config_of_tables.items()
+                report in config.get(f"{type_of_process}_settings", {}).get("reports", [])
+                for report in INFER_REPORT_TYPES for config in config_of_tables.values()
             ]
         )
 
