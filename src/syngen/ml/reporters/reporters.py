@@ -164,6 +164,7 @@ class Reporter:
         categorical_columns = categorical_columns | binary_columns
 
         for col in categorical_columns:
+            # There's a non-breaking space in strings not to mix them with regular strings from dataset.
             original[col] = original[col].fillna('No\xa0value').astype(str)
             synthetic[col] = synthetic[col].fillna('No\xa0value').astype(str)
         return (
