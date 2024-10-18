@@ -9,7 +9,7 @@ The tool is based on the variational autoencoder model (VAE). The Bayesian Gauss
 
 ## Prerequisites
 
-Python 3.9 or Python 3.10 is required to run the library. The library is tested on Linux and Windows operating systems.
+Python 3.10 or 3.11 is required to run the library. The library is tested on Linux and Windows operating systems.
 You can download Python from [the official website](https://www.python.org/downloads/) and install manually, or you can install Python [from your terminal](https://docs.python-guide.org/starting/installation/). After the installation of Python, please, check whether [pip is installed](https://pip.pypa.io/en/stable/getting-started/).
 
 ## Getting started
@@ -443,13 +443,13 @@ docker run --rm -it \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
 
-## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10
+## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10 or 3.11
 
 ### Prerequisites
 
 Before you begin, make sure you have the following installed:
 
-- Python 3.10
+- Python 3.10 or 3.11
 - Homebrew (optional but recommended for managing dependencies)
 
 ### Installation Steps
@@ -507,6 +507,14 @@ Then install it in editable mode.
     brew install pyenv
     pyenv install 3.10.0
     pyenv global 3.10.0
+    ```
+OR
+- **Python 3.11**: Ensure you have Python 3.11 installed. You can use pyenv to manage different Python versions:
+
+    ```sh
+    brew install pyenv
+    pyenv install 3.11.0
+    pyenv global 3.11.0
     ```
 
 ### Verifying Installation

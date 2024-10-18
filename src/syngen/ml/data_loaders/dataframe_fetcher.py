@@ -12,6 +12,7 @@ class DataFrameFetcher:
     """
     loader: Callable[[str], pd.DataFrame]
     table_name: str
+    original_schema = None
 
     def fetch_data(self) -> Tuple[pd.DataFrame, Dict]:
         try:

@@ -144,7 +144,8 @@ def test_save_dataset(rp_logger):
         "nan_labels_in_uuid",
         "dropped_columns",
         "order_of_columns",
-        "categ_columns",
+        "custom_categorical_columns",
+        "categorical_columns",
         "str_columns",
         "float_columns",
         "int_columns",
@@ -165,13 +166,16 @@ def test_save_dataset(rp_logger):
         "foreign_keys_mapping",
         "foreign_keys_list",
         "fk_columns",
-        "format"
+        "keys_mapping",
+        "format",
+        "cast_to_float",
+        "cast_to_integer",
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
-def test_is_valid_categ_defined_in_csv_table(rp_logger):
+def test_is_valid_categorical_defined_in_csv_table(rp_logger):
     rp_logger.info(
         "Test the process of the detection of "
         "the categorical columns in the table in '.csv' format"
@@ -190,7 +194,7 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
         main_process="train"
     )
     mock_dataset.launch_detection()
-    assert mock_dataset.categ_columns == {
+    assert mock_dataset.categorical_columns == {
         "time",
         "ptd_dt",
         "email",
@@ -200,6 +204,54 @@ def test_is_valid_categ_defined_in_csv_table(rp_logger):
         "upd_dt"
     }
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+def test_set_custom_categorical_columns(rp_logger):
+    rp_logger.info(
+        "Test the process of the detection of "
+        "the categorical columns that has been set by a user"
+    )
+    df, schema = DataLoader(
+        f"{DIR_NAME}/unit/dataset/fixtures/data_with_emails.csv"
+    ).load_data()
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata={
+            "mock_table": {
+                "train_settings": {
+                    "source": "path/to/source.csv",
+                    "column_types": {
+                        "categorical": [
+                            "DocNumber",
+                            "MetadataSubject",
+                            "ExtractedFrom"
+                        ]
+                    }
+                },
+                "infer_settings": {},
+                "keys": {
+                    "pk_key": {
+                        "type": "PK",
+                        "columns": ["DocNumber"]
+                    }
+                }
+            }
+        },
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path",
+        },
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+    assert mock_dataset.categorical_columns == {
+        "SenderPersonId",
+        "MetadataSubject",
+        "ExtractedFrom"
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -230,7 +282,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
         "id",
         "timestamp"
     }
-    assert mock_dataset.categ_columns == {"ensure"}
+    assert mock_dataset.categorical_columns == {"ensure"}
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
@@ -292,7 +344,6 @@ def test_check_non_existent_columns(rp_logger):
         ("%b %d, %Y", "%b %d, %Y"),
         ("%d %B %Y", "%d %B %Y"),
         ("%b %d %Y", "%b %d %Y"),
-        ("%d.%m.%Y", "%d.%m.%Y"),
         ("%m-%b-%y", "%d-%m-%Y"),
     ]
 )
@@ -407,6 +458,24 @@ def test_define_date_format_with_diff_format(
             "14-11-2074", "16-06-2089", "02-11-2082", "23-08-2082",
             "28-12-2072", "02-04-2076", "03-10-2086", "18-10-2071"
         ]),
+        ("%d-%m-%Y", "%d-%m-%Y", [
+            "01-01-2074", "27-03-2081", "17-03-2087", "09-09-2089",
+            "09-08-2086", "11-04-2082", "12-04-2072", "06-09-2081",
+            "09-09-2080", "23-03-2070", "17-09-2070", "06-03-2082",
+            "23-03-2078", "24-03-2076", "31-03-2073", "28-10-2084",
+            "28-09-2074", "27-04-2073", "15-03-2086", "21-10-2080",
+            "08-04-2087", "08-07-2070", "13-03-2073", "21-10-2071",
+            "17-04-2076", "27-12-2081", "08-04-2070", "01-03-2076",
+            "13-02-2071", "05-04-2082", "30-09-2085", "02-04-2071",
+            "10-10-2084", "31-10-2085", "16-04-2080", "02-10-2070",
+            "26-07-2073", "12-03-2073", "02-03-2074", "16-09-2077",
+            "24-03-2070", "12-02-2088", "20-06-2070", "08-08-2075",
+            "13-11-2087", "30-11-2086", "26-07-2084", "26-06-2081",
+            "22-12-2075", "15-07-2079", "23-09-2070", "23-09-2077",
+            "14-11-2074", "16-06-2089", "02-11-2082", "23-08-2082",
+            "28-12-2072", "02-04-2076", "03-10-2086", "18-10-2071",
+            np.nan, np.nan, np.nan
+        ]),
         ("%m/%d/%Y", "%m/%d/%Y", [
             "02/27/2089", "11/24/2088", "02/16/2087", "08/30/2071",
             "12/14/2071", "09/05/2074", "05/28/2081", "04/24/2075",
@@ -440,6 +509,23 @@ def test_define_date_format_with_diff_format(
             "14/08/2088", "09/11/2080", "01/05/2087", "25/06/2087",
             "11/10/2086", "23/01/2075", "19/08/2088", "24/09/2077",
             "09/05/2087", "05/08/2079", "04/11/2080", "12/01/2081"
+        ]),
+        ("%d.%m.%Y", "%d.%m.%Y", [
+            "10.11.2077", "25.03.2080", "07.02.2085", "04.07.2073",
+            "31.08.2088", "05.01.2072", "12.12.2085", "16.07.2081",
+            "04.10.2071", "15.01.2079", "23.09.2080", "01.12.2081",
+            "18.06.2079", "07.04.2081", "10.08.2081", "05.07.2073",
+            "01.02.2078", "25.12.2084", "16.09.2070", "24.07.2074",
+            "23.03.2081", "09.12.2080", "05.02.2072", "14.10.2081",
+            "14.08.2074", "03.06.2074", "28.10.2086", "03.09.2076",
+            "05.02.2086", "27.09.2080", "09.04.2077", "04.10.2074",
+            "19.03.2077", "27.08.2085", "22.06.2074", "15.09.2073",
+            "06.03.2089", "16.06.2078", "04.07.2084", "16.06.2082",
+            "31.07.2082", "12.06.2087", "20.08.2073", "26.03.2074",
+            "11.11.2072", "18.04.2072", "12.05.2071", "12.10.2080",
+            "18.01.2072", "24.12.2073", "30.08.2075", "17.02.2072",
+            "02.01.2075", "18.01.2088", "26.09.2080", "18.10.2084",
+            "25.01.2071", "25.10.2086", "10.12.2076", "10.12.2079"
         ]),
     ]
 )
@@ -482,8 +568,7 @@ def test_define_date_format_with_diff_format_and_provided_data(
     [
         ("%Y-%m-%d", "%Y-%m-%d", ["4723-10-17T07:45:35Z", "9999-12-31T05:22:15Z"]),
         ("%Y/%m/%d", "%Y/%m/%d", ["3/10/17T07:45:35Z", "9/12/31T05:22:15Z"]),
-        ("%m/%d/%Y", "%m/%d/%Y", ["11/30/2017T07:45:35Z", "02/27/1999T05:22:15Z"]),
-        ("%d-%m-%Y", "%d-%m-%Y", [np.nan, np.nan, np.nan])
+        ("%m/%d/%Y", "%m/%d/%Y", ["11/30/2017T07:45:35Z", "02/27/1999T05:22:15Z"])
     ]
 )
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
@@ -680,6 +765,42 @@ def test_handle_missing_values_in_numeric_columns_in_csv_file(rp_logger):
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+def test_cast_to_numeric_in_csv_file(rp_logger):
+    rp_logger.info(
+        "Test the process of casting the string values to numeric provided in a '.csv' file"
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    data = {
+        "column1": range(1, 101),
+        "column2": [str(i) for i in range(101, 201)],
+        "column3": range(201, 301),
+        "column4": range(301, 401),
+        "column5": [str(i) for i in np.linspace(0, 1, 100)]
+    }
+    df = pd.DataFrame(data)
+
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4"}
+    assert mock_dataset.float_columns == {"column5"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
     rp_logger.info(
         "Test the process of handling missing values "
@@ -723,4 +844,52 @@ def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
     mock_dataset.launch_detection()
     assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     assert mock_dataset.nan_labels_dict == {"column5": "Not available"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+def test_cast_to_numeric_in_avro_file(rp_logger):
+    rp_logger.info(
+        "Test the process of casting the string values to numeric provided in a '.avro' file"
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    data = {
+        "column1": range(1, 101),
+        "column2": range(101, 201),
+        "column3": range(201, 301),
+        "column4": range(301, 401),
+        "column5": [str(i) for i in range(401, 491)] + [np.NaN for i in range(10)],
+        "column6": [str(i) for i in np.linspace(0, 1, 100)]
+    }
+    df = pd.DataFrame(data)
+
+    schema = {
+        "format": "Avro",
+        "fields": {
+            "column1": "int",
+            "column2": "int",
+            "column3": "int",
+            "column4": "int",
+            "column5": "string",
+            "column6": "string"
+        }
+    }
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+    assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
+    assert mock_dataset.float_columns == {"column6"}
     rp_logger.info(SUCCESSFUL_MESSAGE)

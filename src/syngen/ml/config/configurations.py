@@ -35,10 +35,8 @@ class TrainConfig:
     slugify_table_name: str = field(init=False)
     columns: List = field(init=False)
     dropped_columns: Set = field(init=False)
-    data_loader: DataLoader = field(init=False)
 
     def __post_init__(self):
-        self.data_loader = DataLoader(self.source)
         self.paths = self._get_paths()
         self._remove_existed_artifacts()
         self._prepare_dirs()
@@ -48,7 +46,7 @@ class TrainConfig:
         Return an updated config's instance
         """
         instance = self.__dict__.copy()
-        attribute_keys_to_remove = ["loader", "data_loader"]
+        attribute_keys_to_remove = ["loader"]
         for attr_key in attribute_keys_to_remove:
             if attr_key in instance:
                 del instance[attr_key]
@@ -105,22 +103,31 @@ class TrainConfig:
         os.makedirs(self.paths["state_path"], exist_ok=True)
         os.makedirs(self.paths["tmp_store_path"], exist_ok=True)
 
+    def _fetch_dataframe(self) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Fetch the dataframe using the callback function
+        """
+        dataframe_fetcher = DataFrameFetcher(
+            loader=self.loader,
+            table_name=self.table_name
+        )
+        self.original_schema = dataframe_fetcher.original_schema
+        return dataframe_fetcher.fetch_data()
+
     def _load_source(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Return dataframe and schema of original data
         """
         if self.loader is not None:
-            return DataFrameFetcher(
-                loader=self.loader,
-                table_name=self.table_name
-            ).fetch_data()
+            return self._fetch_dataframe()
         else:
-            self.original_schema = self.data_loader.original_schema
+            data_loader = DataLoader(self.source)
+            self.original_schema = data_loader.original_schema
             if self.original_schema is not None:
                 logger.trace(
                     f"The schema of the table - '{self.table_name}': {self.original_schema}"
                 )
-            return self.data_loader.load_data()
+            return data_loader.load_data()
 
     def _remove_empty_columns(self):
         """
@@ -323,8 +330,9 @@ class InferConfig:
                 )
         ):
             message = (
-                f"It seems that the path to original data "
-                f"of the table - '{self.table_name}' doesn't exist. "
+                f"It seems that the path to the sample of the original data "
+                f"of the table '{self.table_name}' - '{self.paths['input_data_path']}' "
+                f"doesn't exist."
             )
             logger.warning(message)
             if self.print_report:
@@ -352,6 +360,7 @@ class InferConfig:
         """
         if self.size is None:
             data_loader = DataLoader(self.paths["input_data_path"])
+            data = pd.DataFrame()
             if data_loader.has_existed_path:
                 data, schema = data_loader.load_data()
             elif self.loader:
