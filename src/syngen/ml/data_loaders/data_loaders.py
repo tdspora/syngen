@@ -318,6 +318,7 @@ class AvroLoader(BaseDataLoader):
 
     def save_data(self, df: pd.DataFrame, schema: Optional[Dict] = None, **kwargs):
         if schema is not None:
+            logger.trace(f"The data will be saved with the schema: {schema}")
             preprocessed_schema = (
                 self._get_preprocessed_schema(schema) if schema is not None else schema
             )
