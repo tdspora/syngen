@@ -615,19 +615,30 @@ class Dataset(BaseDataset):
 
         if not data_subset.empty:
             # @ presents in more than 4/5 of not None values of every column
+            # Email pattern
             email_pattern = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
-            count_emails = data_subset.apply(
-                lambda col: col.str.contains(email_pattern), axis=1
-            ).sum()
-            adjusted_count = count_emails.values * 1.25  # inverse to 4/5
-            non_na_values_count = data_subset.count().values
+
+            # Vectorized operation to check for email pattern
+            email_mask = data_subset.apply(lambda col: col.str.contains(email_pattern, na=False))
+
+            # Count the number of emails in each column
+            count_emails = email_mask.sum(axis=0)
+
+            # Adjusted count to inverse 4/5 rule
+            adjusted_count = count_emails * 1.25
+
+            # Count non-NA values in each column
+            non_na_values_count = data_subset.notna().sum(axis=0)
+
+            # Filter columns where adjusted count is greater than non-NA count
             filter_mask = adjusted_count > non_na_values_count
-            data_subset = data_subset.loc[
-                :, filter_mask
-            ]
-            self.email_columns = set(data_subset.columns)
+
+            # Select columns that match the filter
+            email_columns = data_subset.columns[filter_mask]
+
+            # Update the email_columns attribute
             self.email_columns = (
-                self.email_columns - self.categorical_columns - self.binary_columns
+                set(email_columns) - self.categorical_columns - self.binary_columns
             )
 
     @staticmethod
@@ -649,36 +660,25 @@ class Dataset(BaseDataset):
     def _is_valid_uuid(self, x):
         """
         Check if uuid_to_test is a valid UUID
-        If there are no NaNs and single non UUID/ULID value,
-        it is treated as nan_label and set as NaN.
         """
-        result = []
+
+        def check_uuid(i):
+            for v in range(1, 6):
+                try:
+                    uuid_obj = UUID(i, version=v)
+                    if uuid_obj.hex == i.replace("-", ""):
+                        return v
+                except ValueError:
+                    pass
+            return self._is_valid_ulid(i)
+
         non_uuid_values = set()
         contain_nan = x.isnull().sum() > 0
 
-        for i in x.dropna().unique():
-            is_uuid = False
-            for v in [1, 2, 3, 4, 5]:
-                try:
-                    uuid_obj = UUID(i, version=v)
-                    if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
-                        result.append(v)
-                        is_uuid = True
-                        break
-                except (ValueError, AttributeError, TypeError):
-                    continue
-
-            if not is_uuid:
-                ulid_result = self._is_valid_ulid(i)
-                if ulid_result:
-                    result.append(ulid_result)
-                else:
-                    non_uuid_values.add(i)
+        result = [check_uuid(i) for i in x.dropna()]
 
         if result:
-            most_common_uuid_type = (
-                max(set(result), key=result.count)
-            )
+            most_common_uuid_type = Counter(result).most_common(1)[0][0]
 
             if not non_uuid_values:
                 return most_common_uuid_type

@@ -853,14 +853,12 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot and original_unique_count > 1 and synthetic_unique_count > 1:
-            plt.clf()
-            plt.figure(figsize=(8, 6.5))
-            # Kernel Density Estimation plot
-            self.original[column].plot(kind="density", color="#3F93E1", linewidth=2)
-            self.synthetic[column].plot(kind="density", color="#FF9C54", linewidth=2)
-            ax = plt.gca()
-            fig = ax.get_figure()
-            fig.canvas.draw()
+            fig, ax = plt.subplots(figsize=(8, 6.5))
+
+            # Kernel Density Estimation plot using Seaborn
+            sns.kdeplot(data=self.original, x=column, color="#3F93E1", linewidth=2, ax=ax)
+            sns.kdeplot(data=self.synthetic, x=column, color="#FF9C54", linewidth=2, ax=ax)
+
             ax.set_xlabel("value", fontsize=9)
             ax.set_ylabel("density", fontsize=9)
             ax.tick_params(axis="both", which="major", labelsize=9)

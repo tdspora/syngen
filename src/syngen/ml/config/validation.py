@@ -24,6 +24,7 @@ class Validator:
     type_of_fk_keys = ["FK"]
     merged_metadata: Dict = field(default_factory=dict)
     mapping: Dict = field(default_factory=dict)
+    existed_columns_mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
 
     def _launch_validation_of_schema(self):
@@ -148,7 +149,7 @@ class Validator:
             )
             self.errors["check existence of the generated data"][parent_table] = message
 
-    def _check_existence_of_source(self, table_name: str) -> bool:
+    def _check_existence_of_source(self, table_name: str):
         """
         Check if the source of the certain table exists
         """
@@ -161,8 +162,6 @@ class Validator:
                 f"'{table_name}'"
             )
             self.errors["check existence of the source"][table_name] = message
-            return False
-        return True
 
     def _check_existence_of_destination(self, table_name: str):
         """
@@ -220,12 +219,12 @@ class Validator:
                 )
             self._check_merged_metadata(parent_table)
 
-    def _check_existence_of_columns(
-        self, metadata_of_table, table_name: str, existed_columns: List[str]
-    ):
+    def _check_existence_of_key_columns(self, table_name):
         """
-        Check if the columns of the certain key exist in the source table
+        Check whether the key columns exist in the table
         """
+        metadata_of_table = self.merged_metadata[table_name]
+        existed_columns = self.existed_columns_mapping[table_name]
         for key, config_of_key in metadata_of_table.get("keys", {}).items():
             if all([column in existed_columns for column in config_of_key["columns"]]):
                 continue
@@ -237,56 +236,52 @@ class Validator:
                 message = (
                     f"The columns of the {config_of_key['type']} '{key}' - "
                     f"{', '.join(non_existed_columns)} "
-                    f"don't exist in the source of the table - '{table_name}'"
+                    f"don't exist in the table - '{table_name}'"
                 )
                 self.errors["check existence of the key columns in 'columns'"][key] = message
 
-    def _check_references_columns(self, table_name, metadata_of_table):
+    def _check_existence_of_referenced_columns(self, table_name: str):
         """
-        Check if the columns of the certain key exist in the referenced table
+        Check whether the key columns exist in the referenced table
         """
+        metadata_of_table = self.merged_metadata[table_name]
         for key, config_of_key in metadata_of_table.get("keys", {}).items():
             if config_of_key["type"] in self.type_of_fk_keys:
-                referenced_columns = config_of_key["references"]["columns"]
                 referenced_table = config_of_key["references"]["table"]
-                existed_columns = self._fetch_existed_columns(
-                    self.merged_metadata[referenced_table]
-                )
-                if all([column in existed_columns for column in referenced_columns]):
-                    continue
-                else:
-                    non_existed_columns = [
-                        f"{col!r}"
-                        for col in set(referenced_columns).difference(set(existed_columns))
-                    ]
+                referenced_columns = config_of_key["references"]["columns"]
+                existed_columns = self.existed_columns_mapping.get(referenced_table, {})
+                non_existed_columns = [
+                    f"{col!r}"
+                    for col in referenced_columns
+                    if col not in existed_columns
+                ]
+                if non_existed_columns:
                     message = (
                         f"The 'referenced.columns' of the {config_of_key['type']} '{key}' - "
                         f"{', '.join(non_existed_columns)} "
-                        f"don't exist in the referenced table - '{table_name}'"
+                        f"don't exist in the referenced table - '{referenced_table}'"
                     )
-                    self.errors["check existence of the key columns in 'referenced.columns'"][
-                        key
-                    ] = message
+                    self.errors[
+                        "check existence of the key columns in 'referenced.columns'"
+                    ][key] = message
 
-    @staticmethod
-    def _fetch_existed_columns(metadata_of_table) -> List[str]:
+    def _fetch_existed_columns(self, table_name: str) -> List[str]:
         """
         Fetch the list of the columns of the source table
         """
+        metadata_of_table = self.merged_metadata[table_name]
         format_settings = metadata_of_table.get("format", {})
         return DataLoader(
             metadata_of_table["train_settings"]["source"]
         ).get_columns(**format_settings)
 
-    def _check_key_columns(self, table_name: str):
+    def _gather_existed_columns(self, table_name: str):
         """
-        Fetch the list of the columns of the source table and
-        check whether the columns of the certain key exist in the source table
+        Fetch the list of the existed columns of the table
+        and put it into the mapping of existed columns
         """
-        metadata_of_table = self.merged_metadata[table_name]
-        existed_columns = self._fetch_existed_columns(metadata_of_table)
-        self._check_existence_of_columns(metadata_of_table, table_name, existed_columns)
-        self._check_references_columns(table_name, metadata_of_table)
+        existed_columns = self._fetch_existed_columns(table_name)
+        self.existed_columns_mapping[table_name] = existed_columns
 
     def _run(self):
         """
@@ -297,12 +292,16 @@ class Validator:
         self._merge_metadata()
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
+
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train" and self.validation_source:
-                if self._check_existence_of_source(table_name):
-                    self._check_key_columns(table_name)
+                self._gather_existed_columns(table_name)
+                self._check_existence_of_source(table_name)
+                self._check_existence_of_key_columns(table_name)
+                self._check_existence_of_referenced_columns(table_name)
             elif self.type_of_process == "infer":
                 self._check_existence_of_destination(table_name)
+
         for table_name in self.metadata.keys():
             self._validate_metadata(table_name)
 

@@ -4,7 +4,6 @@ import os
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from avro.errors import InvalidAvroBinaryEncoding
 
 from syngen.ml.data_loaders import (
     DataLoader,
@@ -315,6 +314,44 @@ def test_load_data_from_table_in_avro_with_null_column(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_load_data_from_table_in_avro_with_nullable_column(rp_logger):
+    rp_logger.info(
+        "Loading data from local table in avro format with a column that has a data type - "
+        "['string', 'null']"
+    )
+    data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
+                             "avro_tables/table_with_nullable_column.avro")
+    df, schema = data_loader.load_data()
+
+    assert isinstance(data_loader.file_loader, AvroLoader)
+
+    assert isinstance(df, pd.DataFrame)
+    assert list(df.columns) == ["id", "first_name", "last_name", "created_date", "Active"]
+    assert df.shape == (100, 5)
+    assert schema == {
+        "fields": {
+            "id": "int",
+            "first_name": "string",
+            "last_name": "string",
+            "created_date": "string",
+            "Active": "int"
+        },
+        "format": "Avro"
+    }
+    assert data_loader.original_schema == {
+        "type": "record",
+        "name": "avro_format",
+        "fields": [
+            {"name": "id", "type": "int"},
+            {"name": "first_name", "type": "string"},
+            {"name": "last_name", "type": "string"},
+            {"name": "created_date", "type": ["string", "null"], "default": None},
+            {"name": "Active", "type": "boolean"}
+        ]
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
     rp_logger.info("Loading data from local empty table in avro format")
     path = f"{DIR_NAME}/unit/data_loaders/fixtures/avro_tables/empty_table.avro"
@@ -335,7 +372,7 @@ def test_load_original_schema_from_empty_table_in_avro_format(caplog, rp_logger)
     path = f"{DIR_NAME}/unit/data_loaders/fixtures/avro_tables/empty_table.avro"
     data_loader = DataLoader(path)
 
-    with pytest.raises(InvalidAvroBinaryEncoding):
+    with pytest.raises(ValueError):
         with caplog.at_level("ERROR"):
             data_loader.file_loader.load_original_schema()
             assert "Read 0 bytes, expected 4 bytes" in caplog.text
@@ -358,7 +395,7 @@ def test_get_columns_from_empty_table_in_avro_format(caplog, rp_logger):
     data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
                              "avro_tables/empty_table.avro")
     assert isinstance(data_loader.file_loader, AvroLoader)
-    with pytest.raises(InvalidAvroBinaryEncoding):
+    with pytest.raises(ValueError):
         with caplog.at_level("ERROR"):
             data_loader.get_columns()
             assert "The empty file was provided. Unable to train this table" in caplog.text
