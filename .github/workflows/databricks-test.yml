@@ -52,7 +52,7 @@ jobs:
         run: |
           cp -n databricks/setup.cfg .
           cp -n databricks/pyproject.toml .
-          sed -i 's/$/rc.dbx/' src/syngen/VERSION
+          sed -i 's/$/rc1+dbx/' src/syngen/VERSION
           cat src/syngen/VERSION
           python -m pip install --upgrade pip
           pip install build
