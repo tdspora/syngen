@@ -205,8 +205,20 @@ class InferStrategy(Strategy):
         """
         Launch the infer process
         """
+        table_name = kwargs["table_name"]
         try:
-            self.set_config(**kwargs)
+            self.set_config(
+                source=kwargs["source"],
+                epochs=kwargs["epochs"],
+                drop_null=kwargs["drop_null"],
+                row_limit=kwargs["row_limit"],
+                table_name=table_name,
+                metadata=kwargs["metadata"],
+                metadata_path=kwargs["metadata_path"],
+                print_report=kwargs["print_report"],
+                batch_size=kwargs["batch_size"],
+                loader=kwargs["loader"]
+            )
             MlflowTracker().log_params(self.config.to_dict())
             self.add_reporters().add_handler(
                 type_of_process=kwargs["type_of_process"]
@@ -214,12 +226,12 @@ class InferStrategy(Strategy):
             self.handler.handle()
         except Exception:
             logger.error(
-                f"Generation of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
+                f"Generation of the table - \"{table_name}\" failed on running stage.\n"
                 f"The traceback of the error - {traceback.format_exc()}"
             )
             raise
         else:
             logger.info(
-                f"Synthesis of the table - {kwargs['table_name']} was completed. "
+                f"Synthesis of the table - \"{table_name}\" was completed. "
                 f"Synthetic data saved in {self.handler.paths['path_to_merged_infer']}"
             )

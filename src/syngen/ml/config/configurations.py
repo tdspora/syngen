@@ -295,7 +295,6 @@ class InferConfig:
     reports: List[str]
     both_keys: bool
     log_level: str
-    type_of_process: str
     loader: Optional[Callable[[str], pd.DataFrame]]
     slugify_table_name: str = field(init=False)
 
