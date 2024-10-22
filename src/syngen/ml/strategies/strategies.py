@@ -45,17 +45,6 @@ class Strategy(ABC):
         """
         pass
 
-    def set_metadata(self, metadata):
-        if metadata:
-            self.metadata = metadata
-            return self
-        if self.config.table_name:
-            metadata = {"table_name": self.config.table_name}
-            self.metadata = metadata
-            return self
-        else:
-            raise AttributeError("Either table name or path to metadata MUST be provided")
-
 
 class TrainStrategy(Strategy, ABC):
     """
@@ -82,14 +71,14 @@ class TrainStrategy(Strategy, ABC):
         Set up the handler which used in training process
         """
         root_handler = RootHandler(
-            metadata=self.metadata,
+            metadata=self.config.metadata,
             table_name=self.config.table_name,
             paths=self.config.paths,
             loader=self.config.loader
         )
 
         vae_handler = VaeTrainHandler(
-            metadata=self.metadata,
+            metadata=self.config.metadata,
             table_name=self.config.table_name,
             schema=self.config.schema,
             paths=self.config.paths,
@@ -103,7 +92,7 @@ class TrainStrategy(Strategy, ABC):
         )
 
         long_text_handler = LongTextsHandler(
-            metadata=self.metadata,
+            metadata=self.config.metadata,
             table_name=self.config.table_name,
             schema=self.config.schema,
             paths=self.config.paths,
@@ -123,7 +112,7 @@ class TrainStrategy(Strategy, ABC):
                 and source is not None
                 and loader is None
                 and os.path.exists(source)
-                and any(["sample" in self.config.reports])
+                and "sample" in self.config.reports
         ):
             sample_reporter = SampleAccuracyReporter(
                 table_name=get_initial_table_name(table_name),
@@ -147,19 +136,8 @@ class TrainStrategy(Strategy, ABC):
                 run_name=f"{table}-PREPROCESS",
                 tags={"table_name": table, "process": "preprocess"},
             )
-            self.set_config(
-                source=kwargs["source"],
-                epochs=kwargs["epochs"],
-                drop_null=kwargs["drop_null"],
-                row_limit=kwargs["row_limit"],
-                table_name=table,
-                metadata_path=kwargs["metadata_path"],
-                reports=kwargs["reports"],
-                batch_size=kwargs["batch_size"],
-                loader=kwargs["loader"]
-            )
-
-            self.add_reporters().set_metadata(kwargs["metadata"]).add_handler()
+            self.set_config(**kwargs)
+            self.add_reporters().add_handler()
             self.handler.handle()
             # End the separate run for the training stage
             MlflowTracker().end_run()
@@ -190,10 +168,9 @@ class InferStrategy(Strategy):
         """
         Set up the handler which used in infer process
         """
-
         self.handler = VaeInferHandler(
-            metadata=self.metadata,
             metadata_path=self.config.metadata_path,
+            metadata=self.config.metadata,
             table_name=self.config.table_name,
             paths=self.config.paths,
             wrapper_name=VanillaVAEWrapper.__name__,
@@ -229,24 +206,9 @@ class InferStrategy(Strategy):
         Launch the infer process
         """
         try:
-
-            self.set_config(
-                destination=kwargs["destination"],
-                size=kwargs["size"],
-                table_name=kwargs["table_name"],
-                metadata_path=kwargs["metadata_path"],
-                run_parallel=kwargs["run_parallel"],
-                batch_size=kwargs["batch_size"],
-                random_seed=kwargs["random_seed"],
-                reports=kwargs["reports"],
-                log_level=kwargs["log_level"],
-                both_keys=kwargs["both_keys"],
-                loader=kwargs["loader"]
-            )
-
+            self.set_config(**kwargs)
             MlflowTracker().log_params(self.config.to_dict())
-
-            self.add_reporters().set_metadata(kwargs["metadata"]).add_handler(
+            self.add_reporters().add_handler(
                 type_of_process=kwargs["type_of_process"]
             )
             self.handler.handle()

@@ -294,7 +294,6 @@ class Worker:
             drop_null=train_settings["drop_null"],
             row_limit=train_settings["row_limit"],
             table_name=table,
-            metadata_path=self.metadata_path,
             reports=train_settings["reports"],
             batch_size=train_settings["batch_size"],
             loader=self.loader
@@ -380,9 +379,9 @@ class Worker:
         InferStrategy().run(
             destination=settings.get("destination") if type_of_process == "infer" else None,
             metadata=metadata,
+            metadata_path=self.metadata_path,
             size=settings.get("size") if type_of_process == "infer" else None,
             table_name=table,
-            metadata_path=self.metadata_path,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
             random_seed=settings.get("random_seed") if type_of_process == "infer" else 1,

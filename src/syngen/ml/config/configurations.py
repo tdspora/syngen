@@ -23,7 +23,7 @@ class TrainConfig:
     drop_null: bool
     row_limit: Optional[int]
     table_name: Optional[str]
-    metadata_path: Optional[str]
+    metadata: Dict
     reports: List[str]
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
@@ -285,15 +285,17 @@ class InferConfig:
     """
 
     destination: Optional[str]
+    metadata: Dict
+    metadata_path: Optional[str]
     size: Optional[int]
     table_name: Optional[str]
     run_parallel: bool
     batch_size: Optional[int]
-    metadata_path: Optional[str]
     random_seed: Optional[int]
     reports: List[str]
     both_keys: bool
     log_level: str
+    type_of_process: str
     loader: Optional[Callable[[str], pd.DataFrame]]
     slugify_table_name: str = field(init=False)
 

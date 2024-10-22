@@ -14,7 +14,13 @@ def test_get_state_of_train_config(rp_logger):
         drop_null=True,
         row_limit=1000,
         table_name="test_table",
-        metadata_path="metadata/path.yaml",
+        metadata={
+            "test_table": {
+                "train_settings": {
+                    "source": "path/to/data.csv"
+                }
+            }
+        },
         reports=["accuracy", "sample"],
         batch_size=32,
         loader=lambda x: pd.DataFrame()
@@ -25,7 +31,7 @@ def test_get_state_of_train_config(rp_logger):
         "drop_null",
         "row_limit",
         "table_name",
-        "metadata_path",
+        "metadata",
         "reports",
         "batch_size"
     }
@@ -62,7 +68,13 @@ def test_preprocess_data(
         drop_null=drop_null,
         row_limit=row_limit,
         table_name="test_table",
-        metadata_path="metadata/path.yaml",
+        metadata={
+            "test_table": {
+                "train_settings": {
+                    "source": "path/to/data.csv"
+                }
+            }
+        },
         reports=["accuracy", "sample"],
         batch_size=32,
         loader=None
