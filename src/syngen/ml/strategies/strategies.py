@@ -208,15 +208,17 @@ class InferStrategy(Strategy):
         table_name = kwargs["table_name"]
         try:
             self.set_config(
-                source=kwargs["source"],
-                epochs=kwargs["epochs"],
-                drop_null=kwargs["drop_null"],
-                row_limit=kwargs["row_limit"],
-                table_name=table_name,
+                destination=kwargs["destination"],
+                size=kwargs["size"],
+                table_name=kwargs["table_name"],
                 metadata=kwargs["metadata"],
                 metadata_path=kwargs["metadata_path"],
-                print_report=kwargs["print_report"],
+                run_parallel=kwargs["run_parallel"],
                 batch_size=kwargs["batch_size"],
+                random_seed=kwargs["random_seed"],
+                reports=kwargs["reports"],
+                log_level=kwargs["log_level"],
+                both_keys=kwargs["both_keys"],
                 loader=kwargs["loader"]
             )
             MlflowTracker().log_params(self.config.to_dict())
