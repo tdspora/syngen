@@ -38,3 +38,29 @@ jobs:
         run: |
             cp -n databricks/databricks.dockerfile .
             docker build -t databricks-test-image -f databricks.dockerfile .
+
+  build-and-publish:
+    needs: Databricks-compatibility-test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build dependencies
+        run: |
+          cp -n databricks/setup.cfg .
+          cp -n databricks/pyproject.toml .
+          sed -i 's/$/rc.dbx/' src/syngen/VERSION
+          cat src/syngen/VERSION
+          python -m pip install --upgrade pip
+          pip install build
+      - name: Build Package
+        run: python -m build .
+      - name: Publish package
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_TEST_TOKEN }} # For release: use secrets.PYPI_TOKEN
+          verbose: true
