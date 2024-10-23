@@ -338,9 +338,11 @@ class BivariateMetric(BaseMetric):
         synthetic: pd.DataFrame,
         plot: bool,
         reports_path: str,
+        columns_nan_labels: Dict,
     ):
         super().__init__(original, synthetic, plot, reports_path)
         self.cmap = LinearSegmentedColormap.from_list("rg", ["#0D5598", "#3E92E0", "#E8F4FF"])
+        self.columns_nan_labels = columns_nan_labels
 
     @staticmethod
     def _format_date_labels(heatmap_orig_data, heatmap_synthetic_data, axis):
@@ -442,9 +444,15 @@ class BivariateMetric(BaseMetric):
                     heatmap_orig_data, heatmap_synthetic_data, "y"
                 )
 
-            self._plot_heatmap(heatmap_orig_data, 0, heatmap_min, heatmap_max, cbar=False)
+            self._plot_heatmap(heatmap_orig_data, plt_index=0,
+                               vrange=(heatmap_min, heatmap_max),
+                               features=(first_col, second_col),
+                               cbar=False)
 
-            self._plot_heatmap(heatmap_synthetic_data, 1, heatmap_min, heatmap_max, cbar=True)
+            self._plot_heatmap(heatmap_synthetic_data, plt_index=1,
+                               vrange=(heatmap_min, heatmap_max),
+                               features=(first_col, second_col),
+                               cbar=True)
             # first_col is x axis, second_col is y axis
             title = f"{first_col} vs. {second_col}"
             path_to_image = (
@@ -463,31 +471,31 @@ class BivariateMetric(BaseMetric):
         return vmin, vmax
 
     @staticmethod
-    def __format_float_tick_labels(labels: List) -> List:
+    def __format_float_tick_labels(labels: List, nan_label: str = 'NaN') -> List:
+        labels = [nan_label if pd.isna(l) else l for l in labels]
         if all([isinstance(i, float) for i in labels]) and (
             max(labels) > 1e5 or min(labels) < 1e-03
         ):
-            labels = [f"{label:.4e}" for label in labels]
-            return labels
+            return [f"{label:.4e}" for label in labels]
         if all([isinstance(i, float) for i in labels]):
-            labels = [f"{round(i, 4)}" for i in labels]
-            return labels
-        else:
-            return labels
+            return [f"{round(i, 4)}" for i in labels]
+        return labels
 
     def _plot_heatmap(
         self,
         heatmap_data: List,
         plt_index: int,
-        vmin: float,
-        vmax: float,
+        vrange: tuple[float],
+        features: tuple[str],
         cbar=True,
     ):
+        vmin, vmax = vrange
+        xfeature, yfeature = features
         ax = self._axes.flat[plt_index]
         ax.tick_params(labelsize=14)
         heatmap, x_tick_labels, y_tick_labels = heatmap_data
-        x_tick_labels = self.__format_float_tick_labels(x_tick_labels)
-        y_tick_labels = self.__format_float_tick_labels(y_tick_labels)
+        x_tick_labels = self.__format_float_tick_labels(x_tick_labels, self.columns_nan_labels.get(xfeature, 'NaN'))
+        y_tick_labels = self.__format_float_tick_labels(y_tick_labels, self.columns_nan_labels.get(yfeature, 'NaN'))
         ax = sns.heatmap(
             heatmap,
             xticklabels=x_tick_labels,
