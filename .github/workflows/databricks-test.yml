@@ -55,6 +55,7 @@ jobs:
           sed -i 's/$/dev.0/' src/syngen/VERSION
           sed -i 's/name="syngen"/name="syngen-databricks"/' src/setup.py
           # NOTE - DEBUG
+          ls
           pwd
           cat setup.cfg
           cat pyproject.toml
