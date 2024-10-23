@@ -20,7 +20,6 @@ jobs:
           cp -n databricks/requirements-databricks-15.4-LTS.txt .
           cat databricks/setup.cfg > setup.cfg
           cat databricks/pyproject.toml > pyproject.toml
-          sed -i 's/$/dev.0/' src/syngen/VERSION
           sed -i 's/name="syngen"/name="syngen-databricks"/' src/setup.py
           python -m pip install --upgrade pip
           pip install flake8 pytest
@@ -45,13 +44,6 @@ jobs:
 
       - name: Build Package
         run: |
-          # NOTE - DEBUG
-          ls
-          pwd
-          cat setup.cfg
-          cat pyproject.toml
-          cat src/setup.py
-          cat src/syngen/VERSION
           pip install build
           python -m build .
       - name: Publish package
@@ -60,6 +52,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ secrets.PYPI_TEST_TOKEN }} # For release: use secrets.PYPI_TOKEN and set proper VERSION suffix
+          password: ${{ secrets.PYPI_TEST_TOKEN }} # For release: use secrets.PYPI_TOKEN and remove 'repository_url'
           repository_url: https://test.pypi.org/legacy/
           verbose: true
