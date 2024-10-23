@@ -26,7 +26,11 @@ import seaborn as sns
 from slugify import slugify
 from loguru import logger
 
-from syngen.ml.utils import timestamp_to_datetime, timing
+from syngen.ml.utils import (
+    timestamp_to_datetime,
+    timing,
+    fetch_config
+)
 matplotlib.use("Agg")
 
 
@@ -338,11 +342,20 @@ class BivariateMetric(BaseMetric):
         synthetic: pd.DataFrame,
         plot: bool,
         reports_path: str,
-        columns_nan_labels: Dict,
+        dataset_pickle_path: str
     ):
         super().__init__(original, synthetic, plot, reports_path)
-        self.cmap = LinearSegmentedColormap.from_list("rg", ["#0D5598", "#3E92E0", "#E8F4FF"])
-        self.columns_nan_labels = columns_nan_labels
+        self.cmap = LinearSegmentedColormap.from_list(
+            "rg", ["#0D5598", "#3E92E0", "#E8F4FF"]
+        )
+        self.dataset = fetch_config(dataset_pickle_path)
+        nan_labels_dict = self.dataset.nan_labels_dict
+        na_values = self.dataset.format.get("na_values", [])
+        self.missing_values: Dict[str, str] = (
+            {col: na_values[0] for col in self.dataset.order_of_columns}
+            if na_values
+            else nan_labels_dict
+        )
 
     @staticmethod
     def _format_date_labels(heatmap_orig_data, heatmap_synthetic_data, axis):
@@ -471,7 +484,7 @@ class BivariateMetric(BaseMetric):
         return vmin, vmax
 
     @staticmethod
-    def __format_float_tick_labels(labels: List, nan_label: str = 'NaN') -> List:
+    def __format_float_tick_labels(labels: List, nan_label: str = "nan") -> List:
         labels = [nan_label if pd.isna(l) else l for l in labels]
         if all([isinstance(i, float) for i in labels]) and (
             max(labels) > 1e5 or min(labels) < 1e-03
@@ -494,8 +507,16 @@ class BivariateMetric(BaseMetric):
         ax = self._axes.flat[plt_index]
         ax.tick_params(labelsize=14)
         heatmap, x_tick_labels, y_tick_labels = heatmap_data
-        x_tick_labels = self.__format_float_tick_labels(x_tick_labels, self.columns_nan_labels.get(xfeature, 'NaN'))
-        y_tick_labels = self.__format_float_tick_labels(y_tick_labels, self.columns_nan_labels.get(yfeature, 'NaN'))
+        print(f"!!!!!!!!!!!!!!!!!!!!!")
+        print(f"{self.missing_values}")
+        x_tick_labels = self.__format_float_tick_labels(
+            x_tick_labels,
+            self.missing_values.get(xfeature, "nan")
+        )
+        y_tick_labels = self.__format_float_tick_labels(
+            y_tick_labels,
+            self.missing_values.get(yfeature, "nan")
+        )
         ax = sns.heatmap(
             heatmap,
             xticklabels=x_tick_labels,
