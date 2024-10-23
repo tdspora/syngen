@@ -52,7 +52,7 @@ jobs:
         run: |
           cp -n databricks/setup.cfg .
           cp -n databricks/pyproject.toml .
-          sed -i 's/$/dbx.0/' src/syngen/VERSION
+          sed -i 's/$/+dbx/' src/syngen/VERSION
           cat src/syngen/VERSION
           python -m pip install --upgrade pip
           pip install build
@@ -63,5 +63,5 @@ jobs:
         if: github.event_name == 'push'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_TOKEN }} # For test release: use secrets.PYPI_TEST_TOKEN
+          password: ${{ secrets.PYPI_TEST_TOKEN }} # For release: use secrets.PYPI_TOKEN and set proper VERSION suffix
           verbose: true
