@@ -64,6 +64,7 @@ class Reporter:
 
     def fetch_data_types(self):
         self.dataset = fetch_config(self.paths["dataset_pickle_path"])
+        self.columns_nan_labels = self.dataset.nan_labels_dict
         types = (
             self.dataset.str_columns,
             self.dataset.date_columns,

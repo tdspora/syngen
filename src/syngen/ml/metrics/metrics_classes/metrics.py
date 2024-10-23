@@ -485,7 +485,7 @@ class BivariateMetric(BaseMetric):
 
     @staticmethod
     def __format_float_tick_labels(labels: List, nan_label: str = "nan") -> List:
-        labels = [nan_label if pd.isna(l) else l for l in labels]
+        labels = [nan_label if pd.isna(label) else label for label in labels]
         if all([isinstance(i, float) for i in labels]) and (
             max(labels) > 1e5 or min(labels) < 1e-03
         ):
@@ -507,8 +507,6 @@ class BivariateMetric(BaseMetric):
         ax = self._axes.flat[plt_index]
         ax.tick_params(labelsize=14)
         heatmap, x_tick_labels, y_tick_labels = heatmap_data
-        print(f"!!!!!!!!!!!!!!!!!!!!!")
-        print(f"{self.missing_values}")
         x_tick_labels = self.__format_float_tick_labels(
             x_tick_labels,
             self.missing_values.get(xfeature, "nan")
