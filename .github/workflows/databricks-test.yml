@@ -53,7 +53,7 @@ jobs:
           cp -n databricks/setup.cfg .
           cp -n databricks/pyproject.toml .
           sed -i 's/$/dev.0/' src/syngen/VERSION
-          sed -i 's/name="syngen"/name="syngen-databricks"/' src/syngen/setup.py
+          sed -i 's/name="syngen"/name="syngen-databricks"/' src/setup.py
           cat src/syngen/VERSION
           python -m pip install --upgrade pip
           pip install build
