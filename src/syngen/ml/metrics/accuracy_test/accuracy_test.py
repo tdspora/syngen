@@ -114,9 +114,11 @@ class AccuracyTest(BaseTest):
         paths: dict,
         table_name: str,
         infer_config: Dict,
+        columns_nan_labels: Dict,
     ):
         super().__init__(original, synthetic, paths, table_name, infer_config)
         self.reports_path = f"{self.paths['reports_path']}/accuracy"
+        self.columns_nan_labels = columns_nan_labels
         self.univariate = UnivariateMetric(
             self.original,
             self.synthetic,
@@ -127,7 +129,8 @@ class AccuracyTest(BaseTest):
             self.original,
             self.synthetic,
             self.plot_exists,
-            self.reports_path
+            self.reports_path,
+            self.columns_nan_labels
         )
         self.correlations = Correlations(
             self.original,

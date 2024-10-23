@@ -288,6 +288,7 @@ class AccuracyReporter(Reporter):
             self.paths,
             self.table_name,
             self.config,
+            self.columns_nan_labels,
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
