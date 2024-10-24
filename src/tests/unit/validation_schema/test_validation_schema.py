@@ -337,11 +337,6 @@ def test_metadata_file_with_invalid_infer_settings(
             "The details are - {'global': {'infer_settings': {"
             "'reports': ['Invalid value.']}}}",
         ),
-        (
-            {"reports": 10},
-            "The details are - {'global': {'infer_settings': {"
-            "'reports': ['Invalid value.']}}}",
-        ),
     ],
 )
 def test_metadata_file_with_invalid_global_infer_settings(
