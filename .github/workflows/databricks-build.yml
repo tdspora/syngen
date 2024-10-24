@@ -2,7 +2,7 @@ name: Databricks-compatibility
 on: [push]
 
 jobs:
-  Databricks-compatibility-test:
+  Databricks-compatibility-library:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +52,5 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ secrets.PYPI_TEST_TOKEN }} # For release: use secrets.PYPI_TOKEN and remove 'repository_url'
-          repository_url: https://test.pypi.org/legacy/
+          password: ${{ secrets.PYPI_TOKEN }} # For test release: use secrets.PYPI_TEST_TOKEN and add 'repository_url: https://test.pypi.org/legacy/'
           verbose: true
