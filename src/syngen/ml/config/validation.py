@@ -293,9 +293,12 @@ class Validator:
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
 
+        if self.type_of_process == "train" and self.validation_source:
+            for table_name in self.merged_metadata.keys():
+                self._gather_existed_columns(table_name)
+
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train" and self.validation_source:
-                self._gather_existed_columns(table_name)
                 self._check_existence_of_source(table_name)
                 self._check_existence_of_key_columns(table_name)
                 self._check_existence_of_referenced_columns(table_name)
