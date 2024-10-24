@@ -16,6 +16,7 @@ from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
+from syngen.ml.validation_schema import INFER_REPORT_TYPES
 
 
 @define
@@ -241,15 +242,19 @@ class Worker:
         return config
 
     @staticmethod
-    def _should_generate_report(config_of_tables: Dict, type_of_process: str):
+    def _should_generate_data(
+        config_of_tables: Dict,
+        type_of_process: str,
+        list_of_reports: List[str]
+    ):
         """
-        Determine whether reports should be generated based
-        on the configurations of the tables
+        Determine whether the synthetic data should be generated
+        in order to generate reports based on it
         """
         return any(
             [
-                config.get(f"{type_of_process}_settings", {}).get("print_report", False)
-                for table, config in config_of_tables.items()
+                report in config.get(f"{type_of_process}_settings", {}).get("reports", [])
+                for report in list_of_reports for config in config_of_tables.values()
             ]
         )
 
@@ -289,8 +294,7 @@ class Worker:
             drop_null=train_settings["drop_null"],
             row_limit=train_settings["row_limit"],
             table_name=table,
-            metadata_path=self.metadata_path,
-            print_report=train_settings["print_report"],
+            reports=train_settings["reports"],
             batch_size=train_settings["batch_size"],
             loader=self.loader
         )
@@ -375,15 +379,13 @@ class Worker:
         InferStrategy().run(
             destination=settings.get("destination") if type_of_process == "infer" else None,
             metadata=metadata,
+            metadata_path=self.metadata_path,
             size=settings.get("size") if type_of_process == "infer" else None,
             table_name=table,
-            metadata_path=self.metadata_path,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
             random_seed=settings.get("random_seed") if type_of_process == "infer" else 1,
-            print_report=settings["print_report"],
-            get_infer_metrics=settings.get("get_infer_metrics")
-            if type_of_process == "infer" else False,
+            reports=settings["reports"],
             log_level=self.log_level,
             both_keys=both_keys,
             type_of_process=self.type_of_process,
@@ -482,7 +484,9 @@ class Worker:
             metadata_for_inference,
         ) = metadata_for_inference
 
-        generation_of_reports = self._should_generate_report(metadata_for_training, "train")
+        generation_of_reports = self._should_generate_data(
+            metadata_for_training, "train", list_of_reports=INFER_REPORT_TYPES
+        )
 
         self.__train_tables(
             tables_for_training,
@@ -515,7 +519,9 @@ class Worker:
         """
         tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
 
-        generation_of_reports = self._should_generate_report(config_of_tables, "infer")
+        generation_of_reports = self._should_generate_data(
+            config_of_tables, "infer", list_of_reports=INFER_REPORT_TYPES
+        )
         delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
