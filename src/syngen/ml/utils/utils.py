@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable, Literal
+from typing import List, Dict, Optional, Union, Set, Callable
 from dateutil import parser
 from datetime import datetime, timedelta
 import time

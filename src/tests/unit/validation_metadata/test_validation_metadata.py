@@ -986,13 +986,14 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
     """
     Test the validation of the incomplete metadata of one table
     contained the foreign key but not contained the information of the parent table.
-    It's used in the training process with the generation 'accuracy' or 'metrics_only' reports
+    It's used in the training process with the generation reports
+    that requires the generation of the synthetic data
     """
     rp_logger.info(
         "Test the validation of the incomplete metadata of one table "
         "contained the foreign key but not contained the information of the parent table. "
-        "It's used in the training process with the generation 'accuracy' or 'metrics_only' "
-        "reports"
+        "It's used in the training process with the generation reports "
+        "that requires the generation of the synthetic data "
     )
     metadata = {
             "table_b": {
@@ -1092,12 +1093,14 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
     """
     Test the validation of the incomplete metadata of one table
     contained the foreign key but not contained the information of the parent table.
-    It's used in the training process with the generation a 'sample' report
+    It's used in the training process with the generation only a 'sample' report
+    that doesn't require the generation of the synthetic data
     """
     rp_logger.info(
         "Test the validation of the incomplete metadata of one table "
         "contained the foreign key but not contained the information of the parent table. "
-        "It's used in the training process with the generation a 'sample' report"
+        "It's used in the training process with the generation only a 'sample' report "
+        "that doesn't require the generation of the synthetic data"
     )
     metadata = {
             "table_b": {
@@ -1812,7 +1815,7 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
     """
     rp_logger.info(
         "Test the validation of the incomplete metadata of one table "
-        "contained the foreign key used in the training process with "
+        "contained the foreign key during the training process with "
         "the generation of reports that requires the generation of the synthetic data. "
         "The information of the parent table is present in the metadata storage, "
         "but the generated data of the parent table hasn't been generated previously"
