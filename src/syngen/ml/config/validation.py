@@ -257,12 +257,12 @@ class Validator:
                 ]
                 if non_existed_columns:
                     message = (
-                        f"The 'referenced.columns' of the {config_of_key['type']} '{key}' - "
+                        f"The 'references.columns' of the {config_of_key['type']} '{key}' - "
                         f"{', '.join(non_existed_columns)} "
                         f"don't exist in the referenced table - '{referenced_table}'"
                     )
                     self.errors[
-                        "check existence of the key columns in 'referenced.columns'"
+                        "check existence of the key columns in 'references.columns'"
                     ][key] = message
 
     def _fetch_existed_columns(self, table_name: str) -> List[str]:
