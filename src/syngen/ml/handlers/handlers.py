@@ -492,6 +492,13 @@ class VaeInferHandler(BaseHandler):
             else pd.DataFrame()
         )
         prepared_data = self._restore_empty_columns(prepared_data)
+        # workaround for the case when all columns are dropped
+        # with technical column
+        if self.dataset.tech_columns:
+            prepared_data = prepared_data.drop(self.dataset.tech_columns, axis=1)
+            logger.debug(f"Technical columns "
+                         f"{self.dataset.tech_columns} are dropped"
+                         f" from the generated table")
 
         is_pk = self._is_pk()
 

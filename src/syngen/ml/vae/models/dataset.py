@@ -60,6 +60,7 @@ class BaseDataset:
         self.uuid_columns: Set = set()
         self.uuid_columns_types: Dict = dict()
         self.dropped_columns: Set = set()
+        self.tech_columns: Set = set()
         self.order_of_columns: List = list()
         self.custom_categorical_columns: Set = set()
         self.categorical_columns: Set = set()
@@ -1320,6 +1321,20 @@ class Dataset(BaseDataset):
             elif column in self.uuid_columns:
                 logger.info(f"Column '{column}' defined as UUID column")
                 self._assign_uuid_null_feature(column)
+
+        # workaround for the case when all columns are dropped
+        # add a technical column to proceed with the training process
+        if not self.features:
+            logger.warning(
+                f"There are no columns left to train on for '{self.table_name}'. "
+                f"Adding a technical column 'syngen_tech_column' to proceed "
+                f"with the training process."
+            )
+            tech_column = "syngen_tech_column"
+            self.df[tech_column] = 1
+            self._assign_float_feature(tech_column)
+            self.tech_columns.add(tech_column)
+
         self.fit()
 
         # The end of the run related to the preprocessing stage
