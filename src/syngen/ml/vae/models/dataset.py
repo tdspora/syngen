@@ -1331,7 +1331,6 @@ class Dataset(BaseDataset):
                 f"Adding a technical column '{tech_column}' to proceed "
                 f"with the training process."
             )
-            tech_column = "syngen_tech_column"
             self.df[tech_column] = 1
             self._assign_float_feature(tech_column)
             self.tech_columns.add(tech_column)
