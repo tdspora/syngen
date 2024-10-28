@@ -19,6 +19,7 @@ from attrs import define, field
 
 from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
+from syngen.ml.reporters import Report
 from syngen.ml.vae.models.dataset import Dataset
 from syngen.ml.utils import (
     fetch_config,
@@ -492,6 +493,15 @@ class VaeInferHandler(BaseHandler):
             else pd.DataFrame()
         )
         prepared_data = self._restore_empty_columns(prepared_data)
+        # workaround for the case when all columns are dropped
+        # with technical column
+        if self.dataset.tech_columns:
+            tech_columns = list(self.dataset.tech_columns)
+            prepared_data = prepared_data.drop(tech_columns, axis=1)
+            Report().unregister_reporters(tech_columns)
+            logger.debug(f"Technical columns "
+                         f"{self.dataset.tech_columns} are dropped"
+                         f" from the generated table")
 
         is_pk = self._is_pk()
 
