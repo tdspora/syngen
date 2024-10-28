@@ -498,7 +498,7 @@ class VaeInferHandler(BaseHandler):
         if self.dataset.tech_columns:
             tech_columns = list(self.dataset.tech_columns)
             prepared_data = prepared_data.drop(tech_columns, axis=1)
-            Report().unregister_reporters(tech_columns)
+            Report().unregister_reporters(self.dataset.table_name)
             logger.debug(f"Technical columns "
                          f"{self.dataset.tech_columns} are dropped"
                          f" from the generated table")

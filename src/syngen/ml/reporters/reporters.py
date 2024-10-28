@@ -212,12 +212,11 @@ class Report:
         cls._reporters[table] = list_of_reporters
 
     @classmethod
-    def unregister_reporters(cls, tables: List[str]):
+    def unregister_reporters(cls, table: str):
         """
-        Unregister all reporters for tables
+        Unregister all reporters for a table
         """
-        for table in tables:
-            cls._reporters[table] = list()
+        cls._reporters[table] = list()
 
     @classmethod
     def clear_report(cls):
