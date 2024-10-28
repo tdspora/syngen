@@ -1325,9 +1325,10 @@ class Dataset(BaseDataset):
         # workaround for the case when all columns are dropped
         # add a technical column to proceed with the training process
         if not self.features:
+            tech_column = "syngen_tech_column"
             logger.warning(
                 f"There are no columns left to train on for '{self.table_name}'. "
-                f"Adding a technical column 'syngen_tech_column' to proceed "
+                f"Adding a technical column '{tech_column}' to proceed "
                 f"with the training process."
             )
             tech_column = "syngen_tech_column"
