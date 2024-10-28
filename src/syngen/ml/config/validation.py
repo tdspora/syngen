@@ -257,12 +257,12 @@ class Validator:
                 ]
                 if non_existed_columns:
                     message = (
-                        f"The 'referenced.columns' of the {config_of_key['type']} '{key}' - "
+                        f"The 'references.columns' of the {config_of_key['type']} '{key}' - "
                         f"{', '.join(non_existed_columns)} "
                         f"don't exist in the referenced table - '{referenced_table}'"
                     )
                     self.errors[
-                        "check existence of the key columns in 'referenced.columns'"
+                        "check existence of the key columns in 'references.columns'"
                     ][key] = message
 
     def _fetch_existed_columns(self, table_name: str) -> List[str]:
@@ -293,9 +293,12 @@ class Validator:
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
 
+        if self.type_of_process == "train" and self.validation_source:
+            for table_name in self.merged_metadata.keys():
+                self._gather_existed_columns(table_name)
+
         for table_name in self.merged_metadata.keys():
             if self.type_of_process == "train" and self.validation_source:
-                self._gather_existed_columns(table_name)
                 self._check_existence_of_source(table_name)
                 self._check_existence_of_key_columns(table_name)
                 self._check_existence_of_referenced_columns(table_name)
