@@ -500,10 +500,15 @@ class VaeInferHandler(BaseHandler):
             prepared_data = prepared_data.drop(tech_columns, axis=1)
             logger.debug(
                 f"Technical columns "
-                f"{self.dataset.tech_columns} were dropped"
+                f"{tech_columns} were dropped"
                 f" from the generated table"
                 )
-            Report().unregister_reporters(self.dataset.table_name)
+            Report().unregister_reporters(self.table_name)
+            logger.info(
+                    "Since there were no columns to train on, "
+                    "reports will be not generated "
+                    f"for the table '{self.table_name}'."
+                    )
 
         is_pk = self._is_pk()
 

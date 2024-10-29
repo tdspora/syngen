@@ -218,12 +218,6 @@ class Report:
         """
         cls._reporters[table] = list()
 
-        logger.info(
-                "Since there were no columns to train on, "
-                "reports will be not generated "
-                f"for the table '{table}'."
-                )
-
     @classmethod
     def clear_report(cls):
         """
