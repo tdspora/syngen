@@ -220,7 +220,7 @@ class Report:
 
         logger.info(
                 "Since there were no columns to train on, "
-                "reports will not be generated "
+                "reports will be not generated "
                 f"for the table '{table}'."
                 )
 

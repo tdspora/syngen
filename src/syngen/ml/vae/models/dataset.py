@@ -1324,8 +1324,6 @@ class Dataset(BaseDataset):
 
         # workaround for the case when all columns are dropped
         # add a technical column to proceed with the training process
-        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print(f"self.features: {self.features}")
         if not self.features:
             tech_column = "syngen_tech_column"
             logger.info(
