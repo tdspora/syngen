@@ -1324,12 +1324,16 @@ class Dataset(BaseDataset):
 
         # workaround for the case when all columns are dropped
         # add a technical column to proceed with the training process
+        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print(f"self.features: {self.features}")
         if not self.features:
             tech_column = "syngen_tech_column"
-            logger.warning(
-                f"There are no columns left to train on for '{self.table_name}'. "
-                f"Adding a technical column '{tech_column}' to proceed "
-                f"with the training process."
+            logger.info(
+                f"Since all columns in the table '{self.table_name}' "
+                f"are uuid/key/long text columns, "
+                f"there are no suitable columns to train on. "
+                f"Technical column '{tech_column}' will be added to proceed "
+                f"with the training process and will be removed afterwards."
             )
             self.df[tech_column] = 1
             self._assign_float_feature(tech_column)
