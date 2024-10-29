@@ -504,11 +504,6 @@ class VaeInferHandler(BaseHandler):
                 f" from the generated table"
                 )
             Report().unregister_reporters(self.dataset.table_name)
-            logger.info(
-                "Since there were no columns to train on, "
-                "reports will not be generated "
-                f"for the table '{self.dataset.table_name}'."
-                )
 
         is_pk = self._is_pk()
 
