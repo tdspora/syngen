@@ -495,18 +495,18 @@ class VaeInferHandler(BaseHandler):
         prepared_data = self._restore_empty_columns(prepared_data)
         # workaround for the case when all columns are dropped
         # with technical column
-        if self.dataset.tech_columns:
-            tech_columns = list(self.dataset.tech_columns)
+        tech_columns = list(self.dataset.tech_columns)
+        if tech_columns:
             prepared_data = prepared_data.drop(tech_columns, axis=1)
             logger.debug(
-                f"Technical columns "
-                f"{tech_columns} were dropped"
-                f" from the generated table"
+                "Technical columns "
+                f"{tech_columns} were removed "
+                "from the generated table."
                 )
             Report().unregister_reporters(self.table_name)
             logger.info(
-                    "Since there were no columns to train on, "
-                    "reports will be not generated "
+                    "Since there were no columns suitable for training, "
+                    "reports will not be generated "
                     f"for the table '{self.table_name}'."
                     )
 
