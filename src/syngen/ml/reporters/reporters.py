@@ -1,5 +1,12 @@
 from abc import abstractmethod
-from typing import Dict, Tuple, Optional, Callable
+from typing import (
+    Dict,
+    Tuple,
+    Optional,
+    Callable,
+    Union,
+    List
+)
 import itertools
 from collections import defaultdict
 
@@ -188,7 +195,7 @@ class Report:
     Singleton metaclass for registration all needed reporters
     """
 
-    _reporters: Dict[str, Reporter] = {}
+    _reporters: Dict[str, Union[Reporter, List]] = {}
 
     def __new__(cls):
         if not hasattr(cls, "instance"):
@@ -203,6 +210,13 @@ class Report:
         list_of_reporters = cls._reporters.get(table, [])
         list_of_reporters.append(reporter)
         cls._reporters[table] = list_of_reporters
+
+    @classmethod
+    def unregister_reporters(cls, table: str):
+        """
+        Unregister all reporters for a table
+        """
+        cls._reporters[table] = list()
 
     @classmethod
     def clear_report(cls):
