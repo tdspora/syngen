@@ -130,6 +130,12 @@ class Dataset(BaseDataset):
         """
         self._cast_to_numeric(excluded_columns)
         self.nan_labels_dict = get_nan_labels(self.df, excluded_columns)
+        if self.nan_labels_dict and self.format.get("na_values", []):
+            logger.info(
+                f"The table '{self.table_name}' does not contain 'NA values' as mentioned "
+                f"in the 'format' section. However, some values have been detected as NA labels "
+                f"by the algorithm: {self.nan_labels_dict}"
+            )
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
     def _preparation_step(self):
