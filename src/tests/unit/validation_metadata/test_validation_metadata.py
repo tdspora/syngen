@@ -237,17 +237,6 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
         "contained only the primary key and the foreign key used in the training process"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
-                }
-            },
             "table_b": {
                 "train_settings": {
                     "source": "path/to/table_b.csv"
@@ -266,7 +255,18 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
                         }
                     }
                 }
-            }
+            },
+            "table_a": {
+                "train_settings": {
+                    "source": "path/to/table_a.csv"
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["id"]
+                    }
+                }
+            },
         }
     validator = Validator(
         metadata=test_metadata,
@@ -2021,8 +2021,8 @@ def test_check_not_existent_referenced_columns_in_fk(rp_logger):
         assert validator.merged_metadata == test_metadata
         assert str(error.value) == (
             "The validation of the metadata has been failed. The error(s) found in - \n"
-            "\"check existence of the key columns in 'referenced.columns'\": {\n    \"fk_id\": "
-            "\"The 'referenced.columns' of the FK 'fk_id' - 'non-existent column' don't exist "
+            "\"check existence of the key columns in 'references.columns'\": {\n    \"fk_id\": "
+            "\"The 'references.columns' of the FK 'fk_id' - 'non-existent column' don't exist "
             "in the referenced table - 'table_b'\"}"
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)

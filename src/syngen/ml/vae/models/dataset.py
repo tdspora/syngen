@@ -60,6 +60,7 @@ class BaseDataset:
         self.uuid_columns: Set = set()
         self.uuid_columns_types: Dict = dict()
         self.dropped_columns: Set = set()
+        self.tech_columns: Set = set()
         self.order_of_columns: List = list()
         self.custom_categorical_columns: Set = set()
         self.categorical_columns: Set = set()
@@ -71,6 +72,7 @@ class BaseDataset:
         self.binary_columns: Set = set()
         self.email_columns: Set = set()
         self.long_text_columns: Set = set()
+        self.tech_columns: Set = set()
         self.primary_keys_mapping: Dict = dict()
         self.primary_keys_list: List = list()
         self.primary_key_name: Optional[str] = None
@@ -1326,6 +1328,23 @@ class Dataset(BaseDataset):
             elif column in self.uuid_columns:
                 logger.info(f"Column '{column}' defined as UUID column")
                 self._assign_uuid_null_feature(column)
+
+        # workaround for the case when all columns are dropped
+        # add a technical column to proceed with the training process
+        if not self.features:
+            tech_column = "syngen_tech_column"
+            logger.info(
+                f"Since all columns in the table '{self.table_name}' "
+                "are uuid/key/long text columns, "
+                "there are no suitable columns to train on. "
+                f"A technical column '{tech_column}' will be added "
+                "to proceed with the training process "
+                "and will be removed afterwards."
+                )
+            self.df[tech_column] = 1
+            self._assign_float_feature(tech_column)
+            self.tech_columns.add(tech_column)
+
         self.fit()
 
         # The end of the run related to the preprocessing stage
