@@ -32,6 +32,6 @@ seaborn==0.13.*
 setuptools==74.1.*
 tensorflow==2.15.*
 tqdm==4.66.3
-Werkzeug==3.0.3
+Werkzeug==3.1.2
 xlrd
 xlwt
