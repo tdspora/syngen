@@ -150,6 +150,7 @@ def test_save_dataset(rp_logger):
         "float_columns",
         "int_columns",
         "date_columns",
+        "tech_columns",
         "date_mapping",
         "binary_columns",
         "email_columns",

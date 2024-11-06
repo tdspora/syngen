@@ -366,9 +366,11 @@ def file_sink(message):
     """
     Save logs to the log file
     """
-    with open(os.getenv("SUCCESS_LOG_FILE"), "a") as log_file:
-        log_message = fetch_log_message(message)
-        log_file.write(log_message + "\n")
+    path_to_logs = os.getenv("SUCCESS_LOG_FILE")
+    if path_to_logs is not None:
+        with open(path_to_logs, "a") as log_file:
+            log_message = fetch_log_message(message)
+            log_file.write(log_message + "\n")
 
 
 def console_sink(record):
