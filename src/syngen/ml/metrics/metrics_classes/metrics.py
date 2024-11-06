@@ -350,11 +350,16 @@ class BivariateMetric(BaseMetric):
         )
         self.dataset = fetch_config(dataset_pickle_path)
         nan_labels_dict = self.dataset.nan_labels_dict
-        na_values = self.dataset.format.get("na_values", [])
+        na_values = [f'"{value}"' for value in self.dataset.format.get("na_values", [])]
+        if na_values:
+            logger.info(
+                f"During data loading the 'format' section was used, therefore the values - "
+                f"{', '.join(na_values)} have been replaced with 'nan', impacting bivariate plots"
+            )
         self.missing_values: Dict[str, str] = (
-            {col: nan_labels_dict.get(col, na_values[0]) for col in self.dataset.order_of_columns}
-            if na_values
-            else nan_labels_dict
+            {col: nan_labels_dict.get(col, "nan") for col in self.dataset.order_of_columns}
+            if nan_labels_dict
+            else {}
         )
 
     @staticmethod
