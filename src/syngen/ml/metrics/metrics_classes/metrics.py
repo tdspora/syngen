@@ -352,7 +352,7 @@ class BivariateMetric(BaseMetric):
         nan_labels_dict = self.dataset.nan_labels_dict
         na_values = self.dataset.format.get("na_values", [])
         self.missing_values: Dict[str, str] = (
-            {col: na_values[0] for col in self.dataset.order_of_columns}
+            {col: nan_labels_dict.get(col, na_values[0]) for col in self.dataset.order_of_columns}
             if na_values
             else nan_labels_dict
         )
