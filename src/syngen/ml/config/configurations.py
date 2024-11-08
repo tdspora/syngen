@@ -339,8 +339,6 @@ class InferConfig:
                 log_message = (
                     "As a result, the accuracy report of the table - "
                     f"'{self.table_name}' won't be generated. "
-                    "The parameter 'reports' of the table - "
-                    f"'{self.table_name}' has been set to 'none'"
                 )
                 logger.warning(log_message)
             if any([item == "metrics_only" for item in self.reports]):
@@ -348,10 +346,12 @@ class InferConfig:
                 log_message = (
                     "As a result, the infer metrics related to the table - "
                     f"'{self.table_name}' won't be fetched. "
-                    "The parameter 'reports' of the table - "
-                    f"'{self.table_name}' has been set to 'none'"
                 )
                 logger.warning(log_message)
+            logger.warning(
+                f"The parameter 'reports' of the table - '{self.table_name}' "
+                f"has been set to 'none'"
+            )
 
     def _set_up_size(self):
         """

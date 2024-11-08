@@ -187,11 +187,11 @@ class VaeTrainHandler(BaseHandler):
             process="train",
         )
         self.model.batch_size = min(self.batch_size, len(data))
-
+        list_of_reports = ", ".join(self.reports)
         logger.debug(
             f"Train model with parameters: epochs={self.epochs}, "
-            f"row_subset={self.row_subset}, reports='{self.reports}', "
-            f"drop_null={self.drop_null}, batch_size={self.batch_size}"
+            f"row_subset={self.row_subset}, drop_null={self.drop_null}, "
+            f"batch_size={self.batch_size}, reports - {list_of_reports}"
         )
 
         self.model.fit_on_df(epochs=self.epochs)
@@ -466,10 +466,11 @@ class VaeInferHandler(BaseHandler):
 
     def handle(self, **kwargs):
         self._prepare_dir()
+        list_of_reports = ", ".join(self.reports)
         logger.debug(
             f"Infer model with parameters: size={self.size}, "
             f"run_parallel={self.run_parallel}, batch_size={self.batch_size}, "
-            f"random_seed={self.random_seed}, reports='{self.reports}'"
+            f"random_seed={self.random_seed}, reports - {list_of_reports}"
         )
         logger.info(f"Total of {self.batch_num} batch(es)")
         batches = self.split_by_batches()

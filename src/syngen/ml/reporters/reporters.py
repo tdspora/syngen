@@ -246,30 +246,51 @@ class Report:
         grouped_reporters = cls._group_reporters()
 
         for table_name, reporters in grouped_reporters.items():
-            MlflowTracker().start_run(
-                run_name=f"{table_name}-REPORT",
-                tags={"table_name": table_name, "process": "report"},
-            )
+            cls._start_mlflow_run(table_name)
             delta = 0.25 / len(reporters)
+
             for reporter in reporters:
-                message = (f"The calculation of {reporter.__class__.report_type} metrics "
-                           f"for the table - '{reporter.table_name}' has started")
-                ProgressBarHandler().set_progress(delta=delta, message=message)
-                reporter.report()
-                if "metrics_only" not in reporter.config["reports"]:
-                    message = (f"The {reporter.__class__.report_type} report of the table - "
-                               f"'{reporter.table_name}' has been generated")
-                    logger.info(message)
-                    ProgressBarHandler().set_progress(
-                        progress=ProgressBarHandler().progress + delta,
-                        delta=delta,
-                        message=message
-                    )
-                if "metrics_only" in reporter.config["reports"]:
-                    logger.info(
-                        f"The metrics for the table - '{reporter.table_name}' have been evaluated"
-                    )
+                cls._process_reporter(reporter, delta)
+
             MlflowTracker().end_run()
+
+    @staticmethod
+    def _start_mlflow_run(table_name: str):
+        MlflowTracker().start_run(
+            run_name=f"{table_name}-REPORT",
+            tags={"table_name": table_name, "process": "report"},
+        )
+
+    @classmethod
+    def _process_reporter(cls, reporter, delta: float):
+        cls._log_and_update_progress(
+            delta,
+            f"The calculation of {reporter.__class__.report_type} metrics for the table - "
+            f"'{reporter.table_name}' has started"
+        )
+
+        reporter.report()
+
+        if "metrics_only" not in reporter.config["reports"]:
+            cls._log_and_update_progress(
+                delta,
+                f"The {reporter.__class__.report_type} report of the table - "
+                f"'{reporter.table_name}' has been generated"
+            )
+        else:
+            logger.info(
+                f"The metrics for the table - '{reporter.table_name}' have been evaluated"
+            )
+
+    @staticmethod
+    def _log_and_update_progress(delta: float, message: str):
+        ProgressBarHandler().set_progress(delta=delta, message=message)
+        logger.info(message)
+        ProgressBarHandler().set_progress(
+            progress=ProgressBarHandler().progress + delta,
+            delta=delta,
+            message=message
+        )
 
     @property
     def reporters(self) -> Dict[str, Reporter]:

@@ -106,10 +106,6 @@ def launch_infer(
     setup_logger()
     if "accuracy" in reports and "metrics_only" in reports:
         reports.remove("metrics_only")
-        logger.warning(
-            "The '--reports' parameter value 'metrics_only' will be ignored "
-            "since the accuracy report includes fetching accuracy metrics."
-        )
     if not metadata_path and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "

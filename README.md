@@ -28,7 +28,7 @@ Otherwise, if you want to install the UI version with streamlit, run:
 pip install syngen[ui]
 ```
 
-*Note*: see details of the UI usage in the [corresponding section](#ui-web-interface)
+*Note:* see details of the UI usage in the [corresponding section](#ui-web-interface)
 
 
 The training and inference processes are separated with two cli entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters.<br>
@@ -78,6 +78,15 @@ train --source PATH_TO_ORIGINAL_CSV \
     --batch_size INT
 ```
 
+*Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
+For example:
+```bash
+train --source PATH_TO_ORIGINAL_CSV \
+    --table_name TABLE_NAME \
+    --reports accuracy \
+    --reports sample
+```
+
 To train one or more tables using a metadata file, you can use the following command:
 
 ```bash
@@ -103,7 +112,7 @@ Requirements for parameters of training process:
 * <i>row_limit</i> - data type - integer
 * <i>drop_null</i> - data type - boolean, default value - False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1, default value - 32
-* <i>reports</i> - data type - string (if the value is passed through CLI), string or list (if the value is passed in the metadata file), accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sampling reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sampling report, <i>"metrics_only"</i> - outputs the metrics information only to standard output
+* <i>reports</i> - data type - string (if the value is passed through CLI), string (if value is "none" or "all") or list (if the value is passed in the metadata file), accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sampling reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sampling report, <i>"metrics_only"</i> - outputs the metrics information only to standard output. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 
@@ -142,13 +151,13 @@ Requirements for parameters of generation process:
 * <i>run_parallel</i> - data type - boolean, default value is False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1
 * <i>random_seed</i> - data type - integer, must be equal to or more than 0
-* <i>reports</i> - data type - string (if the value is passed through CLI), string or list (if the value is passed in the metadata file), accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates an accuracy report, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output
+* <i>reports</i> - data type - string (if the value is passed through CLI), string (if value is "none" or "all") or list (if the value is passed in the metadata file), accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sampling reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sampling report, <i>"metrics_only"</i> - outputs the metrics information only to standard output. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously
 * <i>metadata_path</i> - data type - string
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
 will be ignored.
 
-<i>Note:</i> If you want to set the logging level, you can use the parameter <i>log_level</i> in the CLI call:
+*Note:* If you want to set the logging level, you can use the parameter <i>log_level</i> in the CLI call:
 
 ```bash
 train --source STR --table_name STR --log_level STR
@@ -167,7 +176,7 @@ between tables via metadata, it becomes possible to manage complex relationships
 You can also specify additional parameters needed for training and inference in the metadata file and in this case,
 they will be ignored in the CLI call.
 
-<i>Note:</i> By using metadata file, you can also generate tables with absent relationships.
+*Note:* By using metadata file, you can also generate tables with absent relationships.
 In this case, the tables will be generated independently.
 
 The yaml metadata file should match the following template:
@@ -300,7 +309,7 @@ ORDER:                                      # Table name. Required parameter
           - customer_id
 ```
 
-<i>Note</i>:
+*Note:*
 <ul>
 <li>In the section <i>"global"</i> you can specify training and inference settings for all tables. If the same settings are specified for a specific table, they will override the global settings</li>
 <li>If the information about <i>"destination"</i> isn't specified in <i>"infer_settings"</i>, by default the synthetic data will be stored locally in <i>".csv"</i> format</li>
