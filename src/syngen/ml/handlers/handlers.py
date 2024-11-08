@@ -187,11 +187,12 @@ class VaeTrainHandler(BaseHandler):
             process="train",
         )
         self.model.batch_size = min(self.batch_size, len(data))
-        list_of_reports = ", ".join(self.reports)
+        list_of_reports = [f'"{report}"' for report in self.reports]
         logger.debug(
             f"Train model with parameters: epochs={self.epochs}, "
             f"row_subset={self.row_subset}, drop_null={self.drop_null}, "
-            f"batch_size={self.batch_size}, reports - {list_of_reports}"
+            f"batch_size={self.batch_size}, "
+            f"reports - {', '.join(list_of_reports) if list_of_reports else 'none'}"
         )
 
         self.model.fit_on_df(epochs=self.epochs)
@@ -466,12 +467,17 @@ class VaeInferHandler(BaseHandler):
 
     def handle(self, **kwargs):
         self._prepare_dir()
-        list_of_reports = ", ".join(self.reports)
-        logger.debug(
+        list_of_reports = [f'"{report}"' for report in self.reports]
+        log_message = (
             f"Infer model with parameters: size={self.size}, "
             f"run_parallel={self.run_parallel}, batch_size={self.batch_size}, "
-            f"random_seed={self.random_seed}, reports - {list_of_reports}"
+            f"random_seed={self.random_seed}"
         )
+        if self.type_of_process == "infer":
+            log_message += (
+                f", reports - {', '.join(list_of_reports) if list_of_reports else 'none'}"
+            )
+        logger.debug(log_message)
         logger.info(f"Total of {self.batch_num} batch(es)")
         batches = self.split_by_batches()
         delta = ProgressBarHandler().delta / self.batch_num
