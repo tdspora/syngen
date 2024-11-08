@@ -913,24 +913,25 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     }
     assert validator.merged_metadata == {
         "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv",
-                    "reports": ["accuracy", "sample"]
+            "train_settings": {
+                "source": "path/to/table_a.csv",
+                "reports": ["accuracy", "sample"]
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 },
-                "infer_settings": {
-                    "destination": "path/to/generated_table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
                 }
             },
+            "format": {}
+        },
         "table_b": {
             "train_settings": {
                 "source": "path/to/table_b.csv",
@@ -1027,24 +1028,25 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
     }
     assert validator.merged_metadata == {
         "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv",
-                    "reports": ["accuracy", "sample"]
+            "train_settings": {
+                "source": "path/to/table_a.csv",
+                "reports": ["accuracy", "sample"]
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 },
-                "infer_settings": {
-                    "destination": "path/to/generated_table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
                 }
             },
+            "format": {}
+        },
         "table_b": {
             "train_settings": {
                 "source": "path/to/table_b.csv",
@@ -1134,24 +1136,25 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
     }
     assert validator.merged_metadata == {
         "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv",
-                    "reports": ["accuracy", "sample"]
+            "train_settings": {
+                "source": "path/to/table_a.csv",
+                "reports": ["accuracy", "sample"]
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 },
-                "infer_settings": {
-                    "destination": "path/to/generated_table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
                 }
             },
+            "format": {}
+        },
         "table_b": {
             "train_settings": {
                 "source": "path/to/table_b.csv",
@@ -1240,24 +1243,25 @@ def test_validate_incomplete_metadata_in_infer_process(
     }
     assert validator.merged_metadata == {
         "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv",
-                    "reports": ["accuracy", "sample"]
+            "train_settings": {
+                "source": "path/to/table_a.csv",
+                "reports": ["accuracy", "sample"]
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 },
-                "infer_settings": {
-                    "destination": "path/to/generated_table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
                 }
             },
+            "format": {}
+        },
         "table_b": {
             "train_settings": {
                 "source": "path/to/table_b.csv"
@@ -1761,7 +1765,8 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
                             "type": "UQ",
                             "columns": ["name"]
                         }
-                    }
+                    },
+                    "format": {}
                 }
             }
             assert mock_check_existence_of_destination.call_count == 2
@@ -1885,7 +1890,8 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
                             "type": "UQ",
                             "columns": ["name"]
                         }
-                    }
+                    },
+                    "format": {}
                 }
             }
             assert mock_gather_existed_columns.call_count == 2

@@ -136,6 +136,7 @@ class Worker:
                     },
                     "infer_settings": {},
                     "keys": {},
+                    "format": {}
                 }
             }
             return metadata

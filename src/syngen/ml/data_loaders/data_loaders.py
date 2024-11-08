@@ -5,6 +5,7 @@ from typing import Optional, Dict, Tuple, List, Literal
 import pickle as pkl
 import csv
 import inspect
+from dataclasses import dataclass
 
 import pandas as pd
 import pandas.errors
@@ -402,23 +403,27 @@ class MetadataLoader(BaseDataLoader):
         self.metadata_loader.save_data(metadata, **kwargs)
 
 
+@dataclass
 class YAMLLoader(BaseDataLoader):
     """
     Class for loading and saving data in YAML format
     """
+    metadata_sections = ["train_settings", "infer_settings", "format", "keys"]
+    train_reports = ["accuracy", "sample"]
+    infer_reports = ["accuracy"]
 
-    _metadata_sections = ["train_settings", "infer_settings", "keys"]
+    def __init__(self, path: str):
+        super().__init__(path)
 
-    @staticmethod
-    def _normalize_reports(settings: dict, type_of_process: Literal["train", "infer"]):
+    def _normalize_reports(self, settings: dict, type_of_process: Literal["train", "infer"]):
         reports = settings.get(f"{type_of_process}_settings", {}).get("reports", [])
         if isinstance(reports, str):
             if reports == "none":
                 settings[f"{type_of_process}_settings"]["reports"] = []
             if reports == "all" and type_of_process == "train":
-                settings[f"{type_of_process}_settings"]["reports"] = ["accuracy", "sample"]
+                settings[f"{type_of_process}_settings"]["reports"] = self.train_reports
             if reports == "all" and type_of_process == "infer":
-                settings[f"{type_of_process}_settings"]["reports"] = ["accuracy"]
+                settings[f"{type_of_process}_settings"]["reports"] = self.infer_reports
 
     def _normalize_parameter_reports(self, metadata: dict) -> dict:
         for table, settings in metadata.items():
@@ -460,7 +465,7 @@ class YAMLLoader(BaseDataLoader):
         for key in metadata.keys():
             if key == "global":
                 continue
-            for parameter in self._metadata_sections:
+            for parameter in self.metadata_sections:
                 if metadata.get(key).get(parameter) is None:
                     metadata[key][parameter] = {}
         return metadata

@@ -42,6 +42,7 @@ def test_init_worker_for_training_process_with_absent_metadata_path(mock_validat
             },
             "infer_settings": {},
             "keys": {},
+            "format": {}
         }
     }
     mock_validator_run.assert_called_once()
@@ -82,6 +83,7 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
                 "random_seed": 1,
             },
             "keys": {},
+            "format": {}
         }
     }
     mock_validator_run.assert_called_once()
@@ -128,7 +130,13 @@ def test_init_worker_with_metadata_path(rp_logger):
                 "reports": ["accuracy"],
                 "batch_size": 200,
             },
-            "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            },
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -174,6 +182,7 @@ def test_init_worker_with_empty_settings_in_metadata_in_train_process(rp_logger)
             },
             "infer_settings": {},
             "keys": {},
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -219,6 +228,7 @@ def test_init_worker_with_empty_settings_in_metadata_in_infer_process(rp_logger)
                 "reports": ["accuracy"]
             },
             "keys": {},
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -272,6 +282,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
             },
             "infer_settings": {"reports": []},
             "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+            "format": {}
         },
         "fk_test": {
             "keys": {
@@ -290,6 +301,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
                 "reports": ["accuracy", "sample"],
             },
             "infer_settings": {},
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -345,6 +357,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
                 "random_seed": 5,
             },
             "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+            "format": {}
         },
         "fk_test": {
             "keys": {
@@ -362,6 +375,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
                 "batch_size": 200,
                 "random_seed": 5,
             },
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -430,6 +444,7 @@ def test_launch_train_with_metadata(
                     "batch_size": 200,
                 },
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
             }
         },
         {
@@ -450,6 +465,7 @@ def test_launch_train_with_metadata(
                     "batch_size": 200,
                 },
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
             }
         },
         False
@@ -526,6 +542,7 @@ def test_launch_train_with_metadata_of_related_tables(
                     "reports": ["accuracy"],
                 },
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
             },
             "fk_test": {
                 "train_settings": {
@@ -549,6 +566,7 @@ def test_launch_train_with_metadata_of_related_tables(
                         "references": {"table": "pk_test", "columns": ["Id"]},
                     }
                 },
+                "format": {}
             },
         },
         {
@@ -567,6 +585,7 @@ def test_launch_train_with_metadata_of_related_tables(
                     "reports": ["accuracy"],
                 },
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
             },
             "fk_test": {
                 "train_settings": {
@@ -590,6 +609,7 @@ def test_launch_train_with_metadata_of_related_tables(
                         "references": {"table": "pk_test", "columns": ["Id"]},
                     }
                 },
+                "format": {}
             },
         },
         True
@@ -671,6 +691,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                     },
                 },
                 "infer_settings": {},
+                "format": {}
             },
             "tdm_clusters": {
                 "train_settings": {
@@ -683,6 +704,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                 },
                 "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
                 "infer_settings": {},
+                "format": {}
             },
         },
         {
@@ -704,6 +726,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                     },
                 },
                 "infer_settings": {},
+                "format": {}
             },
             "tdm_clusters": {
                 "train_settings": {
@@ -716,6 +739,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                 },
                 "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
                 "infer_settings": {},
+                "format": {}
             },
             "tdm_models_pk": {
                 "train_settings": {
@@ -728,6 +752,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                 },
                 "keys": {"tdm_models_pkey": {"type": "PK", "columns": ["id"]}},
                 "infer_settings": {},
+                "format": {}
             },
             "tdm_models_fk": {
                 "train_settings": {
@@ -746,6 +771,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                     }
                 },
                 "infer_settings": {},
+                "format": {}
             },
         },
         True
@@ -818,6 +844,7 @@ def test_launch_train_without_metadata(
                 },
                 "infer_settings": {},
                 "keys": {},
+                "format": {}
             }
         },
         {
@@ -832,6 +859,7 @@ def test_launch_train_without_metadata(
                 },
                 "infer_settings": {},
                 "keys": {},
+                "format": {}
             }
         },
         True
@@ -906,6 +934,7 @@ def test_launch_train_with_metadata_contained_global_settings(
                 },
                 "infer_settings": {"reports": []},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
             },
             "fk_test": {
                 "keys": {
@@ -924,6 +953,7 @@ def test_launch_train_with_metadata_contained_global_settings(
                     "reports": ["accuracy", "sample"],
                 },
                 "infer_settings": {},
+                "format": {}
             },
         },
         {
@@ -938,6 +968,7 @@ def test_launch_train_with_metadata_contained_global_settings(
                 },
                 "infer_settings": {"reports": []},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
             },
             "fk_test": {
                 "keys": {
@@ -956,6 +987,7 @@ def test_launch_train_with_metadata_contained_global_settings(
                     "reports": ["accuracy", "sample"],
                 },
                 "infer_settings": {},
+                "format": {}
             },
         },
         True
@@ -1026,6 +1058,7 @@ def test_launch_infer_with_metadata(
                     "batch_size": 200,
                 },
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
             }
         },
         0.25,
@@ -1089,6 +1122,7 @@ def test_launch_infer_with_metadata_of_related_tables(
                     "random_seed": 1,
                 },
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
             },
             "fk_test": {
                 "train_settings": {
@@ -1112,6 +1146,7 @@ def test_launch_infer_with_metadata_of_related_tables(
                         "references": {"table": "pk_test", "columns": ["Id"]},
                     }
                 },
+                "format": {}
             },
         },
         0.125,
@@ -1179,6 +1214,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                     "batch_size": 200,
                     "random_seed": 1,
                 },
+                "format": {}
             },
             "tdm_clusters": {
                 "train_settings": {"source": "./path/to/tdm_clusters.csv"},
@@ -1190,6 +1226,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                     "batch_size": 200,
                     "random_seed": 1,
                 },
+                "format": {}
             },
             "tdm_models_pk": {
                 "train_settings": {"source": "./path/to/tdm_models.csv"},
@@ -1201,6 +1238,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                     "batch_size": 200,
                     "random_seed": 1,
                 },
+                "format": {}
             },
             "tdm_models_fk": {
                 "train_settings": {"source": "./path/to/tdm_models.csv"},
@@ -1218,6 +1256,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                     "batch_size": 200,
                     "random_seed": 1,
                 },
+                "format": {}
             },
         },
         0.08333333333333333,
@@ -1278,6 +1317,7 @@ def test_launch_infer_without_metadata(
                     "batch_size": 200,
                 },
                 "keys": {},
+                "format": {}
             }
         },
         0.25,
@@ -1337,6 +1377,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
                     "batch_size": 300,
                 },
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
             },
             "fk_test": {
                 "keys": {
@@ -1354,6 +1395,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
                     "random_seed": 3,
                     "batch_size": 300,
                 },
+                "format": {}
             },
         },
         0.125,
@@ -1415,6 +1457,7 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
             },
             "infer_settings": {},
             "keys": {},
+            "format": {}
         }
     }
     worker.launch_train()
@@ -1432,7 +1475,8 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
                     "reports": ["accuracy", "sample"]
                 },
                 "infer_settings": {},
-                "keys": {}
+                "keys": {},
+                "format": {}
             }
         },
         {
@@ -1446,7 +1490,8 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
                     "reports": ["accuracy", "sample"]
                 },
                 "infer_settings": {},
-                "keys": {}
+                "keys": {},
+                "format": {}
             }
         },
         True
@@ -1525,7 +1570,8 @@ def test_launch_train_with_metadata_without_source_paths(
                         "type": "PK",
                         "columns": ["Id"]
                     }
-                }
+                },
+                "format": {}
             },
             "fk_test": {
                 "train_settings": {
@@ -1550,7 +1596,8 @@ def test_launch_train_with_metadata_without_source_paths(
                             "columns": ["Id"]
                         }
                     }
-                }
+                },
+                "format": {}
             }
         },
         {
@@ -1572,7 +1619,8 @@ def test_launch_train_with_metadata_without_source_paths(
                         "type": "PK",
                         "columns": ["Id"]
                     }
-                }
+                },
+                "format": {}
             },
             "fk_test": {
                 "train_settings": {
@@ -1597,7 +1645,8 @@ def test_launch_train_with_metadata_without_source_paths(
                             "columns": ["Id"]
                         }
                     }
-                }
+                },
+                "format": {}
             }
         },
         True
@@ -1682,7 +1731,8 @@ def test_launch_train_with_metadata_without_train_settings(
                         "type": "PK",
                         "columns": ["Id"]
                     }
-                }
+                },
+                "format": {}
             },
             "fk_test": {
                 "train_settings": {
@@ -1707,7 +1757,8 @@ def test_launch_train_with_metadata_without_train_settings(
                             "columns": ["Id"]
                         }
                     }
-                }
+                },
+                "format": {}
             }
         },
         {
@@ -1729,7 +1780,8 @@ def test_launch_train_with_metadata_without_train_settings(
                         "type": "PK",
                         "columns": ["Id"]
                     }
-                }
+                },
+                "format": {}
             },
             "fk_test": {
                 "train_settings": {
@@ -1754,7 +1806,8 @@ def test_launch_train_with_metadata_without_train_settings(
                             "columns": ["Id"]
                         }
                     }
-                }
+                },
+                "format": {}
             }
         },
         True
