@@ -409,8 +409,8 @@ class YAMLLoader(BaseDataLoader):
     Class for loading and saving data in YAML format
     """
     metadata_sections = ["train_settings", "infer_settings", "format", "keys"]
-    train_reports = ["accuracy", "sample"]
     infer_reports = ["accuracy"]
+    train_reports = infer_reports + ["sample"]
 
     def __init__(self, path: str):
         super().__init__(path)
