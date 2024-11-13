@@ -112,7 +112,7 @@ Requirements for parameters of training process:
 * <i>row_limit</i> - data type - integer
 * <i>drop_null</i> - data type - boolean, default value - False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1, default value - 32
-* <i>reports</i> - data type - string (if the value is passed through CLI), string (if value is "none" or "all") or list (if the value is passed in the metadata file), accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sampling reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sampling report, <i>"metrics_only"</i> - outputs the metrics information only to standard output. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously
+* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string (if value is "none" or "all") or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sampling reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sampling report, <i>"metrics_only"</i> - outputs the metrics information only to standard output. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 
@@ -151,7 +151,7 @@ Requirements for parameters of generation process:
 * <i>run_parallel</i> - data type - boolean, default value is False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1
 * <i>random_seed</i> - data type - integer, must be equal to or more than 0
-* <i>reports</i> - data type - string (if the value is passed through CLI), string (if value is "none" or "all") or list (if the value is passed in the metadata file), accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sampling reports, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously
+* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string (if value is "none" or "all") or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates an accuracy report, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously
 * <i>metadata_path</i> - data type - string
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
