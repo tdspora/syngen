@@ -502,13 +502,13 @@ class VaeInferHandler(BaseHandler):
                 "Technical columns "
                 f"{tech_columns} were removed "
                 "from the generated table."
-                )
+            )
             Report().unregister_reporters(self.table_name)
             logger.info(
-                    "Since there were no columns suitable for training, "
-                    "reports will not be generated "
-                    f"for the table '{self.table_name}'."
-                    )
+                "Since there were no columns suitable for training, "
+                "reports will not be generated "
+                f"for the table '{self.table_name}'."
+            )
 
         is_pk = self._is_pk()
 

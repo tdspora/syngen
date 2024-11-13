@@ -44,6 +44,7 @@ class Reporter:
         self.loader = loader
         self.dataset = None
         self.columns_nan_labels = dict()
+        self.na_values = dict()
 
     def _fetch_dataframe(self) -> pd.DataFrame:
         """
@@ -308,8 +309,7 @@ class AccuracyReporter(Reporter):
             synthetic,
             self.paths,
             self.table_name,
-            self.config,
-            self.columns_nan_labels,
+            self.config
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
