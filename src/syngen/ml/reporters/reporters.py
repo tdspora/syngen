@@ -271,16 +271,19 @@ class Report:
 
         reporter.report()
 
-        if "metrics_only" not in reporter.config["reports"]:
-            cls._log_and_update_progress(
-                delta,
+        if (
+                reporter.__class__.report_type == "accuracy"
+                and "metrics_only" in reporter.config["reports"]
+        ):
+            message = (
+                f"The metrics for the table - '{reporter.table_name}' have been evaluated"
+            )
+        else:
+            message = (
                 f"The {reporter.__class__.report_type} report of the table - "
                 f"'{reporter.table_name}' has been generated"
             )
-        else:
-            logger.info(
-                f"The metrics for the table - '{reporter.table_name}' have been evaluated"
-            )
+        cls._log_and_update_progress(delta, message)
 
     @staticmethod
     def _log_and_update_progress(delta: float, message: str):
@@ -357,11 +360,6 @@ class SampleAccuracyReporter(Reporter):
             categorical_columns,
             date_columns,
         ) = self.preprocess_data(original, sampled)
-        if original.shape == sampled.shape:
-            logger.warning(
-                "The generation of sampling report is unnecessary and will not be produced "
-                "as the source data and sampled data sizes are identical."
-            )
         accuracy_test = SampleAccuracyTest(
             original,
             sampled,

@@ -28,6 +28,7 @@ class TrainConfig:
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
     data: pd.DataFrame = field(init=False)
+    initial_data_shape: Tuple[int, int] = field(init=False)
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
@@ -166,6 +167,7 @@ class TrainConfig:
         Extract data and schema necessary for training process
         """
         self.data, self.schema = self._load_source()
+        self.initial_data_shape = self.data.shape
         self._check_if_data_is_empty()
 
     def _preprocess_data(self):
