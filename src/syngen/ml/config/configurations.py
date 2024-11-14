@@ -330,30 +330,16 @@ class InferConfig:
                     and not self.loader
                 )
         ):
-            message = (
-                f"It seems that the path to the sample of the original data "
-                f"of the table '{self.table_name}' - '{self.paths['input_data_path']}' "
-                f"doesn't exist."
+            self.reports = list()
+            log_message = (
+                f"It seems that the path to the sample of the original data for the table "
+                f"'{self.table_name}' at '{self.paths['input_data_path']}' does not exist.\n"
+                f"As a result, no reports for the table '{self.table_name}' will be generated.\n"
+                f"The 'reports' parameter for the table '{self.table_name}' "
+                f"has been set to 'none'."
             )
-            logger.warning(message)
-            if any([item == "accuracy" for item in self.reports]):
-                self.reports = list()
-                log_message = (
-                    "As a result, the accuracy report of the table - "
-                    f"'{self.table_name}' won't be generated. "
-                )
-                logger.warning(log_message)
-            if any([item == "metrics_only" for item in self.reports]):
-                self.reports = list()
-                log_message = (
-                    "As a result, the infer metrics related to the table - "
-                    f"'{self.table_name}' won't be fetched. "
-                )
-                logger.warning(log_message)
-            logger.warning(
-                f"The parameter 'reports' of the table - '{self.table_name}' "
-                f"has been set to 'none'"
-            )
+            logger.warning(log_message)
+            self.reports = list()
 
     def _set_up_size(self):
         """
