@@ -312,7 +312,9 @@ def test_train_table_with_several_valid_parameter_reports(
             first_value,
             "--reports",
             second_value,
-            "--table_name", TABLE_NAME, "--source", PATH_TO_TABLE],
+            "--table_name", TABLE_NAME,
+            "--source", PATH_TO_TABLE
+        ],
     )
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
