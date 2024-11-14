@@ -24,6 +24,7 @@ from syngen.ml.context import get_context, global_context
 from syngen.ml.validation_schema import (
     ExcelFormatSettingsSchema,
     CSVFormatSettingsSchema,
+    ReportTypes
 )
 
 DELIMITERS = {"\\t": "\t"}
@@ -409,8 +410,8 @@ class YAMLLoader(BaseDataLoader):
     Class for loading and saving data in YAML format
     """
     metadata_sections = ["train_settings", "infer_settings", "format", "keys"]
-    infer_reports = ["accuracy"]
-    train_reports = infer_reports + ["sample"]
+    infer_reports = ReportTypes().full_list_of_infer_report_types
+    train_reports = ReportTypes().full_list_of_train_report_types
 
     def __init__(self, path: str):
         super().__init__(path)

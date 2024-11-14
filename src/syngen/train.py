@@ -13,12 +13,12 @@ from syngen.ml.utils import (
     check_if_logs_available
 )
 from syngen.ml.utils import validate_parameter_reports
-from syngen.ml.validation_schema import TRAIN_REPORT_TYPES
+from syngen.ml.validation_schema import ReportTypes
 
 
 validate_reports = validate_parameter_reports(
-    report_types=TRAIN_REPORT_TYPES,
-    full_list=["accuracy", "sample"]
+    report_types=ReportTypes().train_report_types,
+    full_list=ReportTypes().full_list_of_train_report_types
 )
 
 

@@ -13,8 +13,30 @@ from marshmallow import (
 from loguru import logger
 
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
-INFER_REPORT_TYPES = ["accuracy", "metrics_only"]
-TRAIN_REPORT_TYPES = INFER_REPORT_TYPES + ["sample"]
+
+
+class ReportTypes:
+    def __init__(self):
+        self.infer_report_types = ["accuracy", "metrics_only"]
+        self.train_report_types = self.infer_report_types + ["sample"]
+        self.excluded_reports = ["metrics_only"]
+        self.full_list_of_train_report_types = self.get_list_of_report_types("train")
+        self.full_list_of_infer_report_types = self.get_list_of_report_types("infer")
+
+    def get_list_of_report_types(self, type_of_process: Literal["train", "infer"]):
+        """
+        Get the full list of reports that should be generated
+        if the parameter 'reports' sets to 'all'
+        """
+        report_types = (
+            self.train_report_types
+            if type_of_process == "train"
+            else self.infer_report_types
+        )
+        full_list = report_types.copy()
+        for report in self.excluded_reports:
+            full_list.remove(report)
+        return full_list
 
 
 class ReferenceSchema(Schema):
@@ -82,7 +104,7 @@ class TrainingSettingsSchema(Schema):
         required=False,
         validate=(
             lambda x: isinstance(x, list) and
-            all(isinstance(elem, str) and elem in TRAIN_REPORT_TYPES for elem in x)
+            all(isinstance(elem, str) and elem in ReportTypes().train_report_types for elem in x)
         )
     )
 
@@ -109,7 +131,7 @@ class InferSettingsSchema(Schema):
         required=False,
         validate=(
             lambda x: isinstance(x, list) and
-            all(isinstance(elem, str) and elem in INFER_REPORT_TYPES for elem in x)
+            all(isinstance(elem, str) and elem in ReportTypes().infer_report_types for elem in x)
         )
     )
 

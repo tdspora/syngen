@@ -4,12 +4,13 @@ from click.testing import CliRunner
 
 from syngen.train import launch_train
 from syngen.ml.worker import Worker
-from syngen.ml.validation_schema import TRAIN_REPORT_TYPES
+from syngen.ml.validation_schema import ReportTypes
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 TABLE_NAME = "test_table"
 PATH_TO_TABLE = f"{DIR_NAME}/unit/launchers/fixtures/table_with_data.csv"
 PATH_TO_METADATA = f"{DIR_NAME}/unit/launchers/fixtures/metadata.yaml"
+TRAIN_REPORT_TYPES = ReportTypes().train_report_types
 
 
 @patch.object(Worker, "launch_train")

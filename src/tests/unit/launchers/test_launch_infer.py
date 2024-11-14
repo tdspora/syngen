@@ -4,12 +4,13 @@ from click.testing import CliRunner
 
 from syngen.infer import launch_infer
 from syngen.ml.worker import Worker
-from syngen.ml.validation_schema import INFER_REPORT_TYPES
+from syngen.ml.validation_schema import ReportTypes
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 TABLE_NAME = "test_table"
 PATH_TO_METADATA = f"{DIR_NAME}/unit/launchers/fixtures/metadata.yaml"
+INFER_REPORT_TYPES = ReportTypes().infer_report_types
 
 
 @patch.object(Worker, "launch_infer")
