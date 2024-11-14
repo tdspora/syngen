@@ -72,7 +72,7 @@ validate_reports = validate_parameter_reports(
     "If set to 'sample', generates a sampling report. "
     "If set to 'accuracy', generates an accuracy report. "
     "If set to 'metrics_only', outputs the metrics information only to standard output. "
-    "If set to 'all', generates both sampling and accuracy reports. "
+    "If set to 'all', generates both accuracy and sampling report. "
     "If it's absent or set to 'none', no reports are generated.",
 )
 @click.option(
