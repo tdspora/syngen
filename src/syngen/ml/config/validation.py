@@ -8,7 +8,7 @@ from marshmallow import ValidationError
 from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader
-from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.validation_schema import ValidationSchema, INFER_REPORT_TYPES
 
 
 @dataclass
@@ -69,7 +69,7 @@ class Validator:
             self.type_of_process == "infer"
             or (
                 self.type_of_process == "train" and
-                any([item in ["accuracy", "metrics_only"] for item in reports])
+                any([item in INFER_REPORT_TYPES for item in reports])
             )
         )
 
