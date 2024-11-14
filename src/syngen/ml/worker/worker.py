@@ -253,9 +253,9 @@ class Worker:
         """
         return any(
             [
-                report in config.get(f"{type_of_process}_settings", {}).get("reports", [])
-                for report in ReportTypes().infer_report_types
+                report in ReportTypes().infer_report_types
                 for config in config_of_tables.values()
+                for report in config.get(f"{type_of_process}_settings", {}).get("reports", [])
             ]
         )
 
