@@ -208,8 +208,8 @@ def test_infer_table_with_valid_parameter_reports(
 @pytest.mark.parametrize(
     "first_value, second_value",
     [
-        (pv, i) for pv in ["accuracy", "metrics_only"]
-        for i in ["accuracy", "metrics_only"]
+        (pv, i) for pv in INFER_REPORT_TYPES
+        for i in INFER_REPORT_TYPES
     ]
 )
 @patch.object(Worker, "launch_infer")

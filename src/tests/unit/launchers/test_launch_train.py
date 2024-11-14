@@ -291,8 +291,8 @@ def test_train_table_with_valid_parameter_reports(
 @pytest.mark.parametrize(
     "first_value, second_value",
     [
-        (pv, i) for pv in ["accuracy", "metrics_only", "sample"]
-        for i in ["accuracy", "metrics_only", "sample"]
+        (pv, i) for pv in TRAIN_REPORT_TYPES
+        for i in TRAIN_REPORT_TYPES
     ]
 )
 @patch.object(Worker, "launch_train")
