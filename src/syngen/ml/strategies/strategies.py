@@ -107,8 +107,6 @@ class TrainStrategy(Strategy, ABC):
         table_name = self.config.table_name
         source = self.config.paths["source_path"]
         loader = self.config.loader
-        print(f"!!!!!!!!!!!!!!!!!!!!!!!!")
-        print(self.config.reports)
         if (
                 not table_name.endswith("_fk")
                 and source is not None

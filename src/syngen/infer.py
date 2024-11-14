@@ -128,7 +128,7 @@ def launch_infer(
         "size": size,
         "run_parallel": run_parallel,
         "batch_size": batch_size,
-        "reports": list(reports),
+        "reports": reports,
         "random_seed": random_seed
     }
     worker = Worker(
