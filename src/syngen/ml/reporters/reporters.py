@@ -250,7 +250,7 @@ class Report:
             delta = 0.25 / len(reporters)
 
             for reporter in reporters:
-                cls._process_reporter(reporter, delta)
+                cls._launch_reporter(reporter, delta)
 
             MlflowTracker().end_run()
 
@@ -262,7 +262,7 @@ class Report:
         )
 
     @classmethod
-    def _process_reporter(cls, reporter, delta: float):
+    def _launch_reporter(cls, reporter, delta: float):
         cls._log_and_update_progress(
             delta,
             f"The calculation of {reporter.__class__.report_type} metrics for the table - "
