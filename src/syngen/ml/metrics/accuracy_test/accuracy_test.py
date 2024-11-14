@@ -20,6 +20,7 @@ from syngen.ml.metrics import (
 from syngen.ml.metrics.utils import transform_to_base64
 from syngen.ml.utils import fetch_config, ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
+from syngen.ml.validation_schema import ReportTypes
 
 
 class BaseTest(ABC):
@@ -37,7 +38,11 @@ class BaseTest(ABC):
         self.table_name = table_name
         self.config = config
         self.plot_exists = any(
-            [item in ["accuracy", "metrics_only"] for item in self.config.get("reports", [])]
+            [
+                item in ReportTypes().full_list_of_infer_report_types
+                for item
+                in self.config.get("reports", [])
+            ]
         )
         self.reports_path = str()
 
