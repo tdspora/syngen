@@ -1,6 +1,7 @@
-from typing import Dict, Literal
+from typing import Dict, Literal, List
 import json
 from pathlib import Path
+from dataclasses import dataclass, field
 
 from marshmallow import (
     Schema,
@@ -15,28 +16,34 @@ from loguru import logger
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
 
 
+@dataclass
 class ReportTypes:
-    def __init__(self):
-        self.infer_report_types = ["accuracy", "metrics_only"]
+    infer_report_types: List[str] = field(default_factory=lambda: ["accuracy", "metrics_only"])
+    train_report_types: List[str] = field(init=False)
+    excluded_reports: List[str] = field(default_factory=lambda: ["metrics_only"])
+    full_list_of_train_report_types: List[str] = field(init=False)
+    full_list_of_infer_report_types: List[str] = field(init=False)
+
+    def __post_init__(self):
         self.train_report_types = self.infer_report_types + ["sample"]
-        self.excluded_reports = ["metrics_only"]
         self.full_list_of_train_report_types = self.get_list_of_report_types("train")
         self.full_list_of_infer_report_types = self.get_list_of_report_types("infer")
 
-    def get_list_of_report_types(self, type_of_process: Literal["train", "infer"]):
+    def get_list_of_report_types(self, report_type):
         """
         Get the full list of reports that should be generated
         if the parameter 'reports' sets to 'all'
         """
         report_types = (
             self.train_report_types
-            if type_of_process == "train"
+            if report_type == "train"
             else self.infer_report_types
         )
-        full_list = report_types.copy()
-        for report in self.excluded_reports:
-            full_list.remove(report)
-        return full_list
+        return [
+            report
+            for report in report_types
+            if report not in self.excluded_reports
+        ]
 
 
 class ReferenceSchema(Schema):
