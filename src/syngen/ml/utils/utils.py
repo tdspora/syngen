@@ -438,6 +438,11 @@ def validate_parameter_reports(report_types: list, full_list: list) -> Callable:
                 f"Invalid input: Acceptable values for the parameter '--reports' are "
                 f"{', '.join(valid_values)}."
             )
+        if "none" in input_values and "all" in input_values:
+            raise ValueError(
+                "Invalid input: The '--reports' parameter cannot be set to both 'none' and 'all'. "
+                "Please provide only one of these options."
+            )
 
         if "none" in input_values or "all" in input_values:
             if len(input_values) > 1:
