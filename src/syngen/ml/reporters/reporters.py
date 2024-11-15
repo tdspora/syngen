@@ -239,7 +239,7 @@ class Report:
         return grouped_reporters
 
     @classmethod
-    def generate_report(cls, type_of_process: str):
+    def generate_report(cls):
         """
         Generate all needed reports
         """

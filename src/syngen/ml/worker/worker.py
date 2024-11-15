@@ -451,7 +451,7 @@ class Worker:
         """
         Generate reports
         """
-        Report().generate_report(type_of_process=self.type_of_process.upper())
+        Report().generate_report()
         Report().clear_report()
 
     @staticmethod
