@@ -333,8 +333,8 @@ class InferConfig:
             self.reports = list()
             log_message = (
                 f"It seems that the path to the sample of the original data for the table "
-                f"'{self.table_name}' at '{self.paths['input_data_path']}' does not exist.\n"
-                f"As a result, no reports for the table '{self.table_name}' will be generated.\n"
+                f"'{self.table_name}' at '{self.paths['input_data_path']}' does not exist. "
+                f"As a result, no reports for the table '{self.table_name}' will be generated. "
                 f"The 'reports' parameter for the table '{self.table_name}' "
                 f"has been set to 'none'."
             )
