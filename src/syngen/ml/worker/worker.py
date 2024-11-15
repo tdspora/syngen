@@ -245,7 +245,8 @@ class Worker:
     @staticmethod
     def _should_generate_data(
         config_of_tables: Dict,
-        type_of_process: str
+        type_of_process: str,
+        list_of_reports: List[str]
     ):
         """
         Determine whether the synthetic data should be generated
@@ -253,7 +254,7 @@ class Worker:
         """
         return any(
             [
-                report in ReportTypes().infer_report_types
+                report in list_of_reports
                 for config in config_of_tables.values()
                 for report in config.get(f"{type_of_process}_settings", {}).get("reports", [])
             ]
@@ -487,7 +488,8 @@ class Worker:
 
         generation_of_reports = self._should_generate_data(
             metadata_for_training,
-            "train"
+            "train",
+            ReportTypes().infer_report_types
         )
 
         self.__train_tables(
@@ -523,7 +525,8 @@ class Worker:
 
         generation_of_reports = self._should_generate_data(
             config_of_tables,
-            "infer"
+            "infer",
+            ReportTypes().infer_report_types
         )
         delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
 
