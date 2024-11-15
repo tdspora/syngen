@@ -22,6 +22,9 @@ class Validator:
     type_of_process: Literal["train", "infer"]
     validation_source: bool = True
     type_of_fk_keys = ["FK"]
+    infer_report_types: List[str] = field(
+        default_factory=lambda: ReportTypes().infer_report_types
+    )
     merged_metadata: Dict = field(default_factory=dict)
     mapping: Dict = field(default_factory=dict)
     existed_columns_mapping: Dict = field(default_factory=dict)
@@ -69,7 +72,7 @@ class Validator:
             self.type_of_process == "infer"
             or (
                 self.type_of_process == "train" and
-                any([item in ReportTypes().infer_report_types for item in reports])
+                any([item in self.infer_report_types for item in reports])
             )
         )
 
