@@ -303,7 +303,7 @@ class Report:
 
 class AccuracyReporter(Reporter):
     """
-    Reporter for running accuracy test
+    Reporter for running an accuracy test
     """
 
     report_type = "accuracy"
@@ -337,7 +337,7 @@ class AccuracyReporter(Reporter):
 
 class SampleAccuracyReporter(Reporter):
     """
-    Reporter for running accuracy test
+    Reporter for running a sample test
     """
 
     report_type = "sample"
