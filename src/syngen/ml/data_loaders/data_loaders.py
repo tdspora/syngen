@@ -259,7 +259,7 @@ class CSVLoader(BaseDataLoader):
             ):
                 filtered_kwargs["na_rep"] = format_params["na_values"][0]
                 logger.warning(
-                    "Since the 'na_values' parameter is not empty, "
+                    "Since the 'na_values' parameter in the 'format' sections is not empty, "
                     "the missing values will be filled with "
                     "the first value from the 'na_values' parameter"
                 )
