@@ -103,8 +103,6 @@ def launch_infer(
     os.environ["LOGURU_LEVEL"] = log_level
     set_log_path(type_of_process="infer", table_name=table_name, metadata_path=metadata_path)
     setup_logger()
-    if "accuracy" in reports and "metrics_only" in reports:
-        reports.remove("metrics_only")
     if not metadata_path and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "

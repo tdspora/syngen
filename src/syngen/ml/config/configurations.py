@@ -309,13 +309,21 @@ class InferConfig:
 
     def _remove_artifacts(self):
         """
-        Remove reports from related to the previous generation process
+        Remove artifacts related to the previous generation process
         """
-        if os.path.exists(self.paths["reports_path"]):
-            shutil.rmtree(self.paths["reports_path"])
+        path_to_reports = self.paths["reports_path"]
+        default_path_to_synth_data = self.paths["default_path_to_merged_infer"]
+        if os.path.exists(path_to_reports):
+            shutil.rmtree(path_to_reports)
             logger.info(
-                f"The reports located in the path - '{self.paths['reports']}' "
-                f"were removed"
+                f"The reports generated in the previous run of an inference process "
+                f"and located in the path - '{path_to_reports}' were removed"
+            )
+        if os.path.exists(default_path_to_synth_data):
+            os.remove(default_path_to_synth_data)
+            logger.info(
+                f"The synthetic data generated in the previous run of an inference process and "
+                f"located in the path - '{default_path_to_synth_data}' was removed"
             )
 
     def to_dict(self) -> Dict:
@@ -388,6 +396,8 @@ class InferConfig:
             "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
             "input_data_path":
                 f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
+            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
+                                            f"merged_infer_{dynamic_name}.csv",
             "path_to_merged_infer": self.destination
             if self.destination is not None
             else f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",

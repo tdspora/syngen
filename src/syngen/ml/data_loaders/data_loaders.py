@@ -425,9 +425,6 @@ class YAMLLoader(BaseDataLoader):
                 settings[f"{type_of_process}_settings"]["reports"] = self.train_reports
             if reports == "all" and type_of_process == "infer":
                 settings[f"{type_of_process}_settings"]["reports"] = self.infer_reports
-            if "accuracy" in reports and "metrics_only" in reports:
-                reports.remove("metrics_only")
-                settings[f"{type_of_process}_settings"]["reports"] = reports
 
     def _normalize_parameter_reports(self, metadata: dict) -> dict:
         for table, settings in metadata.items():
