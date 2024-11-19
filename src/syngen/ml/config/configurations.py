@@ -302,14 +302,25 @@ class InferConfig:
 
     def __post_init__(self):
         self.paths = self._get_paths()
+        self._remove_artifacts()
         self._set_up_reporting()
         self._set_up_size()
         self._set_up_batch_size()
 
+    def _remove_artifacts(self):
+        """
+        Remove reports from related to the previous generation process
+        """
+        if os.path.exists(self.paths["reports_path"]):
+            shutil.rmtree(self.paths["reports_path"])
+            logger.info(
+                f"The reports located in the path - '{self.paths['reports']}' "
+                f"were removed"
+            )
+
     def to_dict(self) -> Dict:
         """
         Return the values of the settings of inference process
-        :return:
         """
         return {
             "size": self.size,
