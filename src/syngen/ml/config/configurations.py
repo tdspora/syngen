@@ -307,24 +307,30 @@ class InferConfig:
         self._set_up_size()
         self._set_up_batch_size()
 
-    def _remove_artifacts(self):
-        """
-        Remove artifacts related to the previous generation process
-        """
+    def _remove_reports(self):
         path_to_reports = self.paths["reports_path"]
-        default_path_to_synth_data = self.paths["default_path_to_merged_infer"]
         if os.path.exists(path_to_reports):
             shutil.rmtree(path_to_reports)
             logger.info(
                 f"The reports generated in the previous run of an inference process "
                 f"and located in the path - '{path_to_reports}' were removed"
             )
+
+    def _remove_generated_data(self):
+        default_path_to_synth_data = self.paths["default_path_to_merged_infer"]
         if os.path.exists(default_path_to_synth_data):
             os.remove(default_path_to_synth_data)
             logger.info(
                 f"The synthetic data generated in the previous run of an inference process and "
                 f"located in the path - '{default_path_to_synth_data}' was removed"
             )
+
+    def _remove_artifacts(self):
+        """
+        Remove artifacts related to the previous generation process
+        """
+        self._remove_reports()
+        self._remove_generated_data()
 
     def to_dict(self) -> Dict:
         """
