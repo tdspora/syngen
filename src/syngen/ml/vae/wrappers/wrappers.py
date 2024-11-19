@@ -94,6 +94,7 @@ class VAEWrapper(BaseWrapper):
         Update dataset object related to the current process
         """
         self.dataset.paths = self.paths
+        self.dataset.metadata = self.metadata
         self.dataset.main_process = self.main_process
 
     def _save_dataset(self):
