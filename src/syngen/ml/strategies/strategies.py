@@ -23,8 +23,6 @@ class Strategy(ABC):
     def __init__(self):
         self.handler = None
         self.config = None
-        self.metadata = None
-        self.table_name = None
 
     @abstractmethod
     def run(self, *args, **kwargs):
@@ -114,18 +112,12 @@ class TrainStrategy(Strategy, ABC):
                 and os.path.exists(source)
                 and "sample" in self.config.reports
         ):
-            if self.config.initial_data_shape[0] == self.config.row_subset:
-                logger.warning(
-                    "The generation of sampling report is unnecessary and will not be produced "
-                    "as the source data and sampled data sizes are identical."
-                )
-            else:
-                sample_reporter = SampleAccuracyReporter(
-                    table_name=get_initial_table_name(table_name),
-                    paths=self.config.paths,
-                    config=self.config.to_dict(),
-                )
-                Report().register_reporter(table=table_name, reporter=sample_reporter)
+            sample_reporter = SampleAccuracyReporter(
+                table_name=get_initial_table_name(table_name),
+                paths=self.config.paths,
+                config=self.config.to_dict(),
+            )
+            Report().register_reporter(table=table_name, reporter=sample_reporter)
 
         return self
 

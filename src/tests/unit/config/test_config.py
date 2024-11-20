@@ -86,3 +86,73 @@ def test_preprocess_data(
     mock_remove_empty_columns.assert_called_once()
     train_config.row_subset == expected_size
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("drop_null, row_limit, expected_size, expected_metadata", [
+    (False, None, 1000, {
+            "test_table": {
+                "train_settings": {
+                    "source": "path/to/data.csv",
+                    "reports": ["accuracy"]
+                }
+            }
+        }),
+    (True, None, 801, {
+            "test_table": {
+                "train_settings": {
+                    "source": "path/to/data.csv",
+                    "reports": ["accuracy", "sample"]
+                }
+            }
+        }),
+    (True, 100, 100, {
+            "test_table": {
+                "train_settings": {
+                    "source": "path/to/data.csv",
+                    "reports": ["accuracy", "sample"]
+                }
+            }
+        })
+])
+@patch.object(TrainConfig, "_save_original_schema")
+@patch.object(TrainConfig, "_remove_empty_columns")
+@patch.object(TrainConfig, "_mark_removed_columns")
+@patch.object(TrainConfig, "_save_input_data")
+def test_check_reports_in_train_config(
+    mock_save_input_data,
+    mock_mark_removed_columns,
+    mock_remove_empty_columns,
+    mock_save_original_schema,
+    drop_null,
+    row_limit,
+    expected_size,
+    expected_metadata,
+    rp_logger
+):
+    rp_logger.info("Test the method '_check_reports' of the class TrainConfig")
+    train_config = TrainConfig(
+        source=f"{DIR_NAME}/unit/config/fixtures/data_types_detection_set.csv",
+        epochs=10,
+        drop_null=drop_null,
+        row_limit=row_limit,
+        table_name="test_table",
+        metadata={
+            "test_table": {
+                "train_settings": {
+                    "source": "path/to/data.csv",
+                    "reports": ["accuracy", "sample"]
+                }
+            }
+        },
+        reports=["accuracy", "sample"],
+        batch_size=32,
+        loader=None
+    )
+    train_config.preprocess_data()
+    mock_save_input_data.assert_called_once()
+    mock_save_original_schema.assert_called_once()
+    mock_mark_removed_columns.assert_called_once()
+    mock_remove_empty_columns.assert_called_once()
+    train_config.row_subset == expected_size
+    train_config.metadata = expected_metadata
+    rp_logger.info(SUCCESSFUL_MESSAGE)

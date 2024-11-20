@@ -60,6 +60,7 @@ class TrainConfig:
         self._remove_empty_columns()
         self._mark_removed_columns()
         self._prepare_data()
+        self._check_reports()
 
     def to_dict(self) -> Dict:
         """
@@ -78,6 +79,25 @@ class TrainConfig:
         Set up "batch_size" for training process
         """
         self.batch_size = min(self.batch_size, self.row_subset)
+
+    def _check_sample_report(self):
+        """
+        Check whether it is necessary to generate a certain report
+        """
+        reports = self.metadata[self.table_name].get("train_settings").get("reports", [])
+        if "sample" in reports and self.initial_data_shape[0] == self.row_subset:
+            logger.warning(
+                "The generation of sampling report is unnecessary and will not be produced "
+                "as the source data and sampled data sizes are identical."
+            )
+            reports.remove("sample")
+            self.metadata[self.table_name]["train_settings"]["reports"] = reports
+
+    def _check_reports(self):
+        """
+        Check whether it is necessary to generate a certain report
+        """
+        self._check_sample_report()
 
     def _remove_existed_artifacts(self):
         """
@@ -306,7 +326,7 @@ class InferConfig:
         self._set_infer_parameters()
 
     def _set_infer_parameters(self):
-        self._set_up_reporting()
+        self._check_reports()
         self._set_up_size()
         self._set_up_batch_size()
 
@@ -347,9 +367,9 @@ class InferConfig:
             "reports": self.reports,
         }
 
-    def _set_up_reporting(self):
+    def _check_reports(self):
         """
-        Check whether it is possible to generate the report
+        Check whether it is possible to generate reports
         """
         if (
                 self.reports
