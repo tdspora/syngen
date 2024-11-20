@@ -114,23 +114,11 @@ class Worker:
             self._update_table_settings(table_settings, global_settings)
             self._update_table_settings(table_settings, self.settings)
 
-    def _update_reports_in_metadata(self):
-        """
-        Remove the report 'metrics_only' from the list of reports
-        in case both 'accuracy' and 'metrics_only' reports have been mentioned
-        """
-        for table, config in self.metadata.items():
-            reports = config.get(f"{self.type_of_process}_settings", {}).get("reports", [])
-            if "accuracy" in reports and "metrics_only" in reports:
-                reports.remove("metrics_only")
-                config[f"{self.type_of_process}_settings"]["reports"] = reports
-
     def _update_metadata(self) -> None:
         if self.metadata_path:
             self._update_metadata_for_tables()
         if self.table_name:
             self._update_metadata_for_table()
-        self._update_reports_in_metadata()
 
     def __fetch_metadata(self) -> Dict:
         """

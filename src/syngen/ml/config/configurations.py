@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set, List, Callable
+from typing import Optional, Dict, Tuple, Set, List, Callable, Literal
 import os
 import shutil
 from datetime import datetime
@@ -84,14 +84,12 @@ class TrainConfig:
         """
         Check whether it is necessary to generate a certain report
         """
-        reports = self.metadata[self.table_name].get("train_settings").get("reports", [])
-        if "sample" in reports and self.initial_data_shape[0] == self.row_subset:
+        if "sample" in self.reports and self.initial_data_shape[0] == self.row_subset:
             logger.warning(
                 "The generation of sampling report is unnecessary and will not be produced "
                 "as the source data and sampled data sizes are identical."
             )
-            reports.remove("sample")
-            self.metadata[self.table_name]["train_settings"]["reports"] = reports
+            self.reports.remove("sample")
 
     def _check_reports(self):
         """
@@ -318,6 +316,7 @@ class InferConfig:
     both_keys: bool
     log_level: str
     loader: Optional[Callable[[str], pd.DataFrame]]
+    type_of_process: Literal["train", "infer"]
     slugify_table_name: str = field(init=False)
 
     def __post_init__(self):
@@ -367,12 +366,13 @@ class InferConfig:
             "reports": self.reports,
         }
 
-    def _check_reports(self):
+    def _check_required_artifacts(self):
         """
-        Check whether it is possible to generate reports
+        Check whether required artifacts exists
         """
         if (
-                self.reports
+                self.type_of_process == "infer"
+                and self.reports
                 and (
                     not DataLoader(self.paths["input_data_path"]).has_existed_path
                     and not self.loader
@@ -388,6 +388,12 @@ class InferConfig:
             )
             logger.warning(log_message)
             self.reports = list()
+
+    def _check_reports(self):
+        """
+        Check whether it is possible to generate reports
+        """
+        self._check_required_artifacts()
 
     def _set_up_size(self):
         """

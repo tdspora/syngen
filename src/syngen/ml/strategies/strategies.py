@@ -200,24 +200,10 @@ class InferStrategy(Strategy):
         """
         table_name = kwargs["table_name"]
         try:
-            self.set_config(
-                destination=kwargs["destination"],
-                size=kwargs["size"],
-                table_name=kwargs["table_name"],
-                metadata=kwargs["metadata"],
-                metadata_path=kwargs["metadata_path"],
-                run_parallel=kwargs["run_parallel"],
-                batch_size=kwargs["batch_size"],
-                random_seed=kwargs["random_seed"],
-                reports=kwargs["reports"],
-                log_level=kwargs["log_level"],
-                both_keys=kwargs["both_keys"],
-                loader=kwargs["loader"]
-            )
+            self.set_config(**kwargs)
             MlflowTracker().log_params(self.config.to_dict())
-            self.add_reporters().add_handler(
-                type_of_process=kwargs["type_of_process"]
-            )
+            self.add_reporters()
+            self.add_handler(type_of_process=kwargs["type_of_process"])
             self.handler.handle()
         except Exception:
             logger.error(

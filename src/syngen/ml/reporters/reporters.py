@@ -274,6 +274,7 @@ class Report:
 
         if (
                 reporter.__class__.report_type == "accuracy"
+                and "accuracy" not in reporter.config["reports"]
                 and "metrics_only" in reporter.config["reports"]
         ):
             message = (
