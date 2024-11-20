@@ -38,7 +38,7 @@ class TrainConfig:
     dropped_columns: Set = field(init=False)
 
     def __post_init__(self):
-        self.paths = self._get_paths()
+        self._set_paths()
         self._remove_existed_artifacts()
         self._prepare_dirs()
 
@@ -245,7 +245,7 @@ class TrainConfig:
             self._save_input_data()
 
     @slugify_attribute(table_name="slugify_table_name")
-    def _get_paths(self) -> Dict:
+    def _set_paths(self):
         """
         Create the paths which used in training process
         """
@@ -253,7 +253,7 @@ class TrainConfig:
             f"losses_{self.table_name}_"
             f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        return {
+        self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
             "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/",
@@ -301,8 +301,11 @@ class InferConfig:
     slugify_table_name: str = field(init=False)
 
     def __post_init__(self):
-        self.paths = self._get_paths()
+        self._set_paths()
         self._remove_artifacts()
+        self._set_infer_parameters()
+
+    def _set_infer_parameters(self):
         self._set_up_reporting()
         self._set_up_size()
         self._set_up_batch_size()
@@ -391,12 +394,12 @@ class InferConfig:
         )
 
     @slugify_attribute(table_name="slugify_table_name")
-    def _get_paths(self) -> Dict:
+    def _set_paths(self):
         """
         Create the paths which used in inference process
         """
         dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
-        return {
+        self.paths = {
             "original_data_path":
                 f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
             "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
