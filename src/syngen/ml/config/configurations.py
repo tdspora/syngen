@@ -86,8 +86,8 @@ class TrainConfig:
         """
         if "sample" in self.reports and self.initial_data_shape[0] == self.row_subset:
             logger.warning(
-                "The generation of sampling report is unnecessary and will not be produced "
-                "as the source data and sampled data sizes are identical."
+                "The generation of the sample report is unnecessary and won't be produced "
+                "as the source data and sampled data sizes are identical"
             )
             self.reports.remove("sample")
 
@@ -371,11 +371,10 @@ class InferConfig:
         Check whether required artifacts exists
         """
         if (
-                self.type_of_process == "infer"
-                and self.reports
+                self.reports
                 and (
-                    not DataLoader(self.paths["input_data_path"]).has_existed_path
-                    and not self.loader
+                    DataLoader(self.paths["input_data_path"]).has_existed_path is False
+                    or self.loader is not None
                 )
         ):
             self.reports = list()
@@ -387,7 +386,6 @@ class InferConfig:
                 f"has been set to 'none'."
             )
             logger.warning(log_message)
-            self.reports = list()
 
     def _check_reports(self):
         """
