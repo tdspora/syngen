@@ -59,7 +59,6 @@ class StreamlitHandler:
             "run_parallel": False,
             "random_seed": None,
             "reports": self.reports,
-            "get_infer_metrics": False
         }
 
     def set_logger(self):
