@@ -1,3 +1,4 @@
+from typing import List, Literal
 import os
 from datetime import datetime
 from queue import Queue
@@ -26,12 +27,12 @@ class StreamlitHandler:
             self,
             epochs: int,
             size_limit: int,
-            print_report: bool,
+            reports: bool,
             uploaded_file: UploadedFile
     ):
         self.epochs = epochs
         self.size_limit = size_limit
-        self.print_report = print_report
+        self.reports = ["accuracy"] if reports else []
         self.uploaded_file = uploaded_file
         self.file_name = self.uploaded_file.name
         self.table_name = os.path.splitext(self.file_name)[0]
@@ -50,14 +51,14 @@ class StreamlitHandler:
             "row_limit": 10000,
             "drop_null": False,
             "batch_size": 32,
-            "print_report": False
+            "reports": []
         }
         self.infer_settings = {
             "size": self.size_limit,
             "batch_size": 32,
             "run_parallel": False,
             "random_seed": None,
-            "print_report": self.print_report,
+            "reports": self.reports,
             "get_infer_metrics": False
         }
 
@@ -89,7 +90,7 @@ class StreamlitHandler:
             log_message = fetch_log_message(message)
             log_file.write(log_message + "\n")
 
-    def _get_worker(self, process_type: str):
+    def _get_worker(self, process_type: Literal["train", "infer"]):
         """
         Get a Worker object
 
@@ -177,7 +178,7 @@ class StreamlitHandler:
         """
         Open the accuracy report in the iframe
         """
-        if os.path.exists(self.path_to_report) and self.print_report:
+        if os.path.exists(self.path_to_report) and self.reports:
             with open(self.path_to_report, "r") as report:
                 report_content = report.read()
             with st.expander("View the accuracy report"):
@@ -197,7 +198,7 @@ class StreamlitHandler:
             os.getenv("SUCCESS_LOG_FILE", ""),
             f"logs_{self.sl_table_name}.log"
         )
-        if self.print_report:
+        if self.reports:
             self.generate_button(
                 "Download the accuracy report",
                 self.path_to_report,
