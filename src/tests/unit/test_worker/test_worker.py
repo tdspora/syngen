@@ -1833,7 +1833,7 @@ def test_launch_train_with_metadata_without_train_settings(
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-def test_launch_infer_pretrained_table(
+def test_launch_infer_of_pretrained_table(
     mock_check_existence_of_destination,
     mock_validate_metadata,
     mock_collect_metrics_in_infer,
@@ -1888,6 +1888,7 @@ def test_launch_infer_pretrained_table(
         type_of_process="infer",
         delta=0.25
     )
+    mock_check_completion_of_training.assert_called_once_with("test-table")
     mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
     mock_generate_reports.assert_called_once()
 
@@ -1895,10 +1896,9 @@ def test_launch_infer_pretrained_table(
 @patch.object(Worker, "_infer_table")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-def test_launch_infer_not_pretrained_table_and_absent_success_file(
+def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
     mock_check_existence_of_destination,
     mock_validate_metadata,
-    mock_collect_metrics_in_infer,
     mock_infer_table,
     caplog,
     rp_logger,
@@ -1942,7 +1942,7 @@ def test_launch_infer_not_pretrained_table_and_absent_success_file(
 @patch.object(Worker, "_infer_table")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-def test_launch_infer_not_pretrained_table_and_success_file_with_wrong_content(
+def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_content(
     mock_check_existence_of_destination,
     mock_validate_metadata,
     mock_infer_table,
