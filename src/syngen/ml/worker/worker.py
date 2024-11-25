@@ -300,11 +300,11 @@ class Worker:
             batch_size=train_settings["batch_size"],
             loader=self.loader
         )
-        self._write_success_message(slugify(table))
+        self._write_success_file(slugify(table))
         self._save_metadata_file()
         ProgressBarHandler().set_progress(
             delta=delta,
-            message=f"Training of the table - {table} was completed"
+            message=f"Training of the table - '{table}' was completed"
         )
 
     def __train_tables(
@@ -361,6 +361,35 @@ class Worker:
             ), None
         )
 
+    import os
+    from slugify import slugify
+
+    def _check_completion_of_training(self, table_name: str):
+        """
+        Check if the training process of a specific table has been completed.
+
+        Args:
+        table_name (str): The name of the table to check.
+
+        Raises:
+        FileNotFoundError: If the success file does not exist.
+        ValueError: If the content of the success file does not indicate success.
+        """
+        path_to_success_file = f"model_artifacts/resources/{slugify(table_name)}/message.success"
+        error_message = (
+            f"The training of the table - '{table_name}' hasn't been completed. "
+            "Please, retrain the table."
+        )
+
+        if not os.path.exists(path_to_success_file):
+            raise FileNotFoundError(error_message)
+
+        with open(path_to_success_file, 'r') as file:
+            content = file.read().strip()
+
+        if content != "SUCCESS":
+            raise ValueError(error_message)
+
     def _infer_table(self, table, metadata, type_of_process, delta, is_nested=False):
         """
         Infer process for a single table
@@ -395,7 +424,7 @@ class Worker:
         )
         ProgressBarHandler().set_progress(
             delta=delta,
-            message=f"Infer process of the table - {table} was completed"
+            message=f"Infer process of the table - '{table}' was completed"
         )
         MlflowTracker().end_run()
 
@@ -414,6 +443,7 @@ class Worker:
 
         non_surrogate_tables = [table for table in tables if table not in self.divided]
         for table in non_surrogate_tables:
+            self._check_completion_of_training(slugify(table))
             self._infer_table(
                 table=table,
                 metadata=config_of_tables,
@@ -455,7 +485,7 @@ class Worker:
         Report().clear_report()
 
     @staticmethod
-    def _write_success_message(table_name: str):
+    def _write_success_file(table_name: str):
         """
         Write success message to the '.success' file
         """

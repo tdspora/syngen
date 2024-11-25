@@ -155,6 +155,20 @@ def test_metadata_storage():
 
 
 @pytest.fixture
+def test_success_file():
+    path_to_test_dir = "model_artifacts/resources/test-table"
+    os.makedirs(path_to_test_dir, exist_ok=True)
+    success_file_path = f"{path_to_test_dir}/message.success"
+    with open(success_file_path, "w") as f:
+        f.write("PROGRESS")
+
+    yield success_file_path
+    if os.path.exists(success_file_path):
+        shutil.rmtree("model_artifacts")
+
+
+
+@pytest.fixture
 def test_metadata_file():
     return {
         "pk_test": {

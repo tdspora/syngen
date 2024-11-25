@@ -1,5 +1,7 @@
 from unittest.mock import patch, MagicMock
 
+import pytest
+
 from syngen.ml.worker import Worker
 from syngen.ml.config import Validator
 
@@ -1823,3 +1825,166 @@ def test_launch_train_with_metadata_without_train_settings(
         True
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+
+@patch.object(Worker, "_generate_reports")
+@patch.object(Worker, "_check_completion_of_training", return_value=None)
+@patch.object(Worker, "_infer_table")
+@patch.object(Worker, "_collect_metrics_in_infer")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_destination")
+def test_launch_infer_pretrained_table(
+    mock_check_existence_of_destination,
+    mock_validate_metadata,
+    mock_collect_metrics_in_infer,
+    mock_infer_table,
+    mock_check_completion_of_training,
+    mock_generate_reports,
+    rp_logger,
+):
+    """
+    Test that the inference process has been launched
+    if the training process of the table has been finished
+    """
+    rp_logger.info(
+        "Test that the inference process has been launched "
+        "if the training process of the table has been finished"
+    )
+    worker = Worker(
+        table_name="test_table",
+        metadata_path=None,
+        settings={
+            "size": 300,
+            "run_parallel": True,
+            "random_seed": 3,
+            "reports": ["accuracy"],
+            "batch_size": 300,
+        },
+        log_level="INFO",
+        type_of_process="infer",
+        loader=None
+    )
+    worker.launch_infer()
+    mock_check_existence_of_destination.assert_called_once()
+    mock_validate_metadata.assert_called_once_with("test_table")
+    mock_infer_table.assert_called_once_with(
+        table="test_table",
+        metadata={
+            "test_table": {
+                "train_settings": {
+                    "source": None
+                },
+                'infer_settings': {
+                    "size": 300,
+                    "run_parallel": True,
+                    "random_seed": 3,
+                    "reports": ["accuracy"],
+                    "batch_size": 300
+                },
+                "keys": {},
+                "format": {}
+            }
+        },
+        type_of_process="infer",
+        delta=0.25
+    )
+    mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
+    mock_generate_reports.assert_called_once()
+
+
+@patch.object(Worker, "_infer_table")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_destination")
+def test_launch_infer_not_pretrained_table(
+    mock_check_existence_of_destination,
+    mock_validate_metadata,
+    mock_collect_metrics_in_infer,
+    mock_infer_table,
+    caplog,
+    rp_logger,
+):
+    """
+    Test that the inference process hasn't been started
+    in case the training process of the table hasn't been finished,
+    and the appropriate success file 'message.success' is absent
+    """
+    rp_logger.info(
+        "Test that the inference process hasn't been started "
+        "in case the training process of the table hasn't been finished, " 
+        "and the appropriate success file 'message.success' is absent"
+    )
+    worker = Worker(
+        table_name="test_table",
+        metadata_path=None,
+        settings={
+            "size": 300,
+            "run_parallel": True,
+            "random_seed": 3,
+            "reports": ["accuracy"],
+            "batch_size": 300,
+        },
+        log_level="INFO",
+        type_of_process="infer",
+        loader=None
+    )
+    with pytest.raises(FileNotFoundError):
+        with caplog.at_level("ERROR"):
+            worker.launch_infer()
+            assert (
+                "The training of the table - 'test-table' hasn't been completed. "
+                "Please, retrain the table."
+                in caplog.text
+            )
+    mock_infer_table.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "_infer_table")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_destination")
+def test_launch_infer_not_pretrained_table(
+    mock_check_existence_of_destination,
+    mock_validate_metadata,
+    mock_infer_table,
+    test_success_file,
+    caplog,
+    rp_logger,
+):
+    """
+    Test that the inference process hasn't been started
+    in case the training process of the table hasn't been finished,
+    and the appropriate success file 'message.success' is present,
+    but the content of the file doesn't correspond to finished training process
+    """
+    rp_logger.info(
+        "Test that the inference process hasn't been started "
+        "in case the training process of the table hasn't been finished, " 
+        "and the appropriate success file 'message.success' is present, "
+        "but the content of the file doesn't correspond to finished training process"
+    )
+    worker = Worker(
+        table_name="test_table",
+        metadata_path=None,
+        settings={
+            "size": 300,
+            "run_parallel": True,
+            "random_seed": 3,
+            "reports": ["accuracy"],
+            "batch_size": 300,
+        },
+        log_level="INFO",
+        type_of_process="infer",
+        loader=None
+    )
+    with pytest.raises(ValueError):
+        with caplog.at_level("ERROR"):
+            worker.launch_infer()
+            assert (
+                "The training of the table - 'test-table' hasn't been completed. "
+                "Please, retrain the table."
+                in caplog.text
+            )
+    mock_infer_table.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
