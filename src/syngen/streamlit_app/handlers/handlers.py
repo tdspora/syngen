@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Literal
 import os
 from datetime import datetime
 from queue import Queue

@@ -1827,7 +1827,6 @@ def test_launch_train_with_metadata_without_train_settings(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-
 @patch.object(Worker, "_generate_reports")
 @patch.object(Worker, "_check_completion_of_training", return_value=None)
 @patch.object(Worker, "_infer_table")
@@ -1896,7 +1895,7 @@ def test_launch_infer_pretrained_table(
 @patch.object(Worker, "_infer_table")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-def test_launch_infer_not_pretrained_table(
+def test_launch_infer_not_pretrained_table_and_absent_success_file(
     mock_check_existence_of_destination,
     mock_validate_metadata,
     mock_collect_metrics_in_infer,
@@ -1911,7 +1910,7 @@ def test_launch_infer_not_pretrained_table(
     """
     rp_logger.info(
         "Test that the inference process hasn't been started "
-        "in case the training process of the table hasn't been finished, " 
+        "in case the training process of the table hasn't been finished, "
         "and the appropriate success file 'message.success' is absent"
     )
     worker = Worker(
@@ -1943,7 +1942,7 @@ def test_launch_infer_not_pretrained_table(
 @patch.object(Worker, "_infer_table")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-def test_launch_infer_not_pretrained_table(
+def test_launch_infer_not_pretrained_table_and_success_file_with_wrong_content(
     mock_check_existence_of_destination,
     mock_validate_metadata,
     mock_infer_table,
@@ -1959,7 +1958,7 @@ def test_launch_infer_not_pretrained_table(
     """
     rp_logger.info(
         "Test that the inference process hasn't been started "
-        "in case the training process of the table hasn't been finished, " 
+        "in case the training process of the table hasn't been finished, "
         "and the appropriate success file 'message.success' is present, "
         "but the content of the file doesn't correspond to finished training process"
     )
@@ -1987,4 +1986,3 @@ def test_launch_infer_not_pretrained_table(
             )
     mock_infer_table.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
-

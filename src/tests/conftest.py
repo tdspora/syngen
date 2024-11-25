@@ -167,7 +167,6 @@ def test_success_file():
         shutil.rmtree("model_artifacts")
 
 
-
 @pytest.fixture
 def test_metadata_file():
     return {
