@@ -1831,11 +1831,9 @@ def test_launch_train_with_metadata_without_train_settings(
 @patch.object(Worker, "_check_completion_of_training", return_value=None)
 @patch.object(Worker, "_infer_table")
 @patch.object(Worker, "_collect_metrics_in_infer")
-@patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "run")
 def test_launch_infer_of_pretrained_table(
-    mock_check_existence_of_destination,
-    mock_validate_metadata,
+    mock_validator_run,
     mock_collect_metrics_in_infer,
     mock_infer_table,
     mock_check_completion_of_training,
@@ -1864,27 +1862,28 @@ def test_launch_infer_of_pretrained_table(
         type_of_process="infer",
         loader=None
     )
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": None
+            },
+            "infer_settings": {
+                "size": 300,
+                "run_parallel": True,
+                "random_seed": 3,
+                "reports": ["accuracy"],
+                "batch_size": 300
+            },
+            "keys": {},
+            "format": {}
+        }
+    }
+    worker.merged_metadata = metadata
     worker.launch_infer()
-    mock_check_existence_of_destination.assert_called_once()
-    mock_validate_metadata.assert_called_once_with("test_table")
+    mock_validator_run.assert_called_once()
     mock_infer_table.assert_called_once_with(
         table="test_table",
-        metadata={
-            "test_table": {
-                "train_settings": {
-                    "source": None
-                },
-                'infer_settings': {
-                    "size": 300,
-                    "run_parallel": True,
-                    "random_seed": 3,
-                    "reports": ["accuracy"],
-                    "batch_size": 300
-                },
-                "keys": {},
-                "format": {}
-            }
-        },
+        metadata=metadata,
         type_of_process="infer",
         delta=0.25
     )
@@ -1894,11 +1893,9 @@ def test_launch_infer_of_pretrained_table(
 
 
 @patch.object(Worker, "_infer_table")
-@patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "run")
 def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
-    mock_check_existence_of_destination,
-    mock_validate_metadata,
+    mock_validator_run,
     mock_infer_table,
     caplog,
     rp_logger,
@@ -1927,6 +1924,23 @@ def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
         type_of_process="infer",
         loader=None
     )
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": None
+            },
+            "infer_settings": {
+                "size": 300,
+                "run_parallel": True,
+                "random_seed": 3,
+                "reports": ["accuracy"],
+                "batch_size": 300
+            },
+            "keys": {},
+            "format": {}
+        }
+    }
+    worker.merged_metadata = metadata
     with pytest.raises(FileNotFoundError):
         with caplog.at_level("ERROR"):
             worker.launch_infer()
@@ -1936,17 +1950,14 @@ def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
                 in caplog.text
             )
     mock_infer_table.assert_not_called()
-    mock_check_existence_of_destination.assert_called_once()
-    mock_validate_metadata.assert_called_once_with("test_table")
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_infer_table")
-@patch.object(Validator, "_validate_metadata")
-@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "run")
 def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_content(
-    mock_check_existence_of_destination,
-    mock_validate_metadata,
+    mock_validator_run,
     mock_infer_table,
     test_success_file,
     caplog,
@@ -1978,6 +1989,23 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
         type_of_process="infer",
         loader=None
     )
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": None
+            },
+            "infer_settings": {
+                "size": 300,
+                "run_parallel": True,
+                "random_seed": 3,
+                "reports": ["accuracy"],
+                "batch_size": 300
+            },
+            "keys": {},
+            "format": {}
+        }
+    }
+    worker.merged_metadata = metadata
     with pytest.raises(ValueError):
         with caplog.at_level("ERROR"):
             worker.launch_infer()
@@ -1987,6 +2015,5 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
                 in caplog.text
             )
     mock_infer_table.assert_not_called()
-    mock_check_existence_of_destination.assert_called_once()
-    mock_validate_metadata.assert_called_once_with("test_table")
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
