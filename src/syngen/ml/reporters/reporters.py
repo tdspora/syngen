@@ -246,6 +246,9 @@ class Report:
         """
         grouped_reporters = cls._group_reporters()
 
+        if grouped_reporters:
+            logger.warning("The report(s) generation might be time consuming")
+
         for table_name, reporters in grouped_reporters.items():
             cls._start_mlflow_run(table_name)
             delta = 0.25 / len(reporters)
