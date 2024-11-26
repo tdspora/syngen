@@ -1,6 +1,7 @@
 from unittest.mock import patch, MagicMock
-
 import pytest
+
+from marshmallow.exceptions import ValidationError
 
 from syngen.ml.worker import Worker
 from syngen.ml.config import Validator
@@ -62,7 +63,7 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
         "with the absent metadata during the inference process"
     )
     worker = Worker(
-        table_name="test_table",
+        table_name="table",
         metadata_path=None,
         settings={
             "size": 100,
@@ -75,7 +76,7 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
         type_of_process="infer",
     )
     assert worker.metadata == {
-        "test_table": {
+        "table": {
             "train_settings": {"source": None},
             "infer_settings": {
                 "size": 100,
@@ -116,9 +117,9 @@ def test_init_worker_with_metadata_path(rp_logger):
     )
     assert worker.metadata == {
         "global": {},
-        "test_table": {
+        "table": {
             "train_settings": {
-                "source": "./path/to/test_table.csv",
+                "source": "./path/to/table.csv",
                 "epochs": 100,
                 "drop_null": False,
                 "reports": [],
@@ -158,8 +159,7 @@ def test_init_worker_with_empty_settings_in_metadata_in_train_process(rp_logger)
     )
     worker = Worker(
         table_name=None,
-        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
-                      "metadata_with_empty_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_with_empty_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -173,9 +173,9 @@ def test_init_worker_with_empty_settings_in_metadata_in_train_process(rp_logger)
     )
     assert worker.metadata == {
         "global": {},
-        "test_table": {
+        "table": {
             "train_settings": {
-                "source": "./path/to/test_table.csv",
+                "source": "./path/to/table.csv",
                 "epochs": 20,
                 "drop_null": True,
                 "reports": ["accuracy", "sample"],
@@ -204,8 +204,7 @@ def test_init_worker_with_empty_settings_in_metadata_in_infer_process(rp_logger)
     )
     worker = Worker(
         table_name=None,
-        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
-                      "metadata_with_empty_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_with_empty_settings.yaml",
         settings={
             "size": 200,
             "run_parallel": False,
@@ -218,9 +217,9 @@ def test_init_worker_with_empty_settings_in_metadata_in_infer_process(rp_logger)
     )
     assert worker.metadata == {
         "global": {},
-        "test_table": {
+        "table": {
             "train_settings": {
-                "source": "./path/to/test_table.csv"
+                "source": "./path/to/table.csv"
             },
             "infer_settings": {
                 "size": 200,
@@ -321,8 +320,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
     )
     worker = Worker(
         table_name=None,
-        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
-                      "metadata_with_global_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "size": 200,
             "run_parallel": False,
@@ -384,12 +382,13 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
-@patch.object(Worker, "_Worker__train_tables", return_value=None)
+@patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata(
     mock_train_tables,
     mock_gather_existed_columns,
@@ -397,6 +396,7 @@ def test_launch_train_with_metadata(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -426,12 +426,12 @@ def test_launch_train_with_metadata(
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        ["test_table"],
-        ["test_table"],
+        ["table"],
+        ["table"],
         {
-            "test_table": {
+            "table": {
                 "train_settings": {
-                    "source": "./path/to/test_table.csv",
+                    "source": "./path/to/table.csv",
                     "epochs": 100,
                     "drop_null": False,
                     "reports": [],
@@ -450,9 +450,9 @@ def test_launch_train_with_metadata(
             }
         },
         {
-            "test_table": {
+            "table": {
                 "train_settings": {
-                    "source": "./path/to/test_table.csv",
+                    "source": "./path/to/table.csv",
                     "epochs": 100,
                     "drop_null": False,
                     "reports": [],
@@ -472,26 +472,28 @@ def test_launch_train_with_metadata(
         },
         False
     )
-    mock_gather_existed_columns.assert_called_once()
-    mock_check_existence_of_source.assert_called_once()
-    mock_check_existence_of_key_columns.assert_called_once()
-    mock_check_existence_of_referenced_columns.assert_called_once()
-    mock_validate_metadata.assert_called_once()
+    mock_gather_existed_columns.assert_called_once_with("table")
+    mock_check_existence_of_source.assert_called_once_with("table")
+    mock_check_existence_of_key_columns.assert_called_once_with("table")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("table")
+    mock_validate_metadata.assert_called_once_with("table")
+    mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
-        ["test_table"],
-        ["test_table"],
+        ["table"],
+        ["table"],
         False
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
-@patch.object(Worker, "_Worker__train_tables", return_value=None)
+@patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_of_related_tables(
     mock_train_tables,
     mock_gather_existed_columns,
@@ -499,6 +501,7 @@ def test_launch_train_with_metadata_of_related_tables(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -621,6 +624,7 @@ def test_launch_train_with_metadata_of_related_tables(
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
@@ -630,12 +634,13 @@ def test_launch_train_with_metadata_of_related_tables(
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
-@patch.object(Worker, "_Worker__train_tables", return_value=None)
+@patch.object(Worker, "_Worker__train_tables",)
 def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     mock_train_tables,
     mock_gather_existed_columns,
@@ -643,6 +648,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -783,6 +789,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["tdm_models", "tdm_clusters"],
         ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
@@ -792,12 +799,13 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
-@patch.object(Worker, "_Worker__train_tables", return_value=None)
+@patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_without_metadata(
     mock_train_tables,
     mock_gather_existed_columns,
@@ -805,6 +813,7 @@ def test_launch_train_without_metadata(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -817,7 +826,7 @@ def test_launch_train_without_metadata(
         "in case the metadata file wasn't provided and a training process was launched through CLI"
     )
     worker = Worker(
-        table_name="test_table",
+        table_name="table",
         metadata_path=None,
         settings={
             "source": "./path/to/source.csv",
@@ -832,10 +841,10 @@ def test_launch_train_without_metadata(
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
-        ["test_table"],
-        ["test_table"],
+        ["table"],
+        ["table"],
         {
-            "test_table": {
+            "table": {
                 "train_settings": {
                     "source": "./path/to/source.csv",
                     "epochs": 20,
@@ -850,7 +859,7 @@ def test_launch_train_without_metadata(
             }
         },
         {
-            "test_table": {
+            "table": {
                 "train_settings": {
                     "source": "./path/to/source.csv",
                     "epochs": 20,
@@ -866,26 +875,28 @@ def test_launch_train_without_metadata(
         },
         True
     )
-    mock_gather_existed_columns.assert_called_once()
-    mock_check_existence_of_source.assert_called_once()
-    mock_check_existence_of_key_columns.assert_called_once()
-    mock_check_existence_of_referenced_columns.assert_called_once()
-    mock_validate_metadata.assert_called_once()
+    mock_gather_existed_columns.assert_called_once_with("table")
+    mock_check_existence_of_source.assert_called_once_with("table")
+    mock_check_existence_of_key_columns.assert_called_once_with("table")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("table")
+    mock_validate_metadata.assert_called_once_with("table")
+    mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
-        ["test_table"],
-        ["test_table"],
+        ["table"],
+        ["table"],
         True
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
-@patch.object(Worker, "_Worker__train_tables", return_value=None)
+@patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_contained_global_settings(
     mock_train_tables,
     mock_gather_existed_columns,
@@ -893,6 +904,7 @@ def test_launch_train_with_metadata_contained_global_settings(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -907,8 +919,7 @@ def test_launch_train_with_metadata_contained_global_settings(
     )
     worker = Worker(
         table_name=None,
-        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
-                      "metadata_with_global_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "source": None,
             "epochs": 20,
@@ -999,6 +1010,7 @@ def test_launch_train_with_metadata_contained_global_settings(
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
@@ -1008,13 +1020,17 @@ def test_launch_train_with_metadata_contained_global_settings(
 
 
 @patch.object(Worker, "_collect_metrics_in_infer")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-@patch.object(Worker, "_Worker__infer_tables", return_value=None)
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Worker, "_Worker__infer_tables")
 def test_launch_infer_with_metadata(
     mock_infer_tables,
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
 ):
@@ -1041,11 +1057,11 @@ def test_launch_infer_with_metadata(
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
-        ["test_table"],
+        ["table"],
         {
-            "test_table": {
+            "table": {
                 "train_settings": {
-                    "source": "./path/to/test_table.csv",
+                    "source": "./path/to/table.csv",
                     "epochs": 100,
                     "drop_null": False,
                     "reports": [],
@@ -1066,20 +1082,26 @@ def test_launch_infer_with_metadata(
         0.25,
         type_of_process="infer"
     )
-    mock_check_existence_of_destination.assert_called_once()
-    mock_validate_metadata.assert_called_once()
-    mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
+    mock_check_completion_of_training.assert_called_once_with("table")
+    mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_validate_metadata.assert_called_once_with("table")
+    mock_generate_reports.assert_called_once()
+    mock_collect_metrics_in_infer.assert_called_once_with(["table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_infer")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-@patch.object(Worker, "_Worker__infer_tables", return_value=None)
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Worker, "_Worker__infer_tables")
 def test_launch_infer_with_metadata_of_related_tables(
     mock_infer_tables,
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
 ):
@@ -1093,8 +1115,7 @@ def test_launch_infer_with_metadata_of_related_tables(
     )
     worker = Worker(
         table_name=None,
-        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
-                      "metadata_of_related_tables.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_of_related_tables.yaml",
         settings={
             "size": 300,
             "run_parallel": True,
@@ -1154,20 +1175,26 @@ def test_launch_infer_with_metadata_of_related_tables(
         0.125,
         type_of_process="infer"
     )
+    assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["pk_test", "fk_test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_infer")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-@patch.object(Worker, "_Worker__infer_tables", return_value=None)
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Worker, "_Worker__infer_tables")
 def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     mock_infer_tables,
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
 ):
@@ -1264,8 +1291,10 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
         0.08333333333333333,
         type_of_process="infer"
     )
+    assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(
         ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"]
     )
@@ -1273,13 +1302,17 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
 
 
 @patch.object(Worker, "_collect_metrics_in_infer")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-@patch.object(Worker, "_Worker__infer_tables", return_value=None)
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Worker, "_Worker__infer_tables")
 def test_launch_infer_without_metadata(
     mock_infer_tables,
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
 ):
@@ -1293,7 +1326,7 @@ def test_launch_infer_without_metadata(
         "the inference process was launched through CLI"
     )
     worker = Worker(
-        table_name="test_table",
+        table_name="table",
         metadata_path=None,
         settings={
             "size": 200,
@@ -1307,9 +1340,9 @@ def test_launch_infer_without_metadata(
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
-        ["test_table"],
+        ["table"],
         {
-            "test_table": {
+            "table": {
                 "train_settings": {"source": None},
                 "infer_settings": {
                     "size": 200,
@@ -1325,20 +1358,26 @@ def test_launch_infer_without_metadata(
         0.25,
         type_of_process="infer"
     )
-    mock_check_existence_of_destination.assert_called_once()
-    mock_validate_metadata.assert_called_once()
-    mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
+    mock_check_completion_of_training.assert_called_once_with("table")
+    mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_validate_metadata.assert_called_once_with("table")
+    mock_generate_reports.assert_called_once()
+    mock_collect_metrics_in_infer.assert_called_once_with(["table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_infer")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
-@patch.object(Worker, "_Worker__infer_tables", return_value=None)
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Worker, "_Worker__infer_tables")
 def test_launch_infer_with_metadata_contained_global_settings(
     mock_infer_tables,
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_infer,
     rp_logger,
 ):
@@ -1353,8 +1392,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
     )
     worker = Worker(
         table_name=None,
-        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
-                      "metadata_with_global_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_with_global_settings.yaml",
         settings={
             "size": 300,
             "run_parallel": True,
@@ -1403,26 +1441,33 @@ def test_launch_infer_with_metadata_contained_global_settings(
         0.125,
         type_of_process="infer",
     )
+    assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_generate_reports.assert_called_once()
     mock_collect_metrics_infer.assert_called_once_with(["pk_test", "fk_test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+
+@patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
-@patch.object(Worker, "_Worker__train_tables", return_value=None)
-def test_init_worker_for_training_process_with_absent_metadata_and_callback_loader(
-        mock_train_tables,
-        mock_gather_existed_columns,
-        mock_check_existence_of_source,
-        mock_check_existence_of_key_columns,
-        mock_check_existence_of_referenced_columns,
-        mock_validate_metadata,
-        rp_logger
+@patch.object(Worker, "_Worker__train_tables")
+def test_launch_train_with_absent_metadata_and_callback_loader(
+    mock_train_tables,
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_validate_metadata,
+    mock_generate_reports,
+    mock_collect_metrics_in_train,
+    rp_logger
 ):
     """
     Test the initialization of 'Worker' class
@@ -1434,7 +1479,7 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
         "with the absent metadata and provided callback function during the training process"
     )
     worker = Worker(
-        table_name="test_table",
+        table_name="table",
         metadata_path=None,
         settings={
             "epochs": 20,
@@ -1448,7 +1493,7 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
         loader=MagicMock()
     )
     assert worker.metadata == {
-        "test_table": {
+        "table": {
             "train_settings": {
                 "source": None,
                 "batch_size": 1000,
@@ -1464,10 +1509,10 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
     }
     worker.launch_train()
     mock_train_tables.assert_called_with(
-        ["test_table"],
-        ["test_table"],
+        ["table"],
+        ["table"],
         {
-            "test_table": {
+            "table": {
                 "train_settings": {
                     "source": None,
                     "epochs": 20,
@@ -1482,7 +1527,7 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
             }
         },
         {
-            "test_table": {
+            "table": {
                 "train_settings": {
                     "source": None,
                     "epochs": 20,
@@ -1503,16 +1548,22 @@ def test_init_worker_for_training_process_with_absent_metadata_and_callback_load
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     mock_validate_metadata.assert_called_once()
+    mock_generate_reports.assert_called_once()
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["table"],
+        ["table"],
+        True)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
-@patch.object(Worker, "_Worker__train_tables", return_value=None)
+@patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_without_source_paths(
     mock_train_tables,
     mock_gather_existed_columns,
@@ -1520,6 +1571,7 @@ def test_launch_train_with_metadata_without_source_paths(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -1654,25 +1706,27 @@ def test_launch_train_with_metadata_without_source_paths(
         True
     )
     mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
+    assert mock_validate_metadata.call_count == 2
+    mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
         True
     )
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_existence_of_key_columns.assert_not_called()
-    mock_check_existence_of_referenced_columns.assert_not_called()
-    assert mock_validate_metadata.call_count == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
-@patch.object(Worker, "_Worker__train_tables", return_value=None)
+@patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_without_train_settings(
     mock_train_tables,
     mock_gather_existed_columns,
@@ -1680,6 +1734,7 @@ def test_launch_train_with_metadata_without_train_settings(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
+    mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -1697,8 +1752,7 @@ def test_launch_train_with_metadata_without_train_settings(
     )
     worker = Worker(
         table_name=None,
-        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
-                      "metadata_without_train_settings.yaml",
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_without_train_settings.yaml",
         settings={
             "epochs": 20,
             "drop_null": True,
@@ -1819,6 +1873,7 @@ def test_launch_train_with_metadata_without_train_settings(
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_validate_metadata.call_count == 2
+    mock_collect_metrics_in_train.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
@@ -1827,17 +1882,19 @@ def test_launch_train_with_metadata_without_train_settings(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Worker, "_generate_reports")
-@patch.object(Worker, "_check_completion_of_training", return_value=None)
-@patch.object(Worker, "_infer_table")
 @patch.object(Worker, "_collect_metrics_in_infer")
-@patch.object(Validator, "run")
+@patch.object(Worker, "_generate_reports")
+@patch.object(Worker, "_infer_table")
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_validate_metadata")
 def test_launch_infer_of_pretrained_table(
-    mock_validator_run,
-    mock_collect_metrics_in_infer,
-    mock_infer_table,
+    mock_validate_metadata,
+    mock_check_existence_of_destination,
     mock_check_completion_of_training,
+    mock_infer_table,
     mock_generate_reports,
+    mock_collect_metrics_in_infer,
     rp_logger,
 ):
     """
@@ -1849,7 +1906,7 @@ def test_launch_infer_of_pretrained_table(
         "if the training process of the table has been finished"
     )
     worker = Worker(
-        table_name="test_table",
+        table_name="table",
         metadata_path=None,
         settings={
             "size": 300,
@@ -1863,7 +1920,7 @@ def test_launch_infer_of_pretrained_table(
         loader=None
     )
     metadata = {
-        "test_table": {
+        "table": {
             "train_settings": {
                 "source": None
             },
@@ -1878,24 +1935,26 @@ def test_launch_infer_of_pretrained_table(
             "format": {}
         }
     }
-    worker.merged_metadata = metadata
     worker.launch_infer()
-    mock_validator_run.assert_called_once()
+    mock_validate_metadata.assert_called_once_with("table")
+    mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_check_completion_of_training.assert_called_once_with("table")
     mock_infer_table.assert_called_once_with(
-        table="test_table",
+        table="table",
         metadata=metadata,
         type_of_process="infer",
         delta=0.25
     )
-    mock_check_completion_of_training.assert_called_once_with("test-table")
-    mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
     mock_generate_reports.assert_called_once()
+    mock_collect_metrics_in_infer.assert_called_once_with(["table"])
 
 
 @patch.object(Worker, "_infer_table")
-@patch.object(Validator, "run")
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_validate_metadata")
 def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
-    mock_validator_run,
+    mock_validate_metadata,
+    mock_check_existence_of_destination,
     mock_infer_table,
     caplog,
     rp_logger,
@@ -1910,54 +1969,41 @@ def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
         "in case the training process of the table hasn't been finished, "
         "and the appropriate success file 'message.success' is absent"
     )
-    worker = Worker(
-        table_name="test_table",
-        metadata_path=None,
-        settings={
-            "size": 300,
-            "run_parallel": True,
-            "random_seed": 3,
-            "reports": ["accuracy"],
-            "batch_size": 300,
-        },
-        log_level="INFO",
-        type_of_process="infer",
-        loader=None
-    )
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": None
-            },
-            "infer_settings": {
-                "size": 300,
-                "run_parallel": True,
-                "random_seed": 3,
-                "reports": ["accuracy"],
-                "batch_size": 300
-            },
-            "keys": {},
-            "format": {}
-        }
-    }
-    worker.merged_metadata = metadata
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            worker.launch_infer()
-            assert (
-                "The training of the table - 'test-table' hasn't been completed. "
-                "Please, retrain the table."
-                in caplog.text
+            worker = Worker(
+                table_name="table",
+                metadata_path=None,
+                settings={
+                    "size": 300,
+                    "run_parallel": True,
+                    "random_seed": 3,
+                    "reports": ["accuracy"],
+                    "batch_size": 300,
+                },
+                log_level="INFO",
+                type_of_process="infer",
+                loader=None
             )
+            worker.launch_infer()
+            message = (
+                "The training of the table - 'table' hasn't been completed. "
+                "Please, retrain the table."
+            )
+            assert message in str(error.value)
+            assert message in caplog.text
+    mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_validate_metadata.assert_called_once_with("table")
     mock_infer_table.assert_not_called()
-    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_infer_table")
-@patch.object(Validator, "run")
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_validate_metadata")
 def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_content(
-    mock_validator_run,
+    mock_validate_metadata,
+    mock_check_existence_of_destination,
     mock_infer_table,
     test_success_file,
     caplog,
@@ -1975,45 +2021,29 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
         "and the appropriate success file 'message.success' is present, "
         "but the content of the file doesn't correspond to finished training process"
     )
-    worker = Worker(
-        table_name="test_table",
-        metadata_path=None,
-        settings={
-            "size": 300,
-            "run_parallel": True,
-            "random_seed": 3,
-            "reports": ["accuracy"],
-            "batch_size": 300,
-        },
-        log_level="INFO",
-        type_of_process="infer",
-        loader=None
-    )
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": None
-            },
-            "infer_settings": {
-                "size": 300,
-                "run_parallel": True,
-                "random_seed": 3,
-                "reports": ["accuracy"],
-                "batch_size": 300
-            },
-            "keys": {},
-            "format": {}
-        }
-    }
-    worker.merged_metadata = metadata
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            worker.launch_infer()
-            assert (
-                "The training of the table - 'test-table' hasn't been completed. "
-                "Please, retrain the table."
-                in caplog.text
+            worker = Worker(
+                table_name="table",
+                metadata_path=None,
+                settings={
+                    "size": 300,
+                    "run_parallel": True,
+                    "random_seed": 3,
+                    "reports": ["accuracy"],
+                    "batch_size": 300,
+                },
+                log_level="INFO",
+                type_of_process="infer",
+                loader=None
             )
+            worker.launch_infer()
+            message = (
+                "The training of the table - 'table' hasn't been completed. "
+                "Please, retrain the table."
+            )
+            assert message in str(error.message)
+            assert message in caplog.text
+    mock_check_existence_of_destination.assert_called_once_with("table")
     mock_infer_table.assert_not_called()
-    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)

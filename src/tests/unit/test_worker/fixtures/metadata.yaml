@@ -1,6 +1,6 @@
-test_table:
+table:
   train_settings:
-    source: ./path/to/test_table.csv
+    source: ./path/to/table.csv
     epochs: 100
     drop_null: false
     reports: none

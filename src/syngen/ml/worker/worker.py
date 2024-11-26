@@ -335,8 +335,6 @@ class Worker:
                 type_of_process="train"
             )
 
-        self._generate_reports()
-
     def _get_surrogate_tables_mapping(self):
         """
         Get the mapping of surrogate tables, which end with "_pk" and "_fk",
@@ -360,35 +358,6 @@ class Worker:
                 if table in children
             ), None
         )
-
-    import os
-    from slugify import slugify
-
-    def _check_completion_of_training(self, table_name: str):
-        """
-        Check if the training process of a specific table has been completed.
-
-        Args:
-        table_name (str): The name of the table to check.
-
-        Raises:
-        FileNotFoundError: If the success file does not exist.
-        ValueError: If the content of the success file does not indicate success.
-        """
-        path_to_success_file = f"model_artifacts/resources/{slugify(table_name)}/message.success"
-        error_message = (
-            f"The training of the table - '{table_name}' hasn't been completed. "
-            "Please, retrain the table."
-        )
-
-        if not os.path.exists(path_to_success_file):
-            raise FileNotFoundError(error_message)
-
-        with open(path_to_success_file, 'r') as file:
-            content = file.read().strip()
-
-        if content != "SUCCESS":
-            raise ValueError(error_message)
 
     def _infer_table(self, table, metadata, type_of_process, delta, is_nested=False):
         """
@@ -443,7 +412,6 @@ class Worker:
 
         non_surrogate_tables = [table for table in tables if table not in self.divided]
         for table in non_surrogate_tables:
-            self._check_completion_of_training(slugify(table))
             self._infer_table(
                 table=table,
                 metadata=config_of_tables,
@@ -466,8 +434,6 @@ class Worker:
                     is_nested=True
                 )
             MlflowTracker().end_run()
-
-        self._generate_reports()
 
     def _collect_integral_metrics(self, tables, type_of_process):
         """
@@ -530,6 +496,7 @@ class Worker:
             generation_of_reports
         )
 
+        self._generate_reports()
         self._collect_metrics_in_train(
             tables_for_training,
             tables_for_inference,
@@ -561,4 +528,5 @@ class Worker:
         delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
+        self._generate_reports()
         self._collect_metrics_in_infer(tables)

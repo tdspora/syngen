@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, call
 import pytest
 
 from marshmallow import ValidationError
@@ -8,7 +8,7 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 FAKE_METADATA_PATH = "path/to/metadata.yaml"
 
 
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -20,7 +20,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     rp_logger
 ):
     """
@@ -32,36 +32,37 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
         "during the training process"
     )
     test_metadata = {
-            "test_table": {
-                "train_settings": {
-                    "source": "path/to/test_table.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
+        "test_table": {
+            "train_settings": {
+                "source": "path/to/test_table.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
                         "columns": ["id"]
-                    }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
-    mock_gather_existed_columns.assert_called_once()
-    mock_check_existence_of_source.assert_called_once()
-    mock_check_existence_of_key_columns.assert_called_once()
-    mock_check_existence_of_referenced_columns.assert_called_once()
+    mock_gather_existed_columns.assert_called_once_with("test_table")
+    mock_check_existence_of_source.assert_called_once_with("test_table")
+    mock_check_existence_of_key_columns.assert_called_once_with("test_table")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_validate_referential_integrity.assert_not_called()
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_check_completion_of_training.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -73,14 +74,12 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     rp_logger
 ):
     """
-    Test the validation of the metadata of one table
-    contained only the primary key
-    during the training process
-    with 'validation_source' set to 'False'
+    Test the validation of the metadata of one table contained only the primary key
+    during the training process with 'validation_source' set to 'False'
     """
     rp_logger.info(
         "Test the validation of the metadata of one table "
@@ -88,33 +87,34 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_
         "with 'validation_source' set to 'False'"
     )
     test_metadata = {
-            "table_a": {
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
+        "table_a": {
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 }
-            },
-            "table_b": {
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
+            }
+        },
+        "table_b": {
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                },
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH,
         validation_source=False
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -123,7 +123,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     mock_validate_referential_integrity.assert_not_called()
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_check_completion_of_training.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -135,24 +135,24 @@ def test_check_key_column_in_pk(rp_logger):
         "Test that the column of the primary key exists in the source table"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
-                              "csv_tables/table_with_data.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
+        "table_a": {
+            "train_settings": {
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -201,6 +201,7 @@ def test_check_key_column_in_fk(rp_logger):
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -212,7 +213,7 @@ def test_check_key_column_in_fk(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -224,7 +225,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     rp_logger
 ):
     """
@@ -237,42 +238,43 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
         "contained only the primary key and the foreign key during the training process"
     )
     test_metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "fk_id": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
-                    }
-                }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv"
             },
-            "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv"
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
                         "columns": ["id"]
                     }
                 }
+            }
+        },
+        "table_a": {
+            "train_settings": {
+                "source": "path/to/table_a.csv"
             },
-        }
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        },
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -285,12 +287,33 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
-    assert mock_validate_referential_integrity.call_count == 1
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_validate_referential_integrity.assert_called_once_with(
+        fk_name="fk_id",
+        fk_config={
+            "type": "FK",
+            "columns": ["id"],
+            "references": {
+                "table": "table_a",
+                "columns": ["id"]
+            }
+        },
+        parent_config={
+            "train_settings": {
+                "source": "path/to/table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        }
+    )
+    mock_check_completion_of_training.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -302,7 +325,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     rp_logger
 ):
     """
@@ -316,37 +339,38 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
         "during the training process with 'validation_source' set to 'False'"
     )
     test_metadata = {
-            "table_a": {
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
+        "table_a": {
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 }
-            },
-            "table_b": {
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
+            }
+        },
+        "table_b": {
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                },
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
                         "columns": ["id"]
-                    },
-                    "fk_id": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
                     }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH,
         validation_source=False
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -359,12 +383,30 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
     mock_check_existence_of_source.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
-    assert mock_validate_referential_integrity.call_count == 1
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_validate_referential_integrity.assert_called_once_with(
+        fk_name="fk_id",
+        fk_config={
+            "type": "FK",
+            "columns": ["id"],
+            "references": {
+                "table": "table_a",
+                "columns": ["id"]
+            }
+        },
+        parent_config={
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        }
+    )
+    mock_check_completion_of_training.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -376,7 +418,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     rp_logger
 ):
     """
@@ -389,50 +431,51 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
         "during the training process"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
-                }
+        "table_a": {
+            "train_settings": {
+                "source": "path/to/table_a.csv"
             },
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv"
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 },
-                "keys": {
-                    "fk_1": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
-                    },
-                    "fk_2": {
-                        "type": "FK",
-                        "columns": ["name"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["name"]
-                        }
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
+                }
+            }
+        },
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv"
+            },
+            "keys": {
+                "fk_1": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                },
+                "fk_2": {
+                    "type": "FK",
+                    "columns": ["name"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["name"]
                     }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -450,11 +493,11 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_referential_integrity.call_count == 2
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_check_completion_of_training.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -466,7 +509,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     rp_logger
 ):
     """
@@ -480,45 +523,46 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
         "during the training process with 'validation_source' set to 'False"
     )
     test_metadata = {
-            "table_a": {
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
+        "table_a": {
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                },
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
                 }
-            },
-            "table_b": {
-                "keys": {
-                    "fk_1": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
-                    },
-                    "fk_2": {
-                        "type": "FK",
-                        "columns": ["name"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["name"]
-                        }
+            }
+        },
+        "table_b": {
+            "keys": {
+                "fk_1": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                },
+                "fk_2": {
+                    "type": "FK",
+                    "columns": ["name"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["name"]
                     }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH,
         validation_source=False
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -536,13 +580,13 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_validate_referential_integrity.call_count == 2
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_check_completion_of_training.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -554,8 +598,8 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
-    mock_check_existence_of_success_file,
     mock_check_existence_of_generated_data,
     rp_logger
 ):
@@ -568,23 +612,24 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
         "during the inference process"
     )
     test_metadata = {
-            "test_table": {
-                "train_settings": {
-                    "source": "path/to/test_table.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
+        "test_table": {
+            "train_settings": {
+                "source": "path/to/test_table.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -593,16 +638,16 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     mock_validate_referential_integrity.assert_not_called()
-    mock_check_existence_of_destination.assert_called_once()
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_check_completion_of_training.assert_called_once_with("test_table")
+    mock_check_existence_of_destination.assert_called_once_with("test_table")
     mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_gather_existed_columns")
@@ -610,9 +655,9 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
     mock_gather_existed_columns,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
     mock_check_existence_of_generated_data,
     rp_logger
 ):
@@ -626,58 +671,59 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
         "contained only the primary key and the unique key during the inference process"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv"
-                },
-                "infer_settings": {
-                    "destination": "path/to/generated_table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
-                }
+        "table_a": {
+            "train_settings": {
+                "source": "path/to/table_a.csv"
             },
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv"
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        },
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
     mock_gather_existed_columns.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
+    assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     mock_validate_referential_integrity.assert_not_called()
-    mock_check_existence_of_success_file.assert_not_called()
     mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_gather_existed_columns")
@@ -685,9 +731,9 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
     mock_gather_existed_columns,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
     mock_check_existence_of_generated_data,
     rp_logger
 ):
@@ -701,45 +747,46 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
         "contained only the primary key and the foreign key during the inference process"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv"
-                },
-                "infer_settings": {
-                    "destination": "path/to/generated_table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
-                }
+        "table_a": {
+            "train_settings": {
+                "source": "path/to/table_a.csv"
             },
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv"
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        },
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
                         "columns": ["id"]
-                    },
-                    "fk_id": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
                     }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -751,17 +798,41 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
     mock_gather_existed_columns.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
+    assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
-    assert mock_validate_referential_integrity.call_count == 1
-    mock_check_existence_of_success_file.assert_not_called()
+    mock_validate_referential_integrity.assert_called_once_with(
+        fk_name="fk_id",
+        fk_config={
+            "type": "FK",
+            "columns": ["id"],
+            "references": {
+                "table": "table_a",
+                "columns": ["id"]
+            }
+        },
+        parent_config={
+            "train_settings": {
+                "source": "path/to/table_a.csv"
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        }
+    )
     mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_gather_existed_columns")
@@ -769,9 +840,9 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
     mock_gather_existed_columns,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
     mock_check_existence_of_generated_data,
     rp_logger
 ):
@@ -784,53 +855,54 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
         "during the inference process"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": "path/to/table_a.csv"
-                },
-                "infer_settings": {
-                    "destination": "path/to/generated_table_a.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    },
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["name"]
-                    }
-                }
+        "table_a": {
+            "train_settings": {
+                "source": "path/to/table_a.csv"
             },
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv"
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 },
-                "keys": {
-                    "fk_1": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
-                    },
-                    "fk_2": {
-                        "type": "FK",
-                        "columns": ["name"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["name"]
-                        }
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
+                }
+            }
+        },
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv"
+            },
+            "keys": {
+                "fk_1": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                },
+                "fk_2": {
+                    "type": "FK",
+                    "columns": ["name"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["name"]
                     }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -846,15 +918,15 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
     mock_gather_existed_columns.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
+    assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_referential_integrity.call_count == 2
-    mock_check_existence_of_success_file.assert_not_called()
     mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -866,7 +938,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     mock_check_existence_of_generated_data,
     test_metadata_storage,
     rp_logger
@@ -882,28 +954,29 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
         "It used in the training process without the generation of reports"
     )
     metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv",
-                    "reports": []
-                },
-                "keys": {
-                    "fk_key": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+                "reports": []
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
                     }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -950,11 +1023,41 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
         }
     }
     assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_existence_of_key_columns.call_count == 2
-    assert mock_check_existence_of_referenced_columns.call_count == 2
-    mock_validate_referential_integrity.assert_called_once()
-    mock_check_existence_of_success_file.assert_called_once()
+    mock_check_existence_of_source.assert_called_once_with("table_b")
+    mock_check_existence_of_key_columns.assert_called_once_with("table_b")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
+    mock_validate_referential_integrity.assert_called_once_with(
+        fk_name="fk_key",
+        fk_config={
+            "type": "FK",
+            "columns": ["id"],
+            "references": {
+                "table": "table_a",
+                "columns": ["id"]
+            }
+        },
+        parent_config={
+            "train_settings": {
+                "source": "path/to/table_a.csv",
+                "reports": ["accuracy", "sample"]
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                },
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
+                }
+            },
+            "format": {}
+        }
+    )
+    mock_check_completion_of_training.assert_called_once_with("table_a")
     mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -966,7 +1069,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     ["metrics_only"]
 ])
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -978,7 +1081,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     mock_check_existence_of_generated_data,
     test_metadata_storage,
     value,
@@ -997,28 +1100,29 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         "that requires the generation of the synthetic data "
     )
     metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv",
-                    "reports": value
-                },
-                "keys": {
-                    "fk_key": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+                "reports": value
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
                     }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1065,17 +1169,47 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         }
     }
     assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_existence_of_key_columns.call_count == 2
-    assert mock_check_existence_of_referenced_columns.call_count == 2
-    mock_validate_referential_integrity.assert_called_once()
-    mock_check_existence_of_success_file.assert_called_once()
-    mock_check_existence_of_generated_data.assert_called_once()
+    mock_check_existence_of_source.assert_called_once_with("table_b")
+    mock_check_existence_of_key_columns.assert_called_once_with("table_b")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
+    mock_validate_referential_integrity.assert_called_once_with(
+        fk_name="fk_key",
+        fk_config={
+            "type": "FK",
+            "columns": ["id"],
+            "references": {
+                "table": "table_a",
+                "columns": ["id"]
+            }
+        },
+        parent_config={
+            "train_settings": {
+                "source": "path/to/table_a.csv",
+                "reports": ["accuracy", "sample"]
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                },
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
+                }
+            },
+            "format": {}
+        }
+    )
+    mock_check_completion_of_training.assert_called_once_with("table_a")
+    mock_check_existence_of_generated_data.assert_called_once_with("table_a")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -1087,7 +1221,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     mock_check_existence_of_generated_data,
     test_metadata_storage,
     rp_logger
@@ -1105,28 +1239,29 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         "that doesn't require the generation of the synthetic data"
     )
     metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv",
-                    "reports": ["sample"]
-                },
-                "keys": {
-                    "fk_key": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+                "reports": ["sample"]
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
                     }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1173,17 +1308,47 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         }
     }
     assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
-    assert mock_check_existence_of_key_columns.call_count == 2
-    assert mock_check_existence_of_referenced_columns.call_count == 2
-    mock_validate_referential_integrity.assert_called_once()
-    mock_check_existence_of_success_file.assert_called_once()
+    mock_check_existence_of_source.assert_called_once_with("table_b")
+    mock_check_existence_of_key_columns.assert_called_once_with("table_b")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
+    mock_validate_referential_integrity.assert_called_once_with(
+        fk_name="fk_key",
+        fk_config={
+            "type": "FK",
+            "columns": ["id"],
+            "references": {
+                "table": "table_a",
+                "columns": ["id"]
+            }
+        },
+        parent_config={
+            "train_settings": {
+                "source": "path/to/table_a.csv",
+                "reports": ["accuracy", "sample"]
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                },
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
+                }
+            },
+            "format": {}
+        }
+    )
+    mock_check_completion_of_training.assert_called_once_with("table_a")
     mock_check_existence_of_generated_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
@@ -1197,7 +1362,7 @@ def test_validate_incomplete_metadata_in_infer_process(
     mock_check_existence_of_referenced_columns,
     mock_check_existence_of_destination,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     mock_check_existence_of_generated_data,
     test_metadata_storage,
     rp_logger
@@ -1213,27 +1378,28 @@ def test_validate_incomplete_metadata_in_infer_process(
         "It used in the inference process"
     )
     metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv",
-                },
-                "keys": {
-                    "fk_key": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
                     }
                 }
             }
         }
+    }
     validator = Validator(
         metadata=metadata,
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
+    validator.errors = dict()
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1282,10 +1448,40 @@ def test_validate_incomplete_metadata_in_infer_process(
     mock_check_existence_of_source.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
-    assert mock_check_existence_of_destination.call_count == 2
-    mock_validate_referential_integrity.assert_called_once()
-    mock_check_existence_of_success_file.assert_called_once()
-    mock_check_existence_of_generated_data.assert_called_once()
+    mock_check_existence_of_destination.assert_called_once_with("table_b")
+    mock_validate_referential_integrity.assert_called_once_with(
+        fk_name="fk_key",
+        fk_config={
+            "type": "FK",
+            "columns": ["id"],
+            "references": {
+                "table": "table_a",
+                "columns": ["id"]
+            }
+        },
+        parent_config={
+            "train_settings": {
+                "source": "path/to/table_a.csv",
+                "reports": ["accuracy", "sample"]
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_table_a.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                },
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["name"]
+                }
+            },
+            "format": {}
+        }
+    )
+    assert mock_check_completion_of_training.call_args_list == [call("table_b"), call("table_a")]
+    mock_check_existence_of_generated_data.assert_called_once_with("table_a")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1293,7 +1489,7 @@ def test_validate_incomplete_metadata_in_infer_process(
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_gather_existed_columns")
-def test_validate_metadata_with_not_existent_source(
+def test_validate_metadata_with_not_existent_source_in_train_process(
     mock_gather_existed_columns,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
@@ -1302,26 +1498,26 @@ def test_validate_metadata_with_not_existent_source(
     rp_logger
 ):
     """
-    Test the validation of the metadata of one table.
+    Test the validation of the metadata of one table during the training process.
     The source of the table is not existent.
     """
     rp_logger.info(
-        "Test the validation of the metadata of one table. "
+        "Test the validation of the metadata of one table during the training process. "
         "The source of the table is not existent."
     )
     test_metadata = {
-            "test_table": {
-                "train_settings": {
-                    "source": "path/to/test_table.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
+        "test_table": {
+            "train_settings": {
+                "source": "path/to/test_table.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 }
             }
         }
+    }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             validator = Validator(
@@ -1332,9 +1528,9 @@ def test_validate_metadata_with_not_existent_source(
             validator.run()
             assert validator.mapping == {}
             assert validator.merged_metadata == test_metadata
-            mock_gather_existed_columns.assert_called_once()
-            mock_check_existence_of_key_columns.assert_called_once()
-            mock_check_existence_of_referenced_columns.assert_called_once()
+            mock_gather_existed_columns.assert_called_once_with("test_table")
+            mock_check_existence_of_key_columns.assert_called_once_with("test_table")
+            mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
             mock_validate_referential_integrity.assert_not_called()
             message = (
                 "The validation of the metadata has been failed. The error(s) found in - "
@@ -1362,22 +1558,22 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
         "The information of the parent table is absent in the metadata storage."
     )
     metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv",
-                },
-                "keys": {
-                    "fk_key": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_c",
-                            "columns": ["id"]
-                        }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_c",
+                        "columns": ["id"]
                     }
                 }
             }
         }
+    }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             validator = Validator(
@@ -1385,6 +1581,7 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
                 type_of_process="train",
                 metadata_path=FAKE_METADATA_PATH
             )
+            validator.errors = dict()
             validator.run()
             assert validator.mapping == {
                 "fk_key": {
@@ -1403,7 +1600,7 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -1413,7 +1610,7 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
     mock_check_existence_of_source,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     test_metadata_storage,
     caplog,
     rp_logger
@@ -1431,22 +1628,22 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
         "which not correspond to the list of the columns of the FK"
     )
     metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv",
-                },
-                "keys": {
-                    "fk_key": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_d",
-                            "columns": ["id"]
-                        }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_d",
+                        "columns": ["id"]
                     }
                 }
             }
         }
+    }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             validator = Validator(
@@ -1497,7 +1694,7 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
             assert mock_check_existence_of_source.call_count == 2
             assert mock_check_existence_of_key_columns.call_count == 2
             assert mock_check_existence_of_referenced_columns.call_count == 2
-            mock_check_existence_of_success_file.assert_called_once()
+            mock_check_completion_of_training.assert_called_once_with("table_d")
             message = (
                 "The validation of the metadata has been failed. "
                 "The error(s) found in - \"validate referential integrity\": "
@@ -1524,21 +1721,21 @@ def test_validate_metadata_with_not_existent_destination(
         "The destination of the table is not existent."
     )
     test_metadata = {
-            "test_table": {
-                "train_settings": {
-                    "source": "path/to/test_table.csv"
-                },
-                "infer_settings": {
-                    "destination": "path/to/generated_test_table.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
+        "test_table": {
+            "train_settings": {
+                "source": "path/to/test_table.csv"
+            },
+            "infer_settings": {
+                "destination": "path/to/generated_test_table.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
                 }
             }
         }
+    }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             validator = Validator(
@@ -1549,7 +1746,7 @@ def test_validate_metadata_with_not_existent_destination(
             validator.run()
             assert validator.mapping == {}
             assert validator.merged_metadata == test_metadata
-            mock_validate_referential_integrity.assert_called_once()
+            mock_validate_referential_integrity.assert_called_once_with()
             message = (
                 "The validation of the metadata has been failed. The error(s) found in - "
                 "\"check existence of the destination\": {\"test_table\": \"It seems that "
@@ -1562,7 +1759,7 @@ def test_validate_metadata_with_not_existent_destination(
 
 
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -1574,7 +1771,7 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     mock_check_existence_of_generated_data,
     test_metadata_storage,
     caplog,
@@ -1594,22 +1791,22 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
         "that's why the success file of the parent table is absent"
     )
     metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv",
-                },
-                "keys": {
-                    "fk_key": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
                     }
                 }
             }
         }
+    }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             validator = Validator(
@@ -1619,11 +1816,40 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
             )
             validator.run()
             assert mock_gather_existed_columns.call_count == 2
-            assert mock_check_existence_of_source.call_count == 2
-            assert mock_check_existence_of_key_columns.call_count == 2
-            assert mock_check_existence_of_referenced_columns.call_count == 2
-            mock_validate_referential_integrity.assert_called_once()
-            mock_check_existence_of_success_file.assert_called_once()
+            mock_check_existence_of_source.assert_called_once_with("table_b")
+            mock_check_existence_of_key_columns.assert_called_once_with("table_b")
+            mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
+            mock_validate_referential_integrity.assert_called_once_with(
+                fk_name="fk_key",
+                fk_config={
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                },
+                parent_metadata={
+                    "train_settings": {
+                        "source": "path/to/table_a.csv",
+                        "reports": ["accuracy", "sample"]
+                    },
+                    "infer_settings": {
+                        "destination": "path/to/generated_table_a.csv"
+                    },
+                    "keys": {
+                        "pk_id": {
+                            "type": "PK",
+                            "columns": ["id"]
+                        },
+                        "uq_id": {
+                            "type": "UQ",
+                            "columns": ["name"]
+                        }
+                    }
+                }
+            )
+            mock_check_completion_of_training.assert_called_once_with("table_a")
             mock_check_existence_of_generated_data.assert_not_called()
             assert validator.mapping == {
                 "fk_key": {
@@ -1669,8 +1895,9 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
             }
             message = (
                 "The validation of the metadata has been failed. The error(s) found in - "
-                "\"check existence of the success file\": {\"table_a\": \"The table - 'table_a'"
-                "hasn't been trained completely. Please, retrain this table first\"}"
+                "\"check completion of the training process\": "
+                "{\"table_a\": \"The training of the table  - 'table_a'"
+                "hasn't been completed. Please, retrain the table.\"}"
             )
             assert str(error.value) == message
             assert message in caplog.text
@@ -1680,7 +1907,9 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
 def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_infer_process(
+    mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_check_existence_of_generated_data,
     mock_validate_referential_integrity,
@@ -1701,22 +1930,22 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
         "generated previously"
     )
     metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv",
-                },
-                "keys": {
-                    "fk_key": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
                     }
                 }
             }
         }
+    }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             validator = Validator(
@@ -1769,9 +1998,39 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
                     "format": {}
                 }
             }
-            assert mock_check_existence_of_destination.call_count == 2
-            mock_validate_referential_integrity.assert_called_once()
-            mock_check_existence_of_generated_data.assert_called_once()
+            assert mock_check_existence_of_destination.assert_called_once_with("table_b")
+            mock_validate_referential_integrity.assert_called_once_with(
+                fk_name="fk_key",
+                fk_config={
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                },
+                parent_config={
+                    "train_settings": {
+                        "source": "path/to/table_a.csv",
+                        "reports": ["accuracy", "sample"]
+                    },
+                    "infer_settings": {
+                        "destination": "path/to/generated_table_a.csv"
+                    },
+                    "keys": {
+                        "pk_id": {
+                            "type": "PK",
+                            "columns": ["id"]
+                        },
+                        "uq_id": {
+                            "type": "UQ",
+                            "columns": ["name"]
+                        }
+                    },
+                    "format": {}
+                }
+            )
+            mock_check_existence_of_generated_data.assert_called_once_with("table_a")
             message = (
                 "The validation of the metadata has been failed. "
                 "The error(s) found in - \"check existence of the generated data\": {"
@@ -1792,7 +2051,7 @@ def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_i
     ["metrics_only"],
 ])
 @patch.object(Validator, "_check_existence_of_generated_data")
-@patch.object(Validator, "_check_existence_of_success_file")
+@patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -1804,7 +2063,7 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
-    mock_check_existence_of_success_file,
+    mock_check_completion_of_training,
     mock_check_existence_of_generated_data,
     test_metadata_storage,
     caplog,
@@ -1826,23 +2085,23 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
         "but the generated data of the parent table hasn't been generated previously"
     )
     metadata = {
-            "table_b": {
-                "train_settings": {
-                    "source": "path/to/table_b.csv",
-                    "reports": value
-                },
-                "keys": {
-                    "fk_key": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv",
+                "reports": value
+            },
+            "keys": {
+                "fk_key": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
                     }
                 }
             }
         }
+    }
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             validator = Validator(
@@ -1895,13 +2154,12 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
                 }
             }
             assert mock_gather_existed_columns.call_count == 2
-            assert mock_check_existence_of_source.call_count == 2
-            assert mock_check_existence_of_key_columns.call_count == 2
-            assert mock_check_existence_of_referenced_columns.call_count == 2
-            mock_check_existence_of_generated_data.assert_called_once()
-            mock_check_existence_of_success_file.assert_called_once()
-            mock_check_existence_of_generated_data.assert_called_once()
-            mock_validate_referential_integrity.assert_called_once()
+            mock_check_existence_of_source.assert_called_once_with("table_b")
+            mock_check_existence_of_key_columns.assert_called_once_with("table_b")
+            mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
+            mock_validate_referential_integrity.assert_called_once_with("table_b")
+            mock_check_completion_of_training.assert_called_once_with("table_a")
+            mock_check_existence_of_generated_data.assert_called_once_with("table_a")
             message = (
                 "The validation of the metadata has been failed. "
                 "The error(s) found in - \"check existence of the generated data\": {"
@@ -1922,25 +2180,24 @@ def test_check_not_existent_key_column_in_pk(rp_logger):
         "Test that the column of the primary key doesn't exist in the source table"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
-                              "csv_tables/table_with_data.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["non-existent column"]
-                    }
+        "table_a": {
+            "train_settings": {
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["non-existent column"]
                 }
             }
         }
-    validator = Validator(
-        metadata=test_metadata,
-        type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
-    )
+    }
     with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="train",
+            metadata_path=FAKE_METADATA_PATH
+        )
         validator.run()
         assert validator.mapping == {}
         assert validator.merged_metadata == test_metadata
@@ -1962,25 +2219,24 @@ def test_check_not_existent_key_column_in_uq(rp_logger):
         "Test that the column of the unique key doesn't exist in the source table"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
-                              "csv_tables/table_with_data.csv"
-                },
-                "keys": {
-                    "uq_id": {
-                        "type": "UQ",
-                        "columns": ["non-existent column"]
-                    }
+        "table_a": {
+            "train_settings": {
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
+            },
+            "keys": {
+                "uq_id": {
+                    "type": "UQ",
+                    "columns": ["non-existent column"]
                 }
             }
         }
-    validator = Validator(
-        metadata=test_metadata,
-        type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
-    )
+    }
     with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="train",
+            metadata_path=FAKE_METADATA_PATH
+        )
         validator.run()
         assert validator.mapping == {}
         assert validator.merged_metadata == test_metadata
@@ -2002,41 +2258,40 @@ def test_check_not_existent_key_column_in_fk(rp_logger):
         "Test that the column of the foreign key doesn't exist in the child table"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
-                              "csv_tables/table_with_data.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
-                }
+        "table_a": {
+            "train_settings": {
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
             },
-            "table_b": {
-                "train_settings": {
-                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/"
-                              "child_table_with_data.csv"
-                },
-                "keys": {
-                    "fk_id": {
-                        "type": "FK",
-                        "columns": ["non-existent column"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["id"]
-                        }
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        },
+        "table_b": {
+            "train_settings": {
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/"
+                          "child_table_with_data.csv"
+            },
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["non-existent column"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
                     }
                 }
             }
         }
-    validator = Validator(
-        metadata=test_metadata,
-        type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
-    )
+    }
     with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="train",
+            metadata_path=FAKE_METADATA_PATH
+        )
         validator.run()
         assert validator.mapping == {}
         assert validator.merged_metadata == test_metadata
@@ -2057,41 +2312,41 @@ def test_check_not_existent_referenced_table_in_fk(test_metadata_storage, rp_log
         "Test that the table of the foreign key doesn't exist in the metadata"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
-                              "csv_tables/table_with_data.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
-                }
+        "table_a": {
+            "train_settings": {
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
             },
-            "table_b": {
-                "train_settings": {
-                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/"
-                              "child_table_with_data.csv"
-                },
-                "keys": {
-                    "fk_id": {
-                        "type": "FK",
-                        "columns": ["non-existent column"],
-                        "references": {
-                            "table": "non-existent table",
-                            "columns": ["id"]
-                        }
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        },
+        "table_b": {
+            "train_settings": {
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/"
+                          "child_table_with_data.csv"
+            },
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["non-existent column"],
+                    "references": {
+                        "table": "non-existent table",
+                        "columns": ["id"]
                     }
                 }
             }
         }
-    validator = Validator(
-        metadata=test_metadata,
-        type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
-    )
+    }
     with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="train",
+            metadata_path=FAKE_METADATA_PATH
+        )
+        validator.errors = dict()
         validator.run()
         assert validator.mapping == {}
         assert validator.merged_metadata == test_metadata
@@ -2112,41 +2367,40 @@ def test_check_not_existent_referenced_columns_in_fk(rp_logger):
         "Test that the referenced columns of the foreign key doesn't exist in the parent table"
     )
     test_metadata = {
-            "table_a": {
-                "train_settings": {
-                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/"
-                              "csv_tables/table_with_data.csv"
-                },
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["id"]
-                    }
-                }
+        "table_a": {
+            "train_settings": {
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/table_with_data.csv"
             },
-            "table_b": {
-                "train_settings": {
-                    "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/"
-                              "child_table_with_data.csv"
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            }
+        },
+        "table_b": {
+            "train_settings": {
+                "source": f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/"
+                          "child_table_with_data.csv"
                 },
-                "keys": {
-                    "fk_id": {
-                        "type": "FK",
-                        "columns": ["id"],
-                        "references": {
-                            "table": "table_a",
-                            "columns": ["non-existent column"]
-                        }
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["non-existent column"]
                     }
                 }
             }
         }
-    validator = Validator(
-        metadata=test_metadata,
-        type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
-    )
+    }
     with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="train",
+            metadata_path=FAKE_METADATA_PATH
+        )
         validator.run()
         assert validator.mapping == {}
         assert validator.merged_metadata == test_metadata
