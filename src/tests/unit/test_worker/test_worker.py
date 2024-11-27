@@ -1449,7 +1449,6 @@ def test_launch_infer_with_metadata_contained_global_settings(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")

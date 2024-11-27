@@ -39,7 +39,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
             "keys": {
                 "pk_id": {
                     "type": "PK",
-                        "columns": ["id"]
+                    "columns": ["id"]
                 }
             }
         }
