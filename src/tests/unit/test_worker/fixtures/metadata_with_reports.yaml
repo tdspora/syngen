@@ -1,0 +1,22 @@
+test_table:
+  train_settings:
+    source: ./path/to/test_table.csv
+    epochs: 100
+    drop_null: false
+    reports: all
+    row_limit: 800
+    batch_size: 2000
+
+  infer_settings:
+    destination: ./path/to/test_table_infer.csv
+    size: 200
+    run_parallel: True
+    random_seed: 2
+    reports: all
+    batch_size: 200
+
+  keys:
+    pk_id:
+      type: "PK"
+      columns:
+        - Id
