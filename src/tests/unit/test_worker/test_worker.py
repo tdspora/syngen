@@ -1828,7 +1828,6 @@ def test_infer_tables_with_generation_reports(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
