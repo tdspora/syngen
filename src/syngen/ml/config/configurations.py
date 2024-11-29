@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Tuple, Set, List, Callable, Literal
 import os
+from copy import deepcopy
 import shutil
 from datetime import datetime
 
@@ -89,7 +90,9 @@ class TrainConfig:
                 "The generation of the sample report is unnecessary and won't be produced "
                 "as the source data and sampled data sizes are identical"
             )
-            self.reports.remove("sample")
+            reports = deepcopy(self.reports)
+            reports.remove("sample")
+            self.reports = reports
 
     def _check_reports(self):
         """
