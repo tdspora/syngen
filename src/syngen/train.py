@@ -69,10 +69,10 @@ validate_reports = validate_parameter_reports(
     callback=validate_reports,
     help="Controls the generation of quality reports. "
     "Might require significant time for big generated tables (>1000 rows). "
-    "If set to 'sample', generates a sampling report. "
+    "If set to 'sample', generates a sample report. "
     "If set to 'accuracy', generates an accuracy report. "
     "If set to 'metrics_only', outputs the metrics information only to standard output. "
-    "If set to 'all', generates both accuracy and sampling report. "
+    "If set to 'all', generates both accuracy and sample report. "
     "If it's absent or set to 'none', no reports are generated.",
 )
 @click.option(
