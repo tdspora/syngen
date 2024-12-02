@@ -669,24 +669,35 @@ class Dataset(BaseDataset):
         """
         Check if uuid_to_test is a valid UUID
         """
-
-        def check_uuid(i):
-            for v in range(1, 6):
-                try:
-                    uuid_obj = UUID(i, version=v)
-                    if uuid_obj.hex == i.replace("-", ""):
-                        return v
-                except ValueError:
-                    pass
-            return self._is_valid_ulid(i)
-
+        result = []
         non_uuid_values = set()
         contain_nan = x.isnull().sum() > 0
 
-        result = [check_uuid(i) for i in x.dropna()]
+        for i in x.dropna().unique():
+            is_uuid = False
+            for v in [1, 2, 3, 4, 5]:
+                try:
+                    uuid_obj = UUID(i, version=v)
+                    if str(uuid_obj) == i or str(uuid_obj).replace("-", "") == i:
+                        result.append(v)
+                        is_uuid = True
+                        break
+                except (ValueError, AttributeError, TypeError):
+                    continue
+
+            if not is_uuid:
+                ulid_result = self._is_valid_ulid(i)
+                if ulid_result:
+                    result.append(ulid_result)
+                else:
+                    non_uuid_values.add(i)
 
         if result:
-            most_common_uuid_type = Counter(result).most_common(1)[0][0]
+            filtered_result = [item for item in result if item is not None]
+
+            most_common_uuid_type = (
+                Counter(filtered_result).most_common(1)[0][0] if filtered_result else None
+            )
 
             if not non_uuid_values:
                 return most_common_uuid_type
