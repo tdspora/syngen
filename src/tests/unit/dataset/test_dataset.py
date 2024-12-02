@@ -665,6 +665,45 @@ def test_is_valid_uuid(rp_logger):
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
+def test_handling_uuid_columns_with_missing_values(rp_logger):
+    rp_logger.info(
+        "Test the process of handling uuid columns containing missing values"
+    )
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+    df, schema = DataLoader(
+        f"{DIR_NAME}/unit/dataset/fixtures/table_with_diff_uuid_columns_with_nan_labels.csv"
+    ).load_data()
+    mock_dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={
+            "train_config_pickle_path": "mock_path"
+        },
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+    assert mock_dataset.uuid_columns == {"column_with_nan_label"}
+    assert mock_dataset.str_columns == {
+        "column_with_nan_label_and_nulls",
+        "column_with_several_nan_labels",
+        "name"
+    }
+    assert mock_dataset.nan_labels_dict == {
+        "column_with_nan_label": "no_uuids"
+    }
+    assert mock_dataset.uuid_columns_types == {
+        "column_with_nan_label": 4.0
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
 def test_set_email_columns(rp_logger):
     rp_logger.info(
         "Test the method '_set_email_columns' of the class Dataset",

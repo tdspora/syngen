@@ -709,7 +709,10 @@ class Dataset(BaseDataset):
             if len(non_uuid_values) > 1 or (contain_nan and non_uuid_values):
                 warning_msg = f"Column '{x.name}' contains UUID/ULID values"
                 if len(non_uuid_values) >= 1:
-                    warning_msg += f", and non-UUID/ULID value/s {non_uuid_values}"
+                    non_uuid_values = [
+                        f"'{non_uuid_value}'" for non_uuid_value in non_uuid_values
+                    ]
+                    warning_msg += f", and non-UUID/ULID value/s - {', '.join(non_uuid_values)}"
                 if contain_nan:
                     warning_msg += ", and null value/s"
                 warning_msg += ". The column will be treated as a text column."
@@ -726,10 +729,11 @@ class Dataset(BaseDataset):
         """
         unique_non_uuid = next(iter(non_uuid_values))
 
-        logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
-                    f"value '{unique_non_uuid}'. It will be treated "
-                    f"as a null label and replaced with nulls during the training process"
-                    )
+        logger.info(
+            f"Column '{x.name}' contains a unique non-UUID/ULID "
+            f"value '{unique_non_uuid}'. It will be treated "
+            f"as a null label and replaced with nulls during the training process."
+        )
         self.nan_labels_in_uuid[x.name] = unique_non_uuid
         self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
         # update the nan_labels_dict with nan_labels_in_uuid
