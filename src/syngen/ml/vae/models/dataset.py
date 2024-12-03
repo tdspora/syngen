@@ -733,7 +733,7 @@ class Dataset(BaseDataset):
 
     def _handle_non_uuid_values(self, column, result, non_uuid_values):
         """
-        Handle a column containing UUID/ULID values
+        Handle a UUID column containing non UUID/ULID values
         """
         contain_nan = column.isnull().sum() > 0
         most_common_uuid_type = max(set(result), key=result.count)
