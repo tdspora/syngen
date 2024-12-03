@@ -681,7 +681,7 @@ class Dataset(BaseDataset):
     def _process_values(self, column: pd.DataFrame):
         """
         Process a text column and collect uuid types in the list - 'result',
-        and non uuid values into the list - 'non_uuid_values'
+        and non uuid values into the set - 'non_uuid_values'
         """
         result = []
         non_uuid_values = set()
@@ -698,7 +698,9 @@ class Dataset(BaseDataset):
 
     def _is_valid_uuid(self, column: pd.DataFrame):
         """
-        Check if column is a valid UUID column
+        Check if column is a valid UUID column.
+        If there are no NaNs and a single non UUID/ULID value,
+        it is treated as a nan label and set as NaN during a training process.
         """
         result, non_uuid_values = self._process_values(column)
 
@@ -717,8 +719,13 @@ class Dataset(BaseDataset):
         """
         warning_msg = f"Column '{column.name}' contains UUID/ULID values"
         if non_uuid_values:
-            non_uuid_values = [f"'{value}'" for value in non_uuid_values]
-            warning_msg += f", and non-UUID/ULID value/s - {', '.join(non_uuid_values)}"
+            non_uuid_values_quoted = [f"'{value}'" for value in non_uuid_values]
+            if len(non_uuid_values_quoted) > 10:
+                warning_msg += (
+                    f", and more than {len(non_uuid_values_quoted)} non-UUID/ULID values"
+                )
+            else:
+                warning_msg += f", and non-UUID/ULID values - {', '.join(non_uuid_values_quoted)}"
         if contain_nan:
             warning_msg += ", and null value/s"
         warning_msg += ". The column will be treated as a text column."
@@ -726,7 +733,7 @@ class Dataset(BaseDataset):
 
     def _handle_non_uuid_values(self, column, result, non_uuid_values):
         """
-        Handle a column containing UUID/ULID columns
+        Handle a column containing UUID/ULID values
         """
         contain_nan = column.isnull().sum() > 0
         most_common_uuid_type = max(set(result), key=result.count)
