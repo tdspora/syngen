@@ -672,7 +672,7 @@ class Dataset(BaseDataset):
         for v in range(1, 6):
             try:
                 uuid_obj = UUID(value, version=v)
-                if str(uuid_obj) == value or str(uuid_obj).replace("-", "") == value:
+                if str(uuid_obj).replace("-", "") == value:
                     return v
             except (ValueError, AttributeError, TypeError):
                 continue
