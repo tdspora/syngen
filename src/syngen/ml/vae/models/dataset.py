@@ -699,7 +699,7 @@ class Dataset(BaseDataset):
 
     def _is_valid_uuid(self, column: pd.DataFrame):
         """
-        Check if column is a valid UUID column.
+        Check if a column is a valid UUID column.
         If there are no NaNs and a single non UUID/ULID value,
         it is treated as a nan label and set as NaN during a training process.
         """
