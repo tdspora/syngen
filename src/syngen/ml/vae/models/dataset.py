@@ -665,9 +665,9 @@ class Dataset(BaseDataset):
         except Exception:
             return
 
-    def _check_uuid(self, value):
+    def _get_uuid_version(self, value):
         """
-        Verify if the value is a UUID and determine its UUID version
+        Get the version of UUID value if the value is a UUID
         """
         for v in range(1, 6):
             try:
@@ -686,9 +686,9 @@ class Dataset(BaseDataset):
         result = []
         non_uuid_values = set()
         for i in column.dropna().unique():
-            uuid_type = self._check_uuid(i)
-            if uuid_type:
-                result.append(uuid_type)
+            uuid_version = self._get_uuid_version(i)
+            if uuid_version:
+                result.append(uuid_version)
             else:
                 if ulid := self._is_valid_ulid(i):
                     result.append(ulid)
