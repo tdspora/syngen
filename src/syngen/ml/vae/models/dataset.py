@@ -606,8 +606,9 @@ class Dataset(BaseDataset):
             self.long_text_columns = (self.long_text_columns - self.categorical_columns
                                       - self.binary_columns)
             if self.long_text_columns:
+                list_of_long_text_columns = [f'"{column}"' for column in self.long_text_columns]
                 logger.info(
-                    f"Please note that the columns - {self.long_text_columns} contain "
+                    f"Please note that the columns - {list_of_long_text_columns} contain "
                     f"long texts (> 200 symbols). Such texts' handling consumes "
                     f"significant resources and results in poor quality content, "
                     f"therefore this column(-s) will be generated using "
@@ -665,62 +666,104 @@ class Dataset(BaseDataset):
         except Exception:
             return
 
-    def _is_valid_uuid(self, x):
+    def _get_uuid_version(self, value):
         """
-        Check if uuid_to_test is a valid UUID
+        Get the version of UUID value if the value is a UUID
         """
+        for v in range(1, 6):
+            try:
+                uuid_obj = UUID(value, version=v)
+                if str(uuid_obj) == value or str(uuid_obj).replace("-", "") == value:
+                    return v
+            except (ValueError, AttributeError, TypeError):
+                continue
+        return None
 
-        def check_uuid(i):
-            for v in range(1, 6):
-                try:
-                    uuid_obj = UUID(i, version=v)
-                    if uuid_obj.hex == i.replace("-", ""):
-                        return v
-                except ValueError:
-                    pass
-            return self._is_valid_ulid(i)
-
+    def _process_values(self, column: pd.DataFrame):
+        """
+        Process a text column and collect uuid types in the list - 'result',
+        and non uuid values into the set - 'non_uuid_values'
+        """
+        result = []
         non_uuid_values = set()
-        contain_nan = x.isnull().sum() > 0
+        for i in column.dropna().unique():
+            uuid_version = self._get_uuid_version(i)
+            if uuid_version:
+                result.append(uuid_version)
+            else:
+                if ulid := self._is_valid_ulid(i):
+                    result.append(ulid)
+                else:
+                    non_uuid_values.add(i)
+        return result, non_uuid_values
 
-        result = [check_uuid(i) for i in x.dropna()]
+    def _is_valid_uuid(self, column: pd.DataFrame):
+        """
+        Check if a column is a valid UUID column.
+        If there are no NaNs and a single non UUID/ULID value,
+        it is treated as a nan label and set as NaN during a training process.
+        """
+        result, non_uuid_values = self._process_values(column)
 
         if result:
-            most_common_uuid_type = Counter(result).most_common(1)[0][0]
-
-            if not non_uuid_values:
-                return most_common_uuid_type
-
-            if not contain_nan and len(non_uuid_values) == 1:
-                self.__handle_nan_label_in_uuid(x, non_uuid_values)
-                return most_common_uuid_type
-
-            if len(non_uuid_values) > 1 or (contain_nan and non_uuid_values):
-                warning_msg = f"Column '{x.name}' contains UUID/ULID values"
-                if len(non_uuid_values) >= 1:
-                    warning_msg += f", and non-UUID/ULID value/s {non_uuid_values}"
-                if contain_nan:
-                    warning_msg += ", and null value/s"
-                warning_msg += ". The column will be treated as a text column."
-                logger.warning(warning_msg)
-                return
+            return self._handle_non_uuid_values(
+                column,
+                result,
+                non_uuid_values,
+            )
         else:
             return
 
-    def __handle_nan_label_in_uuid(self, x, non_uuid_values):
+    def _log_warning(self, column, non_uuid_values, contain_nan):
+        """
+        Build the log warning message related to columns containing UUID/ULID values
+        """
+        warning_msg = f"Column '{column.name}' contains UUID/ULID values"
+        if non_uuid_values:
+            non_uuid_values_quoted = [f"'{value}'" for value in non_uuid_values]
+            if len(non_uuid_values_quoted) > 10:
+                warning_msg += (
+                    f", and more than {len(non_uuid_values_quoted)} non-UUID/ULID values"
+                )
+            else:
+                warning_msg += f", and non-UUID/ULID values - {', '.join(non_uuid_values_quoted)}"
+        if contain_nan:
+            warning_msg += ", and null value/s"
+        warning_msg += ". The column will be treated as a text column."
+        logger.warning(warning_msg)
+
+    def _handle_non_uuid_values(self, column, result, non_uuid_values):
+        """
+        Handle a UUID column containing non UUID/ULID values
+        """
+        contain_nan = column.isnull().sum() > 0
+        most_common_uuid_type = max(set(result), key=result.count)
+        if not non_uuid_values:
+            return most_common_uuid_type
+
+        if not contain_nan and len(non_uuid_values) == 1:
+            self.__handle_nan_label_in_uuid(column, non_uuid_values)
+            return most_common_uuid_type
+
+        if len(non_uuid_values) > 1 or (contain_nan and non_uuid_values):
+            self._log_warning(column, non_uuid_values, contain_nan)
+            return
+
+    def __handle_nan_label_in_uuid(self, column, non_uuid_values):
         """
         Replaces the unique non-UUID/ULID value with NaNs
         Updates the nan_labels_in_uuid dictionary and
-        adds it to nan_labels_dict dict
+        adds it to 'nan_labels_dict' dict
         """
         unique_non_uuid = next(iter(non_uuid_values))
 
-        logger.info(f"Column '{x.name}' contains a unique non-UUID/ULID "
-                    f"value '{unique_non_uuid}'. It will be treated "
-                    f"as a null label and replaced with nulls during the training process"
-                    )
-        self.nan_labels_in_uuid[x.name] = unique_non_uuid
-        self.df[x.name].replace(unique_non_uuid, np.nan, inplace=True)
+        logger.info(
+            f"Column '{column.name}' contains a unique non-UUID/ULID "
+            f"value '{unique_non_uuid}'. It will be treated "
+            f"as a null label and replaced with nulls during the training process."
+        )
+        self.nan_labels_in_uuid[column.name] = unique_non_uuid
+        self.df[column.name].replace(unique_non_uuid, np.nan, inplace=True)
         # update the nan_labels_dict with nan_labels_in_uuid
         self.nan_labels_dict.update(self.nan_labels_in_uuid)
 
