@@ -606,8 +606,9 @@ class Dataset(BaseDataset):
             self.long_text_columns = (self.long_text_columns - self.categorical_columns
                                       - self.binary_columns)
             if self.long_text_columns:
+                list_of_long_text_columns = [f'"{column}"' for column in self.long_text_columns]
                 logger.info(
-                    f"Please note that the columns - {self.long_text_columns} contain "
+                    f"Please note that the columns - {list_of_long_text_columns} contain "
                     f"long texts (> 200 symbols). Such texts' handling consumes "
                     f"significant resources and results in poor quality content, "
                     f"therefore this column(-s) will be generated using "
@@ -672,7 +673,7 @@ class Dataset(BaseDataset):
         for v in range(1, 6):
             try:
                 uuid_obj = UUID(value, version=v)
-                if str(uuid_obj).replace("-", "") == value:
+                if str(uuid_obj) == value or str(uuid_obj).replace("-", "") == value:
                     return v
             except (ValueError, AttributeError, TypeError):
                 continue
