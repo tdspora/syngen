@@ -64,7 +64,8 @@ validate_reports = validate_parameter_reports(
     help="Controls the generation of quality reports. "
     "Might require significant time for big generated tables (>10000 rows). "
     "If set to 'accuracy', generates an accuracy report. "
-    "If set to 'metrics_only', outputs the metrics information only to standard output. "
+    "If set to 'metrics_only', outputs the metrics information "
+    "only to standard output without generation of a report. "
     "If set to 'all', generates an accuracy report. "
     "If it's absent or set to 'none', no reports are generated.",
 )
