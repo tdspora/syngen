@@ -104,7 +104,7 @@ class KeysSchema(Schema):
 
 class TrainingSettingsSchema(Schema):
     @staticmethod
-    def validation(x):
+    def validate_reports(x):
         if any([i in ["all", "none"] for i in x]):
             raise ValidationError(
                 "The value 'all' or 'none' might not be passed in the list."
@@ -124,7 +124,7 @@ class TrainingSettingsSchema(Schema):
     batch_size = fields.Integer(validate=validate.Range(min=1), required=False)
     reports = fields.Raw(
         required=False,
-        validate=validation
+        validate=validate_reports
     )
 
 
@@ -142,7 +142,7 @@ class ExtendedTrainingSettingsSchema(ExtendedRestrictedTrainingSettingsSchema):
 
 class InferSettingsSchema(Schema):
     @staticmethod
-    def validation(x):
+    def validate_reports(x):
         if any([i in ["all", "none"] for i in x]):
             raise ValidationError(
                 "The value 'all' or 'none' might not be passed in the list."
@@ -163,7 +163,7 @@ class InferSettingsSchema(Schema):
     random_seed = fields.Integer(validate=validate.Range(min=0), allow_none=True, required=False)
     reports = fields.Raw(
         required=False,
-        validate=validation
+        validate=validate_reports
     )
 
 
