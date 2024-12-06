@@ -417,13 +417,18 @@ class YAMLLoader(BaseDataLoader):
         super().__init__(path)
 
     def _normalize_reports(self, settings: dict, type_of_process: Literal["train", "infer"]):
+        """
+        Cast the value of the parameter 'reports' to the list
+        """
         reports = settings.get(f"{type_of_process}_settings", {}).get("reports", [])
         if isinstance(reports, str):
-            if reports == "none":
+            if reports not in ["none", "all"]:
+                settings[f"{type_of_process}_settings"]["reports"] = [reports]
+            elif reports == "none":
                 settings[f"{type_of_process}_settings"]["reports"] = []
-            if reports == "all" and type_of_process == "train":
+            elif reports == "all" and type_of_process == "train":
                 settings[f"{type_of_process}_settings"]["reports"] = self.train_reports
-            if reports == "all" and type_of_process == "infer":
+            elif reports == "all" and type_of_process == "infer":
                 settings[f"{type_of_process}_settings"]["reports"] = self.infer_reports
 
     def _normalize_parameter_reports(self, metadata: dict) -> dict:

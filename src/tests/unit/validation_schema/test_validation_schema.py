@@ -25,6 +25,45 @@ def test_valid_metadata_file(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize(
+    "type_of_process, reports", [
+        ("train", []),
+        ("infer", []),
+        ("train", ["accuracy", "sample"]),
+        ("infer", ["accuracy"]),
+        ("train", ["accuracy"]),
+        ("infer", ["accuracy"]),
+        ("train", ["sample"]),
+        ("train", ["metrics_only"]),
+        ("infer", ["metrics_only"]),
+        ("train", ["accuracy", "metrics_only"]),
+        ("infer", ["accuracy", "metrics_only"]),
+        ("train", ["sample", "metrics_only"])
+    ]
+)
+def test_valid_metadata_file_with_diff_types_of_reports(
+    type_of_process, reports, rp_logger, caplog
+):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file "
+        f"with reports - {', '.join(reports)} during the {type_of_process} process"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["global"]["train_settings"]["reports"] = reports
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            metadata_path=path_to_metadata,
+            validation_source=True,
+            process="train"
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_valid_metadata_file_with_source_contained_path_to_excel_table(
     rp_logger, caplog
 ):

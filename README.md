@@ -86,6 +86,13 @@ train --source PATH_TO_ORIGINAL_CSV \
     --reports accuracy \
     --reports sample
 ```
+The accepted values for the parameter <i>"reports"</i>:
+ - <i>"none"</i> (default) - no reports will be generated
+ - <i>"accuracy"</i> - generates an accuracy report (after the training process, synthetic data of the same size as the original data is generated, and then the accuracy report of synthetic data is provided to verify the quality of the model)
+ - <i>"sample"</i> - generates a sample report (if original data is sampled, the comparison of distributions of original data and sampled data is provided in the report)
+ - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
+ - <i>"all"</i> - generates both accuracy and sample reports<br>
+Default value is <i>none</i>.
 
 To train one or more tables using a metadata file, you can use the following command:
 
@@ -112,7 +119,7 @@ Requirements for parameters of training process:
 * <i>row_limit</i> - data type - integer
 * <i>drop_null</i> - data type - boolean, default value - False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1, default value - 32
-* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string (if value is <i>"none"</i> or <i>"all"</i>) or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sample reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sample report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>none</i>. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously.
+* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sample reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sample report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>none</i>. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously, e.g. ["metrics_only", "sample"]
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 
@@ -128,6 +135,20 @@ infer --size INT \
     --random_seed INT \
     --reports STR
 ```
+
+*Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
+For example:
+```bash
+infer --table_name TABLE_NAME \
+    --reports accuracy \
+    --reports metrics_only
+```
+The accepted values for the parameter <i>"reports"</i>:
+ - <i>"none"</i> (default) - no reports will be generated
+ - <i>"accuracy"</i> - generates an accuracy report verify the quality of the generated data
+ - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
+ - <i>"all"</i> - generates an accuracy report<br>
+Default value is <i>none</i>.
 
 To generate one or more tables using a metadata file, you can use the following command:
 
@@ -151,7 +172,7 @@ Requirements for parameters of generation process:
 * <i>run_parallel</i> - data type - boolean, default value is False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1
 * <i>random_seed</i> - data type - integer, must be equal to or more than 0
-* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string (if value is <i>"none"</i> or <i>"all"</i>) or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates an accuracy report, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>none</i>. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously
+* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates an accuracy report, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>none</i>. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously
 * <i>metadata_path</i> - data type - string
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
@@ -167,7 +188,6 @@ infer --metadata_path STR --log_level STR
 ```
 
 where <i>log_level</i> might be one of the following values: <i>TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
-
 
 ### Linked tables generation
 
@@ -188,12 +208,12 @@ global:                                     # Global settings. Optional paramete
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    reports: none                           # Controls the generation of quality reports. Might require significant time for big tables (>10000 rows). Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
+    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously, e.g. ["metrics_only", "sample"]. Might require significant time for big tables (>10000 rows).
 
   infer_settings:                           # Settings for infer process. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    reports: none                           # Controls the generation of quality reports. Might require significant time for big generated tables (>10000 rows). Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
+    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously. Might require significant time for big generated tables (>10000 rows). 
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
 
@@ -204,7 +224,7 @@ CUSTOMER:                                   # Table name. Required parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    reports: none                           # Controls the generation of quality reports. Might require significant time for big tables (>10000 rows). Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
+    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously, e.g. ["metrics_only", "sample"]. Might require significant time for big tables (>10000 rows).       
     column_types:
       categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
         - gender
@@ -226,7 +246,7 @@ CUSTOMER:                                   # Table name. Required parameter
     destination: "./files/generated_data_customer.csv" # The path where the generated data will be stored. If the information about 'destination' isn't specified, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in '.csv', '.avro' formats. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    reports: none                           # Controls the generation of quality reports. Might require significant time for big generated tables (>10000 rows). Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
+    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously. Might require significant time for big generated tables (>10000 rows).
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
 
@@ -269,7 +289,7 @@ ORDER:                                      # Table name. Required parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    reports: none                           # Controls the generation of quality reports. Might require significant time for big tables (>10000 rows). Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
+    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report, e.g. ["metrics_only", "sample"]. Might require significant time for big tables (>10000 rows).
     column_types:
       categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
         - gender
@@ -279,7 +299,7 @@ ORDER:                                      # Table name. Required parameter
     destination: "./files/generated_data_order.csv" # The path where the generated data will be stored. If the information about 'destination' isn't specified, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in 'csv', '.avro' formats. Required parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    reports: none                           # Controls the generation of quality reports. Might require significant time for big generated tables (>10000 rows). Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously.
+    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously.  Might require significant time for big generated tables (>10000 rows).
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
   format:                                   # Settings for reading and writing data in 'csv' format. Optional parameter
@@ -331,6 +351,58 @@ infer --metadata_path="./examples/example-metadata/housing_metadata.yaml"
 ```
 
 If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.<br>
+
+### Ways to set the value(s) in the section "reports" in the metadata file
+
+The accepted values in the section <i>"reports"</i> in <i>"train_settings"</i>:
+ - <i>"none"</i> (default) - no reports will be generated
+ - <i>"accuracy"</i> - generates an accuracy report (after the training process, synthetic data of the same size as the original data is generated, and then the accuracy report of synthetic data is provided to verify the quality of the model)
+ - <i>"sample"</i> - generates a sample report (if original data is sampled, the comparison of distributions of original data and sampled data is provided in the report)
+ - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
+ - <i>"all"</i> - generates both accuracy and sample reports<br>
+Default value is <i>none</i>.
+
+Examples how to set the value(s) in the section <i>"reports"</i> in <i>"train_settings"</i>:
+```yaml
+
+reports: none
+
+reports: all
+
+reports: accuracy
+
+reports: metrics_only
+
+reports: sample
+
+reports:
+  - accuracy
+  - metrics_only
+  - sample
+```
+The accepted values for the parameter <i>"reports"</i> in <i>"infer_settings"</i>:
+ - <i>"none"</i> (default) - no reports will be generated
+ - <i>"accuracy"</i> - generates an accuracy report verify the quality of the generated data
+ - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
+ - <i>"all"</i> - generates an accuracy report<br>
+Default value is <i>none</i>.
+
+Examples how to set the value(s) in the section <i>"reports"</i> in <i>"infer_settings"</i>:
+```yaml
+
+reports: none
+
+reports: all
+
+reports: accuracy
+
+reports: metrics_only
+
+reports:
+  - accuracy
+  - metrics_only
+```
+
 
 ### Docker images
 
@@ -389,7 +461,7 @@ pip install syngen[ui]
 then create a python file and insert the code provided below into it:
 
 ```python
-from syngen import streamlit_app
+afrom syngen import streamlit_app
 
 
 streamlit_app.start()

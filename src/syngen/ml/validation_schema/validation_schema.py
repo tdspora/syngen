@@ -103,16 +103,28 @@ class KeysSchema(Schema):
 
 
 class TrainingSettingsSchema(Schema):
+    @staticmethod
+    def validation(x):
+        if any([i in ["all", "none"] for i in x]):
+            raise ValidationError(
+                "The value 'all' or 'none' might not be passed in the list."
+            )
+        if not (
+                isinstance(x, list)
+                and all(
+                    isinstance(elem, str)
+                    and elem in ReportTypes().train_report_types for elem in x
+            )
+        ):
+            raise ValidationError("Invalid value.")
+
     epochs = fields.Integer(validate=validate.Range(min=1), required=False)
     drop_null = fields.Boolean(required=False)
     row_limit = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), required=False)
     reports = fields.Raw(
         required=False,
-        validate=(
-            lambda x: isinstance(x, list) and
-            all(isinstance(elem, str) and elem in ReportTypes().train_report_types for elem in x)
-        )
+        validate=validation
     )
 
 
@@ -129,6 +141,21 @@ class ExtendedTrainingSettingsSchema(ExtendedRestrictedTrainingSettingsSchema):
 
 
 class InferSettingsSchema(Schema):
+    @staticmethod
+    def validation(x):
+        if any([i in ["all", "none"] for i in x]):
+            raise ValidationError(
+                "The value 'all' or 'none' might not be passed in the list."
+            )
+        if not (
+            isinstance(x, list)
+            and all(
+                isinstance(elem, str)
+                and elem in ReportTypes().infer_report_types for elem in x
+            )
+        ):
+            raise ValidationError("Invalid value.")
+
     destination = fields.String(required=False)
     size = fields.Integer(validate=validate.Range(min=1), required=False)
     run_parallel = fields.Boolean(required=False)
@@ -136,10 +163,7 @@ class InferSettingsSchema(Schema):
     random_seed = fields.Integer(validate=validate.Range(min=0), allow_none=True, required=False)
     reports = fields.Raw(
         required=False,
-        validate=(
-            lambda x: isinstance(x, list) and
-            all(isinstance(elem, str) and elem in ReportTypes().infer_report_types for elem in x)
-        )
+        validate=validation
     )
 
 
