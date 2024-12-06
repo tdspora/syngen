@@ -2,7 +2,7 @@ pk_test:
   infer_settings:
     size: 200
     run_parallel: True
-    print_report: True
+    reports: all
 
   keys:
     pk_id:
@@ -15,7 +15,7 @@ fk_test:
     size: 90
     run_parallel: True
     random_seed: 2
-    print_report: false
+    reports: none
 
   keys:
     fk_id:

@@ -16,6 +16,7 @@ from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
+from syngen.ml.validation_schema import ReportTypes
 
 
 @define
@@ -135,6 +136,7 @@ class Worker:
                     },
                     "infer_settings": {},
                     "keys": {},
+                    "format": {}
                 }
             }
             return metadata
@@ -241,15 +243,20 @@ class Worker:
         return config
 
     @staticmethod
-    def _should_generate_report(config_of_tables: Dict, type_of_process: str):
+    def _should_generate_data(
+        config_of_tables: Dict,
+        type_of_process: str,
+        list_of_reports: List[str]
+    ):
         """
-        Determine whether reports should be generated based
-        on the configurations of the tables
+        Determine whether the synthetic data should be generated
+        in order to generate reports based on it
         """
         return any(
             [
-                config.get(f"{type_of_process}_settings", {}).get("print_report", False)
-                for table, config in config_of_tables.items()
+                report in list_of_reports
+                for config in config_of_tables.values()
+                for report in config.get(f"{type_of_process}_settings", {}).get("reports", [])
             ]
         )
 
@@ -289,16 +296,15 @@ class Worker:
             drop_null=train_settings["drop_null"],
             row_limit=train_settings["row_limit"],
             table_name=table,
-            metadata_path=self.metadata_path,
-            print_report=train_settings["print_report"],
+            reports=train_settings["reports"],
             batch_size=train_settings["batch_size"],
             loader=self.loader
         )
-        self._write_success_message(slugify(table))
+        self._write_success_file(slugify(table))
         self._save_metadata_file()
         ProgressBarHandler().set_progress(
             delta=delta,
-            message=f"Training of the table - {table} was completed"
+            message=f"Training of the table - '{table}' was completed"
         )
 
     def __train_tables(
@@ -328,8 +334,6 @@ class Worker:
                 delta,
                 type_of_process="train"
             )
-
-        self._generate_reports()
 
     def _get_surrogate_tables_mapping(self):
         """
@@ -375,15 +379,13 @@ class Worker:
         InferStrategy().run(
             destination=settings.get("destination") if type_of_process == "infer" else None,
             metadata=metadata,
+            metadata_path=self.metadata_path,
             size=settings.get("size") if type_of_process == "infer" else None,
             table_name=table,
-            metadata_path=self.metadata_path,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
             random_seed=settings.get("random_seed") if type_of_process == "infer" else 1,
-            print_report=settings["print_report"],
-            get_infer_metrics=settings.get("get_infer_metrics")
-            if type_of_process == "infer" else False,
+            reports=settings["reports"],
             log_level=self.log_level,
             both_keys=both_keys,
             type_of_process=self.type_of_process,
@@ -391,7 +393,7 @@ class Worker:
         )
         ProgressBarHandler().set_progress(
             delta=delta,
-            message=f"Infer process of the table - {table} was completed"
+            message=f"Infer process of the table - '{table}' was completed"
         )
         MlflowTracker().end_run()
 
@@ -433,8 +435,6 @@ class Worker:
                 )
             MlflowTracker().end_run()
 
-        self._generate_reports()
-
     def _collect_integral_metrics(self, tables, type_of_process):
         """
         Collect the integral metrics depending on the type of process
@@ -447,11 +447,11 @@ class Worker:
         """
         Generate reports
         """
-        Report().generate_report(type_of_process=self.type_of_process.upper())
+        Report().generate_report()
         Report().clear_report()
 
     @staticmethod
-    def _write_success_message(table_name: str):
+    def _write_success_file(table_name: str):
         """
         Write success message to the '.success' file
         """
@@ -482,7 +482,11 @@ class Worker:
             metadata_for_inference,
         ) = metadata_for_inference
 
-        generation_of_reports = self._should_generate_report(metadata_for_training, "train")
+        generation_of_reports = self._should_generate_data(
+            metadata_for_training,
+            "train",
+            ReportTypes().infer_report_types
+        )
 
         self.__train_tables(
             tables_for_training,
@@ -492,6 +496,7 @@ class Worker:
             generation_of_reports
         )
 
+        self._generate_reports()
         self._collect_metrics_in_train(
             tables_for_training,
             tables_for_inference,
@@ -515,8 +520,13 @@ class Worker:
         """
         tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
 
-        generation_of_reports = self._should_generate_report(config_of_tables, "infer")
+        generation_of_reports = self._should_generate_data(
+            config_of_tables,
+            "infer",
+            ReportTypes().infer_report_types
+        )
         delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
+        self._generate_reports()
         self._collect_metrics_in_infer(tables)

@@ -121,7 +121,7 @@ def test_metadata_storage():
                 "table_a": {
                     "train_settings": {
                         "source": "path/to/table_a.csv",
-                        "print_report": True,
+                        "reports": ["accuracy", "sample"],
                     },
                     "infer_settings": {"destination": "path/to/generated_table_a.csv"},
                     "keys": {
@@ -139,7 +139,7 @@ def test_metadata_storage():
                 "table_d": {
                     "train_settings": {
                         "source": "path/to/table_d.csv",
-                        "print_report": True,
+                        "reports": ["accuracy", "sample"],
                     },
                     "infer_settings": {"destination": "path/to/generated_table_d.csv"},
                     "keys": {
@@ -155,6 +155,19 @@ def test_metadata_storage():
 
 
 @pytest.fixture
+def test_success_file():
+    path_to_test_dir = "model_artifacts/resources/test-table"
+    os.makedirs(path_to_test_dir, exist_ok=True)
+    success_file_path = f"{path_to_test_dir}/message.success"
+    with open(success_file_path, "w") as f:
+        f.write("PROGRESS")
+
+    yield success_file_path
+    if os.path.exists(success_file_path):
+        shutil.rmtree("model_artifacts")
+
+
+@pytest.fixture
 def test_metadata_file():
     return {
         "pk_test": {
@@ -162,11 +175,11 @@ def test_metadata_file():
                 "source": "..\\data\\pk_test.csv",
                 "drop_null": False,
                 "epochs": 1,
-                "print_report": False,
+                "reports": [],
                 "row_limit": 800,
             },
             "infer_settings": {
-                "print_report": True,
+                "reports": ["accuracy"],
                 "random_seed": 1,
                 "run_parallel": False,
                 "size": 100,

@@ -1,10 +1,11 @@
 import os
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Tuple, List
+from typing import Optional, Dict, Tuple, List, Literal
 import pickle as pkl
 import csv
 import inspect
+from dataclasses import dataclass
 
 import pandas as pd
 import pandas.errors
@@ -23,6 +24,7 @@ from syngen.ml.context import get_context, global_context
 from syngen.ml.validation_schema import (
     ExcelFormatSettingsSchema,
     CSVFormatSettingsSchema,
+    ReportTypes
 )
 
 DELIMITERS = {"\\t": "\t"}
@@ -402,19 +404,44 @@ class MetadataLoader(BaseDataLoader):
         self.metadata_loader.save_data(metadata, **kwargs)
 
 
+@dataclass
 class YAMLLoader(BaseDataLoader):
     """
     Class for loading and saving data in YAML format
     """
+    metadata_sections = ["train_settings", "infer_settings", "format", "keys"]
+    train_reports = ReportTypes().full_list_of_train_report_types
+    infer_reports = ReportTypes().full_list_of_infer_report_types
 
-    _metadata_sections = ["train_settings", "infer_settings", "keys"]
+    def __init__(self, path: str):
+        super().__init__(path)
+
+    def _normalize_reports(self, settings: dict, type_of_process: Literal["train", "infer"]):
+        """
+        Cast the value of the parameter 'reports' to the list
+        """
+        reports = settings.get(f"{type_of_process}_settings", {}).get("reports", [])
+        if isinstance(reports, str):
+            if reports not in ["none", "all"]:
+                settings[f"{type_of_process}_settings"]["reports"] = [reports]
+            elif reports == "none":
+                settings[f"{type_of_process}_settings"]["reports"] = []
+            elif reports == "all" and type_of_process == "train":
+                settings[f"{type_of_process}_settings"]["reports"] = self.train_reports
+            elif reports == "all" and type_of_process == "infer":
+                settings[f"{type_of_process}_settings"]["reports"] = self.infer_reports
+
+    def _normalize_parameter_reports(self, metadata: dict) -> dict:
+        for table, settings in metadata.items():
+            self._normalize_reports(settings, "train")
+            self._normalize_reports(settings, "infer")
+        return metadata
 
     def _load_data(self, metadata_file) -> Dict:
         try:
             metadata = yaml.load(metadata_file, Loader=SafeLoader)
-            metadata = self.replace_none_values_of_metadata_settings(
-                self._metadata_sections, metadata
-            )
+            metadata = self.replace_none_values_of_metadata_settings(metadata)
+            metadata = self._normalize_parameter_reports(metadata)
             return metadata
         except ScannerError as error:
             message = (
@@ -429,8 +456,7 @@ class YAMLLoader(BaseDataLoader):
         with open(self.path, "r", encoding="utf-8") as f:
             return self._load_data(f)
 
-    @staticmethod
-    def replace_none_values_of_metadata_settings(parameters, metadata: dict):
+    def replace_none_values_of_metadata_settings(self, metadata: dict):
         """
         Replace None values for parameters in the metadata
         """
@@ -445,7 +471,7 @@ class YAMLLoader(BaseDataLoader):
         for key in metadata.keys():
             if key == "global":
                 continue
-            for parameter in parameters:
+            for parameter in self.metadata_sections:
                 if metadata.get(key).get(parameter) is None:
                     metadata[key][parameter] = {}
         return metadata

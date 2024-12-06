@@ -252,7 +252,7 @@ class MlflowTracker:
 
     def search_runs(self, table_name: str, type_of_process: str):
         """
-        Get the list of runs related the certain experment
+        Get the list of runs related the certain experiment
         """
         if self.is_active:
             run = mlflow.search_runs(
