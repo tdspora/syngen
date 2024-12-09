@@ -110,10 +110,10 @@ class TrainingSettingsSchema(Schema):
                 "The value 'all' or 'none' might not be passed in the list."
             )
         if not (
-                isinstance(x, list)
-                and all(
-                    isinstance(elem, str)
-                    and elem in ReportTypes().train_report_types for elem in x
+            isinstance(x, list)
+            and all(
+                isinstance(elem, str)
+                and elem in ReportTypes().train_report_types for elem in x
             )
         ):
             raise ValidationError("Invalid value.")
