@@ -31,7 +31,7 @@ pip install syngen[ui]
 *Note:* see details of the UI usage in the [corresponding section](#ui-web-interface)
 
 
-The training and inference processes are separated with two cli entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters.<br>
+The training and inference processes are separated with two CLI entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters.<br>
 
 To start training with defaults parameters run:
 
@@ -88,7 +88,7 @@ train --source PATH_TO_ORIGINAL_CSV \
 ```
 The accepted values for the parameter <i>"reports"</i>:
  - <i>"none"</i> (default) - no reports will be generated
- - <i>"accuracy"</i> - generates an accuracy report (after the training process, synthetic data of the same size as the original data is generated, and then the accuracy report of synthetic data is provided to verify the quality of the model)
+ - <i>"accuracy"</i> - generates an accuracy report to measure the quality of synthetic data relative to the original dataset. This report is produced after the completion of the training process, during which a model learns to generate new data. The synthetic data generated for this report is of the same size as the original dataset to reach more accurate comparison.
  - <i>"sample"</i> - generates a sample report (if original data is sampled, the comparison of distributions of original data and sampled data is provided in the report)
  - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
  - <i>"all"</i> - generates both accuracy and sample reports<br>
@@ -100,7 +100,7 @@ To train one or more tables using a metadata file, you can use the following com
 train --metadata_path PATH_TO_METADATA_YAML
 ```
 
-Parameters which you can set up for training process:
+Parameters that you can set up for training process:
 
 - <i>source</i> – required parameter for training of single table, a path to the file that you want to use as a reference
 - <i>table_name</i> – required parameter for training of single table, an arbitrary string to name the directories
@@ -119,7 +119,7 @@ Requirements for parameters of training process:
 * <i>row_limit</i> - data type - integer
 * <i>drop_null</i> - data type - boolean, default value - False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1, default value - 32
-* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sample reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sample report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>none</i>. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously, e.g. ["metrics_only", "sample"]
+* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sample reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sample report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>"none"</i>. In the metadata file multiple values can be specified as a list of available options (<i>"accuracy"</i>, <i>"sample"</i>, <i>"metrics_only"</i>) to generate multiple types of reports simultaneously, e.g. [<i>"metrics_only"</i>, <i>"sample"</i>]
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 
@@ -145,7 +145,7 @@ infer --table_name TABLE_NAME \
 ```
 The accepted values for the parameter <i>"reports"</i>:
  - <i>"none"</i> (default) - no reports will be generated
- - <i>"accuracy"</i> - generates an accuracy report verify the quality of the generated data
+ - <i>"accuracy"</i> - generates an accuracy report that compares original and synthetic data patterns to verify the quality of the generated data
  - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
  - <i>"all"</i> - generates an accuracy report<br>
 Default value is <i>none</i>.
@@ -172,7 +172,7 @@ Requirements for parameters of generation process:
 * <i>run_parallel</i> - data type - boolean, default value is False
 * <i>batch_size</i> - data type - integer, must be equal to or more than 1
 * <i>random_seed</i> - data type - integer, must be equal to or more than 0
-* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates an accuracy report, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>none</i>. In the metadata file multiple values can be specified as a list to generate multiple types of reports simultaneously
+* <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates an accuracy report, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>"none"</i>. In the metadata file multiple values can be specified as a list of available options (<i>"accuracy"</i>, <i>"metrics_only"</i>) to generate multiple types of reports simultaneously
 * <i>metadata_path</i> - data type - string
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
@@ -352,15 +352,15 @@ infer --metadata_path="./examples/example-metadata/housing_metadata.yaml"
 
 If `--metadata_path` is present and the metadata contains the necessary parameters, other CLI parameters will be ignored.<br>
 
-### Ways to set the value(s) in the section "reports" in the metadata file
+### Ways to set the value(s) in the section "reports" of the metadata file
 
 The accepted values in the section <i>"reports"</i> in <i>"train_settings"</i>:
  - <i>"none"</i> (default) - no reports will be generated
- - <i>"accuracy"</i> - generates an accuracy report (after the training process, synthetic data of the same size as the original data is generated, and then the accuracy report of synthetic data is provided to verify the quality of the model)
+ - <i>"accuracy"</i> - generates an accuracy report to measure the quality of synthetic data relative to the original dataset. This report is produced after the completion of the training process, during which a model learns to generate new data. The synthetic data generated for this report is of the same size as the original dataset to reach more accurate comparison.
  - <i>"sample"</i> - generates a sample report (if original data is sampled, the comparison of distributions of original data and sampled data is provided in the report)
  - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
  - <i>"all"</i> - generates both accuracy and sample reports<br>
-Default value is <i>none</i>.
+Default value is <i>"none"</i>.
 
 Examples how to set the value(s) in the section <i>"reports"</i> in <i>"train_settings"</i>:
 ```yaml
@@ -382,10 +382,10 @@ reports:
 ```
 The accepted values for the parameter <i>"reports"</i> in <i>"infer_settings"</i>:
  - <i>"none"</i> (default) - no reports will be generated
- - <i>"accuracy"</i> - generates an accuracy report verify the quality of the generated data
+ - <i>"accuracy"</i> - generates an accuracy report to verify the quality of the generated data
  - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
  - <i>"all"</i> - generates an accuracy report<br>
-Default value is <i>none</i>.
+Default value is <i>"none"</i>.
 
 Examples how to set the value(s) in the section <i>"reports"</i> in <i>"infer_settings"</i>:
 ```yaml
