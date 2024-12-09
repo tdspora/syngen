@@ -132,12 +132,6 @@ class Dataset(BaseDataset):
         """
         self._cast_to_numeric(excluded_columns)
         self.nan_labels_dict = get_nan_labels(self.df, excluded_columns)
-        if self.nan_labels_dict and self.format.get("na_values", []):
-            logger.info(
-                f"Despite the fact that data loading utilized the 'format' section "
-                f"for handling NA values, some values have been detected by the algorithm "
-                f"as NA labels in the columns - {self.nan_labels_dict}"
-            )
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
     def _preparation_step(self):
@@ -415,6 +409,12 @@ class Dataset(BaseDataset):
         self._set_uuid_columns()
         self._set_long_text_columns()
         self._set_email_columns()
+        if self.nan_labels_dict and self.format.get("na_values", []):
+            logger.info(
+                f"Despite the fact that data loading utilized the 'format' section "
+                f"for handling NA values, some values have been detected by the algorithm "
+                f"as NA labels in the columns - {self.nan_labels_dict}"
+            )
 
     def _update_schema(self):
         """

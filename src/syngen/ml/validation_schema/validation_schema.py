@@ -1,6 +1,7 @@
-from typing import Dict, Literal
+from typing import Dict, Literal, List
 import json
 from pathlib import Path
+from dataclasses import dataclass, field
 
 from marshmallow import (
     Schema,
@@ -13,6 +14,36 @@ from marshmallow import (
 from loguru import logger
 
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
+
+
+@dataclass
+class ReportTypes:
+    infer_report_types: List[str] = field(default_factory=lambda: ["accuracy", "metrics_only"])
+    train_report_types: List[str] = field(init=False)
+    excluded_reports: List[str] = field(default_factory=lambda: ["metrics_only"])
+    full_list_of_train_report_types: List[str] = field(init=False)
+    full_list_of_infer_report_types: List[str] = field(init=False)
+
+    def __post_init__(self):
+        self.train_report_types = self.infer_report_types + ["sample"]
+        self.full_list_of_train_report_types = self.get_list_of_report_types("train")
+        self.full_list_of_infer_report_types = self.get_list_of_report_types("infer")
+
+    def get_list_of_report_types(self, report_type):
+        """
+        Get the full list of reports that should be generated
+        if the parameter 'reports' sets to 'all'
+        """
+        report_types = (
+            self.train_report_types
+            if report_type == "train"
+            else self.infer_report_types
+        )
+        return [
+            report
+            for report in report_types
+            if report not in self.excluded_reports
+        ]
 
 
 class ReferenceSchema(Schema):
@@ -72,11 +103,29 @@ class KeysSchema(Schema):
 
 
 class TrainingSettingsSchema(Schema):
+    @staticmethod
+    def validate_reports(x):
+        if any([i in ["all", "none"] for i in x]):
+            raise ValidationError(
+                "The value 'all' or 'none' might not be passed in the list."
+            )
+        if not (
+            isinstance(x, list)
+            and all(
+                isinstance(elem, str)
+                and elem in ReportTypes().train_report_types for elem in x
+            )
+        ):
+            raise ValidationError("Invalid value.")
+
     epochs = fields.Integer(validate=validate.Range(min=1), required=False)
     drop_null = fields.Boolean(required=False)
     row_limit = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), required=False)
-    print_report = fields.Boolean(required=False)
+    reports = fields.Raw(
+        required=False,
+        validate=validate_reports
+    )
 
 
 class ExtendedRestrictedTrainingSettingsSchema(TrainingSettingsSchema):
@@ -92,13 +141,30 @@ class ExtendedTrainingSettingsSchema(ExtendedRestrictedTrainingSettingsSchema):
 
 
 class InferSettingsSchema(Schema):
+    @staticmethod
+    def validate_reports(x):
+        if any([i in ["all", "none"] for i in x]):
+            raise ValidationError(
+                "The value 'all' or 'none' might not be passed in the list."
+            )
+        if not (
+            isinstance(x, list)
+            and all(
+                isinstance(elem, str)
+                and elem in ReportTypes().infer_report_types for elem in x
+            )
+        ):
+            raise ValidationError("Invalid value.")
+
     destination = fields.String(required=False)
     size = fields.Integer(validate=validate.Range(min=1), required=False)
     run_parallel = fields.Boolean(required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     random_seed = fields.Integer(validate=validate.Range(min=0), allow_none=True, required=False)
-    print_report = fields.Boolean(required=False)
-    get_infer_metrics = fields.Boolean(required=False)
+    reports = fields.Raw(
+        required=False,
+        validate=validate_reports
+    )
 
 
 class CSVFormatSettingsSchema(Schema):

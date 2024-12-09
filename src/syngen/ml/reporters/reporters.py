@@ -103,14 +103,13 @@ class Reporter:
             if d not in na_values else np.NaN for d in df[col_name]
         ]
 
-    def preprocess_data(self):
+    def preprocess_data(self, original: pd.DataFrame, synthetic: pd.DataFrame):
         """
         Preprocess original and synthetic data.
         Return original data, synthetic data, float columns, integer columns, categorical columns
         without keys columns
         """
         types = self.fetch_data_types()
-        original, synthetic = self._extract_report_data()
         missing_columns = set(original) - set(synthetic)
         for col in missing_columns:
             synthetic[col] = np.nan
@@ -241,44 +240,65 @@ class Report:
         return grouped_reporters
 
     @classmethod
-    def generate_report(cls, type_of_process: str):
+    def generate_report(cls):
         """
         Generate all needed reports
         """
         grouped_reporters = cls._group_reporters()
 
-        for table_name, reporters in grouped_reporters.items():
-            MlflowTracker().start_run(
-                run_name=f"{table_name}-REPORT",
-                tags={"table_name": table_name, "process": "report"},
-            )
-            delta = 0.25 / len(reporters)
-            for reporter in reporters:
-                message = (f"The calculation of {reporter.__class__.report_type} metrics "
-                           f"for the table - '{reporter.table_name}' has started")
-                ProgressBarHandler().set_progress(delta=delta, message=message)
-                reporter.report()
-                if reporter.config["print_report"]:
-                    message = (f"The {reporter.__class__.report_type} report of the table - "
-                               f"'{reporter.table_name}' has been generated")
-                    logger.info(
-                        f"The {reporter.__class__.report_type} report of the table - "
-                        f"'{reporter.table_name}' has been generated"
-                    )
-                    ProgressBarHandler().set_progress(
-                        progress=ProgressBarHandler().progress + delta,
-                        delta=delta,
-                        message=message
-                    )
+        if grouped_reporters:
+            logger.warning("The report(s) generation might be time-consuming")
 
-                if (
-                        not reporter.config["print_report"]
-                        and reporter.config.get("get_infer_metrics") is not None
-                ):
-                    logger.info(
-                        f"The metrics for the table - '{reporter.table_name}' have been evaluated"
-                    )
+        for table_name, reporters in grouped_reporters.items():
+            cls._start_mlflow_run(table_name)
+            delta = 0.25 / len(reporters)
+
+            for reporter in reporters:
+                cls._launch_reporter(reporter, delta)
+
             MlflowTracker().end_run()
+
+    @staticmethod
+    def _start_mlflow_run(table_name: str):
+        MlflowTracker().start_run(
+            run_name=f"{table_name}-REPORT",
+            tags={"table_name": table_name, "process": "report"},
+        )
+
+    @classmethod
+    def _launch_reporter(cls, reporter, delta: float):
+        cls._log_and_update_progress(
+            delta,
+            f"The calculation of {reporter.__class__.report_type} metrics for the table - "
+            f"'{reporter.table_name}' has started"
+        )
+
+        reporter.report()
+
+        if (
+                reporter.__class__.report_type == "accuracy"
+                and "accuracy" not in reporter.config["reports"]
+                and "metrics_only" in reporter.config["reports"]
+        ):
+            message = (
+                f"The metrics for the table - '{reporter.table_name}' have been evaluated"
+            )
+        else:
+            message = (
+                f"The {reporter.__class__.report_type} report of the table - "
+                f"'{reporter.table_name}' has been generated"
+            )
+        cls._log_and_update_progress(delta, message)
+
+    @staticmethod
+    def _log_and_update_progress(delta: float, message: str):
+        ProgressBarHandler().set_progress(delta=delta, message=message)
+        logger.info(message)
+        ProgressBarHandler().set_progress(
+            progress=ProgressBarHandler().progress + delta,
+            delta=delta,
+            message=message
+        )
 
     @property
     def reporters(self) -> Dict[str, Reporter]:
@@ -287,7 +307,7 @@ class Report:
 
 class AccuracyReporter(Reporter):
     """
-    Reporter for running accuracy test
+    Reporter for running an accuracy test
     """
 
     report_type = "accuracy"
@@ -296,6 +316,7 @@ class AccuracyReporter(Reporter):
         """
         Run the report
         """
+        original, synthetic = self._extract_report_data()
         (
             original,
             synthetic,
@@ -303,7 +324,7 @@ class AccuracyReporter(Reporter):
             int_columns,
             categorical_columns,
             date_columns,
-        ) = self.preprocess_data()
+        ) = self.preprocess_data(original, synthetic)
         accuracy_test = AccuracyTest(
             original,
             synthetic,
@@ -320,7 +341,7 @@ class AccuracyReporter(Reporter):
 
 class SampleAccuracyReporter(Reporter):
     """
-    Reporter for running accuracy test
+    Reporter for running a sample test
     """
 
     report_type = "sample"
@@ -334,6 +355,7 @@ class SampleAccuracyReporter(Reporter):
         """
         Run the report
         """
+        original, sampled = self._extract_report_data()
         (
             original,
             sampled,
@@ -341,7 +363,7 @@ class SampleAccuracyReporter(Reporter):
             int_columns,
             categorical_columns,
             date_columns,
-        ) = self.preprocess_data()
+        ) = self.preprocess_data(original, sampled)
         accuracy_test = SampleAccuracyTest(
             original,
             sampled,

@@ -1,19 +1,22 @@
 from unittest.mock import patch
+import pytest
 from click.testing import CliRunner
 
 from syngen.infer import launch_infer
 from syngen.ml.worker import Worker
+from syngen.ml.validation_schema import ReportTypes
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 TABLE_NAME = "test_table"
 PATH_TO_METADATA = f"{DIR_NAME}/unit/launchers/fixtures/metadata.yaml"
+INFER_REPORT_TYPES = ReportTypes().infer_report_types
 
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_table_name(
-        mock_post_init, mock_launch_infer, rp_logger
+    mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info("Launch infer process through CLI with parameter '--table_name'")
     runner = CliRunner()
@@ -27,7 +30,7 @@ def test_infer_table_with_table_name(
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_metadata_path(
-        mock_post_init, mock_launch_infer, rp_logger
+    mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info("Launch infer process through CLI with parameter '--metadata_path'")
     runner = CliRunner()
@@ -124,7 +127,9 @@ def test_infer_table_with_invalid_run_parallel(rp_logger):
         "Launch infer process through CLI with invalid 'run_parallel' parameter equals 'test'"
     )
     runner = CliRunner()
-    result = runner.invoke(launch_infer, ["--run_parallel", "test", "--table_name", TABLE_NAME])
+    result = runner.invoke(
+        launch_infer, ["--run_parallel", "test", "--table_name", TABLE_NAME]
+    )
     assert result.exit_code == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -158,7 +163,7 @@ def test_infer_table_with_invalid_batch_size(rp_logger):
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_valid_random_seed(
-        mock_post_init, mock_launch_infer, rp_logger
+    mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info(
         "Launch infer process through CLI with valid 'random_seed' parameter equals 1"
@@ -181,27 +186,104 @@ def test_infer_table_with_invalid_random_seed(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("valid_value", INFER_REPORT_TYPES + ["none", "all"])
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_valid_print_report(
-        mock_post_init, mock_launch_infer, rp_logger
+def test_infer_table_with_valid_parameter_reports(
+    mock_post_init, mock_launch_infer, valid_value, rp_logger
 ):
     rp_logger.info(
-        "Launch infer process through CLI with valid 'print_report' parameter equals True"
+        f"Launch infer process through CLI with valid 'reports' parameter equals '{valid_value}'"
     )
     runner = CliRunner()
-    result = runner.invoke(launch_infer, ["--print_report", True, "--table_name", TABLE_NAME])
+    result = runner.invoke(
+        launch_infer, ["--reports", valid_value, "--table_name", TABLE_NAME]
+    )
     assert result.exit_code == 0
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_infer_table_with_invalid_print_report(rp_logger):
+@pytest.mark.parametrize(
+    "first_value, second_value",
+    [
+        (pv, i) for pv in INFER_REPORT_TYPES
+        for i in INFER_REPORT_TYPES
+    ]
+)
+@patch.object(Worker, "launch_infer")
+@patch.object(Worker, "__attrs_post_init__")
+def test_infer_table_with_several_valid_parameter_reports(
+    mock_post_init, mock_launch_infer, first_value, second_value, rp_logger
+):
     rp_logger.info(
-        "Launch infer process through CLI with invalid 'print_report' parameter equals 'test'"
+        f"Launch infer process through CLI "
+        f"with several valid 'reports' parameters equals '{first_value}' and '{second_value}'"
     )
     runner = CliRunner()
-    result = runner.invoke(launch_infer, ["--print_report", "test", "--table_name", TABLE_NAME])
-    assert result.exit_code == 2
+    result = runner.invoke(
+        launch_infer,
+        [
+            "--reports",
+            first_value,
+            "--reports",
+            second_value,
+            "--table_name",
+            TABLE_NAME,
+        ],
+    )
+    mock_post_init.assert_called_once()
+    mock_launch_infer.assert_called_once()
+    assert result.exit_code == 0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("invalid_value", [
+    "sample", "test", ("none", "all"), ("none", "test"), ("all", "test")
+])
+def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
+    rp_logger.info(
+        f"Launch infer process through CLI "
+        f"with invalid 'reports' parameter equals '{invalid_value}'"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_infer, ["--reports", invalid_value, "--table_name", TABLE_NAME]
+    )
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+    assert result.exception.args == (
+        "Invalid input: Acceptable values for the parameter '--reports' "
+        "are none, all, accuracy, metrics_only.",
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "prior_value, value",
+    [(pv, i) for pv in ["all", "none"] for i in INFER_REPORT_TYPES]
+)
+def test_infer_table_with_redundant_parameter_reports(prior_value, value, rp_logger):
+    rp_logger.info(
+        f"Launch infer process through CLI with redundant 'reports' parameter: '{value}'"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_infer, [
+            "--reports",
+            prior_value,
+            "--reports",
+            value,
+            "--table_name",
+            TABLE_NAME
+        ]
+    )
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+    assert result.exception.args == (
+        "Invalid input: When '--reports' option is set to 'none' or 'all', "
+        "no other values should be provided.",)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
     rp_logger.info(SUCCESSFUL_MESSAGE)

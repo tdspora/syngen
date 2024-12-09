@@ -34,7 +34,7 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
     ],
 )
 def test_get_pk_path(
-        mock_os_path_exists, path_to_metadata, expected_path, type_of_process, rp_logger
+    mock_os_path_exists, path_to_metadata, expected_path, type_of_process, rp_logger
 ):
     """
     Test the method '_get_pk_path' of the class VaeInferHandler
@@ -51,8 +51,7 @@ def test_get_pk_path(
             size=100,
             batch_size=100,
             run_parallel=False,
-            print_report=False,
-            get_infer_metrics=False,
+            reports=[],
             wrapper_name="MMDVAEWrapper",
             log_level="INFO",
             type_of_process=type_of_process,
@@ -99,8 +98,7 @@ def test_split_by_batches(
         size=size,
         batch_size=batch_size,
         run_parallel=False,
-        print_report=False,
-        get_infer_metrics=False,
+        reports=[],
         wrapper_name="MMDVAEWrapper",
         log_level="INFO",
         type_of_process="infer",

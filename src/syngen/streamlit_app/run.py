@@ -61,11 +61,11 @@ class StreamlitApp:
         st.markdown(css, unsafe_allow_html=True)
 
     @staticmethod
-    def _get_streamlit_handler(epochs, size_limit, print_report, uploaded_file):
+    def _get_streamlit_handler(epochs, size_limit, reports, uploaded_file):
         """
         Get the Streamlit handler
         """
-        return StreamlitHandler(epochs, size_limit, print_report, uploaded_file)
+        return StreamlitHandler(epochs, size_limit, reports, uploaded_file)
 
     def run_basic_page(self):
         """
@@ -102,13 +102,13 @@ class StreamlitApp:
                 value=1000,
                 disabled=get_running_status()
             )
-            print_report = st.checkbox(
+            reports = st.checkbox(
                 "Create an accuracy report",
                 value=False,
-                key="print_report",
+                key="reports",
                 disabled=get_running_status()
             )
-            handler = self._get_streamlit_handler(epochs, size_limit, print_report, uploaded_file)
+            handler = self._get_streamlit_handler(epochs, size_limit, reports, uploaded_file)
             if st.button(
                     "Generate data",
                     type="primary",

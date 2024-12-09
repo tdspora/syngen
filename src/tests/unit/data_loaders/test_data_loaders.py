@@ -508,16 +508,17 @@ def test_load_metadata_in_yaml_format(rp_logger):
                 "source": "../data/pk_test.csv",
                 "drop_null": False,
                 "epochs": 1,
-                "print_report": False,
+                "reports": [],
                 "row_limit": 800,
             },
             "infer_settings": {
-                "print_report": True,
+                "reports": ["accuracy"],
                 "random_seed": 1,
                 "run_parallel": False,
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -537,16 +538,17 @@ def test_load_metadata_in_yml_format(rp_logger):
                 "source": "../data/pk_test.csv",
                 "drop_null": False,
                 "epochs": 1,
-                "print_report": False,
+                "reports": [],
                 "row_limit": 800,
             },
             "infer_settings": {
-                "print_report": True,
+                "reports": ["accuracy"],
                 "random_seed": 1,
                 "run_parallel": False,
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -563,16 +565,17 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
                 "source": "../data/pk_test.csv",
                 "drop_null": False,
                 "epochs": 1,
-                "print_report": False,
+                "reports": [],
                 "row_limit": 800,
             },
             "infer_settings": {
-                "print_report": True,
+                "reports": ["accuracy"],
                 "random_seed": 1,
                 "run_parallel": False,
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
+            "format": {}
         }
     }
 
@@ -598,17 +601,18 @@ def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger
             "train_settings": {
                 "drop_null": False,
                 "epochs": 1,
-                "print_report": False,
+                "reports": [],
                 "row_limit": 800,
             },
             "infer_settings": {
-                "print_report": True,
+                "reports": ["accuracy"],
                 "random_seed": 1,
                 "run_parallel": False,
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
             "source": "..\\data\\pk_test.csv",
+            "format": {}
         }
     }
 
@@ -634,16 +638,17 @@ def test_save_metadata_in_yaml_format(test_yaml_path, test_metadata_file, rp_log
                 "source": "..\\data\\pk_test.csv",
                 "drop_null": False,
                 "epochs": 1,
-                "print_report": False,
+                "reports": [],
                 "row_limit": 800,
             },
             "infer_settings": {
-                "print_report": True,
+                "reports": ["accuracy"],
                 "random_seed": 1,
                 "run_parallel": False,
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -662,16 +667,17 @@ def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logge
                 "source": "..\\data\\pk_test.csv",
                 "drop_null": False,
                 "epochs": 1,
-                "print_report": False,
+                "reports": [],
                 "row_limit": 800,
             },
             "infer_settings": {
-                "print_report": True,
+                "reports": ["accuracy"],
                 "random_seed": 1,
                 "run_parallel": False,
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -691,6 +697,7 @@ def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
             "train_settings": {"source": "../data/pk_test.csv"},
             "infer_settings": {},
             "keys": {},
+            "format": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
