@@ -8,7 +8,7 @@ from marshmallow import ValidationError
 from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader
-from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.validation_schema import ValidationSchema, ReportTypes
 
 
 @dataclass
@@ -22,6 +22,9 @@ class Validator:
     type_of_process: Literal["train", "infer"]
     validation_source: bool = True
     type_of_fk_keys = ["FK"]
+    infer_report_types: List[str] = field(
+        default_factory=lambda: ReportTypes().infer_report_types
+    )
     merged_metadata: Dict = field(default_factory=dict)
     mapping: Dict = field(default_factory=dict)
     existed_columns_mapping: Dict = field(default_factory=dict)
@@ -64,10 +67,13 @@ class Validator:
         """
         Check conditions whether to launch validation or not
         """
-        print_report = metadata.get("train_settings", {}).get("print_report", False)
+        reports = metadata.get("train_settings", {}).get("reports", [])
         return (
             self.type_of_process == "infer"
-            or (self.type_of_process == "train" and print_report is True)
+            or (
+                self.type_of_process == "train" and
+                any([item in self.infer_report_types for item in reports])
+            )
         )
 
     def _validate_metadata(self, table_name: str):
@@ -87,10 +93,10 @@ class Validator:
             parent_table = self.mapping[key]["parent_table"]
             if parent_table not in self.metadata:
                 if self._check_conditions(metadata_of_the_table):
-                    self._check_existence_of_success_file(parent_table)
+                    self._check_completion_of_training(parent_table)
                     self._check_existence_of_generated_data(parent_table)
                 elif self.type_of_process == "train":
-                    self._check_existence_of_success_file(parent_table)
+                    self._check_completion_of_training(parent_table)
             else:
                 continue
 
@@ -112,21 +118,6 @@ class Validator:
                 f"the {fk_config['type']} - '{fk_name}' aren't the same"
             )
             self.errors["validate referential integrity"][fk_name] = message
-
-    def _check_existence_of_success_file(self, parent_table: str):
-        """
-        Check if the success file of the certain parent table exists.
-        The success file is created after the successful execution of the training process
-        of the certain table.
-        """
-        if not os.path.exists(
-            f"model_artifacts/resources/{slugify(parent_table)}/message.success"
-        ):
-            message = (
-                f"The table - '{parent_table}' hasn't been trained completely. "
-                f"Please, retrain this table first"
-            )
-            self.errors["check existence of the success file"][parent_table] = message
 
     def _check_existence_of_generated_data(self, parent_table: str):
         """
@@ -181,6 +172,30 @@ class Validator:
                 f"'{table_name}' isn't correct. Please, verify the destination path"
             )
             self.errors["check existence of the destination"][table_name] = message
+
+    def _check_completion_of_training(self, table_name: str):
+        """
+        Check if the training process of a specific table has been completed.
+
+        Args:
+        table_name (str): The name of the table to check.
+
+        Raises:
+        FileNotFoundError: If the success file does not exist.
+        ValueError: If the content of the success file does not indicate success.
+        """
+        path_to_success_file = f"model_artifacts/resources/{slugify(table_name)}/message.success"
+        error_message = (
+            f"The training of the table - '{table_name}' hasn't been completed. "
+            "Please, retrain the table."
+        )
+
+        if os.path.exists(path_to_success_file):
+            with open(path_to_success_file, "r") as file:
+                content = file.read().strip()
+
+        if not os.path.exists(path_to_success_file) or content != "SUCCESS":
+            self.errors["check completion of the training process"][table_name] = error_message
 
     def _check_merged_metadata(self, parent_table: str):
         if parent_table not in self.merged_metadata:
@@ -297,12 +312,13 @@ class Validator:
             for table_name in self.merged_metadata.keys():
                 self._gather_existed_columns(table_name)
 
-        for table_name in self.merged_metadata.keys():
+        for table_name in self.metadata.keys():
             if self.type_of_process == "train" and self.validation_source:
                 self._check_existence_of_source(table_name)
                 self._check_existence_of_key_columns(table_name)
                 self._check_existence_of_referenced_columns(table_name)
             elif self.type_of_process == "infer":
+                self._check_completion_of_training(table_name)
                 self._check_existence_of_destination(table_name)
 
         for table_name in self.metadata.keys():

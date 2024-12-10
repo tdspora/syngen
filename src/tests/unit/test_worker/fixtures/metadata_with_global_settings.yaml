@@ -6,7 +6,7 @@ global:
   infer_settings:
     size: 1000
     run_parallel: True
-    print_report: True
+    reports: all
 
 pk_test:
   train_settings:
@@ -14,7 +14,7 @@ pk_test:
     row_limit: 800
 
   infer_settings:
-    print_report: False
+    reports: none
 
   keys:
     pk_id:

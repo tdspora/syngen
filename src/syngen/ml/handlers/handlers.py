@@ -167,7 +167,7 @@ class VaeTrainHandler(BaseHandler):
     drop_null: bool = field(kw_only=True)
     batch_size: int = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
-    print_report: bool = field(kw_only=True)
+    reports: List[str] = field(kw_only=True)
 
     def __fit_model(self, data: pd.DataFrame):
         logger.info("Start VAE training")
@@ -187,11 +187,12 @@ class VaeTrainHandler(BaseHandler):
             process="train",
         )
         self.model.batch_size = min(self.batch_size, len(data))
-
+        list_of_reports = [f'"{report}"' for report in self.reports]
+        list_of_reports = ', '.join(list_of_reports) if list_of_reports else '"none"'
         logger.debug(
             f"Train model with parameters: epochs={self.epochs}, "
-            f"row_subset={self.row_subset}, print_report={self.print_report}, "
-            f"drop_null={self.drop_null}, batch_size={self.batch_size}"
+            f"row_subset={self.row_subset}, drop_null={self.drop_null}, "
+            f"batch_size={self.batch_size}, reports - {list_of_reports}"
         )
 
         self.model.fit_on_df(epochs=self.epochs)
@@ -220,8 +221,7 @@ class VaeInferHandler(BaseHandler):
     size: int = field(kw_only=True)
     batch_size: int = field(kw_only=True)
     run_parallel: bool = field(kw_only=True)
-    print_report: bool = field(kw_only=True)
-    get_infer_metrics: bool = field(kw_only=True)
+    reports: List[str] = field(kw_only=True)
     wrapper_name: str = field(kw_only=True)
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
@@ -467,11 +467,16 @@ class VaeInferHandler(BaseHandler):
 
     def handle(self, **kwargs):
         self._prepare_dir()
-        logger.debug(
-            f"Infer model with parameters: size={self.size}, run_parallel={self.run_parallel}, "
-            f"batch_size={self.batch_size}, random_seed={self.random_seed}, "
-            f"print_report={self.print_report}, get_infer_metrics={self.get_infer_metrics}"
+        list_of_reports = [f'"{report}"' for report in self.reports]
+        list_of_reports = ', '.join(list_of_reports) if list_of_reports else '"none"'
+        log_message = (
+            f"Infer model with parameters: size={self.size}, "
+            f"run_parallel={self.run_parallel}, batch_size={self.batch_size}, "
+            f"random_seed={self.random_seed}"
         )
+        if self.type_of_process == "infer":
+            log_message += f", reports - {list_of_reports}"
+        logger.debug(log_message)
         logger.info(f"Total of {self.batch_num} batch(es)")
         batches = self.split_by_batches()
         delta = ProgressBarHandler().delta / self.batch_num

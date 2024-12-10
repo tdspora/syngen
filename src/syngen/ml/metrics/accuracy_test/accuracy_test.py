@@ -20,6 +20,7 @@ from syngen.ml.metrics import (
 from syngen.ml.metrics.utils import transform_to_base64
 from syngen.ml.utils import fetch_config, ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
+from syngen.ml.validation_schema import ReportTypes
 
 
 class BaseTest(ABC):
@@ -36,8 +37,13 @@ class BaseTest(ABC):
         self.paths = paths
         self.table_name = table_name
         self.config = config
-        self.plot_exists = (self.config.get("print_report", False)
-                            or self.config.get("privacy_report", False))
+        self.plot_exists = any(
+            [
+                item in ReportTypes().full_list_of_infer_report_types
+                for item
+                in self.config.get("reports", [])
+            ]
+        )
         self.reports_path = str()
 
     @abstractmethod
@@ -89,7 +95,7 @@ class BaseTest(ABC):
         """
         Get cleaned configs for the report
         """
-        filtered_fields = ["print_report", "get_infer_metrics", "privacy_report"]
+        filtered_fields = ["reports"]
         train_config = {
             k: v
             for k, v in fetch_config(self.paths["train_config_pickle_path"])

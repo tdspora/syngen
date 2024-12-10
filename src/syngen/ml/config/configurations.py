@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set, List, Callable
+from typing import Optional, Dict, Tuple, Set, List, Callable, Literal
 import os
+from copy import deepcopy
 import shutil
 from datetime import datetime
 
@@ -23,11 +24,12 @@ class TrainConfig:
     drop_null: bool
     row_limit: Optional[int]
     table_name: Optional[str]
-    metadata_path: Optional[str]
-    print_report: bool
+    metadata: Dict
+    reports: List[str]
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
     data: pd.DataFrame = field(init=False)
+    initial_data_shape: Tuple[int, int] = field(init=False)
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     schema: Dict = field(init=False)
@@ -37,7 +39,7 @@ class TrainConfig:
     dropped_columns: Set = field(init=False)
 
     def __post_init__(self):
-        self.paths = self._get_paths()
+        self._set_paths()
         self._remove_existed_artifacts()
         self._prepare_dirs()
 
@@ -59,6 +61,7 @@ class TrainConfig:
         self._remove_empty_columns()
         self._mark_removed_columns()
         self._prepare_data()
+        self._check_reports()
 
     def to_dict(self) -> Dict:
         """
@@ -69,7 +72,7 @@ class TrainConfig:
             "drop_null": self.drop_null,
             "row_subset": self.row_subset,
             "batch_size": self.batch_size,
-            "print_report": self.print_report
+            "reports": self.reports
         }
 
     def _set_batch_size(self):
@@ -77,6 +80,25 @@ class TrainConfig:
         Set up "batch_size" for training process
         """
         self.batch_size = min(self.batch_size, self.row_subset)
+
+    def _check_sample_report(self):
+        """
+        Check whether it is necessary to generate a certain report
+        """
+        if "sample" in self.reports and self.initial_data_shape[0] == self.row_subset:
+            logger.warning(
+                "The generation of the sample report is unnecessary and won't be produced "
+                "as the source data and sampled data sizes are identical"
+            )
+            reports = deepcopy(self.reports)
+            reports.remove("sample")
+            self.reports = reports
+
+    def _check_reports(self):
+        """
+        Check whether it is necessary to generate a certain report
+        """
+        self._check_sample_report()
 
     def _remove_existed_artifacts(self):
         """
@@ -166,6 +188,7 @@ class TrainConfig:
         Extract data and schema necessary for training process
         """
         self.data, self.schema = self._load_source()
+        self.initial_data_shape = self.data.shape
         self._check_if_data_is_empty()
 
     def _preprocess_data(self):
@@ -243,7 +266,7 @@ class TrainConfig:
             self._save_input_data()
 
     @slugify_attribute(table_name="slugify_table_name")
-    def _get_paths(self) -> Dict:
+    def _set_paths(self):
         """
         Create the paths which used in training process
         """
@@ -251,7 +274,7 @@ class TrainConfig:
             f"losses_{self.table_name}_"
             f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        return {
+        self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
             "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/",
@@ -285,74 +308,93 @@ class InferConfig:
     """
 
     destination: Optional[str]
+    metadata: Dict
+    metadata_path: Optional[str]
     size: Optional[int]
     table_name: Optional[str]
     run_parallel: bool
     batch_size: Optional[int]
-    metadata_path: Optional[str]
     random_seed: Optional[int]
-    print_report: bool
-    get_infer_metrics: bool
+    reports: List[str]
     both_keys: bool
     log_level: str
     loader: Optional[Callable[[str], pd.DataFrame]]
+    type_of_process: Literal["train", "infer"]
     slugify_table_name: str = field(init=False)
 
     def __post_init__(self):
-        self.paths = self._get_paths()
-        self._set_up_reporting()
+        self._set_paths()
+        self._remove_artifacts()
+        self._set_infer_parameters()
+
+    def _set_infer_parameters(self):
+        self._check_reports()
         self._set_up_size()
         self._set_up_batch_size()
+
+    def _remove_reports(self):
+        path_to_reports = self.paths["reports_path"]
+        if os.path.exists(path_to_reports):
+            shutil.rmtree(path_to_reports)
+            logger.info(
+                f"The reports generated in the previous run of an inference process "
+                f"and located in the path - '{path_to_reports}' were removed"
+            )
+
+    def _remove_generated_data(self):
+        default_path_to_synth_data = self.paths["default_path_to_merged_infer"]
+        if os.path.exists(default_path_to_synth_data):
+            os.remove(default_path_to_synth_data)
+            logger.info(
+                f"The synthetic data generated in the previous run of an inference process and "
+                f"located in the path - '{default_path_to_synth_data}' was removed"
+            )
+
+    def _remove_artifacts(self):
+        """
+        Remove artifacts related to the previous generation process
+        """
+        self._remove_reports()
+        self._remove_generated_data()
 
     def to_dict(self) -> Dict:
         """
         Return the values of the settings of inference process
-        :return:
         """
         return {
             "size": self.size,
             "run_parallel": self.run_parallel,
             "batch_size": self.batch_size,
             "random_seed": self.random_seed,
-            "print_report": self.print_report,
-            "get_infer_metrics": self.get_infer_metrics,
+            "reports": self.reports,
         }
 
-    def _set_up_reporting(self):
+    def _check_required_artifacts(self):
         """
-        Check whether it is possible to generate the report
+        Check whether required artifacts exists
         """
         if (
-                (self.print_report or self.get_infer_metrics)
+                self.reports
                 and (
-                    not DataLoader(self.paths["input_data_path"]).has_existed_path
-                    and not self.loader
+                    DataLoader(self.paths["input_data_path"]).has_existed_path is False
+                    or self.loader is not None
                 )
         ):
-            message = (
-                f"It seems that the path to the sample of the original data "
-                f"of the table '{self.table_name}' - '{self.paths['input_data_path']}' "
-                f"doesn't exist."
+            self.reports = list()
+            log_message = (
+                f"It seems that the path to the sample of the original data for the table "
+                f"'{self.table_name}' at '{self.paths['input_data_path']}' does not exist. "
+                f"As a result, no reports for the table '{self.table_name}' will be generated. "
+                f"The 'reports' parameter for the table '{self.table_name}' "
+                f"has been set to 'none'."
             )
-            logger.warning(message)
-            if self.print_report:
-                self.print_report = False
-                log_message = (
-                    "As a result, the accuracy report of the table - "
-                    f"'{self.table_name}' won't be generated. "
-                    "The parameter '--print_report' of the table - "
-                    f"'{self.table_name}' has been set to False"
-                )
-                logger.warning(log_message)
-            if self.get_infer_metrics:
-                self.get_infer_metrics = False
-                log_message = (
-                    "As a result, the infer metrics related to the table - "
-                    f"'{self.table_name}' won't be fetched. "
-                    "The parameter '--get_infer_metrics' of the table - "
-                    f"'{self.table_name}' has been set to False"
-                )
-                logger.warning(log_message)
+            logger.warning(log_message)
+
+    def _check_reports(self):
+        """
+        Check whether it is possible to generate reports
+        """
+        self._check_required_artifacts()
 
     def _set_up_size(self):
         """
@@ -379,17 +421,19 @@ class InferConfig:
         )
 
     @slugify_attribute(table_name="slugify_table_name")
-    def _get_paths(self) -> Dict:
+    def _set_paths(self):
         """
         Create the paths which used in inference process
         """
         dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
-        return {
+        self.paths = {
             "original_data_path":
                 f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
             "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
             "input_data_path":
                 f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
+            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
+                                            f"merged_infer_{dynamic_name}.csv",
             "path_to_merged_infer": self.destination
             if self.destination is not None
             else f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",

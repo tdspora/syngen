@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, List
 import traceback
 
 import click
@@ -10,6 +10,14 @@ from syngen.ml.utils import (
     setup_logger,
     set_log_path,
     check_if_logs_available
+)
+from syngen.ml.utils import validate_parameter_reports
+from syngen.ml.validation_schema import ReportTypes
+
+
+validate_reports = validate_parameter_reports(
+    report_types=ReportTypes().infer_report_types,
+    full_list=ReportTypes().full_list_of_infer_report_types
 )
 
 
@@ -48,11 +56,18 @@ from syngen.ml.utils import (
     "use the same int in this command.",
 )
 @click.option(
-    "--print_report",
-    default=False,
-    type=click.BOOL,
-    help="Whether to print quality report. Might require significant time "
-    "for big generated tables (>1000 rows). If absent, it's defaulted to False",
+    "--reports",
+    default=("none",),
+    type=click.UNPROCESSED,
+    multiple=True,
+    callback=validate_reports,
+    help="Controls the generation of quality reports. "
+    "Might require significant time for big generated tables (>10000 rows). "
+    "If set to 'accuracy', generates an accuracy report. "
+    "If set to 'metrics_only', outputs the metrics information "
+    "only to standard output without generation of a report. "
+    "If set to 'all', generates an accuracy report. "
+    "If it's absent or set to 'none', no reports are generated.",
 )
 @click.option(
     "--log_level",
@@ -67,7 +82,7 @@ def launch_infer(
     table_name: Optional[str],
     run_parallel: bool,
     batch_size: Optional[int],
-    print_report: bool,
+    reports: List[str],
     random_seed: Optional[int],
     log_level: str,
 ):
@@ -80,7 +95,7 @@ def launch_infer(
     table_name
     run_parallel
     batch_size
-    print_report
+    reports
     random_seed
     log_level
     -------
@@ -111,9 +126,8 @@ def launch_infer(
         "size": size,
         "run_parallel": run_parallel,
         "batch_size": batch_size,
-        "print_report": print_report,
-        "random_seed": random_seed,
-        "get_infer_metrics": False
+        "reports": reports,
+        "random_seed": random_seed
     }
     worker = Worker(
         table_name=table_name,

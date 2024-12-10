@@ -3,7 +3,7 @@ global:
     epochs: 10
     drop_null: False
     row_limit: 500
-    print_report: false
+    reports: none
     batch_size: 100
 
   infer_settings:                         # Settings for infer process
@@ -11,7 +11,7 @@ global:
     run_parallel: False
     batch_size: 100
     random_seed: 5
-    print_report: true
+    reports: all
 
 pk_test:
   keys:
@@ -24,7 +24,7 @@ fk_test:
   train_settings:
     epochs: 10
     drop_null: False
-    print_report: true
+    reports: all
     batch_size: 200
 
   infer_settings:
@@ -32,7 +32,7 @@ fk_test:
     run_parallel: False
     batch_size: 200
     random_seed: 1
-    print_report: false
+    reports: none
 
   keys:
     fk_test_pk_id:
