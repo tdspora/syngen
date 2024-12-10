@@ -92,7 +92,7 @@ The accepted values for the parameter <i>"reports"</i>:
  - <i>"sample"</i> - generates a sample report (if original data is sampled, the comparison of distributions of original data and sampled data is provided in the report)
  - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
  - <i>"all"</i> - generates both accuracy and sample reports<br>
-Default value is <i>none</i>.
+Default value is <i>"none"</i>.
 
 To train one or more tables using a metadata file, you can use the following command:
 
@@ -148,7 +148,7 @@ The accepted values for the parameter <i>"reports"</i>:
  - <i>"accuracy"</i> - generates an accuracy report that compares original and synthetic data patterns to verify the quality of the generated data
  - <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of an accuracy report
  - <i>"all"</i> - generates an accuracy report<br>
-Default value is <i>none</i>.
+Default value is <i>"none"</i>.
 
 To generate one or more tables using a metadata file, you can use the following command:
 
