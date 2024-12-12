@@ -1356,12 +1356,8 @@ class Utility(BaseMetric):
                     original, model_y, self.sample_size
                 )
 
-            if len(set(model_y)) < 2:
-                logger.info(
-                    f"Column {col} has less than 2 classes as target. "
-                    f"It will not be used in metric "
-                    f"that measures regression results."
-                )
+            # validate number of unique values and instances in each class
+            if not self._valid_target(col, model_y, task_type):
                 continue
 
             (
@@ -1463,3 +1459,39 @@ class Utility(BaseMetric):
             cont_targets, "regression"
         )
         return best_target, score, synthetic_score
+
+    @staticmethod
+    def _valid_target(col, model_y, task_type):
+        """
+        Validate the target column in utility metric calculation.
+
+        Args:
+        col (str): The name of the column being checked.
+        model_y (array-like): The target values.
+        task_type (str): type task
+
+        Returns:
+        bool: True if the column is valid
+        """
+        unique_values, unique_counts = np.unique(model_y, return_counts=True)
+
+        # check if there is only one unique value in the column
+        if len(unique_values) < 2:
+            logger.info(
+                f"Column '{col}' has only one unique value. "
+                "It will not be used as target column "
+                f"in utility metric calculation for {task_type}."
+            )
+            return False
+
+        # check if there is more than 1 sample in each class
+        if task_type in ["binary classification", "multiclass classification"]:
+            if np.min(unique_counts) < 2:
+                logger.info(
+                    f"Column '{col}' has a class with less than 2 samples. "
+                    "It will not be used as target column "
+                    f"in utility metric calculation for {task_type}."
+                )
+                return False
+
+        return True
