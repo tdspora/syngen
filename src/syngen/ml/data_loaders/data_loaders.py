@@ -293,6 +293,7 @@ class AvroLoader(BaseDataLoader):
                 for field
                 in schema.get("fields", {})
             }
+        return schema
 
     def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
@@ -321,10 +322,9 @@ class AvroLoader(BaseDataLoader):
     def save_data(self, df: pd.DataFrame, schema: Optional[Dict] = None, **kwargs):
         if schema is not None:
             logger.trace(f"The data will be saved with the schema: {schema}")
-            preprocessed_schema = (
-                self._get_preprocessed_schema(schema) if schema is not None else schema
-            )
-            df = AvroConvertor(preprocessed_schema, df).preprocessed_df
+
+        preprocessed_schema = self._get_preprocessed_schema(schema)
+        df = AvroConvertor(preprocessed_schema, df).preprocessed_df
         self._save_data(df, schema)
 
     def __load_original_schema(self):

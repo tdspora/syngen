@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple
 from dataclasses import dataclass
 
 import pandas as pd
@@ -15,7 +15,13 @@ class Convertor:
     df: pd.DataFrame
 
     @staticmethod
-    def _update_data_types(schema: Dict, df: pd.DataFrame):
+    def _check_dtype_or_nan(dtypes: Tuple):
+        return (
+            lambda x: isinstance(x, dtypes)
+            or (not isinstance(x, (str, bytes)) and np.isnan(x))
+        )
+
+    def _update_data_types(self, schema: Dict, df: pd.DataFrame):
         """
         Update data types related to the fetched schema
         """
@@ -35,6 +41,15 @@ class Convertor:
                         f"It seems that the data type - '{data_type}' "
                         f"isn\'t correct for the column - '{column}' as it's not empty"
                     )
+
+        if not schema.get("fields"):
+            for column in df.columns:
+                if df[column].apply(lambda x: isinstance(x, int)).all():
+                    df[column] = df[column].astype(int)
+                elif df[column].apply(self._check_dtype_or_nan(dtypes=(int, float))).all():
+                    df[column] = df[column].astype(float)
+                elif df[column].apply(self._check_dtype_or_nan(dtypes=(str, bytes))).all():
+                    df[column] = df[column].astype(pd.StringDtype())
 
     @staticmethod
     def _set_none_values_to_nan(df: pd.DataFrame):
@@ -61,7 +76,7 @@ class Convertor:
         for column in df_object_subset:
             df[column] = [
                 i
-                if not isinstance(i, str) and np.isnan(i)
+                if not isinstance(i, (str, bytes)) and np.isnan(i)
                 else str(i)
                 for i in df[column]
             ]
@@ -73,13 +88,13 @@ class Convertor:
         """
         if not df.empty:
             try:
+                df = self._set_none_values_to_nan(df)
+                df = self._cast_values_to_string(df)
                 self._update_data_types(schema, df)
             except Exception as e:
                 logger.error(e)
                 raise e
             else:
-                df = self._set_none_values_to_nan(df)
-                df = self._cast_values_to_string(df)
                 return df
         else:
             return df
@@ -114,6 +129,7 @@ class AvroConvertor(Convertor):
         """
         converted_schema = dict()
         converted_schema["fields"] = dict()
+        schema = schema if schema else dict()
         for column, data_type in schema.items():
             fields = converted_schema["fields"]
             if "int" in data_type or "long" in data_type or "boolean" in data_type:
