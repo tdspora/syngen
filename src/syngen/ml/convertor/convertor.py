@@ -16,6 +16,9 @@ class Convertor:
 
     @staticmethod
     def _check_dtype_or_nan(dtypes: Tuple):
+        """
+        Check if the value is of the specified data type or 'np.NaN'
+        """
         return (
             lambda x: isinstance(x, dtypes)
             or (not isinstance(x, (str, bytes)) and np.isnan(x))

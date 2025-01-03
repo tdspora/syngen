@@ -283,7 +283,7 @@ class AvroLoader(BaseDataLoader):
             return pdx.from_avro(f)
 
     @staticmethod
-    def _get_preprocessed_schema(schema: Dict) -> Dict:
+    def _get_preprocessed_schema(schema: Optional[Dict]) -> Optional[Dict]:
         """
         Get the preprocessed schema
         """
