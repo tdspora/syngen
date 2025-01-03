@@ -1,6 +1,6 @@
 from typing import Dict, Tuple
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, date
 
 import pandas as pd
 import numpy as np
@@ -14,15 +14,15 @@ class Convertor:
     """
     schema: Dict
     df: pd.DataFrame
+    excluded_dtypes: Tuple = (str, bytes, datetime, date)
 
-    @staticmethod
-    def _check_dtype_or_nan(dtypes: Tuple):
+    def _check_dtype_or_nan(self, dtypes: Tuple):
         """
-        Check if the value is of the specified data type or 'np.NaN'
+        Check if the value is of the specified data types or 'np.NaN'
         """
         return (
             lambda x: isinstance(x, dtypes)
-            or (not isinstance(x, (str, bytes, datetime)) and np.isnan(x))
+            or (not isinstance(x, self.excluded_dtypes) and np.isnan(x))
         )
 
     def _update_data_types(self, schema: Dict, df: pd.DataFrame):
@@ -70,8 +70,7 @@ class Convertor:
             ]
         return df
 
-    @staticmethod
-    def _cast_values_to_string(df: pd.DataFrame) -> pd.DataFrame:
+    def _cast_values_to_string(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Cast the values contained in columns with the data type 'object'
         to 'string'
@@ -80,7 +79,7 @@ class Convertor:
         for column in df_object_subset:
             df[column] = [
                 i
-                if not isinstance(i, (str, bytes, datetime)) and np.isnan(i)
+                if not isinstance(i, self.excluded_dtypes) and np.isnan(i)
                 else str(i)
                 for i in df[column]
             ]
@@ -95,11 +94,10 @@ class Convertor:
                 df = self._set_none_values_to_nan(df)
                 df = self._cast_values_to_string(df)
                 self._update_data_types(schema, df)
+                return df
             except Exception as e:
                 logger.error(e)
                 raise e
-            else:
-                return df
         else:
             return df
 
