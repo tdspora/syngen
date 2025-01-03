@@ -302,7 +302,7 @@ class AvroLoader(BaseDataLoader):
         try:
             df = self._load_data()
             schema = self.load_schema()
-            return self._preprocess_schema_and_df(schema, df)
+            return self._get_schema_and_df(schema, df)
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"
@@ -351,7 +351,7 @@ class AvroLoader(BaseDataLoader):
         return self._get_preprocessed_schema(original_schema)
 
     @staticmethod
-    def _preprocess_schema_and_df(
+    def _get_schema_and_df(
         schema: Dict[str, str], df: pd.DataFrame
     ) -> Tuple[pd.DataFrame, Dict[str, str]]:
         """
