@@ -167,6 +167,89 @@ def test_initiate_avro_convertor(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_initiate_avro_convertor_without_provided_schema(rp_logger):
+    rp_logger.info("Initiating the instance of the class AvroConvertor without a provided schema")
+    df, schema = DataLoader(
+        f"{DIR_NAME}/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv"
+    ).load_data()
+
+    convertor = AvroConvertor(schema=None, df=df)
+
+    assert df.dtypes.to_dict() == {
+        "employeekey": dtype("int64"),
+        "parentemployeekey": dtype("float64"),
+        "parentemployeenationalidalternatekey": dtype("float64"),
+        "employeenationalidalternatekey": pd.StringDtype(),
+        "salesterritorykey": dtype("int64"),
+        "firstname": pd.StringDtype(),
+        "lastname": pd.StringDtype(),
+        "middlename": pd.StringDtype(),
+        "namestyle": dtype("int64"),
+        "title": pd.StringDtype(),
+        "hiredate": pd.StringDtype(),
+        "birthdate": pd.StringDtype(),
+        "loginid": pd.StringDtype(),
+        "emailaddress": pd.StringDtype(),
+        "phone": pd.StringDtype(),
+        "maritalstatus": pd.StringDtype(),
+        "emergencycontactname": pd.StringDtype(),
+        "emergencycontactphone": pd.StringDtype(),
+        "salariedflag": dtype("int64"),
+        "gender": pd.StringDtype(),
+        "payfrequency": dtype("int64"),
+        "baserate": dtype("float64"),
+        "vacationhours": dtype("int64"),
+        "sickleavehours": dtype("int64"),
+        "currentflag": dtype("int64"),
+        "salespersonflag": dtype("int64"),
+        "departmentname": pd.StringDtype(),
+        "startdate": pd.StringDtype(),
+        "enddate": pd.StringDtype(),
+        "status": pd.StringDtype(),
+        "employeephoto": pd.StringDtype(),
+    }
+
+    assert convertor.converted_schema == {
+        "fields": {},
+        "format": "Avro"
+    }
+    assert convertor.preprocessed_df.dtypes.to_dict() == {
+        "employeekey": dtype("int64"),
+        "parentemployeekey": dtype("float64"),
+        "parentemployeenationalidalternatekey": dtype("float64"),
+        "employeenationalidalternatekey": pd.StringDtype(),
+        "salesterritorykey": dtype("int64"),
+        "firstname": pd.StringDtype(),
+        "lastname": pd.StringDtype(),
+        "middlename": pd.StringDtype(),
+        "namestyle": dtype("int64"),
+        "title": pd.StringDtype(),
+        "hiredate": pd.StringDtype(),
+        "birthdate": pd.StringDtype(),
+        "loginid": pd.StringDtype(),
+        "emailaddress": pd.StringDtype(),
+        "phone": pd.StringDtype(),
+        "maritalstatus": pd.StringDtype(),
+        "emergencycontactname": pd.StringDtype(),
+        "emergencycontactphone": pd.StringDtype(),
+        "salariedflag": dtype("int64"),
+        "gender": pd.StringDtype(),
+        "payfrequency": dtype("int64"),
+        "baserate": dtype("float64"),
+        "vacationhours": dtype("int64"),
+        "sickleavehours": dtype("int64"),
+        "currentflag": dtype("int64"),
+        "salespersonflag": dtype("int64"),
+        "departmentname": pd.StringDtype(),
+        "startdate": pd.StringDtype(),
+        "enddate": pd.StringDtype(),
+        "status": pd.StringDtype(),
+        "employeephoto": pd.StringDtype(),
+    }
+    pd.testing.assert_series_equal(convertor.preprocessed_df.dtypes, df.dtypes)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog, rp_logger):
     rp_logger.info(
         "Initiating the instance of the class AvroConvertor "
