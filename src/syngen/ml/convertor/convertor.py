@@ -1,5 +1,6 @@
 from typing import Dict, Tuple
 from dataclasses import dataclass
+from datetime import datetime
 
 import pandas as pd
 import numpy as np
@@ -21,7 +22,7 @@ class Convertor:
         """
         return (
             lambda x: isinstance(x, dtypes)
-            or (not isinstance(x, (str, bytes)) and np.isnan(x))
+            or (not isinstance(x, (str, bytes, datetime)) and np.isnan(x))
         )
 
     def _update_data_types(self, schema: Dict, df: pd.DataFrame):
@@ -79,7 +80,7 @@ class Convertor:
         for column in df_object_subset:
             df[column] = [
                 i
-                if not isinstance(i, (str, bytes)) and np.isnan(i)
+                if not isinstance(i, (str, bytes, datetime)) and np.isnan(i)
                 else str(i)
                 for i in df[column]
             ]
