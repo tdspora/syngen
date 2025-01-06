@@ -283,7 +283,7 @@ class AvroLoader(BaseDataLoader):
             return pdx.from_avro(f)
 
     @staticmethod
-    def _get_preprocessed_schema(schema: Dict) -> Dict:
+    def _get_preprocessed_schema(schema: Optional[Dict]) -> Optional[Dict]:
         """
         Get the preprocessed schema
         """
@@ -293,6 +293,7 @@ class AvroLoader(BaseDataLoader):
                 for field
                 in schema.get("fields", {})
             }
+        return schema
 
     def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
@@ -301,7 +302,7 @@ class AvroLoader(BaseDataLoader):
         try:
             df = self._load_data()
             schema = self.load_schema()
-            return self._preprocess_schema_and_df(schema, df)
+            return self._get_schema_and_df(schema, df)
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"
@@ -321,10 +322,9 @@ class AvroLoader(BaseDataLoader):
     def save_data(self, df: pd.DataFrame, schema: Optional[Dict] = None, **kwargs):
         if schema is not None:
             logger.trace(f"The data will be saved with the schema: {schema}")
-            preprocessed_schema = (
-                self._get_preprocessed_schema(schema) if schema is not None else schema
-            )
-            df = AvroConvertor(preprocessed_schema, df).preprocessed_df
+
+        preprocessed_schema = self._get_preprocessed_schema(schema)
+        df = AvroConvertor(preprocessed_schema, df).preprocessed_df
         self._save_data(df, schema)
 
     def __load_original_schema(self):
@@ -351,7 +351,7 @@ class AvroLoader(BaseDataLoader):
         return self._get_preprocessed_schema(original_schema)
 
     @staticmethod
-    def _preprocess_schema_and_df(
+    def _get_schema_and_df(
         schema: Dict[str, str], df: pd.DataFrame
     ) -> Tuple[pd.DataFrame, Dict[str, str]]:
         """

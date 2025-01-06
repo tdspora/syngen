@@ -419,6 +419,25 @@ def test_save_data_in_avro_format(test_avro_path, test_df, test_avro_schema, rp_
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_save_data_in_avro_format_without_provided_schema(
+    test_avro_path, test_df, rp_logger
+):
+    rp_logger.info("Saving data in avro format locally without a provided schema")
+    data_loader = DataLoader(test_avro_path)
+    data_loader.save_data(test_df, schema=None)
+
+    assert isinstance(data_loader.file_loader, AvroLoader)
+    assert os.path.exists(test_avro_path) is True
+
+    loaded_df, schema = data_loader.load_data()
+    pd.testing.assert_frame_equal(loaded_df, test_df)
+    assert schema == {
+        "fields": {"gender": "int", "height": "float", "id": "int"},
+        "format": "Avro",
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_load_data_from_table_in_pickle_format(rp_logger):
     rp_logger.info("Loading data from local table in pickle format")
     data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
