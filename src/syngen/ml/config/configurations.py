@@ -10,7 +10,8 @@ from loguru import logger
 from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import slugify_attribute
+from syngen.ml.utils import slugify_attribute, fetch_unique_root
+from syngen.ml.convertor import CSVConvertor
 
 
 @dataclass
@@ -25,6 +26,7 @@ class TrainConfig:
     row_limit: Optional[int]
     table_name: Optional[str]
     metadata: Dict
+    metadata_path: Optional[str]
     reports: List[str]
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
@@ -40,8 +42,6 @@ class TrainConfig:
 
     def __post_init__(self):
         self._set_paths()
-        self._remove_existed_artifacts()
-        self._prepare_dirs()
 
     def __getstate__(self) -> Dict:
         """
@@ -100,31 +100,6 @@ class TrainConfig:
         """
         self._check_sample_report()
 
-    def _remove_existed_artifacts(self):
-        """
-        Remove existed artifacts from previous train process
-        """
-        if os.path.exists(self.paths["resources_path"]):
-            shutil.rmtree(self.paths["resources_path"])
-            logger.info(
-                f"The artifacts located in the path - '{self.paths['resources_path']}' "
-                f"were removed"
-            )
-        if os.path.exists(self.paths["tmp_store_path"]):
-            shutil.rmtree(self.paths["tmp_store_path"])
-            logger.info(
-                f"The artifacts located in the path - '{self.paths['tmp_store_path']}' "
-                f"were removed"
-            )
-
-    def _prepare_dirs(self):
-        """
-        Create main directories for saving original, synthetic data and model artifacts
-        """
-        os.makedirs(self.paths["model_artifacts_path"], exist_ok=True)
-        os.makedirs(self.paths["state_path"], exist_ok=True)
-        os.makedirs(self.paths["tmp_store_path"], exist_ok=True)
-
     def _fetch_dataframe(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Fetch the dataframe using the callback function
@@ -142,6 +117,11 @@ class TrainConfig:
         """
         if self.loader is not None:
             return self._fetch_dataframe()
+        if os.path.exists(self.paths["path_to_flatten_metadata"]):
+            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+            self.original_schema = DataLoader(self.paths["input_data_path"]).original_schema
+            schema = CSVConvertor.schema
+            return data, schema
         else:
             data_loader = DataLoader(self.source)
             self.original_schema = data_loader.original_schema
@@ -297,6 +277,9 @@ class TrainConfig:
                                     f"merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path":
                 f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
+            "path_to_flatten_metadata":
+                f"model_artifacts/tmp_store/flatten_configs/"
+                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
             "losses_path": f"model_artifacts/tmp_store/losses/{slugify(losses_file_name)}.csv"
         }
 
@@ -449,4 +432,7 @@ class InferConfig:
             "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
             "path_to_no_ml":
                 f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
+            "path_to_flatten_metadata":
+                f"model_artifacts/tmp_store/flatten_configs/"
+                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
         }

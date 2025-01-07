@@ -291,6 +291,7 @@ class Worker:
 
         TrainStrategy().run(
             metadata=metadata,
+            metadata_path=self.metadata_path,
             source=train_settings.get("source"),
             epochs=train_settings["epochs"],
             drop_null=train_settings["drop_null"],

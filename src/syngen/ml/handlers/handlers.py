@@ -465,6 +465,15 @@ class VaeInferHandler(BaseHandler):
 
         return df
 
+    def _save_data(self, generated_data):
+        """
+        Save generated data to the path
+        """
+        DataLoader(self.paths["path_to_merged_infer"]).save_data(
+            generated_data,
+            format=get_context().get_config(),
+        )
+
     def handle(self, **kwargs):
         self._prepare_dir()
         list_of_reports = [f'"{report}"' for report in self.reports]
@@ -525,27 +534,12 @@ class VaeInferHandler(BaseHandler):
                 generated_data = generated_data[self.dataset.order_of_columns]
 
                 if generated_data is None:
-                    DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                        prepared_data,
-                        schema=self.original_schema,
-                        format=get_context().get_config(),
-                    )
+                    self._save_data(prepared_data)
                 else:
-                    DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                        generated_data,
-                        schema=self.original_schema,
-                        format=get_context().get_config(),
-                    )
+                    self._save_data(generated_data)
             else:
-                DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                    prepared_data,
-                    schema=self.original_schema,
-                    format=get_context().get_config(),
-                )
+                self._save_data(prepared_data)
         if self.metadata_path is None:
             prepared_data = prepared_data[self.dataset.order_of_columns]
-            DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                prepared_data,
-                schema=self.original_schema,
-                format=get_context().get_config(),
-            )
+
+            self._save_data(prepared_data)

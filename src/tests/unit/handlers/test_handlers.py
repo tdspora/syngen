@@ -107,3 +107,4 @@ def test_split_by_batches(
     handler.batch_num = math.ceil(handler.size / handler.batch_size)
     assert handler.split_by_batches() == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
+    rp_logger.info(SUCCESSFUL_MESSAGE)

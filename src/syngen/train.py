@@ -10,10 +10,11 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_logger,
     set_log_path,
-    check_if_logs_available
+    check_if_logs_available,
+    validate_parameter_reports
 )
-from syngen.ml.utils import validate_parameter_reports
 from syngen.ml.validation_schema import ReportTypes
+from syngen.ml.processors import PreprocessHandler
 
 
 validate_reports = validate_parameter_reports(
@@ -170,6 +171,9 @@ def launch_train(
         "batch_size": batch_size,
         "reports": reports,
     }
+
+    PreprocessHandler(metadata_path, table_name, settings).run()
+
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
@@ -181,18 +185,8 @@ def launch_train(
     worker.launch_train()
 
 
-def preprocess_data():
-    """
-    Preprocess the data before the training process
-    """
-    path_to_script = f"{os.getcwd()}/model_artifacts/script.py"
-    if os.path.exists(path_to_script):
-        os.system(f"python3 {path_to_script}")
-
-
 if __name__ == "__main__":
     try:
-        preprocess_data()
         launch_train()
     except Exception as e:
         log_file = os.getenv("SUCCESS_LOG_FILE")
