@@ -318,7 +318,7 @@ class Validator:
         ):
             return (f"{os.getcwd()}/model_artifacts/tmp_store/{slugify(table_name)}/"
                     f"input_data_{slugify(table_name)}.pkl")
-        return self.merged_metadata[table_name]["train_settings"]["source"]
+        return self.metadata[table_name]["train_settings"]["source"]
 
     def _run(self):
         """
