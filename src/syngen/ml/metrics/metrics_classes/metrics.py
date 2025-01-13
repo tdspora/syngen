@@ -1098,13 +1098,13 @@ class Utility(BaseMetric):
         self.sample_size = sample_size
 
     @staticmethod
-    def check_empty_df(df: pd.DataFrame, df_name: Literal["original", "synthetic"]) -> bool:
+    def check_empty_df(df: pd.DataFrame, df_type: Literal["original", "synthetic"]) -> bool:
         """
         Check if the dataframe is empty after dropping rows with missing values
         """
         if df.shape[0] == 0:
             logger.warning(
-                f"Utility metric calculation is skipped: the {df_name} dataframe is empty "
+                f"Utility metric calculation is skipped: the {df_type} dataframe is empty "
                 "after dropping rows with missing values (dropna() function is applied)"
             )
             return True
