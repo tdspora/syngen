@@ -83,8 +83,7 @@ def test_initialize_data_loader_for_local_pickle_table_with_existed_path(rp_logg
         "Initializing the instance of the class DataLoader "
         "for local pickle table with existed path"
     )
-    path_to_table = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
-                     "pickle_tables/table_with_data.pkl")
+    path_to_table = f"{DIR_NAME}/unit/data_loaders/fixtures/pickle_tables/table_with_data.pkl"
     test_data_loader = DataLoader(path_to_table)
     assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
