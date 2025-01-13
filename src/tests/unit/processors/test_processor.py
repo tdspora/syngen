@@ -23,9 +23,9 @@ def test_get_json_columns_contained_one_json_column(rp_logger):
     assert handler._get_json_columns(data) == ["_details"]
 
 
-def test_get_flattened_df_contained_one_json_column(rp_logger):
+def test_get_artifacts_contained_one_json_column(rp_logger):
     rp_logger.info(
-        "Test that the method '_get_flattened_df' method "
+        "Test that the method '_get_artifacts' method "
         "of the class 'PreprocessHandler' "
         "for the dataframe contained one json column"
     )
@@ -47,7 +47,7 @@ def test_get_flattened_df_contained_one_json_column(rp_logger):
 
     (flattened_data,
      flattening_mapping,
-     duplicated_columns) = handler._get_flattened_df(data, json_columns)
+     duplicated_columns) = handler._get_artifacts(data, json_columns)
     assert flattened_data.columns.to_list() == [
         "id",
         "created_at",
@@ -107,9 +107,9 @@ def test_get_json_columns_contained_more_than_one_json_column(rp_logger):
     assert handler._get_json_columns(data) == ["progress", "details"]
 
 
-def test_get_flattened_df_with_df_contained_more_than_one_json_column(rp_logger):
+def test_get_artifacts_with_df_contained_more_than_one_json_column(rp_logger):
     rp_logger.info(
-        "Test that the method '_get_flattened_df' method "
+        "Test that the method '_get_artifacts' method "
         "of the class 'PreprocessHandler' "
         "for the dataframe contained more than one json column"
     )
@@ -130,7 +130,7 @@ def test_get_flattened_df_with_df_contained_more_than_one_json_column(rp_logger)
 
     (flattened_data,
      flattening_mapping,
-     duplicated_columns) = handler._get_flattened_df(data, json_columns)
+     duplicated_columns) = handler._get_artifacts(data, json_columns)
     assert flattened_data.columns.to_list() == [
         "id",
         "created_at",

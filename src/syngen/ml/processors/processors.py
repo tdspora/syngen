@@ -116,12 +116,13 @@ class PreprocessHandler(Processor):
         return json_columns
 
     @staticmethod
-    def _get_flattened_df(
+    def _get_artifacts(
         data: pd.DataFrame,
         json_columns: List,
     ) -> Tuple[pd.DataFrame, Dict, List]:
         """
-        Flatten the JSON columns in the dataframe
+        Flatten the JSON columns in the dataframe, and return the flattened dataframe,
+        the mapping of the flattened columns, and the list of duplicated columns
         """
         df_list = list()
         flattening_mapping = dict()
@@ -195,7 +196,7 @@ class PreprocessHandler(Processor):
                 logger.info(f"Flattening the JSON columns in the table - '{table}'")
                 (flattened_data,
                  flattening_mapping,
-                 duplicated_columns) = self._get_flattened_df(data, json_columns)
+                 duplicated_columns) = self._get_artifacts(data, json_columns)
                 self._save_input_data(flattened_data, table)
                 flatten_metadata[table] = {
                     "flattening_mapping": flattening_mapping,
