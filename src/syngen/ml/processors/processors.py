@@ -1,7 +1,7 @@
 import os
 import shutil
 from collections import Counter
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any, Optional, Callable
 import json
 from json import JSONDecodeError
 from slugify import slugify
@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from flatten_json import flatten, unflatten_list
 
-from syngen.ml.data_loaders import DataLoader, MetadataLoader
+from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import fetch_unique_root
 from syngen.ml.context import get_context
 
@@ -25,45 +25,35 @@ class Processor:
     """
     def __init__(
         self,
-        path_to_metadata: Optional[str],
+        metadata: Dict,
+        metadata_path: Optional[str],
         table_name: Optional[str],
-        settings: Dict
+        loader: Optional[Callable[[str], pd.DataFrame]] = None
     ):
-        self.metadata_path = path_to_metadata
+        self.metadata_path = metadata_path
         self.table_name = table_name
-        self.settings = settings
-        self.metadata = self._fetch_metadata()
+        self.metadata = metadata
+        self.loader = loader
         self.path_to_flatten_metadata = (
             f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/flatten_configs/"
             f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
         )
-
-    def _fetch_metadata(self) -> Dict:
-        metadata = dict()
-        if self.metadata_path:
-            metadata = MetadataLoader(self.metadata_path).load_data()
-        if self.table_name:
-            metadata = {
-                self.table_name: {
-                    "train_settings": {
-                        "source": self.settings.get("source", "")
-                    }
-                }
-            }
-        return metadata
 
 
 class PreprocessHandler(Processor):
     """
     The class for the preprocessing of the data before the training process
     """
-    def __init__(
-        self,
-        path_to_metadata: Optional[str],
-        table_name: Optional[str],
-        settings: Dict
-    ):
-        super().__init__(path_to_metadata, table_name, settings)
+
+    def _clean_up(self):
+        """
+        Clean up the directories before the preprocessing data
+        """
+        for table in self.metadata.keys():
+            if table == "global":
+                continue
+            self._remove_existed_artifacts(table)
+            self._prepare_dirs(table)
 
     @staticmethod
     def _remove_existed_artifact(path_to_artifact: str):
@@ -162,12 +152,17 @@ class PreprocessHandler(Processor):
         with open(f"{self.path_to_flatten_metadata}", "w") as f:
             json.dump(metadata, f)
 
-    @staticmethod
-    def _load_source(source: str, *args):
+    def _load_source(self, path_to_source: str, table_name: str) -> Tuple[pd.DataFrame, Dict]:
         """
         Load the data from the predefined source
         """
-        return DataLoader(source).load_data()
+        if self.loader is not None:
+            dataframe_fetcher = DataFrameFetcher(
+                loader=self.loader,
+                table_name=table_name
+            )
+            return dataframe_fetcher.fetch_data()
+        return DataLoader(path_to_source).load_data()
 
     @staticmethod
     def _save_input_data(flattened_data: pd.DataFrame, table_name: str):
@@ -188,14 +183,14 @@ class PreprocessHandler(Processor):
         for table, settings in self.metadata.items():
             if table == "global":
                 continue
-            source = settings.get("train_settings", {}).get("source", "")
-            data, schema = self._load_source(source, table)
+            path_to_source = settings.get("train_settings", {}).get("source", "")
+            data, schema = self._load_source(path_to_source, table)
             order_of_columns = data.columns.to_list()
-            self._remove_existed_artifacts(table)
-            self._prepare_dirs(table)
             if json_columns := self._get_json_columns(data):
+                list_of_json_columns = [f"'{column}'" for column in json_columns]
+                list_of_json_columns = ', '.join(list_of_json_columns)
                 logger.info(
-                    f"The table '{table}' contains JSON columns: {', '.join(json_columns)}"
+                    f"The table '{table}' contains JSON columns: {list_of_json_columns}"
                 )
                 logger.info(f"Flattening the JSON columns in the table - '{table}'")
                 (flattened_data,
@@ -215,6 +210,7 @@ class PreprocessHandler(Processor):
         """
         Launch the preprocessing process:
         """
+        self._clean_up()
         self._run_script()
         self._handle_json_columns()
 
@@ -226,11 +222,11 @@ class PostprocessHandler(Processor):
 
     def __init__(
         self,
+        metadata: Dict,
         metadata_path: Optional[str],
         table_name: Optional[str],
-        settings: Dict
     ):
-        super().__init__(metadata_path, table_name, settings)
+        super().__init__(metadata, metadata_path, table_name)
 
     def _fetch_flatten_config(self, table_name: str) -> Dict:
         """
@@ -289,21 +285,18 @@ class PostprocessHandler(Processor):
         return df
 
     @staticmethod
-    def _load_generated_data(
-        path_to_generated_data: str,
-        *args
-    ) -> pd.DataFrame:
+    def _load_generated_data(path_to_generated_data: str) -> pd.DataFrame:
         """
         Load generated data from the predefined path
         """
         data, schema = DataLoader(path_to_generated_data).load_data()
         return data
 
-    def _post_process_generated_data(
-            self,
-            data: pd.DataFrame,
-            flattening_mapping: Dict,
-            duplicated_columns: List
+    def _postprocess_generated_data(
+        self,
+        data: pd.DataFrame,
+        flattening_mapping: Dict,
+        duplicated_columns: List
     ) -> pd.DataFrame:
         """
         Postprocess the generated data
@@ -346,23 +339,22 @@ class PostprocessHandler(Processor):
                     f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/"
                     f"{slugify(table)}/merged_infer_{slugify(table)}.csv"
                 )
-                data = self._load_generated_data(path_to_generated_data, table)
-                data = self._post_process_generated_data(
+                data = self._load_generated_data(path_to_generated_data)
+                data = self._postprocess_generated_data(
                     data,
                     flattening_mapping,
                     duplicated_columns
                 )
                 destination = self.metadata[table].get("infer_settings", {}).get("destination", "")
                 path_to_destination = destination if destination else path_to_generated_data
-                self._save_generated_data(data, path_to_destination, order_of_columns, table)
+                self._save_generated_data(data, path_to_destination, order_of_columns)
                 logger.info("Finish postprocessing of the generated data")
 
     @staticmethod
     def _save_generated_data(
         generated_data: pd.DataFrame,
         path_to_destination: str,
-        order_of_columns: List[str],
-        *args
+        order_of_columns: List[str]
     ):
         """
         Save generated data to the path

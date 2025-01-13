@@ -115,8 +115,6 @@ class TrainConfig:
         """
         Return dataframe and schema of original data
         """
-        if self.loader is not None:
-            return self._fetch_dataframe()
         if os.path.exists(self.paths["path_to_flatten_metadata"]):
             data, schema = DataLoader(self.paths["input_data_path"]).load_data()
             self.original_schema = DataLoader(self.paths["input_data_path"]).original_schema
@@ -139,8 +137,9 @@ class TrainConfig:
         self.data = self.data.dropna(how="all", axis=1)
 
         self.dropped_columns = data_columns - set(self.data.columns)
-        if len(self.dropped_columns) > 0:
-            logger.info(f"Empty columns - {', '.join(self.dropped_columns)} were removed")
+        list_of_dropped_columns = [f"'{column}'" for column in self.dropped_columns]
+        if len(list_of_dropped_columns) > 0:
+            logger.info(f"Empty columns - {', '.join(list_of_dropped_columns)} were removed")
 
     def _mark_removed_columns(self):
         """

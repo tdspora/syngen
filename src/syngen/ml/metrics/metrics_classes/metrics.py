@@ -1,4 +1,4 @@
-from typing import Union, List, Optional, Dict
+from typing import Union, List, Optional, Dict, Literal
 from abc import ABC
 from itertools import combinations
 from collections import Counter
@@ -1097,6 +1097,19 @@ class Utility(BaseMetric):
 
         self.sample_size = sample_size
 
+    @staticmethod
+    def check_empty_df(df: pd.DataFrame, df_name: Literal["original", "synthetic"]) -> bool:
+        """
+        Check if the dataframe is empty after dropping rows with missing values
+        """
+        if df.shape[0] == 0:
+            logger.warning(
+                f"Utility metric calculation is skipped: the {df_name} dataframe is empty "
+                "after dropping rows with missing values (dropna() function is applied)"
+            )
+            return True
+        return False
+
     def calculate_all(self, categorical_columns: List[str], cont_columns: List[str]):
         logger.info("Calculating utility metric")
 
@@ -1115,9 +1128,14 @@ class Utility(BaseMetric):
         self.synthetic = self.synthetic[cont_columns + categorical_columns].apply(
             pd.to_numeric, axis=0, errors="ignore"
         )
-
         self.original = self.original.select_dtypes(include="number").dropna()
         self.synthetic = self.synthetic.select_dtypes(include="number").dropna()
+
+        if self.check_empty_df(self.original, "original"):
+            return
+        if self.check_empty_df(self.synthetic, "synthetic"):
+            return
+
         self.synthetic = self.synthetic[self.original.columns]
 
         excluded_cols = [

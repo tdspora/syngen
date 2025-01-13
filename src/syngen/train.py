@@ -14,7 +14,6 @@ from syngen.ml.utils import (
     validate_parameter_reports
 )
 from syngen.ml.validation_schema import ReportTypes
-from syngen.ml.processors import PreprocessHandler
 
 
 validate_reports = validate_parameter_reports(
@@ -171,8 +170,6 @@ def launch_train(
         "batch_size": batch_size,
         "reports": reports,
     }
-
-    PreprocessHandler(metadata_path, table_name, settings).run()
 
     worker = Worker(
         table_name=table_name,

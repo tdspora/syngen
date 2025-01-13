@@ -1,12 +1,12 @@
 from typing import Dict, List, Optional, Any, Callable, Literal
+import os
+from itertools import product
 
 import pandas as pd
 from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
-import os
-from itertools import product
 
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
@@ -17,6 +17,7 @@ from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.validation_schema import ReportTypes
+from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 
 
 @define
@@ -58,6 +59,17 @@ class Worker:
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
+
+    def _preprocess_data(self):
+        """
+        Preprocess the data before a training process
+        """
+        PreprocessHandler(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            table_name=self.table_name,
+            loader=self.loader
+        ).run()
 
     def _set_mlflow(self):
         """
@@ -325,6 +337,13 @@ class Worker:
         """
         delta = 0.49 / len(tables_for_training)
 
+        for table in self.metadata.keys():
+            PreprocessHandler(
+                metadata=self.metadata,
+                metadata_path=self.metadata_path,
+                table_name=table
+            ).run()
+
         for table in tables_for_training:
             self._train_table(table, metadata_for_training, delta)
 
@@ -419,6 +438,11 @@ class Worker:
                 type_of_process=type_of_process,
                 delta=delta
             )
+            PostprocessHandler(
+                metadata=self.metadata,
+                metadata_path=self.metadata_path,
+                table_name=table
+            ).run()
 
         tables_mapping = self._get_surrogate_tables_mapping()
         for table_root in tables_mapping.keys():

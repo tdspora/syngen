@@ -513,9 +513,7 @@ class VaeInferHandler(BaseHandler):
         if tech_columns:
             prepared_data = prepared_data.drop(tech_columns, axis=1)
             logger.debug(
-                "Technical columns "
-                f"{tech_columns} were removed "
-                "from the generated table."
+                f"Technical columns {tech_columns} were removed from the generated table."
             )
             Report().unregister_reporters(self.table_name)
             logger.info(

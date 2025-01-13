@@ -6,7 +6,6 @@ import click
 from loguru import logger
 
 from syngen.ml.worker import Worker
-from syngen.ml.processors import PostprocessHandler
 from syngen.ml.utils import (
     setup_logger,
     set_log_path,
@@ -144,8 +143,6 @@ def launch_infer(
     )
 
     worker.launch_infer()
-
-    PostprocessHandler(metadata_path, table_name, settings).run()
 
 
 if __name__ == "__main__":

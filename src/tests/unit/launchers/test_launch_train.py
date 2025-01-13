@@ -4,7 +4,6 @@ from click.testing import CliRunner
 
 from syngen.train import launch_train
 from syngen.ml.worker import Worker
-from syngen.ml.processors import PreprocessHandler
 from syngen.ml.validation_schema import ReportTypes
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
@@ -33,11 +32,10 @@ def test_train_table_with_source_and_table_name(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(PreprocessHandler, "run")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_metadata_path(
-    mock_post_init, mock_launch_train, mock_preprocess_data, rp_logger
+    mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info("Launch train process through CLI with parameters '--metadata_path'")
     runner = CliRunner()
@@ -45,16 +43,14 @@ def test_train_table_with_metadata_path(
     assert result.exit_code == 0
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
-    mock_preprocess_data.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(PreprocessHandler, "run")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_source(
-    mock_logger, mock_post_init, mock_launch_train, mock_preprocess_data, rp_logger, caplog
+    mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
         "Launch train process through CLI with parameters '--metadata_path' and '--source'"
@@ -68,7 +64,6 @@ def test_train_table_with_metadata_path_and_source(
         assert result.exit_code == 0
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
-        mock_preprocess_data.assert_called_once()
         assert (
             "The information of 'metadata_path' was provided. "
             "In this case the information of 'source' will be ignored" in caplog.text
@@ -76,12 +71,11 @@ def test_train_table_with_metadata_path_and_source(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(PreprocessHandler, "run")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_table_name(
-    mock_logger, mock_post_init, mock_launch_train, mock_preprocess_data, rp_logger, caplog
+    mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
         "Launch train process through CLI with parameters '--metadata_path' and '--table_name'"
@@ -95,7 +89,6 @@ def test_train_table_with_metadata_path_and_table_name(
         assert result.exit_code == 0
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
-        mock_preprocess_data.assert_called_once()
         assert (
             "The information of 'metadata_path' was provided. "
             "In this case the information of 'table_name' will be ignored" in caplog.text
@@ -103,12 +96,11 @@ def test_train_table_with_metadata_path_and_table_name(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(PreprocessHandler, "run")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.train.setup_logger")
 def test_train_table_with_metadata_path_and_table_name_and_source(
-    mock_logger, mock_post_init, mock_launch_train, mock_preprocess_data, rp_logger, caplog
+    mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
         "Launch train process through CLI with parameters "
@@ -130,7 +122,6 @@ def test_train_table_with_metadata_path_and_table_name_and_source(
         assert result.exit_code == 0
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
-        mock_preprocess_data.assert_called_once()
         assert (
             "The information of 'metadata_path' was provided. "
             "In this case the information of 'table_name' and 'source' will be ignored"
@@ -247,9 +238,7 @@ def test_train_table_with_invalid_drop_null(rp_logger):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_row_limit(
-    mock_post_init, mock_launch_train, rp_logger
-):
+def test_train_table_with_valid_row_limit(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
         "Launch train process through CLI with valid 'row_limit' parameter equals 100"
     )
@@ -386,9 +375,7 @@ def test_train_table_with_redundant_parameter_reports(prior_value, value, rp_log
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_batch_size(
-    mock_post_init, mock_launch_train, rp_logger
-):
+def test_train_table_with_valid_batch_size(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
         "Launch train process through CLI with valid 'batch_size' parameter equals 100"
     )
