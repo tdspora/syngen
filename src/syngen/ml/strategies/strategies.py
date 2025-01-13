@@ -110,7 +110,7 @@ class TrainStrategy(Strategy, ABC):
                 not table_name.endswith("_fk")
                 and "sample" in self.config.reports
                 and not flatten_metadata_exists
-            ):
+        ):
             sample_reporter = SampleAccuracyReporter(
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,

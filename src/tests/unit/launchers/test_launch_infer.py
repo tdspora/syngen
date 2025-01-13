@@ -4,7 +4,6 @@ from click.testing import CliRunner
 
 from syngen.infer import launch_infer
 from syngen.ml.worker import Worker
-from syngen.ml.processors import PostprocessHandler
 from syngen.ml.validation_schema import ReportTypes
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
