@@ -71,6 +71,16 @@ class Worker:
             loader=self.loader
         ).run()
 
+    def _postprocess_data(self, table_name: str):
+        """
+        Postprocess the data after an inference process
+        """
+        PostprocessHandler(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            table_name=table_name
+        ).run()
+
     def _set_mlflow(self):
         """
         Set the mlflow experiment name and the mlflow run
@@ -434,11 +444,7 @@ class Worker:
                 type_of_process=type_of_process,
                 delta=delta
             )
-            PostprocessHandler(
-                metadata=self.metadata,
-                metadata_path=self.metadata_path,
-                table_name=table
-            ).run()
+            self._postprocess_data(table)
 
         tables_mapping = self._get_surrogate_tables_mapping()
         for table_root in tables_mapping.keys():
