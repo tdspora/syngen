@@ -60,14 +60,14 @@ class Worker:
         validator.run()
         self.merged_metadata = validator.merged_metadata
 
-    def _preprocess_data(self):
+    def _preprocess_data(self, table_name: str):
         """
         Preprocess the data before a training process
         """
         PreprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
-            table_name=self.table_name,
+            table_name=table_name,
             loader=self.loader
         ).run()
 
@@ -338,11 +338,7 @@ class Worker:
         delta = 0.49 / len(tables_for_training)
 
         for table in self.metadata.keys():
-            PreprocessHandler(
-                metadata=self.metadata,
-                metadata_path=self.metadata_path,
-                table_name=table
-            ).run()
+            self._preprocess_data(table)
 
         for table in tables_for_training:
             self._train_table(table, metadata_for_training, delta)

@@ -166,20 +166,20 @@ def test_init_infer_config_with_existed_input_data_in_train_process(mocker, rp_l
     mocker.patch("syngen.ml.data_loaders.DataLoader.has_existed_path", return_value=True)
 
     infer_config = InferConfig(
-            destination="path/to/destination.csv",
-            metadata=metadata,
-            metadata_path="path/to/metadata.yaml",
-            size=100,
-            table_name=table_name,
-            run_parallel=False,
-            batch_size=100,
-            random_seed=None,
-            reports=["accuracy"],
-            both_keys=True,
-            log_level="DEBUG",
-            loader=None,
-            type_of_process="train"
-        )
+        destination="path/to/destination.csv",
+        metadata=metadata,
+        metadata_path="path/to/metadata.yaml",
+        size=100,
+        table_name=table_name,
+        run_parallel=False,
+        batch_size=100,
+        random_seed=None,
+        reports=["accuracy"],
+        both_keys=True,
+        log_level="DEBUG",
+        loader=None,
+        type_of_process="train"
+    )
 
     assert infer_config.reports == ["accuracy"]
 
