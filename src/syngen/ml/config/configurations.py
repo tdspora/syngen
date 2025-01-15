@@ -57,7 +57,6 @@ class TrainConfig:
     def preprocess_data(self):
         self._extract_data()
         self._save_original_schema()
-        self.columns = list(self.data.columns)
         self._remove_empty_columns()
         self._mark_removed_columns()
         self._prepare_data()
@@ -168,6 +167,7 @@ class TrainConfig:
         """
         self.data, self.schema = self._load_source()
         self.initial_data_shape = self.data.shape
+        self.columns = list(self.data.columns)
         self._check_if_data_is_empty()
 
     def _preprocess_data(self):
