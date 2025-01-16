@@ -181,8 +181,6 @@ class PreprocessHandler(Processor):
         """
         flatten_metadata = dict()
         for table, settings in self.metadata.items():
-            if table == "global":
-                continue
             path_to_source = settings.get("train_settings", {}).get("source", "")
             data, schema = self._load_source(path_to_source, table)
             order_of_columns = data.columns.to_list()
@@ -304,13 +302,9 @@ class PostprocessHandler(Processor):
         for old_column, new_columns in flattening_mapping.items():
             data[new_columns] = self._restore_empty_values(data[new_columns])
 
-            batch_size = 10
-            data["batch_id"] = np.arange(len(data)) // batch_size
-            for batch_id, batch_data in data.groupby("batch_id"):
-                data.loc[batch_data.index, old_column] = batch_data[new_columns].apply(
-                    lambda row: unflatten_list(row.to_dict(), "."), axis=1
-                )
-            data = data.drop(columns=["batch_id"])
+            data[old_column] = data[new_columns].apply(
+                lambda row: unflatten_list(row.to_dict(), "."), axis=1
+            )
 
             data[old_column] = data[old_column]. \
                 apply(lambda row: self._remove_none_from_struct(row))
@@ -329,8 +323,6 @@ class PostprocessHandler(Processor):
         if os.path.exists(self.path_to_flatten_metadata):
             logger.info("Start postprocessing of the generated data")
             for table in self.metadata.keys():
-                if table == "global":
-                    continue
                 flatten_metadata = self._fetch_flatten_config(table)
                 flattening_mapping = flatten_metadata.get("flattening_mapping")
                 duplicated_columns = flatten_metadata.get("duplicated_columns")
