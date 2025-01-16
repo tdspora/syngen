@@ -60,25 +60,25 @@ class Worker:
         validator.run()
         self.merged_metadata = validator.merged_metadata
 
-    def _preprocess_data(self, table_name: str):
+    def __preprocess_data(self):
         """
         Preprocess the data before a training process
         """
         PreprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
-            table_name=table_name,
+            table_name=self.table_name,
             loader=self.loader
         ).run()
 
-    def _postprocess_data(self, table_name: str):
+    def __postprocess_data(self):
         """
         Postprocess the data after an inference process
         """
         PostprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
-            table_name=table_name
+            table_name=self.table_name
         ).run()
 
     def _set_mlflow(self):
@@ -347,8 +347,7 @@ class Worker:
         """
         delta = 0.49 / len(tables_for_training)
 
-        for table in self.metadata.keys():
-            self._preprocess_data(table)
+        self.__preprocess_data()
 
         for table in tables_for_training:
             self._train_table(table, metadata_for_training, delta)
@@ -437,6 +436,7 @@ class Worker:
         """
 
         non_surrogate_tables = [table for table in tables if table not in self.divided]
+
         for table in non_surrogate_tables:
             self._infer_table(
                 table=table,
@@ -444,7 +444,8 @@ class Worker:
                 type_of_process=type_of_process,
                 delta=delta
             )
-            self._postprocess_data(table)
+
+        self.__postprocess_data()
 
         tables_mapping = self._get_surrogate_tables_mapping()
         for table_root in tables_mapping.keys():

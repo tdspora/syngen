@@ -31,12 +31,11 @@ class Processor:
         loader: Optional[Callable[[str], pd.DataFrame]] = None
     ):
         self.metadata_path = metadata_path
-        self.table_name = table_name
         self.metadata = metadata
         self.loader = loader
         self.path_to_flatten_metadata = (
             f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/flatten_configs/"
-            f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
+            f"flatten_metadata_{fetch_unique_root(table_name, self.metadata_path)}.json"
         )
 
 
