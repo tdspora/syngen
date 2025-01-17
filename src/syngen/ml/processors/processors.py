@@ -49,8 +49,6 @@ class PreprocessHandler(Processor):
         Clean up the directories before the preprocessing data
         """
         for table in self.metadata.keys():
-            if table == "global":
-                continue
             self._remove_existed_artifacts(table)
             self._prepare_dirs(table)
 
