@@ -281,7 +281,7 @@ class PostprocessHandler(Processor):
         return df
 
     @staticmethod
-    def _load_generated_data(path_to_generated_data: str, *args) -> pd.DataFrame:
+    def _load_generated_data(path_to_generated_data: str, table_name=None) -> pd.DataFrame:
         """
         Load generated data from the predefined path
         """
@@ -329,7 +329,7 @@ class PostprocessHandler(Processor):
                     f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/"
                     f"{slugify(table)}/merged_infer_{slugify(table)}.csv"
                 )
-                data = self._load_generated_data(path_to_generated_data)
+                data = self._load_generated_data(path_to_generated_data, table)
                 data = self._postprocess_generated_data(
                     data,
                     flattening_mapping,
@@ -337,7 +337,7 @@ class PostprocessHandler(Processor):
                 )
                 destination = self.metadata[table].get("infer_settings", {}).get("destination", "")
                 path_to_destination = destination if destination else path_to_generated_data
-                self._save_generated_data(data, path_to_destination, order_of_columns)
+                self._save_generated_data(data, path_to_destination, order_of_columns, table)
                 logger.info("Finish postprocessing of the generated data")
 
     @staticmethod
@@ -345,7 +345,7 @@ class PostprocessHandler(Processor):
         generated_data: pd.DataFrame,
         path_to_destination: str,
         order_of_columns: List[str],
-        *args
+        table_name=None
     ):
         """
         Save generated data to the path
