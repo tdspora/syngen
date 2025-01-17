@@ -281,7 +281,7 @@ class PostprocessHandler(Processor):
         return df
 
     @staticmethod
-    def _load_generated_data(path_to_generated_data: str) -> pd.DataFrame:
+    def _load_generated_data(path_to_generated_data: str, *args) -> pd.DataFrame:
         """
         Load generated data from the predefined path
         """
@@ -344,7 +344,8 @@ class PostprocessHandler(Processor):
     def _save_generated_data(
         generated_data: pd.DataFrame,
         path_to_destination: str,
-        order_of_columns: List[str]
+        order_of_columns: List[str],
+        *args
     ):
         """
         Save generated data to the path
