@@ -192,7 +192,7 @@ def test_postprocess_generated_data_with_one_json_column(rp_logger):
     Test the postprocessing of the flattened generated data contained one json column
     """
     rp_logger.info(
-        "Test the method '_postprocess_generated_data' fo the class PostprocessHandler "
+        "Test the method '_postprocess_generated_data' of the class PostprocessHandler "
         "for the flattened generated data with one json column"
     )
     path_to_metadata = (
@@ -249,8 +249,8 @@ def test_postprocess_generated_data_with_two_json_columns(rp_logger):
     Test the postprocessing of the flattened generated data contained two json columns
     """
     rp_logger.info(
-        "Test the method '_postprocess_generated_data' fo the class PostprocessHandler "
-        "for the flattened generated data with one json column"
+        "Test the method '_postprocess_generated_data' of the class PostprocessHandler "
+        "for the flattened generated data with two json columns"
     )
     path_to_metadata = (
         f"{DIR_NAME}/unit/processors/fixtures/"
