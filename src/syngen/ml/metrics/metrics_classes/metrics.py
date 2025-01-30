@@ -5,6 +5,13 @@ from collections import Counter
 import re
 import random
 
+import tensorflow as tf 
+
+
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans
+from sklearn.metrics import mean_absolute_error
+
 import tqdm
 from sklearn.cluster import KMeans
 from sklearn.metrics import davies_bouldin_score
