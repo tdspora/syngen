@@ -1,11 +1,10 @@
 import os
 import shutil
 from collections import Counter
-from typing import List, Tuple, Dict, Any, Optional, Callable, ClassVar
+from typing import List, Tuple, Dict, Any, Optional, Callable
 import json
 from json import JSONDecodeError
 from slugify import slugify
-from dataclasses import dataclass
 
 from loguru import logger
 import pandas as pd
