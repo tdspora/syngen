@@ -1,10 +1,11 @@
 import os
 import shutil
 from collections import Counter
-from typing import List, Tuple, Dict, Any, Optional, Callable
+from typing import List, Tuple, Dict, Any, Optional, Callable, ClassVar
 import json
 from json import JSONDecodeError
 from slugify import slugify
+from dataclasses import dataclass
 
 from loguru import logger
 import pandas as pd
@@ -12,7 +13,7 @@ import numpy as np
 from flatten_json import flatten, unflatten_list
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import fetch_unique_root
+from syngen.ml.utils import fetch_unique_root, timing
 from syngen.ml.context import get_context
 
 
@@ -21,7 +22,13 @@ PATH_TO_MODEL_ARTIFACTS = f"{os.getcwd()}/model_artifacts"
 
 class Processor:
     """
-    The base class for the preprocessing and postprocessing of the data
+    Base class for data preprocessing and postprocessing
+
+    Attributes:
+        metadata (Dict): Processing metadata
+        metadata_path (Optional[str]): Path to metadata file
+        table_name (Optional[str]): Name of the table being processed
+        loader (Optional[Callable]): Custom data loader function
     """
     def __init__(
         self,
@@ -97,31 +104,45 @@ class PreprocessHandler(Processor):
             os.system(f"python3 {path_to_script}")
 
     @staticmethod
+    @timing
     def _get_json_columns(data: pd.DataFrame) -> List[str]:
         """
         Get the list of columns which contain JSON data
+        Returns:
+            List[str]: List of column names containing valid JSON data
         """
-        json_columns = list()
-        for column in data.columns.to_list():
+
+        def is_json_column(series: pd.Series) -> bool:
+            if pd.isnull(series).all():
+                return False
             try:
-                if pd.isnull(data[column]).all():
-                    continue
-                data[column].dropna().apply(lambda v: json.loads(v))
-                json_columns.append(column)
+                series.dropna().apply(json.loads)
+                return True
             except (TypeError, JSONDecodeError):
-                continue
-        return json_columns
+                return False
+
+        return [col for col in data.columns if is_json_column(data[col])]
 
     @staticmethod
+    @timing
     def _get_artifacts(
-        data: pd.DataFrame,
-        json_columns: List,
-    ) -> Tuple[pd.DataFrame, Dict, List]:
+            data: pd.DataFrame,
+            json_columns: List[str]
+    ) -> Tuple[pd.DataFrame, Dict[str, List[str]], List[str]]:
         """
-        Flatten the JSON columns in the dataframe, and return the flattened dataframe,
-        the mapping of the flattened columns, and the list of duplicated columns
+        Flatten JSON columns in DataFrame and create mapping of original to flattened columns.
+
+        Args:
+            data (pd.DataFrame): Input DataFrame with JSON columns
+            json_columns (List[str]): List of columns containing JSON data
+
+        Returns:
+            Tuple containing:
+            - Flattened DataFrame
+            - Mapping of original columns to flattened columns
+            - List of duplicated column names
         """
-        df_list = list()
+        flattened_dfs = list()
         flattening_mapping = dict()
         for column in json_columns:
             flattened_data = pd.DataFrame(
@@ -131,8 +152,8 @@ class PreprocessHandler(Processor):
                 ]
             )
             flattening_mapping[column] = flattened_data.columns.to_list()
-            df_list.append(flattened_data)
-        flattened_data = pd.concat([data, *df_list], axis=1)
+            flattened_dfs.append(flattened_data)
+        flattened_data = pd.concat([data, *flattened_dfs], axis=1)
         duplicated_columns = [
             key
             for key, value in dict(Counter(flattened_data.columns.to_list())).items()
@@ -233,51 +254,82 @@ class PostprocessHandler(Processor):
             return flatten_metadata
 
     @staticmethod
-    def _check_none_values(x) -> bool:
+    def _check_none_values(x: Any) -> bool:
         """
-        Check if the value is None or np.NaN
-        """
-        return x is None or (isinstance(x, float) and np.isnan(x))
+        Check if the value should be treated as null/none.
 
-    def _remove_none_from_struct(self, input_data: Any):
+        Args:
+            x: Value to check
+
+        Returns:
+            bool: True if value should be treated as null/none
+
+        Note:
+            Handles None, np.NaN, and empty containers as null values
         """
-        Remove np.NaN or None values from the nested structure
+        if x is None:
+            return True
+        if isinstance(x, float) and np.isnan(x):
+            return True
+        if isinstance(x, (list, dict)) and not x:
+            return True
+        return False
+
+    def _remove_none_from_struct(self, input_data: Any) -> Any:
+        """
+        Remove np.NaN or None values from nested data structures.
+
+        Args:
+            input_data: Input data structure (list, dict, or scalar)
+
+        Returns:
+            Cleaned data structure with None values removed
         """
         if isinstance(input_data, list):
-            output = [
+            # Process list elements and filter empty results
+            return [
                 self._remove_none_from_struct(v)
                 for v in input_data
-                if not self._check_none_values(v) and v != {}
+                if not self._check_none_values(v)
             ]
-            output = [v for v in output if v != {}]
-            return output
-        elif isinstance(input_data, dict):
-            output = {
+
+        if isinstance(input_data, dict):
+            # Process dictionary items and filter empty results
+            return {
                 k: self._remove_none_from_struct(v)
                 for k, v in input_data.items()
-                if not self._check_none_values(v) and v != {}
+                if not self._check_none_values(v)
             }
-            return output
-        else:
-            return input_data
+
+        return input_data
 
     @staticmethod
-    def _restore_empty_values(df: pd.DataFrame):
+    @timing
+    def _restore_empty_values(df: pd.DataFrame) -> pd.DataFrame:
         """
-        Restore the empty dictionary values in the dataframe for nested fields
-        """
-        df = df.astype(object)
-        for i, row in df.iterrows():
-            for pos_col, col in enumerate(df.columns.to_list()):
-                if pd.isna(df.iloc[i, pos_col]):
-                    columns_set = set(df.columns)
-                    columns_set.remove(col)
-                    nested_fields = [
-                        "".join(i.split(f"{col}.")) for i in columns_set if f"{col}." in i
-                    ]
+        Restore empty dictionary values in the dataframe for nested fields.
 
-                    if nested_fields:
-                        df.at[i, col] = dict()
+        Args:
+            df: Input DataFrame with potentially empty nested fields
+
+        Returns:
+            pd.DataFrame: DataFrame with restored empty dictionary values
+        """
+        df = df.copy().astype(object)
+        columns = df.columns.tolist()
+
+        # Create a mapping of parent columns to their nested fields
+        parent_to_nested = {}
+        for col in columns:
+            for potential_parent in columns:
+                if f"{potential_parent}." in col:
+                    parent_to_nested.setdefault(potential_parent, []).append(col)
+
+        # Vectorized operation for each parent column
+        for parent_col, nested_fields in parent_to_nested.items():
+            mask = df[parent_col].isna() & df[nested_fields].notna().any(axis=1)
+            df.loc[mask, parent_col] = df.loc[mask, parent_col].apply(lambda _: {})
+
         return df
 
     @staticmethod

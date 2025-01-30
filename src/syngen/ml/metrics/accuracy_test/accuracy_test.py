@@ -203,9 +203,10 @@ class AccuracyTest(BaseTest):
         self.update_progress_bar("The correlations heatmap has been generated", delta)
 
         self.update_progress_bar("Generation of the clustering metric...")
-        clustering_result = round(
-            self.clustering.calculate_all(kwargs["categorical_columns"], kwargs["cont_columns"]), 4
+        clustering_result = self.clustering.calculate_all(
+            kwargs["categorical_columns"], kwargs["cont_columns"]
         )
+        clustering_result = round(clustering_result, 4) if clustering_result is not None else None
         logger.info(f"Mean clusters homogeneity is {clustering_result}")
         self.update_progress_bar("The clustering metric has been calculated", delta)
 
