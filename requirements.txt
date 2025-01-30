@@ -36,3 +36,4 @@ tqdm==4.66.3
 Werkzeug==3.1.2
 xlrd
 xlwt
+pythorch
