@@ -12,7 +12,7 @@ import numpy as np
 from flatten_json import flatten, unflatten_list
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import fetch_unique_root, timing
+from syngen.ml.utils import fetch_unique_root
 from syngen.ml.context import get_context
 
 
@@ -103,7 +103,6 @@ class PreprocessHandler(Processor):
             os.system(f"python3 {path_to_script}")
 
     @staticmethod
-    @timing
     def _get_json_columns(data: pd.DataFrame) -> List[str]:
         """
         Get the list of columns which contain JSON data
@@ -123,7 +122,6 @@ class PreprocessHandler(Processor):
         return [col for col in data.columns if is_json_column(data[col])]
 
     @staticmethod
-    @timing
     def _get_artifacts(
             data: pd.DataFrame,
             json_columns: List[str]
@@ -303,7 +301,6 @@ class PostprocessHandler(Processor):
         return input_data
 
     @staticmethod
-    @timing
     def _restore_empty_values(df: pd.DataFrame) -> pd.DataFrame:
         """
         Restore empty dictionary values in the dataframe for nested fields.

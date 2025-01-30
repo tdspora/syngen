@@ -1040,7 +1040,6 @@ class Clustering(BaseMetric):
         else:
             return 0
 
-    @timing
     def __get_optimal_number_of_clusters(self, dataset):
         """
         Calculate the optimal number of clusters using Davies-Bouldin score
@@ -1071,7 +1070,6 @@ class Clustering(BaseMetric):
 
         return transformed_dataset
 
-    @timing
     def __calculate_clusters(self, n):
         clusters = KMeans(n_clusters=n, random_state=10).fit(
             self.merged_transformed
