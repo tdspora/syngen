@@ -164,24 +164,6 @@ class StreamlitApp:
         if selected == "Basic":
             self.run_basic_page()
 
-def run():
-    """
-    Run the Streamlit app
-    """
-    os.environ["FERNET_KEY"] = Fernet.generate_key().decode("utf-8")
-    setup_ui()
-    with st.sidebar:
-        selected = option_menu("", ["Basic"],
-                               icons=["'play'"],
-                               default_index=0,
-                               menu_icon=None,
-                               styles={
-                                   "container": {"font-family": "Open Sans"}
-                               }
-                               )
-    if selected == "Basic":
-        run_basic_page()
-
 
 if __name__ == "__main__":
     StreamlitApp().run()
