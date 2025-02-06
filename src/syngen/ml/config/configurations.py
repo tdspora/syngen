@@ -252,7 +252,7 @@ class TrainConfig:
         """
         if os.getenv("FERNET_KEY") and os.getenv("IS_ENCRYPTED") == "0":
             encrypt(self.data, self.paths["input_data_path"])
-        DataLoader(self.paths["input_data_path"]).save_data(self.paths["input_data_path"], self.data)
+        DataLoader(self.paths["input_data_path"]).save_data(self.data)
 
     def _save_original_schema(self):
         """
