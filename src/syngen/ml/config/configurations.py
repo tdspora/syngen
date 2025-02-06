@@ -11,6 +11,7 @@ from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute
+from syngen.ml.utils import encrypt
 
 
 @dataclass
@@ -249,7 +250,9 @@ class TrainConfig:
         """
         Save the subset of the original data
         """
-        DataLoader(self.paths["input_data_path"]).save_data(self.data)
+        if os.getenv("FERNET_KEY") and os.getenv("IS_ENCRYPTED") == "0":
+            encrypt(self.data, self.paths["input_data_path"])
+        DataLoader(self.paths["input_data_path"]).save_data(self.paths["input_data_path"], self.data)
 
     def _save_original_schema(self):
         """

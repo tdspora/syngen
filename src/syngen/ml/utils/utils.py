@@ -14,6 +14,8 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
+from cryptography.fernet import Fernet
+
 
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
@@ -457,3 +459,26 @@ def validate_parameter_reports(report_types: list, full_list: list) -> Callable:
 
         return list(input_values)
     return validator
+
+
+def get_fernet():
+    _fernet = Fernet(os.environ["FERNET_KEY"])
+
+    return _fernet
+
+
+def encrypt(data, path: str):
+    f = get_fernet()
+    v: bytes = bytes(data, "utf-8")
+    data = f.encrypt(v)
+    with open(path, "wb") as encrypted_file:
+        encrypted_file.write(data)
+
+
+def decrypt(path: str):
+    f = get_fernet()
+    with open(path, "rb") as encrypted_file:
+        data = encrypted_file.read()
+
+    decrypted_data = f.decrypt(data)
+    return decrypted_data, {"fields": {}, "format": "CSV"}

@@ -23,5 +23,8 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     check_if_logs_available,
     get_initial_table_name,
     validate_parameter_reports,
-    timing
+    timing,
+    get_fernet,
+    encrypt,
+    decrypt
 )
