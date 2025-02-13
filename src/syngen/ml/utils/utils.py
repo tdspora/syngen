@@ -390,6 +390,9 @@ def setup_logger():
 
 
 def setup_log_process(log_level: str, table_name: Optional[str], metadata_path: Optional[str]):
+    """
+    Set up the logging process with the specified level
+    """
     os.environ["LOGURU_LEVEL"] = log_level
     set_log_path(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
     setup_logger()
