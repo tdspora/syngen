@@ -8,6 +8,7 @@ from datetime import datetime
 import pandas as pd
 from loguru import logger
 from slugify import slugify
+from cryptography.fernet import Fernet
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute
@@ -250,8 +251,8 @@ class TrainConfig:
         """
         Save the subset of the original data
         """
-        if os.getenv("FERNET_KEY") and os.getenv("IS_ENCRYPTED") == "0":
-            encrypt(self.data, self.paths["input_data_path"])
+        os.environ["FERNET_KEY"] = Fernet.generate_key().decode("utf-8")
+        encrypt(self.data, self.paths["input_data_path"])
         DataLoader(self.paths["input_data_path"]).save_data(self.data)
 
     def _save_original_schema(self):
