@@ -389,6 +389,12 @@ def setup_logger():
     logger.add(file_sink, level=os.getenv("LOGURU_LEVEL"))
 
 
+def setup_log_process(log_level: str, table_name: Optional[str], metadata_path: Optional[str]):
+    os.environ["LOGURU_LEVEL"] = log_level
+    set_log_path(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
+    setup_logger()
+
+
 def check_if_logs_available():
     """
     Check if the logs are available and

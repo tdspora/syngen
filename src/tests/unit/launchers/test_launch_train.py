@@ -48,7 +48,7 @@ def test_train_table_with_metadata_path(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.setup_logger")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_metadata_path_and_source(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
@@ -73,7 +73,7 @@ def test_train_table_with_metadata_path_and_source(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.setup_logger")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_metadata_path_and_table_name(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
@@ -98,7 +98,7 @@ def test_train_table_with_metadata_path_and_table_name(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.setup_logger")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_metadata_path_and_table_name_and_source(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
