@@ -482,6 +482,9 @@ def validate_parameter_reports(report_types: list, full_list: list) -> Callable:
 def get_fernet():
     _fernet = Fernet(os.environ["FERNET_KEY"])
 
+    if not _fernet:
+        _fernet = Fernet.generate_key()
+
     return _fernet
 
 
