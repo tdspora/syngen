@@ -100,7 +100,12 @@ def launch_infer(
     -------
 
     """
-    setup_log_process(log_level, table_name, metadata_path)
+    setup_log_process(
+        type_of_process="infer",
+        log_level=log_level,
+        table_name=table_name,
+        metadata_path=metadata_path
+    )
     if not metadata_path and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "
