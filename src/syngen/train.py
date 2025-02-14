@@ -8,9 +8,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
-    setup_logger,
-    set_log_path,
-    check_if_logs_available
+    check_if_logs_available,
+    setup_log_process
 )
 from syngen.ml.utils import validate_parameter_reports
 from syngen.ml.validation_schema import ReportTypes
@@ -118,9 +117,12 @@ def launch_train(
     -------
 
     """
-    os.environ["LOGURU_LEVEL"] = log_level
-    set_log_path(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
-    setup_logger()
+    setup_log_process(
+        type_of_process="train",
+        log_level=log_level,
+        table_name=table_name,
+        metadata_path=metadata_path
+    )
     if not metadata_path and not source and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' "

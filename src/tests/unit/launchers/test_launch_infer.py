@@ -43,7 +43,7 @@ def test_infer_table_with_metadata_path(
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.infer.setup_logger")
+@patch("syngen.infer.setup_log_process")
 def test_infer_table_with_metadata_path_and_table_name(
     mock_logger, mock_post_init, mock_launch_infer, rp_logger, caplog
 ):
