@@ -203,9 +203,10 @@ class AccuracyTest(BaseTest):
         self.update_progress_bar("The correlations heatmap has been generated", delta)
 
         self.update_progress_bar("Generation of the clustering metric...")
-        clustering_result = round(
-            self.clustering.calculate_all(kwargs["categorical_columns"], kwargs["cont_columns"]), 4
+        clustering_result = self.clustering.calculate_all(
+            kwargs["categorical_columns"], kwargs["cont_columns"]
         )
+        clustering_result = round(clustering_result, 4) if clustering_result is not None else None
         logger.info(f"Mean clusters homogeneity is {clustering_result}")
         self.update_progress_bar("The clustering metric has been calculated", delta)
 
@@ -268,8 +269,12 @@ class AccuracyTest(BaseTest):
             utility_barplot=transform_to_base64(
                 f"{self.reports_path}/utility_barplot.svg"
             ),
-            utility_table=utility_result.to_html(),
-            is_data_available=False if utility_result.empty else True,
+            utility_table=utility_result.to_html() if utility_result is not None else None,
+            is_data_available=(
+                False
+                if utility_result is None or (utility_result is not None and utility_result.empty)
+                else True
+            ),
             table_name=self.table_name,
             training_config=train_config,
             inference_config=infer_config,
@@ -296,9 +301,14 @@ class AccuracyTest(BaseTest):
         ) = metrics
         MlflowTracker().log_metrics(
             {
-                "Utility_avg": utility_result["Synth to orig ratio"].mean(),
-                "Clustering": clustering_result if clustering_result is not None
-                else np.NaN,
+                "Utility_avg": (
+                    utility_result["Synth to orig ratio"].mean()
+                    if utility_result is not None else None
+                ),
+                "Clustering": (
+                    clustering_result
+                    if clustering_result is not None else np.NaN
+                ),
                 "Accuracy": acc_median,
                 "Correlation": corr_result,
             }

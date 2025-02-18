@@ -8,9 +8,9 @@ from loguru import logger
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
-    check_if_logs_available
+    check_if_logs_available,
+    validate_parameter_reports
 )
-from syngen.ml.utils import validate_parameter_reports
 from syngen.ml.validation_schema import ReportTypes
 
 
@@ -21,7 +21,12 @@ validate_reports = validate_parameter_reports(
 
 
 @click.command()
-@click.option("--metadata_path", type=str, default=None, help="Path to the metadata file")
+@click.option(
+    "--metadata_path",
+    type=str,
+    default=None,
+    help="Path to the metadata file"
+)
 @click.option(
     "--size",
     default=100,

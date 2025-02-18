@@ -238,9 +238,7 @@ def test_train_table_with_invalid_drop_null(rp_logger):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_row_limit(
-    mock_post_init, mock_launch_train, rp_logger
-):
+def test_train_table_with_valid_row_limit(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
         "Launch train process through CLI with valid 'row_limit' parameter equals 100"
     )
@@ -377,9 +375,7 @@ def test_train_table_with_redundant_parameter_reports(prior_value, value, rp_log
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_batch_size(
-    mock_post_init, mock_launch_train, rp_logger
-):
+def test_train_table_with_valid_batch_size(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
         "Launch train process through CLI with valid 'batch_size' parameter equals 100"
     )

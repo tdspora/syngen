@@ -5,6 +5,7 @@ from marshmallow.exceptions import ValidationError
 
 from syngen.ml.worker import Worker
 from syngen.ml.config import Validator
+from syngen.ml.processors import PreprocessHandler
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
@@ -94,7 +95,7 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
 
 
 @patch.object(Validator, "run")
-def test_init_worker_with_metadata_path(rp_logger):
+def test_init_worker_with_metadata_path(mock_validator_run, rp_logger):
     """
     Test the initialization of 'Worker' class with the metadata path
     """
@@ -142,11 +143,14 @@ def test_init_worker_with_metadata_path(rp_logger):
             "format": {}
         },
     }
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "run")
-def test_init_worker_with_empty_settings_in_metadata_in_train_process(rp_logger):
+def test_init_worker_with_empty_settings_in_metadata_in_train_process(
+    mock_validator_run, rp_logger
+):
     """
     Test the initialization during the training process
     of 'Worker' class with metadata contained the information of one table
@@ -187,11 +191,14 @@ def test_init_worker_with_empty_settings_in_metadata_in_train_process(rp_logger)
             "format": {}
         },
     }
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "run")
-def test_init_worker_with_empty_settings_in_metadata_in_infer_process(rp_logger):
+def test_init_worker_with_empty_settings_in_metadata_in_infer_process(
+    mock_validator_run, rp_logger
+):
     """
     Test the initialization during the inference process
     of 'Worker' class with metadata contained the information of one table
@@ -232,11 +239,14 @@ def test_init_worker_with_empty_settings_in_metadata_in_infer_process(rp_logger)
             "format": {}
         },
     }
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
+def test_init_worker_for_training_with_metadata_with_global_settings(
+    mock_validator_run, rp_logger
+):
     """
     Test the initialization of 'Worker' class during the training process
     with the metadata contained related tables and global settings
@@ -305,11 +315,14 @@ def test_init_worker_for_training_with_metadata_with_global_settings(rp_logger):
             "format": {}
         },
     }
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger):
+def test_init_worker_for_inference_with_metadata_with_global_settings(
+    mock_validator_run, rp_logger
+):
     """
     Test the initialization of 'Worker' class during an inference process
     with metadata contained the information of related tables with the global settings
@@ -378,6 +391,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(rp_logger)
             "format": {}
         },
     }
+    mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1451,6 +1465,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
+@patch.object(PreprocessHandler, "run")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1470,6 +1485,7 @@ def test_train_tables_without_generation_reports(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_preprocess_handler_run,
     mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -1497,6 +1513,7 @@ def test_train_tables_without_generation_reports(
     mock_check_completion_of_training.assert_not_called()
     mock_check_existence_of_destination.assert_not_called()
     mock_validate_metadata.assert_called_once_with("test_table")
+    mock_preprocess_handler_run.assert_called_once()
     mock_train_table.assert_called_once_with(
         "test_table",
         {
@@ -1536,6 +1553,7 @@ def test_train_tables_without_generation_reports(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
+@patch.object(PreprocessHandler, "run")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1555,6 +1573,7 @@ def test_train_tables_with_generation_reports(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_prepocess_handler_run,
     mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -1582,6 +1601,7 @@ def test_train_tables_with_generation_reports(
     mock_check_completion_of_training.assert_not_called()
     mock_check_existence_of_destination.assert_not_called()
     mock_validate_metadata.assert_called_once_with("test_table")
+    mock_prepocess_handler_run.assert_called_once()
     mock_train_table.assert_called_once_with(
         "test_table",
         {
