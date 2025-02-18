@@ -497,7 +497,7 @@ def encrypt(data, path: str):
 
 
 def decrypt(path: str):
-    f = get_fernet()
+    f = Fernet(os.environ["FERNET_KEY"])
     with open(path, "rb") as encrypted_file:
         data = encrypted_file.read()
 

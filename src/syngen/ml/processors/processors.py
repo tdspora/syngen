@@ -12,7 +12,7 @@ import numpy as np
 from flatten_json import flatten, unflatten_list
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import fetch_unique_root
+from syngen.ml.utils import fetch_unique_root, encrypt
 from syngen.ml.context import get_context
 
 
@@ -189,7 +189,7 @@ class PreprocessHandler(Processor):
             f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/{slugify(table_name)}/"
             f"input_data_{slugify(table_name)}.pkl"
         )
-        DataLoader(path_to_input_data).save_data(flattened_data)
+        encrypt(flattened_data, path_to_input_data)
 
     def _handle_json_columns(self):
         """

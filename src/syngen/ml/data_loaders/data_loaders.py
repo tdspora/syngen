@@ -93,7 +93,7 @@ class DataLoader(BaseDataLoader):
 
     def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         try:
-            if kwargs("decrypt", False):
+            if kwargs.get("decrypt", False):
                 df, schema = decrypt(path=self.path)
             else:
                 df, schema = self.file_loader.load_data(**kwargs)

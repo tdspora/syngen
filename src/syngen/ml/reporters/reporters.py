@@ -23,7 +23,7 @@ from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.metrics.utils import text_to_continuous
 from syngen.ml.mlflow_tracker import MlflowTracker
-from syngen.ml.utils import ProgressBarHandler
+from syngen.ml.utils import ProgressBarHandler, decrypt
 
 
 class Reporter:
@@ -65,7 +65,7 @@ class Reporter:
         if self.loader:
             original = self._fetch_dataframe()
         else:
-            original, schema = DataLoader(self.paths["original_data_path"]).load_data()
+            original, schema = decrypt(self.paths["original_data_path"])
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
         return original, synthetic
 
@@ -348,7 +348,7 @@ class SampleAccuracyReporter(Reporter):
 
     def _extract_report_data(self):
         original, schema = DataLoader(self.paths["source_path"]).load_data()
-        sampled, schema = DataLoader(self.paths["input_data_path"]).load_data()
+        sampled, schema = decrypt(self.paths["input_data_path"])
         return original, sampled
 
     def report(self):

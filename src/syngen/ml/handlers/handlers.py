@@ -80,7 +80,7 @@ class BaseHandler(AbstractHandler):
         data = pd.DataFrame()
         schema = None
         if data_loader.has_existed_path:
-            data, schema = data_loader.load_data()
+            data, schema = decrypt(self.paths["input_data_path"])
         elif self.loader:
             data, schema = DataFrameFetcher(
                 loader=self.loader,

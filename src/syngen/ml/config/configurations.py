@@ -10,7 +10,7 @@ from loguru import logger
 from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import slugify_attribute, fetch_unique_root
+from syngen.ml.utils import slugify_attribute, fetch_unique_root, decrypt
 from syngen.ml.convertor import CSVConvertor
 
 
@@ -115,9 +115,8 @@ class TrainConfig:
         Return dataframe and schema of original data
         """
         if os.path.exists(self.paths["path_to_flatten_metadata"]):
-            data, schema = DataLoader(self.paths["input_data_path"]).load_data()
+            data, schema = decrypt(self.paths["input_data_path"])
             self.original_schema = DataLoader(self.paths["input_data_path"]).original_schema
-            schema = CSVConvertor.schema
             return data, schema
         else:
             data_loader = DataLoader(self.source)
