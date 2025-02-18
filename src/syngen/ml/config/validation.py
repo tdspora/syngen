@@ -9,6 +9,7 @@ from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
+from syngen.ml.utils import fetch_unique_root
 
 
 @dataclass
@@ -286,9 +287,8 @@ class Validator:
         """
         metadata_of_table = self.merged_metadata[table_name]
         format_settings = metadata_of_table.get("format", {})
-        return DataLoader(
-            metadata_of_table["train_settings"]["source"]
-        ).get_columns(**format_settings)
+        path_to_source = self._fetch_path_to_source(table_name)
+        return DataLoader(path_to_source).get_columns(**format_settings)
 
     def _gather_existed_columns(self, table_name: str):
         """
@@ -298,15 +298,33 @@ class Validator:
         existed_columns = self._fetch_existed_columns(table_name)
         self.existed_columns_mapping[table_name] = existed_columns
 
-    def _run(self):
+    def preprocess_metadata(self):
         """
-        Run the validation process
+        Preprocess the metadata, set the metadata and the merged metadata
         """
         self._launch_validation_of_schema()
         self._define_mapping()
         self._merge_metadata()
         self.merged_metadata.pop("global", None)
         self.metadata.pop("global", None)
+
+    def _fetch_path_to_source(self, table_name):
+        """
+        Fetch the path to the source of the certain table
+        """
+        if os.path.exists(
+            f"{os.getcwd()}/model_artifacts/tmp_store/flatten_configs/flatten_metadata_"
+            f"{fetch_unique_root(table_name, self.metadata_path)}.json"
+        ):
+            return (f"{os.getcwd()}/model_artifacts/tmp_store/{slugify(table_name)}/"
+                    f"input_data_{slugify(table_name)}.pkl")
+        return self.metadata[table_name]["train_settings"]["source"]
+
+    def _run(self):
+        """
+        Run the validation process
+        """
+        self.preprocess_metadata()
 
         if self.type_of_process == "train" and self.validation_source:
             for table_name in self.merged_metadata.keys():

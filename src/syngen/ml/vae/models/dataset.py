@@ -606,10 +606,10 @@ class Dataset(BaseDataset):
             self.long_text_columns = (self.long_text_columns - self.categorical_columns
                                       - self.binary_columns)
             if self.long_text_columns:
-                list_of_long_text_columns = [f'"{column}"' for column in self.long_text_columns]
+                list_of_long_text_columns = [f"'{column}'" for column in self.long_text_columns]
                 logger.info(
-                    f"Please note that the columns - {list_of_long_text_columns} contain "
-                    f"long texts (> 200 symbols). Such texts' handling consumes "
+                    f"Please note that the columns - {', '.join(list_of_long_text_columns)} "
+                    f"contain long texts (> 200 symbols). Such texts' handling consumes "
                     f"significant resources and results in poor quality content, "
                     f"therefore this column(-s) will be generated using "
                     f"a simplified statistical approach"
@@ -628,7 +628,11 @@ class Dataset(BaseDataset):
             email_pattern = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
 
             # Vectorized operation to check for email pattern
-            email_mask = data_subset.apply(lambda col: col.str.contains(email_pattern, na=False))
+            email_mask = data_subset.apply(
+                lambda col: col.apply(
+                    lambda x: isinstance(x, str) and bool(re.search(email_pattern, x))
+                )
+            )
 
             # Count the number of emails in each column
             count_emails = email_mask.sum(axis=0)
@@ -656,9 +660,9 @@ class Dataset(BaseDataset):
         Check if uuid_to_test is a valid ULID (https://github.com/ulid/spec)
         """
         # ULID pattern check using regex
-        if not re.match(r'^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$', uuid):
-            return
         try:
+            if not re.match(r'^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$', uuid):
+                return
             ulid_timestamp = uuid[:10]
             ulid_timestamp_int = base32_crockford.decode(ulid_timestamp)
             datetime.fromtimestamp(ulid_timestamp_int / 1000.0)

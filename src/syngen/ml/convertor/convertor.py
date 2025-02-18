@@ -106,7 +106,7 @@ class CSVConvertor(Convertor):
     """
     Class for supporting custom schema for csv files
     """
-    schema = {"fields": {}, "format": "CSV"}
+    schema: Dict = {"fields": {}, "format": "CSV"}
 
     def __init__(self, df):
         schema = {"fields": {}, "format": "CSV"}

@@ -500,6 +500,10 @@ class BinaryLoader(BaseDataLoader):
         with open(self.path, "rb") as f:
             return pkl.load(f)
 
+    def get_columns(self) -> List[str]:
+        data, schema = self.load_data()
+        return data.columns.tolist()
+
     def load_data(self) -> Tuple[pd.DataFrame, None]:
         return self._load_data(), None
 

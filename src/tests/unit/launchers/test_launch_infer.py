@@ -15,9 +15,7 @@ INFER_REPORT_TYPES = ReportTypes().infer_report_types
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_table_name(
-    mock_post_init, mock_launch_infer, rp_logger
-):
+def test_infer_table_with_table_name(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info("Launch infer process through CLI with parameter '--table_name'")
     runner = CliRunner()
     result = runner.invoke(launch_infer, ["--table_name", TABLE_NAME])
@@ -29,9 +27,7 @@ def test_infer_table_with_table_name(
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_metadata_path(
-    mock_post_init, mock_launch_infer, rp_logger
-):
+def test_infer_table_with_metadata_path(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info("Launch infer process through CLI with parameter '--metadata_path'")
     runner = CliRunner()
     result = runner.invoke(launch_infer, ["--metadata_path", PATH_TO_METADATA])
@@ -82,9 +78,7 @@ def test_infer_table_without_parameters(rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_valid_size(
-        mock_post_init, mock_launch_infer, rp_logger
-):
+def test_infer_table_with_valid_size(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info(
         "Launch infer process through CLI with valid 'size' parameter equals 10"
     )
@@ -108,9 +102,7 @@ def test_infer_table_with_invalid_size(rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_valid_run_parallel(
-    mock_post_init, mock_launch_infer, rp_logger
-):
+def test_infer_table_with_valid_run_parallel(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info(
         "Launch infer process through CLI with valid 'run_parallel' parameter equals True"
     )
@@ -136,9 +128,7 @@ def test_infer_table_with_invalid_run_parallel(rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_valid_batch_size(
-        mock_post_init, mock_launch_infer, rp_logger
-):
+def test_infer_table_with_valid_batch_size(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info(
         "Launch infer process through CLI with valid 'batch_size' parameter equals 100"
     )
@@ -162,9 +152,7 @@ def test_infer_table_with_invalid_batch_size(rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_valid_random_seed(
-    mock_post_init, mock_launch_infer, rp_logger
-):
+def test_infer_table_with_valid_random_seed(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info(
         "Launch infer process through CLI with valid 'random_seed' parameter equals 1"
     )

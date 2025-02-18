@@ -15,11 +15,7 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
     ]
 )
 @patch.object(TrainConfig, "_save_input_data")
-@patch.object(TrainConfig, "_remove_existed_artifacts")
-@patch.object(TrainConfig, "_prepare_dirs")
 def test_init_train_config(
-    mock_prepare_dirs,
-    mock_remove_existed_artifacts,
     mock_save_input_data,
     drop_null,
     row_limit,
@@ -46,6 +42,7 @@ def test_init_train_config(
         row_limit=row_limit,
         table_name=table_name,
         metadata=metadata,
+        metadata_path=None,
         reports=expected_reports,
         batch_size=32,
         loader=None
@@ -57,6 +54,7 @@ def test_init_train_config(
     assert train_config.row_limit == row_limit
     assert train_config.table_name == table_name
     assert train_config.metadata == metadata
+    assert train_config.metadata_path is None
     assert train_config.reports == expected_reports
     assert train_config.batch_size == 32
     assert train_config.loader is None
@@ -168,20 +166,20 @@ def test_init_infer_config_with_existed_input_data_in_train_process(mocker, rp_l
     mocker.patch("syngen.ml.data_loaders.DataLoader.has_existed_path", return_value=True)
 
     infer_config = InferConfig(
-            destination="path/to/destination.csv",
-            metadata=metadata,
-            metadata_path="path/to/metadata.yaml",
-            size=100,
-            table_name=table_name,
-            run_parallel=False,
-            batch_size=100,
-            random_seed=None,
-            reports=["accuracy"],
-            both_keys=True,
-            log_level="DEBUG",
-            loader=None,
-            type_of_process="train"
-        )
+        destination="path/to/destination.csv",
+        metadata=metadata,
+        metadata_path="path/to/metadata.yaml",
+        size=100,
+        table_name=table_name,
+        run_parallel=False,
+        batch_size=100,
+        random_seed=None,
+        reports=["accuracy"],
+        both_keys=True,
+        log_level="DEBUG",
+        loader=None,
+        type_of_process="train"
+    )
 
     assert infer_config.reports == ["accuracy"]
 
@@ -245,6 +243,7 @@ def test_get_state_of_train_config(rp_logger):
                 }
             }
         },
+        metadata_path=None,
         reports=["accuracy", "sample"],
         batch_size=32,
         loader=lambda x: pd.DataFrame()
@@ -256,6 +255,7 @@ def test_get_state_of_train_config(rp_logger):
         "row_limit",
         "table_name",
         "metadata",
+        "metadata_path",
         "reports",
         "batch_size"
     }
@@ -299,6 +299,7 @@ def test_preprocess_data(
                 }
             }
         },
+        metadata_path=None,
         reports=["accuracy", "sample"],
         batch_size=32,
         loader=None
@@ -368,6 +369,7 @@ def test_check_reports_in_train_config(
                 }
             }
         },
+        metadata_path=None,
         reports=["accuracy", "sample"],
         batch_size=32,
         loader=None

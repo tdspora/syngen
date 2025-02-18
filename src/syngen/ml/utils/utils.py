@@ -327,7 +327,7 @@ def fetch_config(config_pickle_path: str):
         return pkl.load(f)
 
 
-def fetch_unique_root(table_name: str, metadata_path: str):
+def fetch_unique_root(table_name: Optional[str], metadata_path: Optional[str]):
     """
     Construct the unique constant substring for use in the name of the experiment and log file
     """

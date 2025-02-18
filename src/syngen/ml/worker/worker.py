@@ -1,12 +1,12 @@
 from typing import Dict, List, Optional, Any, Callable, Literal
+import os
+from itertools import product
 
 import pandas as pd
 from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
-import os
-from itertools import product
 
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
@@ -17,6 +17,7 @@ from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.validation_schema import ReportTypes
+from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 
 
 @define
@@ -58,6 +59,27 @@ class Worker:
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
+
+    def __preprocess_data(self):
+        """
+        Preprocess the data before a training process
+        """
+        PreprocessHandler(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            table_name=self.table_name,
+            loader=self.loader
+        ).run()
+
+    def __postprocess_data(self):
+        """
+        Postprocess the data after an inference process
+        """
+        PostprocessHandler(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            table_name=self.table_name
+        ).run()
 
     def _set_mlflow(self):
         """
@@ -291,6 +313,7 @@ class Worker:
 
         TrainStrategy().run(
             metadata=metadata,
+            metadata_path=self.metadata_path,
             source=train_settings.get("source"),
             epochs=train_settings["epochs"],
             drop_null=train_settings["drop_null"],
@@ -323,6 +346,8 @@ class Worker:
         the tuple included the list of tables and metadata for inference process
         """
         delta = 0.49 / len(tables_for_training)
+
+        self.__preprocess_data()
 
         for table in tables_for_training:
             self._train_table(table, metadata_for_training, delta)
@@ -411,6 +436,7 @@ class Worker:
         """
 
         non_surrogate_tables = [table for table in tables if table not in self.divided]
+
         for table in non_surrogate_tables:
             self._infer_table(
                 table=table,
@@ -418,6 +444,8 @@ class Worker:
                 type_of_process=type_of_process,
                 delta=delta
             )
+
+        self.__postprocess_data()
 
         tables_mapping = self._get_surrogate_tables_mapping()
         for table_root in tables_mapping.keys():
