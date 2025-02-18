@@ -8,8 +8,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
-    setup_logger,
-    set_log_path,
+    setup_log_process,
     check_if_logs_available,
     validate_parameter_reports
 )
@@ -118,9 +117,12 @@ def launch_train(
     -------
 
     """
-    os.environ["LOGURU_LEVEL"] = log_level
-    set_log_path(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
-    setup_logger()
+    setup_log_process(
+        type_of_process="train",
+        log_level=log_level,
+        table_name=table_name,
+        metadata_path=metadata_path
+    )
     if not metadata_path and not source and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' "
@@ -182,8 +184,18 @@ def launch_train(
     worker.launch_train()
 
 
+def preprocess_data():
+    """
+    Preprocess the data before the training process
+    """
+    path_to_script = f"{os.getcwd()}/model_artifacts/script.py"
+    if os.path.exists(path_to_script):
+        os.system(f"python3 {path_to_script}")
+
+
 if __name__ == "__main__":
     try:
+        preprocess_data()
         launch_train()
     except Exception as e:
         log_file = os.getenv("SUCCESS_LOG_FILE")

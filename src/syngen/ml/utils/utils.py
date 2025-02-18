@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable
+from typing import List, Dict, Optional, Union, Set, Callable, Literal
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -387,6 +387,24 @@ def setup_logger():
     logger.remove()
     logger.add(console_sink, colorize=True, level=os.getenv("LOGURU_LEVEL"))
     logger.add(file_sink, level=os.getenv("LOGURU_LEVEL"))
+
+
+def setup_log_process(
+    type_of_process: Literal["train", "infer"],
+    log_level: str,
+    table_name: Optional[str],
+    metadata_path: Optional[str]
+):
+    """
+    Set up the logging process with the specified level
+    """
+    os.environ["LOGURU_LEVEL"] = log_level
+    set_log_path(
+        type_of_process=type_of_process,
+        table_name=table_name,
+        metadata_path=metadata_path
+    )
+    setup_logger()
 
 
 def check_if_logs_available():

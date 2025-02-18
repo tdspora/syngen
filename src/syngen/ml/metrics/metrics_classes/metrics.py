@@ -28,7 +28,6 @@ from loguru import logger
 
 from syngen.ml.utils import (
     timestamp_to_datetime,
-    timing,
     fetch_config
 )
 matplotlib.use("Agg")
