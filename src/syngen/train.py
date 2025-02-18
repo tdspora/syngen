@@ -184,18 +184,8 @@ def launch_train(
     worker.launch_train()
 
 
-def preprocess_data():
-    """
-    Preprocess the data before the training process
-    """
-    path_to_script = f"{os.getcwd()}/model_artifacts/script.py"
-    if os.path.exists(path_to_script):
-        os.system(f"python3 {path_to_script}")
-
-
 if __name__ == "__main__":
     try:
-        preprocess_data()
         launch_train()
     except Exception as e:
         log_file = os.getenv("SUCCESS_LOG_FILE")
