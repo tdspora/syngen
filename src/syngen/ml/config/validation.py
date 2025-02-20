@@ -298,7 +298,7 @@ class Validator:
         existed_columns = self._fetch_existed_columns(table_name)
         self.existed_columns_mapping[table_name] = existed_columns
 
-    def preprocess_metadata(self):
+    def _preprocess_metadata(self):
         """
         Preprocess the metadata, set the metadata and the merged metadata
         """
@@ -318,14 +318,12 @@ class Validator:
         ):
             return (f"{os.getcwd()}/model_artifacts/tmp_store/{slugify(table_name)}/"
                     f"input_data_{slugify(table_name)}.pkl")
-        return self.metadata[table_name]["train_settings"]["source"]
+        return self.merged_metadata[table_name]["train_settings"]["source"]
 
     def _run(self):
         """
         Run the validation process
         """
-        self.preprocess_metadata()
-
         if self.type_of_process == "train" and self.validation_source:
             for table_name in self.merged_metadata.keys():
                 self._gather_existed_columns(table_name)
@@ -363,5 +361,6 @@ class Validator:
         """
         Run the validation process
         """
+        self._preprocess_metadata()
         self._run()
         self._collect_errors()
