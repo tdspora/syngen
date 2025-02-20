@@ -25,7 +25,8 @@ from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
     get_initial_table_name,
-    ProgressBarHandler
+    ProgressBarHandler,
+    decrypt
 )
 from syngen.ml.context import get_context
 

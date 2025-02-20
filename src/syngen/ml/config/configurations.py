@@ -10,8 +10,7 @@ from loguru import logger
 from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import slugify_attribute, fetch_unique_root, decrypt
-from syngen.ml.convertor import CSVConvertor
+from syngen.ml.utils import slugify_attribute, fetch_unique_root, encrypt, decrypt
 
 
 @dataclass
