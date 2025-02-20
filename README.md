@@ -75,7 +75,8 @@ train --source PATH_TO_ORIGINAL_CSV \
     --row_limit INT \
     --drop_null BOOL \
     --reports STR \
-    --batch_size INT
+    --batch_size INT \
+    --log_level STR
 ```
 
 *Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
@@ -111,6 +112,7 @@ Parameters that you can set up for training process:
 - <i>reports</i> - controls the generation of quality reports, might require significant time for big tables (>10000 rows)
 - <i>metadata_path</i> – a path to the metadata file containing the metadata
 - <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
+- <i>log_level</i> - logging level for the process
 
 Requirements for parameters of training process:
 * <i>source</i> - data type - string
@@ -122,7 +124,7 @@ Requirements for parameters of training process:
 * <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sample reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sample report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>"none"</i>. In the metadata file multiple values can be specified as a list of available options (<i>"accuracy"</i>, <i>"sample"</i>, <i>"metrics_only"</i>) to generate multiple types of reports simultaneously, e.g. [<i>"metrics_only"</i>, <i>"sample"</i>]
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
-
+* <i>log_level</i> - data type - string, must be one of the next values - *TRACE*, *"DEBUG"*, *"INFO"*, *"WARNING"*, *"ERROR"*, *"CRITICAL"*, default value is *"INFO"*
 ### Inference (generation)
 
 You can customize the inference processes by calling for one table:
@@ -133,7 +135,8 @@ infer --size INT \
     --run_parallel BOOL \
     --batch_size INT \
     --random_seed INT \
-    --reports STR
+    --reports STR \
+    --log_level STR
 ```
 
 *Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
@@ -165,6 +168,7 @@ The parameters which you can set up for generation process:
 - <i>random_seed</i> – if specified, generates a reproducible result
 - <i>reports</i> - controls the generation of quality reports, might require significant time for big generated tables (>10000 rows)
 - <i>metadata_path</i> – a path to metadata file
+- <i>log_level</i> - logging level for the process
 
 Requirements for parameters of generation process:
 * <i>size</i> - data type - integer, must be equal to or more than 1, default value is 100
@@ -174,20 +178,10 @@ Requirements for parameters of generation process:
 * <i>random_seed</i> - data type - integer, must be equal to or more than 0
 * <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates an accuracy report, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>"none"</i>. In the metadata file multiple values can be specified as a list of available options (<i>"accuracy"</i>, <i>"metrics_only"</i>) to generate multiple types of reports simultaneously
 * <i>metadata_path</i> - data type - string
+* <i>log_level</i> - data type - string, must be one of the next values - *TRACE*, *"DEBUG"*, *"INFO"*, *"WARNING"*, *"ERROR"*, *"CRITICAL"*, default value is *"INFO"*
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
 will be ignored.
-
-*Note:* If you want to set the logging level, you can use the parameter <i>log_level</i> in the CLI call:
-
-```bash
-train --source STR --table_name STR --log_level STR
-train --metadata_path STR --log_level STR
-infer --size INT --table_name STR --log_level STR
-infer --metadata_path STR --log_level STR
-```
-
-where <i>log_level</i> might be one of the following values: <i>TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
 
 ### Linked tables generation
 
