@@ -6,7 +6,7 @@ global:                                 # In this section you can specify traini
   infer_settings:
     run_parallel: false
     random_seed: 10
-    print_report: true
+    reports: all
 
 housing_properties:                       # Use table name here
   train_settings:                         # Settings for training process

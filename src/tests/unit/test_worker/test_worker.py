@@ -1,11 +1,10 @@
 from unittest.mock import patch, MagicMock
 import pytest
 
-from marshmallow.exceptions import ValidationError
-
 from syngen.ml.worker import Worker
 from syngen.ml.config import Validator
 from syngen.ml.processors import PreprocessHandler
+from syngen.ml.utils import ValidationError
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
