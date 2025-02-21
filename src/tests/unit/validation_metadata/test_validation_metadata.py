@@ -2475,7 +2475,7 @@ def test_validate_metadata_of_related_tables_with_missed_pk_key_in_parent_table_
         assert (
             "The information about columns of the primary or unique key "
             "associated with the columns of the 'FK' key - 'fk_id' "
-            "weren't found in the metadata of the parent table"
+            "wasn't found in the metadata of the parent table"
         ) in str(error.value)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -2617,7 +2617,7 @@ def test_validate_metadata_of_related_tables_with_missed_pk_key_in_parent_table_
         assert (
             "The information about columns of the primary or unique key "
             "associated with the columns of the 'FK' key - 'fk_id' "
-            "weren't found in the metadata of the parent table"
+            "wasn't found in the metadata of the parent table"
         ) in str(error.value)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
