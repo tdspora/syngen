@@ -4,12 +4,11 @@ from dataclasses import dataclass, field
 import json
 from collections import defaultdict
 
-from marshmallow import ValidationError
 from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
-from syngen.ml.utils import fetch_unique_root
+from syngen.ml.utils import fetch_unique_root, ValidationError
 
 
 @dataclass

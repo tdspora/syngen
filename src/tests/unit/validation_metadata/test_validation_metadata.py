@@ -1,8 +1,8 @@
 from unittest.mock import patch, call
 import pytest
 
-from marshmallow import ValidationError
 from syngen.ml.config.validation import Validator
+from syngen.ml.utils import ValidationError
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 FAKE_METADATA_PATH = "path/to/metadata.yaml"

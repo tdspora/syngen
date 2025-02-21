@@ -475,3 +475,15 @@ def validate_parameter_reports(report_types: list, full_list: list) -> Callable:
 
         return list(input_values)
     return validator
+
+
+class ValidationError(Exception):
+    """
+    The exception class for handling validation errors
+    """
+    def __init__(
+        self,
+        message: str
+    ):
+        super().__init__(message)
+        self.message = message
