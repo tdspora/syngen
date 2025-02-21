@@ -2411,3 +2411,136 @@ def test_check_not_existent_referenced_columns_in_fk(rp_logger):
             "in the referenced table - 'table_b'\"}"
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
+def test_validate_metadata_of_related_tables_with_missed_pk_key_in_parent_table_in_train_process(
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_check_completion_of_training,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of related tables
+    contained the parent table without mentioned PK key in the metadata
+    during the training process
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of related tables "
+        "contained the parent table without mentioned PK key "
+        "in the metadata during the training process"
+    )
+    test_metadata = {
+        "table_a": {
+            "train_settings": {
+                "source": "path/to/table_a.csv"
+            },
+        },
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv"
+            },
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                }
+            }
+        }
+    }
+    with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="train",
+            metadata_path=FAKE_METADATA_PATH
+        )
+        validator.run()
+        assert validator.mapping == {
+            "fk_id": {
+                "parent_table": "table_a",
+                "parent_columns": ["id"]
+            }
+        }
+        assert validator.merged_metadata == test_metadata
+        assert str(error.value) == (
+            "The information about columns of the primary or unique key "
+            "associated with the columns of the 'FK' key - 'fk_id' "
+            "weren't found in the metadata of the parent table"
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
+def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_in_train_process(
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_check_completion_of_training,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of related tables
+    contained the parent table with the wrong PK key in the metadata
+    during the training process
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of related tables "
+        "contained the parent table with the wrong PK key "
+        "in the metadata during the training process"
+    )
+    test_metadata = {
+        "table_a": {
+            "train_settings": {
+                "source": "path/to/table_a.csv"
+            },
+        },
+        "table_b": {
+            "train_settings": {
+                "source": "path/to/table_b.csv"
+            },
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["id"],
+                    "references": {
+                        "table": "table_a",
+                        "columns": ["id"]
+                    }
+                }
+            }
+        }
+    }
+    with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="train",
+            metadata_path=FAKE_METADATA_PATH
+        )
+        validator.run()
+        assert validator.mapping == {
+            "fk_id": {
+                "parent_table": "table_a",
+                "parent_columns": ["id"]
+            }
+        }
+        assert validator.merged_metadata == test_metadata
+        assert str(error.value) == (
+            "The columns of primary or unique key associated with the columns of "
+            "the 'FK' key - 'fk_id' aren't the same"
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)

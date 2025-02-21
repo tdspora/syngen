@@ -105,6 +105,16 @@ class Validator:
         Validate whether the columns related to the primary key are the same as
         the referenced columns of the foreign key
         """
+        keys = parent_config.get("keys", {})
+        if not keys or all(config["type"] not in ["PK", "UQ"] for config in keys.values()):
+            message = (
+                "The information about columns of the primary or unique key "
+                f"associated with the columns of the '{fk_config['type']}' key - '{fk_name}' "
+                "wasn't found in the metadata of the parent table"
+            )
+            self.errors["validate referential integrity"][fk_name] = message
+            return
+
         result = any(
             [
                 config["columns"] == fk_config["references"]["columns"]
@@ -115,7 +125,7 @@ class Validator:
         if result is False:
             message = (
                 f"The columns of primary or unique key associated with the columns of "
-                f"the {fk_config['type']} - '{fk_name}' aren't the same"
+                f"the '{fk_config['type']}' key - '{fk_name}' aren't the same"
             )
             self.errors["validate referential integrity"][fk_name] = message
 
@@ -319,9 +329,9 @@ class Validator:
                     f"input_data_{slugify(table_name)}.pkl")
         return self.merged_metadata[table_name]["train_settings"]["source"]
 
-    def _run(self):
+    def _launch_validation(self):
         """
-        Run the validation process
+        Launch the validation process
         """
         if self.type_of_process == "train" and self.validation_source:
             for table_name in self.merged_metadata.keys():
@@ -361,5 +371,5 @@ class Validator:
         Run the validation process
         """
         self._preprocess_metadata()
-        self._run()
+        self._launch_validation()
         self._collect_errors()
