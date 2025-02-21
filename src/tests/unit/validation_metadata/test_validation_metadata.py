@@ -2511,7 +2511,7 @@ def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_i
             "keys": {
                 "pk_id": {
                     "type": "PK",
-                    "columns": ["id"]
+                    "columns": ["wrong_id"]
                 }
             }
         },
@@ -2638,18 +2638,24 @@ def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_i
     """
     Test the validation of the metadata of related tables
     contained the parent table with the wrong PK key in the metadata
-    during the training process
+    during the inference process
     """
     rp_logger.info(
         "Test the validation of the metadata of related tables "
         "contained the parent table with the wrong PK key "
-        "in the metadata during the training process"
+        "in the metadata during the inference process"
     )
     test_metadata = {
         "table_a": {
             "train_settings": {
                 "source": "path/to/table_a.csv"
             },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["wrong_id"]
+                }
+            }
         },
         "table_b": {
             "train_settings": {
