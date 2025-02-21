@@ -259,7 +259,7 @@ class Validator:
                     for col in set(config_of_key["columns"]).difference(set(existed_columns))
                 ]
                 message = (
-                    f"The columns of the {config_of_key['type']} '{key}' - "
+                    f"The columns of the {config_of_key['type']} key '{key}' - "
                     f"{', '.join(non_existed_columns)} "
                     f"don't exist in the table - '{table_name}'"
                 )
