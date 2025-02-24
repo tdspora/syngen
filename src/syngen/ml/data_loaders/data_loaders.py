@@ -6,7 +6,6 @@ import pickle as pkl
 import csv
 import inspect
 from dataclasses import dataclass
-import gc
 
 import pandas as pd
 import pandas.errors
