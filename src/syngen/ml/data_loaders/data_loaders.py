@@ -631,8 +631,9 @@ class DataEncryptor(BaseDataLoader):
             return df_decrypted
         except InvalidToken:
             raise ValueError(
-                "The provided Fernet key is invalid, the encrypted data is corrupted, "
-                "or the data is not encrypted."
+                "It seems that the decryption process failed due to the following reasons - "
+                "the provided Fernet key is invalid, or the encrypted data is corrupted, "
+                "or the data hasn't been encrypted despite the Fernet key presence."
             )
 
     @timing
