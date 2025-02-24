@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable, Literal, Tuple
+from typing import List, Dict, Optional, Union, Set, Callable, Literal
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -14,7 +14,6 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
-from cryptography.fernet import Fernet
 
 
 MAX_ALLOWED_TIME_MS = 253402214400
@@ -489,27 +488,3 @@ class ValidationError(Exception):
     ):
         super().__init__(message)
         self.message = message
-
-
-def encrypt(data: pd.DataFrame, path: str):
-    """
-    Encrypt the data by using the Fernet key and save it to the disk
-    """
-    f = Fernet(os.getenv("FERNET_KEY"))
-    d: bytes = pkl.dumps(data)
-    df_encrypted = f.encrypt(d)
-    with open(path, "wb") as encrypted_file:
-        encrypted_file.write(df_encrypted)
-
-
-def decrypt(path: str) -> Tuple[pd.DataFrame, Dict]:
-    """
-    Decrypt the data by using the Fernet key
-    """
-    f = Fernet(os.getenv("FERNET_KEY"))
-    with open(path, "rb") as encrypted_file:
-        data = encrypted_file.read()
-
-    decrypted_data = f.decrypt(data)
-    df_decrypted = pkl.loads(decrypted_data)
-    return df_decrypted, {"fields": {}, "format": "CSV"}

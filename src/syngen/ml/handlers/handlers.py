@@ -25,8 +25,7 @@ from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
     get_initial_table_name,
-    ProgressBarHandler,
-    decrypt
+    ProgressBarHandler
 )
 from syngen.ml.context import get_context
 
@@ -77,11 +76,11 @@ class BaseHandler(AbstractHandler):
         """
         Fetch the data
         """
-        data_loader = DataLoader(self.paths["input_data_path"])
+        data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
         data = pd.DataFrame()
         schema = None
         if data_loader.has_existed_path:
-            data, schema = decrypt(self.paths["input_data_path"])
+            data, schema = data_loader.load_data()
         elif self.loader:
             data, schema = DataFrameFetcher(
                 loader=self.loader,

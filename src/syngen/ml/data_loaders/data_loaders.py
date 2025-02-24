@@ -6,6 +6,7 @@ import pickle as pkl
 import csv
 import inspect
 from dataclasses import dataclass
+import gc
 
 import pandas as pd
 import pandas.errors
@@ -16,10 +17,11 @@ from yaml.scanner import ScannerError
 from avro.errors import InvalidAvroBinaryEncoding
 from loguru import logger
 import fastavro
+from cryptography.fernet import Fernet, InvalidToken
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
-from syngen.ml.utils import trim_string
+from syngen.ml.utils import trim_string, timing
 from syngen.ml.context import get_context, global_context
 from syngen.ml.validation_schema import (
     ExcelFormatSettingsSchema,
@@ -53,8 +55,9 @@ class DataLoader(BaseDataLoader):
     Base class for loading and saving data
     """
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, sensitive: bool = False):
         super().__init__(path)
+        self.sensitive = True if sensitive and os.getenv("FERNET_KEY") else False
         self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
         self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
@@ -76,7 +79,9 @@ class DataLoader(BaseDataLoader):
 
     def _get_file_loader(self):
         path = Path(self.path)
-        if path.suffix == ".avro":
+        if self.sensitive:
+            return DataEncryptor(self.path)
+        elif path.suffix == ".avro":
             return AvroLoader(self.path)
         elif path.suffix in [".csv", ".txt"]:
             return CSVLoader(self.path)
@@ -575,3 +580,66 @@ class ExcelLoader(BaseDataLoader):
 
     def get_columns(self, **kwargs) -> List[str]:
         return self._get_columns(**kwargs)
+
+
+class DataEncryptor(BaseDataLoader):
+    """
+    A class to handle encryption and decryption of data using a Fernet key
+    """
+
+    def __init__(self, path: str):
+        """
+        Initialize the DataFrameEncryptor with a Fernet key.
+        """
+        super().__init__(path)
+        self.fernet = Fernet(os.environ["FERNET_KEY"])
+
+    def __encrypt_data(self, data: pd.DataFrame):
+        """
+        Encrypt the data using the Fernet key and save it to the disk
+        """
+        serialized_df: bytes = pkl.dumps(data)
+        encrypted_data = self.fernet.encrypt(serialized_df)
+        with open(self.path, "wb") as encrypted_file:
+            encrypted_file.write(encrypted_data)
+            logger.info(
+                f"The data stored at the path - '{self.path}' "
+                f"has been successfully encrypted and saved to the disk."
+            )
+
+    @timing
+    def save_data(self, df: pd.DataFrame):
+        """
+        Save the encrypted dataframe to the disk
+        """
+        self.__encrypt_data(df)
+
+    def __decrypt_data(self) -> pd.DataFrame:
+        """
+        Decrypt the data by using the Fernet key
+        """
+        try:
+            with open(self.path, "rb") as encrypted_file:
+                encrypted_data = encrypted_file.read()
+
+            decrypted_data = self.fernet.decrypt(encrypted_data)
+            df_decrypted = pkl.loads(decrypted_data)
+
+            logger.info(
+                f"The data stored at the path - '{self.path}' "
+                f"has been successfully decrypted and loaded."
+            )
+            return df_decrypted
+        except InvalidToken:
+            raise ValueError(
+                "The provided Fernet key is invalid, the encrypted data is corrupted, "
+                "or the data is not encrypted."
+            )
+
+    @timing
+    def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Load the decrypted data from the disk
+        """
+        df_decrypted = self.__decrypt_data()
+        return df_decrypted, {"fields": {}, "format": "CSV"}

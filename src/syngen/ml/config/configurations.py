@@ -10,7 +10,7 @@ from loguru import logger
 from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import slugify_attribute, fetch_unique_root, encrypt, decrypt
+from syngen.ml.utils import slugify_attribute, fetch_unique_root
 
 
 @dataclass
@@ -114,7 +114,7 @@ class TrainConfig:
         Return dataframe and schema of original data
         """
         if os.path.exists(self.paths["path_to_flatten_metadata"]):
-            data, schema = decrypt(self.paths["input_data_path"])
+            data, schema = DataLoader(self.paths["input_data_path"], sensitive=True).load_data()
             self.original_schema = DataLoader(self.paths["input_data_path"]).original_schema
             return data, schema
         else:
@@ -226,7 +226,7 @@ class TrainConfig:
         """
         Save the subset of the original data
         """
-        encrypt(self.data, self.paths["input_data_path"])
+        DataLoader(self.paths["input_data_path"], sensitive=True).save_data(self.data)
 
     def _save_original_schema(self):
         """
@@ -381,11 +381,10 @@ class InferConfig:
         Set up "size" of generated data
         """
         if self.size is None:
-            path_to_source = self.paths["input_data_path"]
-            data_loader = DataLoader(path_to_source)
+            data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
             data = pd.DataFrame()
             if data_loader.has_existed_path:
-                data, schema = decrypt(path_to_source)
+                data, schema = data_loader.load_data()
             elif self.loader:
                 data, schema = DataFrameFetcher(
                     loader=self.loader,
