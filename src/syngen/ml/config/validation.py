@@ -4,12 +4,11 @@ from dataclasses import dataclass, field
 import json
 from collections import defaultdict
 
-from marshmallow import ValidationError
 from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
-from syngen.ml.utils import fetch_unique_root
+from syngen.ml.utils import fetch_unique_root, ValidationError
 
 
 @dataclass
@@ -106,6 +105,16 @@ class Validator:
         Validate whether the columns related to the primary key are the same as
         the referenced columns of the foreign key
         """
+        keys = parent_config.get("keys", {})
+        if not keys or all(config["type"] not in ["PK", "UQ"] for config in keys.values()):
+            message = (
+                "The information about columns of the primary or unique key "
+                f"associated with the columns of the '{fk_config['type']}' key - '{fk_name}' "
+                "wasn't found in the metadata of the parent table"
+            )
+            self.errors["validate referential integrity"][fk_name] = message
+            return
+
         result = any(
             [
                 config["columns"] == fk_config["references"]["columns"]
@@ -116,7 +125,7 @@ class Validator:
         if result is False:
             message = (
                 f"The columns of primary or unique key associated with the columns of "
-                f"the {fk_config['type']} - '{fk_name}' aren't the same"
+                f"the '{fk_config['type']}' key - '{fk_name}' aren't the same"
             )
             self.errors["validate referential integrity"][fk_name] = message
 
@@ -250,7 +259,7 @@ class Validator:
                     for col in set(config_of_key["columns"]).difference(set(existed_columns))
                 ]
                 message = (
-                    f"The columns of the {config_of_key['type']} '{key}' - "
+                    f"The columns of the {config_of_key['type']} key '{key}' - "
                     f"{', '.join(non_existed_columns)} "
                     f"don't exist in the table - '{table_name}'"
                 )
@@ -298,7 +307,7 @@ class Validator:
         existed_columns = self._fetch_existed_columns(table_name)
         self.existed_columns_mapping[table_name] = existed_columns
 
-    def preprocess_metadata(self):
+    def _preprocess_metadata(self):
         """
         Preprocess the metadata, set the metadata and the merged metadata
         """
@@ -318,14 +327,12 @@ class Validator:
         ):
             return (f"{os.getcwd()}/model_artifacts/tmp_store/{slugify(table_name)}/"
                     f"input_data_{slugify(table_name)}.pkl")
-        return self.metadata[table_name]["train_settings"]["source"]
+        return self.merged_metadata[table_name]["train_settings"]["source"]
 
-    def _run(self):
+    def _launch_validation(self):
         """
-        Run the validation process
+        Launch the validation process
         """
-        self.preprocess_metadata()
-
         if self.type_of_process == "train" and self.validation_source:
             for table_name in self.merged_metadata.keys():
                 self._gather_existed_columns(table_name)
@@ -363,5 +370,6 @@ class Validator:
         """
         Run the validation process
         """
-        self._run()
+        self._preprocess_metadata()
+        self._launch_validation()
         self._collect_errors()

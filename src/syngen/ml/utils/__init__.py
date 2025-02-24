@@ -25,6 +25,7 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     get_initial_table_name,
     validate_parameter_reports,
     timing,
+    ValidationError,
     get_fernet,
     encrypt,
     decrypt

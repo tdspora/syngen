@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable, Literal
+from typing import List, Dict, Optional, Union, Set, Callable, Literal, Tuple
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -479,27 +479,37 @@ def validate_parameter_reports(report_types: list, full_list: list) -> Callable:
     return validator
 
 
-def get_fernet():
-    _fernet = Fernet(os.environ["FERNET_KEY"])
+class ValidationError(Exception):
+    """
+    The exception class for handling validation errors
+    """
+    def __init__(
+        self,
+        message: str
+    ):
+        super().__init__(message)
+        self.message = message
 
-    if not _fernet:
-        _fernet = Fernet.generate_key()
 
-    return _fernet
-
-
-def encrypt(data, path: str):
-    f = get_fernet()
-    v: bytes = bytes(data, "utf-8")
-    data = f.encrypt(v)
+def encrypt(data: pd.DataFrame, path: str):
+    """
+    Encrypt the data by using the Fernet key and save it to the disk
+    """
+    f = Fernet(os.getenv("FERNET_KEY"))
+    d: bytes = pkl.dumps(data)
+    df_encrypted = f.encrypt(d)
     with open(path, "wb") as encrypted_file:
-        encrypted_file.write(data)
+        encrypted_file.write(df_encrypted)
 
 
-def decrypt(path: str):
-    f = Fernet(os.environ["FERNET_KEY"])
+def decrypt(path: str) -> Tuple[pd.DataFrame, Dict]:
+    """
+    Decrypt the data by using the Fernet key
+    """
+    f = Fernet(os.getenv("FERNET_KEY"))
     with open(path, "rb") as encrypted_file:
         data = encrypted_file.read()
 
     decrypted_data = f.decrypt(data)
-    return decrypted_data, {"fields": {}, "format": "CSV"}
+    df_decrypted = pkl.loads(decrypted_data)
+    return df_decrypted, {"fields": {}, "format": "CSV"}
