@@ -6,6 +6,8 @@ import pickle as pkl
 import csv
 import inspect
 from dataclasses import dataclass
+import base64
+import binascii
 
 import pandas as pd
 import pandas.errors
@@ -591,7 +593,55 @@ class DataEncryptor(BaseDataLoader):
         Initialize the DataFrameEncryptor with a Fernet key.
         """
         super().__init__(path)
-        self.fernet = Fernet(os.environ["FERNET_KEY"])
+        key = os.environ["FERNET_KEY"]
+        self._validate_fernet_key(key)
+        self.fernet = Fernet(key)
+
+    @staticmethod
+    def _validate_fernet_key(key: str) -> bool:
+        """
+        Validate the provided Fernet key.
+        A valid Fernet key is a 44-character URL-safe base64-encoded string
+        """
+        # Check if the key is a string and has the correct length
+        error_message = "It seems that the provided Fernet key is invalid"
+        if not isinstance(key, str) or len(key) != 44:
+            message = (
+                f"{error_message} because it doesn't have the correct length."
+            )
+            logger.error(message)
+            raise ValueError(message)
+
+        # Check if the key is URL-safe base64-encoded
+        try:
+            # Attempt to decode the key
+            decoded_key = base64.urlsafe_b64decode(key)
+        except (UnicodeEncodeError, TypeError, binascii.Error) as e:
+            # If decoding fails, the key is invalid
+            logger.error(
+                f"{error_message} because it isn't URL-safe base64-encoded."
+            )
+            raise e
+
+        # Try to initialize a Fernet object with the key
+        try:
+            Fernet(key.encode())
+            return True
+        except (InvalidToken, ValueError) as e:
+            logger.error(
+                f"{error_message} because the attempt to initialize of Fernet key has been failed."
+            )
+            raise e
+
+    def _check_if_data_encrypted(self):
+        """
+        Check whether the data has been encrypted
+        """
+        if Path(self.path).suffix != ".bin":
+            raise ValueError(
+                "It seems that the decryption process failed "
+                "due the data hasn't been encrypted despite the Fernet key presence."
+            )
 
     def __encrypt_data(self, data: pd.DataFrame):
         """
@@ -630,10 +680,9 @@ class DataEncryptor(BaseDataLoader):
             )
             return df_decrypted
         except InvalidToken:
-            raise ValueError(
+            raise InvalidToken(
                 "It seems that the decryption process failed due to the following reasons - "
-                "the provided Fernet key is invalid, or the encrypted data is corrupted, "
-                "or the data hasn't been encrypted despite the Fernet key presence."
+                "the provided Fernet key is invalid or the encrypted data is corrupted."
             )
 
     @timing
@@ -641,5 +690,6 @@ class DataEncryptor(BaseDataLoader):
         """
         Load the decrypted data from the disk
         """
+        self._check_if_data_encrypted()
         df_decrypted = self.__decrypt_data()
         return df_decrypted, {"fields": {}, "format": "CSV"}

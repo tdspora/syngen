@@ -66,7 +66,7 @@ class Reporter:
             original = self._fetch_dataframe()
         else:
             original, schema = DataLoader(
-                self.paths["original_data_path"],
+                self.paths["input_data_path"],
                 sensitive=True
             ).load_data()
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
