@@ -69,6 +69,18 @@ def test_init_train_config(
         "age", "price", "date", "comments"
     ]
     assert train_config.dropped_columns == set()
+    assert set(train_config.__dict__.keys()) == {
+        "source", "epochs", "drop_null", "row_limit", "table_name", "metadata",
+        "metadata_path", "reports", "batch_size", "loader", "slugify_table_name",
+        "paths", "original_schema", "data", "schema", "initial_data_shape",
+        "columns", "dropped_columns", "row_subset"
+    }
+    assert set(train_config.__getstate__().keys()) == {
+        "source", "epochs", "drop_null", "row_limit", "table_name", "metadata",
+        "metadata_path", "reports", "batch_size", "slugify_table_name",
+        "paths", "original_schema", "schema", "initial_data_shape",
+        "columns", "dropped_columns", "row_subset"
+    }
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -105,6 +117,11 @@ def test_init_infer_config_with_absent_input_data_in_train_process(rp_logger):
     )
     assert infer_config.reports == []
 
+    assert set(infer_config.__dict__.keys()) == {
+        "destination", "metadata", "metadata_path", "size", "table_name",
+        "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
+        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -141,6 +158,12 @@ def test_init_infer_config_with_absent_input_data_in_infer_process(rp_logger):
         type_of_process="infer"
     )
     assert infer_config.reports == []
+
+    assert set(infer_config.__dict__.keys()) == {
+        "destination", "metadata", "metadata_path", "size", "table_name",
+        "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
+        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
+    }
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -182,6 +205,12 @@ def test_init_infer_config_with_existed_input_data_in_train_process(mocker, rp_l
     )
 
     assert infer_config.reports == ["accuracy"]
+
+    assert set(infer_config.__dict__.keys()) == {
+        "destination", "metadata", "metadata_path", "size", "table_name",
+        "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
+        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
+    }
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -225,6 +254,12 @@ def test_init_infer_config_with_existed_input_data_in_infer_process(mocker, rp_l
 
     assert infer_config.reports == ["accuracy"]
 
+    assert set(infer_config.__dict__.keys()) == {
+        "destination", "metadata", "metadata_path", "size", "table_name",
+        "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
+        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
+    }
+
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -257,12 +292,12 @@ def test_get_state_of_train_config(rp_logger):
         "metadata",
         "metadata_path",
         "reports",
-        "batch_size"
+        "batch_size",
+        "paths",
+        "slugify_table_name",
     }
     state = train_config.__getstate__()
-    for attr in expected_attributes:
-        assert attr in state
-    assert "loader" not in state
+    assert set(state.keys()) == expected_attributes
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
