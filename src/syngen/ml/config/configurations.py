@@ -48,7 +48,7 @@ class TrainConfig:
         Return an updated config's instance
         """
         instance = self.__dict__.copy()
-        attribute_keys_to_remove = ["loader"]
+        attribute_keys_to_remove = ["loader", "data"]
         for attr_key in attribute_keys_to_remove:
             if attr_key in instance:
                 del instance[attr_key]
