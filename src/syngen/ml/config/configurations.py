@@ -115,7 +115,7 @@ class TrainConfig:
         """
         if os.path.exists(self.paths["path_to_flatten_metadata"]):
             data, schema = DataLoader(self.paths["input_data_path"], sensitive=True).load_data()
-            self.original_schema = DataLoader(self.paths["input_data_path"]).original_schema
+            self.original_schema = DataLoader(self.paths["input_data_path"], sensitive=True).original_schema
             return data, schema
         else:
             data_loader = DataLoader(self.source)
@@ -355,7 +355,7 @@ class InferConfig:
         if (
                 self.reports
                 and (
-                    DataLoader(self.paths["input_data_path"]).has_existed_path is False
+                    DataLoader(self.paths["input_data_path"], sensitive=True).has_existed_path is False
                     or self.loader is not None
                 )
         ):
