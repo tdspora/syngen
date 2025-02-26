@@ -85,7 +85,7 @@ class DataLoader(BaseDataLoader):
 
     def _get_file_loader(self):
         path = Path(self.path)
-        if path.suffix == ".dat" or self.sensitive:
+        if self.sensitive:
             return DataEncryptor(self.path)
         elif path.suffix == ".avro":
             return AvroLoader(self.path)
