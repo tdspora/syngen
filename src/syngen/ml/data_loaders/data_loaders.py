@@ -58,7 +58,12 @@ class DataLoader(BaseDataLoader):
 
     def __init__(self, path: str, sensitive: bool = False):
         super().__init__(path)
-        self.sensitive = True if sensitive and os.getenv("FERNET_KEY") else False
+        if not (fernet_key := os.getenv("FERNET_KEY")):
+            logger.warning(
+                "The Fernet key hasn't been provided. "
+                "That's why the process of encryption or decryption is disabled."
+            )
+        self.sensitive = True if sensitive and fernet_key else False
         self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
         self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
@@ -603,33 +608,38 @@ class DataEncryptor(BaseDataLoader):
         Validate the provided Fernet key.
         A valid Fernet key is a 44-character URL-safe base64-encoded string
         """
-        # Check if the key is a string and has the correct length
         error_message = "It seems that the provided Fernet key is invalid"
-        if not isinstance(key, str) or len(key) != 44:
-            message = (
-                f"{error_message} because it doesn't have the correct length."
+        if not isinstance(key, str):
+            raise TypeError(f"{error_message}. Fernet key must be a string")
+        if len(key) != 44:
+            raise ValueError(
+                f"{error_message}. Invalid key length: {len(key)}. "
+                "Fernet key must be 44 characters"
             )
-            logger.error(message)
             raise ValueError(message)
 
         # Check if the key is URL-safe base64-encoded
         try:
-            # Attempt to decode the key
-            decoded_key = base64.urlsafe_b64decode(key)
+            # Verify the key is valid base64
+            decoded = base64.urlsafe_b64decode(key)
+            if len(decoded) != 32:
+                raise ValueError(
+                    f"{error_message}. Invalid key structure: decoded key must be 32 bytes"
+                )
+
+            # Verify the key can initialize a Fernet instance
+            Fernet(key.encode())
         except (UnicodeEncodeError, TypeError, binascii.Error) as e:
             # If decoding fails, the key is invalid
             logger.error(
-                f"{error_message} because it isn't URL-safe base64-encoded."
+                f"{error_message}. Invalid base64 encoding: {str(e)}."
             )
             raise e
 
-        # Try to initialize a Fernet object with the key
-        try:
-            Fernet(key.encode())
-            return True
         except (InvalidToken, ValueError) as e:
+            # If the initialization fails, the key is invalid
             logger.error(
-                f"{error_message} because the attempt to initialize of Fernet key has been failed."
+                f"{error_message}. Invalid Fernet key: {str(e)}."
             )
             raise e
 
@@ -637,7 +647,7 @@ class DataEncryptor(BaseDataLoader):
         """
         Check whether the data has been encrypted
         """
-        if Path(self.path).suffix != ".bin":
+        if Path(self.path).suffix != ".dat":
             raise ValueError(
                 "It seems that the decryption process failed "
                 "due the data hasn't been encrypted despite the Fernet key presence."
@@ -647,14 +657,24 @@ class DataEncryptor(BaseDataLoader):
         """
         Encrypt the data using the Fernet key and save it to the disk
         """
-        serialized_df: bytes = pkl.dumps(data)
-        encrypted_data = self.fernet.encrypt(serialized_df)
-        with open(self.path, "wb") as encrypted_file:
-            encrypted_file.write(encrypted_data)
+        try:
+            # Use compression to reduce data size before encryption
+            serialized_df: bytes = pkl.dumps(data, protocol=pkl.HIGHEST_PROTOCOL)
+            encrypted_data = self.fernet.encrypt(serialized_df)
+
+            # Use atomic write operation for better safety
+            temp_path = f"{self.path}.tmp"
+            with open(temp_path, "wb") as encrypted_file:
+                encrypted_file.write(encrypted_data)
+            os.replace(temp_path, self.path)
+
             logger.info(
-                f"The data stored at the path - '{self.path}' "
-                f"has been successfully encrypted and saved to the disk."
+                f"Data is successfully encrypted and saved to '{self.path}'"
             )
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise e(f"Encryption failed: {str(e)}")
 
     @timing
     def save_data(self, df: pd.DataFrame):

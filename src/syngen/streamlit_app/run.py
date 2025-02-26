@@ -2,8 +2,6 @@ import os
 import time
 from threading import Thread
 
-from cryptography.fernet import Fernet
-
 import streamlit as st
 from streamlit_option_menu import option_menu
 
@@ -150,7 +148,6 @@ class StreamlitApp:
         """
         Run the Streamlit app
         """
-        os.environ["FERNET_KEY"] = Fernet.generate_key().decode("utf-8")
         self.setup_ui()
         with st.sidebar:
             selected = option_menu("", ["Basic"],

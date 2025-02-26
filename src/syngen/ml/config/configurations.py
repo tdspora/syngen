@@ -259,7 +259,7 @@ class TrainConfig:
             "reports_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/reports",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}."
-                               f"{'bin' if os.getenv('FERNET_KEY') else 'pkl'}",
+                               f"{'dat' if os.getenv('FERNET_KEY') else 'pkl'}",
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
             "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
                                         f"checkpoints/train_config.pkl",
@@ -409,7 +409,7 @@ class InferConfig:
             "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}."
-                               f"{'bin' if os.getenv('FERNET_KEY') else 'pkl'}",
+                               f"{'dat' if os.getenv('FERNET_KEY') else 'pkl'}",
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
                                             f"merged_infer_{dynamic_name}.csv",
             "path_to_merged_infer": self.destination
