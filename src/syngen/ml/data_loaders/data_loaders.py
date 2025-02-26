@@ -22,7 +22,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
-from syngen.ml.utils import trim_string, timing
+from syngen.ml.utils import trim_string
 from syngen.ml.context import get_context, global_context
 from syngen.ml.validation_schema import (
     ExcelFormatSettingsSchema,
@@ -603,7 +603,7 @@ class DataEncryptor(BaseDataLoader):
         self.fernet = Fernet(key)
 
     @staticmethod
-    def _validate_fernet_key(key: str) -> bool:
+    def _validate_fernet_key(key: str):
         """
         Validate the provided Fernet key.
         A valid Fernet key is a 44-character URL-safe base64-encoded string
@@ -677,7 +677,6 @@ class DataEncryptor(BaseDataLoader):
                 os.remove(temp_path)
             raise e(f"Encryption failed: {str(e)}")
 
-    @timing
     def save_data(self, df: pd.DataFrame):
         """
         Save the encrypted dataframe to the disk
@@ -706,7 +705,6 @@ class DataEncryptor(BaseDataLoader):
                 "the provided Fernet key is invalid or the encrypted data is corrupted."
             )
 
-    @timing
     def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
         Load the decrypted data from the disk
