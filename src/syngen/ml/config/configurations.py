@@ -114,8 +114,9 @@ class TrainConfig:
         Return dataframe and schema of original data
         """
         if os.path.exists(self.paths["path_to_flatten_metadata"]):
-            data, schema = DataLoader(self.paths["input_data_path"], sensitive=True).load_data()
-            self.original_schema = DataLoader(self.paths["input_data_path"], sensitive=True).original_schema
+            data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
+            data, schema = data_loader.load_data()
+            self.original_schema = data_loader.original_schema
             return data, schema
         else:
             data_loader = DataLoader(self.source)
@@ -352,10 +353,11 @@ class InferConfig:
         """
         Check whether required artifacts exists
         """
+        data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
         if (
                 self.reports
                 and (
-                    DataLoader(self.paths["input_data_path"], sensitive=True).has_existed_path is False
+                    data_loader.has_existed_path is False
                     or self.loader is not None
                 )
         ):

@@ -612,7 +612,7 @@ class DataEncryptor(BaseDataLoader):
         if not isinstance(key, str):
             raise TypeError(f"{error_message}. Fernet key must be a string")
         if len(key) != 44:
-            raise ValueError(
+            message = (
                 f"{error_message}. Invalid key length: {len(key)}. "
                 "Fernet key must be 44 characters"
             )
@@ -629,6 +629,7 @@ class DataEncryptor(BaseDataLoader):
 
             # Verify the key can initialize a Fernet instance
             Fernet(key.encode())
+
         except (UnicodeEncodeError, TypeError, binascii.Error) as e:
             # If decoding fails, the key is invalid
             logger.error(
