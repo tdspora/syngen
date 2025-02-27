@@ -6,8 +6,6 @@ import pickle as pkl
 import csv
 import inspect
 from dataclasses import dataclass
-import base64
-import binascii
 
 import pandas as pd
 import pandas.errors
@@ -18,7 +16,7 @@ from yaml.scanner import ScannerError
 from avro.errors import InvalidAvroBinaryEncoding
 from loguru import logger
 import fastavro
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
@@ -609,39 +607,11 @@ class DataEncryptor(BaseDataLoader):
         A valid Fernet key is a 44-character URL-safe base64-encoded string
         """
         error_message = "It seems that the provided Fernet key is invalid"
-        if not isinstance(key, str):
-            raise TypeError(f"{error_message}. Fernet key must be a string")
-        if len(key) != 44:
-            message = (
-                f"{error_message}. Invalid key length: {len(key)}. "
-                "Fernet key must be 44 characters"
-            )
-            raise ValueError(message)
-
-        # Check if the key is URL-safe base64-encoded
         try:
-            # Verify the key is valid base64
-            decoded = base64.urlsafe_b64decode(key)
-            if len(decoded) != 32:
-                raise ValueError(
-                    f"{error_message}. Invalid key structure: decoded key must be 32 bytes"
-                )
-
-            # Verify the key can initialize a Fernet instance
             Fernet(key.encode())
 
-        except (UnicodeEncodeError, TypeError, binascii.Error) as e:
-            # If decoding fails, the key is invalid
-            logger.error(
-                f"{error_message}. Invalid base64 encoding: {str(e)}."
-            )
-            raise e
-
-        except (InvalidToken, ValueError) as e:
-            # If the initialization fails, the key is invalid
-            logger.error(
-                f"{error_message}. Invalid Fernet key: {str(e)}."
-            )
+        except ValueError as e:
+            logger.error(f"{error_message}. {str(e)}")
             raise e
 
     def _check_if_data_encrypted(self):
@@ -675,7 +645,8 @@ class DataEncryptor(BaseDataLoader):
         except Exception as e:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-            raise e(f"Encryption failed: {str(e)}")
+            logger.error(f"Encryption failed: {str(e)}")
+            raise e
 
     def save_data(self, df: pd.DataFrame):
         """
@@ -699,11 +670,12 @@ class DataEncryptor(BaseDataLoader):
                 f"has been successfully decrypted and loaded."
             )
             return df_decrypted
-        except InvalidToken:
-            raise InvalidToken(
+        except Exception as e:
+            logger.error(
                 "It seems that the decryption process failed due to the following reasons - "
-                "the provided Fernet key is invalid or the encrypted data is corrupted."
+                f"the provided Fernet key is invalid or the encrypted data is corrupted. {str(e)}"
             )
+            raise e
 
     def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """

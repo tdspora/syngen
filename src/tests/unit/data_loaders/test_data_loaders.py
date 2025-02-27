@@ -1367,18 +1367,44 @@ def test_check_data_encryption(data_encryptor, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_decrypt_data_with_invalid_key(data_encryptor, valid_simple_dataframe, rp_logger):
+@pytest.mark.parametrize(
+    "invalid_key", [
+        "short_key", "a" * 45, "@w3n7X7VO@i0xEHf@fo@rtEa@vgfWW3GZAtmZd@BzlA@"
+    ]
+)
+def test_invalid_fernet_key_validation(invalid_key, rp_logger, caplog):
+    rp_logger.info(
+        "Test the validation of the Fernet key with the invalid length"
+    )
+
+    with pytest.raises(ValueError):
+        with caplog.at_level("ERROR"):
+            DataEncryptor._validate_fernet_key(invalid_key)
+        assert (
+                "It seems that the provided Fernet key is invalid. "
+                "The Fernet key must be 32 url-safe base64-encoded bytes"
+        ) in caplog.text
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_decrypt_data_with_invalid_key(data_encryptor, valid_simple_dataframe, rp_logger, caplog):
     rp_logger.info(
         "Test the decryption of the data with the invalid Fernet key"
     )
     data_encryptor.save_data(valid_simple_dataframe)
     data_encryptor.fernet = Fernet(Fernet.generate_key())  # Change the key
     with pytest.raises(InvalidToken):
-        data_encryptor.load_data()
+        with caplog.at_level("ERROR"):
+            data_encryptor.load_data()
+        assert (
+            "It seems that the decryption process failed due to the following reasons - "
+            "the provided Fernet key is invalid or the encrypted data is corrupted"
+        ) in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_check_data_encryption_with_incorrect_extension(tmp_path, rp_logger):
+def test_check_data_encryption_with_incorrect_extension(tmp_path, rp_logger, caplog):
     rp_logger.info(
         "Test the method '_check_if_data_encrypted' of the DataEncryptor "
         "with the provided invalid path"
@@ -1386,5 +1412,10 @@ def test_check_data_encryption_with_incorrect_extension(tmp_path, rp_logger):
     file_path = tmp_path / "test.txt"
     data_encryptor = DataEncryptor(path=str(file_path))
     with pytest.raises(ValueError):
-        data_encryptor._check_if_data_encrypted()
+        with caplog.at_level("ERROR"):
+            data_encryptor._check_if_data_encrypted()
+        assert (
+            "It seems that the decryption process failed "
+            "due the data hasn't been encrypted despite the Fernet key presence."
+        ) in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)

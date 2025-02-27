@@ -236,11 +236,3 @@ def data_encryptor(tmp_path, valid_fernet_key):
 @pytest.fixture
 def invalid_fernet_key():
     return "invalid_key"
-
-
-@pytest.fixture
-def corrupted_data_file(tmp_path):
-    file_path = tmp_path / "corrupted.dat"
-    with open(file_path, "wb") as f:
-        f.write(b"corrupted data")
-    return str(file_path)
