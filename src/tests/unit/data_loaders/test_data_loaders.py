@@ -13,6 +13,7 @@ from syngen.ml.data_loaders import (
     MetadataLoader,
     YAMLLoader,
     ExcelLoader,
+    DataEncryptor
 )
 from syngen.ml.context import global_context, get_context
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -1329,4 +1330,33 @@ def test_save_excel_table_in_xlsx_format(test_xlsx_path, test_df, rp_logger):
     loaded_df, schema = data_loader.load_data()
     pd.testing.assert_frame_equal(loaded_df, test_df)
     assert schema == CSV_SCHEMA
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+def test_initialization_data_encryptor_with_valid_path_and_key(data_encryptor, rp_logger):
+    rp_logger.info("Test the initialization of DataEncryptor with valid path and key")
+    assert isinstance(data_encryptor, DataEncryptor)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+def test_valid_fernet_key_validation(valid_fernet_key, rp_logger):
+    rp_logger.info("Test the validation of the valid Fernet key")
+    assert DataEncryptor._validate_fernet_key(valid_fernet_key) is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+def test_round_encrypt_decrypt_data(data_encryptor, valid_simple_dataframe, rp_logger):
+    rp_logger.info(
+        "Test the round encryption and decryption of the dataframe "
+        "with the provided valid Ferney key"
+    )
+    data_encryptor.save_data(valid_simple_dataframe)
+    loaded_df, _ = data_encryptor.load_data()
+    pd.testing.assert_frame_equal(loaded_df, valid_simple_dataframe)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+def test_check_data_encryption(data_encryptor, rp_logger):
+    rp_logger.info(
+        "Test the method '_check_if_data_encrypted' of the DataEncryptor "
+        "with the provided valid path"
+    )
+    data_encryptor._check_if_data_encrypted()
+    assert data_encryptor.path.endswith(".dat")
     rp_logger.info(SUCCESSFUL_MESSAGE)
