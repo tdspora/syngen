@@ -417,3 +417,32 @@ def test_check_reports_in_train_config(
     train_config.row_subset == expected_size
     train_config.metadata = expected_metadata
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_check_reports_in_infer_config_with_absent_input_data(rp_logger):
+    rp_logger.info("Test the method '_check_reports' of the class InferConfig")
+    infer_config = InferConfig(
+        destination=None,
+        metadata={
+            "test_table": {
+                "train_settings": {
+                    "source": "path/to/data.csv",
+                    "reports": ["accuracy", "sample"]
+                }
+            }
+        },
+        metadata_path=None,
+        size=100,
+        table_name="test_table",
+        run_parallel=False,
+        batch_size=32,
+        random_seed=None,
+        reports=["accuracy"],
+        both_keys=False,
+        loader=None,
+        log_level="DEBUG",
+        type_of_process="infer"
+    )
+    infer_config._check_reports()
+    assert infer_config.reports == []
+    rp_logger.info(SUCCESSFUL_MESSAGE)

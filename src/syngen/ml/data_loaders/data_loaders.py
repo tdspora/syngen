@@ -56,11 +56,7 @@ class DataLoader(BaseDataLoader):
 
     def __init__(self, path: str, sensitive: bool = False):
         super().__init__(path)
-        if not (fernet_key := os.getenv("FERNET_KEY")):
-            logger.warning(
-                "The Fernet key hasn't been provided. "
-                "That's why the process of encryption or decryption is disabled."
-            )
+        fernet_key = os.getenv("FERNET_KEY")
         self.sensitive = True if sensitive and fernet_key else False
         self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
@@ -83,7 +79,7 @@ class DataLoader(BaseDataLoader):
 
     def _get_file_loader(self):
         path = Path(self.path)
-        if self.sensitive:
+        if self.sensitive or path.suffix == ".dat":
             return DataEncryptor(self.path)
         elif path.suffix == ".avro":
             return AvroLoader(self.path)
