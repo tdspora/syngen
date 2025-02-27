@@ -593,7 +593,7 @@ class DataEncryptor(BaseDataLoader):
 
     def __init__(self, path: str):
         """
-        Initialize the DataFrameEncryptor with a Fernet key.
+        Initialize the DataEncryptor with a Fernet key.
         """
         super().__init__(path)
         key = os.environ["FERNET_KEY"]
@@ -604,7 +604,7 @@ class DataEncryptor(BaseDataLoader):
     def _validate_fernet_key(key: str):
         """
         Validate the provided Fernet key.
-        A valid Fernet key is a 44-character URL-safe base64-encoded string
+        A valid Fernet key is a 44-character URL-safe base64-encoded string.
         """
         error_message = "It seems that the provided Fernet key is invalid"
         try:
@@ -626,10 +626,9 @@ class DataEncryptor(BaseDataLoader):
 
     def __encrypt_data(self, data: pd.DataFrame):
         """
-        Encrypt the data using the Fernet key and save it to the disk
+        Encrypt the data using the Fernet key and save it to the disk.
         """
         try:
-            # Use compression to reduce data size before encryption
             serialized_df: bytes = pkl.dumps(data, protocol=pkl.HIGHEST_PROTOCOL)
             encrypted_data = self.fernet.encrypt(serialized_df)
 
