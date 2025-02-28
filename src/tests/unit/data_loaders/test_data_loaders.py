@@ -1357,13 +1357,12 @@ def test_round_encrypt_decrypt_data(data_encryptor, valid_simple_dataframe, rp_l
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_check_data_encryption(data_encryptor, rp_logger):
-    rp_logger.info(
-        "Test the method '_check_if_data_encrypted' of the DataEncryptor "
-        "with the provided valid path"
-    )
-    data_encryptor._check_if_data_encrypted()
-    assert data_encryptor.path.endswith(".dat")
+def test_validation_of_absent_fernet_key(rp_logger, caplog):
+    rp_logger.info("Test the validation of the absent Fernet key")
+    with pytest.raises(ValueError):
+        with caplog.at_level("ERROR"):
+            DataEncryptor._validate_fernet_key(None)
+        assert "It seems that the Fernet key is absent" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1372,10 +1371,8 @@ def test_check_data_encryption(data_encryptor, rp_logger):
         "short_key", "a" * 45, "@w3n7X7VO@i0xEHf@fo@rtEa@vgfWW3GZAtmZd@BzlA@"
     ]
 )
-def test_invalid_fernet_key_validation(invalid_key, rp_logger, caplog):
-    rp_logger.info(
-        "Test the validation of the Fernet key with the invalid length"
-    )
+def test_validation_of_invalid_fernet_key(invalid_key, rp_logger, caplog):
+    rp_logger.info("Test the validation of the invalid Fernet key")
 
     with pytest.raises(ValueError):
         with caplog.at_level("ERROR"):
@@ -1400,22 +1397,5 @@ def test_decrypt_data_with_invalid_key(data_encryptor, valid_simple_dataframe, r
         assert (
             "It seems that the decryption process failed due to the following reasons - "
             "the provided Fernet key is invalid or the encrypted data is corrupted"
-        ) in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_check_data_encryption_with_incorrect_extension(tmp_path, rp_logger, caplog):
-    rp_logger.info(
-        "Test the method '_check_if_data_encrypted' of the DataEncryptor "
-        "with the provided invalid path"
-    )
-    file_path = tmp_path / "test.txt"
-    data_encryptor = DataEncryptor(path=str(file_path))
-    with pytest.raises(ValueError):
-        with caplog.at_level("ERROR"):
-            data_encryptor._check_if_data_encrypted()
-        assert (
-            "It seems that the decryption process failed "
-            "due the data hasn't been encrypted despite the Fernet key presence."
         ) in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)

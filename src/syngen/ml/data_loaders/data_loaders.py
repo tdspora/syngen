@@ -57,7 +57,9 @@ class DataLoader(BaseDataLoader):
     def __init__(self, path: str, sensitive: bool = False):
         super().__init__(path)
         fernet_key = os.getenv("FERNET_KEY")
-        self.sensitive = True if sensitive and fernet_key else False
+        self.sensitive = (
+            True if sensitive and fernet_key else False
+        ) or self.path.endswith(".dat")
         self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
         self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
@@ -79,7 +81,7 @@ class DataLoader(BaseDataLoader):
 
     def _get_file_loader(self):
         path = Path(self.path)
-        if self.sensitive or path.suffix == ".dat":
+        if self.sensitive:
             return DataEncryptor(self.path)
         elif path.suffix == ".avro":
             return AvroLoader(self.path)
@@ -592,7 +594,7 @@ class DataEncryptor(BaseDataLoader):
         Initialize the DataEncryptor with a Fernet key.
         """
         super().__init__(path)
-        key = os.environ["FERNET_KEY"]
+        key = os.getenv("FERNET_KEY")
         self._validate_fernet_key(key)
         self.fernet = Fernet(key)
 
@@ -602,6 +604,9 @@ class DataEncryptor(BaseDataLoader):
         Validate the provided Fernet key.
         A valid Fernet key is a 44-character URL-safe base64-encoded string.
         """
+        if key is None:
+            raise ValueError("It seems that the Fernet key is absent")
+
         error_message = "It seems that the provided Fernet key is invalid"
         try:
             Fernet(key.encode())
@@ -609,16 +614,6 @@ class DataEncryptor(BaseDataLoader):
         except ValueError as e:
             logger.error(f"{error_message}. {str(e)}")
             raise e
-
-    def _check_if_data_encrypted(self):
-        """
-        Check whether the data has been encrypted
-        """
-        if Path(self.path).suffix != ".dat":
-            raise ValueError(
-                "It seems that the decryption process failed "
-                "due the data hasn't been encrypted despite the Fernet key presence."
-            )
 
     def __encrypt_data(self, data: pd.DataFrame):
         """
@@ -676,6 +671,5 @@ class DataEncryptor(BaseDataLoader):
         """
         Load the decrypted data from the disk
         """
-        self._check_if_data_encrypted()
         df_decrypted = self.__decrypt_data()
         return df_decrypted, {"fields": {}, "format": "CSV"}

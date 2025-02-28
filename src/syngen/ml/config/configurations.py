@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Tuple, Set, List, Callable, Literal
 import os
-from pathlib import Path
 from copy import deepcopy
 import shutil
 from datetime import datetime
@@ -12,6 +11,7 @@ from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute, fetch_unique_root
+from syngen.ml.convertor import CSVConvertor
 
 
 @dataclass
@@ -118,6 +118,7 @@ class TrainConfig:
             data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
             data, schema = data_loader.load_data()
             self.original_schema = data_loader.original_schema
+            schema = CSVConvertor.schema
             return data, schema
         else:
             data_loader = DataLoader(self.source)
@@ -355,7 +356,6 @@ class InferConfig:
         Check whether required artifacts exists
         """
         data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
-        log_message = str()
         if (
                 self.reports
                 and (
@@ -367,24 +367,11 @@ class InferConfig:
             log_message = (
                 f"It seems that the path to the sample of the original data for the table "
                 f"'{self.table_name}' at '{self.paths['input_data_path']}' does not exist. "
+                f"As a result, no reports for the table '{self.table_name}' will be generated. "
+                f"The 'reports' parameter for the table '{self.table_name}' "
+                f"has been set to 'none'."
             )
-        elif (
-            self.reports
-            and Path(data_loader.path).suffix == ".dat"
-            and not os.getenv("FERNET_KEY")
-        ):
-            self.reports = list()
-            log_message = (
-                f"It seems that the sample of the original data for the table "
-                f"'{self.table_name}' at '{self.paths['input_data_path']}' is encrypted, but "
-                f"'FERNET_KEY' environment variable is not set. "
-            )
-        log_message += (
-            f"As a result, no reports for the table '{self.table_name}' will be generated. "
-            f"The 'reports' parameter for the table '{self.table_name}' "
-            f"has been set to 'none'."
-        )
-        logger.warning(log_message)
+            logger.warning(log_message)
 
     def _check_reports(self):
         """
