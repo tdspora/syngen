@@ -455,7 +455,7 @@ pip install syngen[ui]
 then create a python file and insert the code provided below into it:
 
 ```python
-afrom syngen import streamlit_app
+from syngen import streamlit_app
 
 
 streamlit_app.start()
@@ -503,6 +503,7 @@ docker run --rm -it \
   -e MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING=true \
   -e MLFLOW_SYSTEM_METRICS_SAMPLING_INTERVAL 10 \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
 docker run --rm -it \
@@ -513,7 +514,42 @@ docker run --rm -it \
   -e MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING=true \
   -e MLFLOW_SYSTEM_METRICS_SAMPLING_INTERVAL 10 \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+```
+
+### How to keep the original data secure
+
+In the current implementation, a sample of the original data is stored on disk, 
+and to ensure that the data remains secure, it is preferable to set the `FERNET_KEY` 
+environment variable. Setting this variable enables encryption of the stored data.
+
+During the inference process, the encrypted data may be decrypted to facilitate comparisons 
+with synthetic data for the generation of reports. 
+Consequently, if your data was encrypted during an earlier training process, 
+and you intend to generate reports in a subsequent inference process, 
+you must set the `FERNET_KEY` environment variable to the identical value used during the training process.
+
+```bash
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -e FERNET_KEY='YOUR_FERNET_KEY' \
+  --task=train \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -e FERNET_KEY='YOUR_FERNET_KEY' \
+  --task=infer \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+```
+
+*Note:* To generate a Fernet key, you can use the following code:
+
+```python
+from cryptography.fernet import Fernet
+
+cipher = Fernet.generate_key().decode("utf-8")
 ```
 
 ## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10 or 3.11
