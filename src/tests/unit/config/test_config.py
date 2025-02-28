@@ -420,7 +420,10 @@ def test_check_reports_in_train_config(
 
 
 def test_check_reports_in_infer_config_with_absent_input_data(rp_logger):
-    rp_logger.info("Test the method '_check_reports' of the class InferConfig")
+    rp_logger.info(
+        "Test the method '_check_reports' of the class InferConfig "
+        "in case the input data of the table is absent"
+    )
     infer_config = InferConfig(
         destination=None,
         metadata={
@@ -443,6 +446,39 @@ def test_check_reports_in_infer_config_with_absent_input_data(rp_logger):
         log_level="DEBUG",
         type_of_process="infer"
     )
+    infer_config._check_reports()
+    assert infer_config.reports == []
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_check_reports_in_infer_config_with_absent_fernet_key(rp_logger):
+    rp_logger.info(
+        "Test the method '_check_reports' of the class InferConfig "
+        "in case the input data is encrypted and the Fernet key is absent"
+    )
+    infer_config = InferConfig(
+        destination=None,
+        metadata={
+            "test_table": {
+                "train_settings": {
+                    "source": "path/to/data.csv",
+                    "reports": ["accuracy", "sample"]
+                }
+            }
+        },
+        metadata_path=None,
+        size=100,
+        table_name="test_table",
+        run_parallel=False,
+        batch_size=32,
+        random_seed=None,
+        reports=["accuracy"],
+        both_keys=False,
+        loader=None,
+        log_level="DEBUG",
+        type_of_process="infer"
+    )
+    infer_config.paths["input_data_path"] = "path/to/encrypted_data.dat"
     infer_config._check_reports()
     assert infer_config.reports == []
     rp_logger.info(SUCCESSFUL_MESSAGE)

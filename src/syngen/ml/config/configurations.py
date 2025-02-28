@@ -355,6 +355,7 @@ class InferConfig:
         Check whether required artifacts exists
         """
         data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
+        log_message = str()
         if (
                 self.reports
                 and (
@@ -366,11 +367,24 @@ class InferConfig:
             log_message = (
                 f"It seems that the path to the sample of the original data for the table "
                 f"'{self.table_name}' at '{self.paths['input_data_path']}' does not exist. "
-                f"As a result, no reports for the table '{self.table_name}' will be generated. "
-                f"The 'reports' parameter for the table '{self.table_name}' "
-                f"has been set to 'none'."
             )
-            logger.warning(log_message)
+        elif (
+            self.reports
+            and Path(data_loader.path).suffix == ".dat"
+            and not os.getenv("FERNET_KEY")
+        ):
+            self.reports = list()
+            log_message = (
+                f"It seems that the sample of the original data for the table "
+                f"'{self.table_name}' at '{self.paths['input_data_path']}' is encrypted, but "
+                f"'FERNET_KEY' environment variable is not set. "
+            )
+        log_message += (
+            f"As a result, no reports for the table '{self.table_name}' will be generated. "
+            f"The 'reports' parameter for the table '{self.table_name}' "
+            f"has been set to 'none'."
+        )
+        logger.warning(log_message)
 
     def _check_reports(self):
         """

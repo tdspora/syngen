@@ -123,8 +123,8 @@ class PreprocessHandler(Processor):
 
     @staticmethod
     def _get_artifacts(
-            data: pd.DataFrame,
-            json_columns: List[str]
+        data: pd.DataFrame,
+        json_columns: List[str]
     ) -> Tuple[pd.DataFrame, Dict[str, List[str]], List[str]]:
         """
         Flatten JSON columns in DataFrame and create mapping of original to flattened columns.
@@ -187,7 +187,8 @@ class PreprocessHandler(Processor):
         """
         path_to_input_data = (
             f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/{slugify(table_name)}/"
-            f"input_data_{slugify(table_name)}.pkl"
+            f"input_data_{slugify(table_name)}."
+            f"{'dat' if os.getenv('FERNET_KEY') else 'pkl'}"
         )
         DataLoader(path_to_input_data, sensitive=True).save_data(flattened_data)
 
