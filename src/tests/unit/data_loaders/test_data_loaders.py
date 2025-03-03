@@ -1395,7 +1395,8 @@ def test_decrypt_data_with_invalid_key(data_encryptor, valid_simple_dataframe, r
         with caplog.at_level("ERROR"):
             data_encryptor.load_data()
         assert (
-            "It seems that the decryption process failed due to the following reasons - "
+            f"It seems that the decryption process of the data stored at - "
+            f"'{data_encryptor.path}' failed due to the following reasons - "
             "the provided Fernet key is invalid or the encrypted data is corrupted"
         ) in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
