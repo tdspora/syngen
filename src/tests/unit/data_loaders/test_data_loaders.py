@@ -1378,8 +1378,8 @@ def test_validation_of_invalid_fernet_key(invalid_key, rp_logger, caplog):
         with caplog.at_level("ERROR"):
             DataEncryptor._validate_fernet_key(invalid_key)
         assert (
-                "It seems that the provided Fernet key is invalid. "
-                "The Fernet key must be 32 url-safe base64-encoded bytes"
+            "It seems that the provided Fernet key is invalid. "
+            "The Fernet key must be 32 url-safe base64-encoded bytes"
         ) in caplog.text
 
     rp_logger.info(SUCCESSFUL_MESSAGE)

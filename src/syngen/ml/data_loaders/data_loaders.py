@@ -630,7 +630,7 @@ class DataEncryptor(BaseDataLoader):
             os.replace(temp_path, self.path)
 
             logger.info(
-                f"Data is successfully encrypted and saved to '{self.path}'"
+                f"Data is successfully encrypted and saved to '{self.path}'."
             )
         except Exception as e:
             if os.path.exists(temp_path):
@@ -656,7 +656,7 @@ class DataEncryptor(BaseDataLoader):
             df_decrypted = pkl.loads(decrypted_data)
 
             logger.info(
-                f"The data stored at the path - '{self.path}' "
+                f"Data stored at the path - '{self.path}' "
                 f"has been successfully decrypted and loaded."
             )
             return df_decrypted
