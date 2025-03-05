@@ -1334,9 +1334,12 @@ def test_save_excel_table_in_xlsx_format(test_xlsx_path, test_df, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_initialization_data_encryptor_with_valid_path_and_key(data_encryptor, rp_logger):
+def test_initialization_data_encryptor_with_valid_path_and_key(
+    monkeypatch, valid_fernet_key, rp_logger
+):
     rp_logger.info("Test the initialization of DataEncryptor with valid path and key")
-    assert isinstance(data_encryptor, DataEncryptor)
+    monkeypatch.setenv("FERNET_KEY", valid_fernet_key)
+    DataEncryptor("path/to/data.csv")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
