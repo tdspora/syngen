@@ -76,7 +76,7 @@ class BaseHandler(AbstractHandler):
         """
         Fetch the data
         """
-        data_loader = DataLoader(self.paths["input_data_path"])
+        data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
         data = pd.DataFrame()
         schema = None
         if data_loader.has_existed_path:

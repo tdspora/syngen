@@ -30,6 +30,20 @@ class Validator:
     existed_columns_mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
 
+    @staticmethod
+    def _check_encryption_process():
+        """
+        Check if the encryption process is enabled
+        """
+        fernet_key = os.getenv("FERNET_KEY")
+        state = "is" if fernet_key else "isn't"
+        process_status = "enabled" if fernet_key else "disabled"
+        message = (
+            f"As the environment variable 'FERNET_KEY' {state} set, "
+            f"the encryption and decryption process is {process_status}."
+        )
+        logger.warning(message)
+
     def _launch_validation_of_schema(self):
         """
         Launch the validation of the schema of the metadata
@@ -370,6 +384,7 @@ class Validator:
         """
         Run the validation process
         """
+        self._check_encryption_process()
         self._preprocess_metadata()
         self._launch_validation()
         self._collect_errors()

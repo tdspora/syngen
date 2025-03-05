@@ -15,6 +15,7 @@ from ulid import ULID
 import random
 from loguru import logger
 
+
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
 
