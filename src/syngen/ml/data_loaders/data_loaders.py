@@ -615,12 +615,12 @@ class DataEncryptor(BaseDataLoader):
             logger.error(f"{error_message}. {str(e)}")
             raise e
 
-    def __encrypt_data(self, data: pd.DataFrame):
+    def save_data(self, df: pd.DataFrame):
         """
-        Encrypt the data using the Fernet key and save it to the disk.
+        Save the encrypted dataframe to the disk
         """
         try:
-            serialized_df: bytes = pkl.dumps(data, protocol=pkl.HIGHEST_PROTOCOL)
+            serialized_df: bytes = pkl.dumps(df, protocol=pkl.HIGHEST_PROTOCOL)
             encrypted_data = self.fernet.encrypt(serialized_df)
 
             # Use atomic write operation for better safety
@@ -638,15 +638,9 @@ class DataEncryptor(BaseDataLoader):
             logger.error(f"Encryption failed: {str(e)}")
             raise e
 
-    def save_data(self, df: pd.DataFrame):
+    def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
-        Save the encrypted dataframe to the disk
-        """
-        self.__encrypt_data(df)
-
-    def __decrypt_data(self) -> pd.DataFrame:
-        """
-        Decrypt the data by using the Fernet key
+        Load the decrypted data from the disk
         """
         try:
             with open(self.path, "rb") as encrypted_file:
@@ -659,7 +653,7 @@ class DataEncryptor(BaseDataLoader):
                 f"Data stored at the path - '{self.path}' "
                 f"has been successfully decrypted and loaded."
             )
-            return df_decrypted
+            return df_decrypted, {"fields": {}, "format": "CSV"}
         except Exception as e:
             logger.error(
                 f"It seems that the decryption process of the data "
@@ -667,10 +661,3 @@ class DataEncryptor(BaseDataLoader):
                 f"the provided Fernet key is invalid or the encrypted data is corrupted. {str(e)}"
             )
             raise e
-
-    def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
-        """
-        Load the decrypted data from the disk
-        """
-        df_decrypted = self.__decrypt_data()
-        return df_decrypted, {"fields": {}, "format": "CSV"}
