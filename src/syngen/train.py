@@ -89,6 +89,13 @@ validate_reports = validate_parameter_reports(
     help="Number of rows that goes in one batch. "
          "This parameter can help to control memory consumption.",
 )
+@click.option(
+    "--fernet_key",
+    default=None,
+    type=str,
+    help="The value of the Fernet key to encrypt and decrypt "
+         "the sensitive data stored on the disk",
+)
 def launch_train(
     metadata_path: Optional[str],
     source: Optional[str],
@@ -98,7 +105,8 @@ def launch_train(
     row_limit: Optional[int],
     reports: List[str],
     log_level: str,
-    batch_size: int = 32,
+    batch_size: int,
+    fernet_key: Optional[str]
 ):
     """
     Launch the work of training process
@@ -114,6 +122,7 @@ def launch_train(
     reports
     log_level
     batch_size
+    fernet_key
     -------
 
     """
@@ -179,6 +188,7 @@ def launch_train(
         settings=settings,
         log_level=log_level,
         type_of_process="train",
+        fernet_key=fernet_key
     )
 
     worker.launch_train()

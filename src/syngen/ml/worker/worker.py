@@ -30,6 +30,7 @@ class Worker:
     metadata_path: Optional[str] = field(kw_only=True)
     settings: Dict = field(kw_only=True)
     log_level: str = field(kw_only=True)
+    fernet_key: Optional[str] = field(kw_only=True)
     type_of_process: Literal["train", "infer"] = field(kw_only=True)
     metadata: Optional[Dict] = None
     loader: Optional[Callable[[str], pd.DataFrame]] = None
@@ -55,7 +56,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_source=False if self.loader and self.type_of_process == "train" else True
+            validation_source=False if self.loader and self.type_of_process == "train" else True,
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -118,6 +119,7 @@ class Worker:
         """
         global_train_settings = self.metadata.get("global", {}).get("train_settings", {})
         global_infer_settings = self.metadata.get("global", {}).get("infer_settings", {})
+        global_encryption_settings = self.metadata.get("global", {}).get("encryption", {})
 
         for table, table_metadata in self.metadata.items():
             if table == "global":
@@ -135,6 +137,12 @@ class Worker:
 
             self._update_table_settings(table_settings, global_settings)
             self._update_table_settings(table_settings, self.settings)
+            encryption_settings = table_metadata["encryption"]
+            self._update_table_settings(encryption_settings, global_encryption_settings)
+            self._update_table_settings(
+                encryption_settings,
+                {"fernet_key": self.fernet_key}
+            )
 
     def _update_metadata(self) -> None:
         if self.metadata_path:
@@ -157,6 +165,9 @@ class Worker:
                         "source": source,
                     },
                     "infer_settings": {},
+                    "encryption": {
+                        "fernet_key": self.fernet_key
+                    },
                     "keys": {},
                     "format": {}
                 }

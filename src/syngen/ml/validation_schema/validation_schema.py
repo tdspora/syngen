@@ -102,6 +102,10 @@ class KeysSchema(Schema):
             )
 
 
+class EncryptionSettings(Schema):
+    fernet = fields.String(required=False, allow_none=True)
+
+
 class TrainingSettingsSchema(Schema):
     @staticmethod
     def validate_reports(x):
@@ -212,6 +216,7 @@ class ExcelFormatSettingsSchema(Schema):
 class GlobalSettingsSchema(Schema):
     train_settings = fields.Nested(TrainingSettingsSchema, required=False, allow_none=True)
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
+    encryption = fields.Nested(EncryptionSettings, required=False, allow_none=True)
 
 
 class ConfigurationSchema(Schema):
@@ -221,6 +226,7 @@ class ConfigurationSchema(Schema):
         allow_none=True
     )
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
+    encryption = fields.Nested(EncryptionSettings, required=False, allow_none=True)
     format = fields.Raw(required=False, allow_none=True)
     keys = fields.Dict(
         keys=fields.String(),

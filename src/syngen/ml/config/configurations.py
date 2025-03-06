@@ -24,7 +24,7 @@ class TrainConfig:
     epochs: int
     drop_null: bool
     row_limit: Optional[int]
-    table_name: Optional[str]
+    table_name: str
     metadata: Dict
     metadata_path: Optional[str]
     reports: List[str]
@@ -115,13 +115,21 @@ class TrainConfig:
         Return dataframe and schema of original data
         """
         if os.path.exists(self.paths["path_to_flatten_metadata"]):
-            data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
+            path = self.paths["input_data_path"]
+            data_loader = DataLoader(
+                path=path,
+                metadata=self.metadata,
+                table_name=self.table_name,
+                sensitive=True
+            )
             data, schema = data_loader.load_data()
             self.original_schema = data_loader.original_schema
             schema = CSVConvertor.schema
             return data, schema
         else:
-            data_loader = DataLoader(self.source)
+            data_loader = DataLoader(
+                path=self.source, metadata=self.metadata, table_name=self.table_name
+            )
             self.original_schema = data_loader.original_schema
             if self.original_schema is not None:
                 logger.trace(
@@ -229,13 +237,22 @@ class TrainConfig:
         """
         Save the subset of the original data
         """
-        DataLoader(self.paths["input_data_path"], sensitive=True).save_data(self.data)
+        DataLoader(
+            path=self.paths["input_data_path"],
+            metadata=self.metadata,
+            table_name=self.table_name,
+            sensitive=True
+        ).save_data(self.data)
 
     def _save_original_schema(self):
         """
         Save the schema of the original data
         """
-        DataLoader(self.paths["original_schema_path"]).save_data(self.original_schema)
+        DataLoader(
+            path=self.paths["original_schema_path"],
+            metadata=self.metadata,
+            table_name=self.table_name,
+        ).save_data(self.original_schema)
 
     def _prepare_data(self):
         """
@@ -254,6 +271,7 @@ class TrainConfig:
             f"losses_{self.table_name}_"
             f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
+        fernet_key = self.metadata.get("encryption", {}).get("fernet_key")
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -262,7 +280,7 @@ class TrainConfig:
             "reports_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/reports",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}."
-                               f"{'dat' if os.getenv('FERNET_KEY') else 'pkl'}",
+                               f"{'dat' if fernet_key is not None else 'pkl'}",
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
             "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
                                         f"checkpoints/train_config.pkl",
@@ -293,7 +311,7 @@ class InferConfig:
     metadata: Dict
     metadata_path: Optional[str]
     size: Optional[int]
-    table_name: Optional[str]
+    table_name: str
     run_parallel: bool
     batch_size: Optional[int]
     random_seed: Optional[int]
@@ -355,7 +373,12 @@ class InferConfig:
         """
         Check whether required artifacts exists
         """
-        data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
+        data_loader = DataLoader(
+            path=self.paths["input_data_path"],
+            metadata=self.metadata,
+            table_name=self.table_name,
+            sensitive=True
+        )
         if (
                 self.reports
                 and (
@@ -384,7 +407,12 @@ class InferConfig:
         Set up "size" of generated data
         """
         if self.size is None:
-            data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
+            data_loader = DataLoader(
+                path=self.paths["input_data_path"],
+                metadata=self.metadata,
+                table_name=self.table_name,
+                sensitive=True
+            )
             data = pd.DataFrame()
             if data_loader.has_existed_path:
                 data, schema = data_loader.load_data()
@@ -409,11 +437,12 @@ class InferConfig:
         Create the paths which used in inference process
         """
         dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
+        fernet_key = self.metadata.get("encryption", {}).get("fernet_key")
         self.paths = {
             "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}."
-                               f"{'dat' if os.getenv('FERNET_KEY') else 'pkl'}",
+                               f"{'dat' if fernet_key is not None else 'pkl'}",
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
                                             f"merged_infer_{dynamic_name}.csv",
             "path_to_merged_infer": self.destination
