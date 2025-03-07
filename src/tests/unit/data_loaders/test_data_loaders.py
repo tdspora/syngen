@@ -1369,6 +1369,13 @@ def test_validation_of_absent_fernet_key(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_get_columns_by_data_encryptor(data_encryptor, valid_simple_dataframe, rp_logger, caplog):
+    rp_logger.info("Test the method 'get_columns' of the class DataEncryptor")
+    data_encryptor.save_data(valid_simple_dataframe)
+    assert data_encryptor.get_columns() == ["column1", "column2"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @pytest.mark.parametrize(
     "invalid_key", [
         "short_key", "a" * 45, "@w3n7X7VO@i0xEHf@fo@rtEa@vgfWW3GZAtmZd@BzlA@"

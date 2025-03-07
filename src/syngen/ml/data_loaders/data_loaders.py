@@ -615,6 +615,13 @@ class DataEncryptor(BaseDataLoader):
             logger.error(f"{error_message}. {str(e)}")
             raise e
 
+    def get_columns(self) -> List[str]:
+        """
+        Get the column names of the table
+        """
+        data, schema = self.load_data()
+        return data.columns.tolist()
+
     def save_data(self, df: pd.DataFrame):
         """
         Save the encrypted dataframe to the disk
