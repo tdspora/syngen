@@ -178,10 +178,14 @@ class PreprocessHandler(Processor):
                 table_name=table_name
             )
             return dataframe_fetcher.fetch_data()
-        return DataLoader(path_to_source).load_data()
+        return DataLoader(
+            path=path_to_source,
+            metadata=self.metadata,
+            table_name=table_name
+        ).load_data()
 
-    @staticmethod
-    def _save_input_data(flattened_data: pd.DataFrame, table_name: str):
+
+    def _save_input_data(self, flattened_data: pd.DataFrame, table_name: str):
         """
         Save the input data to the predefined path
         """
@@ -190,7 +194,12 @@ class PreprocessHandler(Processor):
             f"input_data_{slugify(table_name)}."
             f"{'dat' if os.getenv('FERNET_KEY') else 'pkl'}"
         )
-        DataLoader(path_to_input_data, sensitive=True).save_data(flattened_data)
+        DataLoader(
+            path=path_to_input_data,
+            metadata=self.metadata,
+            table_name=table_name,
+            sensitive=True
+        ).save_data(flattened_data)
 
     def _handle_json_columns(self):
         """
@@ -329,12 +338,15 @@ class PostprocessHandler(Processor):
 
         return df
 
-    @staticmethod
-    def _load_generated_data(path_to_generated_data: str, table_name=None) -> pd.DataFrame:
+    def _load_generated_data(self, path_to_generated_data: str, table_name: str) -> pd.DataFrame:
         """
         Load generated data from the predefined path
         """
-        data, schema = DataLoader(path_to_generated_data).load_data()
+        data, schema = DataLoader(
+            path=path_to_generated_data,
+            metadata=self.metadata,
+            table_name=table_name
+        ).load_data()
         return data
 
     def _postprocess_generated_data(
@@ -389,18 +401,20 @@ class PostprocessHandler(Processor):
                 self._save_generated_data(data, path_to_destination, order_of_columns, table)
                 logger.info("Finish postprocessing of the generated data")
 
-    @staticmethod
     def _save_generated_data(
+        self,
         generated_data: pd.DataFrame,
         path_to_destination: str,
         order_of_columns: List[str],
-        table_name=None
+        table_name: str
     ):
         """
         Save generated data to the path
         """
         generated_data = generated_data[order_of_columns]
-        DataLoader(path_to_destination).save_data(
+        DataLoader(
+            path=path_to_destination, metadata=self.metadata, table_name=table_name
+        ).save_data(
             generated_data,
             format=get_context().get_config(),
         )

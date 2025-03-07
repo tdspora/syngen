@@ -80,6 +80,12 @@ validate_reports = validate_parameter_reports(
     help="Set the logging level which will be used in the process. "
          "If absent, it's defaulted to 'INFO'",
 )
+@click.option(
+    "--fernet_key",
+    default=None,
+    type=str,
+    help="The value of the Fernet key to decrypt the sensitive data stored on the disk",
+)
 def launch_infer(
     metadata_path: Optional[str],
     size: Optional[int],
@@ -89,6 +95,7 @@ def launch_infer(
     reports: List[str],
     random_seed: Optional[int],
     log_level: str,
+    fernet_key: str
 ):
     """
     Launch the work of infer process
@@ -102,6 +109,7 @@ def launch_infer(
     reports
     random_seed
     log_level
+    fernet_key
     -------
 
     """
@@ -142,6 +150,7 @@ def launch_infer(
         settings=settings,
         log_level=log_level,
         type_of_process="infer",
+        fernet_key=fernet_key
     )
 
     worker.launch_infer()
