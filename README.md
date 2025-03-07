@@ -530,16 +530,21 @@ Consequently, if your data was encrypted during an earlier training process,
 and you intend to generate reports in a subsequent inference process, 
 you must set the `FERNET_KEY` environment variable to the identical value used during the training process.
 
+*Please, pay attention:* 
+Please, store the Fernet key securely. If the key is lost, encrypted data cannot be recovered.
+
 ```bash
 docker run --rm -it \
   --user $(id -u):$(id -g) \
   -e FERNET_KEY='YOUR_FERNET_KEY' \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
 docker run --rm -it \
   --user $(id -u):$(id -g) \
   -e FERNET_KEY='YOUR_FERNET_KEY' \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
   --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 ```
