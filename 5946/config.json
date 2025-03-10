@@ -1,0 +1,35 @@
+{
+    "configurations": [
+        {
+            "infer_settings": {
+                "size": 4e6,
+                "batch_size": 1000,
+                "run_parallel": true
+            }
+        },
+        {
+            "infer_settings": {
+                "size": 4e6,
+                "batch_size": 5000,
+                "run_parallel": true
+            }
+        },
+        {
+            "infer_settings": {
+                "size": 4e6,
+                "batch_size": 15625,
+                "run_parallel": true
+            }
+        },
+        {
+            "infer_settings": {
+                "size": 4e6,
+                "batch_size": 31250,
+                "run_parallel": true
+            }
+        }
+    ],
+    "csv_path": "/home/Iya_Ivanishko@epam.com/5946_run_parallel/batch_size_experiments_EPMCTDM-5946.csv",
+    "batch_memory_csv_path": "/home/Iya_Ivanishko@epam.com/5946_run_parallel/batch_memory_EPMCTDM-5946.csv",
+    "original_yaml_path": "/home/Iya_Ivanishko@epam.com/git/syngen/src/model_artifacts/folio_flatten_audit_loan_EPMCTDM-5946.yaml"
+}
