@@ -8,7 +8,7 @@ from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
-from syngen.ml.utils import fetch_unique_root, ValidationError
+from syngen.ml.utils import ValidationError
 
 
 @dataclass
@@ -311,8 +311,7 @@ class Validator:
         metadata_of_table = self.merged_metadata[table_name]
         format_settings = metadata_of_table.get("format", {})
         path_to_source = self._fetch_path_to_source(table_name)
-        sensitive = True if path_to_source.endswith(".dat") else False
-        return DataLoader(path_to_source, sensitive=sensitive).get_columns(**format_settings)
+        return DataLoader(path_to_source).get_columns(**format_settings)
 
     def _gather_existed_columns(self, table_name: str):
         """
@@ -336,14 +335,6 @@ class Validator:
         """
         Fetch the path to the source of the certain table
         """
-        if os.path.exists(
-            f"{os.getcwd()}/model_artifacts/tmp_store/flatten_configs/flatten_metadata_"
-            f"{fetch_unique_root(table_name, self.metadata_path)}.json"
-        ):
-            return (
-                f"{os.getcwd()}/model_artifacts/tmp_store/{slugify(table_name)}/"
-                f"input_data_{slugify(table_name)}.{'dat' if os.getenv('FERNET_KEY') else 'pkl'}"
-            )
         return self.merged_metadata[table_name]["train_settings"]["source"]
 
     def _launch_validation(self):

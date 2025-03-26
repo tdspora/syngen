@@ -1,5 +1,4 @@
 import os
-import shutil
 from collections import Counter
 from typing import List, Tuple, Dict, Any, Optional, Callable
 import json
@@ -14,9 +13,6 @@ from flatten_json import flatten, unflatten_list
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import fetch_unique_root
 from syngen.ml.context import get_context
-
-
-PATH_TO_MODEL_ARTIFACTS = f"{os.getcwd()}/model_artifacts"
 
 
 class Processor:
@@ -40,7 +36,7 @@ class Processor:
         self.metadata = metadata
         self.loader = loader
         self.path_to_flatten_metadata = (
-            f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/flatten_configs/"
+            "model_artifacts/tmp_store/flatten_configs/"
             f"flatten_metadata_{fetch_unique_root(table_name, self.metadata_path)}.json"
         )
 
@@ -49,48 +45,6 @@ class PreprocessHandler(Processor):
     """
     The class for the preprocessing of the data before the training process
     """
-
-    def _clean_up(self):
-        """
-        Clean up the directories before the preprocessing data
-        """
-        for table in self.metadata.keys():
-            self._remove_existed_artifacts(table)
-            self._prepare_dirs(table)
-
-    @staticmethod
-    def _remove_existed_artifact(path_to_artifact: str):
-        """
-        Remove the existed artifact from the previous train process
-        """
-        if os.path.exists(path_to_artifact):
-            shutil.rmtree(path_to_artifact)
-            logger.info(f"The artifacts located in the path - '{path_to_artifact}' was removed")
-
-    def _remove_existed_artifacts(self, table_name: str):
-        """
-        Remove existed artifacts from previous train process
-        """
-        resources_path = f"{PATH_TO_MODEL_ARTIFACTS}/resources/{slugify(table_name)}/"
-        tmp_store_path = f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/{slugify(table_name)}/"
-        self._remove_existed_artifact(resources_path)
-        self._remove_existed_artifact(tmp_store_path)
-
-    @staticmethod
-    def _prepare_dirs(table_name: str):
-        """
-        Create main directories for saving original, synthetic data and model artifacts
-        """
-        resources_path = f"{PATH_TO_MODEL_ARTIFACTS}/resources/{slugify(table_name)}/"
-        tmp_store_path = f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/{slugify(table_name)}/"
-        state_path = (
-            f"{PATH_TO_MODEL_ARTIFACTS}/resources/{slugify(table_name)}/vae/checkpoints"
-        )
-        flatten_config_path = f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/flatten_configs/"
-        os.makedirs(resources_path, exist_ok=True)
-        os.makedirs(tmp_store_path, exist_ok=True)
-        os.makedirs(state_path, exist_ok=True)
-        os.makedirs(flatten_config_path, exist_ok=True)
 
     @staticmethod
     def _run_script():
@@ -186,7 +140,7 @@ class PreprocessHandler(Processor):
         Save the input data to the predefined path
         """
         path_to_input_data = (
-            f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/{slugify(table_name)}/"
+            f"model_artifacts/tmp_store/{slugify(table_name)}/"
             f"input_data_{slugify(table_name)}."
             f"{'dat' if os.getenv('FERNET_KEY') else 'pkl'}"
         )
@@ -225,7 +179,6 @@ class PreprocessHandler(Processor):
         """
         Launch the preprocessing process:
         """
-        self._clean_up()
         self._run_script()
         self._handle_json_columns()
 
@@ -375,8 +328,7 @@ class PostprocessHandler(Processor):
                 duplicated_columns = flatten_metadata.get("duplicated_columns")
                 order_of_columns = flatten_metadata.get("order_of_columns")
                 path_to_generated_data = (
-                    f"{PATH_TO_MODEL_ARTIFACTS}/tmp_store/"
-                    f"{slugify(table)}/merged_infer_{slugify(table)}.csv"
+                    f"model_artifacts/tmp_store/{slugify(table)}/merged_infer_{slugify(table)}.csv"
                 )
                 data = self._load_generated_data(path_to_generated_data, table)
                 data = self._postprocess_generated_data(
