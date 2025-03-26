@@ -1360,11 +1360,12 @@ def test_round_encrypt_decrypt_data(data_encryptor, valid_simple_dataframe, rp_l
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_validation_of_absent_fernet_key(rp_logger, caplog):
+@pytest.mark.parametrize("key_value", [None, ""])
+def test_validation_of_absent_fernet_key(rp_logger, caplog, key_value):
     rp_logger.info("Test the validation of the absent Fernet key")
     with pytest.raises(ValueError):
         with caplog.at_level("ERROR"):
-            DataEncryptor._validate_fernet_key(None)
+            DataEncryptor._validate_fernet_key(key_value)
         assert "It seems that the Fernet key is absent" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

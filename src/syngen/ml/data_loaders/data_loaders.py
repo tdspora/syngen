@@ -604,7 +604,7 @@ class DataEncryptor(BaseDataLoader):
         Validate the provided Fernet key.
         A valid Fernet key is a 44-character URL-safe base64-encoded string.
         """
-        if key is None:
+        if key is None or not key.strip():
             raise ValueError("It seems that the Fernet key is absent")
 
         error_message = "It seems that the provided Fernet key is invalid"
