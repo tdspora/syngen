@@ -251,7 +251,6 @@ class PostprocessHandler(Processor):
                 for k, v in input_data.items()
                 if not self._check_none_values(v)
             }
-
         return input_data
 
     @staticmethod
@@ -272,7 +271,7 @@ class PostprocessHandler(Processor):
         parent_to_nested = {}
         for col in columns:
             for potential_parent in columns:
-                if f"{potential_parent}." in col:
+                if f"{potential_parent}" in col:
                     parent_to_nested.setdefault(potential_parent, []).append(col)
 
         # Vectorized operation for each parent column
