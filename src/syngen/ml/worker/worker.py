@@ -490,8 +490,6 @@ class Worker:
                 delta=delta
             )
 
-        self.__postprocess_data()
-
         tables_mapping = self._get_surrogate_tables_mapping()
         for table_root in tables_mapping.keys():
             MlflowTracker().start_run(
@@ -602,4 +600,5 @@ class Worker:
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
         self._generate_reports()
+        self.__postprocess_data()
         self._collect_metrics_in_infer(tables)
