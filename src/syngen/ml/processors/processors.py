@@ -267,17 +267,16 @@ class PostprocessHandler(Processor):
         df = df.copy().astype(object)
         columns = df.columns.tolist()
 
-        # Create a mapping of parent columns to their nested fields
-        parent_to_nested = {}
+        # Find potential parent columns
+        parent_columns = set()
         for col in columns:
             for potential_parent in columns:
-                if f"{potential_parent}" in col:
-                    parent_to_nested.setdefault(potential_parent, []).append(col)
+                if f"{potential_parent}." in col:
+                    parent_columns.add(potential_parent)
 
-        # Vectorized operation for each parent column
-        for parent_col, nested_fields in parent_to_nested.items():
-            mask = df[parent_col].isna() & df[nested_fields].notna().any(axis=1)
-            df.loc[mask, parent_col] = df.loc[mask, parent_col].apply(lambda _: {})
+        # Restore empty dictionary values for parent columns
+        for parent_col in parent_columns:
+            df[parent_col] = df[parent_col].apply(lambda val: {} if pd.isna(val) else val)
 
         return df
 
