@@ -288,6 +288,35 @@ class PostprocessHandler(Processor):
         data, schema = DataLoader(path_to_generated_data).load_data()
         return data
 
+    @staticmethod
+    def _remove_empty_elements(d: dict) -> dict:
+        """
+        Recursively remove keys with empty dictionaries or lists from a nested dictionary
+        """
+
+        def clean(data):
+            """
+            Recursively clean nested structures while eliminating empty dictionaries/lists
+            """
+            if isinstance(data, dict):
+                return {
+                    key: clean(value)
+                    for key, value in data.items()
+                    if
+                    value not in ({}, []) and (not isinstance(value, (dict, list)) or clean(value))
+                }
+
+            if isinstance(data, list):
+                return [
+                    clean(item)
+                    for item in data
+                    if item not in ({}, []) and (not isinstance(item, (dict, list)) or clean(item))
+                ]
+
+            return data
+
+        return clean(d)
+
     def _postprocess_generated_data(
         self,
         data: pd.DataFrame,
@@ -303,9 +332,10 @@ class PostprocessHandler(Processor):
             data[old_column] = data[new_columns].apply(
                 lambda row: unflatten_list(row.to_dict(), "."), axis=1
             )
-
             data[old_column] = data[old_column]. \
                 apply(lambda row: self._remove_none_from_struct(row))
+            data[old_column] = data[old_column]. \
+                apply(lambda row: self._remove_empty_elements(row))
             data[old_column] = data[old_column]. \
                 apply(lambda row: json.dumps(row, ensure_ascii=False))
             dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
