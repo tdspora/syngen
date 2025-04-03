@@ -292,26 +292,33 @@ class PostprocessHandler(Processor):
     def _remove_empty_elements(d: dict) -> dict:
         """
         Recursively remove keys with empty dictionaries or lists from a nested dictionary
+
+        Args:
+            d (dict): Input dictionary to clean
+
+        Returns:
+            dict: Cleaned dictionary with empty structures removed
+
+        Note:
+            This method preserves non-empty values including False, 0, and empty strings
         """
 
         def clean(data):
-            """
-            Recursively clean nested structures while eliminating empty dictionaries/lists
-            """
             if isinstance(data, dict):
-                return {
-                    key: clean(value)
+                cleaned = {
+                    key: cleaned_value
                     for key, value in data.items()
-                    if
-                    value not in ({}, []) and (not isinstance(value, (dict, list)) or clean(value))
+                    if (cleaned_value := clean(value)) not in ({}, [])
                 }
+                return cleaned
 
             if isinstance(data, list):
-                return [
-                    clean(item)
+                cleaned = [
+                    cleaned_item
                     for item in data
-                    if item not in ({}, []) and (not isinstance(item, (dict, list)) or clean(item))
+                    if (cleaned_item := clean(item)) not in ({}, [])
                 ]
+                return cleaned
 
             return data
 
