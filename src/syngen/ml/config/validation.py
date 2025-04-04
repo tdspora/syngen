@@ -8,7 +8,7 @@ from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader, DataEncryptor
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
-from syngen.ml.utils import fetch_unique_root, ValidationError
+from syngen.ml.utils import ValidationError
 
 
 @dataclass
@@ -29,6 +29,20 @@ class Validator:
     mapping: Dict = field(default_factory=dict)
     existed_columns_mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
+
+    @staticmethod
+    def _check_encryption_process():
+        """
+        Check if the encryption process is enabled
+        """
+        fernet_key = os.getenv("FERNET_KEY")
+        state = "is" if fernet_key else "isn't"
+        process_status = "enabled" if fernet_key else "disabled"
+        message = (
+            f"As the environment variable 'FERNET_KEY' {state} set, "
+            f"the encryption and decryption process is {process_status}."
+        )
+        logger.warning(message)
 
     def _launch_validation_of_schema(self):
         """
@@ -334,12 +348,6 @@ class Validator:
         """
         Fetch the path to the source of the certain table
         """
-        if os.path.exists(
-            f"{os.getcwd()}/model_artifacts/tmp_store/flatten_configs/flatten_metadata_"
-            f"{fetch_unique_root(table_name, self.metadata_path)}.json"
-        ):
-            return (f"{os.getcwd()}/model_artifacts/tmp_store/{slugify(table_name)}/"
-                    f"input_data_{slugify(table_name)}.pkl")
         return self.merged_metadata[table_name]["train_settings"]["source"]
 
     def _validate_fernet_key(self, table_name: str):
@@ -393,6 +401,7 @@ class Validator:
         """
         Run the validation process
         """
+        self._check_encryption_process()
         self._preprocess_metadata()
         self._launch_validation()
         self._collect_errors()

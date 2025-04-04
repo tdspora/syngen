@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Any, Callable, Literal
 import os
+import shutil
 from itertools import product
 
 import pandas as pd
@@ -44,9 +45,53 @@ class Worker:
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
         self._update_metadata()
+        self._clean_up()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
+
+    def _clean_up(self):
+        """
+        Clean up the directories before the preprocessing data
+        """
+        for table in self.metadata.keys():
+            if table != "global" and self.type_of_process == "train":
+                self._remove_existed_artifacts(table)
+                self._prepare_dirs(table)
+
+    @staticmethod
+    def _remove_existed_artifact(path_to_artifact: str):
+        """
+        Remove the existed artifact from the previous train process
+        """
+        if os.path.exists(path_to_artifact):
+            shutil.rmtree(path_to_artifact)
+            logger.info(f"The artifacts located in the path - '{path_to_artifact}' was removed")
+
+    def _remove_existed_artifacts(self, table_name: str):
+        """
+        Remove existed artifacts from previous train process
+        """
+        resources_path = f"model_artifacts/resources/{slugify(table_name)}/"
+        tmp_store_path = f"model_artifacts/tmp_store/{slugify(table_name)}/"
+        self._remove_existed_artifact(resources_path)
+        self._remove_existed_artifact(tmp_store_path)
+
+    @staticmethod
+    def _prepare_dirs(table_name: str):
+        """
+        Create main directories for saving original, synthetic data and model artifacts
+        """
+        resources_path = f"model_artifacts/resources/{slugify(table_name)}/"
+        tmp_store_path = f"model_artifacts/tmp_store/{slugify(table_name)}/"
+        state_path = (
+            f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints"
+        )
+        flatten_config_path = "model_artifacts/tmp_store/flatten_configs/"
+        os.makedirs(resources_path, exist_ok=True)
+        os.makedirs(tmp_store_path, exist_ok=True)
+        os.makedirs(state_path, exist_ok=True)
+        os.makedirs(flatten_config_path, exist_ok=True)
 
     def __validate_metadata(self):
         """
@@ -456,8 +501,6 @@ class Worker:
                 delta=delta
             )
 
-        self.__postprocess_data()
-
         tables_mapping = self._get_surrogate_tables_mapping()
         for table_root in tables_mapping.keys():
             MlflowTracker().start_run(
@@ -568,4 +611,5 @@ class Worker:
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
         self._generate_reports()
+        self.__postprocess_data()
         self._collect_metrics_in_infer(tables)

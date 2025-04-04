@@ -596,31 +596,39 @@ class DataEncryptor(BaseDataLoader):
         Initialize the DataEncryptor with a Fernet key.
         """
         super().__init__(path)
-        self.validate_fernet_key(key)
-        self.fernet = Fernet(key)
+        self.validate_fernet_key(fernet_key)
+        self.fernet = Fernet(fernet_key)
 
-    def validate_fernet_key(self):
+    @staticmethod
+    def _validate_fernet_key(fernet_key: str):
         """
         Validate the provided Fernet key.
         A valid Fernet key is a 44-character URL-safe base64-encoded string.
         """
-        if self.fernet_key is None:
+        if fernet_key is None or not fernet_key.strip():
             raise ValueError("It seems that the Fernet key is absent")
 
         error_message = "It seems that the provided Fernet key is invalid"
         try:
-            Fernet(self.fernet_key.encode())
+            Fernet(fernet_key.encode())
 
         except ValueError as e:
             logger.error(f"{error_message}. {str(e)}")
             raise e
 
+    def get_columns(self) -> List[str]:
+        """
+        Get the column names of the table
+        """
+        data, schema = self.load_data()
+        return data.columns.tolist()
+
     def save_data(self, df: pd.DataFrame):
         """
-        Encrypt the data using the Fernet key and save it to the disk.
+        Save the encrypted dataframe to the disk
         """
         try:
-            serialized_df: bytes = pkl.dumps(data, protocol=pkl.HIGHEST_PROTOCOL)
+            serialized_df: bytes = pkl.dumps(df, protocol=pkl.HIGHEST_PROTOCOL)
             encrypted_data = self.fernet.encrypt(serialized_df)
 
             # Use atomic write operation for better safety
@@ -640,7 +648,7 @@ class DataEncryptor(BaseDataLoader):
 
     def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
-        Decrypt the data stored on the disk using the Fernet key
+        Load the decrypted data from the disk
         """
         try:
             with open(self.path, "rb") as encrypted_file:
