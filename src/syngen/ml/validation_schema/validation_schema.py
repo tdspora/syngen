@@ -64,7 +64,6 @@ class KeysSchema(Schema):
     type_of_keys = [*pk_types, *fk_types]
     type = fields.String(validate=validate.OneOf(type_of_keys), required=True)
     columns = fields.List(fields.String(), required=True, allow_none=False)
-    joined_sample = fields.Boolean(required=False)
     references = fields.Nested(ReferenceSchema, required=False, allow_none=False)
 
     @validates_schema
@@ -103,7 +102,7 @@ class KeysSchema(Schema):
 
 
 class EncryptionSettings(Schema):
-    fernet = fields.String(required=False, allow_none=True)
+    fernet_key = fields.String(required=False, allow_none=True)
 
 
 class TrainingSettingsSchema(Schema):
@@ -272,8 +271,11 @@ class ValidationSchema:
         self.metadata = metadata
         self.metadata_path = metadata_path
         self.global_schema = GlobalSettingsSchema()
-        self.configuration_schema = RestrictedConfigurationSchema() \
-            if validation_source and process == "train" else ConfigurationSchema()
+        self.configuration_schema = (
+            RestrictedConfigurationSchema()
+            if validation_source and process == "train"
+            else ConfigurationSchema()
+        )
 
     def validate_schema(self):
         """

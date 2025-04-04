@@ -166,28 +166,28 @@ class Worker:
         global_infer_settings = self.metadata.get("global", {}).get("infer_settings", {})
         global_encryption_settings = self.metadata.get("global", {}).get("encryption", {})
 
-        for table, table_metadata in self.metadata.items():
-            if table == "global":
-                continue
-            elif self.type_of_process == "train":
-                settings_key = "train_settings"
-                global_settings = global_train_settings
-            elif self.type_of_process == "infer":
-                settings_key = "infer_settings"
-                global_settings = global_infer_settings
-            else:
+        process_settings_map = {
+            "train": ("train_settings", global_train_settings),
+            "infer": ("infer_settings", global_infer_settings),
+        }
+
+        process_info = process_settings_map.get(self.type_of_process)
+        settings_key, global_process_settings = process_info
+
+        instance_encryption_settings = {}
+        instance_encryption_settings["fernet_key"] = self.fernet_key
+
+        for table_name, table_metadata in self.metadata.items():
+            if table_name == "global":
                 continue
 
-            table_settings = table_metadata[settings_key]
+            table_process_settings = table_metadata.setdefault(settings_key, {})
+            table_encryption_settings = table_metadata.setdefault("fernet_key", {})
 
-            self._update_table_settings(table_settings, global_settings)
-            self._update_table_settings(table_settings, self.settings)
-            encryption_settings = table_metadata["encryption"]
-            self._update_table_settings(encryption_settings, global_encryption_settings)
-            self._update_table_settings(
-                encryption_settings,
-                {"fernet_key": self.fernet_key}
-            )
+            self._update_table_settings(table_process_settings, global_process_settings)
+            self._update_table_settings(table_process_settings, self.settings)
+            self._update_table_settings(table_encryption_settings, global_encryption_settings)
+            self._update_table_settings(table_encryption_settings, instance_encryption_settings)
 
     def _update_metadata(self) -> None:
         if self.metadata_path:

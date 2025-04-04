@@ -95,7 +95,7 @@ def launch_infer(
     reports: List[str],
     random_seed: Optional[int],
     log_level: str,
-    fernet_key: str
+    fernet_key: Optional[str]
 ):
     """
     Launch the work of infer process

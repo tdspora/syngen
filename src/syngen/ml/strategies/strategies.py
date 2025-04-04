@@ -115,6 +115,7 @@ class TrainStrategy(Strategy, ABC):
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
+                metadata=self.config.metadata,
             )
             Report().register_reporter(table=table_name, reporter=sample_reporter)
 
@@ -192,7 +193,8 @@ class InferStrategy(Strategy):
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
-                loader=self.config.loader
+                metadata=self.config.metadata,
+                loader=self.config.loader,
             )
             Report().register_reporter(table=table_name, reporter=accuracy_reporter)
 

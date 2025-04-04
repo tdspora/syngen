@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, Optional
 import os
 from dataclasses import dataclass, field
 import json
@@ -29,20 +29,6 @@ class Validator:
     mapping: Dict = field(default_factory=dict)
     existed_columns_mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
-
-    @staticmethod
-    def _check_encryption_process():
-        """
-        Check if the encryption process is enabled
-        """
-        fernet_key = os.getenv("FERNET_KEY")
-        state = "is" if fernet_key else "isn't"
-        process_status = "enabled" if fernet_key else "disabled"
-        message = (
-            f"As the environment variable 'FERNET_KEY' {state} set, "
-            f"the encryption and decryption process is {process_status}."
-        )
-        logger.warning(message)
 
     def _launch_validation_of_schema(self):
         """
@@ -350,13 +336,31 @@ class Validator:
         """
         return self.merged_metadata[table_name]["train_settings"]["source"]
 
-    def _validate_fernet_key(self, table_name: str):
-        cipher = self.merged_metadata[table_name].get("encryption", {}).get("fernet_key")
-        path =
+    def _validate_fernet_key(self, table_name: str, fernet_key: str):
+        """
+        Validate the structure of the fernet key
+        """
         try:
-            DataEncryptor().validate_fernet_key(cipher)
+            DataEncryptor.validate_fernet_key(fernet_key)
         except ValueError as e:
-            self.errors["validate fernet key"][table_name] = str(e)
+            self.errors["validate structure of fernet key"][table_name] = str(e)
+
+    def _check_access_to_input_data(self, table_name: str, fernet_key: Optional[str]):
+        """
+        Check if the input data is accessible for the inference process
+        """
+        path_to_input_data = (
+            f"model_artifacts/tmp_store/{slugify(table_name)}/"
+            f"input_data_{slugify(table_name)}.{'dat' if fernet_key is not None else 'pkl'}"
+        )
+        try:
+            DataLoader(
+                path=path_to_input_data,
+                metadata=self.merged_metadata,
+                table_name=table_name
+            ).get_columns()
+        except Exception as e:
+            self.errors["check access to input data"][table_name] = str(e)
 
     def _launch_validation(self):
         """
@@ -366,16 +370,19 @@ class Validator:
             for table_name in self.merged_metadata.keys():
                 self._gather_existed_columns(table_name)
 
-        for table_name in self.metadata.keys():
+        for table_name, table_metadata in self.metadata.items():
+            fernet_key = table_name.get("encryption", {}).get("fernet_key")
             if self.type_of_process == "train" and self.validation_source:
-                self._validate_fernet_key(table_name)
+                self._validate_fernet_key(table_name, fernet_key)
                 self._check_existence_of_source(table_name)
                 self._check_existence_of_key_columns(table_name)
                 self._check_existence_of_referenced_columns(table_name)
             elif self.type_of_process == "infer":
-                self._validate_fernet_key(table_name)
                 self._check_completion_of_training(table_name)
                 self._check_existence_of_destination(table_name)
+                if reports := table_metadata.get("infer_settings", {}).get("reports", []):
+                    self._validate_fernet_key(table_name, fernet_key)
+                    self._check_access_to_input_data(table_name, fernet_key)
 
         for table_name in self.metadata.keys():
             self._validate_metadata(table_name)
@@ -401,7 +408,6 @@ class Validator:
         """
         Run the validation process
         """
-        self._check_encryption_process()
         self._preprocess_metadata()
         self._launch_validation()
         self._collect_errors()

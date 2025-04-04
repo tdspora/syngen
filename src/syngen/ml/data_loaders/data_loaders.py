@@ -599,8 +599,8 @@ class DataEncryptor(BaseDataLoader):
         self.validate_fernet_key(fernet_key)
         self.fernet = Fernet(fernet_key)
 
-    @staticmethod
-    def _validate_fernet_key(fernet_key: str):
+    @classmethod
+    def validate_fernet_key(cls, fernet_key: str):
         """
         Validate the provided Fernet key.
         A valid Fernet key is a 44-character URL-safe base64-encoded string.

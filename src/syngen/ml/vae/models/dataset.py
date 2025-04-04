@@ -27,7 +27,6 @@ from syngen.ml.utils import (
     nan_labels_to_float,
     get_date_columns,
 )
-from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import fetch_config, clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
@@ -1200,22 +1199,6 @@ class Dataset(BaseDataset):
                 f"as it is defined as FK column and will be sampled from the PK table"
             )
 
-    def __sample_only_joined_rows(self, fk):
-        references = self.foreign_keys_mapping.get(fk).get("references")
-        pk_table = references.get("table")
-        pk_table_data, schema = DataLoader(
-            f"model_artifacts/tmp_store/{pk_table}/input_data_{pk_table}.csv"
-        ).load_data()
-        pk_column_label = references.get("columns")[0]
-
-        drop_index = self.df[~self.df[fk].isin(pk_table_data[pk_column_label].values)].index
-        if len(drop_index) > 0:
-            logger.info(
-                f"{len(drop_index)} rows were deleted, as they did not have matching primary keys."
-            )
-            logger.info(f"{len(self.df) - len(drop_index)} rows are left in table as input.")
-        self.df = self.df.drop(drop_index)
-
     def _assign_char_feature(self, feature):
         """
         Assign text based feature to text columns
@@ -1325,15 +1308,12 @@ class Dataset(BaseDataset):
         Assign corresponding to FK null column and preprocess if required.
         """
         for fk_name, config in self.foreign_keys_mapping.items():
-            if "joined_sample" in config and config["joined_sample"]:
-                self.__sample_only_joined_rows(fk_name)
-            else:
-                for fk_column in self.fk_columns:
-                    features = self._preprocess_nan_cols(fk_column, fillna_strategy="mode")
-                    if len(features) > 1:
-                        self.assign_feature(
-                            ContinuousFeature(features[1], column_type=int), features[1]
-                        )
+            for fk_column in self.fk_columns:
+                features = self._preprocess_nan_cols(fk_column, fillna_strategy="mode")
+                if len(features) > 1:
+                    self.assign_feature(
+                        ContinuousFeature(features[1], column_type=int), features[1]
+                    )
 
     def _assign_uuid_null_feature(self, feature):
         """

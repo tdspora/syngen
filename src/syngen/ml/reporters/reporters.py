@@ -36,11 +36,13 @@ class Reporter:
         table_name: str,
         paths: Dict[str, str],
         config: Dict[str, str],
+        metadata: Dict,
         loader: Optional[Callable[[str], pd.DataFrame]] = None
     ):
         self.table_name = table_name
         self.paths = paths
         self.config = config
+        self.metadata = metadata
         self.loader = loader
         self.dataset = None
         self.columns_nan_labels = dict()
@@ -67,9 +69,13 @@ class Reporter:
         else:
             original, schema = DataLoader(
                 self.paths["input_data_path"],
+                self.metadata,
+                self.table_name,
                 sensitive=True
             ).load_data()
-        synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
+        synthetic, schema = DataLoader(
+            self.paths["path_to_merged_infer"], self.metadata, self.table_name
+        ).load_data()
         return original, synthetic
 
     def fetch_data_types(self):
@@ -350,8 +356,12 @@ class SampleAccuracyReporter(Reporter):
     report_type = "sample"
 
     def _extract_report_data(self):
-        original, schema = DataLoader(self.paths["source_path"]).load_data()
-        sampled, schema = DataLoader(self.paths["input_data_path"], sensitive=True).load_data()
+        original, schema = DataLoader(
+            self.paths["source_path"], self.metadata, self.table_name
+        ).load_data()
+        sampled, schema = DataLoader(
+            self.paths["input_data_path"], self.metadata, self.table_name, sensitive=True
+        ).load_data()
         return original, sampled
 
     def report(self):
