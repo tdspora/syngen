@@ -16,6 +16,7 @@ from yaml.scanner import ScannerError
 from avro.errors import InvalidAvroBinaryEncoding
 from loguru import logger
 import fastavro
+from cryptography.fernet import Fernet
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
@@ -53,8 +54,12 @@ class DataLoader(BaseDataLoader):
     Base class for loading and saving data
     """
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, sensitive: bool = False):
         super().__init__(path)
+        fernet_key = os.getenv("FERNET_KEY")
+        self.sensitive = (
+            True if sensitive and fernet_key else False
+        ) or self.path.endswith(".dat")
         self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
         self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
@@ -76,7 +81,9 @@ class DataLoader(BaseDataLoader):
 
     def _get_file_loader(self):
         path = Path(self.path)
-        if path.suffix == ".avro":
+        if self.sensitive:
+            return DataEncryptor(self.path)
+        elif path.suffix == ".avro":
             return AvroLoader(self.path)
         elif path.suffix in [".csv", ".txt"]:
             return CSVLoader(self.path)
@@ -575,3 +582,89 @@ class ExcelLoader(BaseDataLoader):
 
     def get_columns(self, **kwargs) -> List[str]:
         return self._get_columns(**kwargs)
+
+
+class DataEncryptor(BaseDataLoader):
+    """
+    A class to handle encryption and decryption of data using a Fernet key
+    """
+
+    def __init__(self, path: str):
+        """
+        Initialize the DataEncryptor with a Fernet key.
+        """
+        super().__init__(path)
+        key = os.getenv("FERNET_KEY")
+        self._validate_fernet_key(key)
+        self.fernet = Fernet(key)
+
+    @staticmethod
+    def _validate_fernet_key(key: str):
+        """
+        Validate the provided Fernet key.
+        A valid Fernet key is a 44-character URL-safe base64-encoded string.
+        """
+        if key is None or not key.strip():
+            raise ValueError("It seems that the Fernet key is absent")
+
+        error_message = "It seems that the provided Fernet key is invalid"
+        try:
+            Fernet(key.encode())
+
+        except ValueError as e:
+            logger.error(f"{error_message}. {str(e)}")
+            raise e
+
+    def get_columns(self) -> List[str]:
+        """
+        Get the column names of the table
+        """
+        data, schema = self.load_data()
+        return data.columns.tolist()
+
+    def save_data(self, df: pd.DataFrame):
+        """
+        Save the encrypted dataframe to the disk
+        """
+        try:
+            serialized_df: bytes = pkl.dumps(df, protocol=pkl.HIGHEST_PROTOCOL)
+            encrypted_data = self.fernet.encrypt(serialized_df)
+
+            # Use atomic write operation for better safety
+            temp_path = f"{self.path}.tmp"
+            with open(temp_path, "wb") as encrypted_file:
+                encrypted_file.write(encrypted_data)
+            os.replace(temp_path, self.path)
+
+            logger.info(
+                f"Data is successfully encrypted and saved to '{self.path}'."
+            )
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            logger.error(f"Encryption failed: {str(e)}")
+            raise e
+
+    def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Load the decrypted data from the disk
+        """
+        try:
+            with open(self.path, "rb") as encrypted_file:
+                encrypted_data = encrypted_file.read()
+
+            decrypted_data = self.fernet.decrypt(encrypted_data)
+            df_decrypted = pkl.loads(decrypted_data)
+
+            logger.info(
+                f"Data stored at the path - '{self.path}' "
+                f"has been successfully decrypted and loaded."
+            )
+            return df_decrypted, {"fields": {}, "format": "CSV"}
+        except Exception as e:
+            logger.error(
+                f"It seems that the decryption process of the data "
+                f"stored at the path - '{self.path}' failed due to the following reasons - "
+                f"the provided Fernet key is invalid or the encrypted data is corrupted. {str(e)}"
+            )
+            raise e

@@ -6,10 +6,12 @@ import shutil
 from loguru import logger
 import yaml
 from _pytest.logging import LogCaptureFixture
-
 import pandas as pd
 from reportportal_client import RPLogger
+from cryptography.fernet import Fernet
+
 from syngen.ml.mlflow_tracker import MlflowTracker
+from syngen.ml.data_loaders import DataEncryptor
 
 
 SUCCESSFUL_MESSAGE = "The test passed successfully"
@@ -213,3 +215,24 @@ def caplog(caplog: LogCaptureFixture):
 @pytest.fixture(scope="function")
 def mlflow_tracker():
     yield MlflowTracker(experiment_name="test_experiment", is_active=True)
+
+
+@pytest.fixture
+def valid_fernet_key():
+    return Fernet.generate_key().decode()
+
+
+@pytest.fixture
+def valid_simple_dataframe():
+    return pd.DataFrame({"column1": [1, 2, 3], "column2": ["a", "b", "c"]})
+
+
+@pytest.fixture
+def data_encryptor(tmp_path, valid_fernet_key):
+    os.environ["FERNET_KEY"] = valid_fernet_key
+    return DataEncryptor(path=str(tmp_path / "test.dat"))
+
+
+@pytest.fixture
+def invalid_fernet_key():
+    return "invalid_key"
