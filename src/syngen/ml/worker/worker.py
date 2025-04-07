@@ -101,7 +101,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_source=False if self.loader and self.type_of_process == "train" else True,
+            validation_source=False if self.loader and self.type_of_process == "train" else True
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata

@@ -56,8 +56,8 @@ class DataLoader(BaseDataLoader):
     def __init__(
         self,
         path: str,
-        table_name: str = None,
-        metadata: Dict = None,
+        table_name: Optional[str] = None,
+        metadata: Optional[Dict] = None,
         sensitive: bool = False
     ):
         super().__init__(path)
