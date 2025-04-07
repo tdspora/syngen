@@ -265,7 +265,7 @@ class TrainConfig:
             f"losses_{self.table_name}_"
             f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        fernet_key = self.metadata.get("encryption", {}).get("fernet_key")
+        fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -431,7 +431,7 @@ class InferConfig:
         Create the paths which used in inference process
         """
         dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
-        fernet_key = self.metadata.get("encryption", {}).get("fernet_key")
+        fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
         self.paths = {
             "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"

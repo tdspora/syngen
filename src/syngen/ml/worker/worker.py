@@ -207,7 +207,7 @@ class Worker:
                         "source": source,
                     },
                     "infer_settings": {},
-                    "encryption": self.encryption_settings,
+                    "encryption": {"fernet_key": self.encryption_settings.get("fernet_key")},
                     "keys": {},
                     "format": {}
                 }

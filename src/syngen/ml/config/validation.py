@@ -2,7 +2,6 @@ from typing import Dict, List, Literal, Optional
 import os
 from dataclasses import dataclass, field
 import json
-from collections import defaultdict
 
 from slugify import slugify
 from loguru import logger
@@ -370,7 +369,8 @@ class Validator:
                 self._check_completion_of_training(table_name)
                 self._check_existence_of_destination(table_name)
                 if table_metadata.get("infer_settings", {}).get("reports", []):
-                    self._check_access_to_input_data(table_name, fernet_key)
+                    if not self.errors.get("validate structure of fernet key", {}).get(table_name):
+                        self._check_access_to_input_data(table_name, fernet_key)
 
         for table_name in self.metadata.keys():
             self._validate_metadata(table_name)

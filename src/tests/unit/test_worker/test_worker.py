@@ -1,5 +1,6 @@
 from unittest.mock import patch, MagicMock
 import pytest
+from collections import defaultdict
 
 from syngen.ml.worker import Worker
 from syngen.ml.config import Validator
