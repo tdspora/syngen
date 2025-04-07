@@ -114,7 +114,7 @@ Parameters that you can set up for training process:
 - <i>metadata_path</i> – a path to the metadata file containing the metadata
 - <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
 - <i>log_level</i> - logging level for the process
-- <i>fernet_key</i> - a key used to encrypt the sample data of the original data. If the key is not set, the original data will be stored in '.pkl' format. If the key is set, the original data will be encrypted and stored securely in '.dat' format. The same key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
+- <i>fernet_key</i> - a fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
 
 Requirements for parameters of training process:
 * <i>source</i> - data type - string
@@ -173,7 +173,7 @@ The parameters which you can set up for generation process:
 - <i>reports</i> - controls the generation of quality reports, might require significant time for big generated tables (>10000 rows)
 - <i>metadata_path</i> – a path to metadata file
 - <i>log_level</i> - logging level for the process
-- <i>fernet_key</i> - a key used to encrypt the sample data of the original data. If the key is not set, the original data will be stored in '.pkl' format. If the key is set, the original data will be encrypted and stored securely in '.dat' format. The same key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
+- <i>fernet_key</i> - a fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
 
 Requirements for parameters of generation process:
 * <i>size</i> - data type - integer, must be equal to or more than 1, default value is 100
@@ -218,7 +218,7 @@ global:                                     # Global settings. Optional paramete
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
   
   encryption:
-    fernet_key: null                       # A key used to encrypt the sample data of the original data. If the key is not set, the original data will be stored in '.pkl' format. If the key is set, the original data will be encrypted and stored securely in '.dat' format. The same key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
+    fernet_key: null                       # A fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
 
 CUSTOMER:                                   # Table name. Required parameter
   train_settings:                           # Settings for training process. Required parameter
@@ -255,7 +255,7 @@ CUSTOMER:                                   # Table name. Required parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
   
   encryption:
-    fernet_key: null                        # A key used to encrypt the sample data of the original data. If the key is not set, the original data will be stored in '.pkl' format. If the key is set, the original data will be encrypted and stored securely in '.dat' format. The same key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
+    fernet_key: null                        # A fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
 
   keys:                                     # Keys of the table. Optional parameter
     PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
@@ -323,7 +323,7 @@ ORDER:                                      # Table name. Required parameter
     sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter
   
   encryption:
-    fernet_key: null                        # A key used to encrypt the sample data of the original data. If the key is not set, the original data will be stored in '.pkl' format. If the key is set, the original data will be encrypted and stored securely in '.dat' format. The same key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
+    fernet_key: null                        # A fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
          
   keys:                                     # Keys of the table. Optional parameter
     pk_order_id:
@@ -541,9 +541,9 @@ docker run --rm -it \
 In the current implementation, a sample of the original data is securely stored on disk. 
 To ensure data security, it is recommended to provide the Fernet key value via the `fernet_key` parameter, 
 either through the command-line interface (CLI) or a metadata file. 
-This key enables encryption of the stored data, ensuring its protection.
+The Fernet key enables encryption of the stored data, ensuring its protection.
 
-*Key usage during inference*:
+*Fernet key usage during inference*:
 During inference, previously encrypted data may need to be decrypted to enable comparisons with synthetic data for report generation.
 If the data was encrypted during the training process, the same Fernet key used for encryption must be provided during inference to successfully 
 decrypt the data and generate reports.
