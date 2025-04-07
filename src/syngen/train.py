@@ -182,13 +182,17 @@ def launch_train(
         "reports": reports,
     }
 
+    encryption_settings = {
+        "fernet_key": fernet_key,
+    }
+
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
         settings=settings,
         log_level=log_level,
         type_of_process="train",
-        fernet_key=fernet_key
+        encryption_settings=encryption_settings
     )
 
     worker.launch_train()

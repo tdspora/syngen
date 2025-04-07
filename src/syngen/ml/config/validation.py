@@ -143,11 +143,7 @@ class Validator:
                 f"model_artifacts/tmp_store/{slugify(parent_table)}/"
                 f"merged_infer_{slugify(parent_table)}.csv"
             )
-        if not DataLoader(
-            path=destination,
-            metadata=self.merged_metadata,
-            table_name=parent_table
-        ).has_existed_path:
+        if not DataLoader(path=destination).has_existed_path:
             message = (
                 f"The generated data of the table - '{parent_table}' hasn't been generated. "
                 f"Please, generate the data related to the table '{parent_table}' first"
@@ -159,11 +155,7 @@ class Validator:
         Check if the source of the certain table exists
         """
         path_to_source = self.merged_metadata[table_name]["train_settings"]["source"]
-        if not DataLoader(
-            path=path_to_source,
-            metadata=self.merged_metadata,
-            table_name=table_name
-        ).has_existed_path:
+        if not DataLoader(path=path_to_source).has_existed_path:
             message = (
                 f"It seems that the path to the source of the table - '{table_name}' "
                 f"isn't correct. Please, check the path to the source of the table - "
@@ -183,10 +175,7 @@ class Validator:
                 f"at the default path - './model_artifacts/tmp_store/{slugify(table_name)}/"
                 f"merged_infer_{slugify(table_name)}.csv'"
             )
-        data_loader = DataLoader(
-            path=destination, metadata=self.merged_metadata, table_name=table_name
-        )
-        if destination is not None and not data_loader.has_existed_destination:
+        if destination is not None and not DataLoader(destination).has_existed_destination:
             message = (
                 f"It seems that the directory path for storing the generated data of table "
                 f"'{table_name}' isn't correct. Please, verify the destination path"
@@ -307,9 +296,7 @@ class Validator:
         metadata_of_table = self.merged_metadata[table_name]
         format_settings = metadata_of_table.get("format", {})
         path_to_source = self._fetch_path_to_source(table_name)
-        data_loader = DataLoader(
-            path=path_to_source, metadata=self.merged_metadata, table_name=table_name
-        )
+        data_loader = DataLoader(path=path_to_source)
         return data_loader.get_columns(**format_settings)
 
     def _gather_existed_columns(self, table_name: str):
@@ -356,8 +343,9 @@ class Validator:
         try:
             DataLoader(
                 path=path_to_input_data,
+                table_name=table_name,
                 metadata=self.merged_metadata,
-                table_name=table_name
+                sensitive=True
             ).get_columns()
         except Exception as e:
             self.errors["check access to input data"][table_name] = str(e)
@@ -371,17 +359,17 @@ class Validator:
                 self._gather_existed_columns(table_name)
 
         for table_name, table_metadata in self.metadata.items():
-            fernet_key = table_name.get("encryption", {}).get("fernet_key")
-            if self.type_of_process == "train" and self.validation_source:
+            fernet_key = table_metadata.get("encryption", {}).get("fernet_key")
+            if fernet_key is not None:
                 self._validate_fernet_key(table_name, fernet_key)
+            if self.type_of_process == "train" and self.validation_source:
                 self._check_existence_of_source(table_name)
                 self._check_existence_of_key_columns(table_name)
                 self._check_existence_of_referenced_columns(table_name)
             elif self.type_of_process == "infer":
                 self._check_completion_of_training(table_name)
                 self._check_existence_of_destination(table_name)
-                if reports := table_metadata.get("infer_settings", {}).get("reports", []):
-                    self._validate_fernet_key(table_name, fernet_key)
+                if table_metadata.get("infer_settings", {}).get("reports", []):
                     self._check_access_to_input_data(table_name, fernet_key)
 
         for table_name in self.metadata.keys():

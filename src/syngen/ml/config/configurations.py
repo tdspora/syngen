@@ -118,8 +118,8 @@ class TrainConfig:
             path = self.paths["input_data_path"]
             data_loader = DataLoader(
                 path=path,
-                metadata=self.metadata,
                 table_name=self.table_name,
+                metadata=self.metadata,
                 sensitive=True
             )
             data, schema = data_loader.load_data()
@@ -127,9 +127,7 @@ class TrainConfig:
             schema = CSVConvertor.schema
             return data, schema
         else:
-            data_loader = DataLoader(
-                path=self.source, metadata=self.metadata, table_name=self.table_name
-            )
+            data_loader = DataLoader(path=self.source)
             self.original_schema = data_loader.original_schema
             if self.original_schema is not None:
                 logger.trace(
@@ -239,8 +237,8 @@ class TrainConfig:
         """
         DataLoader(
             path=self.paths["input_data_path"],
-            metadata=self.metadata,
             table_name=self.table_name,
+            metadata=self.metadata,
             sensitive=True
         ).save_data(self.data)
 
@@ -248,11 +246,7 @@ class TrainConfig:
         """
         Save the schema of the original data
         """
-        DataLoader(
-            path=self.paths["original_schema_path"],
-            metadata=self.metadata,
-            table_name=self.table_name,
-        ).save_data(self.original_schema)
+        DataLoader(path=self.paths["original_schema_path"]).save_data(self.original_schema)
 
     def _prepare_data(self):
         """
@@ -375,8 +369,8 @@ class InferConfig:
         """
         data_loader = DataLoader(
             path=self.paths["input_data_path"],
-            metadata=self.metadata,
             table_name=self.table_name,
+            metadata=self.metadata,
             sensitive=True
         )
         if (
@@ -409,8 +403,8 @@ class InferConfig:
         if self.size is None:
             data_loader = DataLoader(
                 path=self.paths["input_data_path"],
-                metadata=self.metadata,
                 table_name=self.table_name,
+                metadata=self.metadata,
                 sensitive=True
             )
             data = pd.DataFrame()

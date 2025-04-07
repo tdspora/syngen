@@ -31,7 +31,7 @@ class Worker:
     metadata_path: Optional[str] = field(kw_only=True)
     settings: Dict = field(kw_only=True)
     log_level: str = field(kw_only=True)
-    fernet_key: Optional[str] = field(kw_only=True)
+    encryption_settings: Dict = field(kw_only=True)
     type_of_process: Literal["train", "infer"] = field(kw_only=True)
     metadata: Optional[Dict] = None
     loader: Optional[Callable[[str], pd.DataFrame]] = None
@@ -174,20 +174,17 @@ class Worker:
         process_info = process_settings_map.get(self.type_of_process)
         settings_key, global_process_settings = process_info
 
-        instance_encryption_settings = {}
-        instance_encryption_settings["fernet_key"] = self.fernet_key
-
         for table_name, table_metadata in self.metadata.items():
             if table_name == "global":
                 continue
 
             table_process_settings = table_metadata.setdefault(settings_key, {})
-            table_encryption_settings = table_metadata.setdefault("fernet_key", {})
+            table_encryption_settings = table_metadata.setdefault("encryption", {})
 
             self._update_table_settings(table_process_settings, global_process_settings)
             self._update_table_settings(table_process_settings, self.settings)
             self._update_table_settings(table_encryption_settings, global_encryption_settings)
-            self._update_table_settings(table_encryption_settings, instance_encryption_settings)
+            self._update_table_settings(table_encryption_settings, self.encryption_settings)
 
     def _update_metadata(self) -> None:
         if self.metadata_path:
@@ -210,9 +207,7 @@ class Worker:
                         "source": source,
                     },
                     "infer_settings": {},
-                    "encryption": {
-                        "fernet_key": self.fernet_key
-                    },
+                    "encryption": self.encryption_settings,
                     "keys": {},
                     "format": {}
                 }

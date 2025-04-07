@@ -32,6 +32,7 @@ def test_init_worker_for_training_process_with_absent_metadata_path(mock_validat
         },
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
         "table": {
@@ -44,6 +45,9 @@ def test_init_worker_for_training_process_with_absent_metadata_path(mock_validat
                 "row_limit": 1000,
             },
             "infer_settings": {},
+            "encryption": {
+                "fernet_key": None
+            },
             "keys": {},
             "format": {}
         }
@@ -74,6 +78,7 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
         },
         log_level="INFO",
         type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
         "table": {
@@ -84,6 +89,9 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
                 "batch_size": 100,
                 "reports": [],
                 "random_seed": 1,
+            },
+            "encryption": {
+                "fernet_key": None
             },
             "keys": {},
             "format": {}
@@ -114,6 +122,7 @@ def test_init_worker_with_metadata_path(mock_validator_run, rp_logger):
         },
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
         "global": {},
@@ -132,6 +141,9 @@ def test_init_worker_with_metadata_path(mock_validator_run, rp_logger):
                 "random_seed": 2,
                 "reports": ["accuracy"],
                 "batch_size": 200,
+            },
+            "encryption": {
+                "fernet_key": None
             },
             "keys": {
                 "pk_id": {
@@ -173,6 +185,7 @@ def test_init_worker_with_empty_settings_in_metadata_in_train_process(
         },
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
         "global": {},
@@ -186,6 +199,9 @@ def test_init_worker_with_empty_settings_in_metadata_in_train_process(
                 "batch_size": 1000,
             },
             "infer_settings": {},
+            "encryption": {
+                "fernet_key": None
+            },
             "keys": {},
             "format": {}
         },
@@ -220,6 +236,7 @@ def test_init_worker_with_empty_settings_in_metadata_in_infer_process(
         },
         log_level="INFO",
         type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
         "global": {},
@@ -233,6 +250,9 @@ def test_init_worker_with_empty_settings_in_metadata_in_infer_process(
                 "batch_size": 200,
                 "random_seed": 5,
                 "reports": ["accuracy"]
+            },
+            "encryption": {
+                "fernet_key": None
             },
             "keys": {},
             "format": {}
@@ -267,6 +287,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
         },
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
         "global": {
@@ -291,6 +312,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
                 "reports": ["accuracy", "sample"],
             },
             "infer_settings": {"reports": []},
+            "encryption": {"fernet_key": None},
             "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
             "format": {}
         },
@@ -311,6 +333,7 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
                 "reports": ["accuracy", "sample"],
             },
             "infer_settings": {},
+            "encryption": {"fernet_key": None},
             "format": {}
         },
     }
@@ -342,6 +365,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
         },
         log_level="INFO",
         type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
         "global": {
@@ -368,6 +392,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
                 "batch_size": 200,
                 "random_seed": 5,
             },
+            "encryption": {"fernet_key": None},
             "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
             "format": {}
         },
@@ -387,6 +412,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
                 "batch_size": 200,
                 "random_seed": 5,
             },
+            "encryption": {"fernet_key": None},
             "format": {}
         },
     }
@@ -436,6 +462,7 @@ def test_launch_train_with_metadata(
         },
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -458,6 +485,7 @@ def test_launch_train_with_metadata(
                     "reports": ["accuracy"],
                     "batch_size": 200,
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 "format": {}
             }
@@ -479,6 +507,7 @@ def test_launch_train_with_metadata(
                     "reports": ["accuracy"],
                     "batch_size": 200,
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 "format": {}
             }
@@ -539,6 +568,7 @@ def test_launch_train_with_metadata_of_related_tables(
         },
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -559,6 +589,7 @@ def test_launch_train_with_metadata_of_related_tables(
                     "run_parallel": True,
                     "reports": ["accuracy"],
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 "format": {}
             },
@@ -577,6 +608,7 @@ def test_launch_train_with_metadata_of_related_tables(
                     "random_seed": 2,
                     "reports": [],
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "fk_id": {
                         "type": "FK",
@@ -602,6 +634,7 @@ def test_launch_train_with_metadata_of_related_tables(
                     "run_parallel": True,
                     "reports": ["accuracy"],
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 "format": {}
             },
@@ -620,6 +653,7 @@ def test_launch_train_with_metadata_of_related_tables(
                     "random_seed": 2,
                     "reports": [],
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "fk_id": {
                         "type": "FK",
@@ -688,6 +722,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
         },
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -712,6 +747,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                     },
                 },
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
             "tdm_clusters": {
@@ -725,6 +761,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                 },
                 "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
         },
@@ -747,6 +784,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                     },
                 },
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
             "tdm_clusters": {
@@ -760,6 +798,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                 },
                 "keys": {"tdm_clusters_pkey": {"type": "PK", "columns": ["id"]}},
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
             "tdm_models_pk": {
@@ -773,6 +812,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                 },
                 "keys": {"tdm_models_pkey": {"type": "PK", "columns": ["id"]}},
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
             "tdm_models_fk": {
@@ -792,6 +832,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
                     }
                 },
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
         },
@@ -851,6 +892,7 @@ def test_launch_train_without_metadata(
         },
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -867,6 +909,7 @@ def test_launch_train_without_metadata(
                     "reports": ["accuracy", "sample"],
                 },
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "keys": {},
                 "format": {}
             }
@@ -882,6 +925,7 @@ def test_launch_train_without_metadata(
                     "reports": ["accuracy", "sample"],
                 },
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "keys": {},
                 "format": {}
             }
@@ -943,6 +987,7 @@ def test_launch_train_with_metadata_contained_global_settings(
         },
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -959,6 +1004,7 @@ def test_launch_train_with_metadata_contained_global_settings(
                     "reports": ["accuracy", "sample"],
                 },
                 "infer_settings": {"reports": []},
+                "encryption": {"fernet_key": None},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 "format": {}
             },
@@ -979,6 +1025,7 @@ def test_launch_train_with_metadata_contained_global_settings(
                     "reports": ["accuracy", "sample"],
                 },
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
         },
@@ -993,6 +1040,7 @@ def test_launch_train_with_metadata_contained_global_settings(
                     "reports": ["accuracy", "sample"],
                 },
                 "infer_settings": {"reports": []},
+                "encryption": {"fernet_key": None},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 "format": {}
             },
@@ -1013,6 +1061,7 @@ def test_launch_train_with_metadata_contained_global_settings(
                     "reports": ["accuracy", "sample"],
                 },
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
         },
@@ -1034,6 +1083,7 @@ def test_launch_train_with_metadata_contained_global_settings(
 
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1043,6 +1093,7 @@ def test_launch_infer_with_metadata(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_check_access_to_input_data,
     mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
@@ -1067,6 +1118,7 @@ def test_launch_infer_with_metadata(
         },
         log_level="INFO",
         type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1088,6 +1140,7 @@ def test_launch_infer_with_metadata(
                     "reports": ["accuracy"],
                     "batch_size": 200,
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 "format": {}
             }
@@ -1098,6 +1151,7 @@ def test_launch_infer_with_metadata(
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_called_once_with("table", None)
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1105,6 +1159,7 @@ def test_launch_infer_with_metadata(
 
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1114,6 +1169,7 @@ def test_launch_infer_with_metadata_of_related_tables(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_check_access_to_input_data,
     mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
@@ -1138,6 +1194,7 @@ def test_launch_infer_with_metadata_of_related_tables(
         },
         log_level="INFO",
         type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1157,6 +1214,7 @@ def test_launch_infer_with_metadata_of_related_tables(
                     "batch_size": 200,
                     "random_seed": 1,
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 "format": {}
             },
@@ -1175,6 +1233,7 @@ def test_launch_infer_with_metadata_of_related_tables(
                     "reports": [],
                     "batch_size": 200,
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "fk_id": {
                         "type": "FK",
@@ -1191,6 +1250,7 @@ def test_launch_infer_with_metadata_of_related_tables(
     assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_check_access_to_input_data.assert_called_once_with("pk_test", None)
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["pk_test", "fk_test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1198,6 +1258,7 @@ def test_launch_infer_with_metadata_of_related_tables(
 
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1207,6 +1268,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_check_access_to_input_data,
     mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
@@ -1234,6 +1296,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
         },
         log_level="INFO",
         type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1256,6 +1319,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                     "batch_size": 200,
                     "random_seed": 1,
                 },
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
             "tdm_clusters": {
@@ -1268,6 +1332,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                     "batch_size": 200,
                     "random_seed": 1,
                 },
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
             "tdm_models_pk": {
@@ -1280,6 +1345,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                     "batch_size": 200,
                     "random_seed": 1,
                 },
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
             "tdm_models_fk": {
@@ -1298,6 +1364,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
                     "batch_size": 200,
                     "random_seed": 1,
                 },
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
         },
@@ -1307,6 +1374,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    assert mock_check_access_to_input_data.call_count == 2
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(
         ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"]
@@ -1316,6 +1384,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
 
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1325,6 +1394,7 @@ def test_launch_infer_without_metadata(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_check_access_to_input_data,
     mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
@@ -1350,6 +1420,7 @@ def test_launch_infer_without_metadata(
         },
         log_level="INFO",
         type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1364,6 +1435,7 @@ def test_launch_infer_without_metadata(
                     "reports": ["accuracy"],
                     "batch_size": 200,
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {},
                 "format": {}
             }
@@ -1374,6 +1446,7 @@ def test_launch_infer_without_metadata(
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_called_once_with("table", None)
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1381,6 +1454,7 @@ def test_launch_infer_without_metadata(
 
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1390,6 +1464,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_check_access_to_input_data,
     mock_generate_reports,
     mock_collect_metrics_infer,
     rp_logger,
@@ -1415,6 +1490,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
         },
         log_level="INFO",
         type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_infer()
     mock_infer_tables.assert_called_once_with(
@@ -1429,6 +1505,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
                     "random_seed": 3,
                     "batch_size": 300,
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
                 "format": {}
             },
@@ -1448,6 +1525,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
                     "random_seed": 3,
                     "batch_size": 300,
                 },
+                "encryption": {"fernet_key": None},
                 "format": {}
             },
         },
@@ -1457,6 +1535,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
     assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_check_access_to_input_data.assert_called_once_with("fk_test", None)
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_infer.assert_called_once_with(["pk_test", "fk_test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1503,6 +1582,7 @@ def test_train_tables_without_generation_reports(
         settings={},
         log_level="INFO",
         type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
     mock_gather_existed_columns.assert_called_once_with("test_table")
@@ -1533,6 +1613,7 @@ def test_train_tables_without_generation_reports(
                     "reports": [],
                     "batch_size": 200
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -1590,7 +1671,8 @@ def test_train_tables_with_generation_reports(
         metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_with_reports.yaml",
         settings={},
         log_level="INFO",
-        type_of_process="train"
+        type_of_process="train",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
     mock_gather_existed_columns.assert_called_once_with("test_table")
@@ -1621,6 +1703,7 @@ def test_train_tables_with_generation_reports(
                     "reports": ["accuracy"],
                     "batch_size": 200
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -1652,6 +1735,7 @@ def test_train_tables_with_generation_reports(
                     "reports": ["accuracy"],
                     "batch_size": 200
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -1671,6 +1755,7 @@ def test_train_tables_with_generation_reports(
 
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1688,6 +1773,7 @@ def test_infer_tables_without_generation_reports(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_check_access_to_input_data,
     mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
@@ -1711,7 +1797,8 @@ def test_infer_tables_without_generation_reports(
             "batch_size": 300
         },
         log_level="INFO",
-        type_of_process="infer"
+        type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_infer()
     mock_gather_existed_columns.assert_not_called()
@@ -1741,6 +1828,7 @@ def test_infer_tables_without_generation_reports(
                     "reports": [],
                     "batch_size": 200
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -1754,12 +1842,14 @@ def test_infer_tables_without_generation_reports(
         delta=0.5
     )
     mock_generate_reports.assert_called_once()
+    mock_check_access_to_input_data.assert_not_called()
     mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1777,6 +1867,7 @@ def test_infer_tables_with_generation_reports(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_check_access_to_input_data,
     mock_generate_reports,
     mock_collect_metrics_in_infer,
     rp_logger,
@@ -1800,7 +1891,8 @@ def test_infer_tables_with_generation_reports(
             "batch_size": 300,
         },
         log_level="INFO",
-        type_of_process="infer"
+        type_of_process="infer",
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_infer()
     mock_gather_existed_columns.assert_not_called()
@@ -1830,6 +1922,7 @@ def test_infer_tables_with_generation_reports(
                     "reports": ["accuracy"],
                     "batch_size": 200
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -1844,6 +1937,7 @@ def test_infer_tables_with_generation_reports(
     )
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
+    mock_check_access_to_input_data.assert_called_once_with("test_table", None)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1887,7 +1981,8 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
         },
         log_level="INFO",
         type_of_process="train",
-        loader=MagicMock()
+        loader=MagicMock(),
+        encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
         "table": {
@@ -1900,6 +1995,7 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
                 "row_limit": 1000,
             },
             "infer_settings": {},
+            "encryption": {"fernet_key": None},
             "keys": {},
             "format": {}
         }
@@ -1919,6 +2015,7 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
                     "reports": ["accuracy", "sample"]
                 },
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "keys": {},
                 "format": {}
             }
@@ -1934,6 +2031,7 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
                     "reports": ["accuracy", "sample"]
                 },
                 "infer_settings": {},
+                "encryption": {"fernet_key": None},
                 "keys": {},
                 "format": {}
             }
@@ -1996,7 +2094,8 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
         },
         log_level="INFO",
         type_of_process="train",
-        loader=MagicMock()
+        loader=MagicMock(),
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -2016,6 +2115,7 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
                     "run_parallel": True,
                     "reports": ["accuracy"]
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -2038,6 +2138,7 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
                     "random_seed": 2,
                     "reports": []
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "fk_id": {
                         "type": "FK",
@@ -2065,6 +2166,7 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
                     "run_parallel": True,
                     "reports": ["accuracy"]
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -2087,6 +2189,7 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
                     "random_seed": 2,
                     "reports": []
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "fk_id": {
                         "type": "FK",
@@ -2159,7 +2262,8 @@ def test_launch_train_with_metadata_without_train_settings_and_loader(
         },
         log_level="INFO",
         type_of_process="train",
-        loader=MagicMock()
+        loader=MagicMock(),
+        encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
     mock_train_tables.assert_called_once_with(
@@ -2179,6 +2283,7 @@ def test_launch_train_with_metadata_without_train_settings_and_loader(
                     "run_parallel": True,
                     "reports": ["accuracy"]
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -2201,6 +2306,7 @@ def test_launch_train_with_metadata_without_train_settings_and_loader(
                     "random_seed": 2,
                     "reports": []
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "fk_id": {
                         "type": "FK",
@@ -2228,6 +2334,7 @@ def test_launch_train_with_metadata_without_train_settings_and_loader(
                     "run_parallel": True,
                     "reports": ["accuracy"]
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "pk_id": {
                         "type": "PK",
@@ -2250,6 +2357,7 @@ def test_launch_train_with_metadata_without_train_settings_and_loader(
                     "random_seed": 2,
                     "reports": []
                 },
+                "encryption": {"fernet_key": None},
                 "keys": {
                     "fk_id": {
                         "type": "FK",
@@ -2282,6 +2390,7 @@ def test_launch_train_with_metadata_without_train_settings_and_loader(
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Worker, "_infer_table")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_validate_metadata")
@@ -2289,6 +2398,7 @@ def test_launch_infer_of_pretrained_table(
     mock_validate_metadata,
     mock_check_existence_of_destination,
     mock_check_completion_of_training,
+    mock_check_access_to_input_data,
     mock_infer_table,
     mock_generate_reports,
     mock_collect_metrics_in_infer,
@@ -2296,11 +2406,11 @@ def test_launch_infer_of_pretrained_table(
 ):
     """
     Test that the inference process has been launched
-    if the training process of the table has been finished
+    after the training process of the table has been finished
     """
     rp_logger.info(
         "Test that the inference process has been launched "
-        "if the training process of the table has been finished"
+        "after the training process of the table has been finished"
     )
     worker = Worker(
         table_name="table",
@@ -2314,7 +2424,8 @@ def test_launch_infer_of_pretrained_table(
         },
         log_level="INFO",
         type_of_process="infer",
-        loader=None
+        loader=None,
+        encryption_settings={"fernet_key": None}
     )
     metadata = {
         "table": {
@@ -2328,6 +2439,7 @@ def test_launch_infer_of_pretrained_table(
                 "reports": ["accuracy"],
                 "batch_size": 300
             },
+            "encryption": {"fernet_key": None},
             "keys": {},
             "format": {}
         }
@@ -2336,6 +2448,7 @@ def test_launch_infer_of_pretrained_table(
     mock_validate_metadata.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_check_completion_of_training.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_called_once_with("table", None)
     mock_infer_table.assert_called_once_with(
         table="table",
         metadata=metadata,
@@ -2347,11 +2460,13 @@ def test_launch_infer_of_pretrained_table(
 
 
 @patch.object(Worker, "_infer_table")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_validate_metadata")
 def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
     mock_validate_metadata,
     mock_check_existence_of_destination,
+    mock_check_access_to_input_data,
     mock_infer_table,
     caplog,
     rp_logger,
@@ -2380,7 +2495,8 @@ def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
                 },
                 log_level="INFO",
                 type_of_process="infer",
-                loader=None
+                loader=None,
+                encryption_settings={"fernet_key": None}
             )
             worker.launch_infer()
             message = (
@@ -2391,16 +2507,19 @@ def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
             assert message in caplog.text
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_called_once_with("table", None)
     mock_infer_table.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_infer_table")
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_validate_metadata")
 def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_content(
     mock_validate_metadata,
     mock_check_existence_of_destination,
+    mock_check_access_to_input_data,
     mock_infer_table,
     test_success_file,
     caplog,
@@ -2432,7 +2551,8 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
                 },
                 log_level="INFO",
                 type_of_process="infer",
-                loader=None
+                loader=None,
+                encryption_settings={"fernet_key": None}
             )
             worker.launch_infer()
             message = (
@@ -2442,5 +2562,6 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
             assert message in str(error.message)
             assert message in caplog.text
     mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_called_once_with("table", None)
     mock_infer_table.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)

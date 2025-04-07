@@ -69,13 +69,11 @@ class Reporter:
         else:
             original, schema = DataLoader(
                 self.paths["input_data_path"],
-                self.metadata,
                 self.table_name,
+                self.metadata,
                 sensitive=True
             ).load_data()
-        synthetic, schema = DataLoader(
-            self.paths["path_to_merged_infer"], self.metadata, self.table_name
-        ).load_data()
+        synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
         return original, synthetic
 
     def fetch_data_types(self):
@@ -356,11 +354,9 @@ class SampleAccuracyReporter(Reporter):
     report_type = "sample"
 
     def _extract_report_data(self):
-        original, schema = DataLoader(
-            self.paths["source_path"], self.metadata, self.table_name
-        ).load_data()
+        original, schema = DataLoader(self.paths["source_path"]).load_data()
         sampled, schema = DataLoader(
-            self.paths["input_data_path"], self.metadata, self.table_name, sensitive=True
+            self.paths["input_data_path"], self.table_name, self.metadata, sensitive=True
         ).load_data()
         return original, sampled
 

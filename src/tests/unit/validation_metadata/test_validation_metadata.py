@@ -1,5 +1,6 @@
 from unittest.mock import patch, call
 import pytest
+from collections import defaultdict
 
 from syngen.ml.config.validation import Validator
 from syngen.ml.utils import ValidationError
@@ -49,7 +50,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -114,7 +115,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_
         metadata_path=FAKE_METADATA_PATH,
         validation_source=False
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -152,7 +153,7 @@ def test_check_key_column_in_pk(rp_logger):
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -201,7 +202,7 @@ def test_check_key_column_in_fk(rp_logger):
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -274,7 +275,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -370,7 +371,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
         metadata_path=FAKE_METADATA_PATH,
         validation_source=False
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -475,7 +476,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -562,7 +563,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
         metadata_path=FAKE_METADATA_PATH,
         validation_source=False
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -629,7 +630,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -706,7 +707,7 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -786,7 +787,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -902,7 +903,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -976,7 +977,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1122,7 +1123,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1261,7 +1262,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1399,7 +1400,7 @@ def test_validate_incomplete_metadata_in_infer_process(
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1581,7 +1582,7 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
                 type_of_process="train",
                 metadata_path=FAKE_METADATA_PATH
             )
-            validator.errors = dict()
+            validator.errors = defaultdict(defaultdict)
             validator.run()
             assert validator.mapping == {
                 "fk_key": {
@@ -2346,7 +2347,7 @@ def test_check_not_existent_referenced_table_in_fk(test_metadata_storage, rp_log
             type_of_process="train",
             metadata_path=FAKE_METADATA_PATH
         )
-        validator.errors = dict()
+        validator.errors = defaultdict(defaultdict)
         validator.run()
         assert validator.mapping == {}
         assert validator.merged_metadata == test_metadata

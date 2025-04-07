@@ -36,6 +36,8 @@ class BaseDataLoader(ABC):
     Abstract class for data loader
     """
     def __init__(self, path: str):
+        if not path:
+            raise ValueError("It seems that the information of source is absent")
         self.path = path
 
     @abstractmethod
@@ -51,14 +53,19 @@ class DataLoader(BaseDataLoader):
     """
     Base class for loading and saving data
     """
-
-    def __init__(self, path: str, metadata: Dict, table_name: str, sensitive: bool = False):
+    def __init__(
+        self,
+        path: str,
+        table_name: str = None,
+        metadata: Dict = None,
+        sensitive: bool = False
+    ):
         super().__init__(path)
         self.fernet_key = (
             metadata.get(table_name)
             .get("encryption", {})
             .get("fernet_key")
-        )
+        ) if (metadata is not None and table_name is not None) else None
         self.sensitive = (
             True if sensitive and self.fernet_key else False
         ) or self.path.endswith(".dat")
@@ -597,7 +604,7 @@ class DataEncryptor(BaseDataLoader):
         """
         super().__init__(path)
         self.validate_fernet_key(fernet_key)
-        self.fernet = Fernet(fernet_key)
+        self.fernet_key = Fernet(fernet_key)
 
     @classmethod
     def validate_fernet_key(cls, fernet_key: str):
@@ -629,7 +636,7 @@ class DataEncryptor(BaseDataLoader):
         """
         try:
             serialized_df: bytes = pkl.dumps(df, protocol=pkl.HIGHEST_PROTOCOL)
-            encrypted_data = self.fernet.encrypt(serialized_df)
+            encrypted_data = self.fernet_key.encrypt(serialized_df)
 
             # Use atomic write operation for better safety
             temp_path = f"{self.path}.tmp"
@@ -654,7 +661,7 @@ class DataEncryptor(BaseDataLoader):
             with open(self.path, "rb") as encrypted_file:
                 encrypted_data = encrypted_file.read()
 
-            decrypted_data = self.fernet.decrypt(encrypted_data)
+            decrypted_data = self.fernet_key.decrypt(encrypted_data)
             df_decrypted = pkl.loads(decrypted_data)
 
             logger.info(
