@@ -91,24 +91,19 @@ class BaseTest(ABC):
             progress=ProgressBarHandler().progress + delta, delta=None, message=message
         )
 
-    def _get_cleaned_configs(self):
+    @staticmethod
+    def _get_cleaned_config(config):
         """
-        Get cleaned configs for the report
+        Get cleaned config for the report
         """
         filtered_fields = ["reports"]
-        train_config = {
+        cleaned_config = {
             k: v
-            for k, v in fetch_config(self.paths["train_config_pickle_path"])
-            .to_dict()
-            .items()
+            for k, v in config.items()
             if k not in filtered_fields
         }
-        infer_config = {
-            k: v
-            for k, v in self.config.items()
-            if k not in filtered_fields
-        }
-        return train_config, infer_config
+
+        return cleaned_config
 
 
 class AccuracyTest(BaseTest):
@@ -249,7 +244,10 @@ class AccuracyTest(BaseTest):
             title: transform_to_base64(path) for title, path in bi_images.items()
         }
 
-        train_config, infer_config = self._get_cleaned_configs()
+        train_config = self._get_cleaned_config(
+            config=fetch_config(self.paths["train_config_pickle_path"]).to_dict()
+        )
+        infer_config = self._get_cleaned_config(config=self.config)
 
         html = template.render(
             accuracy_value=acc_median,

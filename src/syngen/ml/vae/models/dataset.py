@@ -1306,13 +1306,12 @@ class Dataset(BaseDataset):
         """
         Assign corresponding to FK null column and preprocess if required.
         """
-        for fk_name, config in self.foreign_keys_mapping.items():
-            for fk_column in self.fk_columns:
-                features = self._preprocess_nan_cols(fk_column, fillna_strategy="mode")
-                if len(features) > 1:
-                    self.assign_feature(
-                        ContinuousFeature(features[1], column_type=int), features[1]
-                    )
+        for fk_column in self.fk_columns:
+            features = self._preprocess_nan_cols(fk_column, fillna_strategy="mode")
+            if len(features) > 1:
+                self.assign_feature(
+                    ContinuousFeature(features[1], column_type=int), features[1]
+                )
 
     def _assign_uuid_null_feature(self, feature):
         """
