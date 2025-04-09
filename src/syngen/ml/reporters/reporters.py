@@ -9,6 +9,7 @@ from typing import (
 )
 import itertools
 from collections import defaultdict
+from copy import deepcopy
 
 import pandas as pd
 import numpy as np
@@ -42,7 +43,7 @@ class Reporter:
         self.table_name = table_name
         self.paths = paths
         self.config = config
-        self.metadata = metadata
+        self.metadata = deepcopy(metadata)
         self.loader = loader
         self.dataset = None
         self.columns_nan_labels = dict()
