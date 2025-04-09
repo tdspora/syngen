@@ -2,6 +2,7 @@ from typing import Dict, List, Literal, Optional
 import os
 from dataclasses import dataclass, field
 import json
+from collections import defaultdict
 
 from slugify import slugify
 from loguru import logger
@@ -360,6 +361,10 @@ class Validator:
         for table_name, table_metadata in self.metadata.items():
             fernet_key = table_metadata.get("encryption", {}).get("fernet_key")
             if fernet_key is not None:
+                logger.warning(
+                    f"Encryption and decryption are enabled for the table '{table_name}' "
+                    "as a Fernet key is provided."
+                )
                 self._validate_fernet_key(table_name, fernet_key)
             if self.type_of_process == "train" and self.validation_source:
                 self._check_existence_of_source(table_name)

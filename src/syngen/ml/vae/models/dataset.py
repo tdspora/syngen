@@ -85,12 +85,11 @@ class BaseDataset:
         self.foreign_keys_list: List = list()
         self.fk_columns: List = list()
         self.keys_mapping: Dict = dict()
-        self.dropped_columns: Set = fetch_config(
+        train_config = fetch_config(
             self.paths["train_config_pickle_path"]
-        ).dropped_columns
-        self.order_of_columns: List = fetch_config(
-            self.paths["train_config_pickle_path"]
-        ).columns
+        )
+        self.dropped_columns: Set = train_config.dropped_columns
+        self.order_of_columns: List = train_config.columns
         self.format = self.metadata[self.table_name].get("format", {})
         self.nan_labels_dict = dict()
         self.nan_labels_in_uuid = dict()

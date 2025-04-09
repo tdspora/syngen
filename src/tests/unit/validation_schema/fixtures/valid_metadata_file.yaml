@@ -13,6 +13,9 @@ global:
     random_seed: 5
     reports: all
 
+  encryption:
+    fernet_key: null
+
 pk_test:
   train_settings:
     source: ./data/pk_test.csv
