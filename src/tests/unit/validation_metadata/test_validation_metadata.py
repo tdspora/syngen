@@ -2760,6 +2760,7 @@ def test_validate_metadata_if_invalid_fernet_key_in_train_process(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
+    invalid_fernet_key,
     rp_logger
 ):
     """
@@ -2782,7 +2783,7 @@ def test_validate_metadata_if_invalid_fernet_key_in_train_process(
                 }
             },
             "encryption": {
-                "fernet_key": "INVALID_KEY"
+                "fernet_key": invalid_fernet_key
             }
         },
     }
@@ -2810,6 +2811,7 @@ def test_validate_metadata_if_valid_fernet_key_with_generation_reports_in_infer_
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_check_access_to_input_data,
+    valid_fernet_key,
     rp_logger
 ):
     """
@@ -2821,7 +2823,7 @@ def test_validate_metadata_if_valid_fernet_key_with_generation_reports_in_infer_
         "if encryption is turned on, reports should be generated, "
         "and the valid Fernet key is provided"
     )
-    fernet_key = Fernet.generate_key().decode()
+    fernet_key = valid_fernet_key
     test_metadata = {
         "table": {
             "train_settings": {
@@ -2861,6 +2863,7 @@ def test_validate_metadata_if_valid_fernet_key_without_generation_reports_in_inf
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_check_access_to_input_data,
+    valid_fernet_key,
     rp_logger
 ):
     """
@@ -2872,7 +2875,6 @@ def test_validate_metadata_if_valid_fernet_key_without_generation_reports_in_inf
         "if encryption is turned on, reports won't be generated, "
         "and the valid Fernet key is provided"
     )
-    fernet_key = Fernet.generate_key().decode()
     test_metadata = {
         "table": {
             "train_settings": {
@@ -2885,7 +2887,7 @@ def test_validate_metadata_if_valid_fernet_key_without_generation_reports_in_inf
                 }
             },
             "encryption": {
-                "fernet_key": fernet_key
+                "fernet_key": valid_fernet_key
             }
         },
     }
@@ -2911,6 +2913,7 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process(
     mock_check_existence_of_destination,
     mock_check_access_to_input_data,
     reports,
+    invalid_fernet_key,
     rp_logger
 ):
     """
@@ -2937,7 +2940,7 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process(
                 }
             },
             "encryption": {
-                "fernet_key": "INVALID_KEY"
+                "fernet_key": invalid_fernet_key
             }
         },
     }
