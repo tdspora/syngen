@@ -340,15 +340,17 @@ class Validator:
             f"model_artifacts/tmp_store/{slugify(table_name)}/"
             f"input_data_{slugify(table_name)}.{'dat' if fernet_key is not None else 'pkl'}"
         )
-        try:
-            DataLoader(
+        data_loader = DataLoader(
                 path=path_to_input_data,
                 table_name=table_name,
                 metadata=self.merged_metadata,
                 sensitive=True
-            ).get_columns()
-        except Exception as e:
-            self.errors["check access to input data"][table_name] = str(e)
+            )
+        if data_loader.has_existed_path:
+            try:
+                data_loader.get_columns()
+            except Exception as e:
+                self.errors["check access to input data"][table_name] = str(e)
 
     def _launch_validation(self):
         """
