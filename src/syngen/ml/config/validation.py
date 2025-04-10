@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass, field
 import json
 from collections import defaultdict
+from cryptography.fernet import InvalidToken
 
 from slugify import slugify
 from loguru import logger
@@ -341,14 +342,18 @@ class Validator:
             f"input_data_{slugify(table_name)}.{'dat' if fernet_key is not None else 'pkl'}"
         )
         data_loader = DataLoader(
-                path=path_to_input_data,
-                table_name=table_name,
-                metadata=self.merged_metadata,
-                sensitive=True
-            )
+            path=path_to_input_data,
+            table_name=table_name,
+            metadata=self.merged_metadata,
+            sensitive=True
+        )
         if data_loader.has_existed_path:
             try:
                 data_loader.get_columns()
+            except InvalidToken:
+                self.errors["check access to input data"][table_name] = (
+                    "The provided Fernet key is invalid"
+                )
             except Exception as e:
                 self.errors["check access to input data"][table_name] = str(e)
 
