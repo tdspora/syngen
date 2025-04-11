@@ -9,6 +9,7 @@ from typing import (
 )
 import itertools
 from collections import defaultdict
+from copy import deepcopy
 
 import pandas as pd
 import numpy as np
@@ -36,11 +37,13 @@ class Reporter:
         table_name: str,
         paths: Dict[str, str],
         config: Dict[str, str],
+        metadata: Dict,
         loader: Optional[Callable[[str], pd.DataFrame]] = None
     ):
         self.table_name = table_name
         self.paths = paths
         self.config = config
+        self.metadata = deepcopy(metadata)
         self.loader = loader
         self.dataset = None
         self.columns_nan_labels = dict()
@@ -67,6 +70,8 @@ class Reporter:
         else:
             original, schema = DataLoader(
                 self.paths["input_data_path"],
+                self.table_name,
+                self.metadata,
                 sensitive=True
             ).load_data()
         synthetic, schema = DataLoader(self.paths["path_to_merged_infer"]).load_data()
@@ -351,7 +356,9 @@ class SampleAccuracyReporter(Reporter):
 
     def _extract_report_data(self):
         original, schema = DataLoader(self.paths["source_path"]).load_data()
-        sampled, schema = DataLoader(self.paths["input_data_path"], sensitive=True).load_data()
+        sampled, schema = DataLoader(
+            self.paths["input_data_path"], self.table_name, self.metadata, sensitive=True
+        ).load_data()
         return original, sampled
 
     def report(self):

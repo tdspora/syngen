@@ -1,5 +1,8 @@
 from unittest.mock import patch, call
 import pytest
+from collections import defaultdict
+
+from cryptography.fernet import Fernet
 
 from syngen.ml.config.validation import Validator
 from syngen.ml.utils import ValidationError
@@ -49,7 +52,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -114,7 +117,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_
         metadata_path=FAKE_METADATA_PATH,
         validation_source=False
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -152,7 +155,7 @@ def test_check_key_column_in_pk(rp_logger):
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -201,7 +204,7 @@ def test_check_key_column_in_fk(rp_logger):
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -274,7 +277,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -370,7 +373,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
         metadata_path=FAKE_METADATA_PATH,
         validation_source=False
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -475,7 +478,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -562,7 +565,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
         metadata_path=FAKE_METADATA_PATH,
         validation_source=False
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -629,7 +632,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -706,7 +709,7 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
@@ -786,7 +789,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_id": {
@@ -902,7 +905,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_1": {
@@ -976,7 +979,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1122,7 +1125,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1261,7 +1264,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1399,7 +1402,7 @@ def test_validate_incomplete_metadata_in_infer_process(
         type_of_process="infer",
         metadata_path=FAKE_METADATA_PATH
     )
-    validator.errors = dict()
+    validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {
         "fk_key": {
@@ -1581,7 +1584,7 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
                 type_of_process="train",
                 metadata_path=FAKE_METADATA_PATH
             )
-            validator.errors = dict()
+            validator.errors = defaultdict(defaultdict)
             validator.run()
             assert validator.mapping == {
                 "fk_key": {
@@ -2346,7 +2349,7 @@ def test_check_not_existent_referenced_table_in_fk(test_metadata_storage, rp_log
             type_of_process="train",
             metadata_path=FAKE_METADATA_PATH
         )
-        validator.errors = dict()
+        validator.errors = defaultdict(defaultdict)
         validator.run()
         assert validator.mapping == {}
         assert validator.merged_metadata == test_metadata
@@ -2691,4 +2694,266 @@ def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_i
             "The columns of primary or unique key associated with the columns of "
             "the 'FK' key - 'fk_id' aren't the same"
         ) in str(error.value)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
+def test_validate_metadata_if_valid_fernet_key_in_train_process(
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_validate_metadata,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of a table during training process
+    if encryption is turned on and the valid Fernet key is provided
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of a table during training process "
+        "if encryption is turned on and the valid Fernet key is provided"
+    )
+    test_metadata = {
+        "table": {
+            "train_settings": {
+                "source": "path/to/table.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            },
+            "encryption": {
+                "fernet_key": Fernet.generate_key().decode()
+            }
+        },
+    }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="train",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    validator.errors = defaultdict(defaultdict)
+    validator.run()
+    mock_gather_existed_columns.assert_called_once_with("table")
+    mock_check_existence_of_source.assert_called_once_with("table")
+    mock_check_existence_of_key_columns.assert_called_once_with("table")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("table")
+    mock_validate_metadata.assert_called_once_with("table")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
+def test_validate_metadata_if_invalid_fernet_key_in_train_process(
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_validate_metadata,
+    invalid_fernet_key,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of a table during training process
+    if encryption is turned on and the invalid Fernet key is provided
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of a table during training process "
+        "if encryption is turned on and the invalid Fernet key is provided"
+    )
+    test_metadata = {
+        "table": {
+            "train_settings": {
+                "source": "path/to/table.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            },
+            "encryption": {
+                "fernet_key": invalid_fernet_key
+            }
+        },
+    }
+    with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="train",
+            metadata_path=FAKE_METADATA_PATH
+        )
+        validator.errors = defaultdict(defaultdict)
+        validator.run()
+        mock_gather_existed_columns.assert_called_once_with("table")
+        mock_check_existence_of_source.assert_called_once_with("table")
+        mock_check_existence_of_key_columns.assert_called_once_with("table")
+        mock_check_existence_of_referenced_columns.assert_called_once_with("table")
+        mock_validate_metadata.assert_called_once_with("table")
+    assert "Fernet key must be 32 url-safe base64-encoded bytes." in str(error.value)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "_check_access_to_input_data")
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
+def test_validate_metadata_if_valid_fernet_key_with_generation_reports_in_infer_process(
+    mock_check_completion_of_training,
+    mock_check_existence_of_destination,
+    mock_check_access_to_input_data,
+    valid_fernet_key,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of a table during inference process
+    if encryption is turned on, reports should be generated, and the valid Fernet key is provided
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of a table during inference process "
+        "if encryption is turned on, reports should be generated, "
+        "and the valid Fernet key is provided"
+    )
+    fernet_key = valid_fernet_key
+    test_metadata = {
+        "table": {
+            "train_settings": {
+                "source": "path/to/table.csv"
+            },
+            "infer_settings": {
+                "reports": ["accuracy"],
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            },
+            "encryption": {
+                "fernet_key": fernet_key
+            }
+        },
+    }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="infer",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    validator.errors = defaultdict(defaultdict)
+    validator.run()
+    mock_check_completion_of_training.assert_called_once_with("table")
+    mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_called_once_with("table", fernet_key)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "_check_access_to_input_data")
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
+def test_validate_metadata_if_valid_fernet_key_without_generation_reports_in_infer_process(
+    mock_check_completion_of_training,
+    mock_check_existence_of_destination,
+    mock_check_access_to_input_data,
+    valid_fernet_key,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of a table during inference process
+    if encryption is turned on, reports won't be generated, and the valid Fernet key is provided
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of a table during inference process "
+        "if encryption is turned on, reports won't be generated, "
+        "and the valid Fernet key is provided"
+    )
+    test_metadata = {
+        "table": {
+            "train_settings": {
+                "source": "path/to/table.csv"
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            },
+            "encryption": {
+                "fernet_key": valid_fernet_key
+            }
+        },
+    }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="infer",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    validator.errors = defaultdict(defaultdict)
+    validator.run()
+    mock_check_completion_of_training.assert_called_once_with("table")
+    mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("reports", ([], ["accuracy"]))
+@patch.object(Validator, "_check_access_to_input_data")
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
+def test_validate_metadata_if_invalid_fernet_key_in_infer_process(
+    mock_check_completion_of_training,
+    mock_check_existence_of_destination,
+    mock_check_access_to_input_data,
+    reports,
+    invalid_fernet_key,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of a table during inference process
+    if encryption is turned on, reports should be generated, and the invalid Fernet key is provided
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of a table during inference process "
+        "if encryption is turned on, reports should be generated, "
+        "and the invalid Fernet key is provided"
+    )
+    test_metadata = {
+        "table": {
+            "train_settings": {
+                "source": "path/to/table.csv"
+            },
+            "infer_settings": {
+                "reports": reports,
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            },
+            "encryption": {
+                "fernet_key": invalid_fernet_key
+            }
+        },
+    }
+    with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="infer",
+            metadata_path=FAKE_METADATA_PATH
+        )
+        validator.errors = defaultdict(defaultdict)
+        validator.run()
+        mock_check_completion_of_training.assert_called_once_with("table")
+        mock_check_existence_of_destination.assert_called_once_with("table")
+        mock_check_access_to_input_data.assert_not_called()
+    assert "Fernet key must be 32 url-safe base64-encoded bytes." in str(error.value)
     rp_logger.info(SUCCESSFUL_MESSAGE)

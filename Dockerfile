@@ -8,11 +8,10 @@ COPY requirements.txt .
 COPY requirements-streamlit.txt .
 
 RUN apt-get update && \
-    apt-get install -y \
-    git && \
+    apt-get install -y --no-install-recommends git build-essential python3.11-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    pip install --upgrade pip && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir -r requirements-streamlit.txt && \
     pip uninstall -y pip

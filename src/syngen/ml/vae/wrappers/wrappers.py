@@ -54,7 +54,7 @@ class BaseWrapper(ABC):
 
 @dataclass
 class VAEWrapper(BaseWrapper):
-    df: pd.DataFrame
+    df: Optional[pd.DataFrame]
     schema: Optional[Dict]
     metadata: Dict
     table_name: str

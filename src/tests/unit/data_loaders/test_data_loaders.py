@@ -1334,18 +1334,15 @@ def test_save_excel_table_in_xlsx_format(test_xlsx_path, test_df, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_initialization_data_encryptor_with_valid_path_and_key(
-    monkeypatch, valid_fernet_key, rp_logger
-):
+def test_initialization_data_encryptor_with_valid_path_and_key(valid_fernet_key, rp_logger):
     rp_logger.info("Test the initialization of DataEncryptor with valid path and key")
-    monkeypatch.setenv("FERNET_KEY", valid_fernet_key)
-    DataEncryptor("path/to/data.csv")
+    DataEncryptor("path/to/data.csv", valid_fernet_key)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_valid_fernet_key_validation(valid_fernet_key, rp_logger):
     rp_logger.info("Test the validation of the valid Fernet key")
-    assert DataEncryptor._validate_fernet_key(valid_fernet_key) is None
+    assert DataEncryptor.validate_fernet_key(valid_fernet_key) is None
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1365,7 +1362,7 @@ def test_validation_of_absent_fernet_key(rp_logger, caplog, key_value):
     rp_logger.info("Test the validation of the absent Fernet key")
     with pytest.raises(ValueError):
         with caplog.at_level("ERROR"):
-            DataEncryptor._validate_fernet_key(key_value)
+            DataEncryptor.validate_fernet_key(key_value)
         assert "It seems that the Fernet key is absent" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1387,7 +1384,7 @@ def test_validation_of_invalid_fernet_key(invalid_key, rp_logger, caplog):
 
     with pytest.raises(ValueError):
         with caplog.at_level("ERROR"):
-            DataEncryptor._validate_fernet_key(invalid_key)
+            DataEncryptor.validate_fernet_key(invalid_key)
         assert (
             "It seems that the provided Fernet key is invalid. "
             "The Fernet key must be 32 url-safe base64-encoded bytes"
@@ -1401,7 +1398,7 @@ def test_decrypt_data_with_invalid_key(data_encryptor, valid_simple_dataframe, r
         "Test the decryption of the data with the invalid Fernet key"
     )
     data_encryptor.save_data(valid_simple_dataframe)
-    data_encryptor.fernet = Fernet(Fernet.generate_key())  # Change the key
+    data_encryptor.fernet_key = Fernet(Fernet.generate_key())
     with pytest.raises(InvalidToken):
         with caplog.at_level("ERROR"):
             data_encryptor.load_data()

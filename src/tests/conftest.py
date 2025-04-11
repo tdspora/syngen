@@ -229,8 +229,7 @@ def valid_simple_dataframe():
 
 @pytest.fixture
 def data_encryptor(tmp_path, valid_fernet_key):
-    os.environ["FERNET_KEY"] = valid_fernet_key
-    return DataEncryptor(path=str(tmp_path / "test.dat"))
+    return DataEncryptor(path=str(tmp_path / "test.dat"), fernet_key=valid_fernet_key)
 
 
 @pytest.fixture

@@ -31,6 +31,7 @@ class Worker:
     metadata_path: Optional[str] = field(kw_only=True)
     settings: Dict = field(kw_only=True)
     log_level: str = field(kw_only=True)
+    encryption_settings: Dict = field(kw_only=True)
     type_of_process: Literal["train", "infer"] = field(kw_only=True)
     metadata: Optional[Dict] = None
     loader: Optional[Callable[[str], pd.DataFrame]] = None
@@ -163,23 +164,27 @@ class Worker:
         """
         global_train_settings = self.metadata.get("global", {}).get("train_settings", {})
         global_infer_settings = self.metadata.get("global", {}).get("infer_settings", {})
+        global_encryption_settings = self.metadata.get("global", {}).get("encryption", {})
 
-        for table, table_metadata in self.metadata.items():
-            if table == "global":
+        process_settings_map = {
+            "train": ("train_settings", global_train_settings),
+            "infer": ("infer_settings", global_infer_settings),
+        }
+
+        process_info = process_settings_map.get(self.type_of_process)
+        settings_key, global_process_settings = process_info
+
+        for table_name, table_metadata in self.metadata.items():
+            if table_name == "global":
                 continue
-            elif self.type_of_process == "train":
-                settings_key = "train_settings"
-                global_settings = global_train_settings
-            elif self.type_of_process == "infer":
-                settings_key = "infer_settings"
-                global_settings = global_infer_settings
-            else:
-                continue
 
-            table_settings = table_metadata[settings_key]
+            table_process_settings = table_metadata.setdefault(settings_key, {})
+            table_encryption_settings = table_metadata.setdefault("encryption", {})
 
-            self._update_table_settings(table_settings, global_settings)
-            self._update_table_settings(table_settings, self.settings)
+            self._update_table_settings(table_process_settings, global_process_settings)
+            self._update_table_settings(table_process_settings, self.settings)
+            self._update_table_settings(table_encryption_settings, global_encryption_settings)
+            self._update_table_settings(table_encryption_settings, self.encryption_settings)
 
     def _update_metadata(self) -> None:
         if self.metadata_path:
@@ -202,6 +207,7 @@ class Worker:
                         "source": source,
                     },
                     "infer_settings": {},
+                    "encryption": {"fernet_key": self.encryption_settings.get("fernet_key")},
                     "keys": {},
                     "format": {}
                 }

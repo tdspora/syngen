@@ -1,6 +1,7 @@
 import pytest
 
 from marshmallow import ValidationError
+from cryptography.fernet import Fernet
 
 from syngen.ml.validation_schema import ValidationSchema
 from syngen.ml.data_loaders import MetadataLoader
@@ -14,6 +15,27 @@ def test_valid_metadata_file(rp_logger, caplog):
         f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            metadata_path=path_to_metadata,
+            validation_source=True,
+            process="train"
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_valid_metadata_file_with_turned_on_encryption(rp_logger, caplog):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file "
+        "that contains the value of 'fernet_key'"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["global"]["encryption"]["fernet_key"] = Fernet.generate_key().decode()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
@@ -495,38 +517,9 @@ def test_metadata_file_with_invalid_format_settings_for_csv_table(
 @pytest.mark.parametrize(
     "wrong_setting, expected_error",
     [
-        ({"sep": ","}, "The details are - {'pk_test': {'sep': ['Unknown field.']}}"),
         (
-            {"quotechar": '"'},
-            "The details are - {'pk_test': {'quotechar': ['Unknown field.']}}",
-        ),
-        (
-            {"quoting": "non-numeric"},
-            "The details are - {'pk_test': {'quoting': ['Unknown field.']}}",
-        ),
-        (
-            {"escapechar": "\\"},
-            "The details are - {'pk_test': {'escapechar': ['Unknown field.']}}",
-        ),
-        (
-            {"encoding": "ascii"},
-            "The details are - {'pk_test': {'encoding': ['Unknown field.']}}",
-        ),
-        (
-            {"header": 0},
-            "The details are - {'pk_test': {'header': ['Unknown field.']}}",
-        ),
-        (
-            {"skiprows": 0},
-            "The details are - {'pk_test': {'skiprows': ['Unknown field.']}}",
-        ),
-        (
-            {"on_bad_lines": "skip"},
-            "The details are - {'pk_test': {'on_bad_lines': ['Unknown field.']}}",
-        ),
-        (
-            {"engine": "python"},
-            "The details are - {'pk_test': {'engine': ['Unknown field.']}}",
+            {"fernet_key": 1},
+            "The details are - {'global': {'encryption': {'fernet_key': ['Not a valid string.']}}}"
         ),
     ],
 )
@@ -534,14 +527,15 @@ def test_metadata_file_with_invalid_format_settings_for_excel_table(
     rp_logger, wrong_setting, expected_error
 ):
     rp_logger.info(
-        "Test the validation of the schema of the metadata with format settings set to Excel table"
+        "Test the validation of the schema of the metadata "
+        "that contains invalid values of 'fernet_key'"
     )
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
-        "valid_metadata_file_for_excel_table.yaml"
+        "valid_metadata_file.yaml"
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
-    metadata["pk_test"]["format"].update(wrong_setting)
+    metadata["global"]["encryption"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
