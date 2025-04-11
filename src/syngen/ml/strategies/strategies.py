@@ -166,6 +166,7 @@ class InferStrategy(Strategy):
         """
         configuration = InferConfig(**kwargs)
         self.config = configuration
+        self.metadata = deepcopy(self.config.metadata)
         return self
 
     def add_handler(self, type_of_process: str):
@@ -174,7 +175,7 @@ class InferStrategy(Strategy):
         """
         self.handler = VaeInferHandler(
             metadata_path=self.config.metadata_path,
-            metadata=self.config.metadata,
+            metadata=self.metadata,
             table_name=self.config.table_name,
             paths=self.config.paths,
             wrapper_name=VanillaVAEWrapper.__name__,
@@ -199,7 +200,7 @@ class InferStrategy(Strategy):
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
-                metadata=self.config.metadata,
+                metadata=self.metadata,
                 loader=self.config.loader,
             )
             Report().register_reporter(table=table_name, reporter=accuracy_reporter)

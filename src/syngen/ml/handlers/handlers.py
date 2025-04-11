@@ -60,7 +60,9 @@ class BaseHandler(AbstractHandler):
         return None
 
     @staticmethod
-    def create_wrapper(cls_name, data: pd.DataFrame, schema: Optional[Dict], **kwargs):
+    def create_wrapper(
+        cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
+    ):
         return globals()[cls_name](
             data,
             schema,
@@ -248,10 +250,8 @@ class VaeInferHandler(BaseHandler):
         )
         self.has_vae = len(self.dataset.features) > 0
 
-        data, schema = self.fetch_data()
-
         if self.has_vae:
-            self.vae = self._get_wrapper(data, schema)
+            self.vae = self._get_wrapper()
 
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
@@ -265,14 +265,12 @@ class VaeInferHandler(BaseHandler):
             )
         )
 
-    def _get_wrapper(self, data: pd.DataFrame, schema: Dict):
+    def _get_wrapper(self):
         """
         Create and get the wrapper for the VAE model
         """
         return self.create_wrapper(
             self.wrapper_name,
-            data,
-            schema,
             metadata=self.metadata,
             table_name=self.table_name,
             paths=self.paths,
