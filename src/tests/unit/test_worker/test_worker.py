@@ -1773,6 +1773,7 @@ def test_train_tables_with_generation_reports(
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_check_access_to_input_data")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1790,6 +1791,7 @@ def test_infer_tables_without_generation_reports(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_validate_fernet_key,
     mock_check_access_to_input_data,
     mock_generate_reports,
     mock_collect_metrics_in_infer,
@@ -1859,6 +1861,7 @@ def test_infer_tables_without_generation_reports(
         delta=0.5
     )
     mock_generate_reports.assert_called_once()
+    mock_validate_fernet_key.assert_not_called()
     mock_check_access_to_input_data.assert_not_called()
     mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1867,6 +1870,7 @@ def test_infer_tables_without_generation_reports(
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_check_access_to_input_data")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
@@ -1875,7 +1879,7 @@ def test_infer_tables_without_generation_reports(
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_infer_table")
-def test_infer_tables_with_generation_reports(
+def test_infer_tables_with_generation_report_and_without_provided_fernet_key(
     mock_infer_table,
     mock_gather_existed_columns,
     mock_check_existence_of_source,
@@ -1884,6 +1888,7 @@ def test_infer_tables_with_generation_reports(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
+    mock_validate_fernet_key,
     mock_check_access_to_input_data,
     mock_generate_reports,
     mock_collect_metrics_in_infer,
@@ -1891,11 +1896,11 @@ def test_infer_tables_with_generation_reports(
 ):
     """
     Test the '__infer_tables' method of the 'Worker' class
-    in case the reports should be generated
+    in case the reports should be generated, and the Fernet key was not provided
     """
     rp_logger.info(
         "Test the '__infer_tables' method of the 'Worker' class "
-        "in case the reports will be generated"
+        "in case the reports will be generated, and the Fernet key was not provided"
     )
     worker = Worker(
         table_name=None,
@@ -1954,7 +1959,106 @@ def test_infer_tables_with_generation_reports(
     )
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
+    mock_validate_fernet_key.assert_not_called()
     mock_check_access_to_input_data.assert_called_once_with("test_table", None)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "_collect_metrics_in_infer")
+@patch.object(Worker, "_generate_reports")
+@patch.object(Validator, "_check_access_to_input_data")
+@patch.object(Validator, "_validate_fernet_key")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Worker, "_infer_table")
+def test_infer_tables_with_generation_report_and_with_provided_fernet_key(
+    mock_infer_table,
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_check_completion_of_training,
+    mock_check_existence_of_destination,
+    mock_validate_metadata,
+    mock_validate_fernet_key,
+    mock_check_access_to_input_data,
+    mock_generate_reports,
+    mock_collect_metrics_in_infer,
+    valid_fernet_key,
+    rp_logger,
+):
+    """
+    Test the '__infer_tables' method of the 'Worker' class
+    in case the reports should be generated, and the Fernet key was provided
+    """
+    rp_logger.info(
+        "Test the '__infer_tables' method of the 'Worker' class "
+        "in case the reports will be generated, and the Fernet key was provided"
+    )
+    worker = Worker(
+        table_name=None,
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_with_reports.yaml",
+        settings={
+            "size": 300,
+            "run_parallel": True,
+            "random_seed": 3,
+            "reports": ["accuracy"],
+            "batch_size": 300,
+        },
+        log_level="INFO",
+        type_of_process="infer",
+        encryption_settings={"fernet_key": valid_fernet_key}
+    )
+    worker.launch_infer()
+    mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_existence_of_key_columns.assert_not_called()
+    mock_check_existence_of_referenced_columns.assert_not_called()
+    mock_check_completion_of_training.assert_called_once_with("test_table")
+    mock_check_existence_of_destination.assert_called_once_with("test_table")
+    mock_validate_metadata.assert_called_once_with("test_table")
+    mock_infer_table.assert_called_once_with(
+        table="test_table",
+        metadata={
+            "test_table": {
+                "train_settings": {
+                    "source": "./path/to/test_table.csv",
+                    "epochs": 100,
+                    "drop_null": False,
+                    "reports": ["accuracy", "sample"],
+                    "row_limit": 800,
+                    "batch_size": 2000
+                },
+                "infer_settings": {
+                    "destination": "./path/to/test_table_infer.csv",
+                    "size": 200,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "reports": ["accuracy"],
+                    "batch_size": 200
+                },
+                "encryption": {"fernet_key": valid_fernet_key},
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["Id"]
+                    }
+                },
+                "format": {}
+            }
+        },
+        type_of_process="infer",
+        delta=0.25
+    )
+    mock_generate_reports.assert_called_once()
+    mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
+    mock_validate_fernet_key.assert_called_once_with("test_table", valid_fernet_key)
+    mock_check_access_to_input_data.assert_called_once_with("test_table", valid_fernet_key)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
