@@ -347,15 +347,16 @@ class Validator:
             metadata=self.merged_metadata,
             sensitive=True
         )
-        if data_loader.has_existed_path:
-            try:
-                data_loader.get_columns()
-            except InvalidToken:
-                self.errors["check access to input data"][table_name] = (
-                    "The provided Fernet key is invalid"
-                )
-            except Exception as e:
-                self.errors["check access to input data"][table_name] = str(e)
+        try:
+            data_loader.get_columns()
+        except InvalidToken:
+            self.errors["check access to input data"][table_name] = (
+                "The provided Fernet key is invalid. The attempt to decrypt "
+                "the sample of the original data has been failed. "
+                "Please, provide the valid Fernet key."
+            )
+        except Exception as e:
+            self.errors["check access to input data"][table_name] = str(e)
 
     def _launch_validation(self):
         """
@@ -367,20 +368,34 @@ class Validator:
 
         for table_name, table_metadata in self.metadata.items():
             fernet_key = table_metadata.get("encryption", {}).get("fernet_key")
-            if fernet_key is not None:
+            reports = table_metadata.get("infer_settings", {}).get("reports", [])
+
+            if fernet_key is not None and (
+                self.type_of_process == "train" or (
+                    self.type_of_process == "infer" and reports
+                )
+            ):
                 logger.warning(
                     f"Encryption and decryption are enabled for the table '{table_name}' "
                     "as a Fernet key is provided."
                 )
                 self._validate_fernet_key(table_name, fernet_key)
+
+            if fernet_key is not None and self.type_of_process == "infer" and not reports:
+                logger.warning(
+                    f"The Fernet key is provided for the table '{table_name}' "
+                    f"hasn't been validated because it will not be used."
+                )
+
             if self.type_of_process == "train" and self.validation_source:
                 self._check_existence_of_source(table_name)
                 self._check_existence_of_key_columns(table_name)
                 self._check_existence_of_referenced_columns(table_name)
+
             elif self.type_of_process == "infer":
                 self._check_completion_of_training(table_name)
                 self._check_existence_of_destination(table_name)
-                if table_metadata.get("infer_settings", {}).get("reports", []):
+                if reports:
                     if not self.errors.get("validate structure of fernet key", {}).get(table_name):
                         self._check_access_to_input_data(table_name, fernet_key)
 

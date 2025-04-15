@@ -85,94 +85,10 @@ def test_init_train_config(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_init_infer_config_with_absent_input_data_in_train_process(rp_logger):
-    rp_logger.info(
-        "Test the process of initialization of the instance of the class InferConfig "
-        "during the training process in case the input data is absent"
-    )
-    table_name = "test_table"
-    path_to_source = "path/to/source.csv"
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": path_to_source,
-                "reports": ["accuracy"]
-            }
-        }
-    }
-    infer_config = InferConfig(
-        destination="path/to/destination.csv",
-        metadata=metadata,
-        metadata_path="path/to/metadata.yaml",
-        size=100,
-        table_name=table_name,
-        run_parallel=False,
-        batch_size=100,
-        random_seed=None,
-        reports=["accuracy"],
-        both_keys=True,
-        log_level="DEBUG",
-        loader=None,
-        type_of_process="train"
-    )
-    assert infer_config.reports == []
-
-    assert set(infer_config.__dict__.keys()) == {
-        "destination", "metadata", "metadata_path", "size", "table_name",
-        "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
-        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
-    }
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_init_infer_config_with_absent_input_data_in_infer_process(rp_logger):
-    rp_logger.info(
-        "Test the process of initialization of the instance of the class InferConfig "
-        "during the inference process in case the input data is absent"
-    )
-    table_name = "test_table"
-    path_to_source = "path/to/source.csv"
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": path_to_source
-            },
-            "infer_settings": {
-                "reports": ["accuracy"]
-            }
-        }
-    }
-    infer_config = InferConfig(
-        destination="path/to/destination.csv",
-        metadata=metadata,
-        metadata_path="path/to/metadata.yaml",
-        size=100,
-        table_name=table_name,
-        run_parallel=False,
-        batch_size=100,
-        random_seed=None,
-        reports=["accuracy"],
-        both_keys=True,
-        log_level="DEBUG",
-        loader=None,
-        type_of_process="infer"
-    )
-    assert infer_config.reports == []
-
-    assert set(infer_config.__dict__.keys()) == {
-        "destination", "metadata", "metadata_path", "size", "table_name",
-        "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
-        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
-    }
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
 @pytest.fixture
-def test_init_infer_config_with_existed_input_data_in_train_process(mocker, rp_logger):
+def test_init_infer_config(mocker, rp_logger):
     rp_logger.info(
-        "Test the process of initialization of the instance of the class InferConfig "
-        "during the training process in case the input data is present"
+        "Test the process of initialization of the instance of the class InferConfig"
     )
     table_name = "test_table"
     path_to_source = "path/to/source.csv"
@@ -203,54 +119,6 @@ def test_init_infer_config_with_existed_input_data_in_train_process(mocker, rp_l
         loader=None,
         type_of_process="train"
     )
-
-    assert infer_config.reports == ["accuracy"]
-
-    assert set(infer_config.__dict__.keys()) == {
-        "destination", "metadata", "metadata_path", "size", "table_name",
-        "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
-        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
-    }
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@pytest.fixture
-def test_init_infer_config_with_existed_input_data_in_infer_process(mocker, rp_logger):
-    rp_logger.info(
-        "Test the process of initialization of the instance of the class InferConfig "
-        "during the inference process in case the input data is present"
-    )
-    table_name = "test_table"
-
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": "path/to/source.csv",
-            },
-            "infer_settings": {
-                "reports": ["accuracy"]
-            }
-        }
-    }
-
-    mocker.patch("syngen.ml.data_loaders.DataLoader.has_existed_path", return_value=True)
-
-    infer_config = InferConfig(
-            destination="path/to/destination.csv",
-            metadata=metadata,
-            metadata_path="path/to/metadata.yaml",
-            size=100,
-            table_name=table_name,
-            run_parallel=False,
-            batch_size=100,
-            random_seed=None,
-            reports=["accuracy"],
-            both_keys=True,
-            log_level="DEBUG",
-            loader=None,
-            type_of_process="infer"
-        )
 
     assert infer_config.reports == ["accuracy"]
 
@@ -416,36 +284,4 @@ def test_check_reports_in_train_config(
     mock_remove_empty_columns.assert_called_once()
     train_config.row_subset == expected_size
     train_config.metadata = expected_metadata
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_check_reports_in_infer_config_with_absent_input_data(rp_logger):
-    rp_logger.info(
-        "Test the method '_check_reports' of the class InferConfig "
-        "in case the input data of the table is absent"
-    )
-    infer_config = InferConfig(
-        destination=None,
-        metadata={
-            "test_table": {
-                "train_settings": {
-                    "source": "path/to/data.csv",
-                    "reports": ["accuracy", "sample"]
-                }
-            }
-        },
-        metadata_path=None,
-        size=100,
-        table_name="test_table",
-        run_parallel=False,
-        batch_size=32,
-        random_seed=None,
-        reports=["accuracy"],
-        both_keys=False,
-        loader=None,
-        log_level="DEBUG",
-        type_of_process="infer"
-    )
-    infer_config._check_reports()
-    assert infer_config.reports == []
     rp_logger.info(SUCCESSFUL_MESSAGE)

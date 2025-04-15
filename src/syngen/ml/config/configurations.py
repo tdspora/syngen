@@ -322,7 +322,6 @@ class InferConfig:
         self._set_infer_parameters()
 
     def _set_infer_parameters(self):
-        self._check_reports()
         self._set_up_size()
         self._set_up_batch_size()
 
@@ -362,39 +361,6 @@ class InferConfig:
             "random_seed": self.random_seed,
             "reports": self.reports,
         }
-
-    def _check_required_artifacts(self):
-        """
-        Check whether required artifacts exists
-        """
-        data_loader = DataLoader(
-            path=self.paths["input_data_path"],
-            table_name=self.table_name,
-            metadata=self.metadata,
-            sensitive=True
-        )
-        if (
-                self.reports
-                and (
-                    data_loader.has_existed_path is False
-                    or self.loader is not None
-                )
-        ):
-            self.reports = list()
-            log_message = (
-                f"It seems that the path to the sample of the original data for the table "
-                f"'{self.table_name}' at '{self.paths['input_data_path']}' does not exist. "
-                f"As a result, no reports for the table '{self.table_name}' will be generated. "
-                f"The 'reports' parameter for the table '{self.table_name}' "
-                f"has been set to 'none'."
-            )
-            logger.warning(log_message)
-
-    def _check_reports(self):
-        """
-        Check whether it is possible to generate reports
-        """
-        self._check_required_artifacts()
 
     def _set_up_size(self):
         """

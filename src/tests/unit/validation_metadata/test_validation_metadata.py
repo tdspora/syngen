@@ -2857,11 +2857,13 @@ def test_validate_metadata_if_valid_fernet_key_with_generation_reports_in_infer_
 
 
 @patch.object(Validator, "_check_access_to_input_data")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 def test_validate_metadata_if_valid_fernet_key_without_generation_reports_in_infer_process(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
+    mock_validate_fernet_key,
     mock_check_access_to_input_data,
     valid_fernet_key,
     rp_logger
@@ -2900,19 +2902,18 @@ def test_validate_metadata_if_valid_fernet_key_without_generation_reports_in_inf
     validator.run()
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_validate_fernet_key.assert_not_called()
     mock_check_access_to_input_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("reports", ([], ["accuracy"]))
 @patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
-def test_validate_metadata_if_invalid_fernet_key_in_infer_process(
+def test_validate_metadata_if_invalid_fernet_key_in_infer_process_with_reports_generation(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_check_access_to_input_data,
-    reports,
     invalid_fernet_key,
     rp_logger
 ):
@@ -2931,7 +2932,7 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process(
                 "source": "path/to/table.csv"
             },
             "infer_settings": {
-                "reports": reports,
+                "reports": ["accuracy", "metrics_only"],
             },
             "keys": {
                 "pk_id": {
