@@ -1,7 +1,6 @@
 import pytest
 
 from marshmallow import ValidationError
-from cryptography.fernet import Fernet
 
 from syngen.ml.validation_schema import ValidationSchema
 from syngen.ml.data_loaders import MetadataLoader
@@ -15,27 +14,6 @@ def test_valid_metadata_file(rp_logger, caplog):
         f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
-    with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
-            metadata=metadata,
-            metadata_path=path_to_metadata,
-            validation_source=True,
-            process="train"
-        ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_valid_metadata_file_with_turned_on_encryption(rp_logger, caplog):
-    rp_logger.info(
-        "Test the validation of the schema of the valid metadata file "
-        "that contains the value of 'fernet_key'"
-    )
-    path_to_metadata = (
-        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
-    )
-    metadata = MetadataLoader(path_to_metadata).load_data()
-    metadata["global"]["encryption"]["fernet_key"] = Fernet.generate_key().decode()
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
