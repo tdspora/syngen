@@ -2851,7 +2851,7 @@ def test_validate_metadata_if_valid_fernet_key_with_generation_reports_in_infer_
     validator.run()
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
-    mock_check_access_to_input_data.assert_called_once_with("table", fernet_key)
+    mock_check_access_to_input_data.assert_called_once_with("table")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

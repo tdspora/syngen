@@ -1186,7 +1186,7 @@ def test_launch_infer_with_metadata(
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
     mock_validate_fernet_key.assert_called_once_with("table", FERNET_KEY)
-    mock_check_access_to_input_data.assert_called_once_with("table", FERNET_KEY)
+    mock_check_access_to_input_data.assert_called_once_with("table")
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1288,7 +1288,7 @@ def test_launch_infer_with_metadata_of_related_tables(
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
     mock_validate_fernet_key.assert_not_called()
-    mock_check_access_to_input_data.assert_called_once_with("pk_test", None)
+    mock_check_access_to_input_data.assert_called_once_with("pk_test")
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["pk_test", "fk_test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1490,7 +1490,7 @@ def test_launch_infer_without_metadata(
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
     mock_validate_fernet_key.assert_not_called()
-    mock_check_access_to_input_data.assert_called_once_with("table", None)
+    mock_check_access_to_input_data.assert_called_once_with("table")
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["table"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -1582,7 +1582,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
     mock_validate_fernet_key.assert_called_once_with("fk_test", FERNET_KEY)
-    mock_check_access_to_input_data.assert_called_once_with("fk_test", FERNET_KEY)
+    mock_check_access_to_input_data.assert_called_once_with("fk_test")
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_infer.assert_called_once_with(["pk_test", "fk_test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -2182,7 +2182,7 @@ def test_infer_tables_with_generation_report_and_without_provided_fernet_key(
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
     mock_validate_fernet_key.assert_not_called()
-    mock_check_access_to_input_data.assert_called_once_with("test_table", None)
+    mock_check_access_to_input_data.assert_called_once_with("test_table")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -2279,7 +2279,7 @@ def test_infer_tables_with_generation_report_and_with_provided_fernet_key(
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["test_table"])
     mock_validate_fernet_key.assert_called_once_with("test_table", FERNET_KEY)
-    mock_check_access_to_input_data.assert_called_once_with("test_table", FERNET_KEY)
+    mock_check_access_to_input_data.assert_called_once_with("test_table")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -2984,7 +2984,7 @@ def test_launch_infer_of_pretrained_table(
     mock_validate_metadata.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_check_completion_of_training.assert_called_once_with("table")
-    mock_check_access_to_input_data.assert_called_once_with("table", None)
+    mock_check_access_to_input_data.assert_called_once_with("table")
     mock_infer_table.assert_called_once_with(
         table="table",
         metadata=metadata,
@@ -3043,7 +3043,7 @@ def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
             assert message in caplog.text
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
-    mock_check_access_to_input_data.assert_called_once_with("table", None)
+    mock_check_access_to_input_data.assert_called_once_with("table")
     mock_infer_table.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -3098,6 +3098,6 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
             assert message in str(error.message)
             assert message in caplog.text
     mock_check_existence_of_destination.assert_called_once_with("table")
-    mock_check_access_to_input_data.assert_called_once_with("table", None)
+    mock_check_access_to_input_data.assert_called_once_with("table")
     mock_infer_table.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)

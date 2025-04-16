@@ -10,7 +10,7 @@ from loguru import logger
 from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import slugify_attribute, fetch_unique_root
+from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
 from syngen.ml.convertor import CSVConvertor
 
 
@@ -396,30 +396,37 @@ class InferConfig:
         """
         Create the paths which used in inference process
         """
-        dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
-        fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
+        self.dynamic_name = (
+            self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
+        )
+        path_to_train_config = (
+            f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/train_config.pkl"
+        )
         self.paths = {
-            "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
-            "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                               f"input_data_{self.slugify_table_name}."
-                               f"{'dat' if fernet_key is not None else 'pkl'}",
-            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
-                                            f"merged_infer_{dynamic_name}.csv",
-            "path_to_merged_infer": self.destination
-            if self.destination is not None
-            else f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
-            "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
+            "reports_path": f"model_artifacts/tmp_store/{self.dynamic_name}/reports",
             "train_config_pickle_path":
-                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+                f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/train_config.pkl",
+            "input_data_path": fetch_config(path_to_train_config).paths["input_data_path"],
+            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{self.dynamic_name}/"
+                                            f"merged_infer_{self.dynamic_name}.csv",
+            "path_to_merged_infer": (
+                self.destination
+                if self.destination is not None
+                else f"model_artifacts/tmp_store/{self.dynamic_name}/"
+                     f"merged_infer_{self.dynamic_name}.csv"
+            ),
+            "state_path": f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints",
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
-            "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
-            "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
+            "tmp_store_path": f"model_artifacts/tmp_store/{self.dynamic_name}",
+            "vae_resources_path":
+                f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/",
             "dataset_pickle_path":
-                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
-            "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
+                f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/model_dataset.pkl",
+            "fk_kde_path":
+                f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/stat_keys/",
             "path_to_no_ml":
-                f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
+                f"model_artifacts/resources/{self.dynamic_name}/no_ml/checkpoints/kde_params.pkl",
             "path_to_flatten_metadata":
                 f"model_artifacts/tmp_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
