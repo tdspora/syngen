@@ -1346,17 +1346,6 @@ def test_valid_fernet_key_validation(valid_fernet_key, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_round_encrypt_decrypt_data(data_encryptor, valid_simple_dataframe, rp_logger):
-    rp_logger.info(
-        "Test the round encryption and decryption of the dataframe "
-        "with the provided valid Ferney key"
-    )
-    data_encryptor.save_data(valid_simple_dataframe)
-    loaded_df, _ = data_encryptor.load_data()
-    pd.testing.assert_frame_equal(loaded_df, valid_simple_dataframe)
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
 @pytest.mark.parametrize("key_value", [None, ""])
 def test_validation_of_absent_fernet_key(rp_logger, caplog, key_value):
     rp_logger.info("Test the validation of the absent Fernet key")
@@ -1364,13 +1353,6 @@ def test_validation_of_absent_fernet_key(rp_logger, caplog, key_value):
         with caplog.at_level("ERROR"):
             DataEncryptor.validate_fernet_key(key_value)
         assert "It seems that the Fernet key is absent" in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_get_columns_by_data_encryptor(data_encryptor, valid_simple_dataframe, rp_logger, caplog):
-    rp_logger.info("Test the method 'get_columns' of the class DataEncryptor")
-    data_encryptor.save_data(valid_simple_dataframe)
-    assert data_encryptor.get_columns() == ["column1", "column2"]
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1390,6 +1372,24 @@ def test_validation_of_invalid_fernet_key(invalid_key, rp_logger, caplog):
             "The Fernet key must be 32 url-safe base64-encoded bytes"
         ) in caplog.text
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_round_encrypt_decrypt_data(data_encryptor, valid_simple_dataframe, rp_logger):
+    rp_logger.info(
+        "Test the round encryption and decryption of the dataframe "
+        "with the provided valid Ferney key"
+    )
+    data_encryptor.save_data(valid_simple_dataframe)
+    loaded_df, _ = data_encryptor.load_data()
+    pd.testing.assert_frame_equal(loaded_df, valid_simple_dataframe)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_columns_by_data_encryptor(data_encryptor, valid_simple_dataframe, rp_logger, caplog):
+    rp_logger.info("Test the method 'get_columns' of the class DataEncryptor")
+    data_encryptor.save_data(valid_simple_dataframe)
+    assert data_encryptor.get_columns() == ["column1", "column2"]
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

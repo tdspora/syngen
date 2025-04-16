@@ -440,6 +440,7 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -451,6 +452,7 @@ def test_launch_train_with_metadata(
     mock_check_existence_of_source,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_generate_reports,
     mock_collect_metrics_in_train,
@@ -535,6 +537,7 @@ def test_launch_train_with_metadata(
     mock_check_existence_of_source.assert_called_once_with("table")
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
+    mock_validate_fernet_key.assert_called_once_with("table", FERNET_KEY)
     mock_validate_metadata.assert_called_once_with("table")
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
@@ -548,6 +551,7 @@ def test_launch_train_with_metadata(
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -559,6 +563,7 @@ def test_launch_train_with_metadata_of_related_tables(
     mock_check_existence_of_source,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_generate_reports,
     mock_collect_metrics_in_train,
@@ -687,6 +692,7 @@ def test_launch_train_with_metadata_of_related_tables(
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
+    mock_validate_fernet_key.assert_not_called()
     assert mock_validate_metadata.call_count == 2
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
@@ -700,6 +706,7 @@ def test_launch_train_with_metadata_of_related_tables(
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -711,6 +718,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     mock_check_existence_of_source,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_generate_reports,
     mock_collect_metrics_in_train,
@@ -859,6 +867,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     assert mock_check_existence_of_source.call_count == 2
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
+    mock_validate_fernet_key.assert_not_called()
     assert mock_validate_metadata.call_count == 2
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
@@ -872,6 +881,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -883,6 +893,7 @@ def test_launch_train_without_metadata(
     mock_check_existence_of_source,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_generate_reports,
     mock_collect_metrics_in_train,
@@ -953,6 +964,7 @@ def test_launch_train_without_metadata(
     mock_check_existence_of_source.assert_called_once_with("table")
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
+    mock_validate_fernet_key.assert_not_called()
     mock_validate_metadata.assert_called_once_with("table")
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
@@ -966,6 +978,7 @@ def test_launch_train_without_metadata(
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
 @patch.object(Validator, "_check_existence_of_source")
@@ -977,6 +990,7 @@ def test_launch_train_with_metadata_contained_global_settings(
     mock_check_existence_of_source,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_generate_reports,
     mock_collect_metrics_in_train,
@@ -1089,6 +1103,7 @@ def test_launch_train_with_metadata_contained_global_settings(
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    assert mock_validate_fernet_key.call_count == 2
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
@@ -1102,6 +1117,7 @@ def test_launch_train_with_metadata_contained_global_settings(
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Worker, "_Worker__infer_tables")
@@ -1109,6 +1125,7 @@ def test_launch_infer_with_metadata(
     mock_infer_tables,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_check_access_to_input_data,
     mock_generate_reports,
@@ -1168,6 +1185,7 @@ def test_launch_infer_with_metadata(
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
+    mock_validate_fernet_key.assert_called_once_with("table", FERNET_KEY)
     mock_check_access_to_input_data.assert_called_once_with("table", FERNET_KEY)
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["table"])
@@ -1178,6 +1196,7 @@ def test_launch_infer_with_metadata(
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Worker, "_Worker__infer_tables")
@@ -1185,6 +1204,7 @@ def test_launch_infer_with_metadata_of_related_tables(
     mock_infer_tables,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_check_access_to_input_data,
     mock_generate_reports,
@@ -1267,6 +1287,7 @@ def test_launch_infer_with_metadata_of_related_tables(
     assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_validate_fernet_key.assert_not_called()
     mock_check_access_to_input_data.assert_called_once_with("pk_test", None)
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["pk_test", "fk_test"])
@@ -1277,6 +1298,7 @@ def test_launch_infer_with_metadata_of_related_tables(
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Worker, "_Worker__infer_tables")
@@ -1284,6 +1306,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     mock_infer_tables,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_check_access_to_input_data,
     mock_generate_reports,
@@ -1390,6 +1413,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
     )
     assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
+    mock_validate_fernet_key.assert_not_called()
     assert mock_validate_metadata.call_count == 2
     assert mock_check_access_to_input_data.call_count == 2
     mock_generate_reports.assert_called_once()
@@ -1403,6 +1427,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Worker, "_Worker__infer_tables")
@@ -1410,6 +1435,7 @@ def test_launch_infer_without_metadata(
     mock_infer_tables,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_check_access_to_input_data,
     mock_generate_reports,
@@ -1463,6 +1489,7 @@ def test_launch_infer_without_metadata(
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
+    mock_validate_fernet_key.assert_not_called()
     mock_check_access_to_input_data.assert_called_once_with("table", None)
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_infer.assert_called_once_with(["table"])
@@ -1473,6 +1500,7 @@ def test_launch_infer_without_metadata(
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Worker, "_Worker__infer_tables")
@@ -1480,6 +1508,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
     mock_infer_tables,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_check_access_to_input_data,
     mock_generate_reports,
@@ -1552,6 +1581,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
     assert mock_check_completion_of_training.call_count == 2
     assert mock_check_existence_of_destination.call_count == 2
     assert mock_validate_metadata.call_count == 2
+    mock_validate_fernet_key.assert_called_once_with("fk_test", FERNET_KEY)
     mock_check_access_to_input_data.assert_called_once_with("fk_test", FERNET_KEY)
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_infer.assert_called_once_with(["pk_test", "fk_test"])
@@ -1562,6 +1592,7 @@ def test_launch_infer_with_metadata_contained_global_settings(
 @patch.object(Worker, "_generate_reports")
 @patch.object(PreprocessHandler, "run")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
@@ -1579,6 +1610,7 @@ def test_train_tables_without_generation_reports(
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
+    mock_validate_fernet_key,
     mock_validate_metadata,
     mock_preprocess_handler_run,
     mock_generate_reports,
@@ -1608,6 +1640,7 @@ def test_train_tables_without_generation_reports(
     mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_check_completion_of_training.assert_not_called()
     mock_check_existence_of_destination.assert_not_called()
+    mock_validate_fernet_key.assert_not_called()
     mock_validate_metadata.assert_called_once_with("test_table")
     mock_preprocess_handler_run.assert_called_once()
     mock_train_table.assert_called_once_with(
@@ -1652,6 +1685,7 @@ def test_train_tables_without_generation_reports(
 @patch.object(Worker, "_generate_reports")
 @patch.object(PreprocessHandler, "run")
 @patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
@@ -1668,6 +1702,7 @@ def test_train_tables_with_generation_reports(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
+    mock_validate_fernet_key,
     mock_check_existence_of_destination,
     mock_validate_metadata,
     mock_prepocess_handler_run,
@@ -1698,6 +1733,7 @@ def test_train_tables_with_generation_reports(
     mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_check_completion_of_training.assert_not_called()
     mock_check_existence_of_destination.assert_not_called()
+    mock_validate_fernet_key.assert_not_called()
     mock_validate_metadata.assert_called_once_with("test_table")
     mock_prepocess_handler_run.assert_called_once()
     mock_train_table.assert_called_once_with(
