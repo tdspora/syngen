@@ -2,8 +2,6 @@ from unittest.mock import patch, call
 import pytest
 from collections import defaultdict
 
-from cryptography.fernet import Fernet
-
 from syngen.ml.config.validation import Validator
 from syngen.ml.utils import ValidationError
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -2708,6 +2706,7 @@ def test_validate_metadata_if_valid_fernet_key_in_train_process(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
+    valid_fernet_key,
     rp_logger
 ):
     """
@@ -2730,7 +2729,7 @@ def test_validate_metadata_if_valid_fernet_key_in_train_process(
                 }
             },
             "encryption": {
-                "fernet_key": Fernet.generate_key().decode()
+                "fernet_key": valid_fernet_key
             }
         },
     }
@@ -2857,13 +2856,11 @@ def test_validate_metadata_if_valid_fernet_key_with_generation_reports_in_infer_
 
 
 @patch.object(Validator, "_check_access_to_input_data")
-@patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 def test_validate_metadata_if_valid_fernet_key_without_generation_reports_in_infer_process(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
-    mock_validate_fernet_key,
     mock_check_access_to_input_data,
     valid_fernet_key,
     rp_logger
@@ -2902,7 +2899,6 @@ def test_validate_metadata_if_valid_fernet_key_without_generation_reports_in_inf
     validator.run()
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
-    mock_validate_fernet_key.assert_not_called()
     mock_check_access_to_input_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -2957,4 +2953,55 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process_with_reports_g
         mock_check_existence_of_destination.assert_called_once_with("table")
         mock_check_access_to_input_data.assert_not_called()
     assert "Fernet key must be 32 url-safe base64-encoded bytes." in str(error.value)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "_check_access_to_input_data")
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
+def test_validate_metadata_if_invalid_fernet_key_in_infer_process_without_reports_generation(
+    mock_check_completion_of_training,
+    mock_check_existence_of_destination,
+    mock_check_access_to_input_data,
+    invalid_fernet_key,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of a table during inference process
+    if encryption is turned on, reports should be generated, and the invalid Fernet key is provided
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of a table during inference process "
+        "if encryption is turned on, reports should be generated, "
+        "and the invalid Fernet key is provided"
+    )
+    test_metadata = {
+        "table": {
+            "train_settings": {
+                "source": "path/to/table.csv"
+            },
+            "infer_settings": {
+                "reports": [],
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            },
+            "encryption": {
+                "fernet_key": invalid_fernet_key
+            }
+        },
+    }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="infer",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    validator.errors = defaultdict(defaultdict)
+    validator.run()
+    mock_check_completion_of_training.assert_called_once_with("table")
+    mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
