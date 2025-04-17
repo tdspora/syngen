@@ -1,4 +1,4 @@
-from unittest.mock import patch, call
+from unittest.mock import patch, call, MagicMock
 import pytest
 from collections import defaultdict
 
@@ -2968,11 +2968,11 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process_without_report
 ):
     """
     Test the validation of the metadata of a table during inference process
-    if encryption is turned on, reports should be generated, and the invalid Fernet key is provided
+    if encryption is turned on, reports won't be generated, and the invalid Fernet key is provided
     """
     rp_logger.info(
         "Test the validation of the metadata of a table during inference process "
-        "if encryption is turned on, reports should be generated, "
+        "if encryption is turned on, reports won't be generated, "
         "and the invalid Fernet key is provided"
     )
     test_metadata = {
@@ -3004,4 +3004,114 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process_without_report
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_check_access_to_input_data.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch(
+    "syngen.ml.config.validation.fetch_config",
+    return_value=MagicMock(paths={"input_data_path": "path/to/nonexistent/input_data.dat"})
+)
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
+def test_validate_metadata_if_valid_fernet_key_in_infer_with_reports_and_absent_input_data(
+    mock_check_completion_of_training,
+    mock_check_existence_of_destination,
+    mock_fetch_config,
+    valid_fernet_key,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of a table during inference process
+    if encryption is turned on, reports should be generated, the valid Fernet key is provided,
+    and the input data is absent
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of a table during inference process "
+        "if encryption is turned on, reports should be generated, "
+        "the valid Fernet key is provided, and the input data is absent"
+    )
+    test_metadata = {
+        "table": {
+            "train_settings": {
+                "source": "path/to/table.csv"
+            },
+            "infer_settings": {
+                "reports": ["accuracy"],
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            },
+            "encryption": {
+                "fernet_key": valid_fernet_key
+            }
+        },
+    }
+    with pytest.raises(ValidationError) as error:
+        validator = Validator(
+            metadata=test_metadata,
+            type_of_process="infer",
+            metadata_path=FAKE_METADATA_PATH
+        )
+        validator.errors = defaultdict(defaultdict)
+        validator.run()
+        mock_check_completion_of_training.assert_called_once_with("table")
+        mock_check_existence_of_destination.assert_called_once_with("table")
+    assert "No such file or directory: 'path/to/nonexistent/input_data.dat'" in str(error.value)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch(
+    "syngen.ml.config.validation.fetch_config",
+    return_value=MagicMock(paths={"input_data_path": "path/to/nonexistent/input_data.dat"})
+)
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
+def test_validate_metadata_if_valid_fernet_key_in_infer_without_reports_and_absent_input_data(
+    mock_check_completion_of_training,
+    mock_check_existence_of_destination,
+    mock_fetch_config,
+    valid_fernet_key,
+    rp_logger
+):
+    """
+    Test the validation of the metadata of a table during inference process
+    if encryption is turned on, reports won't be generated, the valid Fernet key is provided,
+    and the input data is absent
+    """
+    rp_logger.info(
+        "Test the validation of the metadata of a table during inference process "
+        "if encryption is turned on, reports won't be generated, "
+        "the valid Fernet key is provided, and the input data is absent"
+    )
+    test_metadata = {
+        "table": {
+            "train_settings": {
+                "source": "path/to/table.csv"
+            },
+            "infer_settings": {
+                "reports": [],
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["id"]
+                }
+            },
+            "encryption": {
+                "fernet_key": valid_fernet_key
+            }
+        },
+    }
+    validator = Validator(
+        metadata=test_metadata,
+        type_of_process="infer",
+        metadata_path=FAKE_METADATA_PATH
+    )
+    validator.errors = defaultdict(defaultdict)
+    validator.run()
+    mock_check_completion_of_training.assert_called_once_with("table")
+    mock_check_existence_of_destination.assert_called_once_with("table")
     rp_logger.info(SUCCESSFUL_MESSAGE)

@@ -1334,9 +1334,31 @@ def test_save_excel_table_in_xlsx_format(test_xlsx_path, test_df, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_initialization_data_encryptor_with_valid_path_and_key(valid_fernet_key, rp_logger):
+@pytest.mark.parametrize(
+    "path, fernet_key", (
+        ["path/to/data.pkl", Fernet.generate_key().decode()],
+        ["path/to/data.dat", Fernet.generate_key().decode()]
+    )
+)
+def test_initialization_data_encryptor_with_valid_path_and_key(path, fernet_key, rp_logger):
     rp_logger.info("Test the initialization of DataEncryptor with valid path and key")
-    DataEncryptor("path/to/data.csv", valid_fernet_key)
+    data_loader = DataLoader(
+        path=path,
+        table_name="table",
+        metadata={
+            "table": {
+                "train_settings": {
+                    "source": path,
+                },
+                "infer_settings": {},
+                "encryption": {
+                    "fernet_key": fernet_key,
+                }
+            }
+        },
+        sensitive=True
+    )
+    assert isinstance(data_loader.file_loader, DataEncryptor)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
