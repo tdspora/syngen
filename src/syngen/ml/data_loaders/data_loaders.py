@@ -53,12 +53,21 @@ class DataLoader(BaseDataLoader):
     """
     Base class for loading and saving data
     """
-
-    def __init__(self, path: str, sensitive: bool = False):
+    def __init__(
+        self,
+        path: str,
+        table_name: Optional[str] = None,
+        metadata: Optional[Dict] = None,
+        sensitive: bool = False
+    ):
         super().__init__(path)
-        fernet_key = os.getenv("FERNET_KEY")
+        self.fernet_key = (
+            metadata.get(table_name)
+            .get("encryption", {})
+            .get("fernet_key")
+        ) if (metadata is not None and table_name is not None) else None
         self.sensitive = (
-            True if sensitive and fernet_key else False
+            True if sensitive and self.fernet_key else False
         ) or self.path.endswith(".dat")
         self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
@@ -82,7 +91,7 @@ class DataLoader(BaseDataLoader):
     def _get_file_loader(self):
         path = Path(self.path)
         if self.sensitive:
-            return DataEncryptor(self.path)
+            return DataEncryptor(self.path, self.fernet_key)
         elif path.suffix == ".avro":
             return AvroLoader(self.path)
         elif path.suffix in [".csv", ".txt"]:
@@ -589,27 +598,26 @@ class DataEncryptor(BaseDataLoader):
     A class to handle encryption and decryption of data using a Fernet key
     """
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, fernet_key: Optional[str]):
         """
         Initialize the DataEncryptor with a Fernet key.
         """
         super().__init__(path)
-        key = os.getenv("FERNET_KEY")
-        self._validate_fernet_key(key)
-        self.fernet = Fernet(key)
+        self.validate_fernet_key(fernet_key)
+        self.fernet_key = Fernet(fernet_key)
 
-    @staticmethod
-    def _validate_fernet_key(key: str):
+    @classmethod
+    def validate_fernet_key(cls, fernet_key: str):
         """
         Validate the provided Fernet key.
         A valid Fernet key is a 44-character URL-safe base64-encoded string.
         """
-        if key is None or not key.strip():
+        if fernet_key is None or not fernet_key.strip():
             raise ValueError("It seems that the Fernet key is absent")
 
         error_message = "It seems that the provided Fernet key is invalid"
         try:
-            Fernet(key.encode())
+            Fernet(fernet_key.encode())
 
         except ValueError as e:
             logger.error(f"{error_message}. {str(e)}")
@@ -628,7 +636,7 @@ class DataEncryptor(BaseDataLoader):
         """
         try:
             serialized_df: bytes = pkl.dumps(df, protocol=pkl.HIGHEST_PROTOCOL)
-            encrypted_data = self.fernet.encrypt(serialized_df)
+            encrypted_data = self.fernet_key.encrypt(serialized_df)
 
             # Use atomic write operation for better safety
             temp_path = f"{self.path}.tmp"
@@ -653,7 +661,7 @@ class DataEncryptor(BaseDataLoader):
             with open(self.path, "rb") as encrypted_file:
                 encrypted_data = encrypted_file.read()
 
-            decrypted_data = self.fernet.decrypt(encrypted_data)
+            decrypted_data = self.fernet_key.decrypt(encrypted_data)
             df_decrypted = pkl.loads(decrypted_data)
 
             logger.info(

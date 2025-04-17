@@ -14,6 +14,9 @@ table:
     reports: all
     batch_size: 200
 
+  encryption:
+    fernet_key: VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY=
+
   keys:
     pk_id:
       type: "PK"

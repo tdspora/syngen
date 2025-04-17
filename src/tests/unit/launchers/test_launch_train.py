@@ -1,5 +1,6 @@
 from unittest.mock import patch
 import pytest
+
 from click.testing import CliRunner
 
 from syngen.train import launch_train

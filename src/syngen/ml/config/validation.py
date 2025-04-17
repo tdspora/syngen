@@ -3,12 +3,13 @@ import os
 from dataclasses import dataclass, field
 import json
 from collections import defaultdict
+from cryptography.fernet import InvalidToken
 
 from slugify import slugify
 from loguru import logger
-from syngen.ml.data_loaders import MetadataLoader, DataLoader
+from syngen.ml.data_loaders import MetadataLoader, DataLoader, DataEncryptor
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
-from syngen.ml.utils import ValidationError
+from syngen.ml.utils import ValidationError, fetch_config
 
 
 @dataclass
@@ -29,20 +30,6 @@ class Validator:
     mapping: Dict = field(default_factory=dict)
     existed_columns_mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
-
-    @staticmethod
-    def _check_encryption_process():
-        """
-        Check if the encryption process is enabled
-        """
-        fernet_key = os.getenv("FERNET_KEY")
-        state = "is" if fernet_key else "isn't"
-        process_status = "enabled" if fernet_key else "disabled"
-        message = (
-            f"As the environment variable 'FERNET_KEY' {state} set, "
-            f"the encryption and decryption process is {process_status}."
-        )
-        logger.warning(message)
 
     def _launch_validation_of_schema(self):
         """
@@ -157,7 +144,7 @@ class Validator:
                 f"model_artifacts/tmp_store/{slugify(parent_table)}/"
                 f"merged_infer_{slugify(parent_table)}.csv"
             )
-        if not DataLoader(destination).has_existed_path:
+        if not DataLoader(path=destination).has_existed_path:
             message = (
                 f"The generated data of the table - '{parent_table}' hasn't been generated. "
                 f"Please, generate the data related to the table '{parent_table}' first"
@@ -168,9 +155,8 @@ class Validator:
         """
         Check if the source of the certain table exists
         """
-        if not DataLoader(
-            self.merged_metadata[table_name]["train_settings"]["source"]
-        ).has_existed_path:
+        path_to_source = self.merged_metadata[table_name]["train_settings"]["source"]
+        if not DataLoader(path=path_to_source).has_existed_path:
             message = (
                 f"It seems that the path to the source of the table - '{table_name}' "
                 f"isn't correct. Please, check the path to the source of the table - "
@@ -311,7 +297,8 @@ class Validator:
         metadata_of_table = self.merged_metadata[table_name]
         format_settings = metadata_of_table.get("format", {})
         path_to_source = self._fetch_path_to_source(table_name)
-        return DataLoader(path_to_source).get_columns(**format_settings)
+        data_loader = DataLoader(path=path_to_source)
+        return data_loader.get_columns(**format_settings)
 
     def _gather_existed_columns(self, table_name: str):
         """
@@ -337,6 +324,40 @@ class Validator:
         """
         return self.merged_metadata[table_name]["train_settings"]["source"]
 
+    def _validate_fernet_key(self, table_name: str, fernet_key: str):
+        """
+        Validate the structure of the fernet key
+        """
+        try:
+            DataEncryptor.validate_fernet_key(fernet_key)
+        except ValueError as e:
+            self.errors["validate structure of fernet key"][table_name] = str(e)
+
+    def _check_access_to_input_data(self, table_name: str):
+        """
+        Check if the input data is accessible for the inference process
+        """
+        path_to_train_config = (
+            f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints/train_config.pkl"
+        )
+        path_to_input_data = fetch_config(path_to_train_config).paths["input_data_path"]
+        try:
+            data_loader = DataLoader(
+                path=path_to_input_data,
+                table_name=table_name,
+                metadata=self.merged_metadata,
+                sensitive=True
+            )
+            data_loader.get_columns()
+        except InvalidToken:
+            self.errors["check access to input data"][table_name] = (
+                "The provided Fernet key is invalid. The attempt to decrypt "
+                "the sample of the original data has been failed. "
+                "Please, provide the valid Fernet key."
+            )
+        except Exception as e:
+            self.errors["check access to input data"][table_name] = str(e)
+
     def _launch_validation(self):
         """
         Launch the validation process
@@ -345,14 +366,38 @@ class Validator:
             for table_name in self.merged_metadata.keys():
                 self._gather_existed_columns(table_name)
 
-        for table_name in self.metadata.keys():
+        for table_name, table_metadata in self.metadata.items():
+            fernet_key = table_metadata.get("encryption", {}).get("fernet_key")
+            reports = table_metadata.get("infer_settings", {}).get("reports", [])
+
+            if fernet_key is not None and (
+                self.type_of_process == "train" or (
+                    self.type_of_process == "infer" and reports
+                )
+            ):
+                logger.warning(
+                    f"Encryption and decryption are enabled for the table '{table_name}' "
+                    "as a Fernet key is provided"
+                )
+                self._validate_fernet_key(table_name, fernet_key)
+
+            if fernet_key is not None and self.type_of_process == "infer" and not reports:
+                logger.warning(
+                    f"The Fernet key is provided for the table '{table_name}' "
+                    f"hasn't been validated because it will not be used"
+                )
+
             if self.type_of_process == "train" and self.validation_source:
                 self._check_existence_of_source(table_name)
                 self._check_existence_of_key_columns(table_name)
                 self._check_existence_of_referenced_columns(table_name)
+
             elif self.type_of_process == "infer":
                 self._check_completion_of_training(table_name)
                 self._check_existence_of_destination(table_name)
+                if reports:
+                    if not self.errors.get("validate structure of fernet key", {}).get(table_name):
+                        self._check_access_to_input_data(table_name)
 
         for table_name in self.metadata.keys():
             self._validate_metadata(table_name)
@@ -378,7 +423,6 @@ class Validator:
         """
         Run the validation process
         """
-        self._check_encryption_process()
         self._preprocess_metadata()
         self._launch_validation()
         self._collect_errors()

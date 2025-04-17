@@ -58,7 +58,7 @@ class SampleAccuracyTest(BaseTest):
             if "word_count" not in title
         }
 
-        config = {k: v for k, v in self.config.items() if k != "print_report"}
+        config = self._get_cleaned_config(config=self.config)
 
         html = template.render(
             uni_imgs=uni_images,

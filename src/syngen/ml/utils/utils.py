@@ -290,8 +290,9 @@ def clean_up_metadata(metadata: Dict):
     Clean up the metadata,
     remove the sensitive information (credentials to the remote storage) from the metadata
     """
+    forbidden_keys = ["credentials", "fernet_key"]
     for key, value in list(metadata.items()):
-        if key == "credentials":
+        if key in forbidden_keys:
             del metadata[key]
         elif isinstance(value, dict):
             clean_up_metadata(value)
