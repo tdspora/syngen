@@ -317,7 +317,7 @@ class InferConfig:
     slugify_table_name: str = field(init=False)
 
     def __post_init__(self):
-        self._set_paths()
+        self.__set_paths()
         self._remove_artifacts()
         self._set_infer_parameters()
 
@@ -398,8 +398,21 @@ class InferConfig:
         """
         return fetch_config(self.paths["train_config_pickle_path"])
 
-    @slugify_attribute(table_name="slugify_table_name")
     def _set_paths(self):
+        """
+        Create the paths which used in inference process
+        """
+        self.paths.update({
+            "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                                    f"original_schema_{self.slugify_table_name}.pkl",
+            "path_to_flatten_metadata":
+                f"model_artifacts/tmp_store/flatten_configs/"
+                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
+            "input_data_path": self.train_config.paths["input_data_path"]
+        })
+
+    @slugify_attribute(table_name="slugify_table_name")
+    def __set_paths(self):
         """
         Create the paths which used in inference process
         """
@@ -419,8 +432,6 @@ class InferConfig:
                      f"merged_infer_{self.dynamic_name}.csv"
             ),
             "state_path": f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints",
-            "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                                    f"original_schema_{self.slugify_table_name}.pkl",
             "tmp_store_path": f"model_artifacts/tmp_store/{self.dynamic_name}",
             "vae_resources_path":
                 f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/",
@@ -429,12 +440,7 @@ class InferConfig:
             "fk_kde_path":
                 f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/stat_keys/",
             "path_to_no_ml":
-                f"model_artifacts/resources/{self.dynamic_name}/no_ml/checkpoints/kde_params.pkl",
-            "path_to_flatten_metadata":
-                f"model_artifacts/tmp_store/flatten_configs/"
-                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
+                f"model_artifacts/resources/{self.dynamic_name}/no_ml/checkpoints/kde_params.pkl"
         }
 
-        self.paths.update({
-            "input_data_path": self.train_config.paths["input_data_path"]
-        })
+        self._set_paths()
