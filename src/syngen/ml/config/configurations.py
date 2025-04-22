@@ -391,6 +391,13 @@ class InferConfig:
             min(self.batch_size, self.size) if self.batch_size is not None else self.size
         )
 
+    @property
+    def train_config(self):
+        """
+        Fetch the training configuration
+        """
+        return fetch_config(self.paths["train_config_pickle_path"])
+
     @slugify_attribute(table_name="slugify_table_name")
     def _set_paths(self):
         """
@@ -399,14 +406,10 @@ class InferConfig:
         self.dynamic_name = (
             self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         )
-        path_to_train_config = (
-            f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/train_config.pkl"
-        )
         self.paths = {
             "reports_path": f"model_artifacts/tmp_store/{self.dynamic_name}/reports",
             "train_config_pickle_path":
                 f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/train_config.pkl",
-            "input_data_path": fetch_config(path_to_train_config).paths["input_data_path"],
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{self.dynamic_name}/"
                                             f"merged_infer_{self.dynamic_name}.csv",
             "path_to_merged_infer": (
@@ -431,3 +434,7 @@ class InferConfig:
                 f"model_artifacts/tmp_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
         }
+
+        self.paths.update({
+            "input_data_path": self.train_config.paths["input_data_path"]
+        })
