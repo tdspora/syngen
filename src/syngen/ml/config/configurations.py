@@ -315,6 +315,7 @@ class InferConfig:
     loader: Optional[Callable[[str], pd.DataFrame]]
     type_of_process: Literal["train", "infer"]
     slugify_table_name: str = field(init=False)
+    paths: Dict = field(init=False)
 
     def __post_init__(self):
         self.__set_paths()
@@ -416,31 +417,31 @@ class InferConfig:
         """
         Create the paths which used in inference process
         """
-        self.dynamic_name = (
+        dynamic_name = (
             self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         )
         self.paths = {
-            "reports_path": f"model_artifacts/tmp_store/{self.dynamic_name}/reports",
+            "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
             "train_config_pickle_path":
-                f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/train_config.pkl",
-            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{self.dynamic_name}/"
-                                            f"merged_infer_{self.dynamic_name}.csv",
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
+                                            f"merged_infer_{dynamic_name}.csv",
             "path_to_merged_infer": (
                 self.destination
                 if self.destination is not None
-                else f"model_artifacts/tmp_store/{self.dynamic_name}/"
-                     f"merged_infer_{self.dynamic_name}.csv"
+                else f"model_artifacts/tmp_store/{dynamic_name}/"
+                     f"merged_infer_{dynamic_name}.csv"
             ),
-            "state_path": f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints",
-            "tmp_store_path": f"model_artifacts/tmp_store/{self.dynamic_name}",
+            "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
+            "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
             "vae_resources_path":
-                f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/",
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
             "dataset_pickle_path":
-                f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/model_dataset.pkl",
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
             "fk_kde_path":
-                f"model_artifacts/resources/{self.dynamic_name}/vae/checkpoints/stat_keys/",
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
             "path_to_no_ml":
-                f"model_artifacts/resources/{self.dynamic_name}/no_ml/checkpoints/kde_params.pkl"
+                f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl"
         }
 
         self._set_paths()

@@ -125,7 +125,7 @@ def test_init_infer_config(mocker, rp_logger):
     assert set(infer_config.__dict__.keys()) == {
         "destination", "metadata", "metadata_path", "size", "table_name",
         "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
-        "log_level", "loader", "type_of_process", "slugify_table_name", "paths", "dynamic_name"
+        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
     }
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
