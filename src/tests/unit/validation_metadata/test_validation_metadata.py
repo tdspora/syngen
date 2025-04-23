@@ -3067,11 +3067,13 @@ def test_validate_metadata_if_valid_fernet_key_in_infer_with_reports_and_absent_
     "syngen.ml.config.validation.fetch_config",
     return_value=MagicMock(paths={"input_data_path": "path/to/nonexistent/input_data.dat"})
 )
+@patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 def test_validate_metadata_if_valid_fernet_key_in_infer_without_reports_and_absent_input_data(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
+    mock_check_access_to_input_data,
     mock_fetch_config,
     valid_fernet_key,
     rp_logger
@@ -3114,4 +3116,5 @@ def test_validate_metadata_if_valid_fernet_key_in_infer_without_reports_and_abse
     validator.run()
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
