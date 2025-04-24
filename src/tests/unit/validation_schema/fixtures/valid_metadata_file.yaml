@@ -55,6 +55,9 @@ fk_test:
       - accuracy
       - metrics_only
 
+  encryption:
+    fernet_key: "VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY="
+
   keys:
     fk_test_pk_id:
       type: "PK"
