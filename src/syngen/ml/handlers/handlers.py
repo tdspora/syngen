@@ -4,6 +4,7 @@ import os
 import math
 from ulid import ULID
 from uuid import UUID
+from copy import deepcopy
 
 import pandas as pd
 import numpy as np
@@ -251,7 +252,7 @@ class VaeInferHandler(BaseHandler):
         self.has_vae = len(self.dataset.features) > 0
 
         if self.has_vae:
-            self.vae = self._get_wrapper()
+            self.vae = self.__get_wrapper()
 
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
@@ -265,13 +266,13 @@ class VaeInferHandler(BaseHandler):
             )
         )
 
-    def _get_wrapper(self):
+    def __get_wrapper(self):
         """
         Create and get the wrapper for the VAE model
         """
         return self.create_wrapper(
             self.wrapper_name,
-            metadata=self.metadata,
+            metadata=deepcopy(self.metadata),
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,
