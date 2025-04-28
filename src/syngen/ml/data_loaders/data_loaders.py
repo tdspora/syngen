@@ -672,7 +672,6 @@ class DataEncryptor(BaseDataLoader):
         except Exception as e:
             logger.error(
                 f"It seems that the decryption process of the data "
-                f"stored at the path - '{self.path}' failed due to the following reasons - "
-                f"the provided Fernet key is invalid or the encrypted data is corrupted. {str(e)}"
+                f"stored at the path - '{self.path}' failed - {str(e)}"
             )
             raise e
