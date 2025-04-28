@@ -45,12 +45,12 @@ class Worker:
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
         self._update_metadata()
-        self._clean_up()
+        self.__clean_up()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
 
-    def _clean_up(self):
+    def __clean_up(self):
         """
         Clean up the directories before the preprocessing data
         """
