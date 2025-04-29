@@ -31,17 +31,6 @@ class Validator:
     existed_columns_mapping: Dict = field(default_factory=dict)
     errors = defaultdict(defaultdict)
 
-    def _launch_validation_of_schema(self):
-        """
-        Launch the validation of the schema of the metadata
-        """
-        return ValidationSchema(
-            metadata=self.metadata,
-            metadata_path=self.metadata_path,
-            validation_source=self.validation_source,
-            process=self.type_of_process
-        ).validate_schema()
-
     def _define_mapping(self):
         """
         Define the mapping contained the information of the foreign keys
@@ -235,8 +224,16 @@ class Validator:
                 metadata = MetadataLoader(path_to_metadata_file).load_data()
                 if parent_table not in metadata:
                     continue
-                self._launch_validation_of_schema()
+
+                ValidationSchema(
+                    metadata=self.metadata,
+                    metadata_path=self.metadata_path,
+                    validation_source=self.validation_source,
+                    process=self.type_of_process
+                ).validate_schema()
+
                 self.merged_metadata.update(metadata)
+
                 logger.info(
                     f"The metadata located in the path - '{path_to_metadata_storage}' "
                     f"has been merged with the current metadata as it contains "
@@ -312,7 +309,6 @@ class Validator:
         """
         Preprocess the metadata, set the metadata and the merged metadata
         """
-        self._launch_validation_of_schema()
         self._define_mapping()
         self._merge_metadata()
         self.merged_metadata.pop("global", None)

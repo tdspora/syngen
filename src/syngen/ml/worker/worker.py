@@ -19,6 +19,7 @@ from syngen.ml.utils import ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.validation_schema import ReportTypes
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
+from syngen.ml.validation_schema import ValidationSchema
 
 
 @define
@@ -38,12 +39,17 @@ class Worker:
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
+    validation_source: bool = field(default=False)
     train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
+        self.validation_source = (
+            False if self.loader and self.type_of_process == "train" else True
+        )
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
+        self._validate_schema()
         self._update_metadata()
         self.__clean_up()
         self.__validate_metadata()
@@ -93,6 +99,17 @@ class Worker:
         os.makedirs(state_path, exist_ok=True)
         os.makedirs(flatten_config_path, exist_ok=True)
 
+    def _validate_schema(self):
+        """
+        Validate the schema of the metadata file
+        """
+        ValidationSchema(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            validation_source=self.validation_source,
+            process=self.type_of_process
+        ).validate_schema()
+
     def __validate_metadata(self):
         """
         Validate the metadata, set the merged metadata
@@ -101,7 +118,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_source=False if self.loader and self.type_of_process == "train" else True
+            validation_source=self.validation_source
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
