@@ -90,6 +90,17 @@ class Validator:
             else:
                 continue
 
+    def __validate_schema(self):
+        """
+        Validate the schema of the metadata
+        """
+        ValidationSchema(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            validation_source=self.validation_source,
+            process=self.type_of_process
+        ).validate_schema()
+
     def _validate_referential_integrity(self, fk_name: str, fk_config: Dict, parent_config: Dict):
         """
         Validate whether the columns related to the primary key are the same as
@@ -225,12 +236,7 @@ class Validator:
                 if parent_table not in metadata:
                     continue
 
-                ValidationSchema(
-                    metadata=self.metadata,
-                    metadata_path=self.metadata_path,
-                    validation_source=self.validation_source,
-                    process=self.type_of_process
-                ).validate_schema()
+                self.__validate_schema()
 
                 self.merged_metadata.update(metadata)
 
