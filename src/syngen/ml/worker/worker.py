@@ -49,7 +49,7 @@ class Worker:
         )
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
-        self._validate_schema()
+        self.__validate_schema()
         self._update_metadata()
         self.__clean_up()
         self.__validate_metadata()
@@ -99,7 +99,7 @@ class Worker:
         os.makedirs(state_path, exist_ok=True)
         os.makedirs(flatten_config_path, exist_ok=True)
 
-    def _validate_schema(self):
+    def __validate_schema(self):
         """
         Validate the schema of the metadata file
         """
