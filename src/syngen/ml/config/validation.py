@@ -90,7 +90,7 @@ class Validator:
             else:
                 continue
 
-    def __validate_schema(self):
+    def _validate_schema(self):
         """
         Validate the schema of the metadata
         """
@@ -236,7 +236,7 @@ class Validator:
                 if parent_table not in metadata:
                     continue
 
-                self.__validate_schema()
+                self._validate_schema()
 
                 self.merged_metadata.update(metadata)
 
