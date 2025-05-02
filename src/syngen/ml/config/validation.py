@@ -397,9 +397,13 @@ class Validator:
             elif self.type_of_process == "infer":
                 self._check_completion_of_training(table_name)
                 self._check_existence_of_destination(table_name)
-                if reports:
-                    if not self.errors.get("validate structure of fernet key", {}).get(table_name):
-                        self._check_access_to_input_data(table_name)
+                if reports and (
+                    not self.errors.get("validate structure of fernet key", {}).get(table_name) and
+                    not self.errors.get(
+                        "check completion of the training process", {}
+                    ).get(table_name)
+                ):
+                    self._check_access_to_input_data(table_name)
 
         for table_name in self.metadata.keys():
             self._validate_metadata(table_name)

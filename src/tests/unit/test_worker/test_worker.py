@@ -3043,7 +3043,7 @@ def test_launch_infer_of_not_pretrained_table_and_absent_success_file(
             assert message in caplog.text
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
-    mock_check_access_to_input_data.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_not_called()
     mock_infer_table.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -3098,6 +3098,6 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
             assert message in str(error.message)
             assert message in caplog.text
     mock_check_existence_of_destination.assert_called_once_with("table")
-    mock_check_access_to_input_data.assert_called_once_with("table")
+    mock_check_access_to_input_data.assert_not_called()
     mock_infer_table.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
