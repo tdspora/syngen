@@ -2959,7 +2959,9 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process_with_reports_g
 @patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
+@patch.object(Validator, "_validate_fernet_key")
 def test_validate_metadata_if_invalid_fernet_key_in_infer_process_without_reports_generation(
+    mock_validate_fernet_key,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_check_access_to_input_data,
@@ -3001,6 +3003,7 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process_without_report
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
+    mock_validate_fernet_key.assert_not_called()
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_check_access_to_input_data.assert_not_called()
