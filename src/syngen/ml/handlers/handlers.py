@@ -80,10 +80,11 @@ class BaseHandler(AbstractHandler):
         Fetch the data
         """
         data_loader = DataLoader(
-            self.paths["input_data_path"], self.table_name, self.metadata, sensitive=True
+            path=self.paths["input_data_path"],
+            table_name=self.table_name,
+            metadata=self.metadata,
+            sensitive=True
         )
-        data = pd.DataFrame()
-        schema = None
         if data_loader.has_existed_path:
             data, schema = data_loader.load_data()
         elif self.loader:
@@ -91,6 +92,8 @@ class BaseHandler(AbstractHandler):
                 loader=self.loader,
                 table_name=self.table_name
             ).fetch_data()
+        else:
+            return pd.DataFrame(), None
         return data, schema
 
 
@@ -439,7 +442,7 @@ class VaeInferHandler(BaseHandler):
                 fk_column_name = config_of_keys.get(key).get("columns")[0]
                 pk_table = config_of_keys.get(key).get("references").get("table")
                 pk_path = self._get_pk_path(pk_table=pk_table, table_name=table_name)
-                pk_table_data, pk_table_schema = DataLoader(pk_path).load_data()
+                pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
@@ -470,8 +473,8 @@ class VaeInferHandler(BaseHandler):
         """
         Save generated data to the path
         """
-        DataLoader(self.paths["path_to_merged_infer"]).save_data(
-            generated_data,
+        DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
+            data=generated_data,
             format=get_context().get_config(),
         )
 

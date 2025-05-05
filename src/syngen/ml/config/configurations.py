@@ -240,13 +240,13 @@ class TrainConfig:
             table_name=self.table_name,
             metadata=self.metadata,
             sensitive=True
-        ).save_data(self.data)
+        ).save_data(data=self.data)
 
     def _save_original_schema(self):
         """
         Save the schema of the original data
         """
-        DataLoader(path=self.paths["original_schema_path"]).save_data(self.original_schema)
+        DataLoader(path=self.paths["original_schema_path"]).save_data(data=self.original_schema)
 
     def _prepare_data(self):
         """

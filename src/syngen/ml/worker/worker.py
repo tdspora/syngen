@@ -214,7 +214,7 @@ class Worker:
         Fetch the metadata for training or infer process
         """
         if self.metadata_path:
-            metadata = MetadataLoader(self.metadata_path).load_data()
+            metadata = MetadataLoader(path=self.metadata_path).load_data()
             return metadata
         if self.table_name:
             source = self.settings.get("source")
@@ -557,8 +557,8 @@ class Worker:
             os.makedirs("model_artifacts/metadata", exist_ok=True)
             metadata_file_name = os.path.basename(self.metadata_path)
             MetadataLoader(
-                f"model_artifacts/metadata/{metadata_file_name}"
-            ).save_data(self.metadata)
+                path=f"model_artifacts/metadata/{metadata_file_name}"
+            ).save_data(metadata=self.metadata)
 
     def launch_train(self):
         """

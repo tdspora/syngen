@@ -176,7 +176,7 @@ class Validator:
                 f"at the default path - './model_artifacts/tmp_store/{slugify(table_name)}/"
                 f"merged_infer_{slugify(table_name)}.csv'"
             )
-        if destination is not None and not DataLoader(destination).has_existed_destination:
+        if destination is not None and not DataLoader(path=destination).has_existed_destination:
             message = (
                 f"It seems that the directory path for storing the generated data of table "
                 f"'{table_name}' isn't correct. Please, verify the destination path"
@@ -232,7 +232,7 @@ class Validator:
             path_to_metadata_storage = "model_artifacts/metadata"
             for file in os.listdir(path_to_metadata_storage):
                 path_to_metadata_file = os.path.join(path_to_metadata_storage, file)
-                metadata = MetadataLoader(path_to_metadata_file).load_data()
+                metadata = MetadataLoader(path=path_to_metadata_file).load_data()
                 if parent_table not in metadata:
                     continue
 
@@ -360,6 +360,15 @@ class Validator:
         except Exception as e:
             self.errors["check access to input data"][table_name] = str(e)
 
+    def _check_conditions_of_existence_of_input_data(self, table_name: str) -> bool:
+        """
+        Check if the input data is accessible for the inference process
+        """
+        return (
+            not self.errors.get("validate structure of fernet key", {}).get(table_name)
+            and not self.errors.get("check completion of the training process", {}).get(table_name)
+        )
+
     def _launch_validation(self):
         """
         Launch the validation process
@@ -397,12 +406,7 @@ class Validator:
             elif self.type_of_process == "infer":
                 self._check_completion_of_training(table_name)
                 self._check_existence_of_destination(table_name)
-                if reports and (
-                    not self.errors.get("validate structure of fernet key", {}).get(table_name) and
-                    not self.errors.get(
-                        "check completion of the training process", {}
-                    ).get(table_name)
-                ):
+                if reports and self._check_conditions_of_existence_of_input_data(table_name):
                     self._check_access_to_input_data(table_name)
 
         for table_name in self.metadata.keys():
