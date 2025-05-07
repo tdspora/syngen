@@ -604,7 +604,7 @@ class DataEncryptor(BaseDataLoader):
         """
         super().__init__(path)
         self.validate_fernet_key(fernet_key)
-        self.fernet_key = Fernet(fernet_key)
+        self.fernet = Fernet(fernet_key)
 
     @classmethod
     def validate_fernet_key(cls, fernet_key: str):
@@ -636,7 +636,7 @@ class DataEncryptor(BaseDataLoader):
         """
         try:
             serialized_df: bytes = pkl.dumps(df, protocol=pkl.HIGHEST_PROTOCOL)
-            encrypted_data = self.fernet_key.encrypt(serialized_df)
+            encrypted_data = self.fernet.encrypt(serialized_df)
 
             # Use atomic write operation for better safety
             temp_path = f"{self.path}.tmp"
@@ -661,7 +661,7 @@ class DataEncryptor(BaseDataLoader):
             with open(self.path, "rb") as encrypted_file:
                 encrypted_data = encrypted_file.read()
 
-            decrypted_data = self.fernet_key.decrypt(encrypted_data)
+            decrypted_data = self.fernet.decrypt(encrypted_data)
             df_decrypted = pkl.loads(decrypted_data)
 
             logger.info(

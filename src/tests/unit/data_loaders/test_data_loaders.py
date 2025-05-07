@@ -1420,7 +1420,7 @@ def test_decrypt_data_with_invalid_key(data_encryptor, valid_simple_dataframe, r
         "Test the decryption of the data with the invalid Fernet key"
     )
     data_encryptor.save_data(valid_simple_dataframe)
-    data_encryptor.fernet_key = Fernet(Fernet.generate_key())
+    data_encryptor.fernet = Fernet(Fernet.generate_key())
     with pytest.raises(InvalidToken):
         with caplog.at_level("ERROR"):
             data_encryptor.load_data()
