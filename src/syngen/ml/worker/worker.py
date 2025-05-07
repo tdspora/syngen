@@ -204,11 +204,10 @@ class Worker:
             self._update_table_settings(table_encryption_settings, global_encryption_settings)
             self._update_table_settings(table_encryption_settings, self.encryption_settings)
 
-        self.metadata.pop("global", None)
-
     def _update_metadata(self) -> None:
         if self.metadata_path:
             self._update_metadata_for_tables()
+            self.metadata.pop("global", None)
         if self.table_name:
             self._update_metadata_for_table()
 
