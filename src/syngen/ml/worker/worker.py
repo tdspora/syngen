@@ -49,6 +49,7 @@ class Worker:
         )
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
+        # The validation of the initial metadata provided by the user
         self.__validate_schema()
         self._update_metadata()
         self.__clean_up()
@@ -202,6 +203,8 @@ class Worker:
             self._update_table_settings(table_process_settings, self.settings)
             self._update_table_settings(table_encryption_settings, global_encryption_settings)
             self._update_table_settings(table_encryption_settings, self.encryption_settings)
+
+        self.metadata.pop("global", None)
 
     def _update_metadata(self) -> None:
         if self.metadata_path:

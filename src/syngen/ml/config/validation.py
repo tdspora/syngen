@@ -235,9 +235,10 @@ class Validator:
                 metadata = MetadataLoader(path=path_to_metadata_file).load_data()
                 if parent_table not in metadata:
                     continue
-
+                # Validate the schema of the metadata of the parent table
                 self._validate_schema()
 
+                metadata.pop("global")
                 self.merged_metadata.update(metadata)
 
                 logger.info(
@@ -317,8 +318,6 @@ class Validator:
         """
         self._define_mapping()
         self._merge_metadata()
-        self.merged_metadata.pop("global", None)
-        self.metadata.pop("global", None)
 
     def _fetch_path_to_source(self, table_name):
         """

@@ -128,7 +128,6 @@ def test_init_worker_with_metadata_path(mock_validator_run, rp_logger):
         encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
-        "global": {},
         "table": {
             "train_settings": {
                 "source": "./path/to/table.csv",
@@ -191,7 +190,6 @@ def test_init_worker_with_empty_settings_in_metadata_in_train_process(
         encryption_settings={"fernet_key": FERNET_KEY}
     )
     assert worker.metadata == {
-        "global": {},
         "table": {
             "train_settings": {
                 "source": "./path/to/table.csv",
@@ -242,7 +240,6 @@ def test_init_worker_with_empty_settings_in_metadata_in_infer_process(
         encryption_settings={"fernet_key": FERNET_KEY}
     )
     assert worker.metadata == {
-        "global": {},
         "table": {
             "train_settings": {
                 "source": "./path/to/table.csv"
@@ -293,21 +290,6 @@ def test_init_worker_for_training_with_metadata_with_global_settings(
         encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
-        "global": {
-            "train_settings": {
-                "drop_null": True,
-                "epochs": 5,
-                "row_limit": 500
-            },
-            "infer_settings": {
-                "reports": ["accuracy"],
-                "run_parallel": True,
-                "size": 1000,
-            },
-            "encryption": {
-                "fernet_key": FERNET_KEY
-            }
-        },
         "pk_test": {
             "train_settings": {
                 "source": "./path/to/pk_test.csv",
@@ -378,21 +360,6 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
         encryption_settings={"fernet_key": None}
     )
     assert worker.metadata == {
-        "global": {
-            "train_settings": {
-                "drop_null": True,
-                "epochs": 5,
-                "row_limit": 500
-            },
-            "infer_settings": {
-                "reports": ["accuracy"],
-                "run_parallel": True,
-                "size": 1000,
-            },
-            "encryption": {
-                "fernet_key": FERNET_KEY
-            }
-        },
         "pk_test": {
             "train_settings": {
                 "source": "./path/to/pk_test.csv",
