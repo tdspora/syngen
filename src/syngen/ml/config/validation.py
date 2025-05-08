@@ -342,6 +342,10 @@ class Validator:
             f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints/train_config.pkl"
         )
         path_to_input_data = fetch_config(path_to_train_config).paths["input_data_path"]
+        log_message = (
+            "Access to a sample of the original data is required "
+            "to generate reports during the inference process."
+        )
         try:
             data_loader = DataLoader(
                 path=path_to_input_data,
@@ -352,12 +356,12 @@ class Validator:
             data_loader.get_columns()
         except InvalidToken:
             self.errors["check access to input data"][table_name] = (
-                "The provided Fernet key is invalid. The attempt to decrypt "
-                "the sample of the original data has been failed. "
+                f"{log_message}. The provided Fernet key is invalid. "
+                "The attempt to decrypt the sample of the original data has been failed. "
                 "Please, provide the valid Fernet key."
             )
         except Exception as e:
-            self.errors["check access to input data"][table_name] = str(e)
+            self.errors["check access to input data"][table_name] = f"{log_message}. {str(e)}"
 
     def _check_conditions_of_existence_of_input_data(self, table_name: str) -> bool:
         """
