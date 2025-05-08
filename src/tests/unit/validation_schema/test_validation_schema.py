@@ -406,6 +406,75 @@ def test_metadata_file_with_invalid_global_infer_settings(
 @pytest.mark.parametrize(
     "wrong_setting, expected_error",
     [
+        (
+            {"fernet_key": 1},
+            "The details are - {'global': {'encryption': {'fernet_key': ['Not a valid string.']}}}"
+        )
+    ],
+)
+def test_metadata_file_with_invalid_global_encryption_settings(
+    rp_logger, wrong_setting, expected_error
+):
+    rp_logger.info(
+        "Test the validation of the schema of the metadata with invalid global encryption settings"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["global"]["encryption"].update(wrong_setting)
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(
+            metadata=metadata,
+            metadata_path=path_to_metadata,
+            validation_source=True,
+            process="train"
+        ).validate_schema()
+    assert (
+        str(error.value)
+        == f"Validation error(s) found in the schema of the metadata. {expected_error}"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "wrong_setting, expected_error",
+    [
+        (
+            {"fernet_key": 1},
+            "The details are - {'fk_test': {'encryption': "
+            "{'fernet_key': ['Not a valid string.']}}}"
+        )
+    ],
+)
+def test_metadata_file_with_invalid_encryption_settings(
+    rp_logger, wrong_setting, expected_error
+):
+    rp_logger.info(
+        "Test the validation of the schema of the metadata with invalid encryption settings"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["fk_test"]["encryption"] = wrong_setting
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(
+            metadata=metadata,
+            metadata_path=path_to_metadata,
+            validation_source=True,
+            process="train"
+        ).validate_schema()
+    assert (
+        str(error.value)
+        == f"Validation error(s) found in the schema of the metadata. {expected_error}"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "wrong_setting, expected_error",
+    [
         ({"sep": 0}, "The details are - {'fk_test': {'sep': ['Not a valid string.']}}"),
         (
             {"quotechar": 0},

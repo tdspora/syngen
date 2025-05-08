@@ -54,7 +54,7 @@ class BaseWrapper(ABC):
 
 @dataclass
 class VAEWrapper(BaseWrapper):
-    df: pd.DataFrame
+    df: Optional[pd.DataFrame]
     schema: Optional[Dict]
     metadata: Dict
     table_name: str
@@ -330,7 +330,7 @@ class VAEWrapper(BaseWrapper):
         """
         Save the information about losses of every feature in every epoch
         """
-        DataLoader(self.paths["losses_path"]).save_data(self.losses_info)
+        DataLoader(path=self.paths["losses_path"]).save_data(data=self.losses_info)
 
     def _gather_losses_info(self, total_feature_losses, mean_loss, mean_kl_loss, epoch):
         """

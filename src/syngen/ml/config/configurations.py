@@ -10,7 +10,7 @@ from loguru import logger
 from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import slugify_attribute, fetch_unique_root
+from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
 from syngen.ml.convertor import CSVConvertor
 
 
@@ -24,7 +24,7 @@ class TrainConfig:
     epochs: int
     drop_null: bool
     row_limit: Optional[int]
-    table_name: Optional[str]
+    table_name: str
     metadata: Dict
     metadata_path: Optional[str]
     reports: List[str]
@@ -115,13 +115,19 @@ class TrainConfig:
         Return dataframe and schema of original data
         """
         if os.path.exists(self.paths["path_to_flatten_metadata"]):
-            data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
+            path = self.paths["input_data_path"]
+            data_loader = DataLoader(
+                path=path,
+                table_name=self.table_name,
+                metadata=self.metadata,
+                sensitive=True
+            )
             data, schema = data_loader.load_data()
             self.original_schema = data_loader.original_schema
             schema = CSVConvertor.schema
             return data, schema
         else:
-            data_loader = DataLoader(self.source)
+            data_loader = DataLoader(path=self.source)
             self.original_schema = data_loader.original_schema
             if self.original_schema is not None:
                 logger.trace(
@@ -229,13 +235,18 @@ class TrainConfig:
         """
         Save the subset of the original data
         """
-        DataLoader(self.paths["input_data_path"], sensitive=True).save_data(self.data)
+        DataLoader(
+            path=self.paths["input_data_path"],
+            table_name=self.table_name,
+            metadata=self.metadata,
+            sensitive=True
+        ).save_data(data=self.data)
 
     def _save_original_schema(self):
         """
         Save the schema of the original data
         """
-        DataLoader(self.paths["original_schema_path"]).save_data(self.original_schema)
+        DataLoader(path=self.paths["original_schema_path"]).save_data(data=self.original_schema)
 
     def _prepare_data(self):
         """
@@ -254,6 +265,7 @@ class TrainConfig:
             f"losses_{self.table_name}_"
             f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
+        fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -262,7 +274,7 @@ class TrainConfig:
             "reports_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/reports",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}."
-                               f"{'dat' if os.getenv('FERNET_KEY') else 'pkl'}",
+                               f"{'dat' if fernet_key is not None else 'pkl'}",
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
             "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
                                         f"checkpoints/train_config.pkl",
@@ -293,7 +305,7 @@ class InferConfig:
     metadata: Dict
     metadata_path: Optional[str]
     size: Optional[int]
-    table_name: Optional[str]
+    table_name: str
     run_parallel: bool
     batch_size: Optional[int]
     random_seed: Optional[int]
@@ -303,14 +315,14 @@ class InferConfig:
     loader: Optional[Callable[[str], pd.DataFrame]]
     type_of_process: Literal["train", "infer"]
     slugify_table_name: str = field(init=False)
+    paths: Dict = field(init=False)
 
     def __post_init__(self):
-        self._set_paths()
+        self.__set_paths()
         self._remove_artifacts()
         self._set_infer_parameters()
 
     def _set_infer_parameters(self):
-        self._check_reports()
         self._set_up_size()
         self._set_up_batch_size()
 
@@ -351,40 +363,17 @@ class InferConfig:
             "reports": self.reports,
         }
 
-    def _check_required_artifacts(self):
-        """
-        Check whether required artifacts exists
-        """
-        data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
-        if (
-                self.reports
-                and (
-                    data_loader.has_existed_path is False
-                    or self.loader is not None
-                )
-        ):
-            self.reports = list()
-            log_message = (
-                f"It seems that the path to the sample of the original data for the table "
-                f"'{self.table_name}' at '{self.paths['input_data_path']}' does not exist. "
-                f"As a result, no reports for the table '{self.table_name}' will be generated. "
-                f"The 'reports' parameter for the table '{self.table_name}' "
-                f"has been set to 'none'."
-            )
-            logger.warning(log_message)
-
-    def _check_reports(self):
-        """
-        Check whether it is possible to generate reports
-        """
-        self._check_required_artifacts()
-
     def _set_up_size(self):
         """
         Set up "size" of generated data
         """
         if self.size is None:
-            data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
+            data_loader = DataLoader(
+                path=self.paths["input_data_path"],
+                table_name=self.table_name,
+                metadata=self.metadata,
+                sensitive=True
+            )
             data = pd.DataFrame()
             if data_loader.has_existed_path:
                 data, schema = data_loader.load_data()
@@ -403,35 +392,56 @@ class InferConfig:
             min(self.batch_size, self.size) if self.batch_size is not None else self.size
         )
 
-    @slugify_attribute(table_name="slugify_table_name")
+    @property
+    def train_config(self):
+        """
+        Fetch the training configuration
+        """
+        return fetch_config(self.paths["train_config_pickle_path"])
+
     def _set_paths(self):
         """
         Create the paths which used in inference process
         """
-        dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
-        self.paths = {
-            "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
-            "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                               f"input_data_{self.slugify_table_name}."
-                               f"{'dat' if os.getenv('FERNET_KEY') else 'pkl'}",
-            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
-                                            f"merged_infer_{dynamic_name}.csv",
-            "path_to_merged_infer": self.destination
-            if self.destination is not None
-            else f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
-            "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
-            "train_config_pickle_path":
-                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+        self.paths.update({
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
-            "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
-            "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
-            "dataset_pickle_path":
-                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
-            "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
-            "path_to_no_ml":
-                f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
             "path_to_flatten_metadata":
                 f"model_artifacts/tmp_store/flatten_configs/"
-                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
+                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
+            "input_data_path": self.train_config.paths["input_data_path"]
+        })
+
+    @slugify_attribute(table_name="slugify_table_name")
+    def __set_paths(self):
+        """
+        Create the paths which used in inference process
+        """
+        dynamic_name = (
+            self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
+        )
+        self.paths = {
+            "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
+            "train_config_pickle_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
+                                            f"merged_infer_{dynamic_name}.csv",
+            "path_to_merged_infer": (
+                self.destination
+                if self.destination is not None
+                else f"model_artifacts/tmp_store/{dynamic_name}/"
+                     f"merged_infer_{dynamic_name}.csv"
+            ),
+            "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
+            "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
+            "vae_resources_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
+            "dataset_pickle_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
+            "fk_kde_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
+            "path_to_no_ml":
+                f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl"
         }
+
+        self._set_paths()

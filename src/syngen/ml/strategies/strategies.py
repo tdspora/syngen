@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import os
 import traceback
 from loguru import logger
+from copy import deepcopy
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -12,7 +13,7 @@ from syngen.ml.handlers import LongTextsHandler, VaeTrainHandler, VaeInferHandle
 from syngen.ml.vae import VanillaVAEWrapper
 from syngen.ml.data_loaders import BinaryLoader
 from syngen.ml.mlflow_tracker.mlflow_tracker import MlflowTracker
-from syngen.ml.utils import get_initial_table_name
+from syngen.ml.utils import get_initial_table_name, clean_up_metadata
 
 
 class Strategy(ABC):
@@ -23,6 +24,7 @@ class Strategy(ABC):
     def __init__(self):
         self.handler = None
         self.config = None
+        self.metadata = None
 
     @abstractmethod
     def run(self, *args, **kwargs):
@@ -46,10 +48,13 @@ class Strategy(ABC):
 
 class TrainStrategy(Strategy, ABC):
     """
-    Class of the strategies of training process
+    Class of a strategy defined in a training process
     """
 
     def _save_training_config(self):
+        metadata = deepcopy(self.config.metadata)
+        self.config.metadata = clean_up_metadata(metadata=metadata)
+
         BinaryLoader(
             path=self.config.paths["train_config_pickle_path"]
         ).save_data(data=self.config)
@@ -60,6 +65,7 @@ class TrainStrategy(Strategy, ABC):
         """
         configuration = TrainConfig(**kwargs)
         self.config = configuration
+        self.metadata = deepcopy(self.config.metadata)
         self.config.preprocess_data()
         self._save_training_config()
         return self
@@ -69,14 +75,14 @@ class TrainStrategy(Strategy, ABC):
         Set up the handler which used in training process
         """
         root_handler = RootHandler(
-            metadata=self.config.metadata,
+            metadata=self.metadata,
             table_name=self.config.table_name,
             paths=self.config.paths,
             loader=self.config.loader
         )
 
         vae_handler = VaeTrainHandler(
-            metadata=self.config.metadata,
+            metadata=self.metadata,
             table_name=self.config.table_name,
             schema=self.config.schema,
             paths=self.config.paths,
@@ -90,7 +96,7 @@ class TrainStrategy(Strategy, ABC):
         )
 
         long_text_handler = LongTextsHandler(
-            metadata=self.config.metadata,
+            metadata=self.metadata,
             table_name=self.config.table_name,
             schema=self.config.schema,
             paths=self.config.paths,
@@ -115,6 +121,7 @@ class TrainStrategy(Strategy, ABC):
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
+                metadata=self.metadata,
             )
             Report().register_reporter(table=table_name, reporter=sample_reporter)
 
@@ -150,7 +157,7 @@ class TrainStrategy(Strategy, ABC):
 
 class InferStrategy(Strategy):
     """
-    Class of the strategies of infer process
+    Class of a strategy defined in the infer process
     """
 
     def set_config(self, **kwargs):
@@ -159,6 +166,7 @@ class InferStrategy(Strategy):
         """
         configuration = InferConfig(**kwargs)
         self.config = configuration
+        self.metadata = deepcopy(self.config.metadata)
         return self
 
     def add_handler(self, type_of_process: str):
@@ -167,7 +175,7 @@ class InferStrategy(Strategy):
         """
         self.handler = VaeInferHandler(
             metadata_path=self.config.metadata_path,
-            metadata=self.config.metadata,
+            metadata=self.metadata,
             table_name=self.config.table_name,
             paths=self.config.paths,
             wrapper_name=VanillaVAEWrapper.__name__,
@@ -192,7 +200,8 @@ class InferStrategy(Strategy):
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
-                loader=self.config.loader
+                metadata=self.metadata,
+                loader=self.config.loader,
             )
             Report().register_reporter(table=table_name, reporter=accuracy_reporter)
 

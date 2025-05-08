@@ -4,6 +4,7 @@ import os
 import math
 from ulid import ULID
 from uuid import UUID
+from copy import deepcopy
 
 import pandas as pd
 import numpy as np
@@ -60,7 +61,9 @@ class BaseHandler(AbstractHandler):
         return None
 
     @staticmethod
-    def create_wrapper(cls_name, data: pd.DataFrame, schema: Optional[Dict], **kwargs):
+    def create_wrapper(
+        cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
+    ):
         return globals()[cls_name](
             data,
             schema,
@@ -76,9 +79,12 @@ class BaseHandler(AbstractHandler):
         """
         Fetch the data
         """
-        data_loader = DataLoader(self.paths["input_data_path"], sensitive=True)
-        data = pd.DataFrame()
-        schema = None
+        data_loader = DataLoader(
+            path=self.paths["input_data_path"],
+            table_name=self.table_name,
+            metadata=self.metadata,
+            sensitive=True
+        )
         if data_loader.has_existed_path:
             data, schema = data_loader.load_data()
         elif self.loader:
@@ -86,6 +92,8 @@ class BaseHandler(AbstractHandler):
                 loader=self.loader,
                 table_name=self.table_name
             ).fetch_data()
+        else:
+            return pd.DataFrame(), None
         return data, schema
 
 
@@ -246,10 +254,8 @@ class VaeInferHandler(BaseHandler):
         )
         self.has_vae = len(self.dataset.features) > 0
 
-        data, schema = self.fetch_data()
-
         if self.has_vae:
-            self.vae = self._get_wrapper(data, schema)
+            self.vae = self.__get_wrapper()
 
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
@@ -263,15 +269,13 @@ class VaeInferHandler(BaseHandler):
             )
         )
 
-    def _get_wrapper(self, data: pd.DataFrame, schema: Dict):
+    def __get_wrapper(self):
         """
         Create and get the wrapper for the VAE model
         """
         return self.create_wrapper(
             self.wrapper_name,
-            data,
-            schema,
-            metadata=self.metadata,
+            metadata=deepcopy(self.metadata),
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,
@@ -438,7 +442,7 @@ class VaeInferHandler(BaseHandler):
                 fk_column_name = config_of_keys.get(key).get("columns")[0]
                 pk_table = config_of_keys.get(key).get("references").get("table")
                 pk_path = self._get_pk_path(pk_table=pk_table, table_name=table_name)
-                pk_table_data, pk_table_schema = DataLoader(pk_path).load_data()
+                pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
@@ -469,8 +473,8 @@ class VaeInferHandler(BaseHandler):
         """
         Save generated data to the path
         """
-        DataLoader(self.paths["path_to_merged_infer"]).save_data(
-            generated_data,
+        DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
+            data=generated_data,
             format=get_context().get_config(),
         )
 
