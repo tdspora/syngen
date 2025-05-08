@@ -66,8 +66,13 @@ class DataLoader(BaseDataLoader):
             .get("encryption", {})
             .get("fernet_key")
         ) if (metadata is not None and table_name is not None) else None
+        if sensitive and self.fernet_key and not self.path.endswith(".dat"):
+            logger.warning(
+                f"The provided Fernet key will be ignored because encryption and decryption "
+                f"are not required for the data in the specified path: '{self.path}'"
+            )
         self.sensitive = (
-            True if sensitive and self.fernet_key else False
+            True if sensitive and self.fernet_key and self.path.endswith(".dat") else False
         ) or self.path.endswith(".dat")
         self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
