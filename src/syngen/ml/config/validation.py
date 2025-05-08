@@ -344,7 +344,7 @@ class Validator:
         path_to_input_data = fetch_config(path_to_train_config).paths["input_data_path"]
         log_message = (
             "Access to a sample of the original data is required "
-            "to generate reports during the inference process."
+            "to generate reports during the inference process"
         )
         try:
             data_loader = DataLoader(
