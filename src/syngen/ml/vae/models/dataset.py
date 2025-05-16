@@ -1356,11 +1356,11 @@ class Dataset(BaseDataset):
             "uuid_columns": self._assign_uuid_null_feature,
         }
 
-    def _assign_features(self):
+    def __assign_features(self):
         """
         Assign features to the columns based on their types
         """
-        for column in [col for col in self.df.columns if not col.endswith("_null")]:
+        for column in [col for col in self.df.columns]:
             self._assign_feature(column)
 
     def _ensure_technical_column_if_no_features(self):
@@ -1372,7 +1372,7 @@ class Dataset(BaseDataset):
             tech_column = "syngen_tech_column"
             logger.info(
                 f"Since all columns in the table '{self.table_name}' "
-                "are uuid/key/long text/pass-through columns, "
+                "are uuid/key/long text columns, "
                 "there are no suitable columns to train on. "
                 f"A technical column '{tech_column}' will be added "
                 "to proceed with the training process "
@@ -1390,7 +1390,7 @@ class Dataset(BaseDataset):
 
         self.__prepare_primary_key_mapping()
 
-        self._assign_features()
+        self.__assign_features()
 
         self._ensure_technical_column_if_no_features()
 
