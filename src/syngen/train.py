@@ -1,5 +1,4 @@
 import os
-import traceback
 from typing import Optional, List
 
 import click
@@ -9,8 +8,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
-    check_if_logs_available,
-    validate_parameter_reports
+    validate_parameter_reports,
 )
 from syngen.ml.validation_schema import ReportTypes
 
@@ -199,15 +197,4 @@ def launch_train(
 
 
 if __name__ == "__main__":
-    try:
-        launch_train()
-    except Exception as e:
-        log_file = os.getenv("SUCCESS_LOG_FILE")
-        if not os.path.exists(log_file):
-            logger.error(
-                f"Training failed on running stage. "
-                f"The traceback of the error - {traceback.format_exc()}"
-            )
-        raise e
-    finally:
-        check_if_logs_available()
+    launch_train()
