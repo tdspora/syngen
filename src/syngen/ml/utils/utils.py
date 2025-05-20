@@ -421,17 +421,6 @@ def setup_log_process(
     setup_logger()
 
 
-def check_if_logs_available():
-    """
-    Check if the logs are available and
-    write a message to the log file if not
-    """
-    path_to_logs = os.getenv("SUCCESS_LOG_FILE")
-    if not os.path.exists(path_to_logs):
-        with open(path_to_logs, "a") as file:
-            file.write("No logs available\n")
-
-
 def get_initial_table_name(table_name) -> str:
     """"
     Get the initial table name without the suffix "_pk" or "_fk"
