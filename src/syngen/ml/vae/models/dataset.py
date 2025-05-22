@@ -71,7 +71,6 @@ class BaseDataset:
         self.binary_columns: Set = set()
         self.email_columns: Set = set()
         self.long_text_columns: Set = set()
-        self.tech_columns: Set = set()
         self.primary_keys_mapping: Dict = dict()
         self.primary_keys_list: List = list()
         self.primary_key_name: Optional[str] = None
@@ -1317,11 +1316,70 @@ class Dataset(BaseDataset):
         """
         Assign corresponding to uuid column null column and preprocess if required.
         """
+        logger.info(f"Column '{feature}' defined as UUID column")
         features = self._preprocess_nan_cols(feature, fillna_strategy="text")
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
             self.assign_feature(ContinuousFeature(features[1]), features[1])
             logger.info(f"Column '{features[1]}' assigned as float feature")
+
+    def __prepare_primary_key_mapping(self):
+        self.primary_keys_mapping.update(self.unique_keys_mapping)
+        pk_uq_keys_mapping = self.primary_keys_mapping
+        if pk_uq_keys_mapping:
+            self.__set_types(pk_uq_keys_mapping)
+            self.__map_text_pk()
+
+    def _assign_feature(self, column: str):
+        """
+        Assign feature to the column based on its type
+        """
+        for column_type, handler in self.dispatcher.items():
+            if column in getattr(self, column_type, []):
+                handler(column)
+                return
+
+    @property
+    def dispatcher(self):
+        """
+        Dispatcher for assigning features to columns
+        """
+        return {
+            "str_columns": self._assign_char_feature,
+            "email_columns": self._assign_email_feature,
+            "float_columns": self._assign_float_feature,
+            "int_columns": self._assign_int_feature,
+            "categorical_columns": self._assign_categ_feature,
+            "date_columns": self._assign_date_feature,
+            "binary_columns": self._assign_binary_feature,
+            "uuid_columns": self._assign_uuid_null_feature,
+        }
+
+    def __assign_features(self):
+        """
+        Assign features to the columns based on their types
+        """
+        for column in [col for col in self.df.columns]:
+            self._assign_feature(column)
+
+    def _ensure_technical_column_if_no_features(self, additional_message: str = ""):
+        """
+        Workaround for the case when all columns are dropped.
+        Add a technical column to proceed with the training process.
+        """
+        if not self.features:
+            tech_column = "syngen_tech_column"
+            logger.info(
+                f"Since all columns in the table '{self.table_name}' "
+                f"are uuid/key/long text{additional_message} columns, "
+                "there are no suitable columns to train on. "
+                f"A technical column '{tech_column}' will be added "
+                "to proceed with the training process "
+                "and will be removed afterwards."
+            )
+            self.df[tech_column] = 1
+            self._assign_float_feature(tech_column)
+            self.tech_columns.add(tech_column)
 
     def pipeline(self) -> pd.DataFrame:
         if self.foreign_keys_list:
@@ -1329,46 +1387,11 @@ class Dataset(BaseDataset):
             self._preprocess_fk_params()
             self._drop_fk_columns()
 
-        self.primary_keys_mapping.update(self.unique_keys_mapping)
-        pk_uq_keys_mapping = self.primary_keys_mapping
-        if pk_uq_keys_mapping:
-            self.__set_types(pk_uq_keys_mapping)
-            self.__map_text_pk()
+        self.__prepare_primary_key_mapping()
 
-        for column in self.df.columns:
-            if column in self.str_columns:
-                self._assign_char_feature(column)
-            if column in self.email_columns:
-                self._assign_email_feature(column)
-            elif column in self.float_columns:
-                self._assign_float_feature(column)
-            elif column in self.int_columns:
-                self._assign_int_feature(column)
-            elif column in self.categorical_columns:
-                self._assign_categ_feature(column)
-            elif column in self.date_columns:
-                self._assign_date_feature(column)
-            elif column in self.binary_columns:
-                self._assign_binary_feature(column)
-            elif column in self.uuid_columns:
-                logger.info(f"Column '{column}' defined as UUID column")
-                self._assign_uuid_null_feature(column)
+        self.__assign_features()
 
-        # workaround for the case when all columns are dropped
-        # add a technical column to proceed with the training process
-        if not self.features:
-            tech_column = "syngen_tech_column"
-            logger.info(
-                f"Since all columns in the table '{self.table_name}' "
-                "are uuid/key/long text columns, "
-                "there are no suitable columns to train on. "
-                f"A technical column '{tech_column}' will be added "
-                "to proceed with the training process "
-                "and will be removed afterwards."
-                )
-            self.df[tech_column] = 1
-            self._assign_float_feature(tech_column)
-            self.tech_columns.add(tech_column)
+        self._ensure_technical_column_if_no_features()
 
         self.fit()
 

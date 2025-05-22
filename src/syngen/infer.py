@@ -1,6 +1,4 @@
-import os
 from typing import Optional, List
-import traceback
 
 import click
 from loguru import logger
@@ -8,7 +6,6 @@ from loguru import logger
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
-    check_if_logs_available,
     validate_parameter_reports
 )
 from syngen.ml.validation_schema import ReportTypes
@@ -162,15 +159,4 @@ def launch_infer(
 
 
 if __name__ == "__main__":
-    try:
-        launch_infer()
-    except Exception as e:
-        log_file = os.getenv("SUCCESS_LOG_FILE")
-        if not os.path.exists(log_file):
-            logger.error(
-                f"Generation failed on running stage. "
-                f"The traceback of the error - {traceback.format_exc()}"
-            )
-        raise e
-    finally:
-        check_if_logs_available()
+    launch_infer()
