@@ -325,24 +325,8 @@ class VaeInferHandler(BaseHandler):
         if random_seed:
             seed(random_seeds_list[i % len(random_seeds_list)])
 
-        # NEW CODE
         result = run_separate_func((i, size), vae_model)
-
-        # # Log memory usage before deleting objects
-        # memory_usage_before = psutil.virtual_memory().percent
-        # logger.info(f"Memory usage before cleaning: {memory_usage_before}%")
-
-        # # Explicitly delete objects that are no longer needed
-        # del random_seed, random_seeds_list, run_separate_func
-        # gc.collect()
-
-        # # Log memory usage after deleting objects
-        # memory_usage_after = psutil.virtual_memory().percent
-        # logger.info(f"Memory usage after cleaning: {memory_usage_after}%")
-
         return result
-
-        # return run_separate_func((i, size), vae_model)
 
     @staticmethod
     def synth_word(size, indexes, counts):
@@ -433,8 +417,7 @@ class VaeInferHandler(BaseHandler):
             synthetic_infer = self.generate_vae(size, vae_model)
 
         if self.has_no_ml:
-            # TODO UNCOMMENT
-            # logger.info(f'Long texts generation for {self.table_name} started.')
+            logger.info(f'Long texts generation for {self.table_name} started.')
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
 
         return synthetic_infer
@@ -483,7 +466,6 @@ class VaeInferHandler(BaseHandler):
                 run_separate_func=self.run_separate
             )
 
-            # self._pool.imap_unordered
             frames = []
             for result in self._pool.imap_unordered(
                     worker_func,
@@ -515,39 +497,18 @@ class VaeInferHandler(BaseHandler):
             logger.info(f"Finished processing all batches. Memory usage: {memory_usage}%")
             self._cleanup_pool()
 
-
-            # for i, batch_size in batches:
-            #     # log_message = (
-            #     #     f"Data synthesis for the table - '{self.table_name}'. "
-            #     #     f"Generating the batch {i + 1} of {self.batch_num}"
-            #     # )
-            #     # ProgressBarHandler().set_progress(
-            #     #     progress=ProgressBarHandler().progress + delta,
-            #     #     delta=delta,
-            #     #     message=log_message,
-            #     # )
-            #     # logger.info(log_message)
-
-            #     result = self._pool.apply_async(worker_func, ((i, batch_size),))
-
-            #     frames.append(result)
-
-            #     logger.warning(f"Result is appended to frames")
-
-            # # wait for all tasks to complete
-            # frames = [frame.get(timeout=120) for frame in frames]
-
             logger.warning(f"In run method all frames are ready")
 
             prepared_data = self._concat_slices_with_unique_pk(frames)
             logger.warning(f"Frames are concatinated with unique pk")
 
-            # self._cleanup_pool()
         else:
             prepared_batches = []
             for i, batch_size in batches:
-                log_message = (f"Data synthesis for the table - '{self.table_name}'. "
-                               f"Generating the batch {i + 1} of {self.batch_num}")
+                log_message = (
+                    f"Data synthesis for the table - '{self.table_name}'. "
+                    f"Generating the batch {i + 1} of {self.batch_num}"
+                )
                 ProgressBarHandler().set_progress(
                     progress=ProgressBarHandler().progress + delta,
                     delta=delta,
