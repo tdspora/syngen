@@ -285,7 +285,7 @@ class PostprocessHandler(Processor):
         return df
 
     @staticmethod
-    def _load_generated_data(path_to_generated_data: str) -> pd.DataFrame:
+    def _load_generated_data(path_to_generated_data: str, *args) -> pd.DataFrame:
         """
         Load generated data from the predefined path
         """
@@ -367,9 +367,10 @@ class PostprocessHandler(Processor):
                 duplicated_columns = flatten_metadata.get("duplicated_columns")
                 order_of_columns = flatten_metadata.get("order_of_columns")
                 path_to_generated_data = (
-                    f"model_artifacts/tmp_store/{slugify(table)}/merged_infer_{slugify(table)}.csv"
+                    f"model_artifacts/tmp_store/{slugify(table)}/"
+                    f"merged_infer_{slugify(table)}.csv"
                 )
-                data = self._load_generated_data(path_to_generated_data)
+                data = self._load_generated_data(path_to_generated_data, table)
                 data = self._postprocess_generated_data(
                     data,
                     flattening_mapping,
@@ -377,14 +378,15 @@ class PostprocessHandler(Processor):
                 )
                 destination = self.metadata[table].get("infer_settings", {}).get("destination", "")
                 path_to_destination = destination if destination else path_to_generated_data
-                self._save_generated_data(data, path_to_destination, order_of_columns)
+                self._save_generated_data(data, path_to_destination, order_of_columns, table)
                 logger.info("Finish postprocessing of the generated data")
 
     @staticmethod
     def _save_generated_data(
         generated_data: pd.DataFrame,
         path_to_destination: str,
-        order_of_columns: List[str]
+        order_of_columns: List[str],
+        *args
     ):
         """
         Save generated data to the path
