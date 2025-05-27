@@ -3,7 +3,7 @@ import sys
 import re
 from typing import List, Dict, Optional, Union, Set, Callable, Literal
 from dateutil import parser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 
 import pandas as pd
@@ -99,7 +99,7 @@ def datetime_to_timestamp(dt, date_format):
             return MIN_ALLOWED_TIME_MS
 
 
-def timestamp_to_datetime(timestamp, delta=False):
+def timestamp_to_datetime(timestamp: int, delta=False):
     """
     Convert the timestamp to the datetime object or timedelta object
     """

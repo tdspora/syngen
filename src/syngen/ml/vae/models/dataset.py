@@ -9,10 +9,11 @@ import re
 import numpy as np
 import dill
 import pandas as pd
-from pandas._libs.tslibs.parsing import guess_datetime_format
+from pandas.tseries.api import guess_datetime_format
 from scipy.stats import gaussian_kde
 import tqdm
 from loguru import logger
+from dateutil import parser
 
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
@@ -30,6 +31,30 @@ from syngen.ml.utils import (
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import fetch_config, clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
+
+
+TIMEZONE_REGEX = re.compile(r"""
+        (?P<iana_name>
+            [A-Za-z_]+
+            (?:/[A-Za-z0-9_.-]+)+
+        )|
+        (?P<offset_zulu>
+            Z
+        )|
+        (?P<offset_numeric>
+            [+-]
+            (?:
+                \d{2}:\d{2}
+                |
+                \d{4}
+            )
+        )|
+        (?P<tz_abbr>
+            \b
+            (?:[A-Z]{2,5})
+            \b
+        )
+    """, re.VERBOSE | re.ASCII)
 
 
 class BaseDataset:
@@ -844,38 +869,32 @@ class Dataset(BaseDataset):
         self.non_existent_columns = non_existent_columns - self.dropped_columns
 
     @staticmethod
-    def __define_date_format(date_text: pd.DataFrame):
+    def __define_date_format(date_text: pd.Series):
         """
-        Define the most common date format.
-        Supported date formats -
-        MM/DD/YYYY; MM-DD-YYYY; DD/MM/YYYY; DD-MM-YYYY;
-        YYYY/MM/DD; YYYY-MM-DD; MMM DD, YYYY; MMM DD YYYY;
-        DD MMM YYYY; YYYY-MM-DD HH:MM:SS
-
-        Not supported formats -
-        MM/DD/YY, DD/MM/YY, YY/MM/DD, MM-DD-YY, DD-MM-YY
-
+        Define the most common date format
         """
-        pattern = (
-            r"\s{0,1}\d+[-/\\:\.]\s{0,1}\d+[-/\\:\.]\s{0,1}\d+|"
-            r"[A-Z][a-z]+ \d{1,2} \d{4}|"
-            r"[A-Z][a-z]+ \d{1,2}, \d{4}|"
-            r"\d{2} [A-Z][a-z]+ \d{4}|"
-            r"\d{2}-[A-Z]{3}-\d{2}|"
-            r"\d{2}[-][A-Z][a-z]+[-]\d{2}|"
-            r"\d{4}[-/\\]\d{1,2}"
-        )
         types = []
+
         n_samples = min(100, len(date_text.dropna()))
         sample = date_text.dropna().sample(n_samples).values
+
         for i in sample:
-            date_format = guess_datetime_format(re.match(pattern, i).group(0))
+            date_format = guess_datetime_format(i)
+            if date_format:
+                match = TIMEZONE_REGEX.search(date_format)
+                if match is not None:
+                    if abbr := match.group("tz_abbr"):
+                        date_format = date_format.replace(abbr, "")
+
             types.append(date_format)
+
         if not list(filter(lambda x: bool(x), types)) or not types:
-            return "%d-%m-%Y"
-        if Counter(types).most_common(1)[0][0] is None:
-            return Counter(types).most_common(2)[1][0]
-        return Counter(types).most_common(1)[0][0]
+            chosen_format = "%d-%m-%Y"
+        elif Counter(types).most_common(1)[0][0] is None:
+            chosen_format = Counter(types).most_common(2)[1][0]
+        else:
+            chosen_format = Counter(types).most_common(1)[0][0]
+        return chosen_format
 
     def _set_date_format(self):
         """
@@ -1281,11 +1300,52 @@ class Dataset(BaseDataset):
         self.assign_feature(CategoricalFeature(feature), feature)
         logger.info(f"Column '{feature}' assigned as categorical based feature")
 
+    @staticmethod
+    def fetch_timezone(date_string: str) -> Optional[str]:
+        """
+        Attempts to find and extract a timezone string from a date string.
+
+        Args:
+            date_string: The input string that might contain a date and timezone.
+
+        Returns:
+            timezone_string: The matched timezone string (e.g., "America/New_York", "+05:30", "EST").
+        """
+        if not isinstance(date_string, str):
+            return np.NaN
+
+        match = TIMEZONE_REGEX.search(date_string)
+
+        if match:
+            if match.group("iana_name"):
+                return match.group("iana_name")
+            elif match.group("offset_zulu"):
+                return match.group("offset_zulu")
+            elif match.group("offset_numeric"):
+                return match.group("offset_numeric")
+            elif match.group("tz_abbr"):
+                # Further validation might be needed for abbreviations if high precision is required
+                # as this part can have false positives.
+                return match.group("tz_abbr")
+
+        return np.NaN
+
+    def _preprocess_dates_with_timezone(self, feature):
+        """
+        Preprocess date columns with timezone information,
+        adding a new column with timezone information
+        """
+        date_format = self.date_mapping.get(feature, None)
+
+        self.df[f"{feature}_tz"] = self.df[feature].apply(self.fetch_timezone)
+        self._assign_categ_feature(f"{feature}_tz")
+
     def _assign_date_feature(self, feature):
         """
         Assign date feature to date columns
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
+        self._preprocess_dates_with_timezone(feature)
         self.assign_feature(DateFeature(features[0]), features[0])
         logger.info(f"Column '{features[0]}' assigned as date feature")
         if len(features) == 2:
@@ -1390,7 +1450,6 @@ class Dataset(BaseDataset):
         self.__prepare_primary_key_mapping()
 
         self.__assign_features()
-
         self._ensure_technical_column_if_no_features()
 
         self.fit()

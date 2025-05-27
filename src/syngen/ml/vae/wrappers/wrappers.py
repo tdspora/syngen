@@ -507,6 +507,18 @@ class VAEWrapper(BaseWrapper):
     def fit_sampler(self, df: pd.DataFrame):
         self.vae.fit_sampler(df)
 
+    def _restore_date_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Restore date columns to datetime format
+        """
+        for column in self.dataset.date_columns:
+            df[column] = df[column].str.cat(df[f"{column}_tz"], na_rep="")
+            df = df.drop(columns=[f"{column}_tz"])
+            logger.debug(
+                f"Column '{column}' containing an information about a timezone has been restored"
+            )
+        return df
+
     def predict_sampled_df(self, n: int) -> pd.DataFrame:
         sampled_df = self.vae.sample(n)
 
@@ -519,6 +531,7 @@ class VAEWrapper(BaseWrapper):
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)
         sampled_df = self._restore_nan_labels(sampled_df)
+        sampled_df = self._restore_date_columns(sampled_df)
 
         return sampled_df
 
