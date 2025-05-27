@@ -868,33 +868,44 @@ class Dataset(BaseDataset):
 
         self.non_existent_columns = non_existent_columns - self.dropped_columns
 
-    @staticmethod
-    def __define_date_format(date_text: pd.Series):
+    def __define_date_format(self, date_text: pd.Series) -> str:
         """
         Define the most common date format
         """
-        types = []
+        date_text = date_text.dropna()
+        if date_text.empty:
+            return "%d-%m-%Y"
 
-        n_samples = min(100, len(date_text.dropna()))
-        sample = date_text.dropna().sample(n_samples).values
+        n_samples = min(100, len(date_text))
+        sample = date_text.sample(n_samples).values
 
-        for i in sample:
-            date_format = guess_datetime_format(i)
-            if date_format:
-                match = TIMEZONE_REGEX.search(date_format)
-                if match is not None:
-                    if abbr := match.group("tz_abbr"):
-                        date_format = date_format.replace(abbr, "")
+        types = [self.__process_date_format(i) for i in sample]
 
-            types.append(date_format)
+        if not any(types):
+            return "%d-%m-%Y"
 
-        if not list(filter(lambda x: bool(x), types)) or not types:
-            chosen_format = "%d-%m-%Y"
-        elif Counter(types).most_common(1)[0][0] is None:
-            chosen_format = Counter(types).most_common(2)[1][0]
+        most_common = Counter(types).most_common()
+        if most_common[0][0] is None:
+            chosen_format = most_common[1][0] if len(most_common) > 1 else "%d-%m-%Y"
         else:
-            chosen_format = Counter(types).most_common(1)[0][0]
+            chosen_format = most_common[0][0]
+
         return chosen_format
+
+    @staticmethod
+    def __process_date_format(date_text: str) -> str:
+        """
+        Helper function to guess a date format and remove timezone abbreviation, if present
+        """
+        date_format = guess_datetime_format(date_text)
+        if not date_format:
+            return None
+
+        match = TIMEZONE_REGEX.search(date_format)
+        if match and (abbr := match.group("tz_abbr")):
+            date_format = date_format.replace(abbr, "")
+
+        return date_format
 
     def _set_date_format(self):
         """
