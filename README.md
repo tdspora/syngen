@@ -75,7 +75,9 @@ train --source PATH_TO_ORIGINAL_CSV \
     --row_limit INT \
     --drop_null BOOL \
     --reports STR \
-    --batch_size INT
+    --batch_size INT \
+    --log_level STR \ 
+    --fernet_key STR
 ```
 
 *Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
@@ -111,6 +113,8 @@ Parameters that you can set up for training process:
 - <i>reports</i> - controls the generation of quality reports, might require significant time for big tables (>10000 rows)
 - <i>metadata_path</i> – a path to the metadata file containing the metadata
 - <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
+- <i>log_level</i> - logging level for the process
+- <i>fernet_key</i> - a fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
 
 Requirements for parameters of training process:
 * <i>source</i> - data type - string
@@ -122,7 +126,8 @@ Requirements for parameters of training process:
 * <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates both accuracy and sample reports, <i>"accuracy"</i> - generates an accuracy report, <i>"sample"</i> - generates a sample report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>"none"</i>. In the metadata file multiple values can be specified as a list of available options (<i>"accuracy"</i>, <i>"sample"</i>, <i>"metrics_only"</i>) to generate multiple types of reports simultaneously, e.g. [<i>"metrics_only"</i>, <i>"sample"</i>]
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
-
+* <i>log_level</i> - data type - string, must be one of the next values - *TRACE*, *"DEBUG"*, *"INFO"*, *"WARNING"*, *"ERROR"*, *"CRITICAL"*, default value is *"INFO"*
+* <i>fernet_key</i> - data type - string, must be a 44-character URL-safe base64-encoded string, default value is None
 ### Inference (generation)
 
 You can customize the inference processes by calling for one table:
@@ -133,7 +138,9 @@ infer --size INT \
     --run_parallel BOOL \
     --batch_size INT \
     --random_seed INT \
-    --reports STR
+    --reports STR \
+    --log_level STR \ 
+    --fernet_key STR
 ```
 
 *Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
@@ -165,6 +172,8 @@ The parameters which you can set up for generation process:
 - <i>random_seed</i> – if specified, generates a reproducible result
 - <i>reports</i> - controls the generation of quality reports, might require significant time for big generated tables (>10000 rows)
 - <i>metadata_path</i> – a path to metadata file
+- <i>log_level</i> - logging level for the process
+- <i>fernet_key</i> - a fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
 
 Requirements for parameters of generation process:
 * <i>size</i> - data type - integer, must be equal to or more than 1, default value is 100
@@ -174,20 +183,11 @@ Requirements for parameters of generation process:
 * <i>random_seed</i> - data type - integer, must be equal to or more than 0
 * <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates an accuracy report, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>"none"</i>. In the metadata file multiple values can be specified as a list of available options (<i>"accuracy"</i>, <i>"metrics_only"</i>) to generate multiple types of reports simultaneously
 * <i>metadata_path</i> - data type - string
+* <i>log_level</i> - data type - string, must be one of the next values - *TRACE*, *"DEBUG"*, *"INFO"*, *"WARNING"*, *"ERROR"*, *"CRITICAL"*, default value is *"INFO"*
+* <i>fernet_key</i> - data type - string, must be a 44-character URL-safe base64-encoded string, default value is None
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
 will be ignored.
-
-*Note:* If you want to set the logging level, you can use the parameter <i>log_level</i> in the CLI call:
-
-```bash
-train --source STR --table_name STR --log_level STR
-train --metadata_path STR --log_level STR
-infer --size INT --table_name STR --log_level STR
-infer --metadata_path STR --log_level STR
-```
-
-where <i>log_level</i> might be one of the following values: <i>TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL</i>.
 
 ### Linked tables generation
 
@@ -216,6 +216,9 @@ global:                                     # Global settings. Optional paramete
     reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously. Might require significant time for big generated tables (>10000 rows). 
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
+  
+  encryption:
+    fernet_key: null                       # A fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
 
 CUSTOMER:                                   # Table name. Required parameter
   train_settings:                           # Settings for training process. Required parameter
@@ -242,6 +245,7 @@ CUSTOMER:                                   # Table name. Required parameter
     engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
     na_values: null                         # Additional strings to recognize as NA/NaN. The first value of the array will be used to replace NA/NaN values. Optional parameter. Applicable for '.csv', '.psv', '.tsv', '.txt' formats
     sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter. Applicable for '.xls', '.xlsx' formats
+
   infer_settings:                           # Settings for infer process. Optional parameter
     destination: "./files/generated_data_customer.csv" # The path where the generated data will be stored. If the information about 'destination' isn't specified, by default the synthetic data will be stored locally in '.csv'. Supported formats include local files in '.csv', '.avro' formats. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
@@ -249,6 +253,9 @@ CUSTOMER:                                   # Table name. Required parameter
     reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously. Might require significant time for big generated tables (>10000 rows).
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
+  
+  encryption:
+    fernet_key: null                        # A fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
 
   keys:                                     # Keys of the table. Optional parameter
     PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
@@ -302,6 +309,7 @@ ORDER:                                      # Table name. Required parameter
     reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously.  Might require significant time for big generated tables (>10000 rows).
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
+
   format:                                   # Settings for reading and writing data in 'csv' format. Optional parameter
     sep: ','                                # Delimiter to use. Optional parameter
     quotechar: '"'                          # The character used to denote the start and end of a quoted item. Optional parameter
@@ -313,6 +321,10 @@ ORDER:                                      # Table name. Required parameter
     on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
     engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter
     sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter
+  
+  encryption:
+    fernet_key: null                        # A fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
+         
   keys:                                     # Keys of the table. Optional parameter
     pk_order_id:
       type: "PK"
@@ -461,7 +473,7 @@ pip install syngen[ui]
 then create a python file and insert the code provided below into it:
 
 ```python
-afrom syngen import streamlit_app
+from syngen import streamlit_app
 
 
 streamlit_app.start()
@@ -509,6 +521,7 @@ docker run --rm -it \
   -e MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING=true \
   -e MLFLOW_SYSTEM_METRICS_SAMPLING_INTERVAL 10 \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=train \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
 
 docker run --rm -it \
@@ -519,7 +532,31 @@ docker run --rm -it \
   -e MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING=true \
   -e MLFLOW_SYSTEM_METRICS_SAMPLING_INTERVAL 10 \
   -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=infer \
   --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+```
+
+### How to keep the original data secure
+
+In the current implementation, a sample of the original data is securely stored on disk. 
+To ensure data security, it is recommended to provide the Fernet key value via the `fernet_key` parameter, 
+either through the command-line interface (CLI) or a metadata file. 
+The Fernet key enables encryption of the stored data, ensuring its protection.
+
+*Fernet key usage during inference*:
+During inference, previously encrypted data may need to be decrypted to enable comparisons with synthetic data for report generation.
+If the data was encrypted during the training process, the same Fernet key used for encryption must be provided during inference to successfully 
+decrypt the data and generate reports.
+
+*Please, pay attention:* 
+Please, store the Fernet key securely. If the key is lost, encrypted data cannot be recovered.
+
+*Note:* To generate a Fernet key, you can use the following code:
+
+```python
+from cryptography.fernet import Fernet
+
+cipher = Fernet.generate_key().decode("utf-8")
 ```
 
 ## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10 or 3.11

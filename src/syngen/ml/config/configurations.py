@@ -10,7 +10,8 @@ from loguru import logger
 from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import slugify_attribute
+from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
+from syngen.ml.convertor import CSVConvertor
 
 
 @dataclass
@@ -23,8 +24,9 @@ class TrainConfig:
     epochs: int
     drop_null: bool
     row_limit: Optional[int]
-    table_name: Optional[str]
+    table_name: str
     metadata: Dict
+    metadata_path: Optional[str]
     reports: List[str]
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
@@ -40,15 +42,13 @@ class TrainConfig:
 
     def __post_init__(self):
         self._set_paths()
-        self._remove_existed_artifacts()
-        self._prepare_dirs()
 
     def __getstate__(self) -> Dict:
         """
         Return an updated config's instance
         """
         instance = self.__dict__.copy()
-        attribute_keys_to_remove = ["loader"]
+        attribute_keys_to_remove = ["loader", "data"]
         for attr_key in attribute_keys_to_remove:
             if attr_key in instance:
                 del instance[attr_key]
@@ -57,7 +57,6 @@ class TrainConfig:
     def preprocess_data(self):
         self._extract_data()
         self._save_original_schema()
-        self.columns = list(self.data.columns)
         self._remove_empty_columns()
         self._mark_removed_columns()
         self._prepare_data()
@@ -100,31 +99,6 @@ class TrainConfig:
         """
         self._check_sample_report()
 
-    def _remove_existed_artifacts(self):
-        """
-        Remove existed artifacts from previous train process
-        """
-        if os.path.exists(self.paths["resources_path"]):
-            shutil.rmtree(self.paths["resources_path"])
-            logger.info(
-                f"The artifacts located in the path - '{self.paths['resources_path']}' "
-                f"were removed"
-            )
-        if os.path.exists(self.paths["tmp_store_path"]):
-            shutil.rmtree(self.paths["tmp_store_path"])
-            logger.info(
-                f"The artifacts located in the path - '{self.paths['tmp_store_path']}' "
-                f"were removed"
-            )
-
-    def _prepare_dirs(self):
-        """
-        Create main directories for saving original, synthetic data and model artifacts
-        """
-        os.makedirs(self.paths["model_artifacts_path"], exist_ok=True)
-        os.makedirs(self.paths["state_path"], exist_ok=True)
-        os.makedirs(self.paths["tmp_store_path"], exist_ok=True)
-
     def _fetch_dataframe(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Fetch the dataframe using the callback function
@@ -140,10 +114,20 @@ class TrainConfig:
         """
         Return dataframe and schema of original data
         """
-        if self.loader is not None:
-            return self._fetch_dataframe()
+        if os.path.exists(self.paths["path_to_flatten_metadata"]):
+            path = self.paths["input_data_path"]
+            data_loader = DataLoader(
+                path=path,
+                table_name=self.table_name,
+                metadata=self.metadata,
+                sensitive=True
+            )
+            data, schema = data_loader.load_data()
+            self.original_schema = data_loader.original_schema
+            schema = CSVConvertor.schema
+            return data, schema
         else:
-            data_loader = DataLoader(self.source)
+            data_loader = DataLoader(path=self.source)
             self.original_schema = data_loader.original_schema
             if self.original_schema is not None:
                 logger.trace(
@@ -159,8 +143,9 @@ class TrainConfig:
         self.data = self.data.dropna(how="all", axis=1)
 
         self.dropped_columns = data_columns - set(self.data.columns)
-        if len(self.dropped_columns) > 0:
-            logger.info(f"Empty columns - {', '.join(self.dropped_columns)} were removed")
+        list_of_dropped_columns = [f"'{column}'" for column in self.dropped_columns]
+        if len(list_of_dropped_columns) > 0:
+            logger.info(f"Empty columns - {', '.join(list_of_dropped_columns)} were removed")
 
     def _mark_removed_columns(self):
         """
@@ -189,6 +174,7 @@ class TrainConfig:
         """
         self.data, self.schema = self._load_source()
         self.initial_data_shape = self.data.shape
+        self.columns = list(self.data.columns)
         self._check_if_data_is_empty()
 
     def _preprocess_data(self):
@@ -249,13 +235,18 @@ class TrainConfig:
         """
         Save the subset of the original data
         """
-        DataLoader(self.paths["input_data_path"]).save_data(self.data)
+        DataLoader(
+            path=self.paths["input_data_path"],
+            table_name=self.table_name,
+            metadata=self.metadata,
+            sensitive=True
+        ).save_data(data=self.data)
 
     def _save_original_schema(self):
         """
         Save the schema of the original data
         """
-        DataLoader(self.paths["original_schema_path"]).save_data(self.original_schema)
+        DataLoader(path=self.paths["original_schema_path"]).save_data(data=self.original_schema)
 
     def _prepare_data(self):
         """
@@ -274,6 +265,7 @@ class TrainConfig:
             f"losses_{self.table_name}_"
             f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
+        fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -281,7 +273,8 @@ class TrainConfig:
             "source_path": self.source,
             "reports_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/reports",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                               f"input_data_{self.slugify_table_name}.pkl",
+                               f"input_data_{self.slugify_table_name}."
+                               f"{'dat' if fernet_key is not None else 'pkl'}",
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
             "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
                                         f"checkpoints/train_config.pkl",
@@ -289,14 +282,15 @@ class TrainConfig:
                                    f"checkpoints/model_dataset.pkl",
             "fk_kde_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
                            f"checkpoints/stat_keys/",
-            "original_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                                  f"input_data_{self.slugify_table_name}.pkl",
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"merged_infer_{self.slugify_table_name}.csv",
             "no_ml_state_path":
                 f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
+            "path_to_flatten_metadata":
+                f"model_artifacts/tmp_store/flatten_configs/"
+                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
             "losses_path": f"model_artifacts/tmp_store/losses/{slugify(losses_file_name)}.csv"
         }
 
@@ -311,7 +305,7 @@ class InferConfig:
     metadata: Dict
     metadata_path: Optional[str]
     size: Optional[int]
-    table_name: Optional[str]
+    table_name: str
     run_parallel: bool
     batch_size: Optional[int]
     random_seed: Optional[int]
@@ -321,14 +315,14 @@ class InferConfig:
     loader: Optional[Callable[[str], pd.DataFrame]]
     type_of_process: Literal["train", "infer"]
     slugify_table_name: str = field(init=False)
+    paths: Dict = field(init=False)
 
     def __post_init__(self):
-        self._set_paths()
+        self.__set_paths()
         self._remove_artifacts()
         self._set_infer_parameters()
 
     def _set_infer_parameters(self):
-        self._check_reports()
         self._set_up_size()
         self._set_up_batch_size()
 
@@ -369,39 +363,17 @@ class InferConfig:
             "reports": self.reports,
         }
 
-    def _check_required_artifacts(self):
-        """
-        Check whether required artifacts exists
-        """
-        if (
-                self.reports
-                and (
-                    DataLoader(self.paths["input_data_path"]).has_existed_path is False
-                    or self.loader is not None
-                )
-        ):
-            self.reports = list()
-            log_message = (
-                f"It seems that the path to the sample of the original data for the table "
-                f"'{self.table_name}' at '{self.paths['input_data_path']}' does not exist. "
-                f"As a result, no reports for the table '{self.table_name}' will be generated. "
-                f"The 'reports' parameter for the table '{self.table_name}' "
-                f"has been set to 'none'."
-            )
-            logger.warning(log_message)
-
-    def _check_reports(self):
-        """
-        Check whether it is possible to generate reports
-        """
-        self._check_required_artifacts()
-
     def _set_up_size(self):
         """
         Set up "size" of generated data
         """
         if self.size is None:
-            data_loader = DataLoader(self.paths["input_data_path"])
+            data_loader = DataLoader(
+                path=self.paths["input_data_path"],
+                table_name=self.table_name,
+                metadata=self.metadata,
+                sensitive=True
+            )
             data = pd.DataFrame()
             if data_loader.has_existed_path:
                 data, schema = data_loader.load_data()
@@ -420,33 +392,56 @@ class InferConfig:
             min(self.batch_size, self.size) if self.batch_size is not None else self.size
         )
 
-    @slugify_attribute(table_name="slugify_table_name")
+    @property
+    def train_config(self):
+        """
+        Fetch the training configuration
+        """
+        return fetch_config(self.paths["train_config_pickle_path"])
+
     def _set_paths(self):
         """
         Create the paths which used in inference process
         """
-        dynamic_name = self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
-        self.paths = {
-            "original_data_path":
-                f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
-            "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
-            "input_data_path":
-                f"model_artifacts/tmp_store/{dynamic_name}/input_data_{dynamic_name}.pkl",
-            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
-                                            f"merged_infer_{dynamic_name}.csv",
-            "path_to_merged_infer": self.destination
-            if self.destination is not None
-            else f"model_artifacts/tmp_store/{dynamic_name}/merged_infer_{dynamic_name}.csv",
-            "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
-            "train_config_pickle_path":
-                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+        self.paths.update({
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
+            "path_to_flatten_metadata":
+                f"model_artifacts/tmp_store/flatten_configs/"
+                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
+            "input_data_path": self.train_config.paths["input_data_path"]
+        })
+
+    @slugify_attribute(table_name="slugify_table_name")
+    def __set_paths(self):
+        """
+        Create the paths which used in inference process
+        """
+        dynamic_name = (
+            self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
+        )
+        self.paths = {
+            "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
+            "train_config_pickle_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+            "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
+                                            f"merged_infer_{dynamic_name}.csv",
+            "path_to_merged_infer": (
+                self.destination
+                if self.destination is not None
+                else f"model_artifacts/tmp_store/{dynamic_name}/"
+                     f"merged_infer_{dynamic_name}.csv"
+            ),
+            "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
-            "vae_resources_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
+            "vae_resources_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/",
             "dataset_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/model_dataset.pkl",
-            "fk_kde_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
+            "fk_kde_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
             "path_to_no_ml":
-                f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
+                f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl"
         }
+
+        self._set_paths()

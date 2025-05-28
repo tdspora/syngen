@@ -5,14 +5,16 @@ base32-crockford
 boto3
 category_encoders==2.6.3
 click
+cryptography
 Jinja2
+flatten_json
 keras==2.15.*
 lazy==1.4
 loguru
 MarkupSafe==2.1.1
 marshmallow==3.19.*
 matplotlib==3.9.*
-mlflow==2.16.*
+mlflow==2.22.*
 numpy==1.26.*
 openpyxl
 pandas==2.2.*

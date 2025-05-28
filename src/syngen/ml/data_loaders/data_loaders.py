@@ -16,6 +16,7 @@ from yaml.scanner import ScannerError
 from avro.errors import InvalidAvroBinaryEncoding
 from loguru import logger
 import fastavro
+from cryptography.fernet import Fernet
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
@@ -52,9 +53,27 @@ class DataLoader(BaseDataLoader):
     """
     Base class for loading and saving data
     """
-
-    def __init__(self, path: str):
+    def __init__(
+        self,
+        path: str,
+        table_name: Optional[str] = None,
+        metadata: Optional[Dict] = None,
+        sensitive: bool = False
+    ):
         super().__init__(path)
+        self.fernet_key = (
+            metadata.get(table_name)
+            .get("encryption", {})
+            .get("fernet_key")
+        ) if (metadata is not None and table_name is not None) else None
+        if sensitive and self.fernet_key and not self.path.endswith(".dat"):
+            logger.warning(
+                f"The provided Fernet key will be ignored because encryption and decryption "
+                f"are not required for the data in the specified path: '{self.path}'"
+            )
+        self.sensitive = (
+            True if sensitive and self.fernet_key and self.path.endswith(".dat") else False
+        ) or self.path.endswith(".dat")
         self.file_loader = self._get_file_loader()
         self.has_existed_path = self.__check_if_path_exists()
         self.has_existed_destination = self.__check_if_path_exists(type_of_path="destination")
@@ -76,7 +95,9 @@ class DataLoader(BaseDataLoader):
 
     def _get_file_loader(self):
         path = Path(self.path)
-        if path.suffix == ".avro":
+        if self.sensitive:
+            return DataEncryptor(self.path, self.fernet_key)
+        elif path.suffix == ".avro":
             return AvroLoader(self.path)
         elif path.suffix in [".csv", ".txt"]:
             return CSVLoader(self.path)
@@ -283,7 +304,7 @@ class AvroLoader(BaseDataLoader):
             return pdx.from_avro(f)
 
     @staticmethod
-    def _get_preprocessed_schema(schema: Dict) -> Dict:
+    def _get_preprocessed_schema(schema: Optional[Dict]) -> Optional[Dict]:
         """
         Get the preprocessed schema
         """
@@ -293,6 +314,7 @@ class AvroLoader(BaseDataLoader):
                 for field
                 in schema.get("fields", {})
             }
+        return schema
 
     def load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
@@ -301,7 +323,7 @@ class AvroLoader(BaseDataLoader):
         try:
             df = self._load_data()
             schema = self.load_schema()
-            return self._preprocess_schema_and_df(schema, df)
+            return self._get_schema_and_df(schema, df)
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"
@@ -321,10 +343,9 @@ class AvroLoader(BaseDataLoader):
     def save_data(self, df: pd.DataFrame, schema: Optional[Dict] = None, **kwargs):
         if schema is not None:
             logger.trace(f"The data will be saved with the schema: {schema}")
-            preprocessed_schema = (
-                self._get_preprocessed_schema(schema) if schema is not None else schema
-            )
-            df = AvroConvertor(preprocessed_schema, df).preprocessed_df
+
+        preprocessed_schema = self._get_preprocessed_schema(schema)
+        df = AvroConvertor(preprocessed_schema, df).preprocessed_df
         self._save_data(df, schema)
 
     def __load_original_schema(self):
@@ -351,7 +372,7 @@ class AvroLoader(BaseDataLoader):
         return self._get_preprocessed_schema(original_schema)
 
     @staticmethod
-    def _preprocess_schema_and_df(
+    def _get_schema_and_df(
         schema: Dict[str, str], df: pd.DataFrame
     ) -> Tuple[pd.DataFrame, Dict[str, str]]:
         """
@@ -497,6 +518,10 @@ class BinaryLoader(BaseDataLoader):
         with open(self.path, "rb") as f:
             return pkl.load(f)
 
+    def get_columns(self) -> List[str]:
+        data, schema = self.load_data()
+        return data.columns.tolist()
+
     def load_data(self) -> Tuple[pd.DataFrame, None]:
         return self._load_data(), None
 
@@ -571,3 +596,87 @@ class ExcelLoader(BaseDataLoader):
 
     def get_columns(self, **kwargs) -> List[str]:
         return self._get_columns(**kwargs)
+
+
+class DataEncryptor(BaseDataLoader):
+    """
+    A class to handle encryption and decryption of data using a Fernet key
+    """
+
+    def __init__(self, path: str, fernet_key: Optional[str]):
+        """
+        Initialize the DataEncryptor with a Fernet key.
+        """
+        super().__init__(path)
+        self.validate_fernet_key(fernet_key)
+        self.fernet = Fernet(fernet_key)
+
+    @classmethod
+    def validate_fernet_key(cls, fernet_key: str):
+        """
+        Validate the provided Fernet key.
+        A valid Fernet key is a 44-character URL-safe base64-encoded string.
+        """
+        if fernet_key is None or not fernet_key.strip():
+            raise ValueError("It seems that the Fernet key is absent")
+
+        error_message = "It seems that the provided Fernet key is invalid"
+        try:
+            Fernet(fernet_key.encode())
+
+        except ValueError as e:
+            logger.error(f"{error_message}. {str(e)}")
+            raise e
+
+    def get_columns(self) -> List[str]:
+        """
+        Get the column names of the table
+        """
+        data, schema = self.load_data()
+        return data.columns.tolist()
+
+    def save_data(self, df: pd.DataFrame):
+        """
+        Save the encrypted dataframe to the disk
+        """
+        try:
+            serialized_df: bytes = pkl.dumps(df, protocol=pkl.HIGHEST_PROTOCOL)
+            encrypted_data = self.fernet.encrypt(serialized_df)
+
+            # Use atomic write operation for better safety
+            temp_path = f"{self.path}.tmp"
+            with open(temp_path, "wb") as encrypted_file:
+                encrypted_file.write(encrypted_data)
+            os.replace(temp_path, self.path)
+
+            logger.info(
+                f"Data is successfully encrypted and saved to '{self.path}'."
+            )
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            logger.error(f"Encryption failed: {str(e)}")
+            raise e
+
+    def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Load the decrypted data from the disk
+        """
+        try:
+            with open(self.path, "rb") as encrypted_file:
+                encrypted_data = encrypted_file.read()
+
+            decrypted_data = self.fernet.decrypt(encrypted_data)
+            df_decrypted = pkl.loads(decrypted_data)
+
+            logger.info(
+                f"Data stored at the path - '{self.path}' "
+                f"has been successfully decrypted and loaded."
+            )
+            return df_decrypted, {"fields": {}, "format": "CSV"}
+        except Exception as e:
+            logger.error(
+                f"It seems that the decryption process of the data "
+                f"stored at the path - '{self.path}' failed - {str(e)}"
+            )
+            raise e

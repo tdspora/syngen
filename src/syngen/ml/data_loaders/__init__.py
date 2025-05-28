@@ -7,5 +7,6 @@ from syngen.ml.data_loaders.data_loaders import (  # noqa: F401;
     BaseDataLoader,
     BinaryLoader,
     ExcelLoader,
+    DataEncryptor
 )
 from syngen.ml.data_loaders.dataframe_fetcher import DataFrameFetcher  # noqa: F401

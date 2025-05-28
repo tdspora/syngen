@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable
+from typing import List, Dict, Optional, Union, Set, Callable, Literal
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -14,6 +14,7 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
+
 
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
@@ -289,8 +290,9 @@ def clean_up_metadata(metadata: Dict):
     Clean up the metadata,
     remove the sensitive information (credentials to the remote storage) from the metadata
     """
+    forbidden_keys = ["credentials", "fernet_key"]
     for key, value in list(metadata.items()):
-        if key == "credentials":
+        if key in forbidden_keys:
             del metadata[key]
         elif isinstance(value, dict):
             clean_up_metadata(value)
@@ -325,7 +327,7 @@ def fetch_config(config_pickle_path: str):
         return pkl.load(f)
 
 
-def fetch_unique_root(table_name: str, metadata_path: str):
+def fetch_unique_root(table_name: Optional[str], metadata_path: Optional[str]):
     """
     Construct the unique constant substring for use in the name of the experiment and log file
     """
@@ -337,19 +339,26 @@ def fetch_unique_root(table_name: str, metadata_path: str):
     return slugify(unique_name)
 
 
-def set_log_path(type_of_process: str, table_name: Optional[str], metadata_path: Optional[str]):
+def create_log_dir(type_of_process: str, table_name: Optional[str], metadata_path: Optional[str]):
     """
-    Set the log path for storing the logs of main processes
+    Create the directory for storing the logs
     """
     logs_dir_name = "model_artifacts/tmp_store/logs"
     os.makedirs(logs_dir_name, exist_ok=True)
+
+
+def get_log_path(table_name: Optional[str], metadata_path: Optional[str], type_of_process: str):
+    """
+    Get the log path for storing the logs of main processes
+    """
+    logs_dir_name = "model_artifacts/tmp_store/logs"
     unique_name = fetch_unique_root(table_name, metadata_path)
     unique_name = f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     file_name_without_extension = f"logs_{type_of_process}_{unique_name}"
     file_path = os.path.join(
         logs_dir_name, f"{slugify(file_name_without_extension)}.log"
     )
-    os.environ["SUCCESS_LOG_FILE"] = file_path
+    return file_path
 
 
 def fetch_log_message(message):
@@ -389,15 +398,27 @@ def setup_logger():
     logger.add(file_sink, level=os.getenv("LOGURU_LEVEL"))
 
 
-def check_if_logs_available():
+def setup_log_process(
+    type_of_process: Literal["train", "infer"],
+    log_level: str,
+    table_name: Optional[str],
+    metadata_path: Optional[str]
+):
     """
-    Check if the logs are available and
-    write a message to the log file if not
+    Set up the logging process with the specified level
     """
-    path_to_logs = os.getenv("SUCCESS_LOG_FILE")
-    if not os.path.exists(path_to_logs):
-        with open(path_to_logs, "a") as file:
-            file.write("No logs available\n")
+    os.environ["LOGURU_LEVEL"] = log_level
+    create_log_dir(
+        type_of_process=type_of_process,
+        table_name=table_name,
+        metadata_path=metadata_path
+    )
+    os.environ["SUCCESS_LOG_FILE"] = get_log_path(
+        table_name=table_name,
+        metadata_path=metadata_path,
+        type_of_process=type_of_process
+    )
+    setup_logger()
 
 
 def get_initial_table_name(table_name) -> str:
@@ -457,3 +478,15 @@ def validate_parameter_reports(report_types: list, full_list: list) -> Callable:
 
         return list(input_values)
     return validator
+
+
+class ValidationError(Exception):
+    """
+    The exception class for handling validation errors
+    """
+    def __init__(
+        self,
+        message: str
+    ):
+        super().__init__(message)
+        self.message = message

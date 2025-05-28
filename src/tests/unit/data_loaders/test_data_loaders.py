@@ -4,6 +4,7 @@ import os
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
+from cryptography.fernet import Fernet, InvalidToken
 
 from syngen.ml.data_loaders import (
     DataLoader,
@@ -13,6 +14,7 @@ from syngen.ml.data_loaders import (
     MetadataLoader,
     YAMLLoader,
     ExcelLoader,
+    DataEncryptor
 )
 from syngen.ml.context import global_context, get_context
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -83,8 +85,7 @@ def test_initialize_data_loader_for_local_pickle_table_with_existed_path(rp_logg
         "Initializing the instance of the class DataLoader "
         "for local pickle table with existed path"
     )
-    path_to_table = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
-                     "pickle_tables/table_with_data.pkl")
+    path_to_table = f"{DIR_NAME}/unit/data_loaders/fixtures/pickle_tables/table_with_data.pkl"
     test_data_loader = DataLoader(path_to_table)
     assert test_data_loader.path == path_to_table
     assert test_data_loader.has_existed_path is True
@@ -406,6 +407,25 @@ def test_save_data_in_avro_format(test_avro_path, test_df, test_avro_schema, rp_
     rp_logger.info("Saving data in avro format locally")
     data_loader = DataLoader(test_avro_path)
     data_loader.save_data(test_df, schema=test_avro_schema)
+
+    assert isinstance(data_loader.file_loader, AvroLoader)
+    assert os.path.exists(test_avro_path) is True
+
+    loaded_df, schema = data_loader.load_data()
+    pd.testing.assert_frame_equal(loaded_df, test_df)
+    assert schema == {
+        "fields": {"gender": "int", "height": "float", "id": "int"},
+        "format": "Avro",
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_data_in_avro_format_without_provided_schema(
+    test_avro_path, test_df, rp_logger
+):
+    rp_logger.info("Saving data in avro format locally without a provided schema")
+    data_loader = DataLoader(test_avro_path)
+    data_loader.save_data(test_df, schema=None)
 
     assert isinstance(data_loader.file_loader, AvroLoader)
     assert os.path.exists(test_avro_path) is True
@@ -1311,4 +1331,130 @@ def test_save_excel_table_in_xlsx_format(test_xlsx_path, test_df, rp_logger):
     loaded_df, schema = data_loader.load_data()
     pd.testing.assert_frame_equal(loaded_df, test_df)
     assert schema == CSV_SCHEMA
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialization_data_encryptor_with_dat_path_and_fernet_key(rp_logger):
+    rp_logger.info(
+        "Test the initialization of DataEncryptor with path ended with '.dat' "
+        "and provided Fernet key"
+    )
+    path = "path/to/data.dat"
+    data_loader = DataLoader(
+        path=path,
+        table_name="table",
+        metadata={
+            "table": {
+                "train_settings": {
+                    "source": path,
+                },
+                "infer_settings": {},
+                "encryption": {
+                    "fernet_key": Fernet.generate_key().decode(),
+                }
+            }
+        },
+        sensitive=True
+    )
+    assert isinstance(data_loader.file_loader, DataEncryptor)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialization_data_encryptor_with_pkl_path_and_fernet_key(rp_logger, caplog):
+    rp_logger.info(
+        "Test the initialization of DataLoader with path ended with '.pkl' "
+        "and provided Fernet key"
+    )
+    path = "path/to/data.pkl"
+    with caplog.at_level("WARNING"):
+        data_loader = DataLoader(
+            path=path,
+            table_name="table",
+            metadata={
+                "table": {
+                    "train_settings": {
+                        "source": path,
+                    },
+                    "infer_settings": {},
+                    "encryption": {
+                        "fernet_key": Fernet.generate_key().decode(),
+                    }
+                }
+            },
+            sensitive=True
+        )
+        assert isinstance(data_loader.file_loader, BinaryLoader)
+        assert (
+            "The provided Fernet key will be ignored because encryption and decryption "
+            "are not required for the data in the specified path: 'path/to/data.pkl'"
+        ) in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_valid_fernet_key_validation(valid_fernet_key, rp_logger):
+    rp_logger.info("Test the validation of the valid Fernet key")
+    assert DataEncryptor.validate_fernet_key(valid_fernet_key) is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("key_value", [None, ""])
+def test_validation_of_absent_fernet_key(rp_logger, caplog, key_value):
+    rp_logger.info("Test the validation of the absent Fernet key")
+    with pytest.raises(ValueError):
+        with caplog.at_level("ERROR"):
+            DataEncryptor.validate_fernet_key(key_value)
+        assert "It seems that the Fernet key is absent" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "invalid_key", [
+        "short_key", "a" * 45, "@w3n7X7VO@i0xEHf@fo@rtEa@vgfWW3GZAtmZd@BzlA@"
+    ]
+)
+def test_validation_of_invalid_fernet_key(invalid_key, rp_logger, caplog):
+    rp_logger.info("Test the validation of the invalid Fernet key")
+
+    with pytest.raises(ValueError):
+        with caplog.at_level("ERROR"):
+            DataEncryptor.validate_fernet_key(invalid_key)
+        assert (
+            "It seems that the provided Fernet key is invalid. "
+            "The Fernet key must be 32 url-safe base64-encoded bytes"
+        ) in caplog.text
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_round_encrypt_decrypt_data(data_encryptor, valid_simple_dataframe, rp_logger):
+    rp_logger.info(
+        "Test the round encryption and decryption of the dataframe "
+        "with the provided valid Ferney key"
+    )
+    data_encryptor.save_data(valid_simple_dataframe)
+    loaded_df, _ = data_encryptor.load_data()
+    pd.testing.assert_frame_equal(loaded_df, valid_simple_dataframe)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_columns_by_data_encryptor(data_encryptor, valid_simple_dataframe, rp_logger, caplog):
+    rp_logger.info("Test the method 'get_columns' of the class DataEncryptor")
+    data_encryptor.save_data(valid_simple_dataframe)
+    assert data_encryptor.get_columns() == ["column1", "column2"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_decrypt_data_with_invalid_key(data_encryptor, valid_simple_dataframe, rp_logger, caplog):
+    rp_logger.info(
+        "Test the decryption of the data with the invalid Fernet key"
+    )
+    data_encryptor.save_data(valid_simple_dataframe)
+    data_encryptor.fernet = Fernet(Fernet.generate_key())
+    with pytest.raises(InvalidToken):
+        with caplog.at_level("ERROR"):
+            data_encryptor.load_data()
+        assert (
+            f"It seems that the decryption process of the data stored at - "
+            f"'{data_encryptor.path}' failed"
+        ) in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)

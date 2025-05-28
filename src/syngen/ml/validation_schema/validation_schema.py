@@ -64,7 +64,6 @@ class KeysSchema(Schema):
     type_of_keys = [*pk_types, *fk_types]
     type = fields.String(validate=validate.OneOf(type_of_keys), required=True)
     columns = fields.List(fields.String(), required=True, allow_none=False)
-    joined_sample = fields.Boolean(required=False)
     references = fields.Nested(ReferenceSchema, required=False, allow_none=False)
 
     @validates_schema
@@ -100,6 +99,10 @@ class KeysSchema(Schema):
             raise ValidationError(
                 "The 'columns' field must have the same length as 'references.columns'"
             )
+
+
+class EncryptionSettings(Schema):
+    fernet_key = fields.String(required=False, allow_none=True)
 
 
 class TrainingSettingsSchema(Schema):
@@ -212,6 +215,7 @@ class ExcelFormatSettingsSchema(Schema):
 class GlobalSettingsSchema(Schema):
     train_settings = fields.Nested(TrainingSettingsSchema, required=False, allow_none=True)
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
+    encryption = fields.Nested(EncryptionSettings, required=False, allow_none=True)
 
 
 class ConfigurationSchema(Schema):
@@ -221,6 +225,7 @@ class ConfigurationSchema(Schema):
         allow_none=True
     )
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
+    encryption = fields.Nested(EncryptionSettings, required=False, allow_none=True)
     format = fields.Raw(required=False, allow_none=True)
     keys = fields.Dict(
         keys=fields.String(),
@@ -266,8 +271,11 @@ class ValidationSchema:
         self.metadata = metadata
         self.metadata_path = metadata_path
         self.global_schema = GlobalSettingsSchema()
-        self.configuration_schema = RestrictedConfigurationSchema() \
-            if validation_source and process == "train" else ConfigurationSchema()
+        self.configuration_schema = (
+            RestrictedConfigurationSchema()
+            if validation_source and process == "train"
+            else ConfigurationSchema()
+        )
 
     def validate_schema(self):
         """

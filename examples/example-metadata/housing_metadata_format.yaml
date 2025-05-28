@@ -3,13 +3,13 @@ global:                                 # In this section you can specify traini
     epochs: 2
     drop_null: true
     row_limit: 1800
-    print_report: true
+    reports: all
 
   infer_settings:
     size: 100
     run_parallel: false
     random_seed: 10
-    print_report: true
+    reports: all
 
 housing_properties:                       # Use table name here
   train_settings:                         # Settings for training process
@@ -17,14 +17,14 @@ housing_properties:                       # Use table name here
     epochs: 8                             # Number of epochs
     drop_null: true                       # Drop rows with NULL values
     row_limit: 1800                       # Limit of rows for training process
-    print_report: true                    # Turn on or turn off generation of the report
+    reports: all                          # Controls the generation of quality reports
 
   infer_settings:                         # Settings for infer process
     destination: "./examples/generated-data/housing_properties_generated.csv" # The path where the generated data will be stored. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 90                              # Size for generated data
     run_parallel: false                   # Turn on or turn off parallel training process
     random_seed: 10                       # Ensure reproducible tables generation
-    print_report: true                    # Turn on or turn off generation of the report
+    reports: all                          # Controls the generation of quality reports
 
   format:
     sep: ","
@@ -48,7 +48,7 @@ housing_conditions:
     epochs: 5
     drop_null: true
     row_limit: 1800
-    print_report: true
+    reports: all
     column_types:
       categorical:                        # Force listed columns to have categorical type (use dictionary of values)
         - housing_median_age
@@ -58,7 +58,7 @@ housing_conditions:
     size: 90
     run_parallel: false
     random_seed: 10
-    print_report: true
+    reports: all
 
   keys:
     households_fk:

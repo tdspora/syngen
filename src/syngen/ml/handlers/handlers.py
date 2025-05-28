@@ -68,6 +68,9 @@ class BaseHandler(AbstractHandler):
     def create_wrapper(
         cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
     ):
+    def create_wrapper(
+        cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
+    ):
         return globals()[cls_name](
             data,
             schema,
@@ -89,6 +92,12 @@ class BaseHandler(AbstractHandler):
             metadata=self.metadata,
             sensitive=True
         )
+        data_loader = DataLoader(
+            path=self.paths["input_data_path"],
+            table_name=self.table_name,
+            metadata=self.metadata,
+            sensitive=True
+        )
         if data_loader.has_existed_path:
             data, schema = data_loader.load_data()
         elif self.loader:
@@ -96,6 +105,8 @@ class BaseHandler(AbstractHandler):
                 loader=self.loader,
                 table_name=self.table_name
             ).fetch_data()
+        else:
+            return pd.DataFrame(), None
         else:
             return pd.DataFrame(), None
         return data, schema
@@ -352,6 +363,7 @@ class VaeInferHandler(BaseHandler):
         return self.create_wrapper(
             self.wrapper_name,
             metadata=deepcopy(self.metadata),
+            metadata=deepcopy(self.metadata),
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,
@@ -606,6 +618,7 @@ class VaeInferHandler(BaseHandler):
                 pk_table = config_of_keys.get(key).get("references").get("table")
                 pk_path = self._get_pk_path(pk_table=pk_table, table_name=table_name)
                 pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
+                pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
@@ -641,7 +654,6 @@ class VaeInferHandler(BaseHandler):
             format=get_context().get_config(),
         )
 
-    @timing
     def handle(self, **kwargs):
         self._prepare_dir()
         list_of_reports = [f'"{report}"' for report in self.reports]
@@ -664,9 +676,7 @@ class VaeInferHandler(BaseHandler):
         if tech_columns:
             prepared_data = prepared_data.drop(tech_columns, axis=1)
             logger.debug(
-                "Technical columns "
-                f"{tech_columns} were removed "
-                "from the generated table."
+                f"Technical columns {tech_columns} were removed from the generated table."
             )
             Report().unregister_reporters(self.table_name)
             logger.info(
@@ -686,9 +696,12 @@ class VaeInferHandler(BaseHandler):
 
                 if generated_data is None:
                     self._save_data(prepared_data)
+                    self._save_data(prepared_data)
                 else:
                     self._save_data(generated_data)
+                    self._save_data(generated_data)
             else:
+                self._save_data(prepared_data)
                 self._save_data(prepared_data)
         if self.metadata_path is None:
             prepared_data = prepared_data[self.dataset.order_of_columns]

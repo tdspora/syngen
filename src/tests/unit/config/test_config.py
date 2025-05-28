@@ -15,11 +15,7 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
     ]
 )
 @patch.object(TrainConfig, "_save_input_data")
-@patch.object(TrainConfig, "_remove_existed_artifacts")
-@patch.object(TrainConfig, "_prepare_dirs")
 def test_init_train_config(
-    mock_prepare_dirs,
-    mock_remove_existed_artifacts,
     mock_save_input_data,
     drop_null,
     row_limit,
@@ -46,6 +42,7 @@ def test_init_train_config(
         row_limit=row_limit,
         table_name=table_name,
         metadata=metadata,
+        metadata_path=None,
         reports=expected_reports,
         batch_size=32,
         loader=None
@@ -57,6 +54,7 @@ def test_init_train_config(
     assert train_config.row_limit == row_limit
     assert train_config.table_name == table_name
     assert train_config.metadata == metadata
+    assert train_config.metadata_path is None
     assert train_config.reports == expected_reports
     assert train_config.batch_size == 32
     assert train_config.loader is None
@@ -71,17 +69,30 @@ def test_init_train_config(
         "age", "price", "date", "comments"
     ]
     assert train_config.dropped_columns == set()
+    assert set(train_config.__dict__.keys()) == {
+        "source", "epochs", "drop_null", "row_limit", "table_name", "metadata",
+        "metadata_path", "reports", "batch_size", "loader", "slugify_table_name",
+        "paths", "original_schema", "data", "schema", "initial_data_shape",
+        "columns", "dropped_columns", "row_subset"
+    }
+    assert set(train_config.__getstate__().keys()) == {
+        "source", "epochs", "drop_null", "row_limit", "table_name", "metadata",
+        "metadata_path", "reports", "batch_size", "slugify_table_name",
+        "paths", "original_schema", "schema", "initial_data_shape",
+        "columns", "dropped_columns", "row_subset"
+    }
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_init_infer_config_with_absent_input_data_in_train_process(rp_logger):
+@pytest.fixture
+def test_init_infer_config(mocker, rp_logger):
     rp_logger.info(
-        "Test the process of initialization of the instance of the class InferConfig "
-        "during the training process in case the input data is absent"
+        "Test the process of initialization of the instance of the class InferConfig"
     )
     table_name = "test_table"
     path_to_source = "path/to/source.csv"
+
     metadata = {
         "test_table": {
             "train_settings": {
@@ -90,6 +101,9 @@ def test_init_infer_config_with_absent_input_data_in_train_process(rp_logger):
             }
         }
     }
+
+    mocker.patch("syngen.ml.data_loaders.DataLoader.has_existed_path", return_value=True)
+
     infer_config = InferConfig(
         destination="path/to/destination.csv",
         metadata=metadata,
@@ -105,127 +119,14 @@ def test_init_infer_config_with_absent_input_data_in_train_process(rp_logger):
         loader=None,
         type_of_process="train"
     )
-    assert infer_config.reports == []
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_init_infer_config_with_absent_input_data_in_infer_process(rp_logger):
-    rp_logger.info(
-        "Test the process of initialization of the instance of the class InferConfig "
-        "during the inference process in case the input data is absent"
-    )
-    table_name = "test_table"
-    path_to_source = "path/to/source.csv"
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": path_to_source
-            },
-            "infer_settings": {
-                "reports": ["accuracy"]
-            }
-        }
-    }
-    infer_config = InferConfig(
-        destination="path/to/destination.csv",
-        metadata=metadata,
-        metadata_path="path/to/metadata.yaml",
-        size=100,
-        table_name=table_name,
-        run_parallel=False,
-        batch_size=100,
-        random_seed=None,
-        reports=["accuracy"],
-        both_keys=True,
-        log_level="DEBUG",
-        loader=None,
-        type_of_process="infer"
-    )
-    assert infer_config.reports == []
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@pytest.fixture
-def test_init_infer_config_with_existed_input_data_in_train_process(mocker, rp_logger):
-    rp_logger.info(
-        "Test the process of initialization of the instance of the class InferConfig "
-        "during the training process in case the input data is present"
-    )
-    table_name = "test_table"
-    path_to_source = "path/to/source.csv"
-
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": path_to_source,
-                "reports": ["accuracy"]
-            }
-        }
-    }
-
-    mocker.patch("syngen.ml.data_loaders.DataLoader.has_existed_path", return_value=True)
-
-    infer_config = InferConfig(
-            destination="path/to/destination.csv",
-            metadata=metadata,
-            metadata_path="path/to/metadata.yaml",
-            size=100,
-            table_name=table_name,
-            run_parallel=False,
-            batch_size=100,
-            random_seed=None,
-            reports=["accuracy"],
-            both_keys=True,
-            log_level="DEBUG",
-            loader=None,
-            type_of_process="train"
-        )
 
     assert infer_config.reports == ["accuracy"]
 
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@pytest.fixture
-def test_init_infer_config_with_existed_input_data_in_infer_process(mocker, rp_logger):
-    rp_logger.info(
-        "Test the process of initialization of the instance of the class InferConfig "
-        "during the inference process in case the input data is present"
-    )
-    table_name = "test_table"
-
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": "path/to/source.csv",
-            },
-            "infer_settings": {
-                "reports": ["accuracy"]
-            }
-        }
+    assert set(infer_config.__dict__.keys()) == {
+        "destination", "metadata", "metadata_path", "size", "table_name",
+        "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
+        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
     }
-
-    mocker.patch("syngen.ml.data_loaders.DataLoader.has_existed_path", return_value=True)
-
-    infer_config = InferConfig(
-            destination="path/to/destination.csv",
-            metadata=metadata,
-            metadata_path="path/to/metadata.yaml",
-            size=100,
-            table_name=table_name,
-            run_parallel=False,
-            batch_size=100,
-            random_seed=None,
-            reports=["accuracy"],
-            both_keys=True,
-            log_level="DEBUG",
-            loader=None,
-            type_of_process="infer"
-        )
-
-    assert infer_config.reports == ["accuracy"]
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -245,6 +146,7 @@ def test_get_state_of_train_config(rp_logger):
                 }
             }
         },
+        metadata_path=None,
         reports=["accuracy", "sample"],
         batch_size=32,
         loader=lambda x: pd.DataFrame()
@@ -256,13 +158,14 @@ def test_get_state_of_train_config(rp_logger):
         "row_limit",
         "table_name",
         "metadata",
+        "metadata_path",
         "reports",
-        "batch_size"
+        "batch_size",
+        "paths",
+        "slugify_table_name",
     }
     state = train_config.__getstate__()
-    for attr in expected_attributes:
-        assert attr in state
-    assert "loader" not in state
+    assert set(state.keys()) == expected_attributes
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -299,6 +202,7 @@ def test_preprocess_data(
                 }
             }
         },
+        metadata_path=None,
         reports=["accuracy", "sample"],
         batch_size=32,
         loader=None
@@ -368,6 +272,7 @@ def test_check_reports_in_train_config(
                 }
             }
         },
+        metadata_path=None,
         reports=["accuracy", "sample"],
         batch_size=32,
         loader=None

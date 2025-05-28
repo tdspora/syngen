@@ -1,12 +1,13 @@
 from typing import Dict, List, Optional, Any, Callable, Literal
+import os
+import shutil
+from itertools import product
 
 import pandas as pd
 from attrs import define, field
 from copy import deepcopy
 from loguru import logger
 from slugify import slugify
-import os
-from itertools import product
 
 from syngen.ml.data_loaders import MetadataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
@@ -17,6 +18,8 @@ from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.validation_schema import ReportTypes
+from syngen.ml.processors import PreprocessHandler, PostprocessHandler
+from syngen.ml.validation_schema import ValidationSchema
 
 
 @define
@@ -29,22 +32,84 @@ class Worker:
     metadata_path: Optional[str] = field(kw_only=True)
     settings: Dict = field(kw_only=True)
     log_level: str = field(kw_only=True)
+    encryption_settings: Dict = field(kw_only=True)
     type_of_process: Literal["train", "infer"] = field(kw_only=True)
     metadata: Optional[Dict] = None
     loader: Optional[Callable[[str], pd.DataFrame]] = None
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
+    validation_source: bool = field(default=False)
     train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
+        self.validation_source = (
+            False if self.loader and self.type_of_process == "train" else True
+        )
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
+        # The validation of the initial metadata provided by the user
+        self.__validate_schema()
         self._update_metadata()
+        self.__clean_up()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
+
+    def __clean_up(self):
+        """
+        Clean up the directories before the preprocessing data
+        """
+        for table in self.metadata.keys():
+            if table != "global" and self.type_of_process == "train":
+                self._remove_existed_artifacts(table)
+                self._prepare_dirs(table)
+
+    @staticmethod
+    def _remove_existed_artifact(path_to_artifact: str):
+        """
+        Remove the existed artifact from the previous train process
+        """
+        if os.path.exists(path_to_artifact):
+            shutil.rmtree(path_to_artifact)
+            logger.info(f"The artifacts located in the path - '{path_to_artifact}' was removed")
+
+    def _remove_existed_artifacts(self, table_name: str):
+        """
+        Remove existed artifacts from previous train process
+        """
+        resources_path = f"model_artifacts/resources/{slugify(table_name)}/"
+        tmp_store_path = f"model_artifacts/tmp_store/{slugify(table_name)}/"
+        self._remove_existed_artifact(resources_path)
+        self._remove_existed_artifact(tmp_store_path)
+
+    @staticmethod
+    def _prepare_dirs(table_name: str):
+        """
+        Create main directories for saving original, synthetic data and model artifacts
+        """
+        resources_path = f"model_artifacts/resources/{slugify(table_name)}/"
+        tmp_store_path = f"model_artifacts/tmp_store/{slugify(table_name)}/"
+        state_path = (
+            f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints"
+        )
+        flatten_config_path = "model_artifacts/tmp_store/flatten_configs/"
+        os.makedirs(resources_path, exist_ok=True)
+        os.makedirs(tmp_store_path, exist_ok=True)
+        os.makedirs(state_path, exist_ok=True)
+        os.makedirs(flatten_config_path, exist_ok=True)
+
+    def __validate_schema(self):
+        """
+        Validate the schema of the metadata file
+        """
+        ValidationSchema(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            validation_source=self.validation_source,
+            process=self.type_of_process
+        ).validate_schema()
 
     def __validate_metadata(self):
         """
@@ -54,10 +119,31 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_source=False if self.loader and self.type_of_process == "train" else True
+            validation_source=self.validation_source
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
+
+    def __preprocess_data(self):
+        """
+        Preprocess the data before a training process
+        """
+        PreprocessHandler(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            table_name=self.table_name,
+            loader=self.loader
+        ).run()
+
+    def __postprocess_data(self):
+        """
+        Postprocess the data after an inference process
+        """
+        PostprocessHandler(
+            metadata=self.metadata,
+            metadata_path=self.metadata_path,
+            table_name=self.table_name
+        ).run()
 
     def _set_mlflow(self):
         """
@@ -96,27 +182,32 @@ class Worker:
         """
         global_train_settings = self.metadata.get("global", {}).get("train_settings", {})
         global_infer_settings = self.metadata.get("global", {}).get("infer_settings", {})
+        global_encryption_settings = self.metadata.get("global", {}).get("encryption", {})
 
-        for table, table_metadata in self.metadata.items():
-            if table == "global":
+        process_settings_map = {
+            "train": ("train_settings", global_train_settings),
+            "infer": ("infer_settings", global_infer_settings),
+        }
+
+        process_info = process_settings_map.get(self.type_of_process)
+        settings_key, global_process_settings = process_info
+
+        for table_name, table_metadata in self.metadata.items():
+            if table_name == "global":
                 continue
-            elif self.type_of_process == "train":
-                settings_key = "train_settings"
-                global_settings = global_train_settings
-            elif self.type_of_process == "infer":
-                settings_key = "infer_settings"
-                global_settings = global_infer_settings
-            else:
-                continue
 
-            table_settings = table_metadata[settings_key]
+            table_process_settings = table_metadata.setdefault(settings_key, {})
+            table_encryption_settings = table_metadata.setdefault("encryption", {})
 
-            self._update_table_settings(table_settings, global_settings)
-            self._update_table_settings(table_settings, self.settings)
+            self._update_table_settings(table_process_settings, global_process_settings)
+            self._update_table_settings(table_process_settings, self.settings)
+            self._update_table_settings(table_encryption_settings, global_encryption_settings)
+            self._update_table_settings(table_encryption_settings, self.encryption_settings)
 
     def _update_metadata(self) -> None:
         if self.metadata_path:
             self._update_metadata_for_tables()
+            self.metadata.pop("global", None)
         if self.table_name:
             self._update_metadata_for_table()
 
@@ -125,7 +216,7 @@ class Worker:
         Fetch the metadata for training or infer process
         """
         if self.metadata_path:
-            metadata = MetadataLoader(self.metadata_path).load_data()
+            metadata = MetadataLoader(path=self.metadata_path).load_data()
             return metadata
         if self.table_name:
             source = self.settings.get("source")
@@ -135,6 +226,7 @@ class Worker:
                         "source": source,
                     },
                     "infer_settings": {},
+                    "encryption": {"fernet_key": self.encryption_settings.get("fernet_key")},
                     "keys": {},
                     "format": {}
                 }
@@ -291,6 +383,7 @@ class Worker:
 
         TrainStrategy().run(
             metadata=metadata,
+            metadata_path=self.metadata_path,
             source=train_settings.get("source"),
             epochs=train_settings["epochs"],
             drop_null=train_settings["drop_null"],
@@ -323,6 +416,8 @@ class Worker:
         the tuple included the list of tables and metadata for inference process
         """
         delta = 0.49 / len(tables_for_training)
+
+        self.__preprocess_data()
 
         for table in tables_for_training:
             self._train_table(table, metadata_for_training, delta)
@@ -411,6 +506,7 @@ class Worker:
         """
 
         non_surrogate_tables = [table for table in tables if table not in self.divided]
+
         for table in non_surrogate_tables:
             self._infer_table(
                 table=table,
@@ -463,8 +559,8 @@ class Worker:
             os.makedirs("model_artifacts/metadata", exist_ok=True)
             metadata_file_name = os.path.basename(self.metadata_path)
             MetadataLoader(
-                f"model_artifacts/metadata/{metadata_file_name}"
-            ).save_data(self.metadata)
+                path=f"model_artifacts/metadata/{metadata_file_name}"
+            ).save_data(metadata=self.metadata)
 
     def launch_train(self):
         """
@@ -529,4 +625,5 @@ class Worker:
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
         self._generate_reports()
+        self.__postprocess_data()
         self._collect_metrics_in_infer(tables)

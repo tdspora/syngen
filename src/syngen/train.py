@@ -1,5 +1,4 @@
 import os
-import traceback
 from typing import Optional, List
 
 import click
@@ -8,11 +7,9 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
-    setup_logger,
-    set_log_path,
-    check_if_logs_available
+    setup_log_process,
+    validate_parameter_reports,
 )
-from syngen.ml.utils import validate_parameter_reports
 from syngen.ml.validation_schema import ReportTypes
 
 
@@ -90,6 +87,13 @@ validate_reports = validate_parameter_reports(
     help="Number of rows that goes in one batch. "
          "This parameter can help to control memory consumption.",
 )
+@click.option(
+    "--fernet_key",
+    default=None,
+    type=str,
+    help="The value of the Fernet key to encrypt and decrypt "
+         "the sensitive data stored on the disk",
+)
 def launch_train(
     metadata_path: Optional[str],
     source: Optional[str],
@@ -99,7 +103,8 @@ def launch_train(
     row_limit: Optional[int],
     reports: List[str],
     log_level: str,
-    batch_size: int = 32,
+    batch_size: int,
+    fernet_key: Optional[str]
 ):
     """
     Launch the work of training process
@@ -115,12 +120,16 @@ def launch_train(
     reports
     log_level
     batch_size
+    fernet_key
     -------
 
     """
-    os.environ["LOGURU_LEVEL"] = log_level
-    set_log_path(type_of_process="train", table_name=table_name, metadata_path=metadata_path)
-    setup_logger()
+    setup_log_process(
+        type_of_process="train",
+        log_level=log_level,
+        table_name=table_name,
+        metadata_path=metadata_path
+    )
     if not metadata_path and not source and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' "
@@ -170,37 +179,22 @@ def launch_train(
         "batch_size": batch_size,
         "reports": reports,
     }
+
+    encryption_settings = {
+        "fernet_key": fernet_key,
+    }
+
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
         settings=settings,
         log_level=log_level,
         type_of_process="train",
+        encryption_settings=encryption_settings
     )
 
     worker.launch_train()
 
 
-def preprocess_data():
-    """
-    Preprocess the data before the training process
-    """
-    path_to_script = f"{os.getcwd()}/model_artifacts/script.py"
-    if os.path.exists(path_to_script):
-        os.system(f"python3 {path_to_script}")
-
-
 if __name__ == "__main__":
-    try:
-        preprocess_data()
-        launch_train()
-    except Exception as e:
-        log_file = os.getenv("SUCCESS_LOG_FILE")
-        if not os.path.exists(log_file):
-            logger.error(
-                f"Training failed on running stage. "
-                f"The traceback of the error - {traceback.format_exc()}"
-            )
-        raise e
-    finally:
-        check_if_logs_available()
+    launch_train()

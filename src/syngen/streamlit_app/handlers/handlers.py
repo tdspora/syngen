@@ -9,10 +9,10 @@ from loguru import logger
 from slugify import slugify
 import streamlit as st
 from streamlit.elements.widgets.file_uploader import UploadedFile
+import streamlit.components.v1 as components
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import fetch_log_message, ProgressBarHandler
-import streamlit.components.v1 as components
 
 
 UPLOAD_DIRECTORY = "uploaded_files"

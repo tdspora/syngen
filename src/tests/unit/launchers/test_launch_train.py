@@ -1,5 +1,6 @@
 from unittest.mock import patch
 import pytest
+
 from click.testing import CliRunner
 
 from syngen.train import launch_train
@@ -48,7 +49,7 @@ def test_train_table_with_metadata_path(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.setup_logger")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_metadata_path_and_source(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
@@ -73,7 +74,7 @@ def test_train_table_with_metadata_path_and_source(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.setup_logger")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_metadata_path_and_table_name(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
@@ -98,7 +99,7 @@ def test_train_table_with_metadata_path_and_table_name(
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.train.setup_logger")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_metadata_path_and_table_name_and_source(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
@@ -238,9 +239,7 @@ def test_train_table_with_invalid_drop_null(rp_logger):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_row_limit(
-    mock_post_init, mock_launch_train, rp_logger
-):
+def test_train_table_with_valid_row_limit(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
         "Launch train process through CLI with valid 'row_limit' parameter equals 100"
     )
@@ -377,9 +376,7 @@ def test_train_table_with_redundant_parameter_reports(prior_value, value, rp_log
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_batch_size(
-    mock_post_init, mock_launch_train, rp_logger
-):
+def test_train_table_with_valid_batch_size(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
         "Launch train process through CLI with valid 'batch_size' parameter equals 100"
     )
