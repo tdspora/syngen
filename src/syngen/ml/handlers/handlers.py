@@ -8,7 +8,7 @@ from uuid import UUID
 import multiprocessing as mp
 import functools
 import psutil
-import gc
+from copy import deepcopy
 
 import pandas as pd
 import numpy as np
@@ -65,7 +65,9 @@ class BaseHandler(AbstractHandler):
         return None
 
     @staticmethod
-    def create_wrapper(cls_name, data: pd.DataFrame, schema: Optional[Dict], **kwargs):
+    def create_wrapper(
+        cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
+    ):
         return globals()[cls_name](
             data,
             schema,
@@ -81,9 +83,12 @@ class BaseHandler(AbstractHandler):
         """
         Fetch the data
         """
-        data_loader = DataLoader(self.paths["input_data_path"])
-        data = pd.DataFrame()
-        schema = None
+        data_loader = DataLoader(
+            path=self.paths["input_data_path"],
+            table_name=self.table_name,
+            metadata=self.metadata,
+            sensitive=True
+        )
         if data_loader.has_existed_path:
             data, schema = data_loader.load_data()
         elif self.loader:
@@ -91,6 +96,8 @@ class BaseHandler(AbstractHandler):
                 loader=self.loader,
                 table_name=self.table_name
             ).fetch_data()
+        else:
+            return pd.DataFrame(), None
         return data, schema
 
 
@@ -252,7 +259,7 @@ class VaeInferHandler(BaseHandler):
 
         self.has_vae = len(self.dataset.features) > 0
 
-        data, schema = self.fetch_data()
+        # data, schema = self.fetch_data()
 
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
@@ -261,10 +268,10 @@ class VaeInferHandler(BaseHandler):
 
         # initialize the VAE model if it is not a parallel run
         if self.has_vae and not self.run_parallel:
-            self.vae = self._get_wrapper(data, schema)
+            self.vae = self._get_wrapper()
 
         if self.has_vae and self.run_parallel:
-            self._setup_parallel_processing(data, schema)
+            self._setup_parallel_processing()
 
     def _cleanup_pool(self):
         if self._pool is not None:
@@ -273,7 +280,7 @@ class VaeInferHandler(BaseHandler):
             self._pool = None
 
     @timing
-    def _setup_parallel_processing(self, data, schema):
+    def _setup_parallel_processing(self):
         # to avoid errors with pkl loading
         ##ANCHOR MANUAL CONTROL HERE
         mp.set_start_method('spawn', force=True)
@@ -309,13 +316,13 @@ class VaeInferHandler(BaseHandler):
         self._pool = mp.Pool(
             processes=n_jobs,
             initializer=self.worker_init,
-            initargs=(data, schema, self._get_wrapper)
+            initargs=(self._get_wrapper,)
         )
 
     @staticmethod
-    def worker_init(data, schema, get_wrapper_func):
+    def worker_init(get_wrapper_func):
         global vae_model
-        vae_model = get_wrapper_func(data, schema)
+        vae_model = get_wrapper_func()
 
     @staticmethod
     def worker_process(params, random_seed,
@@ -338,15 +345,13 @@ class VaeInferHandler(BaseHandler):
             )
         )
 
-    def _get_wrapper(self, data: pd.DataFrame, schema: Dict):
+    def _get_wrapper(self):
         """
         Create and get the wrapper for the VAE model
         """
         return self.create_wrapper(
             self.wrapper_name,
-            data,
-            schema,
-            metadata=self.metadata,
+            metadata=deepcopy(self.metadata),
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,
@@ -600,7 +605,7 @@ class VaeInferHandler(BaseHandler):
                 fk_column_name = config_of_keys.get(key).get("columns")[0]
                 pk_table = config_of_keys.get(key).get("references").get("table")
                 pk_path = self._get_pk_path(pk_table=pk_table, table_name=table_name)
-                pk_table_data, pk_table_schema = DataLoader(pk_path).load_data()
+                pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
 
@@ -626,6 +631,15 @@ class VaeInferHandler(BaseHandler):
         df = pd.concat([df, empty_df], axis=1)
 
         return df
+
+    def _save_data(self, generated_data):
+        """
+        Save generated data to the path
+        """
+        DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
+            data=generated_data,
+            format=get_context().get_config(),
+        )
 
     @timing
     def handle(self, **kwargs):
@@ -671,30 +685,15 @@ class VaeInferHandler(BaseHandler):
                 generated_data = generated_data[self.dataset.order_of_columns]
 
                 if generated_data is None:
-                    DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                        prepared_data,
-                        schema=self.original_schema,
-                        format=get_context().get_config(),
-                    )
+                    self._save_data(prepared_data)
                 else:
-                    DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                        generated_data,
-                        schema=self.original_schema,
-                        format=get_context().get_config(),
-                    )
+                    self._save_data(generated_data)
             else:
-                DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                    prepared_data,
-                    schema=self.original_schema,
-                    format=get_context().get_config(),
-                )
+                self._save_data(prepared_data)
         if self.metadata_path is None:
             prepared_data = prepared_data[self.dataset.order_of_columns]
-            DataLoader(self.paths["path_to_merged_infer"]).save_data(
-                prepared_data,
-                schema=self.original_schema,
-                format=get_context().get_config(),
-            )
+
+            self._save_data(prepared_data)
         self._cleanup_pool()
 
     # TODO - set random seeds get reed of them all through the code
