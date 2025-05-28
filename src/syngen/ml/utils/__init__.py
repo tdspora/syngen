@@ -15,6 +15,7 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     setup_logger,
     datetime_to_timestamp,
     timestamp_to_datetime,
+    fetch_timezone,
     create_log_dir,
     get_log_path,
     setup_log_process,
@@ -25,5 +26,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     get_initial_table_name,
     validate_parameter_reports,
     timing,
-    ValidationError
+    ValidationError,
+    TIMEZONE_REGEX
 )

@@ -26,39 +26,12 @@ from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
     get_date_columns,
+    fetch_timezone,
+    TIMEZONE_REGEX
 )
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import fetch_config, clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
-
-# IANA timezone names (like America/New_York, Europe/London, etc.)
-# Zulu time (UTC) represented by 'Z', which is shorthand for UTC offset +00:00
-# Numeric offsets (like +02:00, -05:00, etc.)
-# Timezone abbreviations (like EST, PST, GMT, etc.)
-TIMEZONE_REGEX = re.compile(r"""
-        (?P<iana_name>
-            [A-Za-z_]+
-            (?:/[A-Za-z0-9_/-]+)+
-        )|
-        (?P<offset_zulu>
-            Z
-        )|
-        (?P<offset_numeric>
-            [+-]
-            (?:
-                \d{2}:\d{2}
-                |
-                \d{4}
-            )
-        )|
-        (?P<tz_abbr>
-            \b
-            (?!AM\b|PM\b)
-            \b
-            (?:[A-Z]{2,5})
-            \b
-        )
-    """, re.VERBOSE | re.ASCII)
 
 
 class BaseDataset:
@@ -1315,41 +1288,12 @@ class Dataset(BaseDataset):
         self.assign_feature(CategoricalFeature(feature), feature)
         logger.info(f"Column '{feature}' assigned as categorical based feature")
 
-    @staticmethod
-    def fetch_timezone(date_string: str) -> Optional[str]:
-        """
-        Attempts to find and extract a timezone string from a date string.
-
-        Args:
-            date_string: The input string that might contain a date and timezone.
-
-        Returns:
-            timezone_string:
-            The matched timezone string (e.g., "America/New_York", "+05:30", "EST").
-        """
-        if not isinstance(date_string, str):
-            return np.NaN
-
-        match = TIMEZONE_REGEX.search(date_string)
-
-        if match:
-            if match.group("iana_name"):
-                return match.group("iana_name")
-            elif match.group("offset_zulu"):
-                return match.group("offset_zulu")
-            elif match.group("offset_numeric"):
-                return match.group("offset_numeric")
-            elif match.group("tz_abbr"):
-                return match.group("tz_abbr")
-
-        return np.NaN
-
     def _preprocess_dates_with_timezone(self, feature):
         """
         Preprocess date columns with timezone information,
         adding a new column with timezone information
         """
-        self.df[f"{feature}_tz"] = self.df[feature].apply(self.fetch_timezone)
+        self.df[f"{feature}_tz"] = self.df[feature].apply(fetch_timezone)
         self._assign_categ_feature(f"{feature}_tz")
 
     def _assign_date_feature(self, feature):
