@@ -53,6 +53,8 @@ TIMEZONE_REGEX = re.compile(r"""
         )|
         (?P<tz_abbr>
             \b
+            (?!AM\b|PM\b)
+            \b
             (?:[A-Z]{2,5})
             \b
         )
