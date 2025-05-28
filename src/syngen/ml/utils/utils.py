@@ -3,7 +3,7 @@ import sys
 import re
 from typing import List, Dict, Optional, Union, Set, Callable, Literal
 from dateutil import parser
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import time
 
 import pandas as pd
@@ -86,9 +86,11 @@ def datetime_to_timestamp(dt, date_format):
     if pd.isnull(dt):
         return np.nan
     try:
-        dt = parser.parse(dt,
-                          dayfirst=is_format_first(date_format, "d"),
-                          yearfirst=is_format_first(date_format, "y")).replace(tzinfo=None)
+        dt = parser.parse(
+            dt,
+            dayfirst=is_format_first(date_format, "d"),
+            yearfirst=is_format_first(date_format, "y")
+        ).replace(tzinfo=None)
         delta = dt - datetime(1970, 1, 1)
         return delta.total_seconds()
     except parser._parser.ParserError as e:

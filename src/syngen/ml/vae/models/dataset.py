@@ -13,7 +13,6 @@ from pandas.tseries.api import guess_datetime_format
 from scipy.stats import gaussian_kde
 import tqdm
 from loguru import logger
-from dateutil import parser
 
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
@@ -32,11 +31,14 @@ from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import fetch_config, clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
 
-
+# IANA timezone names (like America/New_York, Europe/London, etc.)
+# Zulu time (UTC) represented by 'Z', which is shorthand for UTC offset +00:00
+# Numeric offsets (like +02:00, -05:00, etc.)
+# Timezone abbreviations (like EST, PST, GMT, etc.)
 TIMEZONE_REGEX = re.compile(r"""
         (?P<iana_name>
             [A-Za-z_]+
-            (?:/[A-Za-z0-9_.-]+)+
+            (?:/[A-Za-z0-9_/-]+)+
         )|
         (?P<offset_zulu>
             Z
@@ -1320,7 +1322,8 @@ class Dataset(BaseDataset):
             date_string: The input string that might contain a date and timezone.
 
         Returns:
-            timezone_string: The matched timezone string (e.g., "America/New_York", "+05:30", "EST").
+            timezone_string:
+            The matched timezone string (e.g., "America/New_York", "+05:30", "EST").
         """
         if not isinstance(date_string, str):
             return np.NaN
@@ -1335,8 +1338,6 @@ class Dataset(BaseDataset):
             elif match.group("offset_numeric"):
                 return match.group("offset_numeric")
             elif match.group("tz_abbr"):
-                # Further validation might be needed for abbreviations if high precision is required
-                # as this part can have false positives.
                 return match.group("tz_abbr")
 
         return np.NaN
@@ -1346,8 +1347,6 @@ class Dataset(BaseDataset):
         Preprocess date columns with timezone information,
         adding a new column with timezone information
         """
-        date_format = self.date_mapping.get(feature, None)
-
         self.df[f"{feature}_tz"] = self.df[feature].apply(self.fetch_timezone)
         self._assign_categ_feature(f"{feature}_tz")
 
