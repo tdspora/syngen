@@ -880,7 +880,7 @@ class Dataset(BaseDataset):
 
         match = TIMEZONE_REGEX.search(date_format)
         if match and (abbr := match.group("tz_abbr")):
-            date_format = date_format.replace(abbr, "")
+            date_format = date_format.replace(abbr, "%Z")
 
         return date_format
 

@@ -362,7 +362,7 @@ def test_check_non_existent_columns(rp_logger):
         ("%Y-%m-%dT%H:%M:%S.%f%Z", "%Y-%m-%dT%H:%M:%S.%f%Z"),
         ("%a, %d %b %Y %H:%M:%S %Z", "%a, %d %b %Y %H:%M:%S %Z"),
         ("%A, %d %b %Y %H:%M:%S %Z", "%A, %d %b %Y %H:%M:%S %Z"),
-        ("%Y-%m-%d %H:%M:%S GMT", "%Y-%m-%d %H:%M:%S ")
+        ("%Y-%m-%d %H:%M:%S GMT", "%Y-%m-%d %H:%M:%S %Z")
     ]
 )
 @patch("syngen.ml.vae.models.dataset.fetch_config", return_value=MagicMock())
