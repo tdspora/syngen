@@ -199,10 +199,7 @@ def test_setup_parallel_processing(
     handler.batch_num = math.ceil(size / batch_size)
     handler._pool = None
 
-    mock_data = MagicMock()
-    mock_schema = MagicMock()
-
-    handler._setup_parallel_processing(mock_data, mock_schema)
+    handler._setup_parallel_processing()
 
     assert handler.batch_num == expected_batch_num, (
         f"Expected batch_num to be {expected_batch_num}, "
@@ -216,7 +213,7 @@ def test_setup_parallel_processing(
     mock_pool.assert_called_once_with(
         processes=expected_n_jobs,
         initializer=handler.worker_init,
-        initargs=(mock_data, mock_schema, handler._get_wrapper)
+        initargs=(handler._get_wrapper,)
     )
 
     assert handler._pool is not None, "Expected _pool to be initialized"
