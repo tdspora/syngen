@@ -326,7 +326,7 @@ class VaeInferHandler(BaseHandler):
     @staticmethod
     def worker_process(params, random_seed,
                        random_seeds_list, run_separate_func):
-        global vae_model
+        global vae_model  # noqa: F824
         i, size = params
         if random_seed:
             seed(random_seeds_list[i % len(random_seeds_list)])
