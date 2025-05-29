@@ -68,9 +68,6 @@ class BaseHandler(AbstractHandler):
     def create_wrapper(
         cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
     ):
-    def create_wrapper(
-        cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
-    ):
         return globals()[cls_name](
             data,
             schema,
@@ -92,12 +89,7 @@ class BaseHandler(AbstractHandler):
             metadata=self.metadata,
             sensitive=True
         )
-        data_loader = DataLoader(
-            path=self.paths["input_data_path"],
-            table_name=self.table_name,
-            metadata=self.metadata,
-            sensitive=True
-        )
+
         if data_loader.has_existed_path:
             data, schema = data_loader.load_data()
         elif self.loader:
@@ -105,8 +97,6 @@ class BaseHandler(AbstractHandler):
                 loader=self.loader,
                 table_name=self.table_name
             ).fetch_data()
-        else:
-            return pd.DataFrame(), None
         else:
             return pd.DataFrame(), None
         return data, schema
@@ -270,8 +260,6 @@ class VaeInferHandler(BaseHandler):
 
         self.has_vae = len(self.dataset.features) > 0
 
-        # data, schema = self.fetch_data()
-
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
         # set it to None here to avoid serialization issues
@@ -292,17 +280,17 @@ class VaeInferHandler(BaseHandler):
 
     @timing
     def _setup_parallel_processing(self):
-        # to avoid errors with pkl loading
-        ##ANCHOR MANUAL CONTROL HERE
+        # to avoid errors with pkl load consiquently
         mp.set_start_method('spawn', force=True)
 
         logger.info("Running in parallel mode")
 
-        logger.info("Note: Running in parallel mode causes "
-                    "some log messages to appear multiple times. "
-                    "This is expected behavior as the model is loaded "
-                    "on multiple devices to ensure efficient processing."
-                    )
+        logger.warning(
+            "Note: Running in parallel mode causes "
+            "some log messages to appear multiple times. "
+            "This is expected behavior as the model is loaded "
+            "on multiple devices to ensure efficient processing."
+        )
 
         if self.batch_num > 1:
             n_jobs = min(self.batch_num, mp.cpu_count())
@@ -363,7 +351,6 @@ class VaeInferHandler(BaseHandler):
         return self.create_wrapper(
             self.wrapper_name,
             metadata=deepcopy(self.metadata),
-            metadata=deepcopy(self.metadata),
             table_name=self.table_name,
             paths=self.paths,
             batch_size=self.batch_size,
@@ -398,7 +385,6 @@ class VaeInferHandler(BaseHandler):
         synthetic_infer = vae_model.predict_sampled_df(size)
         return synthetic_infer
 
-    # @timing
     def generate_long_texts(self, size, synthetic_infer):
         with open(f'{self.paths["path_to_no_ml"]}', "rb") as file:
             features = dill.load(file)
@@ -416,8 +402,7 @@ class VaeInferHandler(BaseHandler):
                 )
                 for i, j in zip(*text_structures)
             ]
-            # current_process = os.getpid()
-            # logger.debug(f"Long text for column '{col}' is generated for process {current_process}.")
+            logger.debug(f'Long text for column {col} is generated.')
             synthetic_infer[col] = generated_column
         return synthetic_infer
 
@@ -426,7 +411,6 @@ class VaeInferHandler(BaseHandler):
 
         if self.batch_num > 1:
             seed(self.random_seeds_list[i])
-            # logger.warning(f"Set random seed {self.random_seeds_list[i]} for batch {i}")
 
         synthetic_infer = pd.DataFrame()
 
@@ -455,12 +439,34 @@ class VaeInferHandler(BaseHandler):
         data.append(self.size - full_batch_size * (nodes - 1))
         return data
 
-    def check_memory_usage(self, current_usage, target_usage=80, current_batch_size=None):
-        if current_usage > target_usage and current_batch_size is not None:
+    # unused for now
+    def check_memory_usage(
+        self,
+        current_usage,
+        target_usage=80,
+        current_batch_size=None
+    ) -> Optional[int]:
+        """
+        Check the current memory usage and adjust the batch size if necessary.
+        If the current memory usage exceeds the target usage,
+        it reduces the batch size proportionally to the target usage.
+        :param current_usage: Current memory usage in percentage.
+        :param target_usage: Target memory usage in percentage (default is 80%).
+        :param current_batch_size: Current batch size to be adjusted.
+        :return: New batch size if reduced, otherwise the current batch size.
+        """
+        if current_usage > target_usage and (current_batch_size is not None):
             reduction_factor = target_usage / current_usage
-            new_batch_size = max(1, math.floor(current_batch_size * reduction_factor))
-            logger.info(f"Memory usage is {current_usage}%. Reducing batch size from {current_batch_size} to {new_batch_size}")
+            new_batch_size = (
+                max(1, math.floor(current_batch_size * reduction_factor))
+            )
+            logger.info(
+                f"Memory usage is {current_usage}%. "
+                f"Reducing batch size from {current_batch_size} "
+                f"to {new_batch_size}"
+            )
             return new_batch_size
+
         return current_batch_size
 
     def run(self, size: int, run_parallel: bool):
@@ -496,28 +502,28 @@ class VaeInferHandler(BaseHandler):
                             f"out of {self.batch_num} are processed. "
                             f"Memory usage: {memory_usage}%"
                             )
-                if memory_usage > 93:  # and (len(frames) < mp.cpu_count() - 2):
+                if memory_usage > 90:
+                    recommended_batch_size = self.batch_size // 4
                     logger.warning(
                         f"High memory usage detected: {memory_usage}%. "
-                        f"To avoid memory overflow, reduce the batch size and rerun. "
+                        "To avoid memory overflow, reduce the batch size and "
+                        "launch the process again. "
                         f"Current batch_size={self.batch_size}. "
-                        f"Recommended batch_size={self.batch_size // 4}. "
-                        f"Stopping the process to avoid memory overflow."
+                        f"Recommended batch_size={recommended_batch_size}. "
+                        "Stopping the process to avoid memory overflow."
                     )
+                    self._cleanup_pool()
+
                     raise MemoryError(
                         f"High memory usage detected: {memory_usage}%. "
-                        f"To avoid memory overflow, reduce the batch size and rerun. "
+                        "To avoid memory overflow, reduce the batch size and "
+                        "launch the process again. "
                         f"Current batch_size={self.batch_size}. "
-                        f"Recommended batch_size={self.batch_size // 4}. "
-                        f"Stopping the process to avoid memory overflow."
+                        f"Recommended batch_size={recommended_batch_size}. "
+                        "Stopping the process to avoid memory overflow."
                     )
-            logger.info(f"Finished processing all batches. Memory usage: {memory_usage}%")
-            self._cleanup_pool()
-
-            logger.warning(f"In run method all frames are ready")
 
             prepared_data = self._concat_slices_with_unique_pk(frames)
-            logger.warning(f"Frames are concatinated with unique pk")
 
         else:
             prepared_batches = []
@@ -533,22 +539,10 @@ class VaeInferHandler(BaseHandler):
                 )
                 logger.info(log_message)
 
-                # if self.random_seed:
-                #     logger.warning(f"self.random_seeds_list: {self.random_seeds_list}")
-                #     self.random_seeds_list.append(self.random_seed)
-                #     logger.warning(f"self.random_seeds_list: {self.random_seeds_list}")
-                logger.info(f" Memory usage 1: {psutil.virtual_memory().percent}%")
                 prepared_batch = self.run_separate((i, batch_size), self.vae)
                 memory_usage = psutil.virtual_memory().percent
-                logger.info(
-                            f"{i + 1} batches "
-                            f"out of {self.batch_num} are processed. "
-                            f"Memory usage: {memory_usage}%"
-                            )
                 prepared_batches.append(prepared_batch)
-                logger.info(f" Memory usage before concat_slices: {psutil.virtual_memory().percent}%")
 
-            logger.info(f"Finished processing all batches. Memory usage: {memory_usage}%")
             prepared_data = (
                         self._concat_slices_with_unique_pk(prepared_batches)
                         if len(prepared_batches) > 0
@@ -617,7 +611,6 @@ class VaeInferHandler(BaseHandler):
                 fk_column_name = config_of_keys.get(key).get("columns")[0]
                 pk_table = config_of_keys.get(key).get("references").get("table")
                 pk_path = self._get_pk_path(pk_table=pk_table, table_name=table_name)
-                pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
                 pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
                 logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
@@ -696,20 +689,16 @@ class VaeInferHandler(BaseHandler):
 
                 if generated_data is None:
                     self._save_data(prepared_data)
-                    self._save_data(prepared_data)
                 else:
-                    self._save_data(generated_data)
                     self._save_data(generated_data)
             else:
                 self._save_data(prepared_data)
-                self._save_data(prepared_data)
         if self.metadata_path is None:
             prepared_data = prepared_data[self.dataset.order_of_columns]
-
             self._save_data(prepared_data)
+
         self._cleanup_pool()
 
-    # TODO - set random seeds get reed of them all through the code
     def _set_random_seeds(self):
         logger.warning(f"self.batch_num: {self.batch_num}")
         if self.random_seed or self.batch_num > 1:
@@ -718,12 +707,6 @@ class VaeInferHandler(BaseHandler):
             self.random_seeds_list = choice(
                 range(0, max(100, num_seeds)), num_seeds, replace=False
             )
-            # self.random_seeds_list = [self.random_seed] * self.batch_num
-
-            # num_seeds = max(self.batch_num, self._pool._processes if self.run_parallel else 1)
-            # self.random_seeds_list = choice(range(0, max(100, num_seeds)), num_seeds, replace=False)
-            # logger.warning(f"Random seeds: {self.random_seeds_list}")
-            # logger.warning(f"Len Random seed list: {len(self.random_seeds_list)}")
         else:
             self.random_seeds_list = []
         return self.random_seeds_list
