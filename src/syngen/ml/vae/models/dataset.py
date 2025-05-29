@@ -1291,9 +1291,20 @@ class Dataset(BaseDataset):
     def _preprocess_dates_with_timezone(self, feature):
         """
         Preprocess date columns with timezone information,
-        adding a new column with timezone information
+        adding a new column with timezone information if applicable.
         """
-        self.df[f"{feature}_tz"] = self.df[feature].apply(fetch_timezone)
+        timezone_data = self.df[feature].apply(fetch_timezone)
+        if timezone_data.isnull().all():
+            logger.info(f"Column '{feature}' does not contain dates with time zone.")
+            return
+
+        self.df[f"{feature}_tz"] = timezone_data
+        percent_with_tz = timezone_data.notnull().mean() * 100
+        unique_tz = ', '.join(map(str, timezone_data.dropna().unique()))
+        logger.info(
+            f"Column '{feature}' contains {percent_with_tz:.2f}% dates with time zone. "
+            f"Unique time zones: {unique_tz}."
+        )
         self._assign_categ_feature(f"{feature}_tz")
 
     def _assign_date_feature(self, feature):
@@ -1303,11 +1314,11 @@ class Dataset(BaseDataset):
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
         self._preprocess_dates_with_timezone(feature)
         self.assign_feature(DateFeature(features[0]), features[0])
-        logger.info(f"Column '{features[0]}' assigned as date feature")
+        logger.info(f"Column '{features[0]}' assigned as date feature.")
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
             self.assign_feature(ContinuousFeature(features[1]), features[1])
-            logger.info(f"Column '{features[1]}' assigned as float feature")
+            logger.info(f"Column '{features[1]}' assigned as float feature.")
 
     def _assign_binary_feature(self, feature):
         """

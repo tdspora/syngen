@@ -509,14 +509,16 @@ class VAEWrapper(BaseWrapper):
 
     def _restore_date_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Restore date columns to datetime format
+        Restore date columns to datetime format, combining timezone information if available
         """
         for column in self.dataset.date_columns:
-            df[column] = df[column].str.cat(df[f"{column}_tz"], na_rep="")
-            df = df.drop(columns=[f"{column}_tz"])
-            logger.debug(
-                f"Column '{column}' containing an information about a timezone has been restored"
-            )
+            tz_column = f"{column}_tz"
+            if tz_column in df.columns:
+                df[column] = df[column].str.cat(df[tz_column], na_rep="")
+                df.drop(columns=[tz_column], inplace=True)
+                logger.info(
+                    f"Column '{column}' containing timezone information has been restored."
+                )
         return df
 
     def predict_sampled_df(self, n: int) -> pd.DataFrame:
