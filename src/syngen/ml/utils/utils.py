@@ -23,6 +23,10 @@ MIN_ALLOWED_TIME_MS = -62135596800
 # Zulu time (UTC) represented by 'Z', which is shorthand for UTC offset +00:00
 # Numeric offsets (like +02:00, -05:00, etc.)
 # Timezone abbreviations (like EST, PST, GMT, etc.)
+# Date formats (like YYYY-MM-DD, DD-MM-YYYY, DD-MM-YY, YYYY.MM.DD, DD.MM.YYYY,
+# DD.MM.YY, YYYY/MM/DD, DD/MM/YYYY, DD/MM/YY)
+# Date with timestamp formats (like YYYY-MM-DDTHH:MM:SS, YYYY-MM-DD HH:MM:SS,
+# YYYY-MM-DDTHH:MM:SS.ffffff, YYYY-MM-DD HH:MM:SS.ffffff)
 TIMEZONE_REGEX = re.compile(r"""
         (?P<iana_name>
             [A-Za-z_]+
@@ -31,13 +35,20 @@ TIMEZONE_REGEX = re.compile(r"""
         (?P<offset_zulu>
             Z
         )|
-        (?P<offset_numeric>
-        (?!^\d{2}-\d{2}-\d{4}$)  # Ensure no numeric timezone matches "DD-MM-YYYY"
-        [+-]
-        (?:
-            \d{2}:\d{2}$          # Matches "+HH:MM" or "-HH:MM"
+        (?P<date>
+            ^\d{2,4}[-/.]\d{2}[-/.]\d{2,4}$
+        )|
+        (?P<date_with_timestamp>
+            ^\d{2,4}[-/.]\d{2}[-/.]\d{2,4}[T\s-]\d{2}:\d{2}:\d{2}$
             |
-            \d{4}$                # Matches "+HHMM" or "-HHMM"
+            ^\d{2,4}[-/.]\d{2}[-/.]\d{2,4}[T\s-]\d{2}:\d{2}:\d{2}.\d{6}$
+        )|
+        (?P<offset_numeric>
+        [+-]                         # Match a '+' or '-' for timezone offset
+        (?:
+        \d{2}:\d{2}$                 # Matches "+HH:MM" or "-HH:MM"
+        |
+        \d{4}$                       # Matches "+HHMM" or "-HHMM"
         )
         )|
         (?P<tz_abbr>
