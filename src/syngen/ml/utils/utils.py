@@ -25,8 +25,8 @@ MIN_ALLOWED_TIME_MS = -62135596800
 # Timezone abbreviations (like EST, PST, GMT, etc.)
 # Date formats (like YYYY-MM-DD, DD-MM-YYYY, DD-MM-YY, YYYY.MM.DD, DD.MM.YYYY,
 # DD.MM.YY, YYYY/MM/DD, DD/MM/YYYY, DD/MM/YY)
-# Date with timestamp formats (like YYYY-MM-DDTHH:MM:SS, YYYY-MM-DD HH:MM:SS,
-# YYYY-MM-DDTHH:MM:SS.ffffff, YYYY-MM-DD HH:MM:SS.ffffff)
+# Date with timestamp formats (like YYYY-MM-DDTHH:MM:SS, YYYY-MM-DD HH:MM:SS, YYYY-MM-DD-HH:MM:SS,
+# YYYY-MM-DDTHH:MM:SS.ffffff, YYYY-MM-DD HH:MM:SS.ffffff, YYYY-MM-DD-HH:MM:SS.ffffff)
 TIMEZONE_REGEX = re.compile(r"""
         (?P<iana_name>
             [A-Za-z_]+
