@@ -32,13 +32,12 @@ TIMEZONE_REGEX = re.compile(r"""
             Z
         )|
         (?P<offset_numeric>
-        (?<!\d{2}-\d{2}-\d{4})  # Ensure no numeric timezone matches "DD-MM-YYYY"
-        (?<!\d{4}-\d{2}-\d{2})  # Ensure no numeric timezone matches "YYYY-MM-DD"
+        (?!^\d{2}-\d{2}-\d{4}$)  # Ensure no numeric timezone matches "DD-MM-YYYY"
         [+-]
         (?:
-            \d{2}:\d{2}          # Matches "+HH:MM" or "-HH:MM"
+            \d{2}:\d{2}$          # Matches "+HH:MM" or "-HH:MM"
             |
-            \d{4}                # Matches "+HHMM" or "-HHMM"
+            \d{4}$                # Matches "+HHMM" or "-HHMM"
         )
         )|
         (?P<tz_abbr>
