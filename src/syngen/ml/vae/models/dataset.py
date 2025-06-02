@@ -1300,7 +1300,7 @@ class Dataset(BaseDataset):
 
         self.df[f"{feature}_tz"] = timezone_data
         percent_with_tz = round(timezone_data.notnull().mean() * 100, 2)
-        unique_tz = ', '.join(map(str, timezone_data.dropna().unique()))
+        unique_tz = ', '.join(timezone_data.dropna().unique())
         logger.info(
             f"Column '{feature}' contains {percent_with_tz}% dates with time zone. "
             f"Unique time zones: {unique_tz}."
