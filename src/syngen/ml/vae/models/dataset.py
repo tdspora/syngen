@@ -847,7 +847,7 @@ class Dataset(BaseDataset):
 
     def __define_date_format(self, column: str) -> str:
         """
-        Define the most common date format
+        Define the most common date format in the column
         """
         date_text = self.df[column].dropna()
         if date_text.empty:
@@ -1293,16 +1293,16 @@ class Dataset(BaseDataset):
         Preprocess date columns with timezone information,
         adding a new column with timezone information if applicable.
         """
-        timezone_data = self.df[feature].apply(fetch_timezone)
+        timezone_data = self.df[feature].map(fetch_timezone)
         if timezone_data.isnull().all():
             logger.info(f"Column '{feature}' does not contain dates with time zone.")
             return
 
         self.df[f"{feature}_tz"] = timezone_data
-        percent_with_tz = timezone_data.notnull().mean() * 100
+        percent_with_tz = round(timezone_data.notnull().mean() * 100, 2)
         unique_tz = ', '.join(map(str, timezone_data.dropna().unique()))
         logger.info(
-            f"Column '{feature}' contains {percent_with_tz:.2f}% dates with time zone. "
+            f"Column '{feature}' contains {percent_with_tz}% dates with time zone. "
             f"Unique time zones: {unique_tz}."
         )
         self._assign_categ_feature(f"{feature}_tz")
@@ -1311,8 +1311,8 @@ class Dataset(BaseDataset):
         """
         Assign date feature to date columns
         """
-        features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
         self._preprocess_dates_with_timezone(feature)
+        features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
         self.assign_feature(DateFeature(features[0]), features[0])
         logger.info(f"Column '{features[0]}' assigned as date feature.")
         if len(features) == 2:
