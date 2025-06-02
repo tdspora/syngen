@@ -19,10 +19,10 @@ from loguru import logger
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
 
-# IANA timezone names (like America/New_York, Europe/London, etc.)
-# Zulu time (UTC) represented by 'Z', which is shorthand for UTC offset +00:00
-# Numeric offsets (like +02:00, -05:00, etc.)
-# Timezone abbreviations (like EST, PST, GMT, etc.)
+# IANA timezone names - "2023-07-02T10:18:44.000000 America/New_York"
+# Zulu time (UTC) represented by 'Z' - "2023-07-02T10:18:44Z"
+# Numeric offsets (like +02:00, -05:00, etc.) - "2023-07-02T10:18:44 +02:00"
+# Timezone abbreviations (like EST, PST, GMT, etc.) - "2023-07-02T10:18:44 EST"
 # Date formats (like YYYY-MM-DD, DD-MM-YYYY, DD-MM-YY, YYYY.MM.DD, DD.MM.YYYY,
 # DD.MM.YY, YYYY/MM/DD, DD/MM/YYYY, DD/MM/YY)
 # Date with timestamp formats (like YYYY-MM-DDTHH:MM:SS, YYYY-MM-DD HH:MM:SS, YYYY-MM-DD-HH:MM:SS,
@@ -53,7 +53,7 @@ TIMEZONE_REGEX = re.compile(r"""
         )|
         (?P<tz_abbr>
             \b
-            (?!AM\b|PM\b)
+            (?!AM\b|PM\b|YT\b)
             \b
             (?:[A-Z]{2,5})
             \b

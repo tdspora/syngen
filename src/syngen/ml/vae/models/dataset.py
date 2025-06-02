@@ -845,11 +845,11 @@ class Dataset(BaseDataset):
 
         self.non_existent_columns = non_existent_columns - self.dropped_columns
 
-    def __define_date_format(self, date_text: pd.Series) -> str:
+    def __define_date_format(self, column: str) -> str:
         """
         Define the most common date format
         """
-        date_text = date_text.dropna()
+        date_text = self.df[column].dropna()
         if date_text.empty:
             return "%d-%m-%Y"
 
@@ -870,17 +870,17 @@ class Dataset(BaseDataset):
         return chosen_format
 
     @staticmethod
-    def __process_date_format(date_text: str) -> str:
+    def __process_date_format(date_string: str) -> str:
         """
         Helper function to guess a date format and remove timezone abbreviation, if present
         """
-        date_format = guess_datetime_format(date_text)
+        date_format = guess_datetime_format(date_string)
         if not date_format:
             return None
 
         match = TIMEZONE_REGEX.search(date_format)
         if match and (abbr := match.group("tz_abbr")):
-            date_format = date_format.replace(abbr, "%Z")
+            date_format = date_format.replace(abbr, "%z")
 
         return date_format
 
@@ -889,7 +889,7 @@ class Dataset(BaseDataset):
         Define the date format for each date column
         """
         self.date_mapping = {
-            column: self.__define_date_format(self.df[column])
+            column: self.__define_date_format(column)
             for column in self.date_columns
         }
 
