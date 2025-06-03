@@ -131,9 +131,11 @@ def test_split_by_batches(
         )
     handler.batch_num = math.ceil(handler.size / handler.batch_size)
     if run_parallel:
-        with (patch.object(handler, 'worker_init'),
-              patch.object(handler, '_get_wrapper')):
-            handler._setup_parallel_processing(MagicMock(), MagicMock())
+        with patch('multiprocessing.Pool') as mock_pool:
+            mock_pool_instance = MagicMock()
+            mock_pool.return_value = mock_pool_instance
+
+            handler._setup_parallel_processing()
 
     assert handler.split_by_batches() == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)

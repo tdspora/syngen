@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Dict, List, Callable
+from typing import Tuple, Optional, Dict, List, Callable, Any
 from abc import ABC, abstractmethod
 import os
 import math
@@ -66,7 +66,11 @@ class BaseHandler(AbstractHandler):
 
     @staticmethod
     def create_wrapper(
-        cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
+        cls_name,
+        data: Optional[pd.DataFrame] = None,
+        schema: Optional[Dict] = None,
+        initial_dataset_to_pass: Optional[Any] = None,
+        **kwargs
     ):
         return globals()[cls_name](
             data,
@@ -77,6 +81,7 @@ class BaseHandler(AbstractHandler):
             batch_size=kwargs["batch_size"],
             main_process=kwargs["main_process"],
             process=kwargs["process"],
+            preloaded_dataset=initial_dataset_to_pass,
         )
 
     def fetch_data(self) -> Tuple[pd.DataFrame, Optional[Dict]]:
@@ -267,7 +272,7 @@ class VaeInferHandler(BaseHandler):
 
         # initialize the VAE model if it is not a parallel run
         if self.has_vae and not self.run_parallel:
-            self.vae = self._get_wrapper()
+            self.vae = self._get_wrapper(dataset_to_preload=self.dataset)
 
         if self.has_vae and self.run_parallel:
             self._setup_parallel_processing()
@@ -278,10 +283,15 @@ class VaeInferHandler(BaseHandler):
             self._pool.join()
             self._pool = None
 
+    @staticmethod
+    def _initialize_worker_vae_model(handler_instance, dataset_for_worker):
+        return handler_instance._get_wrapper(
+            dataset_to_preload=dataset_for_worker
+        )
+
     @timing
     def _setup_parallel_processing(self):
-        # to avoid errors with pkl load consiquently
-        mp.set_start_method('spawn', force=True)
+        mp.set_start_method('fork', force=True)
 
         logger.info("Running in parallel mode")
 
@@ -312,16 +322,22 @@ class VaeInferHandler(BaseHandler):
 
             n_jobs = self.batch_num
 
+        func_for_worker_init = functools.partial(
+            VaeInferHandler._initialize_worker_vae_model,
+            handler_instance=self,
+            dataset_for_worker=self.dataset
+        )
+
         self._pool = mp.Pool(
             processes=n_jobs,
-            initializer=self.worker_init,
-            initargs=(self._get_wrapper,)
+            initializer=VaeInferHandler.worker_init,
+            initargs=(func_for_worker_init,)
         )
 
     @staticmethod
-    def worker_init(get_wrapper_func):
+    def worker_init(get_wrapper_func_from_main):
         global vae_model
-        vae_model = get_wrapper_func()
+        vae_model = get_wrapper_func_from_main()
 
     @staticmethod
     def worker_process(params, random_seed,
@@ -344,19 +360,33 @@ class VaeInferHandler(BaseHandler):
             )
         )
 
-    def _get_wrapper(self):
+    def _get_wrapper(self, dataset_to_preload: Optional[Dataset] = None):
         """
         Create and get the wrapper for the VAE model
         """
+        wrapper_kwargs = {
+            "metadata": deepcopy(self.metadata),
+            "table_name": self.table_name,
+            "paths": self.paths,
+            "batch_size": self.batch_size,
+            "main_process": self.type_of_process,
+            "process": "infer"
+        }
+
         return self.create_wrapper(
-            self.wrapper_name,
-            metadata=deepcopy(self.metadata),
-            table_name=self.table_name,
-            paths=self.paths,
-            batch_size=self.batch_size,
-            main_process=self.type_of_process,
-            process="infer",
+            cls_name=self.wrapper_name,
+            initial_dataset_to_pass=dataset_to_preload,
+            **wrapper_kwargs
         )
+        # return self.create_wrapper(
+        #     self.wrapper_name,
+        #     metadata=deepcopy(self.metadata),
+        #     table_name=self.table_name,
+        #     paths=self.paths,
+        #     batch_size=self.batch_size,
+        #     main_process=self.type_of_process,
+        #     process="infer",
+        # )
 
     def _prepare_dir(self):
         tmp_store_path = self.paths["tmp_store_path"]
@@ -369,7 +399,6 @@ class VaeInferHandler(BaseHandler):
     def _concat_slices_with_unique_pk(self, df_slices: list):
         if self.metadata and self.table_name in self.metadata:
             config_of_keys = self.metadata.get(self.table_name).get("keys", {})
-            logger.warning(f"config_of_keys: {config_of_keys}")
             for key in config_of_keys.keys():
                 column = config_of_keys.get(key).get("columns")[0]
                 if config_of_keys.get(key).get("type") == "PK" and not isinstance(
@@ -472,7 +501,6 @@ class VaeInferHandler(BaseHandler):
     def run(self, size: int, run_parallel: bool):
         logger.info("Start data synthesis")
         batches = list(enumerate(self.split_by_batches()))
-        logger.warning(f"batches: {batches}")
         delta = ProgressBarHandler().delta / self.batch_num
 
         if self.has_vae:
@@ -522,6 +550,11 @@ class VaeInferHandler(BaseHandler):
                         f"Recommended batch_size={recommended_batch_size}. "
                         "Stopping the process to avoid memory overflow."
                     )
+
+                logger.trace(
+                    f"Finished processing all batches. "
+                    f"Memory usage: {memory_usage}%"
+                )
 
             prepared_data = self._concat_slices_with_unique_pk(frames)
 
@@ -647,6 +680,7 @@ class VaeInferHandler(BaseHandler):
             format=get_context().get_config(),
         )
 
+    @timing
     def handle(self, **kwargs):
         self._prepare_dir()
         list_of_reports = [f'"{report}"' for report in self.reports]
@@ -700,7 +734,6 @@ class VaeInferHandler(BaseHandler):
         self._cleanup_pool()
 
     def _set_random_seeds(self):
-        logger.warning(f"self.batch_num: {self.batch_num}")
         if self.random_seed or self.batch_num > 1:
             seed(self.random_seed)
             num_seeds = self.batch_num
