@@ -378,15 +378,6 @@ class VaeInferHandler(BaseHandler):
             initial_dataset_to_pass=dataset_to_preload,
             **wrapper_kwargs
         )
-        # return self.create_wrapper(
-        #     self.wrapper_name,
-        #     metadata=deepcopy(self.metadata),
-        #     table_name=self.table_name,
-        #     paths=self.paths,
-        #     batch_size=self.batch_size,
-        #     main_process=self.type_of_process,
-        #     process="infer",
-        # )
 
     def _prepare_dir(self):
         tmp_store_path = self.paths["tmp_store_path"]
