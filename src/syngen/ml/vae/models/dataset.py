@@ -848,7 +848,49 @@ class Dataset(BaseDataset):
     def __define_date_format(self, column: str) -> str:
         """
         Define the most common date format in the column
+        Supported formats:
+        - %d-%m-%Y, %d/%m/%Y, %d.%m.%Y, %m-%d-%Y, %m/%d/%Y, %m.%d.%Y, %Y-%m-%d, %Y/%m/%d, %Y.%m.%d;
+        - %d %B %Y, %d %b %Y, %Y %B %d, %Y %b %d; %B %d, %Y; %b %d, %Y;
+        - %Y-%m-%dT%H:%M:%S, %Y-%m-%d %H:%M:%S, %Y-%m-%d-%H:%M:%S;
+        - %Y/%m/%dT%H:%M:%S, %Y/%m/%d %H:%M:%S, %Y/%m/%d-%H:%M:%S;
+        - %d-%m-%YT%H:%M:%S, %d-%m-%dT%H:%M:%S, %Y-%m-%d-%H:%M:%S;
+        - %m-%d-%YT%H:%M:%S, %m-%d-%YT%H:%M:%S, %m-%d-%Y-%H:%M:%S;
+        - %Y-%m-%dT%H:%M:%S.%f, %Y-%m-%d %H:%M:%S.%f, %Y-%m-%d-%H:%M:%S.%f;
+        - %Y/%m/%dT%H:%M:%S.%f, %Y/%m/%d %H:%M:%S.%f, %Y/%m/%d-%H:%M:%S.%f;
+        - %Y.%m.%dT%H:%M:%S.%f, %Y.%m.%d %H:%M:%S.%f, %Y.%m.%d-%H:%M:%S.%f;
+
+        - %d-%m-%YT%H:%M:%S.%f, %d-%m-%Y %H:%M:%S.%f, %d-%m-%d-%H:%M:%S.%f;
+        - %Y/%m/%dT%H:%M:%S.%f, %Y/%m/%d %H:%M:%S.%f, %Y/%m/%d-%H:%M:%S.%f;
+        - %Y.%m.%dT%H:%M:%S.%f, %Y.%m.%d %H:%M:%S.%f, %Y.%m.%d-%H:%M:%S.%f;
+
+        - %d-%m-%YT%H:%M:%S.%f, %d-%m-%Y %H:%M:%S.%f, %d-%m-%Y-%H:%M:%S.%f;
+        - %m-%d-%YT%H:%M:%S.%f, %m-%d-%YT%H:%M:%S.%f, %m-%d-%Y-%H:%M:%S.%f;
+
+
+        ("%Y%m%dT%H%M%S", "%Y%m%dT%H%M%S"),
+        ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S%z"),
+        ("%Y-%m-%dT%H:%M%z", "%Y-%m-%dT%H:%M%z"),
+        ("%Y-%m-%dT%H:%M %z", "%Y-%m-%dT%H:%M %z"),
+        ("%Y%m%dT%H%M%z", "%Y%m%dT%H%M%z"),
+        ("%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S.%f%z"),
+        ("%a, %d %b %Y %H:%M:%S %z", "%a, %d %b %Y %H:%M:%S %z"),
+        ("%A, %d %b %Y %H:%M:%S %z", "%A, %d %b %Y %H:%M:%S %z"),
+        ("%Y-%m-%dT%H:%M:%S%Z", "%Y-%m-%dT%H:%M:%S%Z"),
+        ("%Y-%m-%dT%H:%M%Z", "%Y-%m-%dT%H:%M%Z"),
+        ("%Y-%m-%dT%H:%M %Z", "%Y-%m-%dT%H:%M %Z"),
+        ("%Y%m%dT%H%M%Z", "%Y%m%dT%H%M%Z"),
+        ("%Y-%m-%dT%H:%M:%S.%f%Z", "%Y-%m-%dT%H:%M:%S.%f%Z"),
+        ("%a, %d %b %Y %H:%M:%S %Z", "%a, %d %b %Y %H:%M:%S %Z"),
+        ("%A, %d %b %Y %H:%M:%S %Z", "%A, %d %b %Y %H:%M:%S %Z"),
+        ("%Y-%m-%d %H:%M:%S GMT", "%Y-%m-%d %H:%M:%S %z")
+
+        Not supported formats (for them the default format will be used):
+        - %m-%d-%y, %m/%d/%y, %m.%d.%y, %d-%m-%y, %d/%m/%y, %d.%m.%y, %y-%m-%d, %y/%m/%d, %y.%m.%d;
+        - %m-%d-%yT%H:%M:%S, %m-%d-%y %H:%M:%S, %m-%d-%y-%H:%M:%S;
+        - %d-%m-%yT%H:%M:%S, %d-%m-%y %H:%M:%S, %d-%m-%y-%H:%M:%S;
+        - %y-%m-%dT%H:%M:%S, %y-%m-%d %H:%M:%S, %y-%m-%d-%H:%M:%S;
         """
+
         date_text = self.df[column].dropna()
         if date_text.empty:
             return "%d-%m-%Y"
