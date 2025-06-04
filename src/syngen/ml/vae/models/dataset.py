@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple, Set
+from typing import Dict, Optional, List, Tuple, Set, Literal
 import pickle
 from uuid import UUID
 from datetime import datetime
@@ -1256,8 +1256,16 @@ class Dataset(BaseDataset):
         else:
             return (feature,)
 
-    def _preprocess_categ_params(self, feature: str):
-        self.df[feature] = self.df[feature].fillna("?").astype(str)
+    def _preprocess_categ_params(self, feature: str, strategy: Literal["?", "ffill"] = "?"):
+        """
+        Preprocess categorical columns by filling NaN values with a strategy
+        """
+        if self.df[feature].isnull().any():
+            if strategy == "?":
+                self.df[feature] = self.df[feature].fillna("?").astype(str)
+            else:
+                self.df[feature] = self.df[feature].fillna(method=strategy).astype(str)
+            logger.info(f"Column '{feature}' filled with strategy '{strategy}'")
         return feature
 
     @staticmethod
@@ -1401,11 +1409,11 @@ class Dataset(BaseDataset):
                 self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
                 logger.info(f"Column '{feature}' assigned as float based feature")
 
-    def _assign_categ_feature(self, feature):
+    def _assign_categ_feature(self, feature, strategy: Literal["?", "ffill"] = "?"):
         """
         Assign categorical based feature to categorical columns
         """
-        feature = self._preprocess_categ_params(feature)
+        feature = self._preprocess_categ_params(feature, strategy)
         self.assign_feature(CategoricalFeature(feature), feature)
         logger.info(f"Column '{feature}' assigned as categorical based feature")
 
@@ -1426,7 +1434,7 @@ class Dataset(BaseDataset):
             f"Column '{feature}' contains {percent_with_tz}% dates with time zone. "
             f"Unique time zones: {unique_tz}."
         )
-        self._assign_categ_feature(f"{feature}_tz")
+        self._assign_categ_feature(f"{feature}_tz", strategy="ffill")
 
     def _assign_date_feature(self, feature):
         """

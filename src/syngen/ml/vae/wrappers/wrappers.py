@@ -120,7 +120,7 @@ class VAEWrapper(BaseWrapper):
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
                 logger.info(
-                    f"Column {num_column_name} has {num_zero_values} "
+                    f"Column '{num_column_name}' has {num_zero_values} "
                     f"({round(num_zero_values * 100 / len(num_column), 2)}%) "
                     f"zero values generated"
                 )
@@ -138,7 +138,7 @@ class VAEWrapper(BaseWrapper):
                 df = df.drop(column, axis=1)
                 num_nan_values = num_column.isna().sum()
                 logger.info(
-                    f"Column {num_column_name} has {num_nan_values} "
+                    f"Column '{num_column_name}' has {num_nan_values} "
                     f"({round(num_nan_values * 100 / len(num_column), 2)}%) "
                     f"empty values generated"
                 )
@@ -514,7 +514,11 @@ class VAEWrapper(BaseWrapper):
         for column in self.dataset.date_columns:
             tz_column = f"{column}_tz"
             if tz_column in df.columns:
-                df[column] = df[column].str.cat(df[tz_column], na_rep="")
+                df[column] = np.where(
+                    pd.notnull(df[column]),
+                    df[column].astype(str) + df[tz_column].astype(str),
+                    df[column]
+                )
                 df.drop(columns=[tz_column], inplace=True)
                 logger.info(
                     f"Column '{column}' containing timezone information has been restored."
