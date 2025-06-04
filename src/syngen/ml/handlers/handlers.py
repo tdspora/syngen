@@ -542,10 +542,10 @@ class VaeInferHandler(BaseHandler):
                         "Stopping the process to avoid memory overflow."
                     )
 
-                logger.trace(
-                    f"Finished processing all batches. "
-                    f"Memory usage: {memory_usage}%"
-                )
+            logger.trace(
+                f"Finished processing all batches. "
+                f"Memory usage: {memory_usage}%"
+            )
 
             prepared_data = self._concat_slices_with_unique_pk(frames)
 

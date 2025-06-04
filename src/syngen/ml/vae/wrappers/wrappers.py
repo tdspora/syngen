@@ -142,11 +142,11 @@ class VAEWrapper(BaseWrapper):
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
                 num_nan_values = num_column.isna().sum()
-                # logger.info(
-                #     f"Column {num_column_name} has {num_nan_values} "
-                #     f"({round(num_nan_values * 100 / len(num_column), 2)}%) "
-                #     f"empty values generated"
-                # )
+                logger.info(
+                    f"Column {num_column_name} has {num_nan_values} "
+                    f"({round(num_nan_values * 100 / len(num_column), 2)}%) "
+                    f"empty values generated"
+                )
         return df
 
     def _restore_nan_labels(self, df):
