@@ -1,6 +1,7 @@
 from unittest.mock import patch, MagicMock
 import pytest
 import math
+import functools
 
 from syngen.ml.handlers import VaeInferHandler
 from syngen.ml.data_loaders import MetadataLoader
@@ -84,7 +85,7 @@ def test_get_pk_path(
         (50, 20, 5, True, [20, 20, 10]),
         # if batch_size is not provided split by the number of nodes
         (100, 100, 6, True, [17, 17, 17, 17, 17, 15]),
-        (1000, 1000, 16, True, [63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 55]),
+        (1000, 1000, 16, True, [63] * 15 + [55]),
         # # if not enough points for the last batch, decrease the batch_size
         (10, 10, 8, True, [1, 1, 1, 1, 1, 1, 1, 3]),
         (100, 100, 16, True, [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 10])
@@ -129,15 +130,35 @@ def test_split_by_batches(
         type_of_process="infer",
         loader=None
         )
+
+    # attributes from the __attrs_post_init__ method
     handler.batch_num = math.ceil(handler.size / handler.batch_size)
+    handler._pool = None
+    handler.dataset = MagicMock()
+
     if run_parallel:
-        with patch('multiprocessing.Pool') as mock_pool:
+        with patch('multiprocessing.Pool') as mock_pool, \
+             patch.object(VaeInferHandler, '_initialize_worker_vae_model'):
+
             mock_pool_instance = MagicMock()
             mock_pool.return_value = mock_pool_instance
 
             handler._setup_parallel_processing()
 
-    assert handler.split_by_batches() == expected_result
+    result = handler.split_by_batches()
+
+    assert result == expected_result, (
+        f"split_by_batches() failed for case: "
+        f"size={size}, batch_size={batch_size}, nodes={nodes}, parallel={run_parallel}\n"
+        f"Expected: {expected_result}\n"
+        f"Got: {result}\n"
+        f"Final state: batch_size={handler.batch_size}, batch_num={handler.batch_num}"
+    )
+
+    # ensure total equals original size
+    assert sum(result) == size, (
+        f"Total of batches ({sum(result)}) doesn't equal original size ({size})"
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -179,6 +200,9 @@ def test_setup_parallel_processing(
 
     mock_cpu_count.return_value = cpu_count
 
+    mock_pool_instance = MagicMock()
+    mock_pool.return_value = mock_pool_instance
+
     path_to_metadata = f"{DIR_NAME}/unit/handlers/fixtures/metadata.yaml"
     metadata = MetadataLoader(path_to_metadata).load_data()
     handler = VaeInferHandler(
@@ -195,28 +219,35 @@ def test_setup_parallel_processing(
         log_level="INFO",
         type_of_process="infer",
         loader=None
-        )
+    )
 
     # attributes from the __attrs_post_init__ method
     handler.batch_num = math.ceil(size / batch_size)
     handler._pool = None
+    handler.dataset = MagicMock()
 
-    handler._setup_parallel_processing()
+    # Patch the _initialize_worker_vae_model method
+    with patch.object(VaeInferHandler, '_initialize_worker_vae_model'):
+        handler._setup_parallel_processing()
 
-    assert handler.batch_num == expected_batch_num, (
-        f"Expected batch_num to be {expected_batch_num}, "
-        f"got {handler.batch_num}"
-    )
-    assert handler.batch_size == expected_batch_size, (
-        f"Expected batch_size to be {expected_batch_size}, "
-        f"got {handler.batch_size}"
-    )
+        assert handler.batch_num == expected_batch_num, (
+            f"Expected batch_num to be {expected_batch_num}, "
+            f"got {handler.batch_num}"
+        )
 
-    mock_pool.assert_called_once_with(
-        processes=expected_n_jobs,
-        initializer=handler.worker_init,
-        initargs=(handler._get_wrapper,)
-    )
+        assert handler.batch_size == expected_batch_size, (
+            f"Expected batch_size to be {expected_batch_size}, "
+            f"got {handler.batch_size}"
+        )
+
+        # Check that Pool was initialized with the correct number of processes
+        mock_pool.assert_called_once()
+        call_args = mock_pool.call_args
+        assert call_args[1]['processes'] == expected_n_jobs
+        assert call_args[1]['initializer'] == VaeInferHandler.worker_init
+
+        # verify that partial function is callable
+        assert callable(call_args[1]['initargs'][0])
 
     assert handler._pool is not None, "Expected _pool to be initialized"
 
