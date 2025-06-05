@@ -302,6 +302,30 @@ class VaeInferHandler(BaseHandler):
             "on multiple devices to ensure efficient processing."
         )
 
+        self.batch_size, self.batch_num, n_jobs = (
+            self._calculate_batch_configuration()
+        )
+
+        func_for_worker_init = functools.partial(
+            VaeInferHandler._initialize_worker_vae_model,
+            handler_instance=self,
+            dataset_for_worker=self.dataset
+        )
+
+        self._pool = mp.Pool(
+            processes=n_jobs,
+            initializer=VaeInferHandler.worker_init,
+            initargs=(func_for_worker_init,)
+        )
+
+    def _calculate_batch_configuration(self) -> Tuple[int, int, int]:
+        """
+        Calculate optimal batch size, batch number, and worker count
+        for parallel processing.
+
+        Returns:
+            Tuple[int, int, int]: (batch_size, batch_num, n_jobs)
+        """
         if self.batch_num > 1:
             n_jobs = min(self.batch_num, mp.cpu_count())
         else:
@@ -322,17 +346,7 @@ class VaeInferHandler(BaseHandler):
 
             n_jobs = self.batch_num
 
-        func_for_worker_init = functools.partial(
-            VaeInferHandler._initialize_worker_vae_model,
-            handler_instance=self,
-            dataset_for_worker=self.dataset
-        )
-
-        self._pool = mp.Pool(
-            processes=n_jobs,
-            initializer=VaeInferHandler.worker_init,
-            initargs=(func_for_worker_init,)
-        )
+        return self.batch_size, self.batch_num, n_jobs
 
     @staticmethod
     def worker_init(get_wrapper_func_from_main):
