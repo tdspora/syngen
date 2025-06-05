@@ -1256,16 +1256,16 @@ class Dataset(BaseDataset):
         else:
             return (feature,)
 
-    def _preprocess_categ_params(self, feature: str, strategy: Literal["?", "ffill"] = "?"):
+    def _preprocess_categ_params(self, feature: str, strategy: Literal["?", "fill"] = "?"):
         """
         Preprocess categorical columns by filling NaN values with a strategy
         """
         if self.df[feature].isnull().any():
             if strategy == "?":
                 self.df[feature] = self.df[feature].fillna("?").astype(str)
-            else:
-                self.df[feature] = self.df[feature].fillna(method=strategy).astype(str)
-            logger.info(f"Column '{feature}' filled with strategy '{strategy}'")
+            if strategy == "fill":
+                self.df[feature] = self.df[feature].fillna(method="bfill").fillna(method="ffill")
+            logger.info(f"Column '{feature}' filled with methods - 'bfill', ffill'")
         return feature
 
     @staticmethod
@@ -1409,7 +1409,7 @@ class Dataset(BaseDataset):
                 self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
                 logger.info(f"Column '{feature}' assigned as float based feature")
 
-    def _assign_categ_feature(self, feature, strategy: Literal["?", "ffill"] = "?"):
+    def _assign_categ_feature(self, feature, strategy: Literal["?", "fill"] = "?"):
         """
         Assign categorical based feature to categorical columns
         """
@@ -1422,7 +1422,9 @@ class Dataset(BaseDataset):
         Preprocess date columns with timezone information,
         adding a new column with timezone information if applicable.
         """
-        timezone_data = self.df[feature].map(fetch_timezone)
+        timezone_data = self.df[feature].apply(
+            lambda x: fetch_timezone(x, self.date_mapping.get(feature, None))
+        )
         if timezone_data.isnull().all():
             logger.info(f"Column '{feature}' does not contain dates with time zone.")
             return
@@ -1434,7 +1436,7 @@ class Dataset(BaseDataset):
             f"Column '{feature}' contains {percent_with_tz}% dates with time zone. "
             f"Unique time zones: {unique_tz}."
         )
-        self._assign_categ_feature(f"{feature}_tz", strategy="ffill")
+        self._assign_categ_feature(f"{feature}_tz", strategy="fill")
 
     def _assign_date_feature(self, feature):
         """
