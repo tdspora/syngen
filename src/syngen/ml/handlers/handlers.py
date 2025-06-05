@@ -35,6 +35,10 @@ from syngen.ml.utils import (
 from syngen.ml.context import get_context
 
 
+MEMORY_THRESHOLD = 90  # Memory usage threshold in percent
+BATCH_SIZE_REDUCTION_FACTOR = 4  # Factor to reduce batch size in case of memory overflow
+
+
 class AbstractHandler(ABC):
     @abstractmethod
     def set_next(self, handler):
@@ -326,10 +330,12 @@ class VaeInferHandler(BaseHandler):
         Returns:
             Tuple[int, int, int]: (batch_size, batch_num, n_jobs)
         """
+        cpu_count = mp.cpu_count()
+
         if self.batch_num > 1:
-            n_jobs = min(self.batch_num, mp.cpu_count())
+            n_jobs = min(self.batch_num, cpu_count)
         else:
-            self.batch_num = min(self.size, mp.cpu_count())
+            self.batch_num = min(self.size, cpu_count)
 
             # equal batches for each process in last batch keep the remainder
             self.batch_size = math.ceil(self.size / self.batch_num)
@@ -473,36 +479,6 @@ class VaeInferHandler(BaseHandler):
         data.append(self.size - full_batch_size * (nodes - 1))
         return data
 
-    # unused for now
-    def check_memory_usage(
-        self,
-        current_usage,
-        target_usage=80,
-        current_batch_size=None
-    ) -> Optional[int]:
-        """
-        Check the current memory usage and adjust the batch size if necessary.
-        If the current memory usage exceeds the target usage,
-        it reduces the batch size proportionally to the target usage.
-        :param current_usage: Current memory usage in percentage.
-        :param target_usage: Target memory usage in percentage (default is 80%).
-        :param current_batch_size: Current batch size to be adjusted.
-        :return: New batch size if reduced, otherwise the current batch size.
-        """
-        if current_usage > target_usage and (current_batch_size is not None):
-            reduction_factor = target_usage / current_usage
-            new_batch_size = (
-                max(1, math.floor(current_batch_size * reduction_factor))
-            )
-            logger.info(
-                f"Memory usage is {current_usage}%. "
-                f"Reducing batch size from {current_batch_size} "
-                f"to {new_batch_size}"
-            )
-            return new_batch_size
-
-        return current_batch_size
-
     def run(self, size: int, run_parallel: bool):
         logger.info("Start data synthesis")
         batches = list(enumerate(self.split_by_batches()))
@@ -515,79 +491,107 @@ class VaeInferHandler(BaseHandler):
             self._set_random_seeds()
 
         if run_parallel:
-            worker_func = functools.partial(
-                self.worker_process,
-                random_seed=self.random_seed,
-                random_seeds_list=self.random_seeds_list,
-                run_separate_func=self.run_separate
-            )
-
-            frames = []
-            for result in self._pool.imap_unordered(
-                    worker_func,
-                    ((i, batch_size) for i, batch_size in batches)
-                    ):
-                frames.append(result)
-
-                memory_usage = psutil.virtual_memory().percent
-                logger.info(
-                            f"{len(frames)} batches "
-                            f"out of {self.batch_num} are processed. "
-                            f"Memory usage: {memory_usage}%"
-                            )
-                if memory_usage > 90:
-                    recommended_batch_size = self.batch_size // 4
-                    logger.warning(
-                        f"High memory usage detected: {memory_usage}%. "
-                        "To avoid memory overflow, reduce the batch size and "
-                        "launch the process again. "
-                        f"Current batch_size={self.batch_size}. "
-                        f"Recommended batch_size={recommended_batch_size}. "
-                        "Stopping the process to avoid memory overflow."
-                    )
-                    self._cleanup_pool()
-
-                    raise MemoryError(
-                        f"High memory usage detected: {memory_usage}%. "
-                        "To avoid memory overflow, reduce the batch size and "
-                        "launch the process again. "
-                        f"Current batch_size={self.batch_size}. "
-                        f"Recommended batch_size={recommended_batch_size}. "
-                        "Stopping the process to avoid memory overflow."
-                    )
-
-            logger.trace(
-                f"Finished processing all batches. "
-                f"Memory usage: {memory_usage}%"
-            )
-
-            prepared_data = self._concat_slices_with_unique_pk(frames)
-
+            prepared_data = self._run_parallel(batches)
+            return prepared_data
         else:
-            prepared_batches = []
-            for i, batch_size in batches:
-                log_message = (
-                    f"Data synthesis for the table - '{self.table_name}'. "
-                    f"Generating the batch {i + 1} of {self.batch_num}"
-                )
-                ProgressBarHandler().set_progress(
-                    progress=ProgressBarHandler().progress + delta,
-                    delta=delta,
-                    message=log_message,
-                )
-                logger.info(log_message)
+            prepared_data = self._run_sequential(batches, delta)
+            return prepared_data
 
-                prepared_batch = self.run_separate((i, batch_size), self.vae)
-                memory_usage = psutil.virtual_memory().percent
-                prepared_batches.append(prepared_batch)
+    def _run_parallel(self, batches: List[Tuple[int, int]]) -> pd.DataFrame:
+        """
+        Handle parallel processing
+        """
+        worker_func = functools.partial(
+            self.worker_process,
+            random_seed=self.random_seed,
+            random_seeds_list=self.random_seeds_list,
+            run_separate_func=self.run_separate
+        )
 
-            prepared_data = (
-                        self._concat_slices_with_unique_pk(prepared_batches)
-                        if len(prepared_batches) > 0
-                        else pd.DataFrame()
-                )
+        frames = []
+        for result in self._pool.imap_unordered(
+                worker_func,
+                ((i, batch_size) for i, batch_size in batches)
+        ):
+            frames.append(result)
+            self._check_memory_usage(len(frames))
 
+        logger.trace(f"Finished processing all batches. Memory usage: {psutil.virtual_memory().percent}%")
+
+        prepared_data = self._concat_slices_with_unique_pk(frames)
         return prepared_data
+
+    def _run_sequential(self, batches: List[Tuple[int, int]], delta: float) -> pd.DataFrame:
+        """
+        Handle sequential processing.
+        """
+        prepared_batches = []
+
+        for i, batch_size in batches:
+            # Progress logging
+            log_message = (
+                f"Data synthesis for the table - '{self.table_name}'. "
+                f"Generating the batch {i + 1} of {self.batch_num}"
+            )
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta,
+                delta=delta,
+                message=log_message,
+            )
+            logger.info(log_message)
+
+            prepared_batch = self.run_separate((i, batch_size), self.vae)
+            prepared_batches.append(prepared_batch)
+
+            # check memory usage
+            self._check_memory_usage(len(prepared_batches))
+
+        prepared_data = (
+            self._concat_slices_with_unique_pk(
+                prepared_batches
+            ) if prepared_batches else pd.DataFrame()
+        )
+        return prepared_data
+
+    def _check_memory_usage(self, processed_count: int) -> None:
+        """
+        Check memory usage and log progress
+        """
+        memory_usage = psutil.virtual_memory().percent
+
+        logger.info(
+            f"{processed_count} batches out of {self.batch_num} are processed. "
+            f"Memory usage: {memory_usage}%"
+        )
+
+        if memory_usage > MEMORY_THRESHOLD:
+            self._handle_memory_overflow(memory_usage)
+
+    def _handle_memory_overflow(self, memory_usage: float) -> None:
+        """
+        Handle memory overflow situation by cleaning up and raising error.
+
+        Args:
+            memory_usage: Current memory usage percentage
+
+        Raises:
+            MemoryError: Always raises to stop processing
+        """
+        recommended_batch_size = self.batch_size // BATCH_SIZE_REDUCTION_FACTOR
+
+        error_message = (
+            f"High memory usage detected: {memory_usage}%. "
+            "To avoid memory overflow, reduce the batch size "
+            "and launch the process again. "
+            f"Current batch_size={self.batch_size}. "
+            f"Recommended batch_size={recommended_batch_size}. "
+            "Stopping the process to avoid memory overflow."
+        )
+
+        logger.warning(error_message)
+        self._cleanup_pool()
+
+        raise MemoryError(error_message)
 
     def kde_gen(self, pk_table, pk_column_label, size, fk_label):
         pk = pk_table[pk_column_label]
@@ -708,7 +712,8 @@ class VaeInferHandler(BaseHandler):
         if tech_columns:
             prepared_data = prepared_data.drop(tech_columns, axis=1)
             logger.debug(
-                f"Technical columns {tech_columns} were removed from the generated table."
+                f"Technical columns {tech_columns} "
+                "were removed from the generated table."
             )
             Report().unregister_reporters(self.table_name)
             logger.info(
@@ -737,6 +742,36 @@ class VaeInferHandler(BaseHandler):
             self._save_data(prepared_data)
 
         self._cleanup_pool()
+
+    # unused for now
+    def check_memory_usage_and_adjust_batch_size(
+        self,
+        current_usage,
+        target_usage=80,
+        current_batch_size=None
+    ) -> Optional[int]:
+        """
+        Check the current memory usage and adjust the batch size if necessary.
+        If the current memory usage exceeds the target usage,
+        it reduces the batch size proportionally to the target usage.
+        :param current_usage: Current memory usage in percentage.
+        :param target_usage: Target memory usage in percentage (default is 80%).
+        :param current_batch_size: Current batch size to be adjusted.
+        :return: New batch size if reduced, otherwise the current batch size.
+        """
+        if current_usage > target_usage and (current_batch_size is not None):
+            reduction_factor = target_usage / current_usage
+            new_batch_size = (
+                max(1, math.floor(current_batch_size * reduction_factor))
+            )
+            logger.info(
+                f"Memory usage is {current_usage}%. "
+                f"Reducing batch size from {current_batch_size} "
+                f"to {new_batch_size}"
+            )
+            return new_batch_size
+
+        return current_batch_size
 
     def _set_random_seeds(self):
         if self.random_seed or self.batch_num > 1:
