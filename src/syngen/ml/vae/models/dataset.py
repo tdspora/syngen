@@ -1425,7 +1425,7 @@ class Dataset(BaseDataset):
         Preprocess date columns with timezone information,
         adding a new column with timezone information if applicable.
         """
-        timezone_data = self.df[feature].apply(
+        timezone_data = self.df[feature].map(
             lambda x: fetch_timezone(x, self.date_mapping.get(feature, None))
         )
         if timezone_data.isnull().all():
