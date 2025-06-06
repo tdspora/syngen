@@ -36,7 +36,7 @@ from syngen.ml.context import get_context
 
 
 MEMORY_THRESHOLD = 90  # Memory usage threshold in percent
-BATCH_SIZE_REDUCTION_FACTOR = 4  # Factor to reduce batch size in case of memory overflow
+BATCH_SIZE_REDUCTION_FACTOR = 4  # Recommended factor to reduce batch size in case of memory overflow
 
 
 class AbstractHandler(ABC):
@@ -271,10 +271,9 @@ class VaeInferHandler(BaseHandler):
 
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
-        # set it to None here to avoid serialization issues
+        # set it to None to avoid serialization issues
         self._pool = None
 
-        # initialize the VAE model if it is not a parallel run
         if self.has_vae and not self.run_parallel:
             self.vae = self._get_wrapper(dataset_to_preload=self.dataset)
 
@@ -516,19 +515,21 @@ class VaeInferHandler(BaseHandler):
             frames.append(result)
             self._check_memory_usage(len(frames))
 
-        logger.trace(f"Finished processing all batches. Memory usage: {psutil.virtual_memory().percent}%")
+        logger.trace(
+            "Finished processing all batches. "
+            f"Memory usage: {psutil.virtual_memory().percent}%"
+        )
 
         prepared_data = self._concat_slices_with_unique_pk(frames)
         return prepared_data
 
     def _run_sequential(self, batches: List[Tuple[int, int]], delta: float) -> pd.DataFrame:
         """
-        Handle sequential processing.
+        Handle sequential processing
         """
         prepared_batches = []
 
         for i, batch_size in batches:
-            # Progress logging
             log_message = (
                 f"Data synthesis for the table - '{self.table_name}'. "
                 f"Generating the batch {i + 1} of {self.batch_num}"
@@ -543,7 +544,6 @@ class VaeInferHandler(BaseHandler):
             prepared_batch = self.run_separate((i, batch_size), self.vae)
             prepared_batches.append(prepared_batch)
 
-            # check memory usage
             self._check_memory_usage(len(prepared_batches))
 
         prepared_data = (
