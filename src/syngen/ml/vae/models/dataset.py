@@ -1265,7 +1265,10 @@ class Dataset(BaseDataset):
                 self.df[feature] = self.df[feature].fillna("?").astype(str)
             if strategy == "fill":
                 self.df[feature] = self.df[feature].fillna(method="bfill").fillna(method="ffill")
-            logger.info(f"Column '{feature}' filled with methods - 'bfill', ffill'")
+                logger.info(
+                    f"Filling NaN values in column - '{feature}' "
+                    "with 'bfill' and 'ffill' strategies."
+                )
         return feature
 
     @staticmethod
@@ -1415,7 +1418,7 @@ class Dataset(BaseDataset):
         """
         feature = self._preprocess_categ_params(feature, strategy)
         self.assign_feature(CategoricalFeature(feature), feature)
-        logger.info(f"Column '{feature}' assigned as categorical based feature")
+        logger.info(f"Column '{feature}' assigned as categorical based feature.")
 
     def _preprocess_dates_with_timezone(self, feature):
         """
