@@ -124,11 +124,11 @@ class VAEWrapper(BaseWrapper):
                 num_zero_values = (num_column == 0).sum()
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
-                # logger.info(
-                #     f"Column {num_column_name} has {num_zero_values} "
-                #     f"({round(num_zero_values * 100 / len(num_column), 2)}%) "
-                #     f"zero values generated"
-                # )
+                logger.info(
+                    f"Column {num_column_name} has {num_zero_values} "
+                    f"({round(num_zero_values * 100 / len(num_column), 2)}%) "
+                    f"zero values generated"
+                )
         return df
 
     def _restore_nan_values(self, df):
