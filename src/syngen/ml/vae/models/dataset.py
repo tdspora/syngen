@@ -1266,8 +1266,7 @@ class Dataset(BaseDataset):
             if strategy == "fill":
                 self.df[feature] = self.df[feature].fillna(method="bfill").fillna(method="ffill")
                 logger.info(
-                    f"Filling NaN values in column - '{feature}' "
-                    "with 'bfill' and 'ffill' strategies."
+                    f"Filling NaN values in column - '{feature}' with 'bfill' and 'ffill' methods."
                 )
         return feature
 
