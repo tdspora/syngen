@@ -1428,7 +1428,6 @@ class Dataset(BaseDataset):
             lambda x: fetch_timezone(x, self.date_mapping.get(feature, None))
         )
         if timezone_data.isnull().all():
-            logger.info(f"Column '{feature}' does not contain dates with time zone.")
             return
 
         self.df[f"{feature}_tz"] = timezone_data
