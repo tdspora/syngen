@@ -35,14 +35,6 @@ TIMEZONE_REGEX = re.compile(r"""
         (?P<offset_zulu>
             Z
         )|
-        (?P<date>
-            ^\d{2,4}[-/.]\d{2}[-/.]\d{2,4}$
-        )|
-        (?P<date_with_timestamp>
-            ^\d{2,4}[-/.]\d{2}[-/.]\d{2,4}[T\s-]\d{2}:\d{2}:\d{2}$
-            |
-            ^\d{2,4}[-/.]\d{2}[-/.]\d{2,4}[T\s-]\d{2}:\d{2}:\d{2}.\d{6}$
-        )|
         (?P<offset_numeric>
         [+-]                         # Match a '+' or '-' for timezone offset
         (?:
@@ -223,7 +215,7 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     return set(names)
 
 
-def fetch_timezone(date_string: str, date_format: str) -> Union[str, float]:
+def fetch_timezone(date_string: str) -> Union[str, float]:
     """
     Attempts to find and extract a timezone string from a date string.
 
@@ -239,7 +231,7 @@ def fetch_timezone(date_string: str, date_format: str) -> Union[str, float]:
 
     match = TIMEZONE_REGEX.search(date_string)
 
-    if match and "%z" in date_format:
+    if match:
         if match.group("iana_name"):
             return match.group("iana_name")
         elif match.group("offset_zulu"):

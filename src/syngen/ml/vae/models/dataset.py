@@ -1424,15 +1424,17 @@ class Dataset(BaseDataset):
         Preprocess date columns with timezone information,
         adding a new column with timezone information if applicable.
         """
-        timezone_data = self.df[feature].map(
-            lambda x: fetch_timezone(x, self.date_mapping.get(feature, None))
-        )
+        timezone_data = self.df[feature].map(lambda x: fetch_timezone(x))
         if timezone_data.isnull().all():
             return
 
         self.df[f"{feature}_tz"] = timezone_data
         percent_with_tz = round(timezone_data.notnull().mean() * 100, 2)
-        unique_tz = ', '.join(timezone_data.dropna().unique())
+        unique_tz = timezone_data.dropna().unique()
+        unique_tz = ', '.join(
+            unique_tz[:5].tolist() + ["etc"] if len(unique_tz) > 5 else unique_tz
+        )
+
         logger.info(
             f"Column '{feature}' contains {percent_with_tz}% dates with time zone. "
             f"Unique time zones: {unique_tz}."
@@ -1443,7 +1445,9 @@ class Dataset(BaseDataset):
         """
         Assign date feature to date columns
         """
-        self._preprocess_dates_with_timezone(feature)
+        date_format = self.date_mapping.get(feature)
+        if "%z" in date_format:
+            self._preprocess_dates_with_timezone(feature)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
         self.assign_feature(DateFeature(features[0]), features[0])
         logger.info(f"Column '{features[0]}' assigned as date feature.")
