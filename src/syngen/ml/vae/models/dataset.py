@@ -971,8 +971,6 @@ class Dataset(BaseDataset):
         """
 
         date_text = self.df[column].dropna()
-        if date_text.empty:
-            return "%d-%m-%Y"
 
         n_samples = min(100, len(date_text))
         sample = date_text.sample(n_samples).values
