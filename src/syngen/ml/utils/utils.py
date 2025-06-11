@@ -23,10 +23,6 @@ MIN_ALLOWED_TIME_MS = -62135596800
 # Zulu time (UTC) represented by 'Z' - "2023-07-02T10:18:44Z"
 # Numeric offsets (like +02:00, -05:00, etc.) - "2023-07-02T10:18:44 +02:00"
 # Timezone abbreviations (like EST, PST, GMT, etc.) - "2023-07-02T10:18:44 EST"
-# Date formats (like YYYY-MM-DD, DD-MM-YYYY, DD-MM-YY, YYYY.MM.DD, DD.MM.YYYY,
-# DD.MM.YY, YYYY/MM/DD, DD/MM/YYYY, DD/MM/YY)
-# Date with timestamp formats (like YYYY-MM-DDTHH:MM:SS, YYYY-MM-DD HH:MM:SS, YYYY-MM-DD-HH:MM:SS,
-# YYYY-MM-DDTHH:MM:SS.ffffff, YYYY-MM-DD HH:MM:SS.ffffff, YYYY-MM-DD-HH:MM:SS.ffffff)
 TIMEZONE_REGEX = re.compile(r"""
         (?P<iana_name>
             [A-Za-z_]+
