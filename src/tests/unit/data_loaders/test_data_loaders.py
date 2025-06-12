@@ -577,9 +577,10 @@ def test_load_metadata_in_yml_format(rp_logger):
 def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     rp_logger.info("Loading metadata by YAMLLoader in '.yaml' format")
     path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yaml"
-    loader = YAMLLoader(path_to_metadata)
+    metadata = YAMLLoader(path_to_metadata).load_data()
 
-    expected_metadata = {
+    assert metadata == {
+        "global": {},
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -599,26 +600,19 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
         }
     }
 
-    # Mock the open function, yaml.load, and validate_schema
-    with patch("builtins.open", mock_open(read_data="data")):
-        with patch("yaml.load") as mock_yaml_load:
-            mock_yaml_load.return_value = expected_metadata
-            metadata = loader.load_data()
-            assert metadata == expected_metadata
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger):
     rp_logger.info("Loading metadata by YAMLLoader in '.yml' format")
-    path_to_metadata = (
-        f"{DIR_NAME}/unit/data_loaders/fixtures/"
-        "metadata/metadata_with_absent_destination.yaml"
-    )
-    loader = YAMLLoader(path_to_metadata)
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yml"
+    metadata = YAMLLoader(path_to_metadata).load_data()
 
-    expected_metadata = {
+    assert metadata == {
+        "global": {},
         "pk_test": {
             "train_settings": {
+                "source": "../data/pk_test.csv",
                 "drop_null": False,
                 "epochs": 1,
                 "reports": [],
@@ -631,17 +625,10 @@ def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "source": "..\\data\\pk_test.csv",
             "format": {}
         }
     }
 
-    # Mock the open function, yaml.load, and validate_schema
-    with patch("builtins.open", mock_open(read_data="data")):
-        with patch("yaml.load") as mock_yaml_load:
-            mock_yaml_load.return_value = expected_metadata
-            metadata = loader.load_data()
-            assert metadata == expected_metadata
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -701,6 +688,66 @@ def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logge
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_normalize_parameter_reports_if_all(test_yaml_path, rp_logger):
+    rp_logger.info("Test normalizing the value of 'reports' parameter if 'all' option is provided")
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata_with_reports_all.yaml"
+    )
+    metadata = YAMLLoader(path_to_metadata).load_data()
+    assert metadata == {
+        "global": {},
+        "pk_test": {
+            "train_settings": {
+                "source": "../data/pk_test.csv",
+                "drop_null": False,
+                "epochs": 1,
+                "reports": ["accuracy", "sample"],
+                "row_limit": 800,
+            },
+            "infer_settings": {
+                "reports": ["accuracy"],
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100,
+            },
+            "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
+            "format": {}
+        }
+    }
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_normalize_parameter_reports_if_none(test_yaml_path, rp_logger):
+    rp_logger.info(
+        "Test normalizing the value of 'reports' parameter if 'none' option is provided"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata_with_reports_none.yaml"
+    )
+    metadata = YAMLLoader(path_to_metadata).load_data()
+    assert metadata == {
+        "global": {},
+        "pk_test": {
+            "train_settings": {
+                "source": "../data/pk_test.csv",
+                "drop_null": False,
+                "epochs": 1,
+                "reports": [],
+                "row_limit": 800,
+            },
+            "infer_settings": {
+                "reports": [],
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100,
+            },
+            "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
+            "format": {}
+        }
+    }
 
 
 def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
