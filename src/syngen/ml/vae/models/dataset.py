@@ -999,7 +999,7 @@ class Dataset(BaseDataset):
 
         match = TIMEZONE_REGEX.search(date_format)
         if match and (abbr := match.group("tz_abbr")):
-            date_format = date_format.replace(abbr, "%z")
+            date_format = date_format.replace(abbr, "%Z")
 
         return date_format
 
@@ -1444,7 +1444,7 @@ class Dataset(BaseDataset):
         Assign date feature to date columns
         """
         date_format = self.date_mapping.get(feature)
-        if "%z" in date_format:
+        if "%z" in date_format.lowercase():
             self._preprocess_dates_with_timezone(feature)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
         self.assign_feature(DateFeature(features[0]), features[0])
