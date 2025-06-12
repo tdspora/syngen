@@ -341,6 +341,18 @@ class Worker:
         """
         Determine whether the synthetic data should be generated
         in order to generate reports based on it
+
+        Parameters:
+        -----------
+        config_of_tables: Dict
+            Dictionary containing configuration for tables
+        type_of_process: str
+            Type of process ('train' or 'infer')
+
+        Returns:
+        --------
+        bool
+            True if any reports are configured for the specified process type
         """
         return any(
             [
