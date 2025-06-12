@@ -418,7 +418,7 @@ def test_check_non_existent_columns(rp_logger):
         ("%A, %d %B %Y %H:%M:%S.%f %z", "%A, %d %B %Y %H:%M:%S.%f %z"),
         ("%Y%m%dT%H%M%S", "%Y%m%dT%H%M%S"),
         ("%Y-%m-%dT%H:%M %Z", "%Y-%m-%dT%H:%M %Z"),
-        ("%Y-%m-%d %H:%M:%S GMT", "%Y-%m-%d %H:%M:%S %z"),
+        ("%Y-%m-%d %H:%M:%S GMT", "%Y-%m-%d %H:%M:%S %Z"),
         ("%m-%b-%y", "%d-%m-%Y"),
     ]
 )
