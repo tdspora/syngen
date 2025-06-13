@@ -355,11 +355,8 @@ class Worker:
             True if any reports are configured for the specified process type
         """
         return any(
-            [
-                report
-                for config in config_of_tables.values()
-                for report in config.get(f"{type_of_process}_settings", {}).get("reports", [])
-            ]
+            config.get(f"{type_of_process}_settings", {}).get("reports", [])
+            for config in config_of_tables.values()
         )
 
     def _collect_metrics_in_train(
