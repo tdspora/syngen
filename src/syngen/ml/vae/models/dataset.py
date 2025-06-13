@@ -975,7 +975,7 @@ class Dataset(BaseDataset):
         n_samples = min(100, len(date_text))
         sample = date_text.sample(n_samples).values
 
-        types = [self.__process_date_format(i) for i in sample]
+        types = [self.__get_date_format(i) for i in sample]
 
         if not any(types):
             return "%d-%m-%Y"
@@ -989,9 +989,9 @@ class Dataset(BaseDataset):
         return chosen_format
 
     @staticmethod
-    def __process_date_format(date_string: str) -> str:
+    def __get_date_format(date_string: str) -> str:
         """
-        Helper function to guess a date format and remove timezone abbreviation, if present
+        Get a date format and remove timezone abbreviation, if present
         """
         date_format = guess_datetime_format(date_string)
         if not date_format:
