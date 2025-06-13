@@ -498,7 +498,7 @@ def test_save_data_in_pickle_format(test_pickle_path, test_df, rp_logger):
 
 def test_initialize_metadata_loader(rp_logger):
     rp_logger.info("Initializing metadata loader")
-    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yaml"
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata.yaml"
     test_metadata_loader = MetadataLoader(path_to_metadata)
     assert test_metadata_loader.path == path_to_metadata
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
@@ -515,7 +515,7 @@ def test_initialize_metadata_loader_in_unsupported_format(rp_logger):
 
 def test_load_metadata_in_yaml_format(rp_logger):
     rp_logger.info("Loading metadata in '.yaml' format")
-    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yaml"
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata.yaml"
     test_metadata_loader = MetadataLoader(path_to_metadata)
 
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
@@ -545,7 +545,7 @@ def test_load_metadata_in_yaml_format(rp_logger):
 
 def test_load_metadata_in_yml_format(rp_logger):
     rp_logger.info("Loading metadata in yml format")
-    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yml"
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata.yml"
     test_metadata_loader = MetadataLoader(path_to_metadata)
 
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
@@ -575,7 +575,7 @@ def test_load_metadata_in_yml_format(rp_logger):
 
 def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     rp_logger.info("Loading metadata by YAMLLoader in '.yaml' format")
-    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yaml"
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata.yaml"
     metadata = YAMLLoader(path_to_metadata).load_data()
 
     assert metadata == {
@@ -604,7 +604,7 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
 
 def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger):
     rp_logger.info("Loading metadata by YAMLLoader in '.yml' format")
-    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata.yml"
+    path_to_metadata = f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata.yml"
     metadata = YAMLLoader(path_to_metadata).load_data()
 
     assert metadata == {
@@ -632,7 +632,7 @@ def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger
 
 
 def test_save_metadata_in_yaml_format(test_yaml_path, test_metadata_file, rp_logger):
-    rp_logger.info("Saving metadata in yaml format")
+    rp_logger.info("Saving metadata in '.yaml' format")
     metadata_loader = MetadataLoader(test_yaml_path)
     assert isinstance(metadata_loader.metadata_loader, YAMLLoader)
 
@@ -661,7 +661,7 @@ def test_save_metadata_in_yaml_format(test_yaml_path, test_metadata_file, rp_log
 
 
 def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logger):
-    rp_logger.info("Saving metadata in yml format")
+    rp_logger.info("Saving metadata in '.yml' format")
     metadata_loader = MetadataLoader(test_yml_path)
     assert isinstance(metadata_loader.metadata_loader, YAMLLoader)
 
@@ -692,7 +692,7 @@ def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logge
 def test_normalize_parameter_reports_if_all(test_yaml_path, rp_logger):
     rp_logger.info("Test normalizing the value of 'reports' parameter if 'all' option is provided")
     path_to_metadata = (
-        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata_with_reports_all.yaml"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata_with_reports_all.yaml"
     )
     metadata = YAMLLoader(path_to_metadata).load_data()
     assert metadata == {
@@ -724,7 +724,7 @@ def test_normalize_parameter_reports_if_none(test_yaml_path, rp_logger):
         "Test normalizing the value of 'reports' parameter if 'none' option is provided"
     )
     path_to_metadata = (
-        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata/metadata_with_reports_none.yaml"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata_with_reports_none.yaml"
     )
     metadata = YAMLLoader(path_to_metadata).load_data()
     assert metadata == {
@@ -750,9 +750,12 @@ def test_normalize_parameter_reports_if_none(test_yaml_path, rp_logger):
 
 
 def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
-    rp_logger.info("Loading metadata in yaml format with 'infer_settings', 'keys' defined as None")
-    path_to_metadata = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
-                        "metadata/metadata_with_none_params.yaml")
+    rp_logger.info(
+        "Loading metadata_files in yaml format with 'infer_settings', 'keys' defined as None"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata_with_none_params.yaml"
+    )
     test_metadata_loader = MetadataLoader(path_to_metadata)
 
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
