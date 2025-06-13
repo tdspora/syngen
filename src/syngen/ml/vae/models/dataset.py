@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple, Set
+from typing import Dict, Optional, List, Tuple, Set, Literal
 import pickle
 from uuid import UUID
 from datetime import datetime
@@ -9,7 +9,7 @@ import re
 import numpy as np
 import dill
 import pandas as pd
-from pandas._libs.tslibs.parsing import guess_datetime_format
+from pandas.tseries.api import guess_datetime_format
 from scipy.stats import gaussian_kde
 import tqdm
 from loguru import logger
@@ -26,6 +26,8 @@ from syngen.ml.utils import (
     get_nan_labels,
     nan_labels_to_float,
     get_date_columns,
+    fetch_timezone,
+    TIMEZONE_REGEX
 )
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import fetch_config, clean_up_metadata
@@ -843,46 +845,170 @@ class Dataset(BaseDataset):
 
         self.non_existent_columns = non_existent_columns - self.dropped_columns
 
-    @staticmethod
-    def __define_date_format(date_text: pd.DataFrame):
+    def __define_date_format(self, column: str) -> str:
         """
-        Define the most common date format.
-        Supported date formats -
-        MM/DD/YYYY; MM-DD-YYYY; DD/MM/YYYY; DD-MM-YYYY;
-        YYYY/MM/DD; YYYY-MM-DD; MMM DD, YYYY; MMM DD YYYY;
-        DD MMM YYYY; YYYY-MM-DD HH:MM:SS
+        Define the most common date format in the column
+        Supported formats:
+        - %d-%m-%Y, %d/%m/%Y, %d.%m.%Y, %m-%d-%Y, %m/%d/%Y, %m.%d.%Y, %Y-%m-%d, %Y/%m/%d, %Y.%m.%d;
+        - %d %B %Y, %d %b %Y, %Y %B %d, %Y %b %d; %B %d, %Y; %b %d, %Y;
+        - %Y-%m-%dT%H:%M:%S, %Y-%m-%d %H:%M:%S, %Y-%m-%d-%H:%M:%S;
+        - %Y/%m/%dT%H:%M:%S, %Y/%m/%d %H:%M:%S, %Y/%m/%d-%H:%M:%S;
+        - %Y.%m.%dT%H:%M:%S, %Y.%m.%d %H:%M:%S, %Y.%m.%d-%H:%M:%S;
+        - %Y%m%dT%H:%M:%S, %Y%m%d %H:%M:%S, %Y%m%d-%H:%M:%S;
+        - %d-%m-%YT%H:%M:%S, %d-%m-%Y %H:%M:%S, %d-%m-%Y-%H:%M:%S;
+        - %d/%m/%YT%H:%M:%S, %d/%m/%Y %H:%M:%S, %d/%m/%Y-%H:%M:%S;
+        - %d.%m.%YT%H:%M:%S, %d.%m.%Y %H:%M:%S, %d.%m.%Y-%H:%M:%S;
+        - %m-%d-%YT%H:%M:%S, %m-%d-%Y %H:%M:%S, %m-%d-%Y-%H:%M:%S;
+        - %m/%d/%YT%H:%M:%S, %m/%d/%Y %H:%M:%S, %m/%d/%Y-%H:%M:%S;
+        - %m.%d.%YT%H:%M:%S, %m.%d.%Y %H:%M:%S, %m.%d.%Y-%H:%M:%S;
+        - %Y-%m-%dT%H:%M:%S.%f, %Y-%m-%d %H:%M:%S.%f, %Y-%m-%d-%H:%M:%S.%f;
+        - %Y/%m/%dT%H:%M:%S.%f, %Y/%m/%d %H:%M:%S.%f, %Y/%m/%d-%H:%M:%S.%f;
+        - %Y.%m.%dT%H:%M:%S.%f, %Y.%m.%d %H:%M:%S.%f, %Y.%m.%d-%H:%M:%S.%f;
+        - %Y%m%dT%H:%M:%S.%f, %Y%m%d %H:%M:%S.%f, %Y%m%d-%H:%M:%S.%f;
+        - %d-%m-%YT%H:%M:%S.%f, %d-%m-%Y %H:%M:%S.%f, %d-%m-%Y-%H:%M:%S.%f;
+        - %d/%m/%YT%H:%M:%S.%f, %d/%m/%Y %H:%M:%S.%f, %d/%m/%Y-%H:%M:%S.%f;
+        - %d.%m.%YT%H:%M:%S.%f, %d.%m.%Y %H:%M:%S.%f, %d.%m.%Y-%H:%M:%S.%f;
+        - %m-%d-%YT%H:%M:%S.%f, %m-%d-%Y %H:%M:%S.%f, %m-%d-%Y-%H:%M:%S.%f;
+        - %m/%d/%YT%H:%M:%S.%f, %m/%d/%Y %H:%M:%S.%f, %m/%d/%Y-%H:%M:%S.%f;
+        - %m.%d.%YT%H:%M:%S.%f, %m.%d.%Y %H:%M:%S.%f, %m.%d.%Y-%H:%M:%S.%f;
+        - %Y-%m-%dT%H:%M:%S%z, %Y-%m-%d %H:%M:%S%z, %Y-%m-%d-%H:%S%z;
+        - %Y/%m/%dT%H:%M:%S%z, %Y/%m/%d %H:%M:%S%z, %Y/%m/%d-%H:%M:%S%z;
+        - %Y.%m.%dT%H:%M:%S%z, %Y.%m.%d %H:%M:%S%z, %Y.%m.%d-%H:%M:%S%z;
+        - %Y%m%dT%H:%M:%S%z, %Y%m%d %H:%M:%S%z, %Y%m%d-%H:%M:%S%z;
+        - %d-%m-%YT%H:%M:%S%z, %d-%m-%Y %H:%M:%S%z, %d-%m-%Y-%H:%M:%S%z;
+        - %d/%m/%YT%H:%M:%S%z, %d/%m/%Y %H:%M:%S%z, %d/%m/%Y-%H:%M:%S%z;
+        - %d.%m.%YT%H:%M:%S%z, %d.%m.%Y %H:%M:%S%z, %d.%m.%Y-%H:%M:%S%z;
+        - %m-%d-%YT%H:%M:%S%z, %m-%d-%Y %H:%M:%S%z, %m-%d-%Y-%H:%M:%S%z;
+        - %m/%d/%YT%H:%M:%S%z, %m/%d/%Y %H:%M:%S%z, %m/%d/%Y-%H:%M:%S%z;
+        - %m.%d.%YT%H:%M:%S%z, %m.%d.%Y %H:%M:%S%z, %m.%d.%Y-%H:%M:%S%z;
+        - %Y-%m-%dT%H:%M:%S %z, %Y-%m-%d %H:%M:%S %z, %Y-%m-%d-%H:%M:%S %z;
+        - %Y/%m/%dT%H:%M:%S %z, %Y/%m/%d %H:%M:%S %z, %Y/%m/%d-%H:%M:%S %z;
+        - %Y.%m.%dT%H:%M:%S %z, %Y.%m.%d %H:%M:%S %z, %Y.%m.%d-%H:%M:%S %z;
+        - %Y%m%dT%H:%M:%S %z, %Y%m%d %H:%M:%S %z, %Y%m%d-%H:%M:%S %z;
+        - %d-%m-%YT%H:%M:%S %z, %d-%m-%Y %H:%M:%S %z, %d-%m-%Y-%H:%M:%S %z;
+        - %d/%m/%YT%H:%M:%S %z, %d/%m/%Y %H:%M:%S %z, %d/%m/%Y-%H:%M:%S %z;
+        - %d.%m.%YT%H:%M:%S %z, %d.%m.%Y %H:%M:%S %z, %d.%m.%Y-%H:%M:%S %z;
+        - %m-%d-%YT%H:%M:%S %z, %m-%d-%Y %H:%M:%S %z, %m-%d-%Y-%H:%M:%S %z;
+        - %m/%d/%YT%H:%M:%S %z, %m/%d/%Y %H:%M:%S %z, %m/%d/%Y-%H:%M:%S %z;
+        - %m.%d.%YT%H:%M:%S %z, %m.%d.%Y %H:%M:%S %z, %m.%d.%Y-%H:%M:%S %z;
+        - %Y-%m-%dT%H:%M:%S.%f, %Y-%m-%d %H:%M:%S.%f, %Y-%m-%d-%H:%M:%S.%f;
+        - %Y/%m/%dT%H:%M:%S.%f, %Y/%m/%d %H:%M:%S.%f, %Y/%m/%d-%H:%M:%S.%f;
+        - %Y.%m.%dT%H:%M:%S.%f, %Y.%m.%d %H:%M:%S.%f, %Y.%m.%d-%H:%M:%S.%f;
+        - %Y%m%dT%H:%M:%S.%f, %Y%m%d %H:%M:%S.%f, %Y%m%d-%H:%M:%S.%f;
+        - %d-%m-%YT%H:%M:%S.%f, %d-%m-%Y %H:%M:%S.%f, %d-%m-%Y-%H:%M:%S.%f;
+        - %d/%m/%YT%H:%M:%S.%f, %d/%m/%Y %H:%M:%S.%f, %d/%m/%Y-%H:%M:%S.%f;
+        - %d.%m.%YT%H:%M:%S.%f, %d.%m.%Y %H:%M:%S.%f, %d.%m.%Y-%H:%M:%S.%f;
+        - %m-%d-%YT%H:%M:%S.%f, %m-%d-%Y %H:%M:%S.%f, %m-%d-%Y-%H:%M:%S.%f;
+        - %m/%d/%YT%H:%M:%S.%f, %m/%d/%Y %H:%M:%S.%f, %m/%d/%Y-%H:%M:%S.%f;
+        - %m.%d.%YT%H:%M:%S.%f, %m.%d.%Y %H:%M:%S.%f, %m.%d.%Y-%H:%M:%S.%f;
+        - %Y-%m-%dT%H:%M:%S.%f %z, %Y-%m-%d %H:%M:%S.%f %z, %Y-%m-%d-%H:%M:%S.%f %z;
+        - %Y/%m/%dT%H:%M:%S.%f %z, %Y/%m/%d %H:%M:%S.%f %z, %Y/%m/%d-%H:%M:%S.%f %z;
+        - %Y.%m.%dT%H:%M:%S.%f %z, %Y.%m.%d %H:%M:%S.%f %z, %Y.%m.%d-%H:%M:%S.%f %z;
+        - %Y%m%dT%H:%M:%S.%f %z, %Y%m%d %H:%M:%S.%f %z, %Y%m%d-%H:%M:%S.%f %z;
+        - %d-%m-%YT%H:%M:%S.%f %z, %d-%m-%Y %H:%M:%S.%f %z, %d-%m-%Y-%H:%M:%S.%f %z;
+        - %d/%m/%YT%H:%M:%S.%f %z, %d/%m/%Y %H:%M:%S.%f %z, %d/%m/%Y-%H:%M:%S.%f %z;
+        - %d.%m.%YT%H:%M:%S.%f %z, %d.%m.%Y %H:%M:%S.%f %z, %d.%m.%Y-%H:%M:%S.%f %z;
+        - %m-%d-%YT%H:%M:%S.%f %z, %m-%d-%Y %H:%M:%S.%f %z, %m-%d-%Y-%H:%M:%S.%f %z;
+        - %m/%d/%YT%H:%M:%S.%f %z, %m/%d/%Y %H:%M:%S.%f %z, %m/%d/%Y-%H:%M:%S.%f %z;
+        - %m.%d.%YT%H:%M:%S.%f %z, %m.%d.%Y %H:%M:%S.%f %z, %m.%d.%Y-%H:%M:%S.%f %z;
+        - %Y-%m-%dT%H:%M:%S.%f%z, %Y-%m-%d %H:%M:%S%f%z, %Y-%m-%d-%H:%M:%S%f%z;
+        - %Y/%m/%dT%H:%M:%S.%f%z, %Y/%m/%d %H:%M:%S%f%z, %Y/%m/%d-%H:%M:%S%f%z;
+        - %Y.%m.%dT%H:%M:%S.%f%z, %Y.%m.%d %H:%M:%S%f%z, %Y.%m.%d-%H:%M:%S%f%z;
+        - %Y%m%dT%H:%M:%S.%f%z, %Y%m%d %H:%M:%S%f%z, %Y%m%d-%H:%M:%S%f%z;
+        - %d-%m-%YT%H:%M:%S.%f%z, %d-%m-%Y %H:%M:%S%f%z, %d-%m-%Y-%H:%M:%S%f%z;
+        - %d/%m/%YT%H:%M:%S.%f%z, %d/%m/%Y %H:%M:%S%f%z, %d/%m/%Y-%H:%M:%S%f%z;
+        - %d.%m.%YT%H:%M:%S.%f%z, %d.%m.%Y %H:%M:%S%f%z, %d.%m.%Y-%H:%M:%S%f%z;
+        - %m-%d-%YT%H:%M:%S.%f%z, %m-%d-%Y %H:%M:%S%f%z, %m-%d-%Y-%H:%M:%S%f%z;
+        - %m/%d/%YT%H:%M:%S.%f%z, %m/%d/%Y %H:%M:%S%f%z, %m/%d/%Y-%H:%M:%S%f%z;
+        - %m.%d.%YT%H:%M:%S.%f%z, %m.%d.%Y %H:%M:%S%f%z, %m.%d.%Y-%H:%M:%S%f%z;
+        - "%a, %d %b %Y %H:%M:%S %z", "%a, %d %B %Y %H:%M:%S %z";
+        - "%A, %d %b %Y %H:%M:%S %z", "%A, %d %B %Y %H:%M:%S %z";
+        - "%a, %d %b %Y %H:%M:%S %z", "%a, %d %B %Y %H:%M:%S.%f %z";
+        - "%A, %d %b %Y %H:%M:%S %z", "%A, %d %B %Y %H:%M:%S.%f %z";
+        - "%a, %d %b %Y %H:%M:%S %z", "%a, %d %B %Y %H:%M:%S.%f%z";
+        - "%A, %d %b %Y %H:%M:%S %z", "%A, %d %B %Y %H:%M:%S.%f%z";
+        - "%a, %d %b %Y %H:%M:%S %z", "%a, %d %B %Y %H:%M:%S%z";
+        - "%A, %d %b %Y %H:%M:%S %z", "%A, %d %B %Y %H:%M:%S%z";
 
-        Not supported formats -
-        MM/DD/YY, DD/MM/YY, YY/MM/DD, MM-DD-YY, DD-MM-YY
-
+        Not supported formats (for them the default format will be used):
+        - %m-%d-%y, %m/%d/%y, %m.%d.%y, %d-%m-%y, %d/%m/%y, %d.%m.%y, %y-%m-%d, %y/%m/%d, %y.%m.%d;
+        - %m-%d-%yT%H:%M:%S, %m-%d-%y %H:%M:%S, %m-%d-%y-%H:%M:%S;
+        - %d-%m-%yT%H:%M:%S, %d-%m-%y %H:%M:%S, %d-%m-%y-%H:%M:%S;
+        - %y-%m-%dT%H:%M:%S, %y-%m-%d %H:%M:%S, %y-%m-%d-%H:%M:%S;
+        - %m/%d/%yT%H:%M:%S, %m/%d/%y %H:%M:%S, %m/%d/%y-%H:%M:%S;
+        - %d/%m/%yT%H:%M:%S, %d/%m/%y %H:%M:%S, %d/%m/%y-%H:%M:%S;
+        - %y/%m/%dT%H:%M:%S, %y/%m/%d %H:%M:%S, %y/%m/%d-%H:%M:%S;
+        - %m.%d.%yT%H:%M:%S, %m.%d.%y %H:%M:%S, %m.%d.%y-%H:%M:%S;
+        - %d.%m.%yT%H:%M:%S, %d.%m.%y %H:%M:%S, %d.%m.%y-%H:%M:%S;
+        - %y.%m.%dT%H:%M:%S, %y.%m.%d %H:%M:%S, %y.%m.%d-%H:%M:%S;
+        - %m-%d-%yT%H:%M:%S.%f, %m-%d-%y %H:%M:%S.%f, %m-%d-%y-%H:%M:%S.%f;
+        - %d-%m-%yT%H:%M:%S.%f, %d-%m-%y %H:%M:%S.%f, %d-%m-%y-%H:%M:%S.%f;
+        - %y-%m-%dT%H:%M:%S.%f, %y-%m-%d %H:%M:%S.%f, %y-%m-%d-%H:%M:%S.%f;
+        - %m/%d/%yT%H:%M:%S.%f, %m/%d/%y %H:%M:%S.%f, %m/%d/%y-%H:%M:%S.%f;
+        - %d/%m/%yT%H:%M:%S.%f, %d/%m/%y %H:%M:%S.%f, %d/%m/%y-%H:%M:%S.%f;
+        - %y/%m/%dT%H:%M:%S.%f, %y/%m/%d %H:%M:%S.%f, %y/%m/%d-%H:%M:%S.%f;
+        - %m.%d.%yT%H:%M:%S.%f, %m.%d.%y %H:%M:%S.%f, %m.%d.%y-%H:%M:%S.%f;
+        - %d.%m.%yT%H:%M:%S.%f, %d.%m.%y %H:%M:%S.%f, %d.%m.%y-%H:%M:%S.%f;
+        - %y.%m.%dT%H:%M:%S.%f, %y.%m.%d %H:%M:%S.%f, %y.%m.%d-%H:%M:%S.%f;
+        - %m-%d-%yT%H:%M:%S.%f %z, %m-%d-%y %H:%M:%S.%f %z, %m-%d-%y-%H:%M:%S.%f %z;
+        - %d-%m-%yT%H:%M:%S.%f %z, %d-%m-%y %H:%M:%S.%f %z, %d-%m-%y-%H:%M:%S.%f %z;
+        - %y-%m-%dT%H:%M:%S.%f %z, %y-%m-%d %H:%M:%S.%f %z, %y-%m-%d-%H:%M:%S.%f %z;
+        - %m/%d/%yT%H:%M:%S.%f %z, %m/%d/%y %H:%M:%S.%f %z, %m/%d/%y-%H:%M:%S.%f %z;
+        - %d/%m/%yT%H:%M:%S.%f %z, %d/%m/%y %H:%M:%S.%f %z, %d/%m/%y-%H:%M:%S.%f %z;
+        - %y/%m/%dT%H:%M:%S.%f %z, %y/%m/%d %H:%M:%S.%f %z, %y/%m/%d-%H:%M:%S.%f %z;
+        - %m.%d.%yT%H:%M:%S.%f %z, %m.%d.%y %H:%M:%S.%f %z, %m.%d.%y-%H:%M:%S.%f %z;
+        - %d.%m.%yT%H:%M:%S.%f %z, %d.%m.%y %H:%M:%S.%f %z, %d.%m.%y-%H:%M:%S.%f %z;
+        - %y.%m.%dT%H:%M:%S.%f %z, %y.%m.%d %H:%M:%S.%f %z, %y.%m.%d-%H:%M:%S.%f %z;
+        - %m-%d-%yT%H:%M:%S.%f%z, %m-%d-%y %H:%M:%S.%f%z, %m-%d-%y-%H:%M:%S.%f%z;
+        - %d-%m-%yT%H:%M:%S.%f%z, %d-%m-%y %H:%M:%S.%f%z, %d-%m-%y-%H:%M:%S.%f%z;
+        - %y-%m-%dT%H:%M:%S.%f%z, %y-%m-%d %H:%M:%S.%f%z, %y-%m-%d-%H:%M:%S.%f%z;
+        - %m/%d/%yT%H:%M:%S.%f%z, %m/%d/%y %H:%M:%S.%f%z, %m/%d/%y-%H:%M:%S.%f%z;
+        - %d/%m/%yT%H:%M:%S.%f%z, %d/%m/%y %H:%M:%S.%f%z, %d/%m/%y-%H:%M:%S.%f%z;
+        - %y/%m/%dT%H:%M:%S.%f%z, %y/%m/%d %H:%M:%S.%f%z, %y/%m/%d-%H:%M:%S.%f%z;
+        - %m.%d.%yT%H:%M:%S.%f%z, %m.%d.%y %H:%M:%S.%f%z, %m.%d.%y-%H:%M:%S.%f%z;
+        - %d.%m.%yT%H:%M:%S.%f%z, %d.%m.%y %H:%M:%S.%f%z, %d.%m.%y-%H:%M:%S.%f%z;
+        - %y.%m.%dT%H:%M:%S.%f%z, %y.%m.%d %H:%M:%S.%f%z, %y.%m.%d-%H:%M:%S.%f%z;
         """
-        pattern = (
-            r"\s{0,1}\d+[-/\\:\.]\s{0,1}\d+[-/\\:\.]\s{0,1}\d+|"
-            r"[A-Z][a-z]+ \d{1,2} \d{4}|"
-            r"[A-Z][a-z]+ \d{1,2}, \d{4}|"
-            r"\d{2} [A-Z][a-z]+ \d{4}|"
-            r"\d{2}-[A-Z]{3}-\d{2}|"
-            r"\d{2}[-][A-Z][a-z]+[-]\d{2}|"
-            r"\d{4}[-/\\]\d{1,2}"
-        )
-        types = []
-        n_samples = min(100, len(date_text.dropna()))
-        sample = date_text.dropna().sample(n_samples).values
-        for i in sample:
-            date_format = guess_datetime_format(re.match(pattern, i).group(0))
-            types.append(date_format)
-        if not list(filter(lambda x: bool(x), types)) or not types:
+
+        date_text = self.df[column].dropna()
+
+        n_samples = min(100, len(date_text))
+        sample = date_text.sample(n_samples).values
+
+        types = [self.__get_date_format(i) for i in sample]
+
+        if not any(types):
             return "%d-%m-%Y"
-        if Counter(types).most_common(1)[0][0] is None:
-            return Counter(types).most_common(2)[1][0]
-        return Counter(types).most_common(1)[0][0]
+
+        most_common = Counter(types).most_common()
+        if most_common[0][0] is None:
+            chosen_format = most_common[1][0] if len(most_common) > 1 else "%d-%m-%Y"
+        else:
+            chosen_format = most_common[0][0]
+
+        return chosen_format
+
+    @staticmethod
+    def __get_date_format(date_string: str) -> str:
+        """
+        Get a date format and remove timezone abbreviation, if present
+        """
+        date_format = guess_datetime_format(date_string)
+        if not date_format:
+            return None
+
+        match = TIMEZONE_REGEX.search(date_format)
+        if match and (abbr := match.group("tz_abbr")):
+            date_format = date_format.replace(abbr, "%Z")
+
+        return date_format
 
     def _set_date_format(self):
         """
         Define the date format for each date column
         """
         self.date_mapping = {
-            column: self.__define_date_format(self.df[column])
+            column: self.__define_date_format(column)
             for column in self.date_columns
         }
 
@@ -1128,8 +1254,18 @@ class Dataset(BaseDataset):
         else:
             return (feature,)
 
-    def _preprocess_categ_params(self, feature: str):
-        self.df[feature] = self.df[feature].fillna("?").astype(str)
+    def _preprocess_categ_params(self, feature: str, strategy: Literal["?", "fill"] = "?"):
+        """
+        Preprocess categorical columns by filling NaN values with a strategy
+        """
+        if self.df[feature].isnull().any():
+            if strategy == "?":
+                self.df[feature] = self.df[feature].fillna("?").astype(str)
+            if strategy == "fill":
+                self.df[feature] = self.df[feature].fillna(method="bfill").fillna(method="ffill")
+                logger.info(
+                    f"Filling NaN values in column - '{feature}' with 'bfill' and 'ffill' methods."
+                )
         return feature
 
     @staticmethod
@@ -1273,25 +1409,50 @@ class Dataset(BaseDataset):
                 self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
                 logger.info(f"Column '{feature}' assigned as float based feature")
 
-    def _assign_categ_feature(self, feature):
+    def _assign_categ_feature(self, feature, strategy: Literal["?", "fill"] = "?"):
         """
         Assign categorical based feature to categorical columns
         """
-        feature = self._preprocess_categ_params(feature)
+        feature = self._preprocess_categ_params(feature, strategy)
         self.assign_feature(CategoricalFeature(feature), feature)
-        logger.info(f"Column '{feature}' assigned as categorical based feature")
+        logger.info(f"Column '{feature}' assigned as categorical based feature.")
+
+    def _preprocess_dates_with_timezone(self, feature):
+        """
+        Preprocess date columns with timezone information,
+        adding a new column with timezone information if applicable.
+        """
+        timezone_data = self.df[feature].map(lambda x: fetch_timezone(x))
+        if timezone_data.isnull().all():
+            return
+
+        self.df[f"{feature}_tz"] = timezone_data
+        percent_with_tz = round(timezone_data.notnull().mean() * 100, 2)
+        unique_tz = timezone_data.dropna().unique()
+        unique_tz = ', '.join(
+            unique_tz[:5].tolist() + ["etc"] if len(unique_tz) > 5 else unique_tz
+        )
+
+        logger.info(
+            f"Column '{feature}' contains {percent_with_tz}% dates with time zone. "
+            f"Unique time zones: {unique_tz}."
+        )
+        self._assign_categ_feature(f"{feature}_tz", strategy="fill")
 
     def _assign_date_feature(self, feature):
         """
         Assign date feature to date columns
         """
+        date_format = self.date_mapping.get(feature)
+        if "%z" in date_format.lower():
+            self._preprocess_dates_with_timezone(feature)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")
         self.assign_feature(DateFeature(features[0]), features[0])
-        logger.info(f"Column '{features[0]}' assigned as date feature")
+        logger.info(f"Column '{features[0]}' assigned as date feature.")
         if len(features) == 2:
             self.null_num_column_names.append(features[1])
             self.assign_feature(ContinuousFeature(features[1]), features[1])
-            logger.info(f"Column '{features[1]}' assigned as float feature")
+            logger.info(f"Column '{features[1]}' assigned as float feature.")
 
     def _assign_binary_feature(self, feature):
         """
@@ -1390,7 +1551,6 @@ class Dataset(BaseDataset):
         self.__prepare_primary_key_mapping()
 
         self.__assign_features()
-
         self._ensure_technical_column_if_no_features()
 
         self.fit()

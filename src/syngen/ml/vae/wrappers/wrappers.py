@@ -125,7 +125,7 @@ class VAEWrapper(BaseWrapper):
                 df[num_column_name] = num_column
                 df = df.drop(column, axis=1)
                 logger.info(
-                    f"Column {num_column_name} has {num_zero_values} "
+                    f"Column '{num_column_name}' has {num_zero_values} "
                     f"({round(num_zero_values * 100 / len(num_column), 2)}%) "
                     f"zero values generated"
                 )
@@ -143,7 +143,7 @@ class VAEWrapper(BaseWrapper):
                 df = df.drop(column, axis=1)
                 num_nan_values = num_column.isna().sum()
                 logger.info(
-                    f"Column {num_column_name} has {num_nan_values} "
+                    f"Column '{num_column_name}' has {num_nan_values} "
                     f"({round(num_nan_values * 100 / len(num_column), 2)}%) "
                     f"empty values generated"
                 )
@@ -512,6 +512,24 @@ class VAEWrapper(BaseWrapper):
     def fit_sampler(self, df: pd.DataFrame):
         self.vae.fit_sampler(df)
 
+    def _restore_date_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Restore date columns to datetime format, combining timezone information if available
+        """
+        for column in self.dataset.date_columns:
+            tz_column = f"{column}_tz"
+            if tz_column in df.columns:
+                df[column] = np.where(
+                    pd.notnull(df[column]),
+                    df[column].astype(str) + df[tz_column].astype(str),
+                    df[column]
+                )
+                df.drop(columns=[tz_column], inplace=True)
+                logger.info(
+                    f"Column '{column}' containing timezone information has been restored."
+                )
+        return df
+
     def predict_sampled_df(self, n: int) -> pd.DataFrame:
         sampled_df = self.vae.sample(n)
 
@@ -524,6 +542,7 @@ class VAEWrapper(BaseWrapper):
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)
         sampled_df = self._restore_nan_labels(sampled_df)
+        sampled_df = self._restore_date_columns(sampled_df)
 
         return sampled_df
 
