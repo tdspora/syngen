@@ -349,7 +349,7 @@ class BivariateMetric(BaseMetric):
         )
         self.dataset = fetch_config(dataset_pickle_path)
         nan_labels_dict = self.dataset.nan_labels_dict
-        na_values = [f'"{value}"' for value in self.dataset.format.get("na_values", [])]
+        na_values = [f'\'{value}\'' for value in self.dataset.format.get("na_values", [])]
         if na_values:
             logger.info(
                 f"During data loading the 'format' section was used, therefore the values - "
