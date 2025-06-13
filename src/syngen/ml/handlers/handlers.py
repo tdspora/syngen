@@ -256,7 +256,7 @@ class VaeInferHandler(BaseHandler):
     batch_num: int = field(init=False)
 
     def __attrs_post_init__(self):
-        if self.random_seed:
+        if self.random_seed is not None:
             seed(self.random_seed)
         self.batch_num = math.ceil(self.size / self.batch_size)
         self.random_seeds_list = list()
@@ -774,12 +774,10 @@ class VaeInferHandler(BaseHandler):
         return current_batch_size
 
     def _set_random_seeds(self):
-        if self.random_seed or self.batch_num > 1:
-            seed(self.random_seed)
-            num_seeds = self.batch_num
-            self.random_seeds_list = choice(
-                range(0, max(100, num_seeds)), num_seeds, replace=False
-            )
-        else:
-            self.random_seeds_list = []
+        seed_range = self.batch_num * 100
+        self.random_seeds_list = choice(
+                    seed_range,
+                    size=self.batch_num,
+                    replace=False
+            ).tolist()
         return self.random_seeds_list
