@@ -8,6 +8,7 @@ from syngen.ml.utils import (
     slugify_parameters,
     datetime_to_timestamp,
     timestamp_to_datetime,
+    fetch_timezone
 )
 
 from tests.conftest import SUCCESSFUL_MESSAGE
@@ -109,4 +110,44 @@ def test_timestamp_to_datetime_with_delta(rp_logger):
             assert np.isnan(calculated_datetime)
         else:
             assert calculated_datetime == expected_datetime
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("date_string, expected_timezone", [
+    ("2023-03-15T14:30:00+00:00", "+00:00"),
+    ("2023-03-15T14:30:00-01:00", "-01:00"),
+    ("2023-03-15T14:30:00 +0000", "+0000"),
+    ("2023-03-15T14:30:00 -0100", "-0100"),
+    ("2023-03-15 14:30:00+00:00", "+00:00"),
+    ("2023-03-15 14:30:00-01:00", "-01:00"),
+    ("2023-03-15 14:30:00 +0000", "+0000"),
+    ("2023-03-15 14:30:00 -0100", "-0100"),
+    ("2023-03-15-14:30:00+00:00", "+00:00"),
+    ("2023-03-15-14:30:00-01:00", "-01:00"),
+    ("2023-03-15-14:30:00 +0000", "+0000"),
+    ("2023-03-15-14:30:00 -0100", "-0100"),
+    ("2023-03-15T14:30:00.000000+00:00", "+00:00"),
+    ("2023-03-15T14:30:00.000000-01:00", "-01:00"),
+    ("2023-03-15T14:30:00.000000 +0000", "+0000"),
+    ("2023-03-15T14:30:00.000000 -0100", "-0100"),
+    ("2023-03-15 14:30:00.000000+00:00", "+00:00"),
+    ("2023-03-15 14:30:00.000000-01:00", "-01:00"),
+    ("2023-03-15 14:30:00.000000 +0000", "+0000"),
+    ("2023-03-15 14:30:00.000000 -0100", "-0100"),
+    ("2023-03-15-14:30:00.000000+00:00", "+00:00"),
+    ("2023-03-15-14:30:00.000000-01:00", "-01:00"),
+    ("2023-03-15-14:30:00.000000 +0000", "+0000"),
+    ("2023-03-15-14:30:00.000000 -0100", "-0100"),
+    ("2023-03-15T11:29:00Z", "Z"),
+    ("2023-03-15 11:29:00 AM EDT", "EDT"),
+    ("2023-03-15 11:29:00 PST", "PST")
+])
+def test_fetch_timezone_from_date_string_with_tz(
+    rp_logger, date_string, expected_timezone
+):
+    rp_logger.info(
+        "Test the method 'fetch_timezone' that retrieves the timezone from the date string "
+        "containing timezone information"
+    )
+    assert fetch_timezone(date_string) == expected_timezone
     rp_logger.info(SUCCESSFUL_MESSAGE)

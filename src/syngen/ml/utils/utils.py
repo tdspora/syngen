@@ -19,6 +19,35 @@ from loguru import logger
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800
 
+# IANA timezone names - "2023-07-02T10:18:44.000000 America/New_York"
+# Zulu time (UTC) represented by 'Z' - "2023-07-02T10:18:44Z"
+# Numeric offsets (like +02:00, -05:00, etc.) - "2023-07-02T10:18:44 +02:00"
+# Timezone abbreviations (like EST, PST, GMT, etc.) - "2023-07-02T10:18:44 EST"
+TIMEZONE_REGEX = re.compile(r"""
+        (?P<iana_name>
+            [A-Za-z_]+
+            (?:/[A-Za-z0-9_/-]+)+
+        )|
+        (?P<offset_zulu>
+            Z
+        )|
+        (?P<offset_numeric>
+        [+-]                         # Match a '+' or '-' for timezone offset
+        (?:
+        \d{2}:\d{2}$                 # Matches "+HH:MM" or "-HH:MM"
+        |
+        \d{4}$                       # Matches "+HHMM" or "-HHMM"
+        )
+        )|
+        (?P<tz_abbr>
+            \b
+            (?!AM\b|PM\b|YT\b)
+            \b
+            (?:[A-Z]{2,5})
+            \b
+        )
+    """, re.VERBOSE | re.ASCII)
+
 
 class ProgressBarHandler:
     """
@@ -86,9 +115,11 @@ def datetime_to_timestamp(dt, date_format):
     if pd.isnull(dt):
         return np.nan
     try:
-        dt = parser.parse(dt,
-                          dayfirst=is_format_first(date_format, "d"),
-                          yearfirst=is_format_first(date_format, "y")).replace(tzinfo=None)
+        dt = parser.parse(
+            dt,
+            dayfirst=is_format_first(date_format, "d"),
+            yearfirst=is_format_first(date_format, "y")
+        ).replace(tzinfo=None)
         delta = dt - datetime(1970, 1, 1)
         return delta.total_seconds()
     except parser._parser.ParserError as e:
@@ -99,7 +130,7 @@ def datetime_to_timestamp(dt, date_format):
             return MIN_ALLOWED_TIME_MS
 
 
-def timestamp_to_datetime(timestamp, delta=False):
+def timestamp_to_datetime(timestamp: int, delta=False):
     """
     Convert the timestamp to the datetime object or timedelta object
     """
@@ -178,6 +209,35 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         names = []
 
     return set(names)
+
+
+def fetch_timezone(date_string: str) -> Union[str, float]:
+    """
+    Attempts to find and extract a timezone string from a date string.
+
+    Args:
+        date_string: The input string that might contain a date and timezone.
+
+    Returns:
+        timezone_string:
+        The matched timezone string (e.g., "America/New_York", "+05:30", "EST").
+    """
+    if not isinstance(date_string, str):
+        return np.NaN
+
+    match = TIMEZONE_REGEX.search(date_string)
+
+    if match:
+        if match.group("iana_name"):
+            return match.group("iana_name")
+        elif match.group("offset_zulu"):
+            return match.group("offset_zulu")
+        elif match.group("offset_numeric"):
+            return match.group("offset_numeric")
+        elif match.group("tz_abbr"):
+            return match.group("tz_abbr")
+
+    return np.NaN
 
 
 def get_nan_labels(df: pd.DataFrame, excluded_columns: Set[str]) -> Dict:

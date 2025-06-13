@@ -113,7 +113,8 @@ class BinaryFeature(BaseFeature):
         self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get)
         self.input_dimension = data.shape[1]
 
-    def transform(self, data: pd.DataFrame) -> List:
+    def transform(self, data: pd.DataFrame):
+        data = data.astype("object").replace(self.mapping)
         data = data.replace(self.mapping)
         return data.astype("float64")
 
