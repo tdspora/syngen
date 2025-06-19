@@ -51,12 +51,12 @@ class Worker:
         # The validation of the initial metadata provided by the user
         self.__validate_schema()
         self._update_metadata()
-        self.__clean_up()
+        self._clean_up()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
 
-    def __clean_up(self):
+    def _clean_up(self):
         """
         Clean up the directories stored the artifacts
         from the previous run of a training or inference process
@@ -426,9 +426,7 @@ class Worker:
             batch_size=train_settings["batch_size"],
             loader=self.loader
         )
-        self._write_success_file(
-            path=f"model_artifacts/resources/{slugify(table)}/train_message.success"
-        )
+        self._write_success_file(table_name=table, type_of_process="train")
         self._save_metadata_file()
         ProgressBarHandler().set_progress(
             delta=delta,
@@ -521,12 +519,7 @@ class Worker:
             type_of_process=self.type_of_process,
             loader=self.loader
         )
-        dynamic_name = (
-            slugify(table)[:-3] if both_keys else slugify(table)
-        )
-        self._write_success_file(
-            path=f"model_artifacts/tmp_store/{dynamic_name}/infer_message.success"
-        )
+        self._write_success_file(table_name=table, type_of_process="infer", both_keys=both_keys)
         ProgressBarHandler().set_progress(
             delta=delta,
             message=f"Infer process of the table - '{table}' was completed"
@@ -588,12 +581,21 @@ class Worker:
         Report().clear_report()
 
     @staticmethod
-    def _write_success_file(path: str):
+    def _write_success_file(
+        table_name: str, type_of_process: Literal["train", "infer"], both_keys: bool = False
+    ):
         """
-        Write success message to the '.success' file
+        Write a success message to the '.success' file based on the type of the process
         """
-        with open(path, "w") as f:
-            f.write("SUCCESS")
+        dynamic_name = slugify(table_name)[:-3] if both_keys else slugify(table_name)
+
+        file_paths = {
+            "train": f"model_artifacts/resources/{dynamic_name}/train_message.success",
+            "infer": f"model_artifacts/tmp_store/{dynamic_name}/infer_message.success",
+        }
+
+        with open(file_paths[type_of_process], "w") as success_file:
+            success_file.write("SUCCESS")
 
     def _save_metadata_file(self):
         if self.metadata_path:
