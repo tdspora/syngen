@@ -209,8 +209,8 @@ class VaeTrainHandler(BaseHandler):
             process="train",
         )
         self.model.batch_size = min(self.batch_size, len(data))
-        list_of_reports = [f'"{report}"' for report in self.reports]
-        list_of_reports = ', '.join(list_of_reports) if list_of_reports else '"none"'
+        list_of_reports = [f'\'{report}\'' for report in self.reports]
+        list_of_reports = ', '.join(list_of_reports) if list_of_reports else '\'none\''
         logger.debug(
             f"Train model with parameters: epochs={self.epochs}, "
             f"row_subset={self.row_subset}, drop_null={self.drop_null}, "
@@ -692,8 +692,8 @@ class VaeInferHandler(BaseHandler):
     @timing
     def handle(self, **kwargs):
         self._prepare_dir()
-        list_of_reports = [f'"{report}"' for report in self.reports]
-        list_of_reports = ', '.join(list_of_reports) if list_of_reports else '"none"'
+        list_of_reports = [f'\'{report}\'' for report in self.reports]
+        list_of_reports = ', '.join(list_of_reports) if list_of_reports else '\'none\''
         log_message = (
             f"Infer model with parameters: size={self.size}, "
             f"run_parallel={self.run_parallel}, batch_size={self.batch_size}, "

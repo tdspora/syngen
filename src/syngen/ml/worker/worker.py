@@ -17,7 +17,6 @@ from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
-from syngen.ml.validation_schema import ReportTypes
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 from syngen.ml.validation_schema import ValidationSchema
 
@@ -337,19 +336,27 @@ class Worker:
     @staticmethod
     def _should_generate_data(
         config_of_tables: Dict,
-        type_of_process: str,
-        list_of_reports: List[str]
+        type_of_process: str
     ):
         """
         Determine whether the synthetic data should be generated
         in order to generate reports based on it
+
+        Parameters:
+        -----------
+        config_of_tables: Dict
+            Dictionary containing configuration for tables
+        type_of_process: str
+            Type of process ('train' or 'infer')
+
+        Returns:
+        --------
+        bool
+            True if any reports are configured for the specified process type
         """
         return any(
-            [
-                report in list_of_reports
-                for config in config_of_tables.values()
-                for report in config.get(f"{type_of_process}_settings", {}).get("reports", [])
-            ]
+            config.get(f"{type_of_process}_settings", {}).get("reports", [])
+            for config in config_of_tables.values()
         )
 
     def _collect_metrics_in_train(
@@ -580,8 +587,7 @@ class Worker:
 
         generation_of_reports = self._should_generate_data(
             metadata_for_training,
-            "train",
-            ReportTypes().infer_report_types
+            "train"
         )
 
         self.__train_tables(
@@ -618,8 +624,7 @@ class Worker:
 
         generation_of_reports = self._should_generate_data(
             config_of_tables,
-            "infer",
-            ReportTypes().infer_report_types
+            "infer"
         )
         delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
 
