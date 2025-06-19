@@ -58,40 +58,75 @@ class Worker:
 
     def __clean_up(self):
         """
-        Clean up the directories before the preprocessing data
+        Clean up the directories stored the artifacts
+        from the previous run of a training or inference process
         """
         for table in self.metadata.keys():
-            if table != "global" and self.type_of_process == "train":
-                self._remove_existed_artifacts(table)
-                self._prepare_dirs(table)
+            if table == "global":
+                continue
+
+            slugified_table = slugify(table)
+
+            if self.type_of_process == "train":
+                self._clean_training_directories(slugified_table)
+            elif self.type_of_process == "infer":
+                self._clean_inference_directories(slugified_table)
+
+    def _clean_training_directories(self, table):
+        """
+        Remove existing artifacts and prepare directories before a training process
+        """
+        resources_path = f"model_artifacts/resources/{table}/"
+        tmp_store_path = f"model_artifacts/tmp_store/{table}/"
+
+        self._remove_existed_artifact(resources_path)
+        self._remove_existed_artifact(tmp_store_path)
+        self._prepare_dirs(table)
+
+    def _clean_inference_directories(self, table):
+        """
+        Remove existing artifacts before an inference process
+        """
+        path_to_reports = f"model_artifacts/tmp_store/{table}/reports"
+        default_path_to_merged_infer = (
+            f"model_artifacts/tmp_store/{table}/merged_infer_{table}.csv"
+        )
+        success_file_path = f"model_artifacts/tmp_store/{table}/infer_message.success"
+
+        self._remove_existed_artifact(path_to_reports)
+        self._remove_existed_artifact(default_path_to_merged_infer)
+        self._remove_existed_artifact(success_file_path)
 
     @staticmethod
     def _remove_existed_artifact(path_to_artifact: str):
         """
-        Remove the existed artifact from the previous train process
+        Remove the existed artifact from the previous training process
         """
         if os.path.exists(path_to_artifact):
-            shutil.rmtree(path_to_artifact)
+            if os.path.isfile(path_to_artifact):
+                os.remove(path_to_artifact)
+            else:
+                shutil.rmtree(path_to_artifact)
             logger.info(f"The artifacts located in the path - '{path_to_artifact}' was removed")
 
-    def _remove_existed_artifacts(self, table_name: str):
+    def _remove_existed_artifacts(self, table: str):
         """
         Remove existed artifacts from previous train process
         """
-        resources_path = f"model_artifacts/resources/{slugify(table_name)}/"
-        tmp_store_path = f"model_artifacts/tmp_store/{slugify(table_name)}/"
+        resources_path = f"model_artifacts/resources/{table}/"
+        tmp_store_path = f"model_artifacts/tmp_store/{table}/"
         self._remove_existed_artifact(resources_path)
         self._remove_existed_artifact(tmp_store_path)
 
     @staticmethod
-    def _prepare_dirs(table_name: str):
+    def _prepare_dirs(table: str):
         """
         Create main directories for saving original, synthetic data and model artifacts
         """
-        resources_path = f"model_artifacts/resources/{slugify(table_name)}/"
-        tmp_store_path = f"model_artifacts/tmp_store/{slugify(table_name)}/"
+        resources_path = f"model_artifacts/resources/{table}/"
+        tmp_store_path = f"model_artifacts/tmp_store/{table}/"
         state_path = (
-            f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints"
+            f"model_artifacts/resources/{table}/vae/checkpoints"
         )
         flatten_config_path = "model_artifacts/tmp_store/flatten_configs/"
         os.makedirs(resources_path, exist_ok=True)
@@ -400,7 +435,9 @@ class Worker:
             batch_size=train_settings["batch_size"],
             loader=self.loader
         )
-        self._write_success_file(slugify(table))
+        self._write_success_file(
+            path=f"model_artifacts/resources/{slugify(table)}/train_message.success"
+        )
         self._save_metadata_file()
         ProgressBarHandler().set_progress(
             delta=delta,
@@ -493,6 +530,12 @@ class Worker:
             type_of_process=self.type_of_process,
             loader=self.loader
         )
+        dynamic_name = (
+            slugify(table)[:-3] if both_keys else slugify(table)
+        )
+        self._write_success_file(
+            path=f"model_artifacts/tmp_store/{dynamic_name}/infer_message.success"
+        )
         ProgressBarHandler().set_progress(
             delta=delta,
             message=f"Infer process of the table - '{table}' was completed"
@@ -554,11 +597,11 @@ class Worker:
         Report().clear_report()
 
     @staticmethod
-    def _write_success_file(table_name: str):
+    def _write_success_file(path: str):
         """
         Write success message to the '.success' file
         """
-        with open(f"model_artifacts/resources/{table_name}/message.success", "w") as f:
+        with open(path, "w") as f:
             f.write("SUCCESS")
 
     def _save_metadata_file(self):

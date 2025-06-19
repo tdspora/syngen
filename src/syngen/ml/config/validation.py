@@ -194,7 +194,9 @@ class Validator:
         FileNotFoundError: If the success file does not exist.
         ValueError: If the content of the success file does not indicate success.
         """
-        path_to_success_file = f"model_artifacts/resources/{slugify(table_name)}/message.success"
+        path_to_success_file = (
+            f"model_artifacts/resources/{slugify(table_name)}/train_message.success"
+        )
         error_message = (
             f"The training of the table - '{table_name}' hasn't been completed. "
             "Please, retrain the table."
