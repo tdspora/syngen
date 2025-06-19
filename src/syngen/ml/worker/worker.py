@@ -109,15 +109,6 @@ class Worker:
                 shutil.rmtree(path_to_artifact)
             logger.info(f"The artifacts located in the path - '{path_to_artifact}' was removed")
 
-    def _remove_existed_artifacts(self, table: str):
-        """
-        Remove existed artifacts from previous train process
-        """
-        resources_path = f"model_artifacts/resources/{table}/"
-        tmp_store_path = f"model_artifacts/tmp_store/{table}/"
-        self._remove_existed_artifact(resources_path)
-        self._remove_existed_artifact(tmp_store_path)
-
     @staticmethod
     def _prepare_dirs(table: str):
         """
