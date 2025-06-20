@@ -119,11 +119,13 @@ class Worker:
         state_path = (
             f"model_artifacts/resources/{table}/vae/checkpoints"
         )
-        flatten_config_path = "model_artifacts/tmp_store/flatten_configs/"
+        flatten_config_path = "model_artifacts/system_store/flatten_configs/"
+        losses_path = "model_artifacts/system_store/losses/"
         os.makedirs(resources_path, exist_ok=True)
         os.makedirs(tmp_store_path, exist_ok=True)
         os.makedirs(state_path, exist_ok=True)
         os.makedirs(flatten_config_path, exist_ok=True)
+        os.makedirs(losses_path, exist_ok=True)
 
     def __validate_schema(self):
         """

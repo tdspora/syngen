@@ -288,9 +288,9 @@ class TrainConfig:
             "no_ml_state_path":
                 f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
             "path_to_flatten_metadata":
-                f"model_artifacts/tmp_store/flatten_configs/"
+                f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
-            "losses_path": f"model_artifacts/tmp_store/losses/{slugify(losses_file_name)}.csv"
+            "losses_path": f"model_artifacts/system_store/losses/{slugify(losses_file_name)}.csv"
         }
 
 
@@ -380,7 +380,7 @@ class InferConfig:
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
             "path_to_flatten_metadata":
-                f"model_artifacts/tmp_store/flatten_configs/"
+                f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
             "input_data_path": self.train_config.paths["input_data_path"]
         })

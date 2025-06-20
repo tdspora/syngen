@@ -3031,13 +3031,13 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
     """
     Test that the inference process hasn't been started
     in case the training process of the table hasn't been finished,
-    and the appropriate success file 'message.success' is present,
+    and the appropriate success file 'train_message.success' is present,
     but the content of the file doesn't correspond to finished training process
     """
     rp_logger.info(
         "Test that the inference process hasn't been started "
         "in case the training process of the table hasn't been finished, "
-        "and the appropriate success file 'message.success' is present, "
+        "and the appropriate success file 'train_message.success' is present, "
         "but the content of the file doesn't correspond to finished training process"
     )
     with pytest.raises(ValidationError) as error:

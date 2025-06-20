@@ -202,11 +202,12 @@ class Validator:
             "Please, retrain the table."
         )
 
+        content = str()
         if os.path.exists(path_to_success_file):
             with open(path_to_success_file, "r") as file:
                 content = file.read().strip()
 
-        if not os.path.exists(path_to_success_file) or content != "SUCCESS":
+        if content != "SUCCESS":
             self.errors["check completion of the training process"][table_name] = error_message
 
     def _check_merged_metadata(self, parent_table: str):

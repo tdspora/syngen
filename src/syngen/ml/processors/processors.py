@@ -36,7 +36,7 @@ class Processor:
         self.metadata = metadata
         self.loader = loader
         self.path_to_flatten_metadata = (
-            "model_artifacts/tmp_store/flatten_configs/"
+            "model_artifacts/system_store/flatten_configs/"
             f"flatten_metadata_{fetch_unique_root(table_name, self.metadata_path)}.json"
         )
 
