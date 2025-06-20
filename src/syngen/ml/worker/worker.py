@@ -426,8 +426,8 @@ class Worker:
             batch_size=train_settings["batch_size"],
             loader=self.loader
         )
-        self._write_success_file(table_name=table, type_of_process="train")
         self._save_metadata_file()
+        self._write_success_file(table_name=table, type_of_process="train")
         ProgressBarHandler().set_progress(
             delta=delta,
             message=f"Training of the table - '{table}' was completed"
