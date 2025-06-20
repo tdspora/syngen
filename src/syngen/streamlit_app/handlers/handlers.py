@@ -82,7 +82,7 @@ class StreamlitHandler:
         """
         Write log messages to a log file
         """
-        path_to_logs = f"model_artifacts/tmp_store/{self.sl_table_name}_{TIMESTAMP}.log"
+        path_to_logs = f"model_artifacts/system_store/{self.sl_table_name}_{TIMESTAMP}.log"
         os.environ["SUCCESS_LOG_FILE"] = path_to_logs
         os.makedirs(os.path.dirname(path_to_logs), exist_ok=True)
         with open(path_to_logs, "a") as log_file:

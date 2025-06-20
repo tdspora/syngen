@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Tuple, Set, List, Callable, Literal
 import os
 from copy import deepcopy
-import shutil
 from datetime import datetime
 
 import pandas as pd
@@ -289,9 +288,9 @@ class TrainConfig:
             "no_ml_state_path":
                 f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
             "path_to_flatten_metadata":
-                f"model_artifacts/tmp_store/flatten_configs/"
+                f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
-            "losses_path": f"model_artifacts/tmp_store/losses/{slugify(losses_file_name)}.csv"
+            "losses_path": f"model_artifacts/system_store/losses/{slugify(losses_file_name)}.csv"
         }
 
 
@@ -319,37 +318,11 @@ class InferConfig:
 
     def __post_init__(self):
         self.__set_paths()
-        self._remove_artifacts()
         self._set_infer_parameters()
 
     def _set_infer_parameters(self):
         self._set_up_size()
         self._set_up_batch_size()
-
-    def _remove_reports(self):
-        path_to_reports = self.paths["reports_path"]
-        if os.path.exists(path_to_reports):
-            shutil.rmtree(path_to_reports)
-            logger.info(
-                f"The reports generated in the previous run of an inference process "
-                f"and located in the path - '{path_to_reports}' were removed"
-            )
-
-    def _remove_generated_data(self):
-        default_path_to_synth_data = self.paths["default_path_to_merged_infer"]
-        if os.path.exists(default_path_to_synth_data):
-            os.remove(default_path_to_synth_data)
-            logger.info(
-                f"The synthetic data generated in the previous run of an inference process and "
-                f"located in the path - '{default_path_to_synth_data}' was removed"
-            )
-
-    def _remove_artifacts(self):
-        """
-        Remove artifacts related to the previous generation process
-        """
-        self._remove_reports()
-        self._remove_generated_data()
 
     def to_dict(self) -> Dict:
         """
@@ -407,7 +380,7 @@ class InferConfig:
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
             "path_to_flatten_metadata":
-                f"model_artifacts/tmp_store/flatten_configs/"
+                f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
             "input_data_path": self.train_config.paths["input_data_path"]
         })

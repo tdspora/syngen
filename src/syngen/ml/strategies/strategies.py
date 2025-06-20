@@ -147,12 +147,12 @@ class TrainStrategy(Strategy, ABC):
             MlflowTracker().end_run()
         except Exception:
             logger.error(
-                f"Training of the table - \"{kwargs['table_name']}\" failed on running stage.\n"
+                f"Training of the table - \'{kwargs['table_name']}\' failed on running stage.\n"
                 f"The traceback of the error - {traceback.format_exc()}"
             )
             raise
         else:
-            logger.info(f"Training of the table - {kwargs['table_name']} was completed")
+            logger.info(f"Training of the table - \'{kwargs['table_name']}\' was completed")
 
 
 class InferStrategy(Strategy):
@@ -220,12 +220,12 @@ class InferStrategy(Strategy):
             self.handler.handle()
         except Exception:
             logger.error(
-                f"Generation of the table - \"{table_name}\" failed on running stage.\n"
+                f"Generation of the table - '{table_name}' failed on running stage.\n"
                 f"The traceback of the error - {traceback.format_exc()}"
             )
             raise
         else:
             logger.info(
-                f"Synthesis of the table - \"{table_name}\" was completed. "
-                f"Synthetic data saved in {self.handler.paths['path_to_merged_infer']}"
+                f"Synthesis of the table - '{table_name}' was completed. "
+                f"Synthetic data saved in \'{self.handler.paths['path_to_merged_infer']}\'"
             )
