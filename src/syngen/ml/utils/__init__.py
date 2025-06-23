@@ -16,7 +16,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     datetime_to_timestamp,
     timestamp_to_datetime,
     fetch_timezone,
-    create_log_dir,
     get_log_path,
     setup_log_process,
     clean_up_metadata,

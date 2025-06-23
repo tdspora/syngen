@@ -399,19 +399,11 @@ def fetch_unique_root(table_name: Optional[str], metadata_path: Optional[str]):
     return slugify(unique_name)
 
 
-def create_log_dir(type_of_process: str, table_name: Optional[str], metadata_path: Optional[str]):
-    """
-    Create the directory for storing the logs
-    """
-    logs_dir_name = "model_artifacts/tmp_store/logs"
-    os.makedirs(logs_dir_name, exist_ok=True)
-
-
 def get_log_path(table_name: Optional[str], metadata_path: Optional[str], type_of_process: str):
     """
     Get the log path for storing the logs of main processes
     """
-    logs_dir_name = "model_artifacts/tmp_store/logs"
+    logs_dir_name = "model_artifacts/system_store/logs"
     unique_name = fetch_unique_root(table_name, metadata_path)
     unique_name = f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     file_name_without_extension = f"logs_{type_of_process}_{unique_name}"
@@ -468,11 +460,7 @@ def setup_log_process(
     Set up the logging process with the specified level
     """
     os.environ["LOGURU_LEVEL"] = log_level
-    create_log_dir(
-        type_of_process=type_of_process,
-        table_name=table_name,
-        metadata_path=metadata_path
-    )
+    os.makedirs("model_artifacts/system_store/logs", exist_ok=True)
     os.environ["SUCCESS_LOG_FILE"] = get_log_path(
         table_name=table_name,
         metadata_path=metadata_path,
