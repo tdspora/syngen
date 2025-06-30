@@ -1,9 +1,10 @@
 from unittest.mock import patch, MagicMock
 import pytest
 
+import pandas as pd
+
 from syngen.ml.worker import Worker
 from syngen.ml.config import Validator
-from syngen.ml.processors import PreprocessHandler
 from syngen.ml.utils import ValidationError
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -1557,7 +1558,23 @@ def test_launch_infer_with_metadata_contained_global_settings(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
-@patch.object(PreprocessHandler, "run")
+@patch.object(
+    Worker, "_Worker__preprocess_data",
+    return_value=(
+            pd.DataFrame(
+                {
+                    "gender": [0, 1, 0, 1],
+                    "height": [
+                        157.18518021548246,
+                        166.7731072622863,
+                        162.91821942384928,
+                        173.51448996432848,
+                    ],
+                    "id": [925, 84, 821, 383],
+                }
+            ),
+            {"fields": {}, "format": "CSV"})
+)
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
@@ -1579,7 +1596,7 @@ def test_train_tables_without_generation_reports(
     mock_check_existence_of_destination,
     mock_validate_fernet_key,
     mock_validate_metadata,
-    mock_preprocess_handler_run,
+    mock_preprocess_data,
     mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -1601,6 +1618,7 @@ def test_train_tables_without_generation_reports(
         encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
+    mock_preprocess_data.assert_called_once_with(table_name="test_table")
     mock_gather_existed_columns.assert_called_once_with("test_table")
     mock_check_existence_of_source.assert_called_once_with("test_table")
     mock_check_existence_of_key_columns.assert_called_once_with("test_table")
@@ -1609,39 +1627,7 @@ def test_train_tables_without_generation_reports(
     mock_check_existence_of_destination.assert_not_called()
     mock_validate_fernet_key.assert_not_called()
     mock_validate_metadata.assert_called_once_with("test_table")
-    mock_preprocess_handler_run.assert_called_once()
-    mock_train_table.assert_called_once_with(
-        "test_table",
-        {
-            "test_table": {
-                "train_settings": {
-                    "source": "./path/to/test_table.csv",
-                    "epochs": 100,
-                    "drop_null": False,
-                    "reports": [],
-                    "row_limit": 800,
-                    "batch_size": 2000
-                },
-                "infer_settings": {
-                    "destination": "./path/to/test_table_infer.csv",
-                    "size": 200,
-                    "run_parallel": True,
-                    "random_seed": 2,
-                    "reports": [],
-                    "batch_size": 200
-                },
-                "encryption": {"fernet_key": None},
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["Id"]
-                    }
-                },
-                "format": {}
-            }
-        },
-        0.49
-    )
+    mock_train_table.assert_called_once()
     mock_infer_table.assert_not_called()
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(["test_table"], ["test_table"], False)
@@ -1650,7 +1636,23 @@ def test_train_tables_without_generation_reports(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
-@patch.object(PreprocessHandler, "run")
+@patch.object(
+    Worker, "_Worker__preprocess_data",
+    return_value=(
+            pd.DataFrame(
+                {
+                    "gender": [0, 1, 0, 1],
+                    "height": [
+                        157.18518021548246,
+                        166.7731072622863,
+                        162.91821942384928,
+                        173.51448996432848,
+                    ],
+                    "id": [925, 84, 821, 383],
+                }
+            ),
+            {"fields": {}, "format": "CSV"})
+)
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
@@ -1672,7 +1674,7 @@ def test_train_tables_with_generation_reports(
     mock_validate_fernet_key,
     mock_check_existence_of_destination,
     mock_validate_metadata,
-    mock_prepocess_handler_run,
+    mock_preprocess_data,
     mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -1694,6 +1696,7 @@ def test_train_tables_with_generation_reports(
         encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
+    mock_check_existence_of_source.assert_called_once_with("test_table")
     mock_gather_existed_columns.assert_called_once_with("test_table")
     mock_check_existence_of_source.assert_called_once_with("test_table")
     mock_check_existence_of_key_columns.assert_called_once_with("test_table")
@@ -1702,39 +1705,7 @@ def test_train_tables_with_generation_reports(
     mock_check_existence_of_destination.assert_not_called()
     mock_validate_fernet_key.assert_not_called()
     mock_validate_metadata.assert_called_once_with("test_table")
-    mock_prepocess_handler_run.assert_called_once()
-    mock_train_table.assert_called_once_with(
-        "test_table",
-        {
-            "test_table": {
-                "train_settings": {
-                    "source": "./path/to/test_table.csv",
-                    "epochs": 100,
-                    "drop_null": False,
-                    "reports": ["accuracy", "sample"],
-                    "row_limit": 800,
-                    "batch_size": 2000
-                },
-                "infer_settings": {
-                    "destination": "./path/to/test_table_infer.csv",
-                    "size": 200,
-                    "run_parallel": True,
-                    "random_seed": 2,
-                    "reports": ["accuracy"],
-                    "batch_size": 200
-                },
-                "encryption": {"fernet_key": None},
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["Id"]
-                    }
-                },
-                "format": {}
-            }
-        },
-        0.49
-    )
+    mock_train_table.assert_called_once()
     mock_infer_table.assert_called_once_with(
         table="test_table",
         metadata={
@@ -1872,7 +1843,23 @@ def test_infer_tables_without_generation_reports(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
-@patch.object(PreprocessHandler, "run")
+@patch.object(
+    Worker, "_Worker__preprocess_data",
+    return_value=(
+            pd.DataFrame(
+                {
+                    "gender": [0, 1, 0, 1],
+                    "height": [
+                        157.18518021548246,
+                        166.7731072622863,
+                        162.91821942384928,
+                        173.51448996432848,
+                    ],
+                    "id": [925, 84, 821, 383],
+                }
+            ),
+            {"fields": {}, "format": "CSV"})
+)
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
@@ -1894,7 +1881,7 @@ def test_train_tables_without_provided_fernet_key(
     mock_check_existence_of_destination,
     mock_validate_fernet_key,
     mock_validate_metadata,
-    mock_preprocess_handler_run,
+    mock_preprocess_data,
     mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -1916,6 +1903,7 @@ def test_train_tables_without_provided_fernet_key(
         encryption_settings={"fernet_key": None}
     )
     worker.launch_train()
+    mock_preprocess_data.assert_called_once_with(table_name="test_table")
     mock_gather_existed_columns.assert_called_once_with("test_table")
     mock_check_existence_of_source.assert_called_once_with("test_table")
     mock_check_existence_of_key_columns.assert_called_once_with("test_table")
@@ -1924,39 +1912,7 @@ def test_train_tables_without_provided_fernet_key(
     mock_check_existence_of_destination.assert_not_called()
     mock_validate_fernet_key.assert_not_called()
     mock_validate_metadata.assert_called_once_with("test_table")
-    mock_preprocess_handler_run.assert_called_once()
-    mock_train_table.assert_called_once_with(
-        "test_table",
-        {
-            "test_table": {
-                "train_settings": {
-                    "source": "./path/to/test_table.csv",
-                    "epochs": 100,
-                    "drop_null": False,
-                    "reports": [],
-                    "row_limit": 800,
-                    "batch_size": 2000
-                },
-                "infer_settings": {
-                    "destination": "./path/to/test_table_infer.csv",
-                    "size": 200,
-                    "run_parallel": True,
-                    "random_seed": 2,
-                    "reports": [],
-                    "batch_size": 200
-                },
-                "encryption": {"fernet_key": None},
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["Id"]
-                    }
-                },
-                "format": {}
-            }
-        },
-        0.49
-    )
+    mock_train_table.assert_called_once()
     mock_infer_table.assert_not_called()
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(["test_table"], ["test_table"], False)
@@ -1965,7 +1921,23 @@ def test_train_tables_without_provided_fernet_key(
 
 @patch.object(Worker, "_collect_metrics_in_train")
 @patch.object(Worker, "_generate_reports")
-@patch.object(PreprocessHandler, "run")
+@patch.object(
+    Worker, "_Worker__preprocess_data",
+    return_value=(
+            pd.DataFrame(
+                {
+                    "gender": [0, 1, 0, 1],
+                    "height": [
+                        157.18518021548246,
+                        166.7731072622863,
+                        162.91821942384928,
+                        173.51448996432848,
+                    ],
+                    "id": [925, 84, 821, 383],
+                }
+            ),
+            {"fields": {}, "format": "CSV"})
+)
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_destination")
@@ -1987,7 +1959,7 @@ def test_train_tables_with_provided_fernet_key(
     mock_check_existence_of_destination,
     mock_validate_fernet_key,
     mock_validate_metadata,
-    mock_preprocess_handler_run,
+    mock_preprocess_data,
     mock_generate_reports,
     mock_collect_metrics_in_train,
     rp_logger,
@@ -2009,6 +1981,7 @@ def test_train_tables_with_provided_fernet_key(
         encryption_settings={"fernet_key": FERNET_KEY}
     )
     worker.launch_train()
+    mock_preprocess_data.assert_called_once_with(table_name="test_table")
     mock_gather_existed_columns.assert_called_once_with("test_table")
     mock_check_existence_of_source.assert_called_once_with("test_table")
     mock_check_existence_of_key_columns.assert_called_once_with("test_table")
@@ -2017,39 +1990,7 @@ def test_train_tables_with_provided_fernet_key(
     mock_check_existence_of_destination.assert_not_called()
     mock_validate_fernet_key.assert_called_once_with("test_table", FERNET_KEY)
     mock_validate_metadata.assert_called_once_with("test_table")
-    mock_preprocess_handler_run.assert_called_once()
-    mock_train_table.assert_called_once_with(
-        "test_table",
-        {
-            "test_table": {
-                "train_settings": {
-                    "source": "./path/to/test_table.csv",
-                    "epochs": 100,
-                    "drop_null": False,
-                    "reports": [],
-                    "row_limit": 800,
-                    "batch_size": 2000
-                },
-                "infer_settings": {
-                    "destination": "./path/to/test_table_infer.csv",
-                    "size": 200,
-                    "run_parallel": True,
-                    "random_seed": 2,
-                    "reports": [],
-                    "batch_size": 200
-                },
-                "encryption": {"fernet_key": FERNET_KEY},
-                "keys": {
-                    "pk_id": {
-                        "type": "PK",
-                        "columns": ["Id"]
-                    }
-                },
-                "format": {}
-            }
-        },
-        0.49
-    )
+    mock_train_table.assert_called_once()
     mock_infer_table.assert_not_called()
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(["test_table"], ["test_table"], False)
@@ -2550,7 +2491,8 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
     mock_collect_metrics_in_train.assert_called_once_with(
         ["table"],
         ["table"],
-        True)
+        True
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

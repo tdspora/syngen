@@ -29,15 +29,16 @@ class Processor:
         self,
         metadata: Dict,
         metadata_path: Optional[str],
-        table_name: Optional[str],
+        table_name: str,
         loader: Optional[Callable[[str], pd.DataFrame]] = None
     ):
         self.metadata_path = metadata_path
         self.metadata = metadata
+        self.table_name = table_name
         self.loader = loader
         self.path_to_flatten_metadata = (
             "model_artifacts/system_store/flatten_configs/"
-            f"flatten_metadata_{fetch_unique_root(table_name, self.metadata_path)}.json"
+            f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
         )
 
 
@@ -45,6 +46,72 @@ class PreprocessHandler(Processor):
     """
     The class for the preprocessing of the data before the training process
     """
+    def _save_original_schema(self, original_schema: Dict):
+        """
+        Save the schema of the original data
+        """
+        path = (
+            f"model_artifacts/tmp_store/{slugify(self.table_name)}"
+            f"/original_schema_{slugify(self.table_name)}.pkl"
+        )
+        DataLoader(path).save_data(data=original_schema)
+
+    def preprocess_data(self) -> Tuple[pd.DataFrame, Dict]:
+        data, schema, original_schema = self._load_source()
+        self._save_original_schema(original_schema)
+        preprocessed_data = self._preprocess_data(data)
+        return preprocessed_data, schema
+
+    def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Preprocess data and set the parameter "row_subset" for training process
+        """
+        drop_null = self.metadata[self.table_name]["train_settings"]["drop_null"]
+        row_limit = self.metadata[self.table_name]["train_settings"]["row_limit"]
+        if self.loader:
+            warning_message = (
+                "parameter will be ignored because the retrieval of the data "
+                "is handled by a callback function"
+            )
+            if drop_null:
+                logger.warning(f"The 'drop_null' {warning_message}")
+            if row_limit is not None:
+                logger.warning(f"The 'row_limit' {warning_message}")
+        else:
+            if drop_null:
+                if not data.dropna().empty:
+                    initial_data = data
+                    data = data.dropna()
+                    if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
+                        logger.info(
+                            f"As the parameter 'drop_null' set to 'True', "
+                            f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
+                            f"that have empty values have been dropped. "
+                            f"The count of remained rows is {data.shape[0]}."
+                        )
+                else:
+                    logger.warning(
+                        "The specified 'drop_null' argument results in the empty dataframe, "
+                        "so it will be ignored"
+                    )
+
+            if row_limit:
+                self.row_subset = min(row_limit, len(data))
+                self.data = data.sample(n=self.row_subset)
+
+        if len(data) < 100:
+            logger.warning(
+                "The input table is too small to provide any meaningful results. "
+                "Please consider 1) disable drop_null argument, 2) provide bigger table"
+            )
+        elif len(data) < 500:
+            logger.warning(
+                f"The amount of data is {len(data)} rows. It seems that it isn't enough "
+                f"to supply high-quality results. To improve the quality of generated data "
+                f"please consider any of the steps: 1) provide a bigger table, "
+                f"2) disable drop_null argument"
+            )
+        return data
 
     @staticmethod
     def _run_script():
@@ -119,72 +186,66 @@ class PreprocessHandler(Processor):
         """
         Save the metadata of the flattening process
         """
+        if os.path.exists(self.path_to_flatten_metadata):
+            with open(self.path_to_flatten_metadata, "r") as f:
+                existing_metadata = json.load(f)
+            metadata = {**existing_metadata, **metadata}
         with open(f"{self.path_to_flatten_metadata}", "w") as f:
             json.dump(metadata, f)
 
-    def _load_source(self, path_to_source: str, table_name: str) -> Tuple[pd.DataFrame, Dict]:
+    def _load_source(self) -> Tuple[pd.DataFrame, Dict, Dict]:
         """
         Load the data from the predefined source
         """
         if self.loader is not None:
             dataframe_fetcher = DataFrameFetcher(
                 loader=self.loader,
-                table_name=table_name
+                table_name=self.table_name
             )
-            return dataframe_fetcher.fetch_data()
-        return DataLoader(path=path_to_source).load_data()
+            original_schema = dataframe_fetcher.original_schema
+            data, schema = dataframe_fetcher.fetch_data()
+            return data, schema, original_schema
+        path_to_source = self.metadata[self.table_name]["train_settings"]["source"]
+        data, schema = DataLoader(path=path_to_source).load_data()
+        original_schema = DataLoader(path=path_to_source).original_schema
+        return data, schema, original_schema
 
-    def _save_input_data(self, flattened_data: pd.DataFrame, table_name: str):
-        """
-        Save the input data to the predefined path
-        """
-        fernet_key = self.metadata[table_name].get("encryption", {}).get("fernet_key", None)
-        path_to_input_data = (
-            f"model_artifacts/tmp_store/{slugify(table_name)}/"
-            f"input_data_{slugify(table_name)}.{'dat' if fernet_key else 'pkl'}"
-        )
-        DataLoader(
-            path=path_to_input_data,
-            table_name=table_name,
-            metadata=self.metadata,
-            sensitive=True
-        ).save_data(flattened_data)
-
-    def _handle_json_columns(self):
+    def _handle_json_columns(self, data: pd.DataFrame):
         """
         Preprocess the data contained JSON columns before the training process
         """
         flatten_metadata = dict()
-        for table, settings in self.metadata.items():
-            path_to_source = settings.get("train_settings", {}).get("source", "")
-            data, schema = self._load_source(path_to_source, table)
-            order_of_columns = data.columns.to_list()
-            if json_columns := self._get_json_columns(data):
-                list_of_json_columns = [f"'{column}'" for column in json_columns]
-                list_of_json_columns = ', '.join(list_of_json_columns)
-                logger.info(
-                    f"The table '{table}' contains JSON columns: {list_of_json_columns}"
-                )
-                logger.info(f"Flattening the JSON columns in the table - '{table}'")
-                (flattened_data,
-                 flattening_mapping,
-                 duplicated_columns) = self._get_artifacts(data, json_columns)
-                self._save_input_data(flattened_data, table)
-                flatten_metadata[table] = {
-                    "flattening_mapping": flattening_mapping,
-                    "duplicated_columns": duplicated_columns,
-                    "order_of_columns": order_of_columns
-                }
-                logger.info(f"The table '{table}' has been successfully flattened")
-        if flatten_metadata:
+        order_of_columns = data.columns.to_list()
+        if json_columns := self._get_json_columns(data):
+            list_of_json_columns = [f"'{column}'" for column in json_columns]
+            list_of_json_columns = ', '.join(list_of_json_columns)
+            logger.info(
+                f"The table '{self.table_name}' contains JSON columns: {list_of_json_columns}"
+            )
+            logger.info(f"Flattening the JSON columns in the table - '{self.table_name}'")
+            (
+                flattened_data,
+                flattening_mapping,
+                duplicated_columns
+            ) = self._get_artifacts(data, json_columns)
+            flatten_metadata[self.table_name] = {
+                "flattening_mapping": flattening_mapping,
+                "duplicated_columns": duplicated_columns,
+                "order_of_columns": order_of_columns
+            }
+            logger.info(f"The table '{self.table_name}' has been successfully flattened")
             self._save_flatten_metadata(flatten_metadata)
+            return flattened_data
+        return data
 
-    def run(self):
+    def run(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Launch the preprocessing process:
         """
         self._run_script()
-        self._handle_json_columns()
+        preprocessed_data, schema = self.preprocess_data()
+        data = self._handle_json_columns(preprocessed_data)
+        return data, schema
 
 
 class PostprocessHandler(Processor):
@@ -349,7 +410,7 @@ class PostprocessHandler(Processor):
                 apply(lambda row: self._remove_empty_elements(row))
             data[old_column] = data[old_column]. \
                 apply(lambda row: json.dumps(row, ensure_ascii=False))
-            dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
+            dropped_columns = [i for i in new_columns if i not in duplicated_columns]
             data.drop(dropped_columns, axis=1, inplace=True)
         return data
 

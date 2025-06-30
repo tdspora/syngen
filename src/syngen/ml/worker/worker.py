@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any, Callable, Literal
+from typing import Dict, List, Optional, Any, Callable, Literal, Tuple
 import os
 import shutil
 from itertools import product
@@ -9,7 +9,7 @@ from copy import deepcopy
 from loguru import logger
 from slugify import slugify
 
-from syngen.ml.data_loaders import MetadataLoader
+from syngen.ml.data_loaders import MetadataLoader, DataLoader
 from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
@@ -151,14 +151,14 @@ class Worker:
         validator.run()
         self.merged_metadata = validator.merged_metadata
 
-    def __preprocess_data(self):
+    def __preprocess_data(self, table_name: str) -> Tuple[pd.DataFrame, Dict]:
         """
         Preprocess the data before a training process
         """
-        PreprocessHandler(
+        return PreprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
-            table_name=self.table_name,
+            table_name=table_name,
             loader=self.loader
         ).run()
 
@@ -219,8 +219,8 @@ class Worker:
         process_info = process_settings_map.get(self.type_of_process)
         settings_key, global_process_settings = process_info
 
-        for table_name, table_metadata in self.metadata.items():
-            if table_name == "global":
+        for table, table_metadata in self.metadata.items():
+            if table == "global":
                 continue
 
             table_process_settings = table_metadata.setdefault(settings_key, {})
@@ -405,7 +405,23 @@ class Worker:
             self._collect_integral_metrics(tables=tables_for_inference, type_of_process="infer")
         MlflowTracker().end_run()
 
-    def _train_table(self, table, metadata, delta):
+    def _save_input_data(self, data: pd.DataFrame, table_name: str):
+        """
+        Save the input data to the predefined path
+        """
+        fernet_key = self.metadata[table_name].get("encryption", {}).get("fernet_key", None)
+        path_to_input_data = (
+            f"model_artifacts/tmp_store/{slugify(table_name)}/"
+            f"input_data_{slugify(table_name)}.{'dat' if fernet_key else 'pkl'}"
+        )
+        DataLoader(
+            path=path_to_input_data,
+            table_name=table_name,
+            metadata=self.metadata,
+            sensitive=True
+        ).save_data(data)
+
+    def _train_table(self, data, schema, table, metadata, delta):
         """"
         Train process for a single table
         """
@@ -417,6 +433,8 @@ class Worker:
         ProgressBarHandler().set_progress(delta=delta, message=log_message)
 
         TrainStrategy().run(
+            data=data,
+            schema=schema,
             metadata=metadata,
             metadata_path=self.metadata_path,
             source=train_settings.get("source"),
@@ -429,11 +447,12 @@ class Worker:
             loader=self.loader
         )
         self._save_metadata_file()
-        self._write_success_file(table_name=table, type_of_process="train")
         ProgressBarHandler().set_progress(
             delta=delta,
             message=f"Training of the table - '{table}' was completed"
         )
+        self._save_input_data(data=data, table_name=table)
+        self._write_success_file(table_name=table, type_of_process="train")
 
     def __train_tables(
         self,
@@ -452,10 +471,9 @@ class Worker:
         """
         delta = 0.49 / len(tables_for_training)
 
-        self.__preprocess_data()
-
         for table in tables_for_training:
-            self._train_table(table, metadata_for_training, delta)
+            data, schema = self.__preprocess_data(table_name=table)
+            self._train_table(data, schema, table, metadata_for_training, delta)
 
         if generation_of_reports:
             self.__infer_tables(
@@ -521,12 +539,12 @@ class Worker:
             type_of_process=self.type_of_process,
             loader=self.loader
         )
-        self._write_success_file(table_name=table, type_of_process="infer", both_keys=both_keys)
         ProgressBarHandler().set_progress(
             delta=delta,
             message=f"Infer process of the table - '{table}' was completed"
         )
         MlflowTracker().end_run()
+        self._write_success_file(table_name=table, type_of_process="infer", both_keys=both_keys)
 
     def __infer_tables(
         self,

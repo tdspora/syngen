@@ -30,7 +30,7 @@ from syngen.ml.utils import (
     TIMEZONE_REGEX
 )
 from syngen.ml.utils import slugify_parameters
-from syngen.ml.utils import fetch_config, clean_up_metadata
+from syngen.ml.utils import clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
@@ -38,13 +38,14 @@ class BaseDataset:
     def __init__(
         self,
         df: pd.DataFrame,
-        schema: Optional[Dict],
+        schema: Dict,
         metadata: Dict,
         table_name: str,
         main_process: str,
         paths: Dict
     ):
         self.df = df
+        self.schema = schema
         self.fields = schema.get("fields", {})
         self.schema_format = schema.get("format")
         self.metadata = metadata
@@ -60,9 +61,7 @@ class BaseDataset:
         self.nan_labels_dict: Dict = dict()
         self.uuid_columns: Set = set()
         self.uuid_columns_types: Dict = dict()
-        self.dropped_columns: Set = set()
         self.tech_columns: Set = set()
-        self.order_of_columns: List = list()
         self.custom_categorical_columns: Set = set()
         self.categorical_columns: Set = set()
         self.str_columns: Set = set()
@@ -86,11 +85,8 @@ class BaseDataset:
         self.foreign_keys_list: List = list()
         self.fk_columns: List = list()
         self.keys_mapping: Dict = dict()
-        train_config = fetch_config(
-            self.paths["train_config_pickle_path"]
-        )
-        self.dropped_columns: Set = train_config.dropped_columns
-        self.order_of_columns: List = train_config.columns
+        self.dropped_columns: Set = set()
+        self.order_of_columns: List = list(self.df.columns)
         self.format = self.metadata[self.table_name].get("format", {})
         self.nan_labels_dict = dict()
         self.nan_labels_in_uuid = dict()
@@ -133,12 +129,37 @@ class Dataset(BaseDataset):
         self.nan_labels_dict = get_nan_labels(self.df, excluded_columns)
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
+    def _remove_empty_columns(self):
+        """
+        Remove completely empty columns from dataframe
+        """
+        data_columns = set(self.df.columns)
+        self.df = self.df.dropna(how="all", axis=1)
+
+        self.dropped_columns = data_columns - set(self.df.columns)
+        list_of_dropped_columns = [f"'{column}'" for column in self.dropped_columns]
+        if len(list_of_dropped_columns) > 0:
+            logger.info(f"Empty columns - {', '.join(list_of_dropped_columns)} were removed")
+
+    def _mark_removed_columns(self):
+        """
+        Mark removed columns in the schema
+        """
+        if self.schema.get("format") == "CSV":
+            self.schema["fields"] = dict()
+            self.schema["fields"] = {column: "removed" for column in self.dropped_columns}
+        else:
+            for column, data_type in self.schema.get("fields", {}).items():
+                if column not in self.df.columns:
+                    self.schema["fields"][column] = "removed"
+
     def _preparation_step(self):
         """
         Define binary and categorical columns,
         preprocess the dataframe before the detection of data types of columns
         """
         table_config = self.metadata.get(self.table_name, {})
+        self._remove_empty_columns()
         self._set_non_existent_columns(table_config)
         self._update_metadata(table_config)
         self._set_metadata()
@@ -419,6 +440,7 @@ class Dataset(BaseDataset):
         """
         Synchronize the schema of the table with dataframe
         """
+        self._mark_removed_columns()
         self.fields = {
             column: data_type
             for column, data_type in self.fields.items()

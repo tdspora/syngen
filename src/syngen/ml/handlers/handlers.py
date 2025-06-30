@@ -19,7 +19,7 @@ from loguru import logger
 from attrs import define, field
 
 from syngen.ml.vae import *  # noqa: F403
-from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
+from syngen.ml.data_loaders import DataLoader
 from syngen.ml.reporters import Report
 from syngen.ml.vae.models.dataset import Dataset
 from syngen.ml.utils import (
@@ -43,6 +43,7 @@ class AbstractHandler(ABC):
 
 @define
 class BaseHandler(AbstractHandler):
+    data: Optional[pd.DataFrame] = field(kw_only=True, default=None)
     metadata: Dict = field(kw_only=True)
     paths: Dict = field(kw_only=True)
     table_name: str = field(kw_only=True)
@@ -54,9 +55,9 @@ class BaseHandler(AbstractHandler):
         return handler
 
     @abstractmethod
-    def handle(self, data: pd.DataFrame, **kwargs):
+    def handle(self, **kwargs):
         if self._next_handler:
-            return self._next_handler.handle(data, **kwargs)
+            return self._next_handler.handle(**kwargs)
 
         return None
 
@@ -75,34 +76,12 @@ class BaseHandler(AbstractHandler):
             process=kwargs["process"],
         )
 
-    def fetch_data(self) -> Tuple[pd.DataFrame, Optional[Dict]]:
-        """
-        Fetch the data
-        """
-        data_loader = DataLoader(
-            path=self.paths["input_data_path"],
-            table_name=self.table_name,
-            metadata=self.metadata,
-            sensitive=True
-        )
-        if data_loader.has_existed_path:
-            data, schema = data_loader.load_data()
-        elif self.loader:
-            data, schema = DataFrameFetcher(
-                loader=self.loader,
-                table_name=self.table_name
-            ).fetch_data()
-        else:
-            return pd.DataFrame(), None
-        return data, schema
-
 
 @define
 class RootHandler(BaseHandler):
 
     def handle(self, **kwargs):
-        data, schema = super().fetch_data()
-        return super().handle(data, **kwargs)
+        return super().handle(**kwargs)
 
 
 @define
@@ -120,7 +99,7 @@ class LongTextsHandler(BaseHandler):
         with open(f'{self.paths["no_ml_state_path"]}kde_params.pkl', "wb") as file:
             dill.dump(features, file)
 
-    def handle(self, data: pd.DataFrame, **kwargs):
+    def handle(self, **kwargs):
         self._prepare_dir()
 
         dataset = fetch_config(self.paths["dataset_pickle_path"])
@@ -130,10 +109,10 @@ class LongTextsHandler(BaseHandler):
             features = {}
             for col in long_text_columns:
                 tokenizer = Tokenizer(lower=False, char_level=True)
-                if type(data[col].dropna().values[0]) is bytes:
-                    text_col = data[col].str.decode("utf-8", errors="ignore")
+                if type(self.data[col].dropna().values[0]) is bytes:
+                    text_col = self.data[col].str.decode("utf-8", errors="ignore")
                 else:
-                    text_col = data[col]
+                    text_col = self.data[col]
                 text_col = text_col.fillna("")
                 tokenizer.fit_on_texts(text_col)
 
@@ -163,7 +142,7 @@ class LongTextsHandler(BaseHandler):
 
         else:
             logger.info("No columns to train kde over found")
-        return super().handle(data, **kwargs)
+        return super().handle(**kwargs)
 
 
 @define
@@ -177,15 +156,15 @@ class VaeTrainHandler(BaseHandler):
     type_of_process: str = field(kw_only=True)
     reports: List[str] = field(kw_only=True)
 
-    def __fit_model(self, data: pd.DataFrame):
+    def __fit_model(self):
         logger.info("Start VAE training")
-        if data is None:
+        if self.data is None:
             logger.error("For mode = 'train' path must be provided")
             raise ValueError("Can't read data from path or path is None")
 
         self.model = self.create_wrapper(
             self.wrapper_name,
-            data,
+            self.data,
             self.schema,
             metadata=self.metadata,
             table_name=self.table_name,
@@ -194,7 +173,7 @@ class VaeTrainHandler(BaseHandler):
             main_process=self.type_of_process,
             process="train",
         )
-        self.model.batch_size = min(self.batch_size, len(data))
+        self.model.batch_size = min(self.batch_size, len(self.data))
         list_of_reports = [f'\'{report}\'' for report in self.reports]
         list_of_reports = ', '.join(list_of_reports) if list_of_reports else '\'none\''
         logger.debug(
@@ -216,10 +195,10 @@ class VaeTrainHandler(BaseHandler):
     def __prepare_dir(self):
         os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
 
-    def handle(self, data: pd.DataFrame, **kwargs):
+    def handle(self, **kwargs):
         self.__prepare_dir()
-        self.__fit_model(data)
-        return super().handle(data, **kwargs)
+        self.__fit_model()
+        return super().handle(**kwargs)
 
 
 @define
