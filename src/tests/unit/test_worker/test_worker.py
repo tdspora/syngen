@@ -3010,3 +3010,94 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
     mock_check_access_to_input_data.assert_not_called()
     mock_infer_table.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("metadata, type_of_process, expected_result", [
+    (
+        {
+            "test_table": {
+                "train_settings": {
+                    "source": "./path/to/test_table.csv",
+                    "reports": ["accuracy", "sample"],
+                }
+            }
+        }, "train", True
+    ),
+    (
+        {
+            "test_table": {
+                "train_settings": {
+                    "source": "./path/to/test_table.csv",
+                    "reports": ["sample"],
+                }
+            }
+        }, "train", False
+    ),
+    (
+            {
+                "test_table": {
+                    "train_settings": {
+                        "source": "./path/to/test_table.csv",
+                        "reports": [],
+                    }
+                }
+            }, "train", False
+    ),
+    (
+            {
+                "test_table": {
+                    "train_settings": {
+                        "source": "./path/to/test_table.csv",
+                        "reports": ["accuracy", "sample"],
+                    }
+                }
+            }, "infer", False
+    ),
+    (
+            {
+                "test_table": {
+                    "train_settings": {
+                        "source": "./path/to/test_table.csv",
+                        "reports": ["accuracy", "sample"],
+                    },
+                    "infer_settings": {
+                        "reports": ["accuracy"],
+                    }
+                }
+            }, "infer", True
+    ),
+    (
+            {
+                "test_table": {
+                    "train_settings": {
+                        "source": "./path/to/test_table.csv",
+                        "reports": ["accuracy", "sample"],
+                    },
+                    "infer_settings": {
+                        "reports": [],
+                    }
+                }
+            }, "infer", False
+    ),
+
+])
+@patch.object(Worker, "__attrs_post_init__")
+def test_should_generate_reports(
+    mock_post_init,
+    metadata,
+    type_of_process,
+    expected_result,
+    rp_logger
+):
+    rp_logger.info("Test the method '_should_generate_data' of the 'Worker' class")
+    worker = Worker(
+        table_name="table",
+        metadata_path=None,
+        settings={},
+        log_level="INFO",
+        type_of_process=type_of_process,
+        loader=None,
+        encryption_settings={"fernet_key": None}
+    )
+    worker._should_generate_data(metadata, type_of_process) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)

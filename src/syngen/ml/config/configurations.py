@@ -33,7 +33,6 @@ class TrainConfig:
     def __post_init__(self):
         self.row_subset = len(self.data)
         self._set_paths()
-        self._check_if_data_is_empty()
 
     def __getstate__(self) -> Dict:
         """
@@ -63,15 +62,6 @@ class TrainConfig:
         Set up "batch_size" for training process
         """
         self.batch_size = min(self.batch_size, self.row_subset)
-
-    def _check_if_data_is_empty(self):
-        """
-        Check if the provided data is empty
-        """
-        if self.data.shape[0] < 1:
-            raise ValueError(
-                f"The empty table was provided. Unable to train the table - '{self.table_name}'"
-            )
 
     @slugify_attribute(table_name="slugify_table_name")
     def _set_paths(self):

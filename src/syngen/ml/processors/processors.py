@@ -40,6 +40,8 @@ class Processor:
             "model_artifacts/system_store/flatten_configs/"
             f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
         )
+        self.initial_data_shape: Tuple = ()
+        self.row_subset: int = int()
 
 
 class PreprocessHandler(Processor):
@@ -56,18 +58,48 @@ class PreprocessHandler(Processor):
         )
         DataLoader(path).save_data(data=original_schema)
 
-    def preprocess_data(self) -> Tuple[pd.DataFrame, Dict]:
+    def _check_if_data_is_empty(self, data: pd.DataFrame):
+        """
+        Check if the provided data is empty or not
+        """
+        if data.shape[0] < 1:
+            raise ValueError(
+                f"The empty table was provided. Unable to train the table - '{self.table_name}'"
+            )
+
+    def _check_sample_report(self):
+        """
+        Check whether it is necessary to generate a certain report
+        """
+        reports = self.metadata[self.table_name]["train_settings"]["reports"]
+        if "sample" in reports and self.initial_data_shape[0] == self.row_subset:
+            logger.warning(
+                "The generation of the sample report is unnecessary and won't be produced "
+                "as the source data and sampled data sizes are identical"
+            )
+            reports.remove("sample")
+            self.metadata[self.table_name]["train_settings"]["reports"] = reports
+
+    def prepare_data(self) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Prepare the subset of the data for the training process
+        """
         data, schema, original_schema = self._load_source()
+        self._check_if_data_is_empty(data)
         self._save_original_schema(original_schema)
         preprocessed_data = self._preprocess_data(data)
+        self._check_sample_report()
         return preprocessed_data, schema
 
     def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """
-        Preprocess data and set the parameter "row_subset" for training process
+        Apply the parameters 'drop_null' and 'row_limit' to the data,
+        and get the subset for the training process
         """
         drop_null = self.metadata[self.table_name]["train_settings"]["drop_null"]
         row_limit = self.metadata[self.table_name]["train_settings"]["row_limit"]
+        self.initial_data_shape = data.shape
+        self.row_subset = len(data)
         if self.loader:
             warning_message = (
                 "parameter will be ignored because the retrieval of the data "
@@ -80,9 +112,8 @@ class PreprocessHandler(Processor):
         else:
             if drop_null:
                 if not data.dropna().empty:
-                    initial_data = data
                     data = data.dropna()
-                    if count_of_dropped_rows := initial_data.shape[0] - data.shape[0]:
+                    if count_of_dropped_rows := self.initial_data_shape[0] - data.shape[0]:
                         logger.info(
                             f"As the parameter 'drop_null' set to 'True', "
                             f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
@@ -94,6 +125,7 @@ class PreprocessHandler(Processor):
                         "The specified 'drop_null' argument results in the empty dataframe, "
                         "so it will be ignored"
                     )
+                self.row_subset = len(data)
 
             if row_limit:
                 self.row_subset = min(row_limit, len(data))
@@ -243,7 +275,7 @@ class PreprocessHandler(Processor):
         Launch the preprocessing process:
         """
         self._run_script()
-        preprocessed_data, schema = self.preprocess_data()
+        preprocessed_data, schema = self.prepare_data()
         data = self._handle_json_columns(preprocessed_data)
         return data, schema
 

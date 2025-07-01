@@ -1,3 +1,6 @@
+from unittest.mock import patch
+import pytest
+
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 from syngen.ml.data_loaders import DataLoader, MetadataLoader
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -17,7 +20,7 @@ def test_get_json_columns_contained_one_json_column(rp_logger):
     handler = PreprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name="test_table"
     )
     data, schema = DataLoader(path_to_data).load_data()
     assert handler._get_json_columns(data) == ["_details"]
@@ -39,7 +42,7 @@ def test_get_artifacts_contained_one_json_column(rp_logger):
     handler = PreprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name="test_table"
     )
     data, schema = DataLoader(path_to_data).load_data()
     json_columns = handler._get_json_columns(data)
@@ -101,7 +104,7 @@ def test_get_json_columns_contained_more_than_one_json_column(rp_logger):
     handler = PreprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name="test_table"
     )
     data, schema = DataLoader(path_to_data).load_data()
     assert handler._get_json_columns(data) == ["progress", "details"]
@@ -124,7 +127,7 @@ def test_get_artifacts_with_df_contained_more_than_one_json_column(rp_logger):
     handler = PreprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name="test_table"
     )
     json_columns = ["progress", "details"]
 
@@ -309,3 +312,159 @@ def test_postprocess_generated_data_with_two_json_columns(rp_logger):
         "progress",
         "details"
     ]
+
+
+@pytest.mark.parametrize("drop_null, row_limit, expected_result", [
+    (False, None, 10),
+    (True, None, 5),
+    (False, 5, 5),
+    (True, 6, 5),
+    (True, 2, 2)
+])
+@patch.object(PreprocessHandler, "_save_original_schema")
+def test_prepare_data(
+    mock_save_original_schema,
+    drop_null,
+    row_limit,
+    expected_result,
+    rp_logger
+):
+    rp_logger.info(
+        "Test the method 'prepare_data' of the class 'PreprocessHandler'"
+    )
+    path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_na_values.csv"
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": path_to_data,
+                "drop_null": drop_null,
+                "row_limit": row_limit,
+                "reports": []
+            }
+        }
+    }
+    handler = PreprocessHandler(
+        metadata=metadata,
+        metadata_path=None,
+        table_name="test_table"
+    )
+    handler.prepare_data()
+    assert handler.row_subset == expected_result
+    assert handler.initial_data_shape == (10, 11)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("drop_null, row_limit, expected_result", [
+    (False, None, 3),
+    (True, None, 1),
+    (False, 2, 2),
+    (True, 2, 1),
+])
+@patch.object(PreprocessHandler, "_save_original_schema")
+def test_prepare_data_with_table_containing_json_columns(
+    mock_save_original_schema,
+    drop_null,
+    row_limit,
+    expected_result,
+    rp_logger
+):
+    rp_logger.info(
+        "Test the method 'prepare_data' of the class 'PreprocessHandler' "
+        "for the table containing one JSON column"
+    )
+    path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_one_json_column.csv"
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": path_to_data,
+                "drop_null": drop_null,
+                "row_limit": row_limit,
+                "reports": []
+            }
+        }
+    }
+    handler = PreprocessHandler(
+        metadata=metadata,
+        metadata_path=None,
+        table_name="test_table"
+    )
+    handler.prepare_data()
+    assert handler.row_subset == expected_result
+    assert handler.initial_data_shape == (3, 10)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_check_if_data_is_empty(rp_logger):
+    rp_logger.info(
+        "Test the method '_check_if_data_is_empty' of the class 'PreprocessHandler'"
+    )
+    path_to_data = f"{DIR_NAME}/unit/processors/fixtures/empty_table.csv"
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": path_to_data,
+                "drop_null": False,
+                "row_limit": None,
+                "reports": []
+            }
+        }
+    }
+
+    with pytest.raises(ValueError) as error:
+        handler = PreprocessHandler(
+            metadata=metadata,
+            metadata_path=None,
+            table_name="test_table"
+        )
+        handler.prepare_data()
+    assert (
+        str(error.value)
+        == "The empty table was provided. Unable to train the table - 'test_table'"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("drop_null, row_limit, expected_result", [
+    (False, None, []),
+    (True, None, ["sample"]),
+    (False, 5, ["sample"]),
+    (True, 6, ["sample"]),
+    (True, 2, ["sample"])
+])
+@patch.object(PreprocessHandler, "_save_original_schema")
+def test_check_sample_report(
+    mock_save_original_data,
+    drop_null,
+    row_limit,
+    expected_result,
+    rp_logger
+):
+    rp_logger.info("Test the method '_check_sample_report' of the class 'PreprocessHandler'")
+    path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_na_values.csv"
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": path_to_data,
+                "drop_null": drop_null,
+                "row_limit": row_limit,
+                "reports": ["sample"]
+            }
+        }
+    }
+    handler = PreprocessHandler(
+        metadata=metadata,
+        metadata_path=None,
+        table_name="test_table"
+    )
+    handler.prepare_data()
+    assert handler.metadata == {
+        "test_table": {
+            "train_settings": {
+                "source": path_to_data,
+                "drop_null": drop_null,
+                "row_limit": row_limit,
+                "reports": expected_result
+            }
+        }
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)

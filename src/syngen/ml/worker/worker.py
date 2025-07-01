@@ -381,11 +381,17 @@ class Worker:
         --------
         bool
             True if any reports are configured for the specified process type
+            except 'sample' report
         """
-        return any(
+
+        list_of_reports = [
             config.get(f"{type_of_process}_settings", {}).get("reports", [])
             for config in config_of_tables.values()
-        )
+        ]
+        list_of_reports = [
+            report for sublist in list_of_reports for report in sublist if report != "sample"
+        ]
+        return any(list_of_reports)
 
     def _collect_metrics_in_train(
         self,
