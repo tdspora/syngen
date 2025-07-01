@@ -69,7 +69,7 @@ class PreprocessHandler(Processor):
 
     def _check_sample_report(self):
         """
-        Check whether it is necessary to generate a certain report
+        Check whether it is necessary to generate a sample report
         """
         reports = self.metadata[self.table_name]["train_settings"]["reports"]
         if "sample" in reports and self.initial_data_shape[0] == self.row_subset:

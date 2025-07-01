@@ -37,7 +37,7 @@ class AbstractHandler(ABC):
         pass
 
     @abstractmethod
-    def handle(self, data: pd.DataFrame, **kwargs):
+    def handle(self, **kwargs):
         pass
 
 
@@ -305,7 +305,7 @@ class VaeInferHandler(BaseHandler):
                 )
                 for i, j in zip(*text_structures)
             ]
-            logger.debug(f'Long text for column {col} is generated.')
+            logger.debug(f"Long text for column '{col}' is generated.")
             synthetic_infer[col] = generated_column
         return synthetic_infer
 
@@ -318,10 +318,10 @@ class VaeInferHandler(BaseHandler):
         synthetic_infer = pd.DataFrame()
 
         if self.has_vae:
-            logger.info(f'VAE generation for {self.table_name} started.')
+            logger.info(f"VAE generation for '{self.table_name}' started.")
             synthetic_infer = self.generate_vae(size)
         if self.has_no_ml:
-            logger.info(f'Long texts generation for {self.table_name} started.')
+            logger.info(f"Long texts generation for '{self.table_name}' started.")
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
 
         return synthetic_infer
@@ -375,7 +375,7 @@ class VaeInferHandler(BaseHandler):
 
         except FileNotFoundError:
             logger.warning(
-                f"The mapper for the {fk_label} text key is not found. Making simple sampling"
+                f"The mapper for the '{fk_label}' text key is not found. Making simple sampling"
             )
             synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
             synth_fk = synth_fk.rename(fk_label)
@@ -423,7 +423,7 @@ class VaeInferHandler(BaseHandler):
                 pk_path = self._get_pk_path(pk_table=pk_table, table_name=table_name)
                 pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
-                logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
+                logger.info(f"The '{pk_column_label}' assigned as a foreign_key feature")
 
                 synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, fk_column_name)
                 generated = generated.reset_index(drop=True)
