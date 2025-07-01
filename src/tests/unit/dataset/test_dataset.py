@@ -80,9 +80,7 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(
         schema=schema,
         metadata={"mock_table": {}},
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path",
-        },
+        paths={},
         main_process="train"
     )
     assert mock_dataset.fields == expected_schema
@@ -115,9 +113,7 @@ def test_save_dataset(rp_logger):
         schema=schema,
         metadata={"mock_table": {}},
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     fetched_dataset = mock_dataset.__getstate__()
@@ -186,9 +182,7 @@ def test_is_valid_categorical_defined_in_csv_table(rp_logger):
         schema=schema,
         metadata={"mock_table": {}},
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path",
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -237,9 +231,7 @@ def test_set_custom_categorical_columns(rp_logger):
             }
         },
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path",
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -263,9 +255,7 @@ def test_is_valid_binary_defined_in_csv_table(rp_logger):
         schema=schema,
         metadata={"mock_table": {}},
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path",
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -305,9 +295,7 @@ def test_check_non_existent_columns(rp_logger):
         schema=schema,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.dropped_columns = set()
@@ -448,9 +436,7 @@ def test_define_date_format_with_diff_format(
         schema=CSV_SCHEMA,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -667,9 +653,7 @@ def test_define_date_format_with_diff_format_and_provided_data(
         schema=CSV_SCHEMA,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -713,9 +697,7 @@ def test_define_date_format_with_extreme_values(
         schema=CSV_SCHEMA,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -753,9 +735,7 @@ def test_is_valid_uuid(rp_logger):
         schema=CSV_SCHEMA,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -789,9 +769,7 @@ def test_handling_uuid_columns_with_missing_values(rp_logger):
         schema=CSV_SCHEMA,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -824,9 +802,7 @@ def test_set_email_columns(rp_logger):
         schema=schema,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -835,9 +811,7 @@ def test_set_email_columns(rp_logger):
 
 
 def test_set_long_text_columns(rp_logger):
-    rp_logger.info(
-        "Test the method '_set_long_text_columns' of the class Dataset",
-    )
+    rp_logger.info("Test the method '_set_long_text_columns' of the class Dataset")
     metadata = {
         "mock_table": {
             "keys": {}
@@ -861,9 +835,7 @@ def test_set_long_text_columns(rp_logger):
         schema=CSV_SCHEMA,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -871,10 +843,41 @@ def test_set_long_text_columns(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_handling_empty_columns(rp_logger):
+    rp_logger.info("Test the process of handling of empty columns")
+    metadata = {
+        "mock_table": {
+            "keys": {}
+        }
+    }
+
+    df, schema = DataLoader(
+        f"{DIR_NAME}/unit/dataset/fixtures/data_with_empty_column.csv"
+    ).load_data()
+
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={},
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+    assert mock_dataset.dropped_columns == {"empty_column"}
+    assert mock_dataset.schema == {
+        "fields": {
+            "empty_column": "removed"
+        },
+        "format": "CSV"
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_handle_missing_values_in_numeric_columns_in_csv_file(rp_logger):
     rp_logger.info(
         "Test the process of handling missing values "
-        "in numeric columns in a '.csv' file",
+        "in numeric columns in a '.csv' file"
     )
     metadata = {
         "mock_table": {
@@ -896,9 +899,7 @@ def test_handle_missing_values_in_numeric_columns_in_csv_file(rp_logger):
         schema=CSV_SCHEMA,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -930,9 +931,7 @@ def test_cast_to_numeric_in_csv_file(rp_logger):
         schema=CSV_SCHEMA,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -976,9 +975,7 @@ def test_handle_missing_values_in_numeric_columns_in_avro_file(rp_logger):
         schema=schema,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
@@ -1023,9 +1020,7 @@ def test_cast_to_numeric_in_avro_file(rp_logger):
         schema=schema,
         metadata=metadata,
         table_name="mock_table",
-        paths={
-            "train_config_pickle_path": "mock_path"
-        },
+        paths={},
         main_process="train"
     )
     mock_dataset.launch_detection()
