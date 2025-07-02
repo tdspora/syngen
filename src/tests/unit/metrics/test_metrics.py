@@ -1,4 +1,3 @@
-from unittest import result
 import pandas as pd
 import numpy as np
 import pytest
@@ -68,10 +67,10 @@ def test_utility_valid_target(
     with patch(
         'syngen.ml.metrics.metrics_classes.metrics.logger'
     ) as mock_logger:
-        test_result = Utility._valid_target(col, model_y, task_type)
+        result = Utility._valid_target(col, model_y, task_type)
 
-    assert test_result == expected_result, \
-        f"Expected result is {expected_result}, got {test_result}"
+    assert result == expected_result, \
+        f"Expected result is {expected_result}, got {result}"
 
     if expected_log_message:
         mock_logger.info.assert_called_once()
