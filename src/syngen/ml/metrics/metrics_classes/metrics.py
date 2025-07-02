@@ -945,8 +945,8 @@ class UnivariateMetric(BaseMetric):
 
         Returns:
             dict: A dictionary containing kurtosis, top value ratios,
-            max value ratios, and outlier ratios
-            for both original and synthetic data.
+            max value ratios, outlier ratios, extreme outlier ratios
+            and skewness for both original and synthetic data.
         """
         metrics = {}
 
@@ -987,6 +987,16 @@ class UnivariateMetric(BaseMetric):
         metrics[f"{column}_max_value_original"] = original_max_value
         metrics[f"{column}_max_value_synthetic"] = synthetic_max_value
         metrics[f"{column}_max_value_ratio"] = max_value_ratio
+
+        # Min value
+        original_min_value = self.original[column].min()
+        synthetic_min_value = self.synthetic[column].min()
+        min_value_ratio = self._calculate_ratio(
+            original_min_value, synthetic_min_value
+        )
+        metrics[f"{column}_min_value_original"] = original_min_value
+        metrics[f"{column}_min_value_synthetic"] = synthetic_min_value
+        metrics[f"{column}_min_value_ratio"] = min_value_ratio
 
         # Outlier ratio using IQR
         original_outlier_ratio = (
@@ -1068,6 +1078,12 @@ class UnivariateMetric(BaseMetric):
             f"\n  - Synthetic: {metrics[f'{column}_max_value_synthetic']:.2f}"
             f"\n  - Ratio (synthetic/original): "
             f"{metrics[f'{column}_max_value_ratio']:.2f}"
+            f"\n"
+            f"\nMin Value:"
+            f"\n  - Original: {metrics[f'{column}_min_value_original']:.2f}"
+            f"\n  - Synthetic: {metrics[f'{column}_min_value_synthetic']:.2f}"
+            f"\n  - Ratio (synthetic/original): "
+            f"{metrics[f'{column}_min_value_ratio']:.2f}"
             f"\n"
             f"\nSkewness:"
             f"\n  - Original: {metrics[f'{column}_skewness_original']:.2f}"
