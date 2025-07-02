@@ -32,8 +32,6 @@ from syngen.ml.utils import (
     timestamp_to_datetime
 )
 
-KURTOSIS_THRESHOLD = 50  # Threshold for extreme kurtosis, can be adjusted
-
 
 class BaseFeature:
     """
@@ -214,7 +212,7 @@ class ContinuousFeature(BaseFeature):
         Select appropriate scaler based on data characteristics.
 
         Strategy:
-        - Extreme kurtosis -> QuantileTransformer
+        - Extreme outliers -> QuantileTransformer
         - Normal distribution -> StandardScaler
         - Other cases -> MinMaxScaler
         """
