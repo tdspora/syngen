@@ -158,9 +158,9 @@ def test_metadata_storage():
 
 @pytest.fixture
 def test_success_file():
-    path_to_test_dir = "model_artifacts/resources/test-table"
+    path_to_test_dir = "model_artifacts/resources/table"
     os.makedirs(path_to_test_dir, exist_ok=True)
-    success_file_path = f"{path_to_test_dir}/message.success"
+    success_file_path = f"{path_to_test_dir}/train_message.success"
     with open(success_file_path, "w") as f:
         f.write("PROGRESS")
 

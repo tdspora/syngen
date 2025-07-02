@@ -73,7 +73,6 @@ class VAEWrapper(BaseWrapper):
 
     def __post_init__(self):
         if self.process == "train":
-            self._prepare_dir()
             self.dataset = Dataset(
                 df=self.df,
                 schema=self.schema,
@@ -108,10 +107,6 @@ class VAEWrapper(BaseWrapper):
         """
         with open(self.paths["dataset_pickle_path"], "wb") as f:
             f.write(pickle.dumps(self.dataset))
-
-    @staticmethod
-    def _prepare_dir():
-        os.makedirs("model_artifacts/tmp_store/losses", exist_ok=True)
 
     def _restore_zero_values(self, df):
         for column in self.dataset.zero_num_column_names:
