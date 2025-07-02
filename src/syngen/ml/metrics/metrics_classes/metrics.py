@@ -953,9 +953,8 @@ class UnivariateMetric(BaseMetric):
         # Kurtosis
         original_kurtosis = kurtosis(self.original[column].dropna())
         synthetic_kurtosis = kurtosis(self.synthetic[column].dropna())
-        kurtosis_ratio = (
-            synthetic_kurtosis / original_kurtosis
-            if original_kurtosis != 0 else float('inf')
+        kurtosis_ratio = self._calculate_ratio(
+            original_kurtosis, synthetic_kurtosis
         )
         metrics[f"{column}_kurtosis_original"] = original_kurtosis
         metrics[f"{column}_kurtosis_synthetic"] = synthetic_kurtosis
@@ -982,10 +981,8 @@ class UnivariateMetric(BaseMetric):
         # Max value
         original_max_value = self.original[column].max()
         synthetic_max_value = self.synthetic[column].max()
-        max_value_ratio = (
-            synthetic_max_value / original_max_value
-            if original_max_value != 0
-            else float('inf')
+        max_value_ratio = self._calculate_ratio(
+            original_max_value, synthetic_max_value
         )
         metrics[f"{column}_max_value_original"] = original_max_value
         metrics[f"{column}_max_value_synthetic"] = synthetic_max_value
@@ -1027,9 +1024,8 @@ class UnivariateMetric(BaseMetric):
         # Skewness
         original_skewness = skew(self.original[column].dropna())
         synthetic_skewness = skew(self.synthetic[column].dropna())
-        skewness_ratio = (
-            synthetic_skewness / original_skewness
-            if original_skewness != 0 else float('inf')
+        skewness_ratio = self._calculate_ratio(
+            original_skewness, synthetic_skewness
         )
         metrics[f"{column}_skewness_original"] = original_skewness
         metrics[f"{column}_skewness_synthetic"] = synthetic_skewness
@@ -1080,6 +1076,17 @@ class UnivariateMetric(BaseMetric):
             f"{metrics[f'{column}_skewness_ratio']:.2f}"
             f"\n"
         )
+
+    def _calculate_ratio(self, original_metric, synthetic_metric, epsilon=1e-10):
+        """
+        Calculate the ratio of two metrics.
+        If the original metric is zero, return infinity.
+        """
+        if original_metric == 0 and synthetic_metric == 0:
+            return 1.0
+        if original_metric == 0 and synthetic_metric != 0:
+            original_metric += epsilon
+        return abs(synthetic_metric / original_metric)
 
     @staticmethod
     def outlier_ratio_iqr(column: pd.Series, factor=1.5):
