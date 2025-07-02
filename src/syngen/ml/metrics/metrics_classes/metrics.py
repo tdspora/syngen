@@ -1093,7 +1093,9 @@ class UnivariateMetric(BaseMetric):
             f"\n"
         )
 
-    def _calculate_ratio(original_metric, synthetic_metric, epsilon=1e-10):
+    def _calculate_ratio(
+            self, original_metric, synthetic_metric, epsilon=1e-10
+    ):
         """
         Calculate the ratio of two values
         with proper handling of near-zero values.

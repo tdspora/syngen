@@ -1,10 +1,15 @@
+from unittest import result
 import pandas as pd
 import numpy as np
 import pytest
 
 from unittest.mock import patch
 
-from syngen.ml.metrics.metrics_classes.metrics import Clustering, Utility
+from syngen.ml.metrics.metrics_classes.metrics import (
+    Clustering,
+    Utility,
+    UnivariateMetric
+)
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
@@ -63,14 +68,44 @@ def test_utility_valid_target(
     with patch(
         'syngen.ml.metrics.metrics_classes.metrics.logger'
     ) as mock_logger:
-        result = Utility._valid_target(col, model_y, task_type)
+        test_result = Utility._valid_target(col, model_y, task_type)
 
-    assert result == expected_result, \
-        f"Expected result is {expected_result}, got {result}"
+    assert test_result == expected_result, \
+        f"Expected result is {expected_result}, got {test_result}"
 
     if expected_log_message:
         mock_logger.info.assert_called_once()
     else:
         mock_logger.info.assert_not_called()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "original_val, synthetic_val, expected_result",
+    [
+        (0, 0, 1.0),         # Both zero -> perfect match
+        (0, 5, 5e10),        # Original zero -> synthetic/epsilon
+        (5, 0, 0),          # Synthetic zero -> 0
+        (1e-11, 1e-11, 1.0),  # Both near zero -> perfect match
+        (10, 20, 2.0),      # Regular case
+    ]
+)
+def test_calculate_ratio(
+    rp_logger, original_val, synthetic_val, expected_result
+):
+    """Test _calculate_ratio method of UnivariateMetric class"""
+    rp_logger.info(
+        f"Testing _calculate_ratio with original_val={original_val}, "
+        f"synthetic_val={synthetic_val}, expected_result={expected_result}"
+    )
+    epsilon = 1e-10
+    metric = UnivariateMetric(
+        pd.DataFrame(), pd.DataFrame(), plot=False, reports_path=""
+    )
+
+    ratio = metric._calculate_ratio(original_val, synthetic_val, epsilon)
+
+    assert ratio == expected_result, f"Expected {expected_result}, got {ratio}"
 
     rp_logger.info(SUCCESSFUL_MESSAGE)

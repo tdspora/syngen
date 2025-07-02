@@ -3,9 +3,17 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from unittest.mock import patch, MagicMock
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, QuantileTransformer
+from sklearn.preprocessing import (
+    StandardScaler,
+    MinMaxScaler,
+    QuantileTransformer
+)
 
-from syngen.ml.vae.models.features import BaseFeature, CharBasedTextFeature, ContinuousFeature
+from syngen.ml.vae.models.features import (
+    BaseFeature,
+    CharBasedTextFeature,
+    ContinuousFeature
+)
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
