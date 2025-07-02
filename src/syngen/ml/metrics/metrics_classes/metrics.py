@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.stats as st
+from scipy.stats import kurtosis, skew
 import seaborn as sns
 from slugify import slugify
 from loguru import logger
@@ -867,7 +868,14 @@ class UnivariateMetric(BaseMetric):
                 uni_images[column] = path_to_image
         return uni_images
 
-    def __calc_continuous(self, column: str, isdate: bool, print_nan: bool = False):
+    def __calc_continuous(
+            self,
+            column: str,
+            isdate: bool,
+            print_nan: bool = False,
+            kurtosis_threshold: int = 50,
+            print_extreme_outliers_metrics: bool = True
+            ):
         original_nan_count = self.original[column].isna().sum()
         synthetic_nan_count = self.synthetic[column].isna().sum()
         original_unique_count = self.original[column].nunique()
@@ -918,7 +926,168 @@ class UnivariateMetric(BaseMetric):
         if print_nan:
             logger.info(f"Number of original NaN values in {column}: {original_nan_count}")
             logger.info(f"Number of synthetic NaN values in {column}: {synthetic_nan_count}")
+
+        kurt = kurtosis(self.original[column].dropna())
+        if kurt > kurtosis_threshold:
+            outliers_metrics = self._calculate_outliers_metrics(column)
+            if print_extreme_outliers_metrics:
+                self._log_outliers_analysis(outliers_metrics, column)
+
         return uni_images
+
+    def _calculate_outliers_metrics(self, column):
+        """
+        Calculate various outliers-related metrics for a given column
+        in the original and synthetic datasets.
+
+        Parameters:
+            column (str): The name of the column to analyze.
+
+        Returns:
+            dict: A dictionary containing kurtosis, top value ratios,
+            max value ratios, and outlier ratios
+            for both original and synthetic data.
+        """
+        metrics = {}
+
+        # Kurtosis
+        original_kurtosis = kurtosis(self.original[column].dropna())
+        synthetic_kurtosis = kurtosis(self.synthetic[column].dropna())
+        kurtosis_ratio = (
+            synthetic_kurtosis / original_kurtosis
+            if original_kurtosis != 0 else float('inf')
+        )
+        metrics[f"{column}_kurtosis_original"] = original_kurtosis
+        metrics[f"{column}_kurtosis_synthetic"] = synthetic_kurtosis
+        metrics[f"{column}_kurtosis_ratio"] = kurtosis_ratio
+
+        # Top1 value ratio
+        original_top1_value = self.original[column].mode().iloc[0]
+        synthetic_top1_value = self.synthetic[column].mode().iloc[0]
+        original_top1_ratio = (
+                self.original[column].value_counts(normalize=True).get(
+                    original_top1_value, 0
+                )
+        )
+        synthetic_top1_ratio = (
+                self.synthetic[column].value_counts(normalize=True).get(
+                    synthetic_top1_value, 0
+                )
+        )
+        top1_ratio_diff = abs(synthetic_top1_ratio - original_top1_ratio)
+        metrics[f"{column}_top1_ratio_original"] = original_top1_ratio
+        metrics[f"{column}_top1_ratio_synthetic"] = synthetic_top1_ratio
+        metrics[f"{column}_top1_ratio_diff"] = top1_ratio_diff
+
+        # Max value
+        original_max_value = self.original[column].max()
+        synthetic_max_value = self.synthetic[column].max()
+        max_value_ratio = (
+            synthetic_max_value / original_max_value
+            if original_max_value != 0
+            else float('inf')
+        )
+        metrics[f"{column}_max_value_original"] = original_max_value
+        metrics[f"{column}_max_value_synthetic"] = synthetic_max_value
+        metrics[f"{column}_max_value_ratio"] = max_value_ratio
+
+        # Outlier ratio using IQR
+        original_outlier_ratio = (
+            self.outlier_ratio_iqr(self.original[column].dropna())
+        )
+        synthetic_outlier_ratio = (
+            self.outlier_ratio_iqr(self.synthetic[column].dropna())
+        )
+        outlier_ratio_diff = (
+            abs(synthetic_outlier_ratio - original_outlier_ratio)
+        )
+        metrics[f"{column}_outlier_ratio_original"] = original_outlier_ratio
+        metrics[f"{column}_outlier_ratio_synthetic"] = synthetic_outlier_ratio
+        metrics[f"{column}_outlier_ratio_diff"] = outlier_ratio_diff
+
+        # Extreme outlier ratio using IQR with factor 10
+        original_extr_outlier_ratio = (
+            self.outlier_ratio_iqr(self.original[column].dropna(), factor=10)
+        )
+        synthetic_extr_outlier_ratio = (
+            self.outlier_ratio_iqr(self.synthetic[column].dropna(), factor=10)
+        )
+        extr_outlier_ratio_diff = (
+            abs(synthetic_extr_outlier_ratio - original_extr_outlier_ratio)
+        )
+        metrics[f"{column}_extr_outlier_ratio_original"] = (
+            original_extr_outlier_ratio
+        )
+        metrics[f"{column}_extr_outlier_ratio_synthetic"] = (
+            synthetic_extr_outlier_ratio
+        )
+        metrics[f"{column}_extr_outlier_ratio_diff"] = (
+            extr_outlier_ratio_diff
+        )
+        # Skewness
+        original_skewness = skew(self.original[column].dropna())
+        synthetic_skewness = skew(self.synthetic[column].dropna())
+        skewness_ratio = (
+            synthetic_skewness / original_skewness
+            if original_skewness != 0 else float('inf')
+        )
+        metrics[f"{column}_skewness_original"] = original_skewness
+        metrics[f"{column}_skewness_synthetic"] = synthetic_skewness
+        metrics[f"{column}_skewness_ratio"] = skewness_ratio
+        return metrics
+
+    def _log_outliers_analysis(self, metrics: dict, column: str):
+        logger.trace(
+            f"\nOutliers analysis for '{column}':"
+            f"\nKurtosis:"
+            f"\n  - Original: {metrics[f'{column}_kurtosis_original']:.2f}"
+            f"\n  - Synthetic: {metrics[f'{column}_kurtosis_synthetic']:.2f}"
+            f"\n  - Ratio (synthetic/original): "
+            f"{metrics[f'{column}_kurtosis_ratio']:.2f}"
+            f"\n"
+            f"\nTop1 Value Ratio:"
+            f"\n  - Original: {metrics[f'{column}_top1_ratio_original']:.4f}"
+            f"\n  - Synthetic: {metrics[f'{column}_top1_ratio_synthetic']:.4f}"
+            f"\n  - Absolute Difference: "
+            f"{metrics[f'{column}_top1_ratio_diff']:.4f}"
+            f"\n"
+            f"\nOutliers Ratio (IQR):"
+            f"\n  - Original: "
+            f"{metrics[f'{column}_outlier_ratio_original']:.2%}"
+            f"\n  - Synthetic: "
+            f"{metrics[f'{column}_outlier_ratio_synthetic']:.2%}"
+            f"\n  - Absolute Difference: "
+            f"{metrics[f'{column}_outlier_ratio_diff']:.2%}"
+            f"\n"
+            f"\nExtreme Outliers Ratio (IQR, factor=10):"
+            f"\n  - Original: "
+            f"{metrics[f'{column}_extr_outlier_ratio_original']:.2%}"
+            f"\n  - Synthetic: "
+            f"{metrics[f'{column}_extr_outlier_ratio_synthetic']:.2%}"
+            f"\n  - Absolute Difference: "
+            f"{metrics[f'{column}_extr_outlier_ratio_diff']:.2%}"
+            f"\n"
+            f"\nMax Value:"
+            f"\n  - Original: {metrics[f'{column}_max_value_original']:.2f}"
+            f"\n  - Synthetic: {metrics[f'{column}_max_value_synthetic']:.2f}"
+            f"\n  - Ratio (synthetic/original): "
+            f"{metrics[f'{column}_max_value_ratio']:.2f}"
+            f"\n"
+            f"\nSkewness:"
+            f"\n  - Original: {metrics[f'{column}_skewness_original']:.2f}"
+            f"\n  - Synthetic: {metrics[f'{column}_skewness_synthetic']:.2f}"
+            f"\n  - Ratio (synthetic/original): "
+            f"{metrics[f'{column}_skewness_ratio']:.2f}"
+            f"\n"
+        )
+
+    @staticmethod
+    def outlier_ratio_iqr(column: pd.Series, factor=1.5):
+        Q1 = column.quantile(0.25)
+        Q3 = column.quantile(0.75)
+        IQR = Q3 - Q1
+        outlier_mask = (column < (Q1 - factor * IQR)) | (column > (Q3 + factor * IQR))
+        return outlier_mask.mean()
 
 
 class Clustering(BaseMetric):
