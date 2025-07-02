@@ -1093,15 +1093,32 @@ class UnivariateMetric(BaseMetric):
             f"\n"
         )
 
-    def _calculate_ratio(self, original_metric, synthetic_metric, epsilon=1e-10):
+    def _calculate_ratio(original_metric, synthetic_metric, epsilon=1e-10):
         """
-        Calculate the ratio of two metrics.
-        If the original metric is zero, return infinity.
+        Calculate the ratio of two values
+        with proper handling of near-zero values.
+
+        Args:
+            original_metric: Value from original data
+            synthetic_metric: Value from synthetic data
+            epsilon: Threshold for considering values as effectively zero
+
+        Returns:
+            float: Ratio where:
+            - 1.0 if both metrics are effectively zero (< epsilon)
+            - synthetic/epsilon if only original is effectively zero
+            - regular ratio otherwise
         """
-        if original_metric == 0 and synthetic_metric == 0:
+        # Check if values are effectively zero
+        original_is_zero = abs(original_metric) < epsilon
+        synthetic_is_zero = abs(synthetic_metric) < epsilon
+
+        if original_is_zero and synthetic_is_zero:
             return 1.0
-        if original_metric == 0 and synthetic_metric != 0:
-            original_metric += epsilon
+
+        if original_is_zero and not synthetic_is_zero:
+            return abs(synthetic_metric / epsilon)
+
         return abs(synthetic_metric / original_metric)
 
     @staticmethod
