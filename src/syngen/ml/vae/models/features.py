@@ -231,7 +231,7 @@ class ContinuousFeature(BaseFeature):
         if kurt > kurtosis_threshold:
             logger.debug(
                 f"Column '{self.name}' has extreme outliers: "
-                f"kurtosis={kurt:.2f} > threshold of {kurtosis_threshold}. "
+                f"kurtosis={kurt:.2f} > kurtosis_threshold={kurtosis_threshold}. "
                 f"Using QuantileTransformer."
             )
             quantile_params = self._get_quantile_transformer_params(
