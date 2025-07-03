@@ -67,19 +67,6 @@ class PreprocessHandler(Processor):
                 f"The empty table was provided. Unable to train the table - '{self.table_name}'"
             )
 
-    def _check_sample_report(self):
-        """
-        Check whether it is necessary to generate a sample report
-        """
-        reports = self.metadata[self.table_name]["train_settings"]["reports"]
-        if "sample" in reports and self.initial_data_shape[0] == self.row_subset:
-            logger.warning(
-                "The generation of the sample report is unnecessary and won't be produced "
-                "as the source data and sampled data sizes are identical"
-            )
-            reports.remove("sample")
-            self.metadata[self.table_name]["train_settings"]["reports"] = reports
-
     def prepare_data(self) -> Tuple[pd.DataFrame, Dict]:
         """
         Prepare the subset of the data for the training process
@@ -88,7 +75,6 @@ class PreprocessHandler(Processor):
         self._check_if_data_is_empty(data)
         self._save_original_schema(original_schema)
         preprocessed_data = self._preprocess_data(data)
-        self._check_sample_report()
         return preprocessed_data, schema
 
     def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -129,7 +115,7 @@ class PreprocessHandler(Processor):
 
             if row_limit:
                 self.row_subset = min(row_limit, len(data))
-                self.data = data.sample(n=self.row_subset)
+                data = data.sample(n=self.row_subset)
 
         if len(data) < 100:
             logger.warning(
@@ -199,7 +185,8 @@ class PreprocessHandler(Processor):
                 [
                     flatten(json.loads(i), ".")
                     for i in data[column]
-                ]
+                ],
+                index=data.index
             )
             flattening_mapping[column] = flattened_data.columns.to_list()
             flattened_dfs.append(flattened_data)

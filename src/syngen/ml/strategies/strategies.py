@@ -115,6 +115,10 @@ class TrainStrategy(Strategy, ABC):
         # This should be refactored in the future
         table_name = self.config.table_name
         flatten_metadata_exists = os.path.exists(self.config.paths["path_to_flatten_metadata"])
+        if flatten_metadata_exists:
+            logger.warning(
+                "The sample report isn't available for a table containing JSON column(s)"
+            )
         if (
                 not table_name.endswith("_fk")
                 and "sample" in self.config.reports
