@@ -32,6 +32,8 @@ from syngen.ml.utils import (
     timestamp_to_datetime
 )
 
+KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
+
 
 class BaseFeature:
     """
@@ -206,8 +208,9 @@ class ContinuousFeature(BaseFeature):
         )
 
     def _select_scaler(
-            self, data: pd.DataFrame, kurtosis_threshold=50
-            ) -> object:
+            self, data: pd.DataFrame,
+            kurtosis_threshold=KURTOSIS_THRESHOLD
+    ) -> object:
         """
         Select appropriate scaler based on data characteristics.
 
@@ -228,7 +231,8 @@ class ContinuousFeature(BaseFeature):
         if kurt > kurtosis_threshold:
             logger.debug(
                 f"Column '{self.name}' has extreme outliers: "
-                f"kurtosis={kurt:.2f}. Using QuantileTransformer."
+                f"kurtosis={kurt:.2f} > threshold of {kurtosis_threshold}. "
+                f"Using QuantileTransformer."
             )
             quantile_params = self._get_quantile_transformer_params(
                 n_samples=len(data),

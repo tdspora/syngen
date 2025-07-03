@@ -31,6 +31,8 @@ from syngen.ml.utils import (
     timestamp_to_datetime,
     fetch_config
 )
+from syngen.ml.vae.models.features import KURTOSIS_THRESHOLD
+
 matplotlib.use("Agg")
 
 
@@ -873,8 +875,7 @@ class UnivariateMetric(BaseMetric):
             column: str,
             isdate: bool,
             print_nan: bool = False,
-            kurtosis_threshold: int = 50,
-            print_extreme_outliers_metrics: bool = True
+            kurtosis_threshold: float = KURTOSIS_THRESHOLD
             ):
         original_nan_count = self.original[column].isna().sum()
         synthetic_nan_count = self.synthetic[column].isna().sum()
@@ -927,11 +928,10 @@ class UnivariateMetric(BaseMetric):
             logger.info(f"Number of original NaN values in {column}: {original_nan_count}")
             logger.info(f"Number of synthetic NaN values in {column}: {synthetic_nan_count}")
 
-        kurt = kurtosis(self.original[column].dropna())
+        kurt = kurtosis(self.original[column], nan_policy='omit')
         if kurt > kurtosis_threshold:
             outliers_metrics = self._calculate_outliers_metrics(column)
-            if print_extreme_outliers_metrics:
-                self._log_outliers_analysis(outliers_metrics, column)
+            self._log_outliers_analysis(outliers_metrics, column)
 
         return uni_images
 
@@ -951,32 +951,26 @@ class UnivariateMetric(BaseMetric):
         metrics = {}
 
         # Kurtosis
-        original_kurtosis = kurtosis(self.original[column].dropna())
-        synthetic_kurtosis = kurtosis(self.synthetic[column].dropna())
+        original_kurtosis = kurtosis(self.original[column], nan_policy='omit')
+        synthetic_kurtosis = kurtosis(self.synthetic[column], nan_policy='omit')
         kurtosis_ratio = self._calculate_ratio(
             original_kurtosis, synthetic_kurtosis
         )
-        metrics[f"{column}_kurtosis_original"] = original_kurtosis
-        metrics[f"{column}_kurtosis_synthetic"] = synthetic_kurtosis
-        metrics[f"{column}_kurtosis_ratio"] = kurtosis_ratio
+        metrics["kurtosis_original"] = original_kurtosis
+        metrics["kurtosis_synthetic"] = synthetic_kurtosis
+        metrics["kurtosis_ratio"] = kurtosis_ratio
 
         # Top1 value ratio
-        original_top1_value = self.original[column].mode().iloc[0]
-        synthetic_top1_value = self.synthetic[column].mode().iloc[0]
-        original_top1_ratio = (
-                self.original[column].value_counts(normalize=True).get(
-                    original_top1_value, 0
-                )
+        original_top1_value, original_top1_ratio = next(
+            self.original[column].value_counts(normalize=True).items()
         )
-        synthetic_top1_ratio = (
-                self.synthetic[column].value_counts(normalize=True).get(
-                    synthetic_top1_value, 0
-                )
+        synthetic_top1_value, synthetic_top1_ratio = next(
+            self.synthetic[column].value_counts(normalize=True).items() 
         )
         top1_ratio_diff = abs(synthetic_top1_ratio - original_top1_ratio)
-        metrics[f"{column}_top1_ratio_original"] = original_top1_ratio
-        metrics[f"{column}_top1_ratio_synthetic"] = synthetic_top1_ratio
-        metrics[f"{column}_top1_ratio_diff"] = top1_ratio_diff
+        metrics["top1_ratio_original"] = original_top1_ratio
+        metrics["top1_ratio_synthetic"] = synthetic_top1_ratio
+        metrics["top1_ratio_diff"] = top1_ratio_diff
 
         # Max value
         original_max_value = self.original[column].max()
@@ -984,9 +978,9 @@ class UnivariateMetric(BaseMetric):
         max_value_ratio = self._calculate_ratio(
             original_max_value, synthetic_max_value
         )
-        metrics[f"{column}_max_value_original"] = original_max_value
-        metrics[f"{column}_max_value_synthetic"] = synthetic_max_value
-        metrics[f"{column}_max_value_ratio"] = max_value_ratio
+        metrics["max_value_original"] = original_max_value
+        metrics["max_value_synthetic"] = synthetic_max_value
+        metrics["max_value_ratio"] = max_value_ratio
 
         # Min value
         original_min_value = self.original[column].min()
@@ -994,102 +988,96 @@ class UnivariateMetric(BaseMetric):
         min_value_ratio = self._calculate_ratio(
             original_min_value, synthetic_min_value
         )
-        metrics[f"{column}_min_value_original"] = original_min_value
-        metrics[f"{column}_min_value_synthetic"] = synthetic_min_value
-        metrics[f"{column}_min_value_ratio"] = min_value_ratio
+        metrics["min_value_original"] = original_min_value
+        metrics["min_value_synthetic"] = synthetic_min_value
+        metrics["min_value_ratio"] = min_value_ratio
 
         # Outlier ratio using IQR
-        original_outlier_ratio = (
-            self.outlier_ratio_iqr(self.original[column].dropna())
+        original_outlier_ratio = self.outlier_ratio_iqr(
+            self.original[column].dropna()
         )
-        synthetic_outlier_ratio = (
-            self.outlier_ratio_iqr(self.synthetic[column].dropna())
+        synthetic_outlier_ratio = self.outlier_ratio_iqr(
+            self.synthetic[column].dropna()
         )
         outlier_ratio_diff = (
             abs(synthetic_outlier_ratio - original_outlier_ratio)
         )
-        metrics[f"{column}_outlier_ratio_original"] = original_outlier_ratio
-        metrics[f"{column}_outlier_ratio_synthetic"] = synthetic_outlier_ratio
-        metrics[f"{column}_outlier_ratio_diff"] = outlier_ratio_diff
+        metrics["outlier_ratio_original"] = original_outlier_ratio
+        metrics["outlier_ratio_synthetic"] = synthetic_outlier_ratio
+        metrics["outlier_ratio_diff"] = outlier_ratio_diff
 
         # Extreme outlier ratio using IQR with factor 10
-        original_extr_outlier_ratio = (
-            self.outlier_ratio_iqr(self.original[column].dropna(), factor=10)
+        original_extr_outlier_ratio = self.outlier_ratio_iqr(
+            self.original[column].dropna(), factor=10
         )
-        synthetic_extr_outlier_ratio = (
-            self.outlier_ratio_iqr(self.synthetic[column].dropna(), factor=10)
+        synthetic_extr_outlier_ratio = self.outlier_ratio_iqr(
+            self.synthetic[column].dropna(), factor=10
         )
         extr_outlier_ratio_diff = (
             abs(synthetic_extr_outlier_ratio - original_extr_outlier_ratio)
         )
-        metrics[f"{column}_extr_outlier_ratio_original"] = (
-            original_extr_outlier_ratio
-        )
-        metrics[f"{column}_extr_outlier_ratio_synthetic"] = (
-            synthetic_extr_outlier_ratio
-        )
-        metrics[f"{column}_extr_outlier_ratio_diff"] = (
-            extr_outlier_ratio_diff
-        )
+        metrics["extr_outlier_ratio_original"] = original_extr_outlier_ratio
+        metrics["extr_outlier_ratio_synthetic"] = synthetic_extr_outlier_ratio
+        metrics["extr_outlier_ratio_diff"] = extr_outlier_ratio_diff
         # Skewness
-        original_skewness = skew(self.original[column].dropna())
-        synthetic_skewness = skew(self.synthetic[column].dropna())
+        original_skewness = skew(self.original[column], nan_policy='omit')
+        synthetic_skewness = skew(self.synthetic[column], nan_policy='omit')
         skewness_ratio = self._calculate_ratio(
             original_skewness, synthetic_skewness
         )
-        metrics[f"{column}_skewness_original"] = original_skewness
-        metrics[f"{column}_skewness_synthetic"] = synthetic_skewness
-        metrics[f"{column}_skewness_ratio"] = skewness_ratio
+        metrics["skewness_original"] = original_skewness
+        metrics["skewness_synthetic"] = synthetic_skewness
+        metrics["skewness_ratio"] = skewness_ratio
         return metrics
 
     def _log_outliers_analysis(self, metrics: dict, column: str):
         logger.trace(
             f"\nOutliers analysis for '{column}':"
-            f"\nKurtosis:"
-            f"\n  - Original: {metrics[f'{column}_kurtosis_original']:.2f}"
-            f"\n  - Synthetic: {metrics[f'{column}_kurtosis_synthetic']:.2f}"
+            f"\n Kurtosis, '{column}':"
+            f"\n  - Original: {metrics['kurtosis_original']:.2f}"
+            f"\n  - Synthetic: {metrics['kurtosis_synthetic']:.2f}"
             f"\n  - Ratio (synthetic/original): "
-            f"{metrics[f'{column}_kurtosis_ratio']:.2f}"
+            f"{metrics['kurtosis_ratio']:.2f}"
             f"\n"
-            f"\nTop1 Value Ratio:"
-            f"\n  - Original: {metrics[f'{column}_top1_ratio_original']:.4f}"
-            f"\n  - Synthetic: {metrics[f'{column}_top1_ratio_synthetic']:.4f}"
+            f"\nTop1 Value Ratio, '{column}':"
+            f"\n  - Original: {metrics['top1_ratio_original']:.4f}"
+            f"\n  - Synthetic: {metrics['top1_ratio_synthetic']:.4f}"
             f"\n  - Absolute Difference: "
-            f"{metrics[f'{column}_top1_ratio_diff']:.4f}"
+            f"{metrics['top1_ratio_diff']:.4f}"
             f"\n"
-            f"\nOutliers Ratio (IQR):"
+            f"\nOutliers Ratio (IQR), '{column}':"
             f"\n  - Original: "
-            f"{metrics[f'{column}_outlier_ratio_original']:.2%}"
+            f"{metrics['outlier_ratio_original']:.2%}"
             f"\n  - Synthetic: "
-            f"{metrics[f'{column}_outlier_ratio_synthetic']:.2%}"
+            f"{metrics['outlier_ratio_synthetic']:.2%}"
             f"\n  - Absolute Difference: "
-            f"{metrics[f'{column}_outlier_ratio_diff']:.2%}"
+            f"{metrics['outlier_ratio_diff']:.2%}"
             f"\n"
-            f"\nExtreme Outliers Ratio (IQR, factor=10):"
+            f"\nExtreme Outliers Ratio (IQR, factor=10), '{column}':"
             f"\n  - Original: "
-            f"{metrics[f'{column}_extr_outlier_ratio_original']:.2%}"
+            f"{metrics['extr_outlier_ratio_original']:.2%}"
             f"\n  - Synthetic: "
-            f"{metrics[f'{column}_extr_outlier_ratio_synthetic']:.2%}"
+            f"{metrics['extr_outlier_ratio_synthetic']:.2%}"
             f"\n  - Absolute Difference: "
-            f"{metrics[f'{column}_extr_outlier_ratio_diff']:.2%}"
+            f"{metrics['extr_outlier_ratio_diff']:.2%}"
             f"\n"
-            f"\nMax Value:"
-            f"\n  - Original: {metrics[f'{column}_max_value_original']:.2f}"
-            f"\n  - Synthetic: {metrics[f'{column}_max_value_synthetic']:.2f}"
+            f"\nMax Value, '{column}':"
+            f"\n  - Original: {metrics['max_value_original']:.2f}"
+            f"\n  - Synthetic: {metrics['max_value_synthetic']:.2f}"
             f"\n  - Ratio (synthetic/original): "
-            f"{metrics[f'{column}_max_value_ratio']:.2f}"
+            f"{metrics['max_value_ratio']:.2f}"
             f"\n"
-            f"\nMin Value:"
-            f"\n  - Original: {metrics[f'{column}_min_value_original']:.2f}"
-            f"\n  - Synthetic: {metrics[f'{column}_min_value_synthetic']:.2f}"
+            f"\nMin Value, '{column}':"
+            f"\n  - Original: {metrics['min_value_original']:.2f}"
+            f"\n  - Synthetic: {metrics['min_value_synthetic']:.2f}"
             f"\n  - Ratio (synthetic/original): "
-            f"{metrics[f'{column}_min_value_ratio']:.2f}"
+            f"{metrics['min_value_ratio']:.2f}"
             f"\n"
-            f"\nSkewness:"
-            f"\n  - Original: {metrics[f'{column}_skewness_original']:.2f}"
-            f"\n  - Synthetic: {metrics[f'{column}_skewness_synthetic']:.2f}"
+            f"\nSkewness, '{column}':"
+            f"\n  - Original: {metrics['skewness_original']:.2f}"
+            f"\n  - Synthetic: {metrics['skewness_synthetic']:.2f}"
             f"\n  - Ratio (synthetic/original): "
-            f"{metrics[f'{column}_skewness_ratio']:.2f}"
+            f"{metrics['skewness_ratio']:.2f}"
             f"\n"
         )
 
