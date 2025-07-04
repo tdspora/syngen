@@ -141,7 +141,7 @@ class LongTextsHandler(BaseHandler):
 
         else:
             logger.info("No columns to train kde over found")
-        return super().handle(**kwargs)
+        return super().handle(data, **kwargs)
 
 
 @define
