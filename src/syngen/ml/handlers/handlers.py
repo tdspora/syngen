@@ -37,7 +37,7 @@ class AbstractHandler(ABC):
         pass
 
     @abstractmethod
-    def handle(self, **kwargs):
+    def handle(self, data: pd.DataFrame, **kwargs):
         pass
 
 
