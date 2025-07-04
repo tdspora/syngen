@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import os
 import traceback
 
-import pandas as pd
 from loguru import logger
 from copy import deepcopy
 
@@ -71,12 +70,11 @@ class TrainStrategy(Strategy, ABC):
         self._save_training_config()
         return self
 
-    def add_handler(self, data: pd.DataFrame):
+    def add_handler(self):
         """
         Set up the handler which used in training process
         """
         root_handler = RootHandler(
-            data=data,
             metadata=self.metadata,
             table_name=self.config.table_name,
             paths=self.config.paths,
@@ -84,7 +82,6 @@ class TrainStrategy(Strategy, ABC):
         )
 
         vae_handler = VaeTrainHandler(
-            data=data,
             metadata=self.metadata,
             table_name=self.config.table_name,
             schema=self.config.schema,
@@ -149,8 +146,8 @@ class TrainStrategy(Strategy, ABC):
                 tags={"table_name": table, "process": "preprocess"},
             )
             self.set_config(**kwargs)
-            self.add_reporters().add_handler(data)
-            self.handler.handle()
+            self.add_reporters().add_handler()
+            self.handler.handle(data)
             # End the separate run for the training stage
             MlflowTracker().end_run()
         except Exception:

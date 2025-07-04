@@ -43,7 +43,6 @@ class AbstractHandler(ABC):
 
 @define
 class BaseHandler(AbstractHandler):
-    data: Optional[pd.DataFrame] = field(kw_only=True, default=None)
     metadata: Dict = field(kw_only=True)
     paths: Dict = field(kw_only=True)
     table_name: str = field(kw_only=True)
@@ -55,9 +54,9 @@ class BaseHandler(AbstractHandler):
         return handler
 
     @abstractmethod
-    def handle(self, **kwargs):
+    def handle(self, data: Optional[pd.DataFrame], **kwargs):
         if self._next_handler:
-            return self._next_handler.handle(**kwargs)
+            return self._next_handler.handle(data, **kwargs)
 
         return None
 
@@ -80,8 +79,8 @@ class BaseHandler(AbstractHandler):
 @define
 class RootHandler(BaseHandler):
 
-    def handle(self, **kwargs):
-        return super().handle(**kwargs)
+    def handle(self, data: pd.DataFrame, **kwargs):
+        return super().handle(data, **kwargs)
 
 
 @define
@@ -99,7 +98,7 @@ class LongTextsHandler(BaseHandler):
         with open(f'{self.paths["no_ml_state_path"]}kde_params.pkl', "wb") as file:
             dill.dump(features, file)
 
-    def handle(self, **kwargs):
+    def handle(self, data: pd.DataFrame, **kwargs):
         self._prepare_dir()
 
         dataset = fetch_config(self.paths["dataset_pickle_path"])
@@ -109,10 +108,10 @@ class LongTextsHandler(BaseHandler):
             features = {}
             for col in long_text_columns:
                 tokenizer = Tokenizer(lower=False, char_level=True)
-                if type(self.data[col].dropna().values[0]) is bytes:
-                    text_col = self.data[col].str.decode("utf-8", errors="ignore")
+                if type(data[col].dropna().values[0]) is bytes:
+                    text_col = data[col].str.decode("utf-8", errors="ignore")
                 else:
-                    text_col = self.data[col]
+                    text_col = data[col]
                 text_col = text_col.fillna("")
                 tokenizer.fit_on_texts(text_col)
 
@@ -156,15 +155,15 @@ class VaeTrainHandler(BaseHandler):
     type_of_process: str = field(kw_only=True)
     reports: List[str] = field(kw_only=True)
 
-    def __fit_model(self):
+    def __fit_model(self, data: Optional[pd.DataFrame]):
         logger.info("Start VAE training")
-        if self.data is None:
+        if data is None:
             logger.error("For mode = 'train' path must be provided")
             raise ValueError("Can't read data from path or path is None")
 
         self.model = self.create_wrapper(
             self.wrapper_name,
-            self.data,
+            data,
             self.schema,
             metadata=self.metadata,
             table_name=self.table_name,
@@ -173,7 +172,7 @@ class VaeTrainHandler(BaseHandler):
             main_process=self.type_of_process,
             process="train",
         )
-        self.model.batch_size = min(self.batch_size, len(self.data))
+        self.model.batch_size = min(self.batch_size, len(data))
         list_of_reports = [f'\'{report}\'' for report in self.reports]
         list_of_reports = ', '.join(list_of_reports) if list_of_reports else '\'none\''
         logger.debug(
@@ -195,10 +194,10 @@ class VaeTrainHandler(BaseHandler):
     def __prepare_dir(self):
         os.makedirs(self.paths["fk_kde_path"], exist_ok=True)
 
-    def handle(self, **kwargs):
+    def handle(self, data: pd.DataFrame, **kwargs):
         self.__prepare_dir()
-        self.__fit_model()
-        return super().handle(**kwargs)
+        self.__fit_model(data)
+        return super().handle(data, **kwargs)
 
 
 @define
