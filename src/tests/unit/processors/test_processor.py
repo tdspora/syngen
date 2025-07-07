@@ -375,7 +375,14 @@ def test_run_with_table_containing_json_columns(
     assert handler.row_subset == row_subset
     assert handler.initial_data_shape == (3, 10)
     assert data.shape == (row_subset, 18)
-
+    assert data.columns.to_list() == [
+        "id", "created_at", "updated_at",
+        "name", "description", "owner_id",
+        "is_default", "is_encrypted", "status",
+        "cluster_type", "master", "log_level",
+        "env_variables", "ssh_config", "authentication_type",
+        "username", "key_passphrase", "private_key"
+    ]
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
