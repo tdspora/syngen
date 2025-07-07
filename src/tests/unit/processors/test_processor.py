@@ -52,38 +52,18 @@ def test_get_artifacts_contained_one_json_column(rp_logger):
      flattening_mapping,
      duplicated_columns) = handler._get_artifacts(data, json_columns)
     assert flattened_data.columns.to_list() == [
-        "id",
-        "created_at",
-        "updated_at",
-        "name",
-        "description",
-        "owner_id",
-        "is_default",
-        "is_encrypted",
-        "status",
-        "cluster_type",
-        "master",
-        "ssh_config",
-        "username",
-        "password",
-        "authentication_type",
-        "log_level",
-        "env_variables",
-        "key_passphrase",
-        "private_key"
+        "id", "created_at", "updated_at", "name",
+        "description", "owner_id", "is_default",
+        "is_encrypted", "status", "cluster_type",
+        "master", "log_level", "env_variables",
+        "ssh_config", "authentication_type",
+        "username", "key_passphrase", "private_key"
     ]
     assert flattening_mapping == {
         "_details": [
-            "cluster_type",
-            "master",
-            "ssh_config",
-            "username",
-            "password",
-            "authentication_type",
-            "log_level",
-            "env_variables",
-            "key_passphrase",
-            "private_key"
+            "cluster_type", "master", "log_level",
+            "env_variables", "ssh_config", "authentication_type",
+            "username", "key_passphrase", "private_key"
         ]
     }
     assert duplicated_columns == []
@@ -322,7 +302,7 @@ def test_postprocess_generated_data_with_two_json_columns(rp_logger):
     (True, 2, 2)
 ])
 @patch.object(PreprocessHandler, "_save_original_schema")
-def test_prepare_data(
+def test_run(
     mock_save_original_schema,
     drop_null,
     row_limit,
@@ -330,7 +310,7 @@ def test_prepare_data(
     rp_logger
 ):
     rp_logger.info(
-        "Test the method 'prepare_data' of the class 'PreprocessHandler'"
+        "Test the method 'run' of the class 'PreprocessHandler'"
     )
     path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_na_values.csv"
     metadata = {
@@ -348,28 +328,31 @@ def test_prepare_data(
         metadata_path=None,
         table_name="test_table"
     )
-    handler.prepare_data()
+    data, _ = handler.run()
     assert handler.row_subset == expected_result
     assert handler.initial_data_shape == (10, 11)
+    assert data.shape == (expected_result, 11)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("drop_null, row_limit, expected_result", [
+@pytest.mark.parametrize("drop_null, row_limit, row_subset", [
     (False, None, 3),
     (True, None, 1),
     (False, 2, 2),
     (True, 2, 1),
 ])
+@patch.object(PreprocessHandler, "_save_flatten_metadata")
 @patch.object(PreprocessHandler, "_save_original_schema")
-def test_prepare_data_with_table_containing_json_columns(
+def test_run_with_table_containing_json_columns(
     mock_save_original_schema,
+    mock_save_flatten_metadata,
     drop_null,
     row_limit,
-    expected_result,
+    row_subset,
     rp_logger
 ):
     rp_logger.info(
-        "Test the method 'prepare_data' of the class 'PreprocessHandler' "
+        "Test the method 'run' of the class 'PreprocessHandler' "
         "for the table containing one JSON column"
     )
     path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_one_json_column.csv"
@@ -388,9 +371,11 @@ def test_prepare_data_with_table_containing_json_columns(
         metadata_path=None,
         table_name="test_table"
     )
-    handler.prepare_data()
-    assert handler.row_subset == expected_result
+    data, _ = handler.run()
+    assert handler.row_subset == row_subset
     assert handler.initial_data_shape == (3, 10)
+    assert data.shape == (row_subset, 18)
+
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
