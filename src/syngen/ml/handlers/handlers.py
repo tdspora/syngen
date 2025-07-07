@@ -310,14 +310,14 @@ class VaeInferHandler(BaseHandler):
         )
 
         func_for_worker_init = functools.partial(
-            VaeInferHandler._initialize_worker_vae_model,
+            self.__class__._initialize_worker_vae_model,
             handler_instance=self,
             dataset_for_worker=self.dataset
         )
 
         self._pool = mp.Pool(
             processes=n_jobs,
-            initializer=VaeInferHandler.worker_init,
+            initializer=self.__class__.worker_init,
             initargs=(func_for_worker_init,)
         )
 
