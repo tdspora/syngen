@@ -429,11 +429,11 @@ class Worker:
             loader=self.loader
         )
         self._save_metadata_file()
-        self._write_success_file(table_name=table, type_of_process="train")
         ProgressBarHandler().set_progress(
             delta=delta,
             message=f"Training of the table - '{table}' was completed"
         )
+        self._write_success_file(table_name=table, type_of_process="train")
 
     def __train_tables(
         self,
@@ -521,12 +521,12 @@ class Worker:
             type_of_process=self.type_of_process,
             loader=self.loader
         )
-        self._write_success_file(table_name=table, type_of_process="infer", both_keys=both_keys)
         ProgressBarHandler().set_progress(
             delta=delta,
             message=f"Infer process of the table - '{table}' was completed"
         )
         MlflowTracker().end_run()
+        self._write_success_file(table_name=table, type_of_process="infer", both_keys=both_keys)
 
     def __infer_tables(
         self,
