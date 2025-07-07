@@ -1,14 +1,19 @@
 from itertools import chain
 from typing import Union, List
 from lazy import lazy
+from loguru import logger
 
 import category_encoders as ce
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from scipy.stats import shapiro
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from scipy.stats import shapiro, kurtosis
+from sklearn.preprocessing import (
+    StandardScaler,
+    MinMaxScaler,
+    QuantileTransformer
+)
 from tensorflow.keras import losses
 from tensorflow.keras.layers import (
     Bidirectional,
@@ -26,6 +31,8 @@ from syngen.ml.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime
 )
+
+KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
 
 
 class BaseFeature:
@@ -182,8 +189,7 @@ class ContinuousFeature(BaseFeature):
 
     def fit(self, data: pd.DataFrame, **kwargs):
         self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
-        normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
-        self.scaler = StandardScaler() if normality >= 0.05 else MinMaxScaler()
+        self.scaler = self._select_scaler(data)
         self.scaler.fit(data)
         self.input_dimension = data.shape[1]
 
@@ -200,6 +206,70 @@ class ContinuousFeature(BaseFeature):
             if self.column_type is float
             else np.around(reverse_transformed).astype("int64")
         )
+
+    def _select_scaler(
+            self, data: pd.DataFrame,
+            kurtosis_threshold=KURTOSIS_THRESHOLD
+    ) -> object:
+        """
+        Select appropriate scaler based on data characteristics.
+
+        Strategy:
+        - Extreme outliers -> QuantileTransformer
+        - Normal distribution -> StandardScaler
+        - Other cases -> MinMaxScaler
+        """
+        data = data.iloc[:, 0]
+
+        kurt = kurtosis(data)
+        normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
+
+        if normality >= 0.05:
+            return StandardScaler()
+
+        # QuantileTransformer for extreme outliers
+        if kurt > kurtosis_threshold:
+            logger.debug(
+                f"Column '{self.name}' has extreme outliers: "
+                f"kurtosis={kurt:.2f} > kurtosis_threshold={kurtosis_threshold}. "
+                f"Using QuantileTransformer."
+            )
+            quantile_params = self._get_quantile_transformer_params(
+                n_samples=len(data),
+                kurt=kurt,
+                kurtosis_threshold=kurtosis_threshold
+            )
+            return QuantileTransformer(**quantile_params)
+        else:
+            return MinMaxScaler()
+
+    def _get_quantile_transformer_params(
+            self, n_samples, kurt, kurtosis_threshold
+            ) -> dict:
+        """
+        Get optimal parameters for QuantileTransformer
+        based on data characteristics
+        """
+        base_quantiles = min(n_samples, 100_000)
+
+        # for distributions with very extreme outliers use more quantiles
+        if kurt > 4 * kurtosis_threshold:
+            quantile_factor = 1.5
+        elif kurt > 2 * kurtosis_threshold:
+            quantile_factor = 1.2
+        else:
+            quantile_factor = 1.0
+
+        n_quantiles = min(int(base_quantiles * quantile_factor), n_samples)
+
+        # supsample did not affect time for fitting and transforming
+        subsample = None
+
+        return {
+            'n_quantiles': n_quantiles,
+            'subsample': subsample,
+            'output_distribution': 'normal'
+        }
 
     @lazy
     def input(self) -> tf.Tensor:
