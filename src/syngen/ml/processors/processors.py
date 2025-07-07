@@ -120,7 +120,7 @@ class PreprocessHandler(Processor):
         if len(data) < 100:
             logger.warning(
                 "The input table is too small to provide any meaningful results. "
-                "Please consider 1) disable drop_null argument, 2) provide bigger table"
+                "Please consider: 1) disable drop_null argument, 2) provide bigger table"
             )
         elif len(data) < 500:
             logger.warning(
