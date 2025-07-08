@@ -129,6 +129,7 @@ class PreprocessHandler(Processor):
                 f"please consider any of the steps: 1) provide a bigger table, "
                 f"2) disable drop_null argument"
             )
+        logger.info(f"The subset of rows was set to {self.row_subset}")
         return data
 
     @staticmethod
