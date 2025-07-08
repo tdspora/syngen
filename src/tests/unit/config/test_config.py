@@ -2,10 +2,16 @@ import pandas as pd
 import pytest
 
 from syngen.ml.config import TrainConfig, InferConfig
+from syngen.ml.data_loaders import DataLoader
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
-def test_init_train_config(test_df, rp_logger):
+@pytest.mark.parametrize("input_batch_size, expected_batch_size", [
+    (100, 100),
+    (1000, 1000),
+    (1100, 1000)
+])
+def test_init_train_config(input_batch_size, expected_batch_size, rp_logger):
     rp_logger.info(
         "Test the process of initialization of the instance of the class TrainConfig"
     )
@@ -22,8 +28,9 @@ def test_init_train_config(test_df, rp_logger):
             "format": {}
         }
     }
+    df, _ = DataLoader(path=path_to_source).load_data()
     train_config = TrainConfig(
-        data=test_df,
+        data=df,
         schema={"fields": {}, "format": "CSV"},
         source=path_to_source,
         epochs=10,
@@ -33,9 +40,11 @@ def test_init_train_config(test_df, rp_logger):
         metadata=metadata,
         metadata_path=None,
         reports=["accuracy", "sample"],
-        batch_size=32,
+        batch_size=input_batch_size,
         loader=None
     )
+    assert train_config.row_subset == 1000
+    assert train_config.batch_size == expected_batch_size
     assert train_config.slugify_table_name == "test-table"
     assert set(train_config.__dict__.keys()) == {
         "source", "epochs", "data", "schema", "drop_null", "row_limit", "table_name", "metadata",

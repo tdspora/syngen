@@ -32,6 +32,7 @@ class TrainConfig:
 
     def __post_init__(self):
         self.row_subset = len(self.data)
+        self.batch_size = min(self.batch_size, self.row_subset)
         self._set_paths()
 
     def __getstate__(self) -> Dict:
@@ -56,12 +57,6 @@ class TrainConfig:
             "batch_size": self.batch_size,
             "reports": self.reports
         }
-
-    def _set_batch_size(self):
-        """
-        Set up "batch_size" for training process
-        """
-        self.batch_size = min(self.batch_size, self.row_subset)
 
     @slugify_attribute(table_name="slugify_table_name")
     def _set_paths(self):
