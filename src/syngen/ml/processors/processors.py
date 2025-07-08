@@ -79,7 +79,7 @@ class PreprocessHandler(Processor):
         list_of_dropped_columns = [f"'{column}'" for column in dropped_columns]
         if list_of_dropped_columns:
             logger.info(f"Empty columns - {', '.join(list_of_dropped_columns)} were removed")
-            schema["fields"] = {column: "removed" for column in dropped_columns}
+            schema["fields"].update({column: "removed" for column in dropped_columns})
         return data, schema
 
     def prepare_data(self) -> Tuple[pd.DataFrame, Dict]:
