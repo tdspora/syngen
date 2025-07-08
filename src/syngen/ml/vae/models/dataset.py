@@ -30,7 +30,7 @@ from syngen.ml.utils import (
     TIMEZONE_REGEX
 )
 from syngen.ml.utils import slugify_parameters
-from syngen.ml.utils import fetch_config, clean_up_metadata
+from syngen.ml.utils import clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
@@ -38,13 +38,14 @@ class BaseDataset:
     def __init__(
         self,
         df: pd.DataFrame,
-        schema: Optional[Dict],
+        schema: Dict,
         metadata: Dict,
         table_name: str,
         main_process: str,
         paths: Dict
     ):
         self.df = df
+        self.schema = schema
         self.fields = schema.get("fields", {})
         self.schema_format = schema.get("format")
         self.metadata = metadata
@@ -60,9 +61,7 @@ class BaseDataset:
         self.nan_labels_dict: Dict = dict()
         self.uuid_columns: Set = set()
         self.uuid_columns_types: Dict = dict()
-        self.dropped_columns: Set = set()
         self.tech_columns: Set = set()
-        self.order_of_columns: List = list()
         self.custom_categorical_columns: Set = set()
         self.categorical_columns: Set = set()
         self.str_columns: Set = set()
@@ -86,11 +85,10 @@ class BaseDataset:
         self.foreign_keys_list: List = list()
         self.fk_columns: List = list()
         self.keys_mapping: Dict = dict()
-        train_config = fetch_config(
-            self.paths["train_config_pickle_path"]
-        )
-        self.dropped_columns: Set = train_config.dropped_columns
-        self.order_of_columns: List = train_config.columns
+        self.dropped_columns: Set = {
+            column for column in self.fields if self.fields[column] == "removed"
+        }
+        self.order_of_columns: List = list(self.df.columns)
         self.format = self.metadata[self.table_name].get("format", {})
         self.nan_labels_dict = dict()
         self.nan_labels_in_uuid = dict()
@@ -446,14 +444,9 @@ class Dataset(BaseDataset):
         Exclude the column from the list of columns
         if it was removed previously as empty column
         """
-        removed = [
-            col
-            for col, data_type in self.fields.items()
-            if data_type == "removed"
-        ]
         columns = getattr(self, f"{column_type}_columns")
         for col in list(columns):
-            if col in removed:
+            if col in self.dropped_columns:
                 columns.remove(col)
                 logger.warning(
                     f"The column '{col}' was excluded from the list of {column_type} columns "

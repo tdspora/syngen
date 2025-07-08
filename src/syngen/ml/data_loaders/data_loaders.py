@@ -36,8 +36,6 @@ class BaseDataLoader(ABC):
     Abstract class for data loader
     """
     def __init__(self, path: str):
-        if not path:
-            raise ValueError("It seems that the information of source is absent")
         self.path = path
 
     @abstractmethod
