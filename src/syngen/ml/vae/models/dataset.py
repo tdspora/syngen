@@ -145,13 +145,7 @@ class Dataset(BaseDataset):
         """
         Mark removed columns in the schema
         """
-        if self.schema.get("format") == "CSV":
-            self.schema["fields"] = dict()
-            self.schema["fields"] = {column: "removed" for column in self.dropped_columns}
-        else:
-            for column, data_type in self.schema.get("fields", {}).items():
-                if column not in self.df.columns:
-                    self.schema["fields"][column] = "removed"
+        self.schema["fields"] = {column: "removed" for column in self.dropped_columns}
 
     def _preparation_step(self):
         """
