@@ -27,7 +27,8 @@ from syngen.ml.utils import (
     nan_labels_to_float,
     get_date_columns,
     fetch_timezone,
-    TIMEZONE_REGEX
+    TIMEZONE_REGEX,
+    fetch_config
 )
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import clean_up_metadata
@@ -85,7 +86,9 @@ class BaseDataset:
         self.foreign_keys_list: List = list()
         self.fk_columns: List = list()
         self.keys_mapping: Dict = dict()
-        self.dropped_columns: Set = set()
+        self.dropped_columns: Set = {
+            column for column in self.fields if self.fields[column] == "removed"
+        }
         self.order_of_columns: List = list(self.df.columns)
         self.format = self.metadata[self.table_name].get("format", {})
         self.nan_labels_dict = dict()
@@ -129,31 +132,12 @@ class Dataset(BaseDataset):
         self.nan_labels_dict = get_nan_labels(self.df, excluded_columns)
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
 
-    def _remove_empty_columns(self):
-        """
-        Remove completely empty columns from dataframe
-        """
-        data_columns = set(self.df.columns)
-        self.df = self.df.dropna(how="all", axis=1)
-
-        self.dropped_columns = data_columns - set(self.df.columns)
-        list_of_dropped_columns = [f"'{column}'" for column in self.dropped_columns]
-        if len(list_of_dropped_columns) > 0:
-            logger.info(f"Empty columns - {', '.join(list_of_dropped_columns)} were removed")
-
-    def _mark_removed_columns(self):
-        """
-        Mark removed columns in the schema
-        """
-        self.schema["fields"] = {column: "removed" for column in self.dropped_columns}
-
     def _preparation_step(self):
         """
         Define binary and categorical columns,
         preprocess the dataframe before the detection of data types of columns
         """
         table_config = self.metadata.get(self.table_name, {})
-        self._remove_empty_columns()
         self._set_non_existent_columns(table_config)
         self._update_metadata(table_config)
         self._set_metadata()
@@ -434,7 +418,6 @@ class Dataset(BaseDataset):
         """
         Synchronize the schema of the table with dataframe
         """
-        self._mark_removed_columns()
         self.fields = {
             column: data_type
             for column, data_type in self.fields.items()
@@ -462,14 +445,9 @@ class Dataset(BaseDataset):
         Exclude the column from the list of columns
         if it was removed previously as empty column
         """
-        removed = [
-            col
-            for col, data_type in self.fields.items()
-            if data_type == "removed"
-        ]
         columns = getattr(self, f"{column_type}_columns")
         for col in list(columns):
-            if col in removed:
+            if col in self.dropped_columns:
                 columns.remove(col)
                 logger.warning(
                     f"The column '{col}' was excluded from the list of {column_type} columns "

@@ -843,37 +843,6 @@ def test_set_long_text_columns(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_handling_empty_columns(rp_logger):
-    rp_logger.info("Test the process of handling of empty columns")
-    metadata = {
-        "mock_table": {
-            "keys": {}
-        }
-    }
-
-    df, schema = DataLoader(
-        f"{DIR_NAME}/unit/dataset/fixtures/data_with_empty_column.csv"
-    ).load_data()
-
-    mock_dataset = Dataset(
-        df=df,
-        schema=schema,
-        metadata=metadata,
-        table_name="mock_table",
-        paths={},
-        main_process="train"
-    )
-    mock_dataset.launch_detection()
-    assert mock_dataset.dropped_columns == {"empty_column"}
-    assert mock_dataset.schema == {
-        "fields": {
-            "empty_column": "removed"
-        },
-        "format": "CSV"
-    }
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
 def test_handle_missing_values_in_numeric_columns_in_csv_file(rp_logger):
     rp_logger.info(
         "Test the process of handling missing values "

@@ -67,25 +67,42 @@ class PreprocessHandler(Processor):
                 f"The empty table was provided. Unable to train the table - '{self.table_name}'"
             )
 
+    @staticmethod
+    def _remove_empty_columns(data: pd.DataFrame, schema: Dict) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Remove completely empty columns from dataframe and mark them as 'removed' in the schema
+        """
+        initial_data_columns = set(data.columns)
+        data = data.dropna(how="all", axis=1)
+
+        dropped_columns = initial_data_columns - set(data.columns)
+        list_of_dropped_columns = [f"'{column}'" for column in dropped_columns]
+        if list_of_dropped_columns:
+            logger.info(f"Empty columns - {', '.join(list_of_dropped_columns)} were removed")
+            schema["fields"] = {column: "removed" for column in dropped_columns}
+        return data, schema
+
     def prepare_data(self) -> Tuple[pd.DataFrame, Dict]:
         """
-        Prepare the subset of the data for the training process
+        Prepare the subset of the data for the training process,
+        and get the preprocessed data and schema
         """
         data, schema, original_schema = self._load_source()
         self._check_if_data_is_empty(data)
         self._save_original_schema(original_schema)
-        preprocessed_data = self._preprocess_data(data)
-        return preprocessed_data, schema
+        preprocessed_data, preprocessed_schema = self._preprocess_data(data, schema)
+        return preprocessed_data, preprocessed_schema
 
-    def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _preprocess_data(self, data: pd.DataFrame, schema: Dict) -> Tuple[pd.DataFrame, Dict]:
         """
         Apply the parameters 'drop_null' and 'row_limit' to the data,
-        and get the subset for the training process
+        and get the subset for the training process, and modified schema
         """
         drop_null = self.metadata[self.table_name]["train_settings"]["drop_null"]
         row_limit = self.metadata[self.table_name]["train_settings"]["row_limit"]
         self.initial_data_shape = data.shape
         self.row_subset = len(data)
+        data, schema = self._remove_empty_columns(data, schema)
         if self.loader:
             warning_message = (
                 "parameter will be ignored because the retrieval of the data "
@@ -130,7 +147,7 @@ class PreprocessHandler(Processor):
                 f"2) disable drop_null argument"
             )
         logger.info(f"The subset of rows was set to {self.row_subset}")
-        return data
+        return data, schema
 
     @staticmethod
     def _run_script():

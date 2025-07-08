@@ -328,9 +328,13 @@ def test_run(
         metadata_path=None,
         table_name="test_table"
     )
-    data, _ = handler.run()
+    data, schema = handler.run()
+    assert schema == {
+        "fields": {"registration": "removed"},
+        "format": "CSV"
+    }
     assert handler.row_subset == expected_result
-    assert handler.initial_data_shape == (10, 11)
+    assert handler.initial_data_shape == (10, 12)
     assert data.shape == (expected_result, 11)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
