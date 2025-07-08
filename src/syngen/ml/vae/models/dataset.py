@@ -27,8 +27,7 @@ from syngen.ml.utils import (
     nan_labels_to_float,
     get_date_columns,
     fetch_timezone,
-    TIMEZONE_REGEX,
-    fetch_config
+    TIMEZONE_REGEX
 )
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import clean_up_metadata
