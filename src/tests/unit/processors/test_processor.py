@@ -339,6 +339,53 @@ def test_run(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(PreprocessHandler, "_save_original_schema")
+def test_run_with_avro_file(
+    mock_save_original_schema,
+    rp_logger
+):
+    rp_logger.info(
+        "Test the method 'run' of the class 'PreprocessHandler' "
+        "by providing the file in the '.avro' format"
+    )
+    path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_na_values.avro"
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": path_to_data,
+                "drop_null": False,
+                "row_limit": None,
+                "reports": []
+            }
+        }
+    }
+    handler = PreprocessHandler(
+        metadata=metadata,
+        metadata_path=None,
+        table_name="test_table"
+    )
+    data, schema = handler.run()
+    assert schema == {
+        "fields": {
+            "id_number": "int",
+            "first_name": "string",
+            "last_name": "string",
+            "created_date": "string",
+            "active": "int",
+            "id": "string",
+            "region": "string",
+            "email": "string",
+            "ratio": "float",
+            "address": "string",
+            "alternative_address": "string",
+            "registration": "removed",
+            "description": "string"
+        },
+        "format": "Avro"
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @pytest.mark.parametrize("drop_null, row_limit, row_subset", [
     (False, None, 3),
     (True, None, 1),
