@@ -1705,6 +1705,7 @@ def test_train_tables_with_generation_reports(
     mock_check_existence_of_destination.assert_not_called()
     mock_validate_fernet_key.assert_not_called()
     mock_validate_metadata.assert_called_once_with("test_table")
+    mock_preprocess_data.assert_called_once_with(table_name="test_table")
     mock_train_table.assert_called_once()
     mock_infer_table.assert_called_once_with(
         table="test_table",
