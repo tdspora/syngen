@@ -447,8 +447,8 @@ class PostprocessHandler(Processor):
                 apply(lambda row: self._remove_empty_elements(row))
             data[old_column] = data[old_column]. \
                 apply(lambda row: json.dumps(row, ensure_ascii=False))
-            dropped_columns = [i for i in new_columns if i not in duplicated_columns]
-            data.drop(dropped_columns, axis=1, inplace=True)
+            dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
+            data.drop(list(dropped_columns), axis=1, inplace=True)
         return data
 
     def run(self):
