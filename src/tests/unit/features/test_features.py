@@ -185,7 +185,9 @@ def test_select_scaler(
 def test_get_quantile_transformer_params(
     n_samples, kurt, threshold, expected_factor, rp_logger
 ):
-    rp_logger.info("Testing _get_quantile_transformer_params method with different kurtosis values")
+    rp_logger.info(
+        "Testing _get_quantile_transformer_params method with different kurtosis values"
+    )
 
     feature = ContinuousFeature(name="test_feature")
     result = feature._get_quantile_transformer_params(

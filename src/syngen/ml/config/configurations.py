@@ -1,16 +1,12 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Set, List, Callable, Literal
-import os
-from copy import deepcopy
+from typing import Optional, Dict, List, Callable, Literal
 from datetime import datetime
 
 import pandas as pd
-from loguru import logger
 from slugify import slugify
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
-from syngen.ml.convertor import CSVConvertor
 
 
 @dataclass
@@ -18,7 +14,8 @@ class TrainConfig:
     """
     The configuration class to set up the work of train process
     """
-
+    data: pd.DataFrame
+    schema: Dict
     source: Optional[str]
     epochs: int
     drop_null: bool
@@ -29,17 +26,13 @@ class TrainConfig:
     reports: List[str]
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
-    data: pd.DataFrame = field(init=False)
-    initial_data_shape: Tuple[int, int] = field(init=False)
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
-    schema: Dict = field(init=False)
-    original_schema: Dict = field(init=False)
     slugify_table_name: str = field(init=False)
-    columns: List = field(init=False)
-    dropped_columns: Set = field(init=False)
 
     def __post_init__(self):
+        self.row_subset = len(self.data)
+        self.batch_size = min(self.batch_size, self.row_subset)
         self._set_paths()
 
     def __getstate__(self) -> Dict:
@@ -53,14 +46,6 @@ class TrainConfig:
                 del instance[attr_key]
         return instance
 
-    def preprocess_data(self):
-        self._extract_data()
-        self._save_original_schema()
-        self._remove_empty_columns()
-        self._mark_removed_columns()
-        self._prepare_data()
-        self._check_reports()
-
     def to_dict(self) -> Dict:
         """
         Return the values of the settings of training process
@@ -72,188 +57,6 @@ class TrainConfig:
             "batch_size": self.batch_size,
             "reports": self.reports
         }
-
-    def _set_batch_size(self):
-        """
-        Set up "batch_size" for training process
-        """
-        self.batch_size = min(self.batch_size, self.row_subset)
-
-    def _check_sample_report(self):
-        """
-        Check whether it is necessary to generate a certain report
-        """
-        if "sample" in self.reports and self.initial_data_shape[0] == self.row_subset:
-            logger.warning(
-                "The generation of the sample report is unnecessary and won't be produced "
-                "as the source data and sampled data sizes are identical"
-            )
-            reports = deepcopy(self.reports)
-            reports.remove("sample")
-            self.reports = reports
-
-    def _check_reports(self):
-        """
-        Check whether it is necessary to generate a certain report
-        """
-        self._check_sample_report()
-
-    def _fetch_dataframe(self) -> Tuple[pd.DataFrame, Dict]:
-        """
-        Fetch the dataframe using the callback function
-        """
-        dataframe_fetcher = DataFrameFetcher(
-            loader=self.loader,
-            table_name=self.table_name
-        )
-        self.original_schema = dataframe_fetcher.original_schema
-        return dataframe_fetcher.fetch_data()
-
-    def _load_source(self) -> Tuple[pd.DataFrame, Dict]:
-        """
-        Return dataframe and schema of original data
-        """
-        if os.path.exists(self.paths["path_to_flatten_metadata"]):
-            path = self.paths["input_data_path"]
-            data_loader = DataLoader(
-                path=path,
-                table_name=self.table_name,
-                metadata=self.metadata,
-                sensitive=True
-            )
-            data, schema = data_loader.load_data()
-            self.original_schema = data_loader.original_schema
-            schema = CSVConvertor.schema
-            return data, schema
-        else:
-            data_loader = DataLoader(path=self.source)
-            self.original_schema = data_loader.original_schema
-            if self.original_schema is not None:
-                logger.trace(
-                    f"The schema of the table - '{self.table_name}': {self.original_schema}"
-                )
-            return data_loader.load_data()
-
-    def _remove_empty_columns(self):
-        """
-        Remove completely empty columns from dataframe
-        """
-        data_columns = set(self.data.columns)
-        self.data = self.data.dropna(how="all", axis=1)
-
-        self.dropped_columns = data_columns - set(self.data.columns)
-        list_of_dropped_columns = [f"'{column}'" for column in self.dropped_columns]
-        if len(list_of_dropped_columns) > 0:
-            logger.info(f"Empty columns - {', '.join(list_of_dropped_columns)} were removed")
-
-    def _mark_removed_columns(self):
-        """
-        Mark removed columns in the schema
-        """
-        if self.schema.get("format") == "CSV":
-            self.schema["fields"] = dict()
-            self.schema["fields"] = {column: "removed" for column in self.dropped_columns}
-        else:
-            for column, data_type in self.schema.get("fields", {}).items():
-                if column not in self.data.columns:
-                    self.schema["fields"][column] = "removed"
-
-    def _check_if_data_is_empty(self):
-        """
-        Check if the provided data is empty
-        """
-        if self.data.shape[0] < 1:
-            raise ValueError(
-                f"The empty table was provided. Unable to train the table - '{self.table_name}'"
-            )
-
-    def _extract_data(self):
-        """
-        Extract data and schema necessary for training process
-        """
-        self.data, self.schema = self._load_source()
-        self.initial_data_shape = self.data.shape
-        self.columns = list(self.data.columns)
-        self._check_if_data_is_empty()
-
-    def _preprocess_data(self):
-        """
-        Preprocess data and set the parameter "row_subset" for training process
-        """
-        if self.loader:
-            warning_message = (
-                "parameter will be ignored because the retrieval of the data "
-                "is handled by a callback function"
-            )
-            if self.drop_null:
-                logger.warning(f"The 'drop_null' {warning_message}")
-            if self.row_limit is not None:
-                logger.warning(f"The 'row_limit' {warning_message}")
-        else:
-            if self.drop_null:
-                if not self.data.dropna().empty:
-                    initial_data = self.data
-                    self.data = self.data.dropna()
-                    if count_of_dropped_rows := initial_data.shape[0] - self.data.shape[0]:
-                        logger.info(
-                            f"As the parameter 'drop_null' set to 'True', "
-                            f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
-                            f"that have empty values have been dropped. "
-                            f"The count of remained rows is {self.data.shape[0]}."
-                        )
-                else:
-                    logger.warning(
-                        "The specified 'drop_null' argument results in the empty dataframe, "
-                        "so it will be ignored"
-                    )
-
-            if self.row_limit:
-                self.row_subset = min(self.row_limit, len(self.data))
-
-                self.data = self.data.sample(n=self.row_subset)
-
-        if len(self.data) < 100:
-            logger.warning(
-                "The input table is too small to provide any meaningful results. "
-                "Please consider 1) disable drop_null argument, 2) provide bigger table"
-            )
-        elif len(self.data) < 500:
-            logger.warning(
-                f"The amount of data is {len(self.data)} rows. It seems that it isn't enough "
-                f"to supply high-quality results. To improve the quality of generated data "
-                f"please consider any of the steps: 1) provide a bigger table, "
-                f"2) disable drop_null argument"
-            )
-
-        logger.info(f"The subset of rows was set to {len(self.data)}")
-
-        self.row_subset = len(self.data)
-        self._set_batch_size()
-
-    def _save_input_data(self):
-        """
-        Save the subset of the original data
-        """
-        DataLoader(
-            path=self.paths["input_data_path"],
-            table_name=self.table_name,
-            metadata=self.metadata,
-            sensitive=True
-        ).save_data(data=self.data)
-
-    def _save_original_schema(self):
-        """
-        Save the schema of the original data
-        """
-        DataLoader(path=self.paths["original_schema_path"]).save_data(data=self.original_schema)
-
-    def _prepare_data(self):
-        """
-        Preprocess and save the data necessary for the training process
-        """
-        self._preprocess_data()
-        if not self.loader:
-            self._save_input_data()
 
     @slugify_attribute(table_name="slugify_table_name")
     def _set_paths(self):

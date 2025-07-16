@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import os
 import traceback
+
 from loguru import logger
 from copy import deepcopy
 
@@ -66,7 +67,6 @@ class TrainStrategy(Strategy, ABC):
         configuration = TrainConfig(**kwargs)
         self.config = configuration
         self.metadata = deepcopy(self.config.metadata)
-        self.config.preprocess_data()
         self._save_training_config()
         return self
 
@@ -112,6 +112,10 @@ class TrainStrategy(Strategy, ABC):
         # This should be refactored in the future
         table_name = self.config.table_name
         flatten_metadata_exists = os.path.exists(self.config.paths["path_to_flatten_metadata"])
+        if flatten_metadata_exists:
+            logger.warning(
+                "The sample report isn't available for a table containing JSON column(s)"
+            )
         if (
                 not table_name.endswith("_fk")
                 and "sample" in self.config.reports
@@ -133,6 +137,7 @@ class TrainStrategy(Strategy, ABC):
         """
         try:
             table = kwargs["table_name"]
+            data = kwargs["data"]
             # Start the separate run for the preprocess stage
             # included preprocessing of the original data, identification of data types of columns,
             # fit and transform of the assigned features
@@ -142,7 +147,7 @@ class TrainStrategy(Strategy, ABC):
             )
             self.set_config(**kwargs)
             self.add_reporters().add_handler()
-            self.handler.handle()
+            self.handler.handle(data)
             # End the separate run for the training stage
             MlflowTracker().end_run()
         except Exception:

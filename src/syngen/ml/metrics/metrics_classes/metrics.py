@@ -965,7 +965,7 @@ class UnivariateMetric(BaseMetric):
             self.original[column].value_counts(normalize=True).items()
         )
         synthetic_top1_value, synthetic_top1_ratio = next(
-            self.synthetic[column].value_counts(normalize=True).items() 
+            self.synthetic[column].value_counts(normalize=True).items()
         )
         top1_ratio_diff = abs(synthetic_top1_ratio - original_top1_ratio)
         metrics["top1_ratio_original"] = original_top1_ratio
