@@ -1,14 +1,19 @@
 from itertools import chain
 from typing import Union, List
 from lazy import lazy
+from loguru import logger
 
-import category_encoders as ce
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from scipy.stats import shapiro
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from scipy.stats import shapiro, kurtosis
+from sklearn.preprocessing import (
+    StandardScaler,
+    MinMaxScaler,
+    QuantileTransformer,
+    OneHotEncoder
+)
 from tensorflow.keras import losses
 from tensorflow.keras.layers import (
     Bidirectional,
@@ -26,6 +31,8 @@ from syngen.ml.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime
 )
+
+KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
 
 
 class BaseFeature:
@@ -116,7 +123,7 @@ class BinaryFeature(BaseFeature):
     def transform(self, data: pd.DataFrame):
         data = data.astype("object").replace(self.mapping)
         data = data.replace(self.mapping)
-        return data.astype("float64")
+        return data.astype("float32")
 
     def inverse_transform(self, data: List) -> np.ndarray:
         data = np.round(data)
@@ -182,8 +189,7 @@ class ContinuousFeature(BaseFeature):
 
     def fit(self, data: pd.DataFrame, **kwargs):
         self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
-        normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
-        self.scaler = StandardScaler() if normality >= 0.05 else MinMaxScaler()
+        self.scaler = self._select_scaler(data)
         self.scaler.fit(data)
         self.input_dimension = data.shape[1]
 
@@ -200,6 +206,70 @@ class ContinuousFeature(BaseFeature):
             if self.column_type is float
             else np.around(reverse_transformed).astype("int64")
         )
+
+    def _select_scaler(
+            self, data: pd.DataFrame,
+            kurtosis_threshold=KURTOSIS_THRESHOLD
+    ) -> object:
+        """
+        Select appropriate scaler based on data characteristics.
+
+        Strategy:
+        - Extreme outliers -> QuantileTransformer
+        - Normal distribution -> StandardScaler
+        - Other cases -> MinMaxScaler
+        """
+        data = data.iloc[:, 0]
+
+        kurt = kurtosis(data)
+        normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
+
+        if normality >= 0.05:
+            return StandardScaler()
+
+        # QuantileTransformer for extreme outliers
+        if kurt > kurtosis_threshold:
+            logger.debug(
+                f"Column '{self.name}' has extreme outliers: "
+                f"kurtosis={kurt:.2f} > kurtosis_threshold={kurtosis_threshold}. "
+                f"Using QuantileTransformer."
+            )
+            quantile_params = self._get_quantile_transformer_params(
+                n_samples=len(data),
+                kurt=kurt,
+                kurtosis_threshold=kurtosis_threshold
+            )
+            return QuantileTransformer(**quantile_params)
+        else:
+            return MinMaxScaler()
+
+    def _get_quantile_transformer_params(
+            self, n_samples, kurt, kurtosis_threshold
+            ) -> dict:
+        """
+        Get optimal parameters for QuantileTransformer
+        based on data characteristics
+        """
+        base_quantiles = min(n_samples, 100_000)
+
+        # for distributions with very extreme outliers use more quantiles
+        if kurt > 4 * kurtosis_threshold:
+            quantile_factor = 1.5
+        elif kurt > 2 * kurtosis_threshold:
+            quantile_factor = 1.2
+        else:
+            quantile_factor = 1.0
+
+        n_quantiles = min(int(base_quantiles * quantile_factor), n_samples)
+
+        # supsample did not affect time for fitting and transforming
+        subsample = None
+
+        return {
+            'n_quantiles': n_quantiles,
+            'subsample': subsample,
+            'output_distribution': 'normal'
+        }
 
     @lazy
     def input(self) -> tf.Tensor:
@@ -278,37 +348,46 @@ class CategoricalFeature(BaseFeature):
             weight_randomizer = (0, 1)
 
         super().__init__(name="_".join(name.split()))
-        self.one_hot_encoder = ce.OneHotEncoder(return_df=False, handle_unknown="ignore")
+
+        self.one_hot_encoder = OneHotEncoder(
+            sparse_output=False,
+            handle_unknown='ignore',
+            dtype=np.float32)
         self.decoder = None
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
         self.feature_type = "categorical"
 
     def fit(self, data: pd.DataFrame, **kwargs):
-        data = data.astype(object)
+        """
+        Fit the encoder and create mappings.
+        """
+        data = data.iloc[:, 0].astype(str).to_numpy().reshape(-1, 1)
+
         self.one_hot_encoder.fit(data)
-        self.mapping = {
-            k: v
-            for k, v
-            in self.one_hot_encoder.ordinal_encoder.category_mapping[0]["mapping"].items()
-        }
+
+        categories = self.one_hot_encoder.categories_[0]
+        self.mapping = {cat: idx for idx, cat in enumerate(categories)}
         self.inverse_mapping = inverse_dict(self.mapping)
         self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get)
 
-        # because in mapping exist additional class None, input dimensionality should be less on 1
-        self.input_dimension = len(self.mapping) - 1
+        self.input_dimension = len(self.mapping)
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
-        if isinstance(data, pd.Series):
-            data = data.values
-        data = np.array(self.one_hot_encoder.transform(data)).astype("float32")
-        return data
+        """
+        Transform data to one-hot encoding.
+        """
+        data = data.iloc[:, 0].astype(str).to_numpy().reshape(-1, 1)
+
+        return self.one_hot_encoder.transform(data).astype("float32")
 
     def inverse_transform(self, data: np.ndarray) -> np.ndarray:
-        data = (
-            data.argmax(axis=1) + 1
-        )  # because in array numbers starts from 0, in dict it starts from 1
+        """
+        Convert one-hot encoded data back to original categories.
+        """
+        data = data.argmax(axis=1)
         inversed = self.inverse_vectorizer(data)
+
         return np.where(inversed == "?", None, inversed)
 
     @lazy

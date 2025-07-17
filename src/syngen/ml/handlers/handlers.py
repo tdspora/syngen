@@ -22,7 +22,7 @@ from loguru import logger
 from attrs import define, field
 
 from syngen.ml.vae import *  # noqa: F403
-from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
+from syngen.ml.data_loaders import DataLoader
 from syngen.ml.reporters import Report
 from syngen.ml.vae.models.dataset import Dataset
 from syngen.ml.utils import (
@@ -62,7 +62,7 @@ class BaseHandler(AbstractHandler):
         return handler
 
     @abstractmethod
-    def handle(self, data: pd.DataFrame, **kwargs):
+    def handle(self, data: Optional[pd.DataFrame], **kwargs):
         if self._next_handler:
             return self._next_handler.handle(data, **kwargs)
 
@@ -88,34 +88,11 @@ class BaseHandler(AbstractHandler):
             preloaded_dataset=initial_dataset_to_pass,
         )
 
-    def fetch_data(self) -> Tuple[pd.DataFrame, Optional[Dict]]:
-        """
-        Fetch the data
-        """
-        data_loader = DataLoader(
-            path=self.paths["input_data_path"],
-            table_name=self.table_name,
-            metadata=self.metadata,
-            sensitive=True
-        )
-
-        if data_loader.has_existed_path:
-            data, schema = data_loader.load_data()
-        elif self.loader:
-            data, schema = DataFrameFetcher(
-                loader=self.loader,
-                table_name=self.table_name
-            ).fetch_data()
-        else:
-            return pd.DataFrame(), None
-        return data, schema
-
 
 @define
 class RootHandler(BaseHandler):
 
-    def handle(self, **kwargs):
-        data, schema = super().fetch_data()
+    def handle(self, data: pd.DataFrame, **kwargs):
         return super().handle(data, **kwargs)
 
 
@@ -191,7 +168,7 @@ class VaeTrainHandler(BaseHandler):
     type_of_process: str = field(kw_only=True)
     reports: List[str] = field(kw_only=True)
 
-    def __fit_model(self, data: pd.DataFrame):
+    def __fit_model(self, data: Optional[pd.DataFrame]):
         logger.info("Start VAE training")
         if data is None:
             logger.error("For mode = 'train' path must be provided")
@@ -441,7 +418,7 @@ class VaeInferHandler(BaseHandler):
                 )
                 for i, j in zip(*text_structures)
             ]
-            logger.debug(f'Long text for column {col} is generated.')
+            logger.debug(f"Long text for column '{col}' is generated.")
             synthetic_infer[col] = generated_column
         return synthetic_infer
 
@@ -454,10 +431,11 @@ class VaeInferHandler(BaseHandler):
         synthetic_infer = pd.DataFrame()
 
         if self.has_vae:
+            logger.info(f'VAE generation for {self.table_name} started.')
             synthetic_infer = self.generate_vae(size, vae_model)
 
         if self.has_no_ml:
-            logger.info(f'Long texts generation for {self.table_name} started.')
+            logger.info(f"Long texts generation for '{self.table_name}' started.")
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
 
         return synthetic_infer
@@ -607,7 +585,7 @@ class VaeInferHandler(BaseHandler):
 
         except FileNotFoundError:
             logger.warning(
-                f"The mapper for the {fk_label} text key is not found. Making simple sampling"
+                f"The mapper for the '{fk_label}' text key is not found. Making simple sampling"
             )
             synth_fk = pk.sample(size, replace=True).reset_index(drop=True)
             synth_fk = synth_fk.rename(fk_label)
@@ -655,7 +633,7 @@ class VaeInferHandler(BaseHandler):
                 pk_path = self._get_pk_path(pk_table=pk_table, table_name=table_name)
                 pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
                 pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
-                logger.info(f"The {pk_column_label} assigned as a foreign_key feature")
+                logger.info(f"The '{pk_column_label}' assigned as a foreign_key feature")
 
                 synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, fk_column_name)
                 generated = generated.reset_index(drop=True)
