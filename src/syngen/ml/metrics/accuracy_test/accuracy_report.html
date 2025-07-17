@@ -564,7 +564,7 @@
 						src={{utility_barplot}}>
 					<h3 class="h3-title">{{table_name}}</h3>
 					<div class="utility-table">
-						{{utility_table}}
+						{{utility_table | safe}}
 					</div>
 					{% else %}
 					<p class="no-data">
