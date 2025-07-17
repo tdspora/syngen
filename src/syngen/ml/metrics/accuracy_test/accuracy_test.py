@@ -235,7 +235,7 @@ class AccuracyTest(BaseTest):
         with open(
             f"{os.path.dirname(os.path.realpath(__file__))}/accuracy_report.html"
         ) as file_:
-            template = jinja2.Template(file_.read())
+            template = jinja2.Template(file_.read(), autoescape=True)
 
         uni_images = {
             title: transform_to_base64(path) for title, path in uni_images.items()
