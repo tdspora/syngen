@@ -3,7 +3,6 @@ from typing import Union, List
 from lazy import lazy
 from loguru import logger
 
-import category_encoders as ce
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -12,7 +11,8 @@ from scipy.stats import shapiro, kurtosis
 from sklearn.preprocessing import (
     StandardScaler,
     MinMaxScaler,
-    QuantileTransformer
+    QuantileTransformer,
+    OneHotEncoder
 )
 from tensorflow.keras import losses
 from tensorflow.keras.layers import (
@@ -123,7 +123,7 @@ class BinaryFeature(BaseFeature):
     def transform(self, data: pd.DataFrame):
         data = data.astype("object").replace(self.mapping)
         data = data.replace(self.mapping)
-        return data.astype("float64")
+        return data.astype("float32")
 
     def inverse_transform(self, data: List) -> np.ndarray:
         data = np.round(data)
@@ -348,37 +348,46 @@ class CategoricalFeature(BaseFeature):
             weight_randomizer = (0, 1)
 
         super().__init__(name="_".join(name.split()))
-        self.one_hot_encoder = ce.OneHotEncoder(return_df=False, handle_unknown="ignore")
+
+        self.one_hot_encoder = OneHotEncoder(
+            sparse_output=False,
+            handle_unknown='ignore',
+            dtype=np.float32)
         self.decoder = None
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
         self.feature_type = "categorical"
 
     def fit(self, data: pd.DataFrame, **kwargs):
-        data = data.astype(object)
+        """
+        Fit the encoder and create mappings.
+        """
+        data = data.iloc[:, 0].astype(str).to_numpy().reshape(-1, 1)
+
         self.one_hot_encoder.fit(data)
-        self.mapping = {
-            k: v
-            for k, v
-            in self.one_hot_encoder.ordinal_encoder.category_mapping[0]["mapping"].items()
-        }
+
+        categories = self.one_hot_encoder.categories_[0]
+        self.mapping = {cat: idx for idx, cat in enumerate(categories)}
         self.inverse_mapping = inverse_dict(self.mapping)
         self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get)
 
-        # because in mapping exist additional class None, input dimensionality should be less on 1
-        self.input_dimension = len(self.mapping) - 1
+        self.input_dimension = len(self.mapping)
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
-        if isinstance(data, pd.Series):
-            data = data.values
-        data = np.array(self.one_hot_encoder.transform(data)).astype("float32")
-        return data
+        """
+        Transform data to one-hot encoding.
+        """
+        data = data.iloc[:, 0].astype(str).to_numpy().reshape(-1, 1)
+
+        return self.one_hot_encoder.transform(data).astype("float32")
 
     def inverse_transform(self, data: np.ndarray) -> np.ndarray:
-        data = (
-            data.argmax(axis=1) + 1
-        )  # because in array numbers starts from 0, in dict it starts from 1
+        """
+        Convert one-hot encoded data back to original categories.
+        """
+        data = data.argmax(axis=1)
         inversed = self.inverse_vectorizer(data)
+
         return np.where(inversed == "?", None, inversed)
 
     @lazy
