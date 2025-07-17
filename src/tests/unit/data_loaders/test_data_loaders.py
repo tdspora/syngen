@@ -120,10 +120,10 @@ def test_initialize_data_loader_for_local_table_with_empty_path(caplog, rp_logge
     rp_logger.info(
         "Initializing the instance of the class DataLoader for local table with empty path"
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         with caplog.at_level("ERROR"):
             DataLoader("")
-            assert "It seems that the information of source is absent" in caplog.text
+            assert "File format not supported for extension" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
