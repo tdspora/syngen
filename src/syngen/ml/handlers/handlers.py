@@ -431,7 +431,6 @@ class VaeInferHandler(BaseHandler):
         synthetic_infer = pd.DataFrame()
 
         if self.has_vae:
-            logger.info(f'VAE generation for {self.table_name} started.')
             synthetic_infer = self.generate_vae(size, vae_model)
 
         if self.has_no_ml:
