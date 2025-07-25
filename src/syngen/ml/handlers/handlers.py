@@ -467,11 +467,11 @@ class VaeInferHandler(BaseHandler):
             self._set_random_seeds()
 
         if run_parallel:
-            prepared_data = self._run_parallel(batches)
-            return prepared_data
+            generated_data = self._run_parallel(batches)
+            return generated_data
         else:
-            prepared_data = self._run_sequential(batches, delta)
-            return prepared_data
+            generated_data = self._run_sequential(batches, delta)
+            return generated_data
 
     def _run_parallel(self, batches: List[Tuple[int, int]]) -> pd.DataFrame:
         """
@@ -497,8 +497,8 @@ class VaeInferHandler(BaseHandler):
             f"Memory usage: {psutil.virtual_memory().percent}%"
         )
 
-        prepared_data = self._concat_slices_with_unique_pk(frames)
-        return prepared_data
+        generated_data = frames if frames else pd.DataFrame()
+        return generated_data
 
     def _run_sequential(self, batches: List[Tuple[int, int]], delta: float) -> pd.DataFrame:
         """
@@ -523,12 +523,8 @@ class VaeInferHandler(BaseHandler):
 
             self._check_memory_usage(len(prepared_batches))
 
-        prepared_data = (
-            self._concat_slices_with_unique_pk(
-                prepared_batches
-            ) if prepared_batches else pd.DataFrame()
-        )
-        return prepared_data
+        generated_data = prepared_batches if prepared_batches else pd.DataFrame()
+        return generated_data
 
     def _check_memory_usage(self, processed_count: int) -> None:
         """
@@ -680,7 +676,13 @@ class VaeInferHandler(BaseHandler):
             log_message += f", reports - {list_of_reports}"
         logger.debug(log_message)
         logger.info(f"Total of {self.batch_num} batch(es)")
-        prepared_data = self.run(self.size, self.run_parallel)
+        generated_data = self.run(self.size, self.run_parallel)
+
+        prepared_data = (
+            self._concat_slices_with_unique_pk(
+                generated_data
+                ) if generated_data else pd.DataFrame()
+        )
 
         prepared_data = self._restore_empty_columns(prepared_data)
         # workaround for the case when all columns are dropped
