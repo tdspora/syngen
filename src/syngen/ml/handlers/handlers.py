@@ -238,12 +238,15 @@ class VaeInferHandler(BaseHandler):
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
 
     @staticmethod
-    def synth_word(size, indexes, counts):
-        return "".join(
-            np.random.choice(
-                np.array(list(indexes)),
-                size=size,
-                p=np.array(list(counts.values())) / sum(np.array(list(counts.values()))),
+    def _synth_word(size, indexes, counts):
+        generator = np.random.default_rng()
+        return (
+            "".join(
+                generator.choice(
+                    np.array(list(indexes)),
+                    size=size,
+                    p=np.array(list(counts.values())) / sum(np.array(list(counts.values())))
+                )
             )
         )
 
@@ -298,7 +301,7 @@ class VaeInferHandler(BaseHandler):
             generated_column = [
                 " ".join(
                     [
-                        self.synth_word(s, indexes, counts)
+                        self._synth_word(s, indexes, counts)
                         for s in np.maximum(np.random.normal(i / j, 1, j).astype("int32"), 2)
                     ]
                 )
@@ -447,6 +450,23 @@ class VaeInferHandler(BaseHandler):
 
         return df
 
+    def _drop_technical_columns(self, prepared_data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Workaround for the case when all columns are dropped with technical column
+        """
+        tech_columns = list(self.dataset.tech_columns)
+        if tech_columns:
+            prepared_data = prepared_data.drop(tech_columns, axis=1)
+            logger.debug(
+                f"Technical columns {tech_columns} were removed from the generated table."
+            )
+            Report().unregister_reporters(self.table_name)
+            logger.info(
+                "Since there were no columns suitable for training, reports will not be generated "
+                f"for the table '{self.table_name}'."
+            )
+        return prepared_data
+
     def _save_data(self, generated_data):
         """
         Save generated data to the path
@@ -489,20 +509,8 @@ class VaeInferHandler(BaseHandler):
             else pd.DataFrame()
         )
         prepared_data = self._restore_empty_columns(prepared_data)
-        # workaround for the case when all columns are dropped
-        # with technical column
-        tech_columns = list(self.dataset.tech_columns)
-        if tech_columns:
-            prepared_data = prepared_data.drop(tech_columns, axis=1)
-            logger.debug(
-                f"Technical columns {tech_columns} were removed from the generated table."
-            )
-            Report().unregister_reporters(self.table_name)
-            logger.info(
-                "Since there were no columns suitable for training, "
-                "reports will not be generated "
-                f"for the table '{self.table_name}'."
-            )
+
+        prepared_data = self._drop_technical_columns(prepared_data)
 
         is_pk = self._is_pk()
 
