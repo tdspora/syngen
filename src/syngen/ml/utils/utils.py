@@ -159,7 +159,7 @@ def timestamp_to_datetime(timestamp: int, delta=False):
         return epoch_datetime + delta_of_time
 
 
-def convert_to_date_string(value: int, date_format: str) -> str:
+def convert_to_date_string(value: Union[int, float], date_format: str) -> str:
     """
     Convert timestamp to string values represented dates in a column
     """
