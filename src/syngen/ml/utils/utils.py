@@ -159,6 +159,13 @@ def timestamp_to_datetime(timestamp: int, delta=False):
         return epoch_datetime + delta_of_time
 
 
+def convert_to_date_string(value: int, date_format: str) -> str:
+    """
+    Convert timestamp to string values represented dates in a column
+    """
+    return timestamp_to_datetime(int(value)).strftime(date_format)
+
+
 def generate_uuids(version: Union[int, str], size: int):
     ulid = ULID()
     generated_uuid_column = []
@@ -209,6 +216,16 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
         names = []
 
     return set(names)
+
+
+def convert_to_timestamp(data: pd.Series, date_format: str, na_values: List[str]):
+    """
+    Convert the string values to timestamp
+    """
+    return [
+        datetime_to_timestamp(d, date_format)
+        if d not in na_values else np.NaN for d in data
+    ]
 
 
 def fetch_timezone(date_string: str) -> Union[str, float]:
