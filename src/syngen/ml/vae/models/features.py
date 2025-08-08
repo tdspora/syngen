@@ -1,3 +1,4 @@
+# flake8: noqa
 from itertools import chain
 from typing import Union, List
 from lazy import lazy
@@ -5,31 +6,46 @@ from loguru import logger
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-import tensorflow.keras.backend as K
+
+try:
+    import tensorflow as tf  # type: ignore
+    import tensorflow.keras.backend as K  # type: ignore
+    from tensorflow.keras import losses  # type: ignore
+    from tensorflow.keras.layers import (  # type: ignore
+        Bidirectional,
+        Dense,
+        Input,
+        LSTM,
+        Layer,
+        RepeatVector,
+        TimeDistributed,
+    )
+except Exception:  # pragma: no cover - optional TF
+    tf = None  # type: ignore
+    K = None  # type: ignore
+    losses = None  # type: ignore
+
+    # lightweight dummies so import does not fail; using these code paths without TF will error at runtime
+    class _Dummy:  # type: ignore
+        def __call__(self, *args, **kwargs):  # noqa: D401
+            raise RuntimeError(
+                "TensorFlow is not installed; TF-based features are unavailable"
+            )
+
+    Bidirectional = Dense = Input = LSTM = Layer = RepeatVector = TimeDistributed = _Dummy()  # type: ignore
 from scipy.stats import shapiro, kurtosis
 from sklearn.preprocessing import (
     StandardScaler,
     MinMaxScaler,
     QuantileTransformer,
-    OneHotEncoder
-)
-from tensorflow.keras import losses
-from tensorflow.keras.layers import (
-    Bidirectional,
-    Dense,
-    Input,
-    LSTM,
-    Layer,
-    RepeatVector,
-    TimeDistributed,
+    OneHotEncoder,
 )
 
 from syngen.ml.utils import (
     slugify_parameters,
     inverse_dict,
     datetime_to_timestamp,
-    timestamp_to_datetime
+    timestamp_to_datetime,
 )
 
 KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
@@ -38,9 +54,10 @@ KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
 class BaseFeature:
     """
     Base class for feature classes.
-    Each feature class implements feature preprocessing, transformation and inverse transformation.
-    What is more, each feature class contains modules for the neural network (NN), including
-    corresponding input, encoder, decoder, and loss
+    Each feature class implements feature preprocessing,
+    transformation and inverse transformation.
+    What is more, each feature class contains modules for the neural network (NN),
+    including corresponding input, encoder, decoder, and loss
     """
 
     def __init__(self, name):
@@ -208,8 +225,7 @@ class ContinuousFeature(BaseFeature):
         )
 
     def _select_scaler(
-            self, data: pd.DataFrame,
-            kurtosis_threshold=KURTOSIS_THRESHOLD
+        self, data: pd.DataFrame, kurtosis_threshold=KURTOSIS_THRESHOLD
     ) -> object:
         """
         Select appropriate scaler based on data characteristics.
@@ -235,17 +251,15 @@ class ContinuousFeature(BaseFeature):
                 f"Using QuantileTransformer."
             )
             quantile_params = self._get_quantile_transformer_params(
-                n_samples=len(data),
-                kurt=kurt,
-                kurtosis_threshold=kurtosis_threshold
+                n_samples=len(data), kurt=kurt, kurtosis_threshold=kurtosis_threshold
             )
             return QuantileTransformer(**quantile_params)
         else:
             return MinMaxScaler()
 
     def _get_quantile_transformer_params(
-            self, n_samples, kurt, kurtosis_threshold
-            ) -> dict:
+        self, n_samples, kurt, kurtosis_threshold
+    ) -> dict:
         """
         Get optimal parameters for QuantileTransformer
         based on data characteristics
@@ -266,9 +280,9 @@ class ContinuousFeature(BaseFeature):
         subsample = None
 
         return {
-            'n_quantiles': n_quantiles,
-            'subsample': subsample,
-            'output_distribution': 'normal'
+            "n_quantiles": n_quantiles,
+            "subsample": subsample,
+            "output_distribution": "normal",
         }
 
     @lazy
@@ -292,7 +306,9 @@ class ContinuousFeature(BaseFeature):
                 decoder_layers.append(Layer)
 
         decoder_layers.append(
-            Dense(self.input_dimension, activation="linear", name="%s_linear" % self.name)
+            Dense(
+                self.input_dimension, activation="linear", name="%s_linear" % self.name
+            )
         )
 
         return decoder_layers
@@ -350,9 +366,8 @@ class CategoricalFeature(BaseFeature):
         super().__init__(name="_".join(name.split()))
 
         self.one_hot_encoder = OneHotEncoder(
-            sparse_output=False,
-            handle_unknown='ignore',
-            dtype=np.float32)
+            sparse_output=False, handle_unknown="ignore", dtype=np.float32
+        )
         self.decoder = None
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
@@ -392,7 +407,9 @@ class CategoricalFeature(BaseFeature):
 
     @lazy
     def input(self) -> tf.Tensor:
-        self.idx_input = Input(shape=(self.input_dimension,), name="input_%s" % self.name)
+        self.idx_input = Input(
+            shape=(self.input_dimension,), name="input_%s" % self.name
+        )
 
         return self.idx_input
 
@@ -444,7 +461,9 @@ class CategoricalFeature(BaseFeature):
         high = self.weight_randomizer[1]
         random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
 
-        return random_weight * tf.keras.losses.categorical_crossentropy(self.input, self.decoder)
+        return random_weight * tf.keras.losses.categorical_crossentropy(
+            self.input, self.decoder
+        )
 
 
 class CharBasedTextFeature(BaseFeature):
@@ -468,19 +487,24 @@ class CharBasedTextFeature(BaseFeature):
         self.feature_type = "text"
 
     def fit(self, data: pd.DataFrame, **kwargs):
-        from tensorflow.keras.preprocessing.text import Tokenizer
+        # Replace Keras Tokenizer with a lightweight in-file tokenizer
+        from collections import Counter
 
         if len(data.columns) > 1:
             raise Exception("CharBasedTextFeature can work only with one text column")
 
         data = data[data.columns[0]]
 
-        tokenizer = Tokenizer(lower=False, char_level=True)
-        tokenizer.fit_on_texts(data)
-        tokenizer.inverse_dict = inverse_dict(tokenizer.word_index)
-
-        self.vocab_size = len(tokenizer.word_index)
-        self.tokenizer = tokenizer
+        char_counts = Counter()
+        for s in data.values:
+            char_counts.update(list(str(s)))
+        # 1-based indices like keras
+        word_index = {ch: i + 1 for i, (ch, _) in enumerate(char_counts.most_common())}
+        inverse_map = inverse_dict(word_index)
+        self.vocab_size = len(word_index)
+        self.tokenizer = type("_Tok", (), {})()
+        self.tokenizer.word_index = word_index
+        self.tokenizer.inverse_dict = inverse_map
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
         if len(data.columns) > 1:
@@ -488,24 +512,20 @@ class CharBasedTextFeature(BaseFeature):
 
         data = data[data.columns[0]]
 
-        from tensorflow.keras.preprocessing.sequence import pad_sequences
-
-        data_gen = self.tokenizer.texts_to_sequences(data)
-        data_gen = pad_sequences(
-            data_gen,
-            maxlen=self.text_max_len,
-            padding="post",
-            truncating="post",
-            value=0.0,
-        )
+        # Convert texts to sequences
+        sequences = [
+            [self.tokenizer.word_index.get(ch, 0) for ch in str(s)] for s in data
+        ]
+        # Pad/truncate to fixed length
+        data_gen = np.zeros((len(sequences), self.text_max_len), dtype="int32")
+        for i, seq in enumerate(sequences):
+            seq = seq[: self.text_max_len]
+            data_gen[i, : len(seq)] = np.array(seq, dtype="int32")
         # return data_gen
         return K.one_hot(K.cast(data_gen, "int32"), self.vocab_size)
 
     @staticmethod
-    def _top_p_filtering(
-            logits: np.ndarray,
-            top_p: float = 0.9
-    ):
+    def _top_p_filtering(logits: np.ndarray, top_p: float = 0.9):
         # Convert logits to TensorFlow tensor
         logits = tf.convert_to_tensor(logits, dtype=tf.float32)
 
@@ -520,10 +540,11 @@ class CharBasedTextFeature(BaseFeature):
         sorted_indices_to_remove = cumulative_probs >= top_p
 
         # Shift the indices to the right to keep also the first token above the threshold
-        zeros_for_shift = tf.zeros_like(sorted_indices_to_remove[:, :, :1], dtype=tf.bool)
+        zeros_for_shift = tf.zeros_like(
+            sorted_indices_to_remove[:, :, :1], dtype=tf.bool
+        )
         sorted_indices_to_remove = tf.concat(
-            [zeros_for_shift, sorted_indices_to_remove[:, :, :-1]],
-            axis=-1
+            [zeros_for_shift, sorted_indices_to_remove[:, :, :-1]], axis=-1
         )
 
         # Create a mask for indices to remove
@@ -531,13 +552,11 @@ class CharBasedTextFeature(BaseFeature):
 
         batch_indices = tf.repeat(tf.range(batch_size), seq_length * vocab_size)
         feature_length_indices = tf.tile(
-            tf.repeat(tf.range(seq_length), vocab_size),
-            [batch_size]
+            tf.repeat(tf.range(seq_length), vocab_size), [batch_size]
         )
         vocab_selection_indices = tf.reshape(sorted_indices, [-1])
         update_indices = tf.stack(
-            [batch_indices, feature_length_indices, vocab_selection_indices],
-            axis=1
+            [batch_indices, feature_length_indices, vocab_selection_indices], axis=1
         )
         flattened_update_values = tf.reshape(sorted_indices_to_remove, [-1])
         indices_to_remove = tf.tensor_scatter_nd_update(
@@ -547,15 +566,14 @@ class CharBasedTextFeature(BaseFeature):
         )
 
         # Apply the filter value to the logits
-        logits_removed = tf.where(indices_to_remove, tf.fill(indices_to_remove.shape, 0.0), logits)
+        logits_removed = tf.where(
+            indices_to_remove, tf.fill(indices_to_remove.shape, 0.0), logits
+        )
 
         return logits_removed.numpy().astype(np.float64)
 
     @staticmethod
-    def _top_k_filtering(
-            logits: np.ndarray,
-            top_k: int = 0
-    ):
+    def _top_k_filtering(logits: np.ndarray, top_k: int = 0):
         indices_to_remove = logits < tf.math.top_k(logits, top_k)[0][..., -1, None]
         logits[indices_to_remove] = 0.0
         return logits
@@ -572,8 +590,9 @@ class CharBasedTextFeature(BaseFeature):
             lambda x: np.argmax(np.random.multinomial(1, x)), -1, probs
         )
 
-        chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ''))(
-            multinomial_samples)
+        chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ""))(
+            multinomial_samples
+        )
 
         # Convert tokens to words
         words = ["".join(sample) for sample in chars_array]
@@ -587,7 +606,7 @@ class CharBasedTextFeature(BaseFeature):
         feature_values = []
 
         for i in range(num_batches):
-            batch = data[i * batch_size: (i + 1) * batch_size]
+            batch = data[i * batch_size : (i + 1) * batch_size]
             feature_values.extend(self._process_batch(batch))
 
         return feature_values
@@ -602,7 +621,9 @@ class CharBasedTextFeature(BaseFeature):
 
     @lazy
     def encoder(self) -> tf.Tensor:
-        rnn_encoder_layer = Bidirectional(self.rnn_unit(self.rnn_units, return_sequences=False))
+        rnn_encoder_layer = Bidirectional(
+            self.rnn_unit(self.rnn_units, return_sequences=False)
+        )
 
         rnn_econder = rnn_encoder_layer(self.input)
         return rnn_econder
@@ -613,7 +634,9 @@ class CharBasedTextFeature(BaseFeature):
 
         decoder_layers.append(RepeatVector(self.text_max_len))
         decoder_layers.append(self.rnn_unit(self.rnn_units, return_sequences=True))
-        decoder_layers.append(TimeDistributed(Dense(self.vocab_size, activation="linear")))
+        decoder_layers.append(
+            TimeDistributed(Dense(self.vocab_size, activation="linear"))
+        )
 
         return decoder_layers
 
@@ -649,12 +672,11 @@ class EmailFeature(CharBasedTextFeature):
         text_max_len: int,
         rnn_units: int = 128,
         dropout: int = 0,
-        domain: str = 'tdspora.ai'
+        domain: str = "tdspora.ai",
     ):
-        super().__init__(name=name,
-                         text_max_len=text_max_len,
-                         rnn_units=rnn_units,
-                         dropout=dropout)
+        super().__init__(
+            name=name, text_max_len=text_max_len, rnn_units=rnn_units, dropout=dropout
+        )
         self.domain = domain
 
     def fit(self, data: pd.DataFrame, **kwargs):
@@ -662,8 +684,13 @@ class EmailFeature(CharBasedTextFeature):
 
     @staticmethod
     def extract_email_name(data: pd.DataFrame) -> pd.DataFrame:
-        pattern = r'^([^@]+).*$'  # returns all the string if there's no "@" in it
-        return data.iloc[:, 0].str.extract(pattern).rename({0: data.columns[0]}, axis=1).fillna('')
+        pattern = r"^([^@]+).*$"  # returns all the string if there's no "@" in it
+        return (
+            data.iloc[:, 0]
+            .str.extract(pattern)
+            .rename({0: data.columns[0]}, axis=1)
+            .fillna("")
+        )
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
         if len(data.columns) > 1:
@@ -674,8 +701,7 @@ class EmailFeature(CharBasedTextFeature):
 
     def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
         return [
-            s + "@" +
-            self.domain for s in super().inverse_transform(data, **kwargs)
+            s + "@" + self.domain for s in super().inverse_transform(data, **kwargs)
         ]
 
 
@@ -708,12 +734,7 @@ class DateFeature(BaseFeature):
         self.date_format = kwargs["date_mapping"][self.original_name]
         self.data = chain.from_iterable(data.values)
         self.data = pd.DataFrame(
-            list(
-                map(
-                    lambda d: datetime_to_timestamp(d, self.date_format),
-                    self.data
-                )
-            )
+            list(map(lambda d: datetime_to_timestamp(d, self.date_format), self.data))
         )
         self.is_positive = (self.data >= 0).sum().item() >= len(self.data) * 0.99
         normality = shapiro(self.data.sample(n=min(len(self.data), 500))).pvalue
@@ -738,7 +759,9 @@ class DateFeature(BaseFeature):
 
     @lazy
     def input(self):
-        return Input(shape=(self.input_dimension,), name="input_%s" % self.name, dtype="float64")
+        return Input(
+            shape=(self.input_dimension,), name="input_%s" % self.name, dtype="float64"
+        )
 
     @lazy
     def encoder(self):

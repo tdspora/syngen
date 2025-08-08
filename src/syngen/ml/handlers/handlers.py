@@ -1,3 +1,4 @@
+# flake8: noqa
 from typing import Tuple, Optional, Dict, List, Callable
 from abc import ABC, abstractmethod
 import os
@@ -12,8 +13,7 @@ from numpy.random import seed, choice
 from pathos.multiprocessing import ProcessingPool
 import dill
 from scipy.stats import gaussian_kde
-from collections import OrderedDict
-from tensorflow.keras.preprocessing.text import Tokenizer
+from collections import OrderedDict, Counter
 from slugify import slugify
 from loguru import logger
 from attrs import define, field
@@ -26,7 +26,7 @@ from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
     get_initial_table_name,
-    ProgressBarHandler
+    ProgressBarHandler,
 )
 from syngen.ml.context import get_context
 
@@ -62,7 +62,10 @@ class BaseHandler(AbstractHandler):
 
     @staticmethod
     def create_wrapper(
-        cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
+        cls_name,
+        data: Optional[pd.DataFrame] = None,
+        schema: Optional[Dict] = None,
+        **kwargs,
     ):
         return globals()[cls_name](
             data,
@@ -107,19 +110,33 @@ class LongTextsHandler(BaseHandler):
         if len(long_text_columns) > 0:
             features = {}
             for col in long_text_columns:
-                tokenizer = Tokenizer(lower=False, char_level=True)
+                # Build a simple char-level tokenizer replacement
                 if type(data[col].dropna().values[0]) is bytes:
                     text_col = data[col].str.decode("utf-8", errors="ignore")
                 else:
                     text_col = data[col]
                 text_col = text_col.fillna("")
-                tokenizer.fit_on_texts(text_col)
-
-                indexes = OrderedDict((k, v) for k, v in tokenizer.word_index.items() if k != " ")
-                counts = OrderedDict((k, v) for k, v in tokenizer.word_counts.items() if k != " ")
+                # Count characters across all texts
+                char_counts = Counter()
+                for s in text_col.values:
+                    char_counts.update(list(str(s)))
+                if " " in char_counts:
+                    del char_counts[" "]
+                # Sort by frequency (desc) then by char for stability
+                sorted_chars = sorted(
+                    char_counts.items(), key=lambda kv: (-kv[1], kv[0])
+                )
+                # 1-based indexing to mimic keras Tokenizer
+                indexes = OrderedDict(
+                    (ch, i + 1) for i, (ch, _) in enumerate(sorted_chars)
+                )
+                counts = OrderedDict((ch, cnt) for ch, cnt in sorted_chars)
                 ordered_indexes = OrderedDict((k, indexes[k]) for k in counts.keys())
                 text_structure = np.array(
-                    [text_col.str.len(), text_col.apply(self.series_count_words)]
+                    [
+                        text_col.str.len(),
+                        text_col.apply(self.series_count_words),
+                    ]
                 )
                 noise_to_prevent_singularity = np.random.uniform(
                     low=-1e-4,
@@ -173,8 +190,8 @@ class VaeTrainHandler(BaseHandler):
             process="train",
         )
         self.model.batch_size = min(self.batch_size, len(data))
-        list_of_reports = [f'\'{report}\'' for report in self.reports]
-        list_of_reports = ', '.join(list_of_reports) if list_of_reports else '\'none\''
+        list_of_reports = [f"'{report}'" for report in self.reports]
+        list_of_reports = ", ".join(list_of_reports) if list_of_reports else "'none'"
         logger.debug(
             f"Train model with parameters: epochs={self.epochs}, "
             f"row_subset={self.row_subset}, drop_null={self.drop_null}, "
@@ -240,13 +257,12 @@ class VaeInferHandler(BaseHandler):
     @staticmethod
     def _synth_word(size, indexes, counts):
         generator = np.random.default_rng()
-        return (
-            "".join(
-                generator.choice(
-                    np.array(list(indexes)),
-                    size=size,
-                    p=np.array(list(counts.values())) / sum(np.array(list(counts.values())))
-                )
+        return "".join(
+            generator.choice(
+                np.array(list(indexes)),
+                size=size,
+                p=np.array(list(counts.values()))
+                / sum(np.array(list(counts.values()))),
             )
         )
 
@@ -282,7 +298,9 @@ class VaeInferHandler(BaseHandler):
                 ):
                     cumm_len = 0
                     for i, frame in enumerate(df_slices):
-                        frame[column] = frame[column].map(lambda pk_val: pk_val + cumm_len)
+                        frame[column] = frame[column].map(
+                            lambda pk_val: pk_val + cumm_len
+                        )
                         cumm_len += len(frame)
         return pd.concat(df_slices, ignore_index=True)
 
@@ -302,7 +320,9 @@ class VaeInferHandler(BaseHandler):
                 " ".join(
                     [
                         self._synth_word(s, indexes, counts)
-                        for s in np.maximum(np.random.normal(i / j, 1, j).astype("int32"), 2)
+                        for s in np.maximum(
+                            np.random.normal(i / j, 1, j).astype("int32"), 2
+                        )
                     ]
                 )
                 for i, j in zip(*text_structures)
@@ -353,9 +373,7 @@ class VaeInferHandler(BaseHandler):
                     range(0, max(100, pool.nodes)), pool.nodes, replace=False
                 )
 
-            frames = pool.map(
-                self.run_separate, enumerate(self.split_by_batches())
-            )
+            frames = pool.map(self.run_separate, enumerate(self.split_by_batches()))
             generated = self._concat_slices_with_unique_pk(frames)
         else:
             if self.random_seed:
@@ -372,7 +390,9 @@ class VaeInferHandler(BaseHandler):
             pk = pk.dropna()
             numeric_pk = np.arange(len(pk)) if pk.dtype == "object" else pk
             fk_pdf = np.maximum(kde.evaluate(numeric_pk), 1e-12)
-            synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
+            synth_fk = np.random.choice(
+                pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True
+            )
             synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)
 
         except FileNotFoundError:
@@ -424,15 +444,23 @@ class VaeInferHandler(BaseHandler):
                 pk_table = config_of_keys.get(key).get("references").get("table")
                 pk_path = self._get_pk_path(pk_table=pk_table, table_name=table_name)
                 pk_table_data, pk_table_schema = DataLoader(path=pk_path).load_data()
-                pk_column_label = config_of_keys.get(key).get("references").get("columns")[0]
-                logger.info(f"The '{pk_column_label}' assigned as a foreign_key feature")
+                pk_column_label = (
+                    config_of_keys.get(key).get("references").get("columns")[0]
+                )
+                logger.info(
+                    f"The '{pk_column_label}' assigned as a foreign_key feature"
+                )
 
-                synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, fk_column_name)
+                synth_fk = self.kde_gen(
+                    pk_table_data, pk_column_label, size, fk_column_name
+                )
                 generated = generated.reset_index(drop=True)
 
                 null_column_name = f"{key}_null"
                 if null_column_name in generated.columns:
-                    not_null_column_mask = generated[null_column_name].astype("float64") <= 0.5
+                    not_null_column_mask = (
+                        generated[null_column_name].astype("float64") <= 0.5
+                    )
                     synth_fk = synth_fk.where(not_null_column_mask, np.nan)
                     generated = generated.drop(null_column_name, axis=1)
 
@@ -478,8 +506,8 @@ class VaeInferHandler(BaseHandler):
 
     def handle(self, **kwargs):
         self._prepare_dir()
-        list_of_reports = [f'\'{report}\'' for report in self.reports]
-        list_of_reports = ', '.join(list_of_reports) if list_of_reports else '\'none\''
+        list_of_reports = [f"'{report}'" for report in self.reports]
+        list_of_reports = ", ".join(list_of_reports) if list_of_reports else "'none'"
         log_message = (
             f"Infer model with parameters: size={self.size}, "
             f"run_parallel={self.run_parallel}, batch_size={self.batch_size}, "
@@ -493,8 +521,10 @@ class VaeInferHandler(BaseHandler):
         delta = ProgressBarHandler().delta / self.batch_num
         prepared_batches = []
         for i, batch in enumerate(batches):
-            log_message = (f"Data synthesis for the table - '{self.table_name}'. "
-                           f"Generating the batch {i + 1} of {self.batch_num}")
+            log_message = (
+                f"Data synthesis for the table - '{self.table_name}'. "
+                f"Generating the batch {i + 1} of {self.batch_num}"
+            )
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
                 delta=delta,

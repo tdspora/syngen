@@ -1,18 +1,28 @@
+# flake8: noqa
 from pathlib import Path
 
-import tensorflow as tf
 import pickle
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (
-    Input,
-    Dense,
-    Dropout,
-    LeakyReLU,
-    concatenate,
-    Lambda,
-    BatchNormalization,
-    Activation,
-)
+
+try:
+    import tensorflow as tf  # type: ignore
+    from tensorflow.keras.models import Model  # type: ignore
+    from tensorflow.keras.layers import (  # type: ignore
+        Input,
+        Dense,
+        Dropout,
+        LeakyReLU,
+        concatenate,
+        Lambda,
+        BatchNormalization,
+        Activation,
+    )
+except Exception:  # pragma: no cover - optional TF
+    tf = None  # type: ignore
+
+    class Model:  # type: ignore
+        pass
+
+
 from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
@@ -27,12 +37,16 @@ class CVAE:
     A class implementing the model architecture.
     """
 
-    def __init__(self, dataset, batch_size, latent_dim, intermediate_dim, latent_components):
+    def __init__(
+        self, dataset, batch_size, latent_dim, intermediate_dim, latent_components
+    ):
         self.dataset = dataset
         self.intermediate_dim = intermediate_dim
         self.batch_size = batch_size
         self.latent_dim = latent_dim
-        self.latent_components = min(latent_components, len(self.dataset.order_of_columns))
+        self.latent_components = min(
+            latent_components, len(self.dataset.order_of_columns)
+        )
         self.model = None
         self.latent_model = None
         self.metrics = {}
@@ -98,7 +112,9 @@ class CVAE:
         kl_loss = (
             1
             * 0.5
-            * tf.reduce_sum(tf.exp(self.log_sigma) + self.mu**2 - 1.0 - self.log_sigma, 1)
+            * tf.reduce_sum(
+                tf.exp(self.log_sigma) + self.mu**2 - 1.0 - self.log_sigma, 1
+            )
         )
 
         generator_input = Input(shape=(gen_inp_shape,))
@@ -158,9 +174,15 @@ class CVAE:
                 name="Decoder_0",
             )
         else:
-            decoder_h0 = Dense(self.intermediate_dim, activation=LeakyReLU(), name="Decoder_0")
-        decoder_h1 = Dense(self.intermediate_dim, activation=LeakyReLU(), name="Decoder_1")
-        decoder_h2 = Dense(self.intermediate_dim, activation=LeakyReLU(), name="Decoder_2")
+            decoder_h0 = Dense(
+                self.intermediate_dim, activation=LeakyReLU(), name="Decoder_0"
+            )
+        decoder_h1 = Dense(
+            self.intermediate_dim, activation=LeakyReLU(), name="Decoder_1"
+        )
+        decoder_h2 = Dense(
+            self.intermediate_dim, activation=LeakyReLU(), name="Decoder_2"
+        )
 
         h_decoded0 = Dropout(0.2)(decoder_h0(input_z))
         h_decoded1 = Dropout(0.2)(decoder_h1(h_decoded0))
@@ -185,7 +207,10 @@ class CVAE:
         latent_points = self.encoder_model.predict(transformed_data)
 
         logger.info("Creating BayesianGaussianMixture")
-        self.latent_model = BayesianGaussianMixture(n_components=self.latent_components, n_init=10)
+        self.latent_model = BayesianGaussianMixture(
+            n_components=self.latent_components,
+            n_init=10,
+        )
         logger.info("Fitting BayesianGaussianMixture")
         self.latent_model.fit(latent_points)
         logger.info("Finished fitting BayesianGaussianMixture")
@@ -200,7 +225,9 @@ class CVAE:
         np.random.shuffle(latent_sample)
 
         synthetic_prediction = self.generator_model.predict(latent_sample)
-        self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
+        self.inverse_transformed_df = self.dataset.inverse_transform(
+            synthetic_prediction
+        )
         pk_uq_keys_mapping = self.dataset.primary_keys_mapping
         if pk_uq_keys_mapping:
             self.__make_pk_uq_unique(pk_uq_keys_mapping, self.dataset.dropped_columns)
@@ -226,9 +253,8 @@ class CVAE:
         return self.dataset.inverse_transform(synthetic_prediction)
 
     def __check_pk_numeric_convertability(self, column, key_type):
-        if (
-            key_type is str
-            and column not in self.dataset.long_text_columns | self.dataset.uuid_columns
+        if key_type is str and column not in (
+            self.dataset.long_text_columns | self.dataset.uuid_columns
         ):
             return self.inverse_transformed_df[column].dropna().str.isnumeric().all()
         else:
@@ -237,12 +263,18 @@ class CVAE:
     def __make_pk_uq_unique(self, pk_uq_keys_mapping, empty_columns):
         for key_name, config in pk_uq_keys_mapping.items():
             key_columns = [
-                column for column in config.get("columns") if column not in empty_columns
+                column
+                for column in config.get("columns")
+                if column not in empty_columns
             ]
             for column in key_columns:
                 key_type = self.dataset.pk_uq_keys_types[column]
-                if key_type is float or self.__check_pk_numeric_convertability(column, key_type):
-                    mapped_keys = np.arange(len(self.inverse_transformed_df[column])) + 1
+                if key_type is float or self.__check_pk_numeric_convertability(
+                    column, key_type
+                ):
+                    mapped_keys = (
+                        np.arange(len(self.inverse_transformed_df[column])) + 1
+                    )
                     self.inverse_transformed_df[column] = mapped_keys
 
     def save_state(self, path: str):

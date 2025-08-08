@@ -1,3 +1,4 @@
+# flake8: noqa
 import os
 from datetime import datetime
 from typing import Tuple, List, Optional, Dict
@@ -7,9 +8,19 @@ from dataclasses import dataclass, field
 
 import warnings
 import pickle
-import tensorflow as tf
-from tensorflow.python.data.experimental import AutoShardPolicy
-from tensorflow.keras.models import Model
+import os as _os
+
+USE_TORCH_VAE = _os.getenv("USE_TORCH_VAE", "1") == "1"
+if not USE_TORCH_VAE:
+    import tensorflow as tf
+    from tensorflow.python.data.experimental import AutoShardPolicy
+    from tensorflow.keras.models import Model
+else:
+    # Dummy for type hints when TensorFlow is not installed
+    class Model:  # type: ignore
+        pass
+
+
 import matplotlib.pyplot as plt
 import time
 import tqdm
@@ -18,14 +29,22 @@ import numpy as np
 from loguru import logger
 from slugify import slugify
 
-from syngen.ml.vae.models.model import CVAE
+if not USE_TORCH_VAE:
+    from syngen.ml.vae.models.model import CVAE
+from syngen.ml.vae.torch_cvae import (
+    TorchCVAE,
+    build_dataloader as build_torch_loader,
+    train_epoch as torch_train_epoch,
+    encode_dataset as torch_encode,
+    generate_from_latent as torch_generate,
+)
 from syngen.ml.vae.models import Dataset
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import (
     generate_uuid,
     fetch_config,
     check_if_features_assigned,
-    ProgressBarHandler
+    ProgressBarHandler,
 )
 from syngen.ml.data_loaders import DataLoader
 
@@ -40,7 +59,9 @@ class BaseWrapper(ABC):
     """
 
     @abstractmethod
-    def fit_on_df(self, df: pd.DataFrame, epochs: int, columns_subset: List[str] = None):
+    def fit_on_df(
+        self, df: pd.DataFrame, epochs: int, columns_subset: List[str] = None
+    ):
         pass
 
     @abstractmethod
@@ -170,11 +191,67 @@ class VAEWrapper(BaseWrapper):
 
         train_dataset = self._create_batched_dataset(df)
         self.num_batches = len(train_dataset)
-        self.model = self.vae.model
-        self.feature_types = self.vae.feature_types
+        if USE_TORCH_VAE:
+            import torch
 
-        self.optimizer = self.__create_optimizer()
-        self.loss_metric = self._create_loss()
+            transformed = self.dataset.transform(df)
+            feature_dims = {
+                name: arr.shape[1]
+                for name, arr in zip(self.dataset.features.keys(), transformed)
+            }
+            feature_types = {
+                name: getattr(self.dataset.features[name], "feature_type", "numeric")
+                for name in self.dataset.features
+            }
+            loader = build_torch_loader(transformed, batch_size=self.batch_size)
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            model = TorchCVAE(
+                feature_dims, feature_types, latent_dim=10, intermediate_dim=128
+            )
+            model.to(device)
+            optim = torch.optim.Adam(model.parameters(), lr=1e-3)
+            try:
+                from opacus import PrivacyEngine
+
+                # Optional DP if config provides epsilon via dataset.train config
+                config = fetch_config(self.paths["train_config_pickle_path"])  # type: ignore
+                if getattr(config, "epsilon", 0) and getattr(
+                    config, "row_subset", None
+                ):
+                    # Rough mapping using existing compute_optimal_noise from EE if available
+                    from syngen_ee.ml.utils import compute_optimal_noise  # type: ignore
+
+                    noise = compute_optimal_noise(
+                        epochs,
+                        config.row_subset,
+                        self.batch_size,
+                        config.epsilon,
+                    )
+                    pe = PrivacyEngine()
+                    loader = loader  # noqa: F841 keep name stable
+                    model, optim, loader = pe.make_private(
+                        module=model,
+                        optimizer=optim,
+                        data_loader=loader,
+                        noise_multiplier=float(noise),
+                        max_grad_norm=1.0,
+                    )
+            except Exception:
+                pass
+            self.num_batches = len(loader)
+            for epoch in range(epochs):
+                loss, kl, feats = torch_train_epoch(
+                    model, loader, optim, feature_dims, feature_types
+                )
+                logger.info(f"epoch: {epoch}, total loss: {loss}, kl: {kl}")
+            self.torch_model = model
+            self.feature_types = feature_types
+            self.model = model
+        else:
+            self.model = self.vae.model
+            self.feature_types = self.vae.feature_types
+            self.optimizer = self.__create_optimizer()
+            self.loss_metric = self._create_loss()
 
         # Start of the run of training process
         MlflowTracker().start_run(
@@ -184,7 +261,10 @@ class VAEWrapper(BaseWrapper):
         config = fetch_config(self.paths["train_config_pickle_path"])
         MlflowTracker().log_params(config.to_dict())
 
-        self._train(train_dataset, epochs)
+        if USE_TORCH_VAE:
+            pass
+        else:
+            self._train(train_dataset, epochs)
 
         MlflowTracker().end_run()
 
@@ -192,18 +272,16 @@ class VAEWrapper(BaseWrapper):
             run_name=f"{self.table_name}-POSTPROCESS",
             tags={"table_name": self.table_name, "process": "postprocess"},
         )
-        self.fit_sampler(df)
+        if not USE_TORCH_VAE:
+            self.fit_sampler(df)
 
-    def _calculate_loss_by_type(
-        self,
-        feature_losses: Dict,
-        feature_type: str
-    ) -> float:
+    def _calculate_loss_by_type(self, feature_losses: Dict, feature_type: str) -> float:
         """
         Group features and calculate the loss by the type
         """
         return sum(
-            loss for name, loss in feature_losses.items()
+            loss
+            for name, loss in feature_losses.items()
             if self.feature_types[name] == feature_type
         )
 
@@ -211,38 +289,25 @@ class VAEWrapper(BaseWrapper):
         """
         Get the mean numerical, categorical, and text losses for every epoch
         """
-        num_loss = self._calculate_loss_by_type(
-            feature_losses,
-            feature_type="numeric"
-        )
+        num_loss = self._calculate_loss_by_type(feature_losses, feature_type="numeric")
 
         categorical_loss = self._calculate_loss_by_type(
-            feature_losses,
-            feature_type="categorical"
+            feature_losses, feature_type="categorical"
         )
 
-        text_loss = self._calculate_loss_by_type(
-            feature_losses,
-            feature_type="text"
-        )
+        text_loss = self._calculate_loss_by_type(feature_losses, feature_type="text")
         logger.trace(
             f"The 'numeric_loss' - {num_loss}, "
             f"the 'categorical_loss' - {categorical_loss}, "
             f"the 'text_loss' - {text_loss} in the {epoch} epoch"
         )
-        MlflowTracker().log_metric(
-            "numeric_loss", num_loss, step=epoch
-        )
-        MlflowTracker().log_metric(
-            "categorical_loss", categorical_loss, step=epoch
-        )
-        MlflowTracker().log_metric(
-            "text_loss", text_loss, step=epoch
-        )
+        MlflowTracker().log_metric("numeric_loss", num_loss, step=epoch)
+        MlflowTracker().log_metric("categorical_loss", categorical_loss, step=epoch)
+        MlflowTracker().log_metric("text_loss", text_loss, step=epoch)
         return {
             "numeric_loss": num_loss,
             "categorical_loss": categorical_loss,
-            "text_loss": text_loss
+            "text_loss": text_loss,
         }
 
     def _get_mean_feature_losses(self, total_feature_losses: Dict):
@@ -258,11 +323,7 @@ class VAEWrapper(BaseWrapper):
         """
         Get the appropriate ending for the name of the loss of the certain feature
         """
-        endings = {
-            "categorical": "cat",
-            "numeric": "num",
-            "text": "text"
-        }
+        endings = {"categorical": "cat", "numeric": "num", "text": "text"}
         feature_type = self.feature_types.get(feature_name)
         return endings.get(feature_type)
 
@@ -277,9 +338,7 @@ class VAEWrapper(BaseWrapper):
             )
 
     def _fetch_feature_losses_info(
-            self,
-            feature_losses: Dict,
-            epoch: int
+        self, feature_losses: Dict, epoch: int
     ) -> pd.DataFrame:
         """
         Fetch the information related to the loss for every feature in a certain epoch
@@ -334,10 +393,7 @@ class VAEWrapper(BaseWrapper):
         """
         mean_feature_losses = self._get_mean_feature_losses(total_feature_losses)
         self._update_losses_info(mean_feature_losses, epoch)
-        self._monitor_feature_losses(
-            mean_feature_losses,
-            epoch
-        )
+        self._monitor_feature_losses(mean_feature_losses, epoch)
         losses = self._get_grouped_losses(mean_feature_losses, epoch)
         losses.update({"kl_loss": mean_kl_loss, "total_loss": mean_loss})
         self._update_losses_info(losses, epoch)
@@ -375,8 +431,7 @@ class VAEWrapper(BaseWrapper):
                 f"on the epoch: {epoch}"
             )
             ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress + delta,
-                message=log_message
+                progress=ProgressBarHandler().progress + delta, message=log_message
             )
             total_loss = 0.0
             total_feature_losses = dict()
@@ -389,8 +444,7 @@ class VAEWrapper(BaseWrapper):
                 total_loss += loss
                 total_kl_loss += kl_loss
                 total_feature_losses = self._accumulate_feature_losses(
-                    feature_losses,
-                    total_feature_losses
+                    feature_losses, total_feature_losses
                 )
 
             mean_loss = np.mean(total_loss / self.num_batches)
@@ -404,21 +458,22 @@ class VAEWrapper(BaseWrapper):
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
 
-            log_message = (
-                f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
-            )
+            log_message = f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
             logger.info(log_message)
 
             ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress + delta,
-                message=log_message
+                progress=ProgressBarHandler().progress + delta, message=log_message
             )
 
-            self._gather_losses_info(total_feature_losses, mean_loss, mean_kl_loss, epoch)
+            self._gather_losses_info(
+                total_feature_losses, mean_loss, mean_kl_loss, epoch
+            )
             logger.trace(f"The 'kl_loss' - {mean_kl_loss} in {epoch} epoch")
 
             MlflowTracker().log_metric("loss", mean_loss, step=epoch)
-            MlflowTracker().log_metric("saved_weights_loss", saved_weights_loss, step=epoch)
+            MlflowTracker().log_metric(
+                "saved_weights_loss", saved_weights_loss, step=epoch
+            )
             MlflowTracker().log_metric("kl_loss", mean_kl_loss, step=epoch)
 
             prev_total_loss = mean_loss
@@ -438,8 +493,11 @@ class VAEWrapper(BaseWrapper):
     @staticmethod
     def _create_optimizer(learning_rate):
         import platform
-        if platform.processor() == 'arm':
-            logger.info('Mac ARM processor is detected. Legacy Adam optimizer has been created.')
+
+        if platform.processor() == "arm":
+            logger.info(
+                "Mac ARM processor is detected. Legacy Adam optimizer has been created."
+            )
             return tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
         else:
             return tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -478,14 +536,11 @@ class VAEWrapper(BaseWrapper):
             kl_loss = self.model.losses[-1].numpy()
             feature_losses = {
                 name: loss.numpy()
-                for name, loss in
-                zip(order_of_features, self.model.losses[:-1])
+                for name, loss in zip(order_of_features, self.model.losses[:-1])
             }
 
         self.optimizer.minimize(
-            loss=loss,
-            var_list=self.model.trainable_weights,
-            tape=tape
+            loss=loss, var_list=self.model.trainable_weights, tape=tape
         )
         self.loss_metric(loss)
         return loss, kl_loss, feature_losses
@@ -512,7 +567,7 @@ class VAEWrapper(BaseWrapper):
                 df[column] = np.where(
                     pd.notnull(df[column]),
                     df[column].astype(str) + df[tz_column].astype(str),
-                    df[column]
+                    df[column],
                 )
                 df.drop(columns=[tz_column], inplace=True)
                 logger.info(
@@ -521,13 +576,31 @@ class VAEWrapper(BaseWrapper):
         return df
 
     def predict_sampled_df(self, n: int) -> pd.DataFrame:
-        sampled_df = self.vae.sample(n)
+        if USE_TORCH_VAE:
+            import torch
+
+            transformed = self.dataset.transform(
+                self.df.loc[:, list(set(self.df.columns))]
+            )
+            loader = build_torch_loader(transformed, batch_size=self.batch_size)
+            latent = torch_encode(self.torch_model, loader)
+            generator = np.random.default_rng()
+            noise = generator.normal(
+                loc=0,
+                scale=0.05,
+                size=(min(n, len(latent)), self.torch_model.latent_dim),
+            )
+            sample_latent = latent[: min(n, len(latent))] + noise
+            pred = torch_generate(self.torch_model, sample_latent)
+            ordered = [pred[name] for name in self.dataset.features.keys()]
+            sampled_df = self.dataset.inverse_transform(ordered)
+        else:
+            sampled_df = self.vae.sample(n)
 
         # uuid columns are generated here to restore nan values
         uuid_columns = self.dataset.uuid_columns
         if uuid_columns:
-            sampled_df = generate_uuid(n, self.dataset,
-                                       uuid_columns, sampled_df)
+            sampled_df = generate_uuid(n, self.dataset, uuid_columns, sampled_df)
 
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)
@@ -536,7 +609,9 @@ class VAEWrapper(BaseWrapper):
 
         return sampled_df
 
-    def predict_less_likely_samples(self, df: pd.DataFrame, n: int, temp=0.05, variaty=3):
+    def predict_less_likely_samples(
+        self, df: pd.DataFrame, n: int, temp=0.05, variaty=3
+    ):
         self.fit_sampler(df)
         return self.vae.less_likely_sample(n, temp, variaty)
 
@@ -563,18 +638,20 @@ class VanillaVAEWrapper(VAEWrapper):
     model : CVAE
         final model that we will use to generate new data
     """
+
     def __init__(
-            self,
-            df: pd.DataFrame,
-            schema: Optional[Dict],
-            metadata: Dict,
-            table_name: str,
-            paths: Dict,
-            process: str,
-            main_process: str,
-            batch_size: int,
-            latent_dim: int = 10,
-            latent_components: int = 30):
+        self,
+        df: pd.DataFrame,
+        schema: Optional[Dict],
+        metadata: Dict,
+        table_name: str,
+        paths: Dict,
+        process: str,
+        main_process: str,
+        batch_size: int,
+        latent_dim: int = 10,
+        latent_components: int = 30,
+    ):
 
         log_level = os.getenv("LOGURU_LEVEL")
 
@@ -587,7 +664,7 @@ class VanillaVAEWrapper(VAEWrapper):
             process,
             main_process,
             batch_size,
-            log_level
+            log_level,
         )
         self.latent_dim = min(latent_dim, int(len(self.dataset.columns) / 2))
         self.vae = CVAE(

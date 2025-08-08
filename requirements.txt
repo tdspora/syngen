@@ -7,7 +7,7 @@ click
 cryptography
 Jinja2
 flatten_json
-keras==2.15.*
+# keras removed; using pure PyTorch
 lazy==1.4
 loguru
 MarkupSafe==2.1.1
@@ -31,9 +31,10 @@ scikit_learn==1.5.*
 scipy==1.14.*
 seaborn==0.13.*
 setuptools==74.1.*
-tensorflow==2.15.*
+opacus==1.5.*
 tornado==6.4.*
 tqdm==4.66.3
 Werkzeug==3.1.2
 xlrd
 xlwt
+torch==2.3.*
