@@ -31,6 +31,7 @@ from syngen.ml.utils import (
     timestamp_to_datetime,
     fetch_config
 )
+from syngen.ml.metrics.utils import get_outlier_ratio_iqr
 from syngen.ml.vae.models.features import KURTOSIS_THRESHOLD
 
 matplotlib.use("Agg")
@@ -993,10 +994,10 @@ class UnivariateMetric(BaseMetric):
         metrics["min_value_ratio"] = min_value_ratio
 
         # Outlier ratio using IQR
-        original_outlier_ratio = self.outlier_ratio_iqr(
+        original_outlier_ratio = get_outlier_ratio_iqr(
             self.original[column].dropna()
         )
-        synthetic_outlier_ratio = self.outlier_ratio_iqr(
+        synthetic_outlier_ratio = get_outlier_ratio_iqr(
             self.synthetic[column].dropna()
         )
         outlier_ratio_diff = (
@@ -1007,10 +1008,10 @@ class UnivariateMetric(BaseMetric):
         metrics["outlier_ratio_diff"] = outlier_ratio_diff
 
         # Extreme outlier ratio using IQR with factor 10
-        original_extr_outlier_ratio = self.outlier_ratio_iqr(
+        original_extr_outlier_ratio = get_outlier_ratio_iqr(
             self.original[column].dropna(), factor=10
         )
-        synthetic_extr_outlier_ratio = self.outlier_ratio_iqr(
+        synthetic_extr_outlier_ratio = get_outlier_ratio_iqr(
             self.synthetic[column].dropna(), factor=10
         )
         extr_outlier_ratio_diff = (
@@ -1110,14 +1111,6 @@ class UnivariateMetric(BaseMetric):
             return abs(synthetic_metric / epsilon)
 
         return abs(synthetic_metric / original_metric)
-
-    @staticmethod
-    def outlier_ratio_iqr(column: pd.Series, factor=1.5):
-        Q1 = column.quantile(0.25)
-        Q3 = column.quantile(0.75)
-        IQR = Q3 - Q1
-        outlier_mask = (column < (Q1 - factor * IQR)) | (column > (Q3 + factor * IQR))
-        return outlier_mask.mean()
 
 
 class Clustering(BaseMetric):

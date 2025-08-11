@@ -45,3 +45,14 @@ def transform_to_base64(path):
     except FileNotFoundError:
         logger.warning(f"No file found at {path}")
         return ""
+
+
+def get_outlier_ratio_iqr(column: pd.Series, factor=1.5):
+    """
+    Get the ratio of outliers in a column using the IQR method
+    """
+    q1 = column.quantile(0.25)
+    q3 = column.quantile(0.75)
+    iqr = q3 - q1
+    outlier_mask = (column < (q1 - factor * iqr)) | (column > (q3 + factor * iqr))
+    return outlier_mask.mean()
