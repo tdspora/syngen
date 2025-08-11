@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable, Literal
+from typing import List, Dict, Optional, Union, Set, Callable
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -468,7 +468,7 @@ def setup_logger():
 
 
 def setup_log_process(
-    type_of_process: Literal["train", "infer"],
+    type_of_process: str,
     log_level: str,
     table_name: Optional[str],
     metadata_path: Optional[str]
