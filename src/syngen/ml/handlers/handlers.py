@@ -13,7 +13,6 @@ from pathos.multiprocessing import ProcessingPool
 import dill
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
-from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
 from attrs import define, field
@@ -30,6 +29,44 @@ from syngen.ml.utils import (
 )
 from syngen.ml.context import get_context
 
+
+class CharTokenizer:
+    """
+    Lightweight character-level tokenizer to replace Keras Tokenizer for this module's needs.
+    Exposes:
+      - fit_on_texts(texts)
+      - word_index: OrderedDict[str, int]  (1-based indices by first occurrence)
+      - word_counts: OrderedDict[str, int] (in insertion order)
+    """
+
+    def __init__(self, lower: bool = False):
+        self.lower = lower
+        self.word_index: OrderedDict[str, int] = OrderedDict()
+        self.word_counts: OrderedDict[str, int] = OrderedDict()
+
+    def fit_on_texts(self, texts):
+        next_index = 1
+        for text in texts:
+            if text is None:
+                text = ""
+            if isinstance(text, bytes):
+                try:
+                    text = text.decode("utf-8", errors="ignore")
+                except Exception:
+                    text = ""
+            s = str(text)
+            if self.lower:
+                s = s.lower()
+            for ch in s:
+                # update counts preserving insertion order
+                if ch in self.word_counts:
+                    self.word_counts[ch] += 1
+                else:
+                    self.word_counts[ch] = 1
+                # assign index on first occurrence
+                if ch not in self.word_index:
+                    self.word_index[ch] = next_index
+                    next_index += 1
 
 class AbstractHandler(ABC):
     @abstractmethod
@@ -107,7 +144,7 @@ class LongTextsHandler(BaseHandler):
         if len(long_text_columns) > 0:
             features = {}
             for col in long_text_columns:
-                tokenizer = Tokenizer(lower=False, char_level=True)
+                tokenizer = CharTokenizer(lower=False)
                 if type(data[col].dropna().values[0]) is bytes:
                     text_col = data[col].str.decode("utf-8", errors="ignore")
                 else:

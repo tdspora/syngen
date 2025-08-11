@@ -1,214 +1,226 @@
 from pathlib import Path
 
-import tensorflow as tf
+from typing import Dict, Tuple, List
 import pickle
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (
-    Input,
-    Dense,
-    Dropout,
-    LeakyReLU,
-    concatenate,
-    Lambda,
-    BatchNormalization,
-    Activation,
-)
-from sklearn.mixture import BayesianGaussianMixture
+
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from sklearn.mixture import BayesianGaussianMixture
 from loguru import logger
+from syngen.ml.utils import ProgressBarHandler
+import math
 
-from syngen.ml.vae.models.custom_layers import FeatureLossLayer
-from syngen.ml.utils import slugify_parameters, ProgressBarHandler
 
-
-class CVAE:
+class CVAE(nn.Module):
     """
-    A class implementing the model architecture.
+    PyTorch implementation of Conditional Variational Autoencoder used by Syngen.
+
+    Notes:
+    - Reconstruction losses are computed explicitly outside the module (in the wrapper)
+      via `compute_losses` to preserve per-feature accounting.
+    - KL term can be combined with a weight (currently set to 0.0 in wrapper to match
+      previous behavior).
     """
 
     def __init__(self, dataset, batch_size, latent_dim, intermediate_dim, latent_components):
+        super().__init__()
         self.dataset = dataset
         self.intermediate_dim = intermediate_dim
         self.batch_size = batch_size
         self.latent_dim = latent_dim
         self.latent_components = min(latent_components, len(self.dataset.order_of_columns))
-        self.model = None
-        self.latent_model = None
-        self.metrics = {}
-        self.cond_features = {}
-        self.is_cond = False
-        self.inputs = list()
-        self.encoders = list()
-        self.feature_decoders = list()
-        self.feature_losses = dict()
-        self.feature_types = dict()
-        self.loss_models = dict()
-        self.cond_inputs = list()
-        self.global_decoder = None
-        self.generator = None
 
-    def sample_z(self, args):
-        mu, log_sigma = args
-        eps = tf.random.normal(shape=(self.latent_dim,), mean=0.0, stddev=1.0)
-        return mu + tf.exp(log_sigma / 2) * eps
-
-    @staticmethod
-    @slugify_parameters(exclude_params=("feature",))
-    def _create_feature_loss_layer(feature, name):
-        FeatureLossLayer(feature, name=name)
-
-    def build_model(self):
+        # Collect feature metadata and shapes
+        self.feature_types: Dict[str, str] = {}
+        self.feature_shapes: Dict[str, Tuple[int, ...]] = {}
+        self.flatten_dims: Dict[str, int] = {}
         for name, feature in self.dataset.features.items():
-            if name in self.cond_features and self.is_cond:
-                self.cond_inputs.append(feature.input)
-
-            self.inputs.append(feature.input)
-            self.encoders.append(feature.encoder)
-
-        if len(self.encoders) > 1:
-            features_encoders = concatenate(self.encoders)
-        else:
-            features_encoders = self.encoders[0]
-
-        self.mu, self.log_sigma = self.__build_encoder(features_encoders)
-        # embed_layer = SampleLayer(gamma=2,
-        #                          capacity=30,
-        #                          name='sampling_layer')([self.mu, self.log_sigma])
-        z = Lambda(self.sample_z)([self.mu, self.log_sigma])
-
-        if self.is_cond:
-            if len(self.cond_inputs) > 1:
-                self.cond_input = concatenate(self.cond_inputs)
-                logger.info(f"Conditioning on {set(self.cond_features)}")
+            ftype = getattr(feature, "feature_type", "numeric")
+            self.feature_types[name] = ftype
+            if ftype == "text":
+                L = getattr(feature, "text_max_len")
+                V = getattr(feature, "vocab_size")
+                shape = (L, V)
             else:
-                self.cond_input = self.cond_inputs[0]
-            z_cond = concatenate([z, self.cond_input])
+                dim = getattr(feature, "input_dimension", 1)
+                shape = (dim,)
+            self.feature_shapes[name] = shape
+            self.flatten_dims[name] = int(np.prod(shape))
 
-            gen_inp_shape = self.latent_dim + self.cond_input.shape[1]
-            decoder_input = z_cond
-            encoder_output = z_cond
-        else:
-            gen_inp_shape = self.latent_dim
-            # decoder_input = Lambda(lambda x: x, name='decoder_inp')(embed_layer)
-            # encoder_output = embed_layer
-            decoder_input = z
-            encoder_output = self.mu
+        self.feature_names: List[str] = list(self.dataset.features.keys())
+        self.total_in_dim = int(sum(self.flatten_dims.values()))
 
-        kl_loss = (
-            1
-            * 0.5
-            * tf.reduce_sum(tf.exp(self.log_sigma) + self.mu**2 - 1.0 - self.log_sigma, 1)
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(self.total_in_dim, self.intermediate_dim),
+            nn.BatchNorm1d(self.intermediate_dim),
+            nn.LeakyReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(self.intermediate_dim, self.intermediate_dim),
+            nn.BatchNorm1d(self.intermediate_dim),
+            nn.LeakyReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(self.intermediate_dim, self.intermediate_dim),
+            nn.BatchNorm1d(self.intermediate_dim),
+            nn.LeakyReLU(),
+            nn.Dropout(0.2),
+        )
+        self.mu_head = nn.Linear(self.intermediate_dim, self.latent_dim)
+        self.logvar_head = nn.Linear(self.intermediate_dim, self.latent_dim)
+
+        # Decoder (shared)
+        self.decoder = nn.Sequential(
+            nn.Linear(self.latent_dim, self.intermediate_dim),
+            nn.LeakyReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(self.intermediate_dim, self.intermediate_dim),
+            nn.LeakyReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(self.intermediate_dim, self.intermediate_dim),
+            nn.LeakyReLU(),
+            nn.Dropout(0.2),
         )
 
-        generator_input = Input(shape=(gen_inp_shape,))
+        # Per-feature heads
+        self.heads = nn.ModuleDict({
+            name: nn.Linear(self.intermediate_dim, out_dim)
+            for name, out_dim in self.flatten_dims.items()
+        })
 
-        self.__build_decoder(decoder_input, generator_input)
+        # Sampler for latent space
+        self.latent_model: BayesianGaussianMixture | None = None
 
-        generator_outputs = list()
-        for i, (name, feature) in enumerate(self.dataset.features.items()):
-            feature_decoder = feature.create_decoder(self.global_decoder)
+    @staticmethod
+    def _flatten_inputs(inputs: List[torch.Tensor]) -> torch.Tensor:
+        flats = []
+        for x in inputs:
+            if x.dim() > 2:
+                flats.append(x.view(x.size(0), -1))
+            else:
+                flats.append(x)
+        return torch.cat(flats, dim=1)
 
-            self._create_feature_loss_layer(feature=feature, name=name)
-            feature_tensor = feature_decoder
-            self.feature_losses[name] = feature.loss
-            self.feature_types[name] = feature.feature_type
+    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
 
-            self.feature_decoders.append(feature_tensor)
+    def forward(self, inputs: List[torch.Tensor]):
+        x = self._flatten_inputs(inputs)
+        h = self.encoder(x)
+        mu = self.mu_head(h)
+        logvar = self.logvar_head(h)
+        z = self.reparameterize(mu, logvar)
+        h_dec = self.decoder(z)
+        outputs: Dict[str, torch.Tensor] = {}
+        for name, head in self.heads.items():
+            out = head(h_dec)
+            shape = self.feature_shapes[name]
+            if len(shape) == 1:
+                outputs[name] = out
+            else:
+                outputs[name] = out.view(-1, *shape)
+        return outputs, mu, logvar
 
-            generator_outputs.append(feature.create_decoder(self.generator))
+    def compute_losses(
+        self,
+        inputs_by_name: Dict[str, torch.Tensor],
+        outputs_by_name: Dict[str, torch.Tensor],
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        total = torch.tensor(0.0, device=next(self.parameters()).device)
+        per_feature: Dict[str, torch.Tensor] = {}
+        for name, y_pred in outputs_by_name.items():
+            ftype = self.feature_types.get(name, "numeric")
+            y_true = inputs_by_name[name]
+            if ftype == "categorical":
+                # y_true (B, C) one-hot -> indices
+                target = torch.argmax(y_true, dim=-1)
+                loss = F.cross_entropy(y_pred, target)
+            elif ftype == "text":
+                # y_true (B, L, V) one-hot
+                B, L, V = y_pred.shape
+                target = torch.argmax(y_true, dim=-1).view(-1)
+                logits = y_pred.view(B * L, V)
+                loss = F.cross_entropy(logits, target)
+            elif ftype == "binary":
+                loss = F.mse_loss(y_pred, y_true)
+            else:
+                loss = F.mse_loss(y_pred, y_true)
+            per_feature[name] = loss.detach()
+            total = total + loss
+        return total, per_feature
 
-        self.model = Model(self.inputs, self.feature_decoders)
-        losses = list(self.feature_losses.values())
-        self.model.add_loss(losses)
-        self.model.add_loss(kl_loss * 0)
+    @staticmethod
+    def kl_divergence(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        return 0.5 * torch.sum(torch.exp(logvar) + mu ** 2 - 1.0 - logvar, dim=1).mean()
 
-        self.encoder_model = Model(self.inputs, encoder_output)
-
-        # generator
-        self.generator_model = Model(generator_input, generator_outputs)
-
-        return self.model
-
-    def __build_encoder(self, input):
-        h0 = Dense(self.intermediate_dim, name="Encoder_0")(input)
-        h0 = BatchNormalization(name="First_encoder_BN")(h0)
-        h0 = Activation(tf.nn.leaky_relu)(h0)
-        h0 = Dropout(0.2)(h0)
-
-        h1 = Dense(self.intermediate_dim, name="Encoder_1")(h0)
-        h1 = BatchNormalization(name="Second_encoder_BN")(h1)
-        h1 = Activation(tf.nn.leaky_relu)(h1)
-        h1 = Dropout(0.2)(h1)
-
-        h2 = Dense(self.intermediate_dim, name="Encoder_2")(h1)
-        h2 = BatchNormalization(name="Third_encoder_BN")(h2)
-        h2 = Activation(tf.nn.leaky_relu)(h2)
-        h2 = Dropout(0.2)(h2)
-
-        mu = Dense(self.latent_dim, name="mu")(h2)
-        log_sigma = Dense(self.latent_dim, name="log_sigma")(h2)
-        return mu, log_sigma
-
-    def __build_decoder(self, input_z, generator_input):
-        if self.is_cond:
-            decoder_h0 = Dense(
-                self.intermediate_dim + self.cond_input.shape[1],
-                activation=LeakyReLU(),
-                name="Decoder_0",
-            )
-        else:
-            decoder_h0 = Dense(self.intermediate_dim, activation=LeakyReLU(), name="Decoder_0")
-        decoder_h1 = Dense(self.intermediate_dim, activation=LeakyReLU(), name="Decoder_1")
-        decoder_h2 = Dense(self.intermediate_dim, activation=LeakyReLU(), name="Decoder_2")
-
-        h_decoded0 = Dropout(0.2)(decoder_h0(input_z))
-        h_decoded1 = Dropout(0.2)(decoder_h1(h_decoded0))
-        self.global_decoder = Dropout(0.2)(decoder_h2(h_decoded1))
-
-        generator0 = decoder_h0(generator_input)
-        generator1 = decoder_h1(generator0)
-        self.generator = decoder_h2(generator1)
-
-    def fit(self, data: pd.DataFrame, **kwargs) -> dict:
-        transformed_data = self.dataset.transform(data)
-        return self.model.fit(transformed_data, batch_size=self.batch_size, **kwargs)
-
+    # ----------------- Inference/sampling helpers -----------------
+    @torch.no_grad()
     def fit_sampler(self, data: pd.DataFrame):
-        log_message = "Fit sampler"
-        logger.info(log_message)
-        ProgressBarHandler().set_progress(message=log_message)
-        transformed_data = self.dataset.transform(data)
-        log_message = "Start encoding"
-        logger.info(log_message)
-        ProgressBarHandler().set_progress(message=log_message)
-        latent_points = self.encoder_model.predict(transformed_data)
-
+        inputs_np = self.dataset.transform(data)
+        normalized: List[np.ndarray] = []
+        for inp in inputs_np:
+            if isinstance(inp, pd.DataFrame):
+                arr = inp.to_numpy(dtype=np.float32)
+            else:
+                arr = np.asarray(inp, dtype=np.float32)
+                if arr.ndim == 1:
+                    arr = arr.reshape(-1, 1)
+            normalized.append(arr)
+        tensors = [torch.from_numpy(arr).float().to(next(self.parameters()).device) for arr in normalized]
+        mu = self.forward(tensors)[1].cpu().numpy()
         logger.info("Creating BayesianGaussianMixture")
         self.latent_model = BayesianGaussianMixture(n_components=self.latent_components, n_init=10)
         logger.info("Fitting BayesianGaussianMixture")
-        self.latent_model.fit(latent_points)
+        self.latent_model.fit(mu)
         logger.info("Finished fitting BayesianGaussianMixture")
 
+    @torch.no_grad()
     def predict(self, data: pd.DataFrame) -> pd.DataFrame:
-        transformed_data = self.dataset.transform(data)
-        prediction = self.model.predict(transformed_data, batch_size=self.batch_size)
-        return self.dataset.inverse_transform(prediction)
+        inputs_np = self.dataset.transform(data)
+        normalized: List[np.ndarray] = []
+        for inp in inputs_np:
+            if isinstance(inp, pd.DataFrame):
+                arr = inp.to_numpy(dtype=np.float32)
+            else:
+                arr = np.asarray(inp, dtype=np.float32)
+                if arr.ndim == 1:
+                    arr = arr.reshape(-1, 1)
+            normalized.append(arr)
+        tensors = [torch.from_numpy(arr).float().to(next(self.parameters()).device) for arr in normalized]
+        outputs, _, _ = self.forward(tensors)
+        preds_list = [outputs[name].detach().cpu().numpy() for name in self.feature_names]
+        return self.dataset.inverse_transform(preds_list)
 
+    @torch.no_grad()
     def sample(self, nb_samples: int) -> pd.DataFrame:
+        if self.latent_model is None:
+            raise RuntimeError("Latent sampler is not fitted. Call fit_sampler first.")
         latent_sample = self.latent_model.sample(nb_samples)[0]
         np.random.shuffle(latent_sample)
-
-        synthetic_prediction = self.generator_model.predict(latent_sample)
-        self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
+        z = torch.from_numpy(latent_sample).float().to(next(self.parameters()).device)
+        h_dec = self.decoder(z)
+        outputs = []
+        for name, head in self.heads.items():
+            out = head(h_dec)
+            shape = self.feature_shapes[name]
+            if len(shape) > 1:
+                out = out.view(-1, *shape)
+            outputs.append(out.detach().cpu().numpy())
+        self.inverse_transformed_df = self.dataset.inverse_transform(outputs)
         pk_uq_keys_mapping = self.dataset.primary_keys_mapping
         if pk_uq_keys_mapping:
             self.__make_pk_uq_unique(pk_uq_keys_mapping, self.dataset.dropped_columns)
         return self.inverse_transformed_df
 
-    def less_likely_sample(
-        self, nb_samples: int, temp: float = 0.05, variaty: int = 3
-    ) -> pd.DataFrame:
+    @torch.no_grad()
+    def less_likely_sample(self, nb_samples: int, temp: float = 0.05, variaty: int = 3) -> pd.DataFrame:
+        if self.latent_model is None:
+            raise RuntimeError("Latent sampler is not fitted. Call fit_sampler first.")
+
         def pop_npoints(latent_vector, log):
             log_probs = {prob: idx for idx, prob in enumerate(log)}
             sorted_log_probs_keys = np.sort(list(log_probs.keys()))
@@ -217,13 +229,21 @@ class CVAE:
             return latent_vector[idxs]
 
         sliced_latent_sample = []
-        for i in range(variaty):
+        for _ in range(variaty):
             latent_sample = self.latent_model.sample(nb_samples)[0]
             log_likelihoods = self.latent_model.score_samples(latent_sample)
             sliced_latent_sample.append(pop_npoints(latent_sample, log_likelihoods))
 
-        synthetic_prediction = self.generator_model.predict(sliced_latent_sample)
-        return self.dataset.inverse_transform(synthetic_prediction)
+        z = torch.from_numpy(np.concatenate(sliced_latent_sample, axis=0)).float().to(next(self.parameters()).device)
+        h_dec = self.decoder(z)
+        outputs = []
+        for name, head in self.heads.items():
+            out = head(h_dec)
+            shape = self.feature_shapes[name]
+            if len(shape) > 1:
+                out = out.view(-1, *shape)
+            outputs.append(out.detach().cpu().numpy())
+        return self.dataset.inverse_transform(outputs)
 
     def __check_pk_numeric_convertability(self, column, key_type):
         if (
@@ -247,21 +267,14 @@ class CVAE:
 
     def save_state(self, path: str):
         pth = Path(path)
-
-        if self.model is not None:
-            self.model.save_weights(str(pth / "vae.ckpt"))
-
-        if self.generator_model is not None:
-            self.generator_model.save_weights(str(pth / "vae_generator.ckpt"))
-
+        pth.mkdir(parents=True, exist_ok=True)
+        torch.save(self.state_dict(), str(pth / "vae.pt"))
         if self.latent_model is not None:
             with open(str(pth / "latent_model.pkl"), "wb") as f:
                 f.write(pickle.dumps(self.latent_model))
 
     def load_state(self, path: str):
         pth = Path(path)
-        self.model.load_weights(str(pth / "vae.ckpt"))
-        self.generator_model.load_weights(str(pth / "vae_generator.ckpt"))
-
+        self.load_state_dict(torch.load(str(pth / "vae.pt"), map_location="cpu"))
         with open(str(pth / "latent_model.pkl"), "rb") as f:
             self.latent_model = pickle.loads(f.read())

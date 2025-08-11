@@ -40,8 +40,10 @@ venv.bak/
 
 # Data source for trainings
 data/
-model_artifacts/
-metadata/
+**/model_artifacts
+**/metadata
+**/resources
+**/tmp_store
 
 pytest*.xml
 /src/tests/**/text_contained_nested_structures.csv
