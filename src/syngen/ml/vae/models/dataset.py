@@ -5,6 +5,7 @@ from datetime import datetime
 import base32_crockford
 from collections import Counter
 import re
+from dataclasses import dataclass, field
 
 import numpy as np
 import dill
@@ -34,86 +35,84 @@ from syngen.ml.utils import clean_up_metadata
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
-class BaseDataset:
-    def __init__(
-        self,
-        df: pd.DataFrame,
-        schema: Dict,
-        metadata: Dict,
-        table_name: str,
-        main_process: str,
-        paths: Dict
-    ):
-        self.df = df
-        self.schema = schema
-        self.fields = schema.get("fields", {})
-        self.schema_format = schema.get("format")
-        self.metadata = metadata
-        self.table_name = table_name
-        self.paths = paths
-        self.main_process = main_process
-        self.features: Dict = dict()
-        self.columns: Dict = dict()
-        self.is_fitted: bool = False
-        self.all_columns: List = list()
-        self.null_num_column_names: List = list()
-        self.zero_num_column_names: List = list()
-        self.nan_labels_dict: Dict = dict()
-        self.uuid_columns: Set = set()
-        self.uuid_columns_types: Dict = dict()
-        self.tech_columns: Set = set()
-        self.custom_categorical_columns: Set = set()
-        self.categorical_columns: Set = set()
-        self.str_columns: Set = set()
-        self.float_columns: Set = set()
-        self.int_columns: Set = set()
-        self.date_columns: Set = set()
-        self.date_mapping: Dict = dict()
-        self.binary_columns: Set = set()
-        self.email_columns: Set = set()
-        self.long_text_columns: Set = set()
-        self.primary_keys_mapping: Dict = dict()
-        self.primary_keys_list: List = list()
-        self.primary_key_name: Optional[str] = None
-        self.pk_columns: List = list()
-        self.unique_keys_mapping: Dict = dict()
-        self.unique_keys_mapping_list: List = list()
-        self.unique_keys_list: List = list()
-        self.uq_columns_lists: List = list()
-        self.uq_columns: List = list()
-        self.foreign_keys_mapping: Dict = dict()
-        self.foreign_keys_list: List = list()
-        self.fk_columns: List = list()
-        self.keys_mapping: Dict = dict()
+@dataclass
+class Dataset:
+    df: pd.DataFrame
+    schema: Dict
+    metadata: Dict
+    table_name: str
+    main_process: str
+    paths: Dict[str, str]
+    features: Dict = field(default_factory=dict)
+    columns: Dict = field(default_factory=dict)
+    is_fitted: bool = field(default=False)
+    all_columns: List = field(default_factory=list)
+    null_num_column_names: List = field(default_factory=list)
+    zero_num_column_names: List = field(default_factory=list)
+    nan_labels_dict: Dict = field(default_factory=dict)
+    uuid_columns: Set = field(default_factory=set)
+    uuid_columns_types: Dict = field(default_factory=dict)
+    tech_columns: Set = field(default_factory=set)
+    custom_categorical_columns: Set = field(default_factory=set)
+    categorical_columns: Set = field(default_factory=set)
+    str_columns: Set = field(default_factory=set)
+    float_columns: Set = field(default_factory=set)
+    int_columns: Set = field(default_factory=set)
+    date_columns: Set = field(default_factory=set)
+    date_mapping: Dict = field(default_factory=dict)
+    binary_columns: Set = field(default_factory=set)
+    email_columns: Set = field(default_factory=set)
+    long_text_columns: Set = field(default_factory=set)
+    primary_keys_mapping: Dict = field(default_factory=dict)
+    primary_keys_list: List = field(default_factory=list)
+    primary_key_name: Optional[str] = field(default=None)
+    pk_columns: List = field(default_factory=list)
+    unique_keys_mapping: Dict = field(default_factory=dict)
+    unique_keys_mapping_list: List = field(default_factory=list)
+    unique_keys_list: List = field(default_factory=list)
+    uq_columns_lists: List = field(default_factory=list)
+    uq_columns: List = field(default_factory=list)
+    foreign_keys_mapping: Dict = field(default_factory=dict)
+    foreign_keys_list: List = field(default_factory=list)
+    fk_columns: List = field(default_factory=list)
+    keys_mapping: Dict = field(default_factory=dict)
+    fields: Dict = field(default_factory=dict)
+    schema_format: str = field(default=str())
+    order_of_columns: List = field(default_factory=list)
+    nan_labels_dict: Dict = field(default_factory=dict)
+    nan_labels_in_uuid: Dict = field(default_factory=dict)
+    cast_to_integer: Set = field(default_factory=set)
+    cast_to_float: Set = field(default_factory=set)
+    dropped_columns: Set = field(default_factory=set)
+    format: Dict = field(default_factory=dict)
+    text_columns: Set = field(default_factory=set)
+
+    def __post_init__(self):
+        self.fields = self.schema.get("fields", {})
+        self.schema_format = self.schema.get("format")
+        self.order_of_columns: List = list(self.df.columns)
         self.dropped_columns: Set = {
             column for column in self.fields if self.fields[column] == "removed"
         }
-        self.order_of_columns: List = list(self.df.columns)
         self.format = self.metadata[self.table_name].get("format", {})
-        self.nan_labels_dict = dict()
-        self.nan_labels_in_uuid = dict()
-        self.cast_to_integer = set()
-        self.cast_to_float = set()
+        self.text_columns = self._select_str_columns()
 
-
-class Dataset(BaseDataset):
-    def __init__(
-        self,
-        df: pd.DataFrame,
-        schema: Optional[Dict],
-        metadata: Dict,
-        table_name: str,
-        main_process: str,
-        paths: Dict
-    ):
-        super().__init__(
-            df,
-            schema,
-            metadata,
-            table_name,
-            main_process,
-            paths
-        )
+    def _select_str_columns(self) -> List[str]:
+        """
+        Select the text columns
+        """
+        if self.schema_format == "CSV":
+            text_columns = [
+                col for col, dtype in dict(self.df.dtypes).items()
+                if dtype in ["object", "string"]
+            ]
+        else:
+            text_columns = [
+                col
+                for col, data_type in self.fields.items()
+                if data_type == "string"
+            ]
+        return text_columns
 
     def _detect_categorical_columns(self):
         """
@@ -153,8 +152,7 @@ class Dataset(BaseDataset):
         Cast the values in the column to 'integer' or 'float' data type
         in case all of them might be cast to this data type
         """
-        text_columns = self._select_str_columns()
-        list_of_columns = set(text_columns) - excluded_columns
+        list_of_columns = set(self.text_columns) - excluded_columns
         for column in list_of_columns:
             try:
                 if self.df[column].dropna().apply(lambda x: float(x).is_integer()).all():
@@ -556,24 +554,6 @@ class Dataset(BaseDataset):
         )
         self.categorical_columns.update(self.custom_categorical_columns)
 
-    # TODO: cache this function calls (?)
-    def _select_str_columns(self) -> List[str]:
-        """
-        Select the text columns
-        """
-        if self.schema_format == "CSV":
-            text_columns = [
-                col for col, dtype in dict(self.df.dtypes).items()
-                if dtype in ["object", "string"]
-            ]
-        else:
-            text_columns = [
-                col
-                for col, data_type in self.fields.items()
-                if data_type == "string"
-            ]
-        return text_columns
-
     def _set_categorical_columns(self):
         """
         Set up the list of categorical columns
@@ -587,8 +567,7 @@ class Dataset(BaseDataset):
         """
         Set up the list of columns with long texts (> 200 symbols)
         """
-        text_columns = self._select_str_columns()
-        data_subset = self.df[text_columns]
+        data_subset = self.df[self.text_columns]
 
         if not data_subset.empty:
             data_subset = data_subset.loc[
@@ -611,8 +590,7 @@ class Dataset(BaseDataset):
         """
         Set up the list of columns with emails (defined by count of @ symbols)
         """
-        text_columns = self._select_str_columns()
-        data_subset = self.df[text_columns]
+        data_subset = self.df[self.text_columns]
 
         if not data_subset.empty:
             # @ presents in more than 4/5 of not None values of every column
@@ -767,9 +745,7 @@ class Dataset(BaseDataset):
         """
         Set up the list of columns with UUIDs
         """
-
-        text_columns = self._select_str_columns()
-        data_subset = self.df[text_columns]
+        data_subset = self.df[self.text_columns]
 
         if not data_subset.empty:
             data_subset = data_subset.apply(self._is_valid_uuid)
