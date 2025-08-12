@@ -944,7 +944,7 @@ class Dataset:
         n_samples = min(100, len(date_text))
         sample = date_text.sample(n_samples).values
 
-        types = [self.__get_date_format(i) for i in sample]
+        types = [self.__get_date_format(str(i)) for i in sample]
 
         if not any(types):
             return "%d-%m-%Y"
