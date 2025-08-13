@@ -49,7 +49,6 @@ class Dataset:
     all_columns: List = field(default_factory=list)
     null_num_column_names: List = field(default_factory=list)
     zero_num_column_names: List = field(default_factory=list)
-    nan_labels_dict: Dict = field(default_factory=dict)
     uuid_columns: Set = field(default_factory=set)
     uuid_columns_types: Dict = field(default_factory=dict)
     tech_columns: Set = field(default_factory=set)
