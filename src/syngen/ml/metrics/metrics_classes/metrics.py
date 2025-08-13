@@ -802,6 +802,7 @@ class UnivariateMetric(BaseMetric):
         counts = {key: (x / size * 100) for key, x in counts.items()}
         return counts
 
+    @staticmethod
     def sanitize_labels(label):
         """
         Sanitize labels by removing dollar signs and carets
