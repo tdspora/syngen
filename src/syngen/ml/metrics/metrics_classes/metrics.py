@@ -782,36 +782,46 @@ class UnivariateMetric(BaseMetric):
 
         return updated_ratio_counts
 
+    @staticmethod
+    def plot_dist(column_data, sort=True, full_set=None):
+        """
+        Plot the distribution of the column data
+        """
+        counts = Counter(column_data)
+        if full_set is not None:
+            absent_keys = full_set - set(counts.keys())
+            if len(absent_keys) > 0:
+                for k in absent_keys:
+                    counts[k] = 0
+
+        if sort:
+            sorted_keys = sorted(counts, key=lambda x: counts[x])
+            counts = {i: counts[i] for i in sorted_keys}
+
+        size = len(column_data)
+        counts = {key: (x / size * 100) for key, x in counts.items()}
+        return counts
+
+    def sanitize_labels(label):
+        """
+        Sanitize labels by removing dollar signs and carets
+        """
+        return re.sub(r"\$|\^", "", label)
+
     def __calc_categ(self, column):
-        def plot_dist(column_data, sort=True, full_set=None):
-            counts = Counter(column_data)
-            if full_set is not None:
-                absent_keys = full_set - set(counts.keys())
-                if len(absent_keys) > 0:
-                    for k in absent_keys:
-                        counts[k] = 0
-
-            if sort:
-                sorted_keys = sorted(counts, key=lambda x: counts[x])
-                counts = {i: counts[i] for i in sorted_keys}
-
-            size = len(column_data)
-            counts = {key: (x / size * 100) for key, x in counts.items()}
-            return counts
-
-        def sanitize_labels(label):
-            return re.sub(r"\$|\^", "", label)
-
+        """
+        Calculate the univariate distribution for a categorical column
+        """
         original_column = self.original[column].fillna("?")
         synthetic_column = self.synthetic[column].fillna("?")
         full_values_set = set(original_column.values) | set(synthetic_column.values)
 
-        original_ratio_counts = plot_dist(original_column, True, full_values_set)
+        original_ratio_counts = self.plot_dist(original_column, True, full_values_set)
         original_ratio_counts = self._get_ratio_counts(original_ratio_counts)
         original_labels = list(original_ratio_counts.keys())
         original_ratio = list(original_ratio_counts.values())
 
-        synthetic_ratio_counts = plot_dist(synthetic_column, False, full_values_set)
+        synthetic_ratio_counts = self.plot_dist(synthetic_column, False, full_values_set)
         synthetic_ratio = [
             synthetic_ratio_counts[label]
             for label in original_labels
@@ -847,9 +857,9 @@ class UnivariateMetric(BaseMetric):
             ax.set_xticks(x)
             ax.set_xticklabels(
                 [
-                    str(sanitize_labels(label[:30])) + "..."
+                    str(self.sanitize_labels(label[:30])) + "..."
                     if len(str(label)) > 33
-                    else sanitize_labels(str(label))
+                    else self.sanitize_labels(str(label))
                     for label in original_labels
                 ]
             )
