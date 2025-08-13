@@ -1,8 +1,6 @@
 from typing import Union, List, Optional, Dict, Literal
 from abc import ABC
 from itertools import combinations
-from collections import Counter
-import re
 import random
 
 import tqdm
@@ -31,7 +29,12 @@ from syngen.ml.utils import (
     timestamp_to_datetime,
     fetch_config
 )
-from syngen.ml.metrics.utils import get_outlier_ratio_iqr
+from syngen.ml.metrics.utils import (
+    get_outlier_ratio_iqr,
+    plot_dist,
+    sanitize_labels,
+    get_ratio_counts
+)
 from syngen.ml.vae.models.features import KURTOSIS_THRESHOLD
 
 matplotlib.use("Agg")
@@ -760,55 +763,6 @@ class UnivariateMetric(BaseMetric):
         images.update(uni_categ_images)
         return images
 
-    @staticmethod
-    def _get_ratio_counts(ratio_counts, count: int = 30) -> Dict:
-        """
-        Select the most common, least common and some random items between them
-        from the ratio_counts
-        """
-        ratio_counts = Counter(ratio_counts)
-
-        most_least_count = int(count * 0.2)
-        other_items = count - 2 * most_least_count
-
-        most_common_items = ratio_counts.most_common(most_least_count)
-        least_common_items = ratio_counts.most_common()[: -most_least_count - 1: -1]
-        between_items = ratio_counts.most_common()[most_least_count:-most_least_count]
-        selected_between_items = random.sample(between_items, min(other_items, len(between_items)))
-
-        updated_ratio_counts = dict(
-            most_common_items + selected_between_items + least_common_items
-        )
-
-        return updated_ratio_counts
-
-    @staticmethod
-    def plot_dist(column_data, sort=True, full_set=None):
-        """
-        Plot the distribution of the column data
-        """
-        counts = Counter(column_data)
-        if full_set is not None:
-            absent_keys = full_set - set(counts.keys())
-            if len(absent_keys) > 0:
-                for k in absent_keys:
-                    counts[k] = 0
-
-        if sort:
-            sorted_keys = sorted(counts, key=lambda x: counts[x])
-            counts = {i: counts[i] for i in sorted_keys}
-
-        size = len(column_data)
-        counts = {key: (x / size * 100) for key, x in counts.items()}
-        return counts
-
-    @staticmethod
-    def sanitize_labels(label):
-        """
-        Sanitize labels by removing dollar signs and carets
-        """
-        return re.sub(r"\$|\^", "", label)
-
     def __calc_categ(self, column):
         """
         Calculate the univariate distribution for a categorical column
@@ -817,12 +771,12 @@ class UnivariateMetric(BaseMetric):
         synthetic_column = self.synthetic[column].fillna("?")
         full_values_set = set(original_column.values) | set(synthetic_column.values)
 
-        original_ratio_counts = self.plot_dist(original_column, True, full_values_set)
-        original_ratio_counts = self._get_ratio_counts(original_ratio_counts)
+        original_ratio_counts = plot_dist(original_column, True, full_values_set)
+        original_ratio_counts = get_ratio_counts(original_ratio_counts)
         original_labels = list(original_ratio_counts.keys())
         original_ratio = list(original_ratio_counts.values())
 
-        synthetic_ratio_counts = self.plot_dist(synthetic_column, False, full_values_set)
+        synthetic_ratio_counts = plot_dist(synthetic_column, False, full_values_set)
         synthetic_ratio = [
             synthetic_ratio_counts[label]
             for label in original_labels
@@ -858,9 +812,9 @@ class UnivariateMetric(BaseMetric):
             ax.set_xticks(x)
             ax.set_xticklabels(
                 [
-                    str(self.sanitize_labels(label[:30])) + "..."
+                    str(sanitize_labels(label[:30])) + "..."
                     if len(str(label)) > 33
-                    else self.sanitize_labels(str(label))
+                    else sanitize_labels(str(label))
                     for label in original_labels
                 ]
             )
