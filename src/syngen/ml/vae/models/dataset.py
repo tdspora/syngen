@@ -36,7 +36,7 @@ from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 @dataclass
-class Dataset:
+class BaseDataset:
     df: pd.DataFrame
     schema: Dict
     metadata: Dict
@@ -86,15 +86,6 @@ class Dataset:
     format: Dict = field(default_factory=dict)
     text_columns: Set = field(default_factory=set)
 
-    def __post_init__(self):
-        self.fields = self.schema.get("fields", {})
-        self.schema_format = self.schema.get("format")
-        self.order_of_columns: List = list(self.df.columns)
-        self.dropped_columns: Set = {
-            column for column in self.fields if self.fields[column] == "removed"
-        }
-        self.format = self.metadata[self.table_name].get("format", {})
-        self.text_columns = self._select_str_columns()
 
     def _select_str_columns(self) -> List[str]:
         """
@@ -113,6 +104,19 @@ class Dataset:
             ]
         return text_columns
 
+    def __post_init__(self):
+        self.fields = self.schema.get("fields", {})
+        self.schema_format = self.schema.get("format")
+        self.order_of_columns: List = list(self.df.columns)
+        self.dropped_columns: Set = {
+            column for column in self.fields if self.fields[column] == "removed"
+        }
+        self.format = self.metadata[self.table_name].get("format", {})
+        self.text_columns = self._select_str_columns()
+
+
+@dataclass
+class Dataset(BaseDataset):
     def _detect_categorical_columns(self):
         """
         Define binary and categorical columns
