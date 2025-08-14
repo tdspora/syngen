@@ -86,7 +86,6 @@ class BaseDataset:
     format: Dict = field(default_factory=dict)
     text_columns: Set = field(default_factory=set)
 
-
     def _select_str_columns(self) -> List[str]:
         """
         Select the text columns
