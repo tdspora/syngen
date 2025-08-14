@@ -36,7 +36,7 @@ from syngen.ml.mlflow_tracker import MlflowTracker
 
 
 @dataclass
-class BaseDataset:
+class Dataset:
     df: pd.DataFrame
     schema: Dict
     metadata: Dict
@@ -113,9 +113,6 @@ class BaseDataset:
         self.format = self.metadata[self.table_name].get("format", {})
         self.text_columns = self._select_str_columns()
 
-
-@dataclass
-class Dataset(BaseDataset):
     def _detect_categorical_columns(self):
         """
         Define binary and categorical columns
