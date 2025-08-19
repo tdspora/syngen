@@ -262,7 +262,7 @@ def get_nan_labels(df: pd.DataFrame, excluded_columns: Set[str]) -> Dict:
     Get labels that represent nan values in float/int columns
     """
     columns_nan_labels = {}
-    object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
+    object_columns = df.select_dtypes(include=[pd.StringDtype(), "object", "string"]).columns
     columns = set(object_columns) - excluded_columns
     for column in columns:
         if df[column].isna().sum() > 0:

@@ -86,22 +86,21 @@ class Dataset:
     format: Dict = field(default_factory=dict)
     text_columns: Set = field(default_factory=set)
 
-    def _select_str_columns(self) -> List[str]:
+    def _set_text_columns(self) -> List[str]:
         """
-        Select the text columns
+        Set the text columns
         """
         if self.schema_format == "CSV":
-            text_columns = [
+            self.text_columns = [
                 col for col, dtype in dict(self.df.dtypes).items()
-                if dtype in ["object", "string"]
+                if dtype in ["object", "string", pd.StringDtype()]
             ]
         else:
-            text_columns = [
+            self.text_columns = [
                 col
                 for col, data_type in self.fields.items()
                 if data_type == "string"
             ]
-        return text_columns
 
     def __post_init__(self):
         self.fields = self.schema.get("fields", {})
@@ -111,7 +110,6 @@ class Dataset:
             column for column in self.fields if self.fields[column] == "removed"
         }
         self.format = self.metadata[self.table_name].get("format", {})
-        self.text_columns = self._select_str_columns()
 
     def _detect_categorical_columns(self):
         """
@@ -125,9 +123,9 @@ class Dataset:
         """
         Preprocess the dataframe
         """
-        self._cast_to_numeric(excluded_columns)
         self.nan_labels_dict = get_nan_labels(self.df, excluded_columns)
         self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
+        self._cast_to_numeric(excluded_columns)
 
     def _preparation_step(self):
         """
@@ -135,6 +133,7 @@ class Dataset:
         preprocess the dataframe before the detection of data types of columns
         """
         table_config = self.metadata.get(self.table_name, {})
+        self._set_text_columns()
         self._set_non_existent_columns(table_config)
         self._update_metadata(table_config)
         self._set_metadata()
