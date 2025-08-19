@@ -84,9 +84,9 @@ class Dataset:
     cast_to_float: Set = field(default_factory=set)
     dropped_columns: Set = field(default_factory=set)
     format: Dict = field(default_factory=dict)
-    text_columns: Set = field(default_factory=set)
+    text_columns: List = field(default_factory=list)
 
-    def _set_text_columns(self) -> List[str]:
+    def _set_text_columns(self):
         """
         Set the text columns
         """
