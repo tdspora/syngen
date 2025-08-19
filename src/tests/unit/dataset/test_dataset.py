@@ -141,7 +141,6 @@ def test_save_dataset(rp_logger):
         "custom_categorical_columns",
         "categorical_columns",
         "str_columns",
-        "text_columns",
         "float_columns",
         "int_columns",
         "date_columns",

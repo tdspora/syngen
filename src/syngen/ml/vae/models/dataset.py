@@ -84,23 +84,23 @@ class Dataset:
     cast_to_float: Set = field(default_factory=set)
     dropped_columns: Set = field(default_factory=set)
     format: Dict = field(default_factory=dict)
-    text_columns: List = field(default_factory=list)
 
-    def _set_text_columns(self):
+    def _select_str_columns(self) -> List[str]:
         """
-        Set the text columns
+        Select the text columns
         """
         if self.schema_format == "CSV":
-            self.text_columns = [
+            text_columns = [
                 col for col, dtype in dict(self.df.dtypes).items()
                 if dtype in ["object", "string", pd.StringDtype()]
             ]
         else:
-            self.text_columns = [
+            text_columns = [
                 col
                 for col, data_type in self.fields.items()
                 if data_type == "string"
             ]
+        return text_columns
 
     def __post_init__(self):
         self.fields = self.schema.get("fields", {})
@@ -133,7 +133,6 @@ class Dataset:
         preprocess the dataframe before the detection of data types of columns
         """
         table_config = self.metadata.get(self.table_name, {})
-        self._set_text_columns()
         self._set_non_existent_columns(table_config)
         self._update_metadata(table_config)
         self._set_metadata()
@@ -150,7 +149,8 @@ class Dataset:
         Cast the values in the column to 'integer' or 'float' data type
         in case all of them might be cast to this data type
         """
-        list_of_columns = set(self.text_columns) - excluded_columns
+        text_columns = self._select_str_columns()
+        list_of_columns = set(text_columns) - excluded_columns
         for column in list_of_columns:
             try:
                 if self.df[column].dropna().apply(lambda x: float(x).is_integer()).all():
@@ -565,7 +565,8 @@ class Dataset:
         """
         Set up the list of columns with long texts (> 200 symbols)
         """
-        data_subset = self.df[self.text_columns]
+        text_columns = self._select_str_columns()
+        data_subset = self.df[text_columns]
 
         if not data_subset.empty:
             data_subset = data_subset.loc[
@@ -588,7 +589,8 @@ class Dataset:
         """
         Set up the list of columns with emails (defined by count of @ symbols)
         """
-        data_subset = self.df[self.text_columns]
+        text_columns = self._select_str_columns()
+        data_subset = self.df[text_columns]
 
         if not data_subset.empty:
             # @ presents in more than 4/5 of not None values of every column
@@ -743,7 +745,8 @@ class Dataset:
         """
         Set up the list of columns with UUIDs
         """
-        data_subset = self.df[self.text_columns]
+        text_columns = self._select_str_columns()
+        data_subset = self.df[text_columns]
 
         if not data_subset.empty:
             data_subset = data_subset.apply(self._is_valid_uuid)
