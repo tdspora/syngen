@@ -633,6 +633,14 @@ class DataEncryptor(BaseDataLoader):
         data, schema = self.load_data()
         return data.columns.tolist()
 
+    @staticmethod
+    def _save_data(path: str, data: bytes):
+        """
+        Save the encrypted dataframe to the disk
+        """
+        with open(path, "wb") as encrypted_file:
+            encrypted_file.write(data)
+
     def save_data(self, df: pd.DataFrame):
         """
         Save the encrypted dataframe to the disk
@@ -643,8 +651,7 @@ class DataEncryptor(BaseDataLoader):
 
             # Use atomic write operation for better safety
             temp_path = f"{self.path}.tmp"
-            with open(temp_path, "wb") as encrypted_file:
-                encrypted_file.write(encrypted_data)
+            self._save_data(temp_path, encrypted_data)
             os.replace(temp_path, self.path)
 
             logger.info(
@@ -656,14 +663,19 @@ class DataEncryptor(BaseDataLoader):
             logger.error(f"Encryption failed: {str(e)}")
             raise e
 
+    def _load_data(self) -> bytes:
+        """
+        Read encrypted data from disk.
+        """
+        with open(self.path, "rb") as encrypted_file:
+            return encrypted_file.read()
+
     def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
-        Load the decrypted data from the disk
+        Load the decrypted data from the disk.
         """
         try:
-            with open(self.path, "rb") as encrypted_file:
-                encrypted_data = encrypted_file.read()
-
+            encrypted_data = self._load_data()
             decrypted_data = self.fernet.decrypt(encrypted_data)
             df_decrypted = pkl.loads(decrypted_data)
 
