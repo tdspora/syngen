@@ -440,6 +440,17 @@ def fetch_log_message(message):
     return log_message
 
 
+def fetch_env_variables(options: Dict) -> Dict:
+    """
+    Fetches the values of environment variables specified in options
+    """
+    return {
+        option: os.getenv(value)
+        if value is not None else value
+        for option, value in options.items()
+    }
+
+
 def file_sink(message):
     """
     Save logs to the log file

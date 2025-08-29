@@ -994,6 +994,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
             "infer_settings": {
                 "destination": "path/to/generated_table_a.csv"
             },
+            "encryption": {},
             "keys": {
                 "pk_id": {
                     "type": "PK",
@@ -1055,6 +1056,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
                     "columns": ["name"]
                 }
             },
+            "encryption": {},
             "format": {}
         }
     )
@@ -1140,6 +1142,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
             "infer_settings": {
                 "destination": "path/to/generated_table_a.csv"
             },
+            "encryption": {},
             "keys": {
                 "pk_id": {
                     "type": "PK",
@@ -1191,6 +1194,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
             "infer_settings": {
                 "destination": "path/to/generated_table_a.csv"
             },
+            "encryption": {},
             "keys": {
                 "pk_id": {
                     "type": "PK",
@@ -1279,6 +1283,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
             "infer_settings": {
                 "destination": "path/to/generated_table_a.csv"
             },
+            "encryption": {},
             "keys": {
                 "pk_id": {
                     "type": "PK",
@@ -1330,6 +1335,7 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
             "infer_settings": {
                 "destination": "path/to/generated_table_a.csv"
             },
+            "encryption": {},
             "keys": {
                 "pk_id": {
                     "type": "PK",
@@ -1417,6 +1423,7 @@ def test_validate_incomplete_metadata_in_infer_process(
             "infer_settings": {
                 "destination": "path/to/generated_table_a.csv"
             },
+            "encryption": {},
             "keys": {
                 "pk_id": {
                     "type": "PK",
@@ -1468,6 +1475,7 @@ def test_validate_incomplete_metadata_in_infer_process(
             "infer_settings": {
                 "destination": "path/to/generated_table_a.csv"
             },
+            "encryption": {},
             "keys": {
                 "pk_id": {
                     "type": "PK",

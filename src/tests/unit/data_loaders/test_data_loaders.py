@@ -537,7 +537,8 @@ def test_load_metadata_in_yaml_format(rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -567,7 +568,8 @@ def test_load_metadata_in_yml_format(rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -595,7 +597,8 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         }
     }
 
@@ -624,7 +627,8 @@ def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         }
     }
 
@@ -654,7 +658,8 @@ def test_save_metadata_in_yaml_format(test_yaml_path, test_metadata_file, rp_log
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -683,7 +688,8 @@ def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logge
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -712,7 +718,8 @@ def test_normalize_parameter_reports_if_all(test_yaml_path, rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         }
     }
 
@@ -744,14 +751,15 @@ def test_normalize_parameter_reports_if_none(test_yaml_path, rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         }
     }
 
 
 def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
     rp_logger.info(
-        "Loading metadata_files in yaml format with 'infer_settings', 'keys' defined as None"
+        "Loading the metadata file in yaml format with 'infer_settings', 'keys' defined as None"
     )
     path_to_metadata = (
         f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata_with_none_params.yaml"
@@ -766,8 +774,56 @@ def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
             "train_settings": {"source": "../data/pk_test.csv"},
             "infer_settings": {},
             "keys": {},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_metadata_with_fernet_keys(rp_logger):
+    rp_logger.info(
+        "Loading the metadata file in yaml format with fernet keys "
+        "in 'global_settings' and 'table_settings'"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata_with_fernet_keys.yaml"
+    )
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+    metadata = test_metadata_loader.load_data()
+    assert metadata == {
+        "global": {
+            "encryption": {
+                "fernet_key": "VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY="
+            }
+        },
+        "pk_test": {
+            "train_settings": {
+                "source": "../data/pk_test.csv",
+                "epochs": 1,
+                "drop_null": False,
+                "reports": [],
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "size": 100,
+                "run_parallel": False,
+                "random_seed": 1,
+                "reports": ["accuracy"]
+            },
+            "encryption": {
+                "fernet_key": "k64ntCKv3k7ihkNmbjN5cIlkRGxkPoHskJNcKB6bVuI="
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            },
+            "format": {}
+        }
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

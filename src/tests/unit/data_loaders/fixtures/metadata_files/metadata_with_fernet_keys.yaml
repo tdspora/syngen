@@ -1,0 +1,26 @@
+global:
+    encryption:
+        fernet_key: FERNET_KEY           # Fernet key for encryption
+
+pk_test:                                  # Use table name here
+  train_settings:                         # Settings for training process
+    source: ../data/pk_test.csv           # Supported formats include cloud storage locations, local files
+    epochs: 1                             # Number of epochs
+    drop_null: false                      # Drop rows with NULL values
+    reports: none                         # Turn on or turn off generation of the report
+    row_limit: 800
+
+  infer_settings:                         # Settings for infer process
+    size: 100
+    run_parallel: false                   # Turn on or turn off parallel training process
+    random_seed: 1                        # Ensure reproducible tables generation
+    reports: all
+
+  encryption:
+    fernet_key: FERNET_KEY_2              # Fernet key for encryption
+
+  keys:                                   # Keys of the table
+    pk_id:                                # Name of a key
+      type: "PK"                          # Type of key
+      columns:                            # Columns related to key
+        - Id

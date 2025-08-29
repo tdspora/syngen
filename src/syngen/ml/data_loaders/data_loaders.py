@@ -20,7 +20,7 @@ from cryptography.fernet import Fernet
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
-from syngen.ml.utils import trim_string
+from syngen.ml.utils import trim_string, fetch_env_variables
 from syngen.ml.context import get_context, global_context
 from syngen.ml.validation_schema import (
     ExcelFormatSettingsSchema,
@@ -456,10 +456,24 @@ class YAMLLoader(BaseDataLoader):
             self._normalize_reports(settings, "infer")
         return metadata
 
+    def _fetch_encryption_settings(self, metadata: dict) -> dict:
+        """
+        Fetch the encryption settings, expecially 'fernet_key' parameter,
+        from environment variables
+        """
+        for table, settings in metadata.items():
+            if "encryption" not in settings:
+                settings["encryption"] = {}
+            else:
+                encryption_settings = settings["encryption"]
+                settings["encryption"] = fetch_env_variables(encryption_settings)
+        return metadata
+
     def _load_data(self, metadata_file) -> Dict:
         try:
             metadata = yaml.load(metadata_file, Loader=SafeLoader)
-            metadata = self.replace_none_values_of_metadata_settings(metadata)
+            metadata = self._fetch_encryption_settings(metadata)
+            metadata = self._replace_none_values_of_metadata_settings(metadata)
             metadata = self._normalize_parameter_reports(metadata)
             return metadata
         except ScannerError as error:
@@ -475,7 +489,7 @@ class YAMLLoader(BaseDataLoader):
         with open(self.path, "r", encoding="utf-8") as f:
             return self._load_data(f)
 
-    def replace_none_values_of_metadata_settings(self, metadata: dict):
+    def _replace_none_values_of_metadata_settings(self, metadata: dict):
         """
         Replace None values for parameters in the metadata
         """
