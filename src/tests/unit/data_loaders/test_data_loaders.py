@@ -787,7 +787,8 @@ def test_load_metadata_with_fernet_keys(rp_logger):
         "in 'global_settings' and 'table_settings'"
     )
     path_to_metadata = (
-        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata_with_fernet_keys.yaml"
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/"
+        "metadata_with_several_fernet_keys.yaml"
     )
     test_metadata_loader = MetadataLoader(path_to_metadata)
 
@@ -801,16 +802,14 @@ def test_load_metadata_with_fernet_keys(rp_logger):
         },
         "pk_test": {
             "train_settings": {
-                "source": "../data/pk_test.csv",
+                "source": "./path/to/pk_test.csv",
                 "epochs": 1,
                 "drop_null": False,
-                "reports": [],
                 "row_limit": 800
             },
             "infer_settings": {
-                "size": 100,
-                "run_parallel": False,
-                "random_seed": 1,
+                "size": 200,
+                "run_parallel": True,
                 "reports": ["accuracy"]
             },
             "encryption": {
@@ -822,6 +821,33 @@ def test_load_metadata_with_fernet_keys(rp_logger):
                     "columns": ["Id"]
                 }
             },
+            "format": {}
+        },
+        "fk_test": {
+            "train_settings": {
+                "source": "./path/to/fk_test.csv",
+                "epochs": 5,
+                "drop_null": True,
+                "reports": ["accuracy", "sample"],
+                "row_limit": 600
+            },
+            "infer_settings": {
+                "size": 90,
+                "run_parallel": True,
+                "random_seed": 2,
+                "reports": []
+            },
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["Id"],
+                    "references": {
+                        "table": "pk_test",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "encryption": {},
             "format": {}
         }
     }
