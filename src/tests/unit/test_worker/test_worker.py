@@ -2177,6 +2177,92 @@ def test_launch_train_with_metadata_contained_several_fernet_keys(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_launch_train_with_metadata_contained_non_existent_fernet_key(rp_logger, caplog):
+    """
+    Test that 'launch_train' method calls all necessary methods
+    by providing the metadata file of related tables
+    in which one of provided keys is non-existent
+    """
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "by providing the metadata file of related tables "
+        "in which one of provided keys is non-existent"
+    )
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            worker = Worker(
+                table_name=None,
+                metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                              "metadata_with_one_nonexistent_fernet_key.yaml",
+                settings={
+                    "source": None,
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "reports": ["accuracy", "sample"],
+                },
+                log_level="INFO",
+                type_of_process="train",
+                encryption_settings=fetch_env_variables({"fernet_key": None})
+            )
+            worker.launch_train()
+    assert (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+        "Please, check whether it is set correctly."
+    ) in str(error.value)
+    assert (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+        "Please, check whether it is set correctly."
+    ) in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_launch_train_with_metadata_contained_all_non_existent_fernet_key(rp_logger, caplog):
+    """
+    Test that 'launch_train' method calls all necessary methods
+    by providing the metadata file of related tables
+    in which all provided keys are non-existent
+    """
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "by providing the metadata file of related tables "
+        "in which all provided keys are non-existent"
+    )
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            worker = Worker(
+                table_name=None,
+                metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                              "metadata_with_all_nonexistent_fernet_keys.yaml",
+                settings={
+                    "source": None,
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "reports": ["accuracy", "sample"],
+                },
+                log_level="INFO",
+                type_of_process="train",
+                encryption_settings=fetch_env_variables({"fernet_key": None})
+            )
+            worker.launch_train()
+    assert (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT_1' wasn't fetched. "
+        "Please, check whether it is set correctly. "
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT_2' wasn't fetched. "
+        "Please, check whether it is set correctly."
+    ) in str(error.value)
+    assert (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT_1' wasn't fetched. "
+        "Please, check whether it is set correctly. "
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT_2' wasn't fetched. "
+        "Please, check whether it is set correctly."
+    ) in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @patch.object(Worker, "_collect_metrics_in_infer")
 @patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_check_access_to_input_data")
@@ -2673,6 +2759,90 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
         ["table"],
         True
     )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_launch_infer_with_metadata_contained_non_existent_fernet_key(rp_logger, caplog):
+    """
+    Test that 'launch_infer' method calls all necessary methods
+    by providing the metadata file of related tables
+    in which one of provided keys is non-existent
+    """
+    rp_logger.info(
+        "Test that 'launch_infer' method calls all necessary methods "
+        "by providing the metadata file of related tables "
+        "in which one of provided keys is non-existent"
+    )
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            worker = Worker(
+                table_name=None,
+                metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                              "metadata_with_one_nonexistent_fernet_key.yaml",
+                settings={
+                    "size": 300,
+                    "run_parallel": True,
+                    "random_seed": 3,
+                    "reports": ["accuracy"],
+                    "batch_size": 300,
+                },
+                log_level="INFO",
+                type_of_process="infer",
+                encryption_settings=fetch_env_variables({"fernet_key": None})
+            )
+            worker.launch_infer()
+    assert (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+        "Please, check whether it is set correctly."
+    ) in str(error.value)
+    assert (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+        "Please, check whether it is set correctly."
+    ) in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_launch_infer_with_metadata_contained_all_non_existent_fernet_key(rp_logger, caplog):
+    """
+    Test that 'launch_infer' method calls all necessary methods
+    by providing the metadata file of related tables
+    in which all provided keys are non-existent
+    """
+    rp_logger.info(
+        "Test that 'launch_infer' method calls all necessary methods "
+        "by providing the metadata file of related tables "
+        "in which all provided keys are non-existent"
+    )
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            worker = Worker(
+                table_name=None,
+                metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                              "metadata_with_all_nonexistent_fernet_keys.yaml",
+                settings={
+                    "size": 300,
+                    "run_parallel": True,
+                    "random_seed": 3,
+                    "reports": ["accuracy"],
+                    "batch_size": 300,
+                },
+                log_level="INFO",
+                type_of_process="infer",
+                encryption_settings=fetch_env_variables({"fernet_key": None})
+            )
+            worker.launch_infer()
+    assert (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT_1' wasn't fetched. "
+        "Please, check whether it is set correctly. "
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT_2' wasn't fetched. "
+        "Please, check whether it is set correctly."
+    ) in str(error.value)
+    assert (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT_1' wasn't fetched. "
+        "Please, check whether it is set correctly. "
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT_2' wasn't fetched. "
+        "Please, check whether it is set correctly."
+    ) in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

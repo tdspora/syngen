@@ -854,6 +854,64 @@ def test_load_metadata_with_fernet_keys(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_load_metadata_with_one_non_existent_fernet_key(rp_logger, caplog):
+    rp_logger.info(
+        "Loading the metadata file in yaml format with one non-existent fernet key"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/"
+        "metadata_with_one_nonexistent_fernet_key.yaml"
+    )
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            test_metadata_loader.load_data()
+            assert (
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in str(error.value)
+            assert (
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in caplog.text
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_metadata_with_all_nonexistent_fernet_key(rp_logger, caplog):
+    rp_logger.info(
+        "Loading the metadata file in yaml format with all non-existent fernet key"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/"
+        "metadata_with_all_nonexistent_fernet_keys.yaml"
+    )
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            test_metadata_loader.load_data()
+            assert (
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT_1' wasn't fetched. "
+                "Please, check whether it is set correctly. "
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT_2' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in str(error.value)
+            assert (
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT_1' wasn't fetched. "
+                "Please, check whether it is set correctly. "
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT_2' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in caplog.text
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_load_pipe_delimited_csv(rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/pipe_delimited_text.csv")

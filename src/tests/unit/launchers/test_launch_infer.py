@@ -276,3 +276,43 @@ def test_infer_table_with_redundant_parameter_reports(prior_value, value, rp_log
         "no other values should be provided.",)
     rp_logger.info(SUCCESSFUL_MESSAGE)
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_infer")
+@patch.object(Worker, "__attrs_post_init__")
+def test_infer_table_with_valid_fernet_key(mock_post_init, mock_launch_infer, rp_logger):
+    rp_logger.info(
+        "Launch infer process through CLI with valid 'fernet_key' parameter "
+        "equals to the value of the environment variable 'FERNET_KEY'"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_infer,
+        ["--fernet_key", "FERNET_KEY", "--table_name", TABLE_NAME],
+    )
+    mock_post_init.assert_called_once()
+    mock_launch_infer.assert_called_once()
+    assert result.exit_code == 0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_infer_table_with_invalid_fernet_key(rp_logger):
+    rp_logger.info(
+        "Launch infer process through CLI with invalid 'fernet_key' parameter "
+        "equals to non-existent environment variable name"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_infer,
+        [
+            "--fernet_key", "FERNET_KEY_NONEXISTENT",
+            "--table_name", TABLE_NAME
+        ],
+    )
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+    assert result.exception.args == (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+        "Please, check whether it is set correctly.",
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)

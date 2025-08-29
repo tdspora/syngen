@@ -11,7 +11,8 @@ from syngen.ml.utils import (
     timestamp_to_datetime,
     fetch_timezone,
     convert_to_timestamp,
-    convert_to_date_string
+    convert_to_date_string,
+    fetch_env_variables
 )
 
 from tests.conftest import SUCCESSFUL_MESSAGE
@@ -188,4 +189,67 @@ def test_fetch_timezone_from_date_string_with_tz(
         "containing timezone information"
     )
     assert fetch_timezone(date_string) == expected_timezone
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_fetch_env_variables_if_all_env_variables_exist(rp_logger, monkeypatch):
+    rp_logger.info(
+        "Test the function 'fetch_env_variables' when all environment variables exist"
+    )
+    monkeypatch.setenv("TEST_ENV_VAR1", "value1")
+    monkeypatch.setenv("TEST_ENV_VAR2", "value2")
+
+    env_vars = fetch_env_variables(
+        {"secret_1": "TEST_ENV_VAR1", "secret_2": "TEST_ENV_VAR2"}
+    )
+
+    assert env_vars == {
+        "secret_1": "value1",
+        "secret_2": "value2"
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_fetch_env_variables_if_one_of_all_env_variables_exist(rp_logger, caplog, monkeypatch):
+    rp_logger.info(
+        "Test the function 'fetch_env_variables' when one of all environment variables exist"
+    )
+    monkeypatch.setenv("TEST_ENV_VAR1", "value1")
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            fetch_env_variables(
+                {"secret_1": "TEST_ENV_VAR1", "secret_2": "TEST_ENV_VAR2"}
+            )
+            assert (
+                "The value of the environment variable 'TEST_ENV_VAR2' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in caplog.text
+            assert (
+                "The value of the environment variable 'TEST_ENV_VAR2' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in str(error.value)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_fetch_env_variables_if_all_env_variables_dont_exist(rp_logger, caplog):
+    rp_logger.info(
+        "Test the function 'fetch_env_variables' if all environment variables don't exist"
+    )
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            fetch_env_variables(
+                {"secret_1": "TEST_ENV_VAR1", "secret_2": "TEST_ENV_VAR2"}
+            )
+            assert (
+                "The value of the environment variable 'TEST_ENV_VAR1' wasn't fetched. "
+                "Please, check whether it is set correctly. "
+                "The value of the environment variable 'TEST_ENV_VAR2' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in caplog.text
+            assert (
+                "The value of the environment variable 'TEST_ENV_VAR1' wasn't fetched. "
+                "Please, check whether it is set correctly. "
+                "The value of the environment variable 'TEST_ENV_VAR2' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in str(error.value)
     rp_logger.info(SUCCESSFUL_MESSAGE)

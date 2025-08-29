@@ -461,13 +461,23 @@ class YAMLLoader(BaseDataLoader):
         Fetch the encryption settings, expecially 'fernet_key' parameter,
         from environment variables
         """
+        errors = list()
         for table, settings in metadata.items():
-            if "encryption" not in settings:
-                settings["encryption"] = {}
-            else:
-                encryption_settings = settings["encryption"]
-                settings["encryption"] = fetch_env_variables(encryption_settings)
-        return metadata
+            try:
+                if "encryption" not in settings:
+                    settings["encryption"] = {}
+                else:
+                    encryption_settings = settings["encryption"]
+                    settings["encryption"] = fetch_env_variables(encryption_settings)
+            except ValueError as error:
+                errors.append(str(error))
+                continue
+        if errors:
+            errors = " ".join(errors)
+            logger.error(errors)
+            raise ValueError(errors)
+        else:
+            return metadata
 
     def _load_data(self, metadata_file) -> Dict:
         try:
