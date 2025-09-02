@@ -12,6 +12,7 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 FERNET_KEY = os.getenv("FERNET_KEY")
+FERNET_KEY_2 = os.getenv("FERNET_KEY_2")
 
 
 @patch.object(Validator, "run")
@@ -1548,6 +1549,123 @@ def test_launch_infer_with_metadata_contained_global_settings(
     assert mock_validate_metadata.call_count == 2
     mock_validate_fernet_key.assert_called_once_with("fk_test", FERNET_KEY)
     mock_check_access_to_input_data.assert_called_once_with("fk_test")
+    mock_generate_reports.assert_called_once()
+    mock_collect_metrics_infer.assert_called_once_with(["pk_test", "fk_test"])
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "_collect_metrics_in_infer")
+@patch.object(Worker, "_generate_reports")
+@patch.object(Validator, "_check_access_to_input_data")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
+@patch.object(Validator, "_check_existence_of_destination")
+@patch.object(Validator, "_check_completion_of_training")
+@patch.object(Worker, "_Worker__infer_tables")
+def test_launch_infer_with_metadata_contained_several_fernet_keys(
+    mock_infer_tables,
+    mock_check_completion_of_training,
+    mock_check_existence_of_destination,
+    mock_validate_fernet_key,
+    mock_validate_metadata,
+    mock_check_access_to_input_data,
+    mock_generate_reports,
+    mock_collect_metrics_infer,
+    rp_logger,
+):
+    """
+    Test that 'launch_infer' method calls all necessary methods
+    in case the metadata file contained several fernet keys was provided,
+    and it contains global settings
+    """
+    rp_logger.info(
+        "Test that 'launch_infer' method calls all necessary methods "
+        "in case the metadata file contained several fernet keys was provided, "
+        "and it contains global settings"
+    )
+    worker = Worker(
+        table_name=None,
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/"
+                      f"metadata_with_several_fernet_keys.yaml",
+        settings={
+            "size": 300,
+            "run_parallel": True,
+            "random_seed": 3,
+            "reports": ["accuracy"],
+            "batch_size": 300,
+        },
+        log_level="INFO",
+        type_of_process="infer",
+        encryption_settings=fetch_env_variables({"fernet_key": None})
+    )
+    worker.launch_infer()
+    mock_infer_tables.assert_called_once_with(
+        ["pk_test", "fk_test"],
+        {
+            "pk_test": {
+                "train_settings": {
+                    "source": "./path/to/pk_test.csv",
+                    "epochs": 1,
+                    "drop_null": False,
+                    "row_limit": 800
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "reports": ["accuracy"],
+                    "random_seed": 3,
+                    "batch_size": 300
+                },
+                "encryption": {
+                    "fernet_key": FERNET_KEY_2
+                },
+                "keys": {
+                    "pk_id": {
+                        "type": "PK",
+                        "columns": ["Id"]
+                    }
+                },
+                "format": {}
+            },
+            "fk_test": {
+                "train_settings": {
+                    "source": "./path/to/fk_test.csv",
+                    "epochs": 5,
+                    "drop_null": True,
+                    "reports": ["accuracy", "sample"],
+                    "row_limit": 600
+                },
+                "infer_settings": {
+                    "size": 90,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "reports": [],
+                    "batch_size": 300
+                },
+                "keys": {
+                    "fk_id": {
+                        "type": "FK",
+                        "columns": ["Id"],
+                        "references": {
+                            "table": "pk_test",
+                            "columns": ["Id"]
+                        }
+                    }
+                },
+                "encryption": {
+                    "fernet_key": FERNET_KEY
+                },
+                "format": {}
+            }
+        },
+        0.125,
+        type_of_process="infer"
+    )
+    assert mock_check_completion_of_training.call_count == 2
+    assert mock_check_existence_of_destination.call_count == 2
+    assert mock_validate_metadata.call_count == 2
+    mock_validate_fernet_key.assert_called_once_with("pk_test", FERNET_KEY_2)
+    mock_check_access_to_input_data.assert_called_once_with("pk_test")
     mock_generate_reports.assert_called_once()
     mock_collect_metrics_infer.assert_called_once_with(["pk_test", "fk_test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
