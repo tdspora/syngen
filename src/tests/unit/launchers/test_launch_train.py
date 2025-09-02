@@ -1,4 +1,3 @@
-import os
 from unittest.mock import patch
 import pytest
 
@@ -13,9 +12,6 @@ TABLE_NAME = "test_table"
 PATH_TO_TABLE = f"{DIR_NAME}/unit/launchers/fixtures/table_with_data.csv"
 PATH_TO_METADATA = f"{DIR_NAME}/unit/launchers/fixtures/metadata.yaml"
 TRAIN_REPORT_TYPES = ReportTypes().train_report_types
-
-
-FERNET_KEY = os.getenv("FERNET_KEY")
 
 
 @patch.object(Worker, "launch_train")
