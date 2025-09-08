@@ -296,7 +296,7 @@ def test_infer_table_with_valid_fernet_key(mock_post_init, mock_launch_infer, rp
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_infer_table_with_invalid_fernet_key(rp_logger):
+def test_infer_table_with_non_existent_fernet_key(rp_logger):
     rp_logger.info(
         "Launch infer process through CLI with invalid 'fernet_key' parameter "
         "equals to non-existent environment variable name"
