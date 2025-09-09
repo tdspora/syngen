@@ -20,6 +20,9 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 CSV_SCHEMA = {"fields": {}, "format": "CSV"}
+FERNET_KEY = os.getenv("FERNET_KEY")
+FERNET_KEY_2 = os.getenv("FERNET_KEY_2")
+
 
 
 def test_initialize_data_loader_for_local_csv_table_with_existed_path(rp_logger):
@@ -797,7 +800,7 @@ def test_load_metadata_with_fernet_keys(rp_logger):
     assert metadata == {
         "global": {
             "encryption": {
-                "fernet_key": "VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY="
+                "fernet_key": FERNET_KEY
             }
         },
         "pk_test": {
@@ -813,7 +816,7 @@ def test_load_metadata_with_fernet_keys(rp_logger):
                 "reports": ["accuracy"]
             },
             "encryption": {
-                "fernet_key": "k64ntCKv3k7ihkNmbjN5cIlkRGxkPoHskJNcKB6bVuI="
+                "fernet_key": FERNET_KEY_2
             },
             "keys": {
                 "pk_id": {
