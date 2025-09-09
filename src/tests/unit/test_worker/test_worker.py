@@ -2264,7 +2264,7 @@ def test_launch_train_with_metadata_contained_several_fernet_keys(
                     "reports": ["accuracy"]
                 },
                 "encryption": {
-                    "fernet_key": "k64ntCKv3k7ihkNmbjN5cIlkRGxkPoHskJNcKB6bVuI="
+                    "fernet_key": FERNET_KEY_2
                 },
                 "keys": {
                     "pk_id": {
@@ -2300,7 +2300,7 @@ def test_launch_train_with_metadata_contained_several_fernet_keys(
                     }
                 },
                 "encryption": {
-                    "fernet_key": "VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY="
+                    "fernet_key": FERNET_KEY
                 },
                 "format": {}
             }
@@ -2321,7 +2321,7 @@ def test_launch_train_with_metadata_contained_several_fernet_keys(
                     "reports": ["accuracy"]
                 },
                 "encryption": {
-                    "fernet_key": "k64ntCKv3k7ihkNmbjN5cIlkRGxkPoHskJNcKB6bVuI="
+                    "fernet_key": FERNET_KEY_2
                 },
                 "keys": {
                     "pk_id": {
@@ -2357,7 +2357,7 @@ def test_launch_train_with_metadata_contained_several_fernet_keys(
                     }
                 },
                 "encryption": {
-                    "fernet_key": "VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY="
+                    "fernet_key": FERNET_KEY
                 },
                 "format": {}
             }

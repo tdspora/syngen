@@ -24,7 +24,6 @@ FERNET_KEY = os.getenv("FERNET_KEY")
 FERNET_KEY_2 = os.getenv("FERNET_KEY_2")
 
 
-
 def test_initialize_data_loader_for_local_csv_table_with_existed_path(rp_logger):
     rp_logger.info(
         "Initializing the instance of the class DataLoader for local csv table with existed path"
