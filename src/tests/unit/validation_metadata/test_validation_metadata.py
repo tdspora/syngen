@@ -1917,7 +1917,7 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
 @patch.object(Validator, "_check_existence_of_generated_data")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
-def test_validate_incomplete_metadata_with_absent_generated_of_parent_table_in_infer_process(
+def test_validate_incomplete_metadata_with_absent_gen_data_of_parent_table_in_infer_process(
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_check_existence_of_generated_data,
@@ -3084,7 +3084,9 @@ def test_validate_metadata_if_valid_fernet_key_in_infer_with_reports_and_absent_
 @patch.object(Validator, "_check_access_to_input_data")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
+@patch.object(Validator, "_validate_fernet_key")
 def test_validate_metadata_if_valid_fernet_key_in_infer_without_reports_and_absent_input_data(
+    mock_validate_fernet_key,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_check_access_to_input_data,
@@ -3128,6 +3130,7 @@ def test_validate_metadata_if_valid_fernet_key_in_infer_without_reports_and_abse
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
+    mock_validate_fernet_key.assert_not_called()
     mock_check_completion_of_training.assert_called_once_with("table")
     mock_check_existence_of_destination.assert_called_once_with("table")
     mock_check_access_to_input_data.assert_not_called()
