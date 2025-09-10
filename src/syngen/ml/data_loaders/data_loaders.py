@@ -482,8 +482,8 @@ class YAMLLoader(BaseDataLoader):
     def _load_data(self, metadata_file) -> Dict:
         try:
             metadata = yaml.load(metadata_file, Loader=SafeLoader)
-            metadata = self._fetch_encryption_settings(metadata)
             metadata = self._replace_none_values_of_metadata_settings(metadata)
+            metadata = self._fetch_encryption_settings(metadata)
             metadata = self._normalize_parameter_reports(metadata)
             return metadata
         except ScannerError as error:

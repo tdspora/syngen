@@ -523,7 +523,9 @@ def test_load_metadata_in_yaml_format(rp_logger):
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     metadata = test_metadata_loader.load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -554,7 +556,9 @@ def test_load_metadata_in_yml_format(rp_logger):
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     metadata = test_metadata_loader.load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -583,7 +587,9 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     metadata = YAMLLoader(path_to_metadata).load_data()
 
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -613,7 +619,9 @@ def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger
     metadata = YAMLLoader(path_to_metadata).load_data()
 
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -644,7 +652,9 @@ def test_save_metadata_in_yaml_format(test_yaml_path, test_metadata_file, rp_log
 
     metadata_loader.save_data(test_metadata_file)
     assert metadata_loader.load_data() == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "..\\data\\pk_test.csv",
@@ -674,7 +684,9 @@ def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logge
 
     metadata_loader.save_data(test_metadata_file)
     assert metadata_loader.load_data() == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "..\\data\\pk_test.csv",
@@ -704,7 +716,9 @@ def test_normalize_parameter_reports_if_all(test_yaml_path, rp_logger):
     )
     metadata = YAMLLoader(path_to_metadata).load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -737,7 +751,9 @@ def test_normalize_parameter_reports_if_none(test_yaml_path, rp_logger):
     )
     metadata = YAMLLoader(path_to_metadata).load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -771,7 +787,9 @@ def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     metadata = test_metadata_loader.load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {"source": "../data/pk_test.csv"},
             "infer_settings": {},
