@@ -227,6 +227,13 @@ class ContinuousFeature(BaseFeature):
         if normality >= 0.05:
             return StandardScaler()
 
+        # Column that ends with "_null"
+        # (indicators of nan values of corresponding column)
+        # is binary but stored as numeric.
+        # It must not be transformed with QuantileTransformer
+        if data.nunique() == 2:
+            return MinMaxScaler()
+
         # QuantileTransformer for extreme outliers
         if kurt > kurtosis_threshold:
             logger.debug(
