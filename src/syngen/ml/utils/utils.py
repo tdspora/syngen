@@ -444,6 +444,7 @@ def fetch_env_variables(options: Dict) -> Dict:
     """
     Fetches the values of environment variables specified in options
     """
+    errors = []
     options = options.copy()
     for option, value in options.items():
         if value is not None:
@@ -453,9 +454,11 @@ def fetch_env_variables(options: Dict) -> Dict:
                     f"The value of the environment variable '{value}' wasn't fetched. "
                     "Please, check whether it is set correctly."
                 )
-                logger.error(error_message)
-                raise ValueError(error_message)
+                errors.append(error_message)
             options[option] = fetched_value
+    if errors:
+        errors = " ".join(errors)
+        raise ValueError(errors)
     return options
 
 
