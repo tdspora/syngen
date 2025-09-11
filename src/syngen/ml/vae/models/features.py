@@ -217,7 +217,7 @@ class ContinuousFeature(BaseFeature):
         Strategy:
         - Extreme outliers -> QuantileTransformer
         - Normal distribution -> StandardScaler
-        - Other cases -> MinMaxScaler
+        - "_null" features and other cases -> MinMaxScaler
         """
         data = data.iloc[:, 0]
 
