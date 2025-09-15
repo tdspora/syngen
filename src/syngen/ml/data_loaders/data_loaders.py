@@ -467,8 +467,7 @@ class YAMLLoader(BaseDataLoader):
                 if "encryption" not in settings:
                     settings["encryption"] = {}
                 else:
-                    encryption_settings = settings["encryption"]
-                    settings["encryption"] = fetch_env_variables(encryption_settings)
+                    settings["encryption"] = fetch_env_variables(settings["encryption"])
             except ValueError as error:
                 errors.append(str(error))
                 continue
@@ -485,6 +484,7 @@ class YAMLLoader(BaseDataLoader):
             metadata = self._replace_none_values_of_metadata_settings(metadata)
             metadata = self._fetch_encryption_settings(metadata)
             metadata = self._normalize_parameter_reports(metadata)
+
             return metadata
         except ScannerError as error:
             message = (
