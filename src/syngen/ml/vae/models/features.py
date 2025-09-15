@@ -468,21 +468,37 @@ class CharBasedTextFeature(BaseFeature):
         self.feature_type = "text"
 
     def fit(self, data: pd.DataFrame, **kwargs):
-        from tensorflow.keras.preprocessing.text import Tokenizer
+        logger.trace(f"Fitting text data for feature '{self.name}'")
+        from tokenizers import BertWordPieceTokenizer
+        from transformers import BertTokenizerFast
 
         if len(data.columns) > 1:
             raise Exception("CharBasedTextFeature can work only with one text column")
 
         data = data[data.columns[0]]
 
-        tokenizer = Tokenizer(lower=False, char_level=True)
-        tokenizer.fit_on_texts(data)
-        tokenizer.inverse_dict = inverse_dict(tokenizer.word_index)
+        self.vocab_size = 500
 
-        self.vocab_size = len(tokenizer.word_index)
-        self.tokenizer = tokenizer
+        tokenizer = BertWordPieceTokenizer(
+            clean_text=True,
+            handle_chinese_chars=False,
+            strip_accents=True,
+            lowercase=False
+        )
+        tokenizer.train_from_iterator(
+            iterator=data,
+            vocab_size=self.vocab_size,
+            min_frequency=2,
+            limit_alphabet=100,
+            wordpieces_prefix="##"  # BERT convention
+        )
+        #tokenizer.inverse_dict = inverse_dict(tokenizer.word_index)
+
+        #self.vocab_size = len(tokenizer.word_index)
+        self.hf_tokenizer = BertTokenizerFast(tokenizer_object=tokenizer)
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
+        logger.trace(f"Transforming text data for feature '{self.name}'")
         if len(data.columns) > 1:
             raise Exception("CharBasedTextFeature can work only with one text column")
 
@@ -490,16 +506,17 @@ class CharBasedTextFeature(BaseFeature):
 
         from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-        data_gen = self.tokenizer.texts_to_sequences(data)
-        data_gen = pad_sequences(
-            data_gen,
-            maxlen=self.text_max_len,
-            padding="post",
-            truncating="post",
-            value=0.0,
+        data_gen_be = self.hf_tokenizer(
+            data.tolist(),
+            #max_length=self.text_max_len,
+            padding=True,
+            truncation=False,
+            return_tensors="np"
         )
-        # return data_gen
-        return K.one_hot(K.cast(data_gen, "int32"), self.vocab_size)
+
+        data_gen = np.pad(data_gen_be.input_ids, ((0, 0), (0, self.text_max_len-data_gen_be.input_ids.shape[1])), constant_values=0)
+        #self.text_max_len = data_gen.shape[1]
+        return K.one_hot(data_gen, self.vocab_size)
 
     @staticmethod
     def _top_p_filtering(
@@ -572,11 +589,12 @@ class CharBasedTextFeature(BaseFeature):
             lambda x: np.argmax(np.random.multinomial(1, x)), -1, probs
         )
 
-        chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ''))(
-            multinomial_samples)
+        #chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ''))(
+        #    multinomial_samples)
 
         # Convert tokens to words
-        words = ["".join(sample) for sample in chars_array]
+        #words = ["".join(sample) for sample in chars_array]
+        words = self.hf_tokenizer.batch_decode(multinomial_samples, skip_special_tokens=True)
 
         return words
 
@@ -594,6 +612,7 @@ class CharBasedTextFeature(BaseFeature):
 
     @lazy
     def input(self) -> tf.Tensor:
+        logger.trace(f"Creating input layer for text feature '{self.name}'")
         self.index_input = Input(
             shape=(self.text_max_len, self.vocab_size), name="input_%s" % self.name
         )
