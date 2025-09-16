@@ -539,7 +539,7 @@ docker run --rm -it \
 ### How to keep the original data secure
 
 In the current implementation, a sample of the original data is securely stored on disk. 
-To ensure data security, it is recommended to provide the name of the environment variable that kept the value of Fernet key value via the `fernet_key` parameter, 
+To ensure data security, it is recommended to provide the name of the environment variable that kept the value of the fernet key value via the `fernet_key` parameter, 
 either through the command-line interface (CLI) or a metadata file. 
 The Fernet key enables encryption of the stored data, ensuring its protection.
 
