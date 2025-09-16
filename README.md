@@ -114,7 +114,7 @@ Parameters that you can set up for training process:
 - <i>metadata_path</i> – a path to the metadata file containing the metadata
 - <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
 - <i>log_level</i> - logging level for the process
-- <i>fernet_key</i> - name of the environment variable that kept the value of fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
+- <i>fernet_key</i> - the name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
 
 Requirements for parameters of training process:
 * <i>source</i> - data type - string
@@ -127,7 +127,7 @@ Requirements for parameters of training process:
 * <i>metadata_path</i> - data type - string
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 * <i>log_level</i> - data type - string, must be one of the next values - *TRACE*, *"DEBUG"*, *"INFO"*, *"WARNING"*, *"ERROR"*, *"CRITICAL"*, default value is *"INFO"*
-* <i>fernet_key</i> - data type - string, the name of the environment variable that kept the value of fernet key. It must be a 44-character URL-safe base64-encoded string, default value is None
+* <i>fernet_key</i> - data type - string, the name of the environment variable that kept the value of the fernet key. It must be a 44-character URL-safe base64-encoded string, default value is None
 ### Inference (generation)
 
 You can customize the inference processes by calling for one table:
@@ -173,7 +173,7 @@ The parameters which you can set up for generation process:
 - <i>reports</i> - controls the generation of quality reports, might require significant time for big generated tables (>10000 rows)
 - <i>metadata_path</i> – a path to metadata file
 - <i>log_level</i> - logging level for the process
-- <i>fernet_key</i> - name of the environment variable that kept the value of fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
+- <i>fernet_key</i> - the name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
 
 Requirements for parameters of generation process:
 * <i>size</i> - data type - integer, must be equal to or more than 1, default value is 100
@@ -184,7 +184,7 @@ Requirements for parameters of generation process:
 * <i>reports</i> - data type - if the value is passed through CLI - string, if the value is passed in the metadata file - string or list, accepted values: <i>"none"</i> (default) - no reports will be generated, <i>"all"</i> - generates an accuracy report, <i>"accuracy"</i> - generates an accuracy report, <i>"metrics_only"</i> - outputs the metrics information only to standard output without generation of a report. Default value is <i>"none"</i>. In the metadata file multiple values can be specified as a list of available options (<i>"accuracy"</i>, <i>"metrics_only"</i>) to generate multiple types of reports simultaneously
 * <i>metadata_path</i> - data type - string
 * <i>log_level</i> - data type - string, must be one of the next values - *TRACE*, *"DEBUG"*, *"INFO"*, *"WARNING"*, *"ERROR"*, *"CRITICAL"*, default value is *"INFO"*
-* <i>fernet_key</i> - data type - string, the name of the environment variable that kept the value of fernet key. It must be a 44-character URL-safe base64-encoded string, default value is None
+* <i>fernet_key</i> - data type - string, the name of the environment variable that kept the value of the fernet key. It must be a 44-character URL-safe base64-encoded string, default value is None
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
 will be ignored.
@@ -218,7 +218,7 @@ global:                                     # Global settings. Optional paramete
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
   
   encryption:
-    fernet_key: null                       # A name of the environment variable that kept the value of fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
+    fernet_key: null                       # The name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
 
 CUSTOMER:                                   # Table name. Required parameter
   train_settings:                           # Settings for training process. Required parameter
@@ -255,7 +255,7 @@ CUSTOMER:                                   # Table name. Required parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
   
   encryption:
-    fernet_key: null                        # The name of the environment variable that kept the value of fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
+    fernet_key: null                        # The name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
 
   keys:                                     # Keys of the table. Optional parameter
     PK_CUSTOMER_ID:                         # Name of a key. Only one PK per table.
@@ -323,7 +323,7 @@ ORDER:                                      # Table name. Required parameter
     sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter
   
   encryption:
-    fernet_key: null                        # The name of the environment variable that kept the value of fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
+    fernet_key: null                        # The name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
          
   keys:                                     # Keys of the table. Optional parameter
     pk_order_id:
