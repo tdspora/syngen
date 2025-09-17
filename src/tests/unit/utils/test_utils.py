@@ -166,7 +166,7 @@ def test_fetch_timezone_from_date_string_with_tz(
     (
         '''
         {
-        "member_1": {"name": "John", "occupation": "doctor"}, 
+        "member_1": {"name": "John", "occupation": "doctor"},
         "member_2": {"name": "Jane", "occupation": "manager", "department": "financial"}
         }
         ''',
@@ -181,7 +181,7 @@ def test_fetch_timezone_from_date_string_with_tz(
     (
         b'''
         {
-        "member_1": {"name": "John", "occupation": "doctor"}, 
+        "member_1": {"name": "John", "occupation": "doctor"},
         "member_2": {"name": "Jane", "occupation": "manager", "department": "financial"}
         }
         ''',
@@ -196,7 +196,7 @@ def test_fetch_timezone_from_date_string_with_tz(
     (
         bytearray(b'''
         {
-        "member_1": {"name": "John", "occupation": "doctor"}, 
+        "member_1": {"name": "John", "occupation": "doctor"},
         "member_2": {"name": "Jane", "occupation": "manager", "department": "financial"}
         }
         '''),
