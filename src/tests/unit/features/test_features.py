@@ -261,6 +261,7 @@ def test_categorical_feature_fit(
     assert callable(feature.inverse_vectorizer)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
+
 @pytest.mark.parametrize(
     "input_data, expected_output",
     [

@@ -5,6 +5,9 @@ from typing import List, Dict, Optional, Union, Set, Callable, Literal
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
+import json
+from json import JSONDecodeError
+from flatten_json import flatten
 
 import pandas as pd
 import numpy as np
@@ -538,3 +541,17 @@ class ValidationError(Exception):
     ):
         super().__init__(message)
         self.message = message
+
+
+def safe_flatten(val):
+    """
+    Safely flatten a JSON string into a flat dictionary.
+    If the input is not a valid JSON string or not a dictionary, return an empty dictionary
+    """
+    if not isinstance(val, (str, bytes, bytearray)):
+        return {}
+    try:
+        parsed = json.loads(val)
+    except (TypeError, JSONDecodeError):
+        return {}
+    return flatten(parsed, ".") if isinstance(parsed, dict) else {}

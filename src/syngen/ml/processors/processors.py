@@ -8,10 +8,10 @@ from slugify import slugify
 from loguru import logger
 import pandas as pd
 import numpy as np
-from flatten_json import flatten, unflatten_list
+from flatten_json import unflatten_list
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import fetch_unique_root
+from syngen.ml.utils import fetch_unique_root, safe_flatten
 from syngen.ml.context import get_context
 
 
@@ -201,8 +201,7 @@ class PreprocessHandler(Processor):
         for column in json_columns:
             flattened_data = pd.DataFrame(
                 [
-                    flatten(json.loads(i), ".")
-                    for i in data[column]
+                    safe_flatten(i) for i in data[column]
                 ],
                 index=data.index
             )

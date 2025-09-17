@@ -8,7 +8,8 @@ from syngen.ml.utils import (
     slugify_parameters,
     datetime_to_timestamp,
     timestamp_to_datetime,
-    fetch_timezone
+    fetch_timezone,
+    safe_flatten
 )
 
 from tests.conftest import SUCCESSFUL_MESSAGE
@@ -150,4 +151,73 @@ def test_fetch_timezone_from_date_string_with_tz(
         "containing timezone information"
     )
     assert fetch_timezone(date_string) == expected_timezone
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("value, expected_result", [
+    (
+        '{"key_1": "value_1", "key_2": "value_2"}',
+        {'key_1': 'value_1', 'key_2': 'value_2'}
+    ),
+    (
+        b'{"key_1": "value_1", "key_2": "value_2"}',
+        {'key_1': 'value_1', 'key_2': 'value_2'}
+    ),
+    (
+        '''
+        {
+        "member_1": {"name": "John", "occupation": "doctor"}, 
+        "member_2": {"name": "Jane", "occupation": "manager", "department": "financial"}
+        }
+        ''',
+        {
+            "member_1.name": "John",
+            "member_1.occupation": "doctor",
+            "member_2.department": "financial",
+            "member_2.name": "Jane",
+            "member_2.occupation": "manager"
+        }
+    ),
+    (
+        b'''
+        {
+        "member_1": {"name": "John", "occupation": "doctor"}, 
+        "member_2": {"name": "Jane", "occupation": "manager", "department": "financial"}
+        }
+        ''',
+        {
+            "member_1.name": "John",
+            "member_1.occupation": "doctor",
+            "member_2.department": "financial",
+            "member_2.name": "Jane",
+            "member_2.occupation": "manager"
+        }
+    ),
+    (
+        bytearray(b'''
+        {
+        "member_1": {"name": "John", "occupation": "doctor"}, 
+        "member_2": {"name": "Jane", "occupation": "manager", "department": "financial"}
+        }
+        '''),
+        {
+            "member_1.name": "John",
+            "member_1.occupation": "doctor",
+            "member_2.department": "financial",
+            "member_2.name": "Jane",
+            "member_2.occupation": "manager"
+        }
+    ),
+    ("[1, 2, 3, 4, 5]", {}),
+    ("Not a JSON string", {}),
+    (12345, {}),
+    (123.45, {}),
+    (np.nan, {}),
+    (None, {}),
+    (True, {}),
+    (False, {})
+])
+def test_safe_flatten(value, expected_result, rp_logger):
+    rp_logger.info("Test the method 'safe_flatten'")
+    assert safe_flatten(value) == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
