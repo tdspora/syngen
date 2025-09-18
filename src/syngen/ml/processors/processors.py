@@ -1,6 +1,6 @@
 import os
 from collections import Counter
-from typing import List, Tuple, Dict, Any, Optional, Callable
+from typing import List, Tuple, Dict, Any, Optional, Callable, Union
 import json
 from json import JSONDecodeError
 from slugify import slugify
@@ -390,7 +390,7 @@ class PostprocessHandler(Processor):
         return data
 
     @staticmethod
-    def _remove_empty_elements(d: dict) -> dict:
+    def _remove_empty_elements(d: dict) -> Optional[Union[Dict, List]]:
         """
         Recursively remove keys with empty dictionaries or lists from a nested dictionary
 
@@ -422,8 +422,8 @@ class PostprocessHandler(Processor):
                 return cleaned
 
             return data
-
-        return clean(d)
+        result = clean(d)
+        return result if result else None
 
     def _postprocess_generated_data(
         self,
@@ -445,7 +445,7 @@ class PostprocessHandler(Processor):
             data[old_column] = data[old_column]. \
                 apply(lambda row: self._remove_empty_elements(row))
             data[old_column] = data[old_column]. \
-                apply(lambda row: json.dumps(row, ensure_ascii=False))
+                apply(lambda row: json.dumps(row, ensure_ascii=False) if row is not None else row)
             dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
             data.drop(list(dropped_columns), axis=1, inplace=True)
         return data
