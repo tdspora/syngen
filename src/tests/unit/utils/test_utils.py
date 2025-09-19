@@ -157,11 +157,17 @@ def test_fetch_timezone_from_date_string_with_tz(
 @pytest.mark.parametrize("value, expected_result", [
     (
         '{"key_1": "value_1", "key_2": "value_2"}',
-        {'key_1': 'value_1', 'key_2': 'value_2'}
+        {
+            'flattened_data': {'key_1': 'value_1', 'key_2': 'value_2'},
+            'original_data': None
+        }
     ),
     (
         b'{"key_1": "value_1", "key_2": "value_2"}',
-        {'key_1': 'value_1', 'key_2': 'value_2'}
+        {
+            'flattened_data': {'key_1': 'value_1', 'key_2': 'value_2'},
+            'original_data': None
+        }
     ),
     (
         '''
@@ -171,11 +177,14 @@ def test_fetch_timezone_from_date_string_with_tz(
         }
         ''',
         {
-            "member_1.name": "John",
-            "member_1.occupation": "doctor",
-            "member_2.department": "financial",
-            "member_2.name": "Jane",
-            "member_2.occupation": "manager"
+            "flattened_data": {
+                "member_1.name": "John",
+                "member_1.occupation": "doctor",
+                "member_2.department": "financial",
+                "member_2.name": "Jane",
+                "member_2.occupation": "manager"
+            },
+            "original_data": None
         }
     ),
     (
@@ -186,11 +195,14 @@ def test_fetch_timezone_from_date_string_with_tz(
         }
         ''',
         {
-            "member_1.name": "John",
-            "member_1.occupation": "doctor",
-            "member_2.department": "financial",
-            "member_2.name": "Jane",
-            "member_2.occupation": "manager"
+            "flattened_data": {
+                "member_1.name": "John",
+                "member_1.occupation": "doctor",
+                "member_2.department": "financial",
+                "member_2.name": "Jane",
+                "member_2.occupation": "manager"
+            },
+            "original_data": None
         }
     ),
     (
@@ -201,21 +213,24 @@ def test_fetch_timezone_from_date_string_with_tz(
         }
         '''),
         {
-            "member_1.name": "John",
-            "member_1.occupation": "doctor",
-            "member_2.department": "financial",
-            "member_2.name": "Jane",
-            "member_2.occupation": "manager"
+            "flattened_data": {
+                "member_1.name": "John",
+                "member_1.occupation": "doctor",
+                "member_2.department": "financial",
+                "member_2.name": "Jane",
+                "member_2.occupation": "manager"
+            },
+            "original_data": None
         }
     ),
-    ("[1, 2, 3, 4, 5]", {}),
-    ("Not a JSON string", {}),
-    (12345, {}),
-    (123.45, {}),
-    (np.nan, {}),
-    (None, {}),
-    (True, {}),
-    (False, {})
+    ("[1, 2, 3, 4, 5]", {"flattened_data": {}, "original_data": '[1, 2, 3, 4, 5]'}),
+    ("Not a JSON string", {"flattened_data": {}, "original_data": "Not a JSON string"}),
+    (12345, {"flattened_data": {}, "original_data": 12345}),
+    (123.45, {"flattened_data": {}, "original_data": 123.45}),
+    (np.nan, {"flattened_data": {}, "original_data": np.nan}),
+    (None, {"flattened_data": {}, "original_data": None}),
+    (True, {"flattened_data": {}, "original_data": True}),
+    (False, {"flattened_data": {}, "original_data": False}),
 ])
 def test_safe_flatten(value, expected_result, rp_logger):
     rp_logger.info("Test the method 'safe_flatten'")

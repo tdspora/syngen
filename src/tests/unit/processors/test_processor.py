@@ -57,7 +57,8 @@ def test_get_artifacts_contained_one_json_column(rp_logger):
         "is_encrypted", "status", "cluster_type",
         "master", "log_level", "env_variables",
         "ssh_config", "authentication_type",
-        "username", "key_passphrase", "private_key"
+        "username", "key_passphrase", "private_key",
+        "_details_"
     ]
     assert flattening_mapping == {
         "_details": [
@@ -126,6 +127,7 @@ def test_get_artifacts_with_df_contained_more_than_one_json_column(rp_logger):
         "info.finished",
         "info.total",
         "step",
+        "progress_",
         "description",
         "source.id",
         "source.name",
@@ -140,7 +142,8 @@ def test_get_artifacts_with_df_contained_more_than_one_json_column(rp_logger):
         "integrity_type",
         "total_tables",
         "included_tables",
-        "base_table"
+        "base_table",
+        "details_"
     ]
     assert flattening_mapping == {
         "progress": [
@@ -425,14 +428,14 @@ def test_run_with_table_containing_json_columns(
     data, _ = handler.run()
     assert handler.row_subset == row_subset
     assert handler.initial_data_shape == (3, 10)
-    assert data.shape == (row_subset, 18)
+    assert data.shape == (row_subset, 19)
     assert data.columns.to_list() == [
         "id", "created_at", "updated_at",
         "name", "description", "owner_id",
         "is_default", "is_encrypted", "status",
         "cluster_type", "master", "log_level",
         "env_variables", "ssh_config", "authentication_type",
-        "username", "key_passphrase", "private_key"
+        "username", "key_passphrase", "private_key", "_details_"
     ]
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

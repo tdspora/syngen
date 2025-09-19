@@ -549,9 +549,25 @@ def safe_flatten(val):
     If the input is not a valid JSON string or not a dictionary, return an empty dictionary
     """
     if not isinstance(val, (str, bytes, bytearray)):
-        return {}
+        return {
+            "original_data": val,
+            "flattened_data": {}
+        }
+
     try:
         parsed = json.loads(val)
     except (TypeError, JSONDecodeError):
-        return {}
-    return flatten(parsed, ".") if isinstance(parsed, dict) else {}
+        return {
+            "original_data": val,
+            "flattened_data": {}
+        }
+
+    if isinstance(parsed, dict):
+        return {
+            "flattened_data": flatten(parsed, "."),
+            "original_data": None
+        }
+    return {
+        "original_data": val,
+        "flattened_data": {}
+    }

@@ -162,20 +162,21 @@ class PreprocessHandler(Processor):
     @staticmethod
     def _get_json_columns(data: pd.DataFrame) -> List[str]:
         """
-        Get the list of columns which contain JSON data
+        Get the list of columns which contain JSON data convertable to a Python dictionary
         Returns:
-            List[str]: List of column names containing valid JSON data
+            List[str]: List of column names containing valid JSON data convertable to dict
         """
-
         def is_json_column(series: pd.Series) -> bool:
             if pd.isnull(series).all():
                 return False
-            try:
-                series.dropna().apply(json.loads)
-                return True
-            except (TypeError, JSONDecodeError):
-                return False
 
+            def is_json_value(x):
+                try:
+                    return isinstance(json.loads(x), dict)
+                except (TypeError, JSONDecodeError):
+                    return False
+
+            return series.dropna().apply(is_json_value).any()
         return [col for col in data.columns if is_json_column(data[col])]
 
     @staticmethod
@@ -199,13 +200,24 @@ class PreprocessHandler(Processor):
         flattened_dfs = list()
         flattening_mapping = dict()
         for column in json_columns:
+            result = [safe_flatten(i) for i in data[column]]
             flattened_data = pd.DataFrame(
                 [
-                    safe_flatten(i) for i in data[column]
+                    i["flattened_data"] for i in result
                 ],
                 index=data.index
             )
-            flattening_mapping[column] = flattened_data.columns.to_list()
+            original_data = pd.DataFrame(
+                [
+                    i["original_data"] for i in result
+                ],
+                index=data.index
+            )
+            flattened_data[f"{column}_"] = original_data
+            flattening_mapping[column] = [
+                c for c in flattened_data.columns.to_list()
+                if c != f"{column}_"
+            ]
             flattened_dfs.append(flattened_data)
         flattened_data = pd.concat([data, *flattened_dfs], axis=1)
         duplicated_columns = [
@@ -423,7 +435,7 @@ class PostprocessHandler(Processor):
 
             return data
         result = clean(d)
-        return result if result else None
+        return result if pd.notnull(result) else None
 
     def _postprocess_generated_data(
         self,
@@ -437,15 +449,21 @@ class PostprocessHandler(Processor):
         for old_column, new_columns in flattening_mapping.items():
             data[new_columns] = self._restore_empty_values(data[new_columns])
 
-            data[old_column] = data[new_columns].apply(
-                lambda row: unflatten_list(row.to_dict(), "."), axis=1
+            data[old_column] = data.apply(
+                lambda row: unflatten_list(row[new_columns].to_dict(), ".")
+                if row[new_columns].notnull().any()
+                else row[f"{old_column}_"],
+                axis=1
             )
-            data[old_column] = data[old_column]. \
-                apply(lambda row: self._remove_none_from_struct(row))
-            data[old_column] = data[old_column]. \
-                apply(lambda row: self._remove_empty_elements(row))
-            data[old_column] = data[old_column]. \
-                apply(lambda row: json.dumps(row, ensure_ascii=False) if row is not None else row)
+            data[old_column] = data[old_column].apply(
+                lambda row: self._remove_none_from_struct(row)
+            )
+            data[old_column] = data[old_column].apply(lambda row: self._remove_empty_elements(row))
+            data[old_column] = data[old_column].apply(
+                lambda row: json.dumps(row, ensure_ascii=False)
+                if row is not None
+                else row
+            )
             dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
             data.drop(list(dropped_columns), axis=1, inplace=True)
         return data
