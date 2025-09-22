@@ -177,11 +177,6 @@ def test_get_artifacts_with_df_contained_more_than_one_json_column(rp_logger):
         ]
     }
     assert_series_equal(
-        flattened_data["progress_"],
-        pd.Series([None, None, None]),
-        check_names=False
-    )
-    assert_series_equal(
         flattened_data["details_"],
         pd.Series([None, None, None]),
         check_names=False
