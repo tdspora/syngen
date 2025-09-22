@@ -425,7 +425,7 @@ class Worker:
             table_name=table_name,
             metadata=self.metadata,
             sensitive=True
-        ).save_data(data)
+        ).save_data
 
     def _train_table(self, data, schema, table, metadata, delta):
         """"

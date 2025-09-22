@@ -465,6 +465,7 @@ class PostprocessHandler(Processor):
                 else row
             )
             dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
+            dropped_columns.add(f"{old_column}_")
             data.drop(list(dropped_columns), axis=1, inplace=True)
         return data
 

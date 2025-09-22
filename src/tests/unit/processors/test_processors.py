@@ -1,6 +1,8 @@
 from unittest.mock import patch
 import pytest
 
+import pandas as pd
+from pandas.testing import assert_series_equal
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 from syngen.ml.data_loaders import DataLoader, MetadataLoader
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -60,6 +62,11 @@ def test_get_artifacts_contained_one_json_column(rp_logger):
         "username", "key_passphrase", "private_key",
         "_details_"
     ]
+    assert_series_equal(
+        flattened_data["_details_"],
+        pd.Series([None, None, None]),
+        check_names=False
+    )
     assert flattening_mapping == {
         "_details": [
             "cluster_type", "master", "log_level",
@@ -169,6 +176,85 @@ def test_get_artifacts_with_df_contained_more_than_one_json_column(rp_logger):
             "base_table"
         ]
     }
+    assert_series_equal(
+        flattened_data["progress_"],
+        pd.Series([None, None, None]),
+        check_names=False
+    )
+    assert_series_equal(
+        flattened_data["details_"],
+        pd.Series([None, None, None]),
+        check_names=False
+    )
+    assert duplicated_columns == []
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_json_column_contained_mixed_data(rp_logger):
+    rp_logger.info(
+        "Test that the method '_get_json_columns' of the class 'PreprocessHandler' "
+        "for the dataframe contained the column with mixed data types"
+    )
+    path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_column_contained_mixed_data.csv"
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/processors/fixtures/"
+        "metadata_for_table_with_column_contained_mixed_data.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    handler = PreprocessHandler(
+        metadata=metadata,
+        metadata_path=path_to_metadata,
+        table_name="test_table"
+    )
+    data, schema = DataLoader(path_to_data).load_data()
+    assert handler._get_json_columns(data) == ["_details"]
+
+
+def test_get_artifacts_contained_column_with_mixed_data(rp_logger):
+    rp_logger.info(
+        "Test that the method '_get_artifacts' method of the class 'PreprocessHandler' "
+        "for the dataframe contained the column with mixed data"
+    )
+    path_to_data = (
+        f"{DIR_NAME}/unit/processors/fixtures/data_with_column_contained_mixed_data.csv"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/processors/fixtures/"
+        "metadata_for_table_with_column_contained_mixed_data.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+
+    handler = PreprocessHandler(
+        metadata=metadata,
+        metadata_path=path_to_metadata,
+        table_name="test_table"
+    )
+    data, schema = DataLoader(path_to_data).load_data()
+    json_columns = handler._get_json_columns(data)
+    assert json_columns == ["_details"]
+
+    (flattened_data,
+     flattening_mapping,
+     duplicated_columns) = handler._get_artifacts(data, json_columns)
+    assert flattened_data.columns.to_list() == [
+        "id", "created_at", "updated_at", "name",
+        "description", "owner_id", "is_default",
+        "is_encrypted", "status", "cluster_type",
+        "master", "log_level", "env_variables",
+        "ssh_config", "authentication_type",
+        "username", "key_passphrase", "private_key",
+        "_details_"
+    ]
+    values_list = flattened_data["_details_"].fillna("?").tolist()
+    for value in ["some_string", "1", "1234"]:
+        assert value in values_list
+    assert flattening_mapping == {
+        "_details": [
+            "cluster_type", "master", "log_level",
+            "env_variables", "ssh_config", "authentication_type",
+            "username", "key_passphrase", "private_key"
+        ]
+    }
     assert duplicated_columns == []
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -206,7 +292,6 @@ def test_postprocess_generated_data_with_one_json_column(rp_logger):
                 "master",
                 "ssh_config",
                 "username",
-                "password",
                 "authentication_type",
                 "log_level",
                 "env_variables",
@@ -294,6 +379,63 @@ def test_postprocess_generated_data_with_two_json_columns(rp_logger):
         "user_id",
         "progress",
         "details"
+    ]
+
+
+def test_postprocess_generated_data_with_mixed_data(rp_logger):
+    """
+    Test the postprocessing of the flattened generated data with the column
+    contained mixed data
+    """
+    rp_logger.info(
+        "Test the method '_postprocess_generated_data' of the class PostprocessHandler "
+        "for the flattened generated data with the column contained mixed data"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/processors/fixtures/"
+        f"metadata_for_table_with_column_contained_mixed_data.yaml"
+    )
+    path_to_flattened_data = (
+        f"{DIR_NAME}/unit/processors/fixtures/"
+        "flattened_data_with_column_contained_mixed_data.csv"
+    )
+
+    metadata = MetadataLoader(path_to_metadata).load_data()
+
+    handler = PostprocessHandler(
+        metadata=metadata,
+        metadata_path=path_to_metadata,
+        table_name=None
+    )
+    data = handler._load_generated_data(path_to_flattened_data)
+    un_flattened_data = handler._postprocess_generated_data(
+        data=data,
+        flattening_mapping={
+            "_details": [
+                "cluster_type",
+                "master",
+                "ssh_config",
+                "username",
+                "authentication_type",
+                "log_level",
+                "env_variables",
+                "key_passphrase",
+                "private_key"
+            ]
+        },
+        duplicated_columns=[]
+    )
+    assert un_flattened_data.columns.to_list() == [
+        "id",
+        "created_at",
+        "updated_at",
+        "name",
+        "description",
+        "owner_id",
+        "is_default",
+        "is_encrypted",
+        "status",
+        "_details"
     ]
 
 
