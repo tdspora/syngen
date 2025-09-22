@@ -26,6 +26,7 @@ def test_get_json_columns_contained_one_json_column(rp_logger):
     )
     data, schema = DataLoader(path_to_data).load_data()
     assert handler._get_json_columns(data) == ["_details"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_get_artifacts_contained_one_json_column(rp_logger):
@@ -96,6 +97,7 @@ def test_get_json_columns_contained_more_than_one_json_column(rp_logger):
     )
     data, schema = DataLoader(path_to_data).load_data()
     assert handler._get_json_columns(data) == ["progress", "details"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_get_artifacts_with_df_contained_more_than_one_json_column(rp_logger):
@@ -203,6 +205,7 @@ def test_get_json_column_contained_mixed_data(rp_logger):
     )
     data, schema = DataLoader(path_to_data).load_data()
     assert handler._get_json_columns(data) == ["_details"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_get_artifacts_contained_column_with_mixed_data(rp_logger):
@@ -308,6 +311,7 @@ def test_postprocess_generated_data_with_one_json_column(rp_logger):
             "status",
             "_details"
         ]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_postprocess_generated_data_with_two_json_columns(rp_logger):
@@ -375,6 +379,7 @@ def test_postprocess_generated_data_with_two_json_columns(rp_logger):
         "progress",
         "details"
     ]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_postprocess_generated_data_with_mixed_data(rp_logger):
@@ -432,6 +437,7 @@ def test_postprocess_generated_data_with_mixed_data(rp_logger):
         "status",
         "_details"
     ]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @pytest.mark.parametrize("drop_null, row_limit, expected_result", [
