@@ -295,6 +295,7 @@ def test_postprocess_generated_data_with_one_json_column(rp_logger):
                 "master",
                 "ssh_config",
                 "username",
+                "password",
                 "authentication_type",
                 "log_level",
                 "env_variables",
@@ -314,7 +315,6 @@ def test_postprocess_generated_data_with_one_json_column(rp_logger):
             "is_default",
             "is_encrypted",
             "status",
-            "password",
             "_details"
         ]
     rp_logger.info(SUCCESSFUL_MESSAGE)
