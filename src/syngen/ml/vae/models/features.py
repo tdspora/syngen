@@ -484,7 +484,7 @@ class CharBasedTextFeature(BaseFeature):
 
         data = data[data.columns[0]]
 
-        self.vocab_size = 500
+        self.vocab_size = 1000
 
         tokenizer = BertWordPieceTokenizer(
             clean_text=True,
@@ -499,9 +499,12 @@ class CharBasedTextFeature(BaseFeature):
             limit_alphabet=100,
             wordpieces_prefix="##"  # BERT convention
         )
-        #tokenizer.inverse_dict = inverse_dict(tokenizer.word_index)
 
-        #self.vocab_size = len(tokenizer.word_index)
+        sample_texts = data.sample(n=min(len(data), 1000), random_state=42).tolist()
+        encoded_samples = tokenizer.encode_batch(sample_texts)
+        self.text_max_len = max(len(enc.ids) for enc in encoded_samples)
+        logger.info(f"Feature '{self.name}': setting maximal length to {self.text_max_len} tokens.")
+
         self.hf_tokenizer = BertTokenizerFast(tokenizer_object=tokenizer)
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
@@ -515,13 +518,22 @@ class CharBasedTextFeature(BaseFeature):
 
         data_gen_be = self.hf_tokenizer(
             data.tolist(),
-            #max_length=self.text_max_len,
+            max_length=self.text_max_len,
             padding=True,
             truncation=False,
             return_tensors="np"
         )
 
-        data_gen = np.pad(data_gen_be.input_ids, ((0, 0), (0, self.text_max_len-data_gen_be.input_ids.shape[1])), constant_values=0)
+        if data_gen_be.input_ids.shape[1] < self.text_max_len:
+            data_gen = np.pad(data_gen_be.input_ids, ((0, 0), (0, self.text_max_len-data_gen_be.input_ids.shape[1])), constant_values=0)
+        else:
+            data_gen = pad_sequences(
+                data_gen_be.input_ids,
+                maxlen=self.text_max_len,
+                padding="post",
+                truncating="post",
+                value=0
+            )
         #self.text_max_len = data_gen.shape[1]
         return K.one_hot(data_gen, self.vocab_size)
 
@@ -596,11 +608,6 @@ class CharBasedTextFeature(BaseFeature):
             lambda x: np.argmax(np.random.multinomial(1, x)), -1, probs
         )
 
-        #chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ''))(
-        #    multinomial_samples)
-
-        # Convert tokens to words
-        #words = ["".join(sample) for sample in chars_array]
         words = self.hf_tokenizer.batch_decode(multinomial_samples, skip_special_tokens=True)
 
         return words
