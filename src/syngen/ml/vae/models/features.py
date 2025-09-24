@@ -5,8 +5,6 @@ from loguru import logger
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-import tensorflow.keras.backend as K
 from scipy.stats import shapiro, kurtosis
 from sklearn.preprocessing import (
     StandardScaler,
@@ -14,16 +12,7 @@ from sklearn.preprocessing import (
     QuantileTransformer,
     OneHotEncoder
 )
-from tensorflow.keras import losses
-from tensorflow.keras.layers import (
-    Bidirectional,
-    Dense,
-    Input,
-    LSTM,
-    Layer,
-    RepeatVector,
-    TimeDistributed,
-)
+# Removed TensorFlow/Keras dependencies
 
 from syngen.ml.utils import (
     slugify_parameters,
@@ -34,6 +23,73 @@ from syngen.ml.utils import (
 
 KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
 
+
+class _CharTokenizer:
+    """
+    Minimal character-level tokenizer to replace Keras Tokenizer here.
+    Provides:
+      - fit_on_texts(list[str])
+      - texts_to_sequences(list[str]) -> list[list[int]]
+      - word_index: dict[str, int] (1-based)
+      - word_counts: dict[str, int]
+      - inverse_dict: dict[int, str]
+    """
+
+    def __init__(self, lower: bool = False, char_level: bool = True):
+        self.lower = lower
+        self.char_level = char_level
+        self.word_index: dict[str, int] = {}
+        self.word_counts: dict[str, int] = {}
+        self.inverse_dict: dict[int, str] = {}
+
+    def fit_on_texts(self, texts: List[str]):
+        index = 1
+        for t in texts:
+            if t is None:
+                t = ""
+            if isinstance(t, bytes):
+                try:
+                    t = t.decode("utf-8", errors="ignore")
+                except Exception:
+                    t = ""
+            s = str(t)
+            if self.lower:
+                s = s.lower()
+            for ch in s:
+                self.word_counts[ch] = self.word_counts.get(ch, 0) + 1
+                if ch not in self.word_index:
+                    self.word_index[ch] = index
+                    index += 1
+        self.inverse_dict = {v: k for k, v in self.word_index.items()}
+
+    def texts_to_sequences(self, texts: List[str]) -> List[List[int]]:
+        sequences: List[List[int]] = []
+        for t in texts:
+            if t is None:
+                t = ""
+            if isinstance(t, bytes):
+                try:
+                    t = t.decode("utf-8", errors="ignore")
+                except Exception:
+                    t = ""
+            s = str(t)
+            if self.lower:
+                s = s.lower()
+            seq = [self.word_index.get(ch, 0) for ch in s]
+            sequences.append(seq)
+        return sequences
+
+def _pad_sequences(sequences: List[List[int]], maxlen: int, value: int = 0) -> np.ndarray:
+    arr = np.full((len(sequences), maxlen), fill_value=value, dtype=np.int32)
+    for i, seq in enumerate(sequences):
+        trunc = seq[:maxlen]
+        arr[i, : len(trunc)] = trunc
+    return arr
+
+def _softmax_np(x: np.ndarray, axis: int = -1) -> np.ndarray:
+    x_max = np.max(x, axis=axis, keepdims=True)
+    e = np.exp(x - x_max)
+    return e / np.sum(e, axis=axis, keepdims=True)
 
 class BaseFeature:
     """
@@ -74,31 +130,31 @@ class BaseFeature:
         """
         pass
 
-    def input(self) -> tf.Tensor:
+    def input(self):
         """
         Define a feature-specific input for the NN
         """
         pass
 
-    def encoder(self) -> tf.Tensor:
+    def encoder(self):
         """
         Define a feature-specific encoder for the NN
         """
         pass
 
-    def __decoder_layer(self) -> tf.Tensor:
+    def __decoder_layer(self):
         """
         Define an elementary layer for decoder to use in create_decoder() method
         """
         pass
 
-    def create_decoder(self, encoder_output: tf.Tensor):
+    def create_decoder(self, encoder_output):
         """
         Create a feature-specific decoder combining given decoder layers and encoder outputs
         """
         pass
 
-    def loss(self) -> tf.Tensor:
+    def loss(self):
         """
         Define a feature-specific loss taking into account the data types
         """
@@ -117,7 +173,7 @@ class BinaryFeature(BaseFeature):
     def fit(self, data: pd.DataFrame, **kwargs):
         self.mapping = {k: n for n, k in enumerate(np.unique(data))}
         self.inverse_mapping = inverse_dict(self.mapping)
-        self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get)
+        self.inverse_vectorizer = np.vectorize(self.inverse_mapping.get, otypes=[object])
         self.input_dimension = data.shape[1]
 
     def transform(self, data: pd.DataFrame):
@@ -126,32 +182,32 @@ class BinaryFeature(BaseFeature):
         return data.astype("float32")
 
     def inverse_transform(self, data: List) -> np.ndarray:
-        data = np.round(data)
+        # Clamp to [0,1] to avoid out-of-range indices after generation
+        data = np.clip(data, 0, 1)
+        data = np.round(data).astype(int)
         inversed = self.inverse_vectorizer(data)
         return np.where(inversed == "?", None, inversed)
 
     @lazy
-    def input(self) -> tf.Tensor:
-        return Input(shape=(self.input_dimension,), name="input_%s" % self.name)
+    def input(self):
+        return (self.input_dimension,)
 
     @lazy
-    def encoder(self) -> tf.Tensor:
+    def encoder(self):
         return self.input
 
     @lazy
-    def __decoder_layer(self) -> tf.Tensor:
-        return Dense(self.input_dimension, activation="sigmoid")
+    def __decoder_layer(self):
+        return ("linear", self.input_dimension)
 
-    def create_decoder(self, encoder_output: tf.Tensor) -> tf.Tensor:
-        self.decoder = self.__decoder_layer(encoder_output)
+    def create_decoder(self, encoder_output):
+        # Placeholder; PyTorch model handles decoding
+        self.decoder = encoder_output
         return self.decoder
 
     @lazy
-    def loss(self) -> tf.Tensor:
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        return self.weight * losses.binary_crossentropy(self.input, self.decoder)
+    def loss(self):
+        return None
 
 
 class ContinuousFeature(BaseFeature):
@@ -279,54 +335,45 @@ class ContinuousFeature(BaseFeature):
         }
 
     @lazy
-    def input(self) -> tf.Tensor:
-        return Input(shape=(self.input_dimension,), name="input_%s" % self.name)
+    def input(self):
+        return (self.input_dimension,)
 
     @lazy
-    def encoder(self) -> tf.Tensor:
+    def encoder(self):
         return self.input
 
     @lazy
-    def __decoder_layer(self) -> List[tf.Tensor]:
+    def __decoder_layer(self):
         decoder_layers = list()
         for idx, item in enumerate(self.decoder_layers):
             name = "%s_decoder_%d" % (self.name, idx)
             if isinstance(item, int):
-                decoder_layers.append(Dense(item, activation="relu", name=name))
+                decoder_layers.append(("linear", item))
 
-            if isinstance(item, Layer):
-                item.name = name
-                decoder_layers.append(Layer)
+            # Keras Layer types removed in PyTorch port
 
-        decoder_layers.append(
-            Dense(self.input_dimension, activation="linear", name="%s_linear" % self.name)
-        )
+        decoder_layers.append(("linear", self.input_dimension))
 
         return decoder_layers
 
-    def create_decoder(self, encoder_output: tf.Tensor) -> tf.Tensor:
+    def create_decoder(self, encoder_output):
         if not isinstance(self.__decoder_layer, list):
             decoder_layers = [self.__decoder_layer]
         else:
             decoder_layers = self.__decoder_layer
 
         x = encoder_output
-        for layer in decoder_layers:
-            x = layer(x)
+        # Placeholder path: actual decoding is done in PyTorch model
+        for _ in decoder_layers:
+            x = x
 
         self.decoder = x
         return self.decoder
 
     @lazy
-    def loss(self) -> tf.Tensor:
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        low = self.weight_randomizer[0]
-        high = self.weight_randomizer[1]
-        random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
-
-        return random_weight * tf.keras.losses.MSE(self.input, self.decoder)
+    def loss(self):
+        # Loss is computed explicitly in PyTorch, so this is a placeholder.
+        return None
 
 
 class CategoricalFeature(BaseFeature):
@@ -392,66 +439,51 @@ class CategoricalFeature(BaseFeature):
         """
         Convert one-hot encoded data back to original categories.
         """
-        data = data.argmax(axis=1)
+        data = np.asarray(data)
+        if data.ndim > 1:
+            data = data.argmax(axis=1)
         inversed = self.inverse_vectorizer(data)
 
         return np.where(inversed == "?", None, inversed)
 
     @lazy
-    def input(self) -> tf.Tensor:
-        self.idx_input = Input(shape=(self.input_dimension,), name="input_%s" % self.name)
-
-        return self.idx_input
+    def input(self):
+        return (self.input_dimension,)
 
     @lazy
-    def encoder(self) -> tf.Tensor:
-        return self.idx_input
+    def encoder(self):
+        return self.input
 
     @lazy
-    def __decoder_layer(self) -> List[tf.Tensor]:
+    def __decoder_layer(self):
         decoder_layers = list()
         for idx, item in enumerate(self.decoder_layers):
             name = "%s_decoder_%d" % (self.name, idx)
             if isinstance(item, int):
-                decoder_layers.append(Dense(item, activation="relu", name=name))
+                decoder_layers.append(("linear", item))
+            # Keras Layer types removed
 
-            if isinstance(item, Layer):
-                item.name = name
-                decoder_layers.append(Layer)
-
-        decoder_layers.append(
-            Dense(
-                self.input_dimension,
-                activation="softmax",
-                name="%s_softmax" % self.name,
-            )
-        )
+        decoder_layers.append(("linear", self.input_dimension))
 
         return decoder_layers
 
-    def create_decoder(self, encoder_output: tf.Tensor) -> tf.Tensor:
+    def create_decoder(self, encoder_output):
         if not isinstance(self.__decoder_layer, list):
             decoder_layers = [self.__decoder_layer]
         else:
             decoder_layers = self.__decoder_layer
 
         x = encoder_output
-        for layer in decoder_layers:
-            x = layer(x)
+        # Placeholder; decoding handled by PyTorch model
+        for _ in decoder_layers:
+            x = x
 
         self.decoder = x
         return self.decoder
 
     @lazy
-    def loss(self) -> tf.Tensor:
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        low = self.weight_randomizer[0]
-        high = self.weight_randomizer[1]
-        random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
-
-        return random_weight * tf.keras.losses.categorical_crossentropy(self.input, self.decoder)
+    def loss(self):
+        return None
 
 
 class CharBasedTextFeature(BaseFeature):
@@ -470,20 +502,18 @@ class CharBasedTextFeature(BaseFeature):
         self.decoder = None
         self.text_max_len = text_max_len
         self.rnn_units = rnn_units
-        self.rnn_unit = LSTM
+        # rnn definitions removed in PyTorch port; handled in model
         self.dropout = dropout
         self.feature_type = "text"
 
     def fit(self, data: pd.DataFrame, **kwargs):
-        from tensorflow.keras.preprocessing.text import Tokenizer
-
         if len(data.columns) > 1:
             raise Exception("CharBasedTextFeature can work only with one text column")
 
         data = data[data.columns[0]]
 
-        tokenizer = Tokenizer(lower=False, char_level=True)
-        tokenizer.fit_on_texts(data)
+        tokenizer = _CharTokenizer(lower=False, char_level=True)
+        tokenizer.fit_on_texts(list(data))
         tokenizer.inverse_dict = inverse_dict(tokenizer.word_index)
 
         self.vocab_size = len(tokenizer.word_index)
@@ -495,80 +525,57 @@ class CharBasedTextFeature(BaseFeature):
 
         data = data[data.columns[0]]
 
-        from tensorflow.keras.preprocessing.sequence import pad_sequences
-
-        data_gen = self.tokenizer.texts_to_sequences(data)
-        data_gen = pad_sequences(
-            data_gen,
-            maxlen=self.text_max_len,
-            padding="post",
-            truncating="post",
-            value=0.0,
-        )
-        # return data_gen
-        return K.one_hot(K.cast(data_gen, "int32"), self.vocab_size)
+        sequences = self.tokenizer.texts_to_sequences(list(data))
+        data_gen = _pad_sequences(sequences, maxlen=self.text_max_len, value=0)
+        # one-hot encode to shape (batch, max_len, vocab_size)
+        n, L = data_gen.shape
+        one_hot = np.zeros((n, L, self.vocab_size), dtype=np.float32)
+        # fill one-hot for non-zero token ids
+        for i in range(n):
+            idxs = data_gen[i]
+            for t, token in enumerate(idxs):
+                if token > 0 and token <= self.vocab_size:
+                    one_hot[i, t, token - 1] = 1.0
+        return one_hot
 
     @staticmethod
     def _top_p_filtering(
             logits: np.ndarray,
             top_p: float = 0.9
     ):
-        # Convert logits to TensorFlow tensor
-        logits = tf.convert_to_tensor(logits, dtype=tf.float32)
-
-        # Sort logits and get sorted indices
-        sorted_logits = tf.sort(logits, direction="DESCENDING", axis=-1)
-        sorted_indices = tf.argsort(logits, direction="DESCENDING", axis=-1)
-
-        # Calculate cumulative probabilities
-        cumulative_probs = tf.cumsum(sorted_logits, axis=-1)
-
-        # Remove tokens with cumulative probability above the threshold
-        sorted_indices_to_remove = cumulative_probs >= top_p
-
-        # Shift the indices to the right to keep also the first token above the threshold
-        zeros_for_shift = tf.zeros_like(sorted_indices_to_remove[:, :, :1], dtype=tf.bool)
-        sorted_indices_to_remove = tf.concat(
-            [zeros_for_shift, sorted_indices_to_remove[:, :, :-1]],
-            axis=-1
-        )
-
-        # Create a mask for indices to remove
-        batch_size, seq_length, vocab_size = logits.shape
-
-        batch_indices = tf.repeat(tf.range(batch_size), seq_length * vocab_size)
-        feature_length_indices = tf.tile(
-            tf.repeat(tf.range(seq_length), vocab_size),
-            [batch_size]
-        )
-        vocab_selection_indices = tf.reshape(sorted_indices, [-1])
-        update_indices = tf.stack(
-            [batch_indices, feature_length_indices, vocab_selection_indices],
-            axis=1
-        )
-        flattened_update_values = tf.reshape(sorted_indices_to_remove, [-1])
-        indices_to_remove = tf.tensor_scatter_nd_update(
-            tf.zeros_like(logits, dtype=sorted_indices_to_remove.dtype),
-            update_indices,
-            flattened_update_values,
-        )
-
-        # Apply the filter value to the logits
-        logits_removed = tf.where(indices_to_remove, tf.fill(indices_to_remove.shape, 0.0), logits)
-
-        return logits_removed.numpy().astype(np.float64)
+        # logits: (batch, seq_len, vocab)
+        probs = _softmax_np(logits, axis=-1)
+        # sort descending
+        sorted_idx = np.argsort(-probs, axis=-1)
+        sorted_probs = np.take_along_axis(probs, sorted_idx, axis=-1)
+        cumprobs = np.cumsum(sorted_probs, axis=-1)
+        # mark tokens with cumulative prob >= top_p (except keep first above threshold)
+        to_remove = cumprobs >= top_p
+        # shift right to keep first token above threshold
+        to_remove[..., 1:] = to_remove[..., :-1]
+        to_remove[..., 0] = False
+        # scatter mask back to vocab order
+        mask = np.zeros_like(to_remove)
+        np.put_along_axis(mask, sorted_idx, to_remove, axis=-1)
+        filtered = np.where(mask, 0.0, probs)
+        return filtered.astype(np.float64)
 
     @staticmethod
     def _top_k_filtering(
             logits: np.ndarray,
             top_k: int = 0
     ):
-        indices_to_remove = logits < tf.math.top_k(logits, top_k)[0][..., -1, None]
-        logits[indices_to_remove] = 0.0
-        return logits
+        if top_k <= 0:
+            return logits
+        # keep only top_k per last axis
+        kth_vals = np.partition(logits, -top_k, axis=-1)[..., -top_k][..., None]
+        mask = logits < kth_vals
+        out = logits.copy()
+        out[mask] = 0.0
+        return out
 
     def _process_batch(self, batch: np.ndarray) -> List[str]:
-        probs = tf.nn.softmax(batch, axis=-1).numpy().astype(float)
+        probs = _softmax_np(batch, axis=-1).astype(float)
         probs = self._top_p_filtering(probs, top_p=0.9)
         # probs = self._top_k_filtering(probs, top_k=6)
         # TODO: select top_k based on inverse_dict length
@@ -600,53 +607,35 @@ class CharBasedTextFeature(BaseFeature):
         return feature_values
 
     @lazy
-    def input(self) -> tf.Tensor:
-        self.index_input = Input(
-            shape=(self.text_max_len, self.vocab_size), name="input_%s" % self.name
-        )
-
-        return self.index_input
+    def input(self):
+        return (self.text_max_len, self.vocab_size)
 
     @lazy
-    def encoder(self) -> tf.Tensor:
-        rnn_encoder_layer = Bidirectional(self.rnn_unit(self.rnn_units, return_sequences=False))
-
-        rnn_econder = rnn_encoder_layer(self.input)
-        return rnn_econder
+    def encoder(self):
+        # Handled by PyTorch model
+        return self.input
 
     @lazy
-    def __decoder_layer(self) -> List[tf.Tensor]:
-        decoder_layers = list()
+    def __decoder_layer(self):
+        # Placeholder; decoding handled by PyTorch model
+        return [("repeat", self.text_max_len), ("rnn", self.rnn_units), ("linear", self.vocab_size)]
 
-        decoder_layers.append(RepeatVector(self.text_max_len))
-        decoder_layers.append(self.rnn_unit(self.rnn_units, return_sequences=True))
-        decoder_layers.append(TimeDistributed(Dense(self.vocab_size, activation="linear")))
-
-        return decoder_layers
-
-    def create_decoder(self, encoder_output: tf.Tensor) -> tf.Tensor:
+    def create_decoder(self, encoder_output):
         if not isinstance(self.__decoder_layer, list):
             decoder_layers = [self.__decoder_layer]
         else:
             decoder_layers = self.__decoder_layer
 
         x = encoder_output
-        for layer in decoder_layers:
-            x = layer(x)
+        for _ in decoder_layers:
+            x = x
 
         self.decoder = x
         return self.decoder
 
     @lazy
-    def loss(self) -> tf.Tensor:
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        return self.weight * K.mean(
-            tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
-                labels=self.input, logits=self.decoder
-            )
-        )
+    def loss(self):
+        return None
 
 
 class EmailFeature(CharBasedTextFeature):
@@ -745,7 +734,7 @@ class DateFeature(BaseFeature):
 
     @lazy
     def input(self):
-        return Input(shape=(self.input_dimension,), name="input_%s" % self.name, dtype="float64")
+        return (self.input_dimension,)
 
     @lazy
     def encoder(self):
@@ -757,21 +746,8 @@ class DateFeature(BaseFeature):
         for idx, item in enumerate(self.decoder_layers):
             name = "%s_decoder_%d" % (self.name, idx)
             if isinstance(item, int):
-                decoder_layers.append(Dense(item, activation="relu", name=name))
-
-            if isinstance(item, Layer):
-                item.name = name
-                decoder_layers.append(Layer)
-
-        decoder_layers.append(
-            Dense(
-                self.input_dimension,
-                dtype="float32",
-                activation="linear",
-                name="%s_linear" % self.name,
-            )
-        )
-
+                decoder_layers.append(("linear", item))
+        decoder_layers.append(("linear", self.input_dimension))
         return decoder_layers
 
     def create_decoder(self, encoder_output):
@@ -781,19 +757,13 @@ class DateFeature(BaseFeature):
             decoder_layers = self.__decoder_layer
 
         x = encoder_output
-        for layer in decoder_layers:
-            x = layer(x)
+        # no-op; placeholder
+        for _ in decoder_layers:
+            x = x
 
         self.decoder = x
         return self.decoder
 
     @lazy
     def loss(self):
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        low = self.weight_randomizer[0]
-        high = self.weight_randomizer[1]
-        random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
-
-        return random_weight * tf.keras.losses.MSE(self.input, self.decoder)
+        return None

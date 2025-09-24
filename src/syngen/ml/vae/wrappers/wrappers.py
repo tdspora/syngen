@@ -7,9 +7,6 @@ from dataclasses import dataclass, field
 
 import warnings
 import pickle
-import tensorflow as tf
-from tensorflow.python.data.experimental import AutoShardPolicy
-from tensorflow.keras.models import Model
 import matplotlib.pyplot as plt
 import time
 import tqdm
@@ -66,7 +63,7 @@ class VAEWrapper(BaseWrapper):
     losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
-    model: Model = field(init=False, default=None)
+    model: object = field(init=False, default=None)
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
@@ -170,11 +167,14 @@ class VAEWrapper(BaseWrapper):
 
         train_dataset = self._create_batched_dataset(df)
         self.num_batches = len(train_dataset)
-        self.model = self.vae.model
+        # Switch to PyTorch model and optimizer
+        self.model = self.vae
         self.feature_types = self.vae.feature_types
-
-        self.optimizer = self.__create_optimizer()
-        self.loss_metric = self._create_loss()
+        import torch
+        lr = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
 
         # Start of the run of training process
         MlflowTracker().start_run(
@@ -399,7 +399,8 @@ class VAEWrapper(BaseWrapper):
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
             else:
-                self.model.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                import torch
+                torch.save(self.model.state_dict(), str(pth / "vae_best.pt"))
                 loss_grows_num_epochs = 0
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
@@ -424,7 +425,8 @@ class VAEWrapper(BaseWrapper):
             prev_total_loss = mean_loss
 
             if loss_grows_num_epochs == es_patience:
-                self.model.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                import torch
+                self.model.load_state_dict(torch.load(str(pth / "vae_best.pt"), map_location=self.device))
                 logger.info(
                     f"The loss does not become lower for "
                     f"{loss_grows_num_epochs} epochs in a row. "
@@ -435,60 +437,47 @@ class VAEWrapper(BaseWrapper):
         self.__save_losses()
         self._log_losses_info_to_mlflow()
 
-    @staticmethod
-    def _create_optimizer(learning_rate):
-        import platform
-        if platform.processor() == 'arm':
-            logger.info('Mac ARM processor is detected. Legacy Adam optimizer has been created.')
-            return tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-        else:
-            return tf.keras.optimizers.Adam(learning_rate=learning_rate)
-
-    def __create_optimizer(self):
-        learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
-        return self._create_optimizer(learning_rate)
-
-    @staticmethod
-    def _create_loss():
-        return tf.keras.metrics.Mean()
+    # Removed TF optimizer/metric in PyTorch migration
 
     def _create_batched_dataset(self, df: pd.DataFrame):
         """
-        Define batched dataset for training vae
+        Create a Python iterable of batches as tuples of numpy arrays, one per feature.
+        This removes the dependency on tf.data while remaining compatible with the
+        current Keras model which can consume numpy batches.
         """
         transformed_data = self.dataset.transform(df)
-
-        feature_datasets = []
-        options = tf.data.Options()
-        options.experimental_distribute.auto_shard_policy = AutoShardPolicy.DATA
+        # Ensure all feature tensors are numpy float32 arrays
+        normalized = []
         for inp in transformed_data:
-            dataset = tf.data.Dataset.from_tensor_slices(inp).with_options(options)
-            feature_datasets.append(dataset)
+            if isinstance(inp, pd.DataFrame):
+                arr = inp.to_numpy(dtype=np.float32)
+            else:
+                arr = np.asarray(inp, dtype=np.float32)
+                if arr.ndim == 1:
+                    arr = arr.reshape(-1, 1)
+            normalized.append(arr)
+        num_rows = min(arr.shape[0] for arr in normalized)
+        batch_size = self.batch_size
+        num_full = (num_rows // batch_size) * batch_size
+        batches = []
+        for start in range(0, num_full, batch_size):
+            end = start + batch_size
+            batch = tuple(arr[start:end] for arr in normalized)
+            batches.append(batch)
+        return batches
 
-        dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
-        return dataset.batch(self.batch_size, drop_remainder=True)
-
-    def _train_step(self, batch: Tuple[tf.Tensor]):
-        with tf.GradientTape() as tape:
-            self.model(batch)
-
-            # Compute reconstruction loss
-            loss = sum(self.model.losses)
-            order_of_features = list(self.vae.feature_losses.keys())
-            kl_loss = self.model.losses[-1].numpy()
-            feature_losses = {
-                name: loss.numpy()
-                for name, loss in
-                zip(order_of_features, self.model.losses[:-1])
-            }
-
-        self.optimizer.minimize(
-            loss=loss,
-            var_list=self.model.trainable_weights,
-            tape=tape
-        )
-        self.loss_metric(loss)
-        return loss, kl_loss, feature_losses
+    def _train_step(self, batch: Tuple):
+        import torch
+        tensors = [torch.from_numpy(x).float().to(self.device) for x in batch]
+        outputs, mu, logvar = self.model(tensors)
+        inputs_by_name = {name: tensors[i] for i, name in enumerate(self.model.feature_names)}
+        recon_total, per_feature = self.model.compute_losses(inputs_by_name, outputs)
+        kl = self.model.kl_divergence(mu, logvar)
+        total = recon_total + 0.0 * kl
+        self.optimizer.zero_grad()
+        total.backward()
+        self.optimizer.step()
+        return total.detach().cpu().item(), kl.detach().cpu().item(), {k: v.detach().cpu().item() for k, v in per_feature.items()}
 
     @staticmethod
     def display_losses(feature_losses: Dict):
@@ -597,6 +586,5 @@ class VanillaVAEWrapper(VAEWrapper):
             latent_components=min(latent_components, latent_dim * 2),
             intermediate_dim=128,
         )
-        self.vae.build_model()
         if self.process == "infer":
             self.load_state(self.paths["state_path"])

@@ -5,8 +5,6 @@ import traceback
 from loguru import logger
 from copy import deepcopy
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
 from syngen.ml.handlers import RootHandler
 from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
 from syngen.ml.config import TrainConfig, InferConfig

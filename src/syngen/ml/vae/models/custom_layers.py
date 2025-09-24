@@ -1,64 +1,43 @@
-from typing import Dict
-
-from tensorflow.keras.layers import Layer
-import tensorflow.keras.backend as K
+from typing import Dict, Any, Optional
 
 
-class FeatureLossLayer(Layer):
-    def __init__(self, feature, **kwargs):
+class FeatureLossLayer:
+    """
+    TensorFlow-free placeholder for the old Keras FeatureLossLayer.
+    In the PyTorch port, losses are computed explicitly in the training loop,
+    so this class is a no-op kept only to preserve construction sites that
+    previously instantiated the Keras layer.
+    """
+
+    def __init__(self, feature: Any, **kwargs: Any) -> None:
         self.feature = feature
-        super().__init__(**kwargs)
+        self.name: Optional[str] = kwargs.get("name")
 
-    def call(self, inputs, **kwargs):
-        feature_input, feature_decoder = inputs
-        self.add_loss(self.feature.loss, inputs=inputs)
-        return feature_decoder
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        # Keras code used to call the layer to add a loss; here we simply
+        # passthrough the last positional argument when present to avoid
+        # breaking call sites that might expect a return value.
+        return args[-1] if args else None
 
 
-class SampleLayer(Layer):
-    def __init__(self, gamma, capacity, **kwargs):
-        super().__init__(**kwargs)
+class SampleLayer:
+    """
+    TensorFlow-free placeholder for the old Keras SampleLayer.
+    The reparameterization trick and capacity-style loss should be implemented
+    directly in the PyTorch model/criterion. This class remains only to avoid
+    import errors until the model is fully ported.
+    """
+
+    def __init__(self, gamma: float, capacity: float, **kwargs: Any) -> None:
         self.gamma = gamma
         self.max_capacity = capacity
 
-    def build(self, input_shape):
-        super(SampleLayer, self).build(input_shape)
-        self.built = True
-
-    def call(self, layer_inputs, **kwargs):
-        if len(layer_inputs) != 2:
-            raise Exception("input layers must be a list: mean and stddev")
-        if len(K.int_shape(layer_inputs[0])) != 2 or len(K.int_shape(layer_inputs[1])) != 2:
-            raise Exception("input shape is not a vector [batchSize, latentSize]")
-
-        mean = layer_inputs[0]
-        log_var = layer_inputs[1]
-
-        batch = K.shape(mean)[0]
-        dim = K.int_shape(mean)[1]
-
-        latent_loss = -0.5 * (1 + log_var - K.square(mean) - K.exp(log_var))
-        latent_loss = K.sum(latent_loss, axis=1, keepdims=True)
-        latent_loss = K.mean(latent_loss)
-        latent_loss = self.gamma * K.abs(latent_loss - self.max_capacity)
-
-        latent_loss = K.reshape(latent_loss, [1, 1])
-
-        epsilon = K.random_normal(shape=(batch, dim), mean=0.0, stddev=1.0)
-        layer_output = mean + K.exp(0.5 * log_var) * epsilon
-
-        self.add_loss(losses=[latent_loss], inputs=[layer_inputs])
-
-        return layer_output
-
-    def compute_output_shape(self, input_shape):
-        return input_shape[0]
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        raise NotImplementedError(
+            "SampleLayer is deprecated in the PyTorch port. Implement reparameterization "
+            "and capacity loss directly in the model forward/loss computation."
+        )
 
     @property
-    def get_config(self):
-        config = {
-            "gamma": self.gamma,
-            "capacity": self.max_capacity,
-        }
-        base_config: Dict = super(SampleLayer, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+    def get_config(self) -> Dict[str, Any]:
+        return {"gamma": self.gamma, "capacity": self.max_capacity}
