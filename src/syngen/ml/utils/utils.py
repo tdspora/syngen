@@ -546,7 +546,7 @@ class ValidationError(Exception):
 def safe_flatten(val):
     """
     Safely flatten a JSON string into a flat dictionary.
-    If the input is not a valid JSON string or not a dictionary, return an empty dictionary
+    If the input won't be flattened, return the original value.
     """
     if not isinstance(val, (str, bytes, bytearray)):
         return {
@@ -556,17 +556,14 @@ def safe_flatten(val):
 
     try:
         parsed = json.loads(val)
-    except (TypeError, JSONDecodeError):
-        return {
-            "original_data": val,
-            "flattened_data": {}
-        }
+        if isinstance(parsed, dict):
+            return {
+                "flattened_data": flatten(parsed, "."),
+                "original_data": None
+            }
+    except JSONDecodeError:
+        pass
 
-    if isinstance(parsed, dict):
-        return {
-            "flattened_data": flatten(parsed, "."),
-            "original_data": None
-        }
     return {
         "original_data": val,
         "flattened_data": {}

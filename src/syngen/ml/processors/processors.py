@@ -171,9 +171,11 @@ class PreprocessHandler(Processor):
                 return False
 
             def is_json_value(x):
+                if not isinstance(x, str):
+                    return False
                 try:
                     return isinstance(json.loads(x), dict)
-                except (TypeError, JSONDecodeError):
+                except JSONDecodeError:
                     return False
 
             return series.dropna().apply(is_json_value).any()
@@ -202,18 +204,13 @@ class PreprocessHandler(Processor):
         for column in json_columns:
             result = [safe_flatten(i) for i in data[column]]
             flattened_data = pd.DataFrame(
-                [
-                    i["flattened_data"] for i in result
-                ],
+                [i["flattened_data"] for i in result],
                 index=data.index
             )
-            original_data = pd.DataFrame(
-                [
-                    i["original_data"] for i in result
-                ],
+            flattened_data[f"{column}_"] = pd.DataFrame(
+                [i["original_data"] for i in result],
                 index=data.index
             )
-            flattened_data[f"{column}_"] = original_data
             flattening_mapping[column] = [
                 c for c in flattened_data.columns.to_list()
                 if c != f"{column}_"
@@ -402,20 +399,10 @@ class PostprocessHandler(Processor):
         return data
 
     @staticmethod
-    def _remove_empty_elements(d: dict) -> Optional[Union[Dict, List]]:
+    def _remove_empty_elements(d: Union[Dict, List]) -> Optional[Union[Dict, List]]:
         """
-        Recursively remove keys with empty dictionaries or lists from a nested dictionary
-
-        Args:
-            d (dict): Input dictionary to clean
-
-        Returns:
-            dict: Cleaned dictionary with empty structures removed
-
-        Note:
-            This method preserves non-empty values including False, 0, and empty strings
+        Recursively remove keys with empty dictionaries or lists from a nested dictionary or list
         """
-
         def clean(data):
             if isinstance(data, dict):
                 cleaned = {
@@ -435,7 +422,7 @@ class PostprocessHandler(Processor):
 
             return data
         result = clean(d)
-        return result if pd.notnull(result) else None
+        return result if pd.notnull(result) and result not in [{}, []] else None
 
     def _postprocess_generated_data(
         self,
