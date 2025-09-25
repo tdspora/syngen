@@ -140,9 +140,6 @@ class Reporter:
         without keys columns
         """
         types = self.fetch_data_types()
-        missing_columns = set(original) - set(synthetic)
-        for col in missing_columns:
-            synthetic[col] = np.nan
         exclude_columns = self.dataset.uuid_columns
         for column in self.dataset.cast_to_integer:
             original[column] = pd.to_numeric(
@@ -201,8 +198,8 @@ class Reporter:
         categorical_columns = categorical_columns | binary_columns
 
         for col in categorical_columns:
-            original[col] = original[col].astype(str)
-            synthetic[col] = synthetic[col].astype(str)
+            original[col] = original[col].fillna("nan").astype(str)
+            synthetic[col] = synthetic[col].fillna("nan").astype(str)
         return (
             original,
             synthetic,
