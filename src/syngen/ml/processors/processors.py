@@ -1,6 +1,6 @@
 import os
 from collections import Counter
-from typing import List, Tuple, Dict, Any, Optional, Callable
+from typing import List, Tuple, Dict, Any, Optional, Callable, Union
 import json
 from json import JSONDecodeError
 from slugify import slugify
@@ -8,10 +8,10 @@ from slugify import slugify
 from loguru import logger
 import pandas as pd
 import numpy as np
-from flatten_json import flatten, unflatten_list
+from flatten_json import unflatten_list
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import fetch_unique_root
+from syngen.ml.utils import fetch_unique_root, safe_flatten
 from syngen.ml.context import get_context
 
 
@@ -162,20 +162,23 @@ class PreprocessHandler(Processor):
     @staticmethod
     def _get_json_columns(data: pd.DataFrame) -> List[str]:
         """
-        Get the list of columns which contain JSON data
+        Get the list of columns which contain JSON data convertable to a Python dictionary
         Returns:
-            List[str]: List of column names containing valid JSON data
+            List[str]: List of column names containing valid JSON data convertable to dict
         """
-
         def is_json_column(series: pd.Series) -> bool:
             if pd.isnull(series).all():
                 return False
-            try:
-                series.dropna().apply(json.loads)
-                return True
-            except (TypeError, JSONDecodeError):
-                return False
 
+            def is_json_value(x):
+                if not isinstance(x, str):
+                    return False
+                try:
+                    return isinstance(json.loads(x), dict)
+                except JSONDecodeError:
+                    return False
+
+            return series.dropna().apply(is_json_value).any()
         return [col for col in data.columns if is_json_column(data[col])]
 
     @staticmethod
@@ -199,14 +202,19 @@ class PreprocessHandler(Processor):
         flattened_dfs = list()
         flattening_mapping = dict()
         for column in json_columns:
+            result = [safe_flatten(i) for i in data[column]]
             flattened_data = pd.DataFrame(
-                [
-                    flatten(json.loads(i), ".")
-                    for i in data[column]
-                ],
+                [i["flattened_data"] for i in result],
                 index=data.index
             )
-            flattening_mapping[column] = flattened_data.columns.to_list()
+            flattened_data[f"{column}_"] = pd.DataFrame(
+                [i["original_data"] for i in result],
+                index=data.index
+            )
+            flattening_mapping[column] = [
+                c for c in flattened_data.columns.to_list()
+                if c != f"{column}_"
+            ]
             flattened_dfs.append(flattened_data)
         flattened_data = pd.concat([data, *flattened_dfs], axis=1)
         duplicated_columns = [
@@ -391,20 +399,10 @@ class PostprocessHandler(Processor):
         return data
 
     @staticmethod
-    def _remove_empty_elements(d: dict) -> dict:
+    def _remove_empty_elements(d: Union[Dict, List]) -> Optional[Union[Dict, List]]:
         """
-        Recursively remove keys with empty dictionaries or lists from a nested dictionary
-
-        Args:
-            d (dict): Input dictionary to clean
-
-        Returns:
-            dict: Cleaned dictionary with empty structures removed
-
-        Note:
-            This method preserves non-empty values including False, 0, and empty strings
+        Recursively remove keys with empty dictionaries or lists from a nested dictionary or list
         """
-
         def clean(data):
             if isinstance(data, dict):
                 cleaned = {
@@ -423,8 +421,8 @@ class PostprocessHandler(Processor):
                 return cleaned
 
             return data
-
-        return clean(d)
+        result = clean(d)
+        return result if pd.notnull(result) and result not in [{}, []] else None
 
     def _postprocess_generated_data(
         self,
@@ -438,16 +436,23 @@ class PostprocessHandler(Processor):
         for old_column, new_columns in flattening_mapping.items():
             data[new_columns] = self._restore_empty_values(data[new_columns])
 
-            data[old_column] = data[new_columns].apply(
-                lambda row: unflatten_list(row.to_dict(), "."), axis=1
+            data[old_column] = data.apply(
+                lambda row: unflatten_list(row[new_columns].to_dict(), ".")
+                if row[new_columns].notnull().any()
+                else row[f"{old_column}_"],
+                axis=1
             )
-            data[old_column] = data[old_column]. \
-                apply(lambda row: self._remove_none_from_struct(row))
-            data[old_column] = data[old_column]. \
-                apply(lambda row: self._remove_empty_elements(row))
-            data[old_column] = data[old_column]. \
-                apply(lambda row: json.dumps(row, ensure_ascii=False))
+            data[old_column] = data[old_column].apply(
+                lambda row: self._remove_none_from_struct(row)
+            )
+            data[old_column] = data[old_column].apply(lambda row: self._remove_empty_elements(row))
+            data[old_column] = data[old_column].apply(
+                lambda row: json.dumps(row, ensure_ascii=False)
+                if isinstance(row, dict)
+                else row
+            )
             dropped_columns = set(i for i in new_columns if i not in duplicated_columns)
+            dropped_columns.add(f"{old_column}_")
             data.drop(list(dropped_columns), axis=1, inplace=True)
         return data
 

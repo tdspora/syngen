@@ -801,8 +801,8 @@ class UnivariateMetric(BaseMetric):
         def sanitize_labels(label):
             return re.sub(r"\$|\^", "", label)
 
-        original_column = self.original[column].fillna("?")
-        synthetic_column = self.synthetic[column].fillna("?")
+        original_column = self.original[column]
+        synthetic_column = self.synthetic[column]
         full_values_set = set(original_column.values) | set(synthetic_column.values)
 
         original_ratio_counts = plot_dist(original_column, True, full_values_set)
