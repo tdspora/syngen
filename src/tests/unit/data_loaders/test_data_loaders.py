@@ -20,6 +20,8 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 CSV_SCHEMA = {"fields": {}, "format": "CSV"}
+FERNET_KEY = os.getenv("FERNET_KEY")
+FERNET_KEY_2 = os.getenv("FERNET_KEY_2")
 
 
 def test_initialize_data_loader_for_local_csv_table_with_existed_path(rp_logger):
@@ -521,7 +523,9 @@ def test_load_metadata_in_yaml_format(rp_logger):
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     metadata = test_metadata_loader.load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -537,7 +541,8 @@ def test_load_metadata_in_yaml_format(rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -551,7 +556,9 @@ def test_load_metadata_in_yml_format(rp_logger):
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     metadata = test_metadata_loader.load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -567,7 +574,8 @@ def test_load_metadata_in_yml_format(rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -579,7 +587,9 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
     metadata = YAMLLoader(path_to_metadata).load_data()
 
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -595,7 +605,8 @@ def test_load_metadata_by_yaml_loader_in_yaml_format(rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         }
     }
 
@@ -608,7 +619,9 @@ def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger
     metadata = YAMLLoader(path_to_metadata).load_data()
 
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -624,7 +637,8 @@ def test_load_metadata_by_yaml_loader_in_yml_format_without_validation(rp_logger
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         }
     }
 
@@ -638,7 +652,9 @@ def test_save_metadata_in_yaml_format(test_yaml_path, test_metadata_file, rp_log
 
     metadata_loader.save_data(test_metadata_file)
     assert metadata_loader.load_data() == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "..\\data\\pk_test.csv",
@@ -654,7 +670,8 @@ def test_save_metadata_in_yaml_format(test_yaml_path, test_metadata_file, rp_log
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -667,7 +684,9 @@ def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logge
 
     metadata_loader.save_data(test_metadata_file)
     assert metadata_loader.load_data() == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "..\\data\\pk_test.csv",
@@ -683,7 +702,8 @@ def test_save_metadata_in_yml_format(test_yml_path, test_metadata_file, rp_logge
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -696,7 +716,9 @@ def test_normalize_parameter_reports_if_all(test_yaml_path, rp_logger):
     )
     metadata = YAMLLoader(path_to_metadata).load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -712,7 +734,8 @@ def test_normalize_parameter_reports_if_all(test_yaml_path, rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         }
     }
 
@@ -728,7 +751,9 @@ def test_normalize_parameter_reports_if_none(test_yaml_path, rp_logger):
     )
     metadata = YAMLLoader(path_to_metadata).load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {
                 "source": "../data/pk_test.csv",
@@ -744,14 +769,15 @@ def test_normalize_parameter_reports_if_none(test_yaml_path, rp_logger):
                 "size": 100,
             },
             "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
-            "format": {}
+            "format": {},
+            "encryption": {}
         }
     }
 
 
 def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
     rp_logger.info(
-        "Loading metadata_files in yaml format with 'infer_settings', 'keys' defined as None"
+        "Loading the metadata file in yaml format with 'infer_settings', 'keys' defined as None"
     )
     path_to_metadata = (
         f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/metadata_with_none_params.yaml"
@@ -761,14 +787,148 @@ def test_load_metadata_with_none_params_in_yaml_format(rp_logger):
     assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
     metadata = test_metadata_loader.load_data()
     assert metadata == {
-        "global": {},
+        "global": {
+            "encryption": {}
+        },
         "pk_test": {
             "train_settings": {"source": "../data/pk_test.csv"},
             "infer_settings": {},
             "keys": {},
-            "format": {}
+            "format": {},
+            "encryption": {}
         },
     }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_metadata_with_fernet_keys(rp_logger):
+    rp_logger.info(
+        "Loading the metadata file in yaml format with fernet keys "
+        "in 'global_settings' and 'table_settings'"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/"
+        "metadata_with_several_fernet_keys.yaml"
+    )
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+    metadata = test_metadata_loader.load_data()
+    assert metadata == {
+        "global": {
+            "encryption": {
+                "fernet_key": FERNET_KEY
+            }
+        },
+        "pk_test": {
+            "train_settings": {
+                "source": "./path/to/pk_test.csv",
+                "epochs": 1,
+                "drop_null": False,
+                "row_limit": 800
+            },
+            "infer_settings": {
+                "size": 200,
+                "run_parallel": True,
+                "reports": ["accuracy"]
+            },
+            "encryption": {
+                "fernet_key": FERNET_KEY_2
+            },
+            "keys": {
+                "pk_id": {
+                    "type": "PK",
+                    "columns": ["Id"]
+                }
+            },
+            "format": {}
+        },
+        "fk_test": {
+            "train_settings": {
+                "source": "./path/to/fk_test.csv",
+                "epochs": 5,
+                "drop_null": True,
+                "reports": ["accuracy", "sample"],
+                "row_limit": 600
+            },
+            "infer_settings": {
+                "size": 90,
+                "run_parallel": True,
+                "random_seed": 2,
+                "reports": []
+            },
+            "keys": {
+                "fk_id": {
+                    "type": "FK",
+                    "columns": ["Id"],
+                    "references": {
+                        "table": "pk_test",
+                        "columns": ["Id"]
+                    }
+                }
+            },
+            "encryption": {},
+            "format": {}
+        }
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_metadata_with_one_non_existent_fernet_key(rp_logger, caplog):
+    rp_logger.info(
+        "Loading the metadata file in yaml format with one non-existent fernet key"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/"
+        "metadata_with_one_nonexistent_fernet_key.yaml"
+    )
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            test_metadata_loader.load_data()
+            assert (
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in str(error.value)
+            assert (
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in caplog.text
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_metadata_with_all_nonexistent_fernet_key(rp_logger, caplog):
+    rp_logger.info(
+        "Loading the metadata file in yaml format with all non-existent fernet key"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/data_loaders/fixtures/metadata_files/"
+        "metadata_with_all_nonexistent_fernet_keys.yaml"
+    )
+    test_metadata_loader = MetadataLoader(path_to_metadata)
+
+    assert isinstance(test_metadata_loader.metadata_loader, YAMLLoader)
+
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            test_metadata_loader.load_data()
+            assert (
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT_1' wasn't fetched. "
+                "Please, check whether it is set correctly. "
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT_2' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in str(error.value)
+            assert (
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT_1' wasn't fetched. "
+                "Please, check whether it is set correctly. "
+                "The value of the environment variable 'FERNET_KEY_NONEXISTENT_2' wasn't fetched. "
+                "Please, check whether it is set correctly."
+            ) in caplog.text
+
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

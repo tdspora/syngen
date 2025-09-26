@@ -15,6 +15,8 @@ from syngen.ml.data_loaders import DataEncryptor
 
 
 SUCCESSFUL_MESSAGE = "The test passed successfully"
+os.environ["FERNET_KEY"] = "VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY="
+os.environ["FERNET_KEY_2"] = "k64ntCKv3k7ihkNmbjN5cIlkRGxkPoHskJNcKB6bVuI="
 
 
 def get_dir_name():

@@ -1,23 +1,21 @@
 global:
-  train_settings:
-    epochs: 5
-    drop_null: true
-    row_limit: 500
-  infer_settings:
-    size: 1000
-    run_parallel: True
-    reports: all
-
   encryption:
-    fernet_key: FERNET_KEY
+    fernet_key: FERNET_KEY_NONEXISTENT_1
 
 pk_test:
   train_settings:
     source: ./path/to/pk_test.csv
+    epochs: 1
+    drop_null: false
     row_limit: 800
 
   infer_settings:
-    reports: none
+    size: 200
+    run_parallel: True
+    reports: all
+
+  encryption:
+    fernet_key: FERNET_KEY_NONEXISTENT_2
 
   keys:
     pk_id:
@@ -28,6 +26,17 @@ pk_test:
 fk_test:
   train_settings:
     source: ./path/to/fk_test.csv
+    epochs: 5
+    drop_null: true
+    reports: all
+    row_limit: 600
+
+  infer_settings:
+    size: 90
+    run_parallel: True
+    random_seed: 2
+    reports: none
+
   keys:
     fk_id:
       type: "FK"

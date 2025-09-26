@@ -9,6 +9,7 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     validate_parameter_reports,
+    fetch_env_variables
 )
 from syngen.ml.validation_schema import ReportTypes
 
@@ -91,8 +92,8 @@ validate_reports = validate_parameter_reports(
     "--fernet_key",
     default=None,
     type=str,
-    help="The value of the Fernet key to encrypt and decrypt "
-         "the sensitive data stored on the disk",
+    help="The name of the environment variable that kept the value of the Fernet key "
+         "to encrypt and decrypt the sensitive data stored on the disk",
 )
 def launch_train(
     metadata_path: Optional[str],
@@ -180,9 +181,7 @@ def launch_train(
         "reports": reports,
     }
 
-    encryption_settings = {
-        "fernet_key": fernet_key,
-    }
+    encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
 
     worker = Worker(
         table_name=table_name,
