@@ -179,13 +179,19 @@ class InferConfig:
         """
         Create the paths which used in inference process
         """
+        timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
         self.paths.update({
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
             "path_to_flatten_metadata":
                 f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
-            "input_data_path": self.train_config.paths["input_data_path"]
+            "input_data_path": self.train_config.paths["input_data_path"],
+            "path_to_accuracy_report": (
+                "model_artifacts/"
+                f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
+                f"/{self.slugify_table_name}/reports/accuracy-report-{timestamp}.html"
+            )
         })
 
     @slugify_attribute(table_name="slugify_table_name")
@@ -196,14 +202,8 @@ class InferConfig:
         dynamic_name = (
             self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         )
-        timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
         self.paths = {
             "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
-            "path_to_accuracy_report": (
-                "model_artifacts/"
-                f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
-                f"/{self.slugify_table_name}/reports/accuracy-report-{timestamp}.html"
-            ),
             "train_config_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"

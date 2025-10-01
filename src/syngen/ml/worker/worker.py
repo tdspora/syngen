@@ -113,6 +113,7 @@ class Worker:
         """
         resources_path = f"model_artifacts/resources/{table}/"
         tmp_store_path = f"model_artifacts/tmp_store/{table}/"
+        path_to_reports = f"model_artifacts/resources/{table}/reports/"
         state_path = (
             f"model_artifacts/resources/{table}/vae/checkpoints"
         )
@@ -120,6 +121,7 @@ class Worker:
         losses_path = "model_artifacts/system_store/losses/"
         os.makedirs(resources_path, exist_ok=True)
         os.makedirs(tmp_store_path, exist_ok=True)
+        os.makedirs(path_to_reports, exist_ok=True)
         os.makedirs(state_path, exist_ok=True)
         os.makedirs(flatten_config_path, exist_ok=True)
         os.makedirs(losses_path, exist_ok=True)
