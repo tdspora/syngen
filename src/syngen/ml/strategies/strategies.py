@@ -121,6 +121,7 @@ class TrainStrategy(Strategy, ABC):
                 and "sample" in self.config.reports
                 and not flatten_metadata_exists
         ):
+            os.makedirs(self.config.paths["reports_path"], exist_ok=True)
             sample_reporter = SampleAccuracyReporter(
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
@@ -201,6 +202,7 @@ class InferStrategy(Strategy):
                 not table_name.endswith("_fk") and
                 any([item in ["accuracy", "metrics_only"] for item in self.config.reports])
         ):
+            os.makedirs(self.config.paths["reports_path"], exist_ok=True)
             accuracy_reporter = AccuracyReporter(
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
