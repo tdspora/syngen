@@ -72,8 +72,6 @@ class TrainConfig:
             "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/",
             "source_path": self.source,
             "reports_path": f"model_artifacts/resources/{self.slugify_table_name}/reports",
-            "path_to_accuracy_report": f"model_artifacts/resources/{self.slugify_table_name}/"
-                                       f"reports/accuracy-report-{timestamp}.html",
             "path_to_sample_report": f"model_artifacts/resources/{self.slugify_table_name}/"
                                      f"reports/sample-report-{timestamp}.html",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
