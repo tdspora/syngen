@@ -66,9 +66,10 @@ class SampleAccuracyTest(BaseTest):
             config=config,
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
         )
-
+        path_to_sample_report = f"{self.paths['path_to_sample_report']}"
+        os.makedirs(os.path.dirname(path_to_sample_report), exist_ok=True)
         with open(
-            f"{self.paths['path_to_sample_report']}",
+            path_to_sample_report,
             "w",
             encoding="utf-8",
         ) as f:

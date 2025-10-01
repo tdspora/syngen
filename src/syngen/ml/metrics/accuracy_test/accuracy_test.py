@@ -281,7 +281,7 @@ class AccuracyTest(BaseTest):
         )
 
         path_to_accuracy_report = f"{self.paths['path_to_accuracy_report']}"
-        logger.info(f"{os.path.exists(os.path.dirname(path_to_accuracy_report))}")
+        os.makedirs(os.path.dirname(path_to_accuracy_report), exist_ok=True)
         with open(
             path_to_accuracy_report, "w", encoding="utf-8"
         ) as f:
