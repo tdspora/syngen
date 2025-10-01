@@ -202,7 +202,7 @@ class InferConfig:
             "path_to_accuracy_report": (
                 "model_artifacts/"
                 f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
-                f"/{self.slugify_table_name}/reports/accuracy-report-{slugify(timestamp)}.html"
+                f"/{self.slugify_table_name}/reports/accuracy-report-{timestamp}.html"
             ),
             "train_config_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
