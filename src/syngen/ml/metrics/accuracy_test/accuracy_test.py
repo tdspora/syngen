@@ -280,7 +280,7 @@ class AccuracyTest(BaseTest):
             round=round,
         )
 
-        path_to_accuracy_report = f"{self.paths['reports_path']}/accuracy_report.html"
+        path_to_accuracy_report = f"{self.paths['path_to_accuracy_report']}"
         with open(
             path_to_accuracy_report, "w", encoding="utf-8"
         ) as f:

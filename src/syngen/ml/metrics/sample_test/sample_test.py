@@ -68,7 +68,7 @@ class SampleAccuracyTest(BaseTest):
         )
 
         with open(
-            f"{self.paths['reports_path']}/sample_accuracy_report.html",
+            f"{self.paths['path_to_sample_report']}",
             "w",
             encoding="utf-8",
         ) as f:

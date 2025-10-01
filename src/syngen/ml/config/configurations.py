@@ -63,17 +63,19 @@ class TrainConfig:
         """
         Create the paths which used in training process
         """
-        losses_file_name = (
-            f"losses_{self.table_name}_"
-            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        )
+        timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
+        losses_file_name = f"losses-{self.slugify_table_name}-{timestamp}"
         fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
             "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/",
             "source_path": self.source,
-            "reports_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/reports",
+            "reports_path": f"model_artifacts/resources/{self.slugify_table_name}/reports",
+            "path_to_accuracy_report": f"model_artifacts/resources/{self.slugify_table_name}/"
+                                       f"reports/accuracy-report-{timestamp}.html",
+            "path_to_sample_report": f"model_artifacts/resources/{self.slugify_table_name}/"
+                                     f"reports/sample-report-{timestamp}.html",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}."
                                f"{'dat' if fernet_key is not None else 'pkl'}",
@@ -93,7 +95,7 @@ class TrainConfig:
             "path_to_flatten_metadata":
                 f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
-            "losses_path": f"model_artifacts/system_store/losses/{slugify(losses_file_name)}.csv"
+            "losses_path": f"model_artifacts/system_store/losses/{losses_file_name}.csv"
         }
 
 
@@ -196,8 +198,14 @@ class InferConfig:
         dynamic_name = (
             self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         )
+        timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
         self.paths = {
             "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
+            "path_to_accuracy_report": (
+                "model_artifacts/"
+                f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
+                f"/{self.slugify_table_name}/reports/accuracy-report-{slugify(timestamp)}.html"
+            ),
             "train_config_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
