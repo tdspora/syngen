@@ -203,7 +203,11 @@ class InferConfig:
             self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         )
         self.paths = {
-            "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
+            "reports_path": (
+                f"model_artifacts/"
+                f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
+                f"/{dynamic_name}/reports"
+            ),
             "train_config_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
