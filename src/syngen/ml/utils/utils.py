@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable, Literal
+from typing import List, Dict, Optional, Union, Set, Callable
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -162,6 +162,13 @@ def timestamp_to_datetime(timestamp: int, delta=False):
         return epoch_datetime + delta_of_time
 
 
+def convert_to_date_string(value: Union[int, float], date_format: str) -> str:
+    """
+    Convert timestamp to string values represented dates in a column
+    """
+    return timestamp_to_datetime(int(value)).strftime(date_format)
+
+
 def generate_uuids(version: Union[int, str], size: int):
     ulid = ULID()
     generated_uuid_column = []
@@ -214,6 +221,16 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     return set(names)
 
 
+def convert_to_timestamp(data: pd.Series, date_format: str, na_values: List[str]):
+    """
+    Convert the string values to timestamp
+    """
+    return [
+        datetime_to_timestamp(d, date_format)
+        if d not in na_values else np.NaN for d in data
+    ]
+
+
 def fetch_timezone(date_string: str) -> Union[str, float]:
     """
     Attempts to find and extract a timezone string from a date string.
@@ -248,7 +265,7 @@ def get_nan_labels(df: pd.DataFrame, excluded_columns: Set[str]) -> Dict:
     Get labels that represent nan values in float/int columns
     """
     columns_nan_labels = {}
-    object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
+    object_columns = df.select_dtypes(include=[pd.StringDtype(), "object", "string"]).columns
     columns = set(object_columns) - excluded_columns
     for column in columns:
         if df[column].isna().sum() > 0:
@@ -426,6 +443,28 @@ def fetch_log_message(message):
     return log_message
 
 
+def fetch_env_variables(options: Dict) -> Dict:
+    """
+    Fetches the values of environment variables specified in options
+    """
+    errors = []
+    options = options.copy()
+    for option, value in options.items():
+        if value is not None:
+            fetched_value = os.getenv(value)
+            if fetched_value is None:
+                error_message = (
+                    f"The value of the environment variable '{value}' wasn't fetched. "
+                    "Please, check whether it is set correctly."
+                )
+                errors.append(error_message)
+            options[option] = fetched_value
+    if errors:
+        errors = " ".join(errors)
+        raise ValueError(errors)
+    return options
+
+
 def file_sink(message):
     """
     Save logs to the log file
@@ -454,7 +493,7 @@ def setup_logger():
 
 
 def setup_log_process(
-    type_of_process: Literal["train", "infer"],
+    type_of_process: str,
     log_level: str,
     table_name: Optional[str],
     metadata_path: Optional[str]
