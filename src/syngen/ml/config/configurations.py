@@ -9,6 +9,9 @@ from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
 
 
+TIMESTAMP = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
+
+
 @dataclass
 class TrainConfig:
     """
@@ -63,8 +66,6 @@ class TrainConfig:
         """
         Create the paths which used in training process
         """
-        timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
-        losses_file_name = f"losses-{self.slugify_table_name}-{timestamp}"
         fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
@@ -73,7 +74,7 @@ class TrainConfig:
             "source_path": self.source,
             "reports_path": f"model_artifacts/resources/{self.slugify_table_name}/reports",
             "path_to_sample_report": f"model_artifacts/resources/{self.slugify_table_name}/"
-                                     f"reports/sample-report-{timestamp}.html",
+                                     f"reports/sample-report-{TIMESTAMP}.html",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}."
                                f"{'dat' if fernet_key is not None else 'pkl'}",
@@ -93,7 +94,8 @@ class TrainConfig:
             "path_to_flatten_metadata":
                 f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
-            "losses_path": f"model_artifacts/system_store/losses/{losses_file_name}.csv"
+            "losses_path": f"model_artifacts/system_store/losses/"
+                           f"losses-{self.slugify_table_name}-{TIMESTAMP}.csv"
         }
 
 
@@ -179,7 +181,6 @@ class InferConfig:
         """
         Create the paths which used in inference process
         """
-        timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
         self.paths.update({
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
@@ -190,7 +191,7 @@ class InferConfig:
             "path_to_accuracy_report": (
                 "model_artifacts/"
                 f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
-                f"/{self.slugify_table_name}/reports/accuracy-report-{timestamp}.html"
+                f"/{self.slugify_table_name}/reports/accuracy-report-{TIMESTAMP}.html"
             )
         })
 
