@@ -425,7 +425,7 @@ def get_log_path(table_name: Optional[str], metadata_path: Optional[str], type_o
     """
     logs_dir_name = "model_artifacts/system_store/logs"
     unique_name = fetch_unique_root(table_name, metadata_path)
-    unique_name = f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    unique_name = f"{unique_name}_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
     file_name_without_extension = f"logs_{type_of_process}_{unique_name}"
     file_path = os.path.join(
         logs_dir_name, f"{slugify(file_name_without_extension)}.log"
