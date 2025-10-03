@@ -402,3 +402,44 @@ def test_train_table_with_invalid_batch_size(rp_logger):
     )
     assert result.exit_code == 2
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_train")
+@patch.object(Worker, "__attrs_post_init__")
+def test_train_table_with_valid_fernet_key(mock_post_init, mock_launch_train, rp_logger):
+    rp_logger.info(
+        "Launch train process through CLI with valid 'fernet_key' parameter "
+        "equals to the value of the environment variable 'FERNET_KEY'"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_train,
+        ["--fernet_key", "FERNET_KEY", "--table_name", TABLE_NAME, "--source", PATH_TO_TABLE],
+    )
+    mock_post_init.assert_called_once()
+    mock_launch_train.assert_called_once()
+    assert result.exit_code == 0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_train_table_with_nonexistent_fernet_key(rp_logger):
+    rp_logger.info(
+        "Launch train process through CLI with invalid 'fernet_key' parameter "
+        "equals to non-existent environment variable name"
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        launch_train,
+        [
+            "--fernet_key", "FERNET_KEY_NONEXISTENT",
+            "--table_name", TABLE_NAME,
+            "--source", PATH_TO_TABLE
+        ],
+    )
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+    assert result.exception.args == (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+        "Please, check whether it is set correctly.",
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
