@@ -48,9 +48,8 @@ class Worker:
         )
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
-        # The validation of the initial metadata provided by the user
-        self.__validate_schema()
         self._update_metadata()
+        self.__validate_schema()
         self._clean_up()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())

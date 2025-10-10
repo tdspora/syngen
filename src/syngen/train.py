@@ -1,5 +1,5 @@
 import os
-from typing import Optional, List
+from typing import Optional, List, Union, Tuple
 
 import click
 from loguru import logger
@@ -8,123 +8,23 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
-    validate_parameter_reports,
+    get_reports,
     fetch_env_variables
 )
-from syngen.ml.validation_schema import ReportTypes
 
 
-validate_reports = validate_parameter_reports(
-    report_types=ReportTypes().train_report_types,
-    full_list=ReportTypes().full_list_of_train_report_types
-)
-
-
-@click.command()
-@click.option(
-    "--metadata_path",
-    type=str,
-    default=None,
-    help="Path to the metadata file"
-)
-@click.option(
-    "--source",
-    type=str,
-    default=None,
-    help="Path to the table that you want to use as a reference",
-)
-@click.option(
-    "--table_name",
-    type=str,
-    default=None,
-    help="Arbitrary string to name the directories",
-)
-@click.option(
-    "--epochs",
-    default=10,
-    type=click.IntRange(1),
-    help="Number of trained epochs. If absent, it's defaulted to 10",
-)
-@click.option(
-    "--drop_null",
-    default=False,
-    type=click.BOOL,
-    help="Flag which set whether to drop rows with at least one missing value. "
-    "If absent, it's defaulted to False",
-)
-@click.option(
-    "--row_limit",
-    default=None,
-    type=click.IntRange(1),
-    help="Number of rows to train over. A number less than the original table "
-         "length will randomly subset the specified rows number",
-)
-@click.option(
-    "--reports",
-    default=("none",),
-    type=click.UNPROCESSED,
-    multiple=True,
-    callback=validate_reports,
-    help="Controls the generation of quality reports. "
-    "Might require significant time for big generated tables (>1000 rows). "
-    "If set to 'sample', generates a sample report. "
-    "If set to 'accuracy', generates an accuracy report. "
-    "If set to 'metrics_only', outputs the metrics information only to standard output "
-    "without generation of a report. "
-    "If set to 'all', generates both accuracy and sample report. "
-    "If it's absent or set to 'none', no reports are generated.",
-)
-@click.option(
-    "--log_level",
-    default="INFO",
-    type=click.Choice(["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
-    help="Set the logging level which will be used in the process. "
-         "If absent, it's defaulted to 'INFO'",
-)
-@click.option(
-    "--batch_size",
-    default=32,
-    type=click.IntRange(1),
-    help="Number of rows that goes in one batch. "
-         "This parameter can help to control memory consumption.",
-)
-@click.option(
-    "--fernet_key",
-    default=None,
-    type=str,
-    help="The name of the environment variable that kept the value of the Fernet key "
-         "to encrypt and decrypt the sensitive data stored on the disk",
-)
 def launch_train(
-    metadata_path: Optional[str],
-    source: Optional[str],
-    table_name: Optional[str],
-    epochs: int,
-    drop_null: bool,
-    row_limit: Optional[int],
-    reports: List[str],
-    log_level: str,
-    batch_size: int,
-    fernet_key: Optional[str]
+    metadata_path: Optional[str] = None,
+    source: Optional[str] = None,
+    table_name: Optional[str] = None,
+    epochs: int = 10,
+    drop_null: bool = False,
+    row_limit: Optional[int] = None,
+    reports: Union[List[str], Tuple[str], str] = "none",
+    log_level: str = "INFO",
+    batch_size: int = 32,
+    fernet_key: Optional[str] = None
 ):
-    """
-    Launch the work of training process
-
-    Parameters
-    ----------
-    metadata_path
-    source
-    table_name
-    epochs
-    drop_null
-    row_limit
-    reports
-    log_level
-    batch_size
-    fernet_key
-    -------
-
-    """
     setup_log_process(
         type_of_process="train",
         log_level=log_level,
@@ -178,7 +78,7 @@ def launch_train(
         "drop_null": drop_null,
         "row_limit": row_limit,
         "batch_size": batch_size,
-        "reports": reports,
+        "reports": get_reports(reports, type_of_process="train"),
     }
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
@@ -195,5 +95,122 @@ def launch_train(
     worker.launch_train()
 
 
+@click.command()
+@click.option(
+    "--metadata_path",
+    type=str,
+    default=None,
+    help="Path to the metadata file"
+)
+@click.option(
+    "--source",
+    type=str,
+    default=None,
+    help="Path to the table that you want to use as a reference",
+)
+@click.option(
+    "--table_name",
+    type=str,
+    default=None,
+    help="Arbitrary string to name the directories",
+)
+@click.option(
+    "--epochs",
+    default=10,
+    type=click.IntRange(1),
+    help="Number of trained epochs. If absent, it's defaulted to 10",
+)
+@click.option(
+    "--drop_null",
+    default=False,
+    type=click.BOOL,
+    help="Flag which set whether to drop rows with at least one missing value. "
+    "If absent, it's defaulted to False",
+)
+@click.option(
+    "--row_limit",
+    default=None,
+    type=click.IntRange(1),
+    help="Number of rows to train over. A number less than the original table "
+         "length will randomly subset the specified rows number",
+)
+@click.option(
+    "--reports",
+    default=("none",),
+    type=click.UNPROCESSED,
+    multiple=True,
+    help="Controls the generation of quality reports. "
+    "Might require significant time for big generated tables (>1000 rows). "
+    "If set to 'sample', generates a sample report. "
+    "If set to 'accuracy', generates an accuracy report. "
+    "If set to 'metrics_only', outputs the metrics information only to standard output "
+    "without generation of a report. "
+    "If set to 'all', generates both accuracy and sample report. "
+    "If it's absent or set to 'none', no reports are generated.",
+)
+@click.option(
+    "--log_level",
+    default="INFO",
+    type=click.Choice(["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    help="Set the logging level which will be used in the process. "
+         "If absent, it's defaulted to 'INFO'",
+)
+@click.option(
+    "--batch_size",
+    default=32,
+    type=click.IntRange(1),
+    help="Number of rows that goes in one batch. "
+         "This parameter can help to control memory consumption.",
+)
+@click.option(
+    "--fernet_key",
+    default=None,
+    type=str,
+    help="The name of the environment variable that kept the value of the Fernet key "
+         "to encrypt and decrypt the sensitive data stored on the disk",
+)
+def cli_launch_train(
+    metadata_path: Optional[str],
+    source: Optional[str],
+    table_name: Optional[str],
+    epochs: int,
+    drop_null: bool,
+    row_limit: Optional[int],
+    reports: List[str],
+    log_level: str,
+    batch_size: int,
+    fernet_key: Optional[str]
+):
+    """
+    Launch the work of training process
+
+    Parameters
+    ----------
+    metadata_path
+    source
+    table_name
+    epochs
+    drop_null
+    row_limit
+    reports
+    log_level
+    batch_size
+    fernet_key
+    -------
+    """
+    launch_train(
+        metadata_path=metadata_path,
+        source=source,
+        table_name=table_name,
+        epochs=epochs,
+        drop_null=drop_null,
+        row_limit=row_limit,
+        reports=reports,
+        log_level=log_level,
+        batch_size=batch_size,
+        fernet_key=fernet_key
+    )
+
+
 if __name__ == "__main__":
-    launch_train()
+    cli_launch_train()

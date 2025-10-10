@@ -211,6 +211,8 @@ class InferConfig:
             ),
             "train_config_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+            "infer_config_pickle_path":
+                f"model_artifacts/tmp_store/{dynamic_name}/infer_config.pkl",
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
                                             f"merged_infer_{dynamic_name}.csv",
             "path_to_merged_infer": (
