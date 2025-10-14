@@ -1408,7 +1408,7 @@ def test_load_data_from_table_in_excel_format_from_1_sheet_of_2_sheets(rp_logger
     global_context({"sheet_name": "TestName"})
     data_loader = DataLoader(
         f"{DIR_NAME}/unit/data_loaders/fixtures/"
-        "excel_tables/table_with_data_and_2_sheets.xls"
+        "excel_tables/table_with_data_and_2_nonempty_sheets.xlsx"
     )
     df, schema = data_loader.load_data()
     assert isinstance(data_loader.file_loader, ExcelLoader)
@@ -1417,9 +1417,9 @@ def test_load_data_from_table_in_excel_format_from_1_sheet_of_2_sheets(rp_logger
             df,
             pd.DataFrame(
                 {
-                    "gender": [0, 1, 0, 1],
-                    "height": [157.1852, 166.7731, 162.9182, 173.5145],
-                    "id": [925, 84, 821, 383],
+                    "gender": [0, 1],
+                    "height": [162.9182, 173.5145],
+                    "id": [821, 383],
                 }
             ),
         )

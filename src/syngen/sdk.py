@@ -1,62 +1,97 @@
-from typing import Optional, List, Union, Literal
+from typing import Optional, Dict, List, Union, Set
 import os
 import pandas as pd
-from dataclasses import dataclass
 from loguru import logger
 
 from slugify import slugify
-from marshmallow import ValidationError
 from syngen.ml.data_loaders import DataLoader, DataEncryptor
 from syngen.train import launch_train
 from syngen.infer import launch_infer
-from syngen.ml.utils import fetch_config, fetch_env_variables, get_reports
+from syngen.ml.utils import fetch_config, fetch_env_variables
 from syngen.ml.reporters import (
     Report,
     AccuracyReporter,
     SampleAccuracyReporter,
 )
+from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.context import global_context, get_context
+from syngen.ml.utils import get_reports
 
 
-@dataclass
 class DataIO:
-    path: str
-    fernet_key: Optional[str] = None
-
-    def load_data(self) -> pd.DataFrame:
-        data_loader = DataLoader(
+    """
+    SDK class for loading and saving data with optional encryption and format settings.
+    """
+    def __init__(self, path: str, fernet_key: Optional[str] = None, **kwargs):
+        self.path = path
+        self.fernet_key = fernet_key
+        self.metadata = self._create_metadata(**kwargs)
+        self._validate_metadata(self.metadata)
+        global_context(metadata=kwargs)
+        self.data_loader = DataLoader(
             path=self.path,
             table_name="table",
-            metadata={
-                "table": {
-                    "encryption": {
-                        "fernet_key": (
-                            fetch_env_variables({"fernet_key": self.fernet_key}).get("fernet_key")
-                        ),
-                    }
-                }
-            }
+            metadata=self.metadata
         )
-        df, _ = data_loader.load_data()
+
+    def _create_metadata(self, **kwargs) -> Dict:
+        """
+        Create metadata dictionary for data loading and saving
+        """
+        return {
+            "table": {
+                "train_settings": {
+                    "source": self.path
+                },
+                "encryption": {
+                    "fernet_key": (
+                        fetch_env_variables({"fernet_key": self.fernet_key}).get("fernet_key")
+                    )
+                },
+                "format": kwargs
+            }
+        }
+
+    @staticmethod
+    def _validate_metadata(metadata: Dict):
+        ValidationSchema(
+            metadata=metadata,
+            validation_source=True,
+            process="train"
+        ).validate_schema()
+
+    def load_data(self, **kwargs) -> pd.DataFrame:
+        """
+        Load data from the specified path with optional parameters
+        """
+        df, _ = self.data_loader.load_data(**kwargs)
         return df
 
-    def save_data(self, df: pd.DataFrame):
-        data_loader = DataLoader(
-            path=self.path,
-            table_name="table",
-            metadata={
-                "table": {
-                    "encryption": {
-                        "fernet_key": (
-                            fetch_env_variables({"fernet_key": self.fernet_key}).get("fernet_key")
-                        ),
-                    }
-                }
-            }
+    def load_schema(self):
+        """
+        Load the original schema of the data
+        """
+        return self.data_loader.original_schema
+
+    def save_data(
+        self,
+        df: pd.DataFrame,
+        **kwargs
+    ):
+        """
+        Save data to the specified path with optional parameters
+        """
+        self.data_loader.save_data(
+            df,
+            schema=kwargs.get("schema"),
+            format=get_context().get_config()
         )
-        data_loader.save_data(df)
 
 
 class Syngen:
+    """
+    SDK class for training, inference, and the generation of reports.
+    """
 
     @staticmethod
     def train(
@@ -112,64 +147,45 @@ class Syngen:
     def _validate_artifacts(
         table_name: str,
         fernet_key: Optional[str],
-        reports: List[str]
+        reports: Set[str]
     ):
         errors: List[str] = []
 
         slug = slugify(table_name)
 
-        reports = set(reports)
-
-        if fernet_key is not None:
-            try:
-                DataEncryptor.validate_fernet_key(fernet_key)
-            except ValueError as error:
-                errors.append(str(error))
-
         path_to_input_data = (
             f"model_artifacts/tmp_store/{slug}/"
             f"input_data_{slug}.{'dat' if fernet_key is not None else 'pkl'}"
         )
+        if not os.path.exists(path_to_input_data):
+            errors.append(
+                (
+                    f"The input data file wasn't found for the table '{table_name}' "
+                    f"in the path - {path_to_input_data}."
+                )
+            )
 
+        # Type-specific validations
         path_to_train_config = (
             f"model_artifacts/resources/{slug}/vae/checkpoints/train_config.pkl"
         )
         path_to_train_success_file = f"model_artifacts/resources/{slug}/train_message.success"
         path_to_infer_config = f"model_artifacts/tmp_store/{slug}/infer_config.pkl"
         path_to_infer_success_file = f"model_artifacts/tmp_store/{slug}/infer_message.success"
-        path_to_model_dataset = (
-            f"model_artifacts/resources/{slug}/vae/checkpoints/model_dataset.pkl"
-        )
-        common_check_of_artifacts = [
-            (
-                path_to_input_data,
-                (
-                    f"The input data file wasn't found for the table '{table_name}' "
-                    f"in the path - '{path_to_input_data}'."
-                )
-            ),
-            (
-                path_to_model_dataset,
-                (
-                    f"The model dataset file wasn't found for the table '{table_name}' "
-                    f"in the path - '{path_to_model_dataset}'."
-                ),
-            ),
-        ]
         checks_of_artifacts = {
             "sample": [
                 (
                     path_to_train_config,
                     (
                         f"The training configuration wasn't found for the table '{table_name}' "
-                        f"in the path - '{path_to_train_config}'."
+                        f"in the path - {path_to_train_config}."
                     ),
                 ),
                 (
                     path_to_train_success_file,
                     (
                         f"The training success file wasn't found for the table '{table_name}' "
-                        f"in the path - '{path_to_train_success_file}'."
+                        f"in the path - {path_to_train_success_file}."
                     ),
                 ),
             ],
@@ -178,46 +194,25 @@ class Syngen:
                     path_to_infer_config,
                     (
                         f"The inference configuration wasn't found for table '{table_name}' "
-                        f"in the path - '{path_to_infer_config}'"
+                        f"in the path - {path_to_infer_config}"
                     ),
                 ),
                 (
                     path_to_infer_success_file,
                     (
                         f"The inference success file wasn't found for table '{table_name}' "
-                        f"in the path - '{path_to_infer_success_file}'."
+                        f"in the path - {path_to_infer_success_file}."
                     ),
                 ),
             ],
         }
-        for path, message in common_check_of_artifacts:
-            if not os.path.exists(path):
-                errors.append(message)
-
-        type_of_reports = set(
-            [
-                "accuracy"
-                if report in ["accuracy", "metrics_only"]
-                else "sample"
-                for report in reports
-            ]
-        )
-        for report in type_of_reports:
+        for report in reports:
             for path, message in checks_of_artifacts.get(report, []):
                 if not os.path.exists(path):
                     errors.append(message)
 
         if errors:
-            process_phrase = (
-                "training and inference"
-                if ("accuracy" in reports or "metrics_only" in reports)
-                else "training"
-            )
-            errors.append(
-                f"Before the generation of reports, please ensure that the {process_phrase} "
-                f"process of the table '{table_name}' were completed successfully."
-            )
-            raise ValidationError("\n".join(errors))
+            raise FileNotFoundError("\n".join(errors))
 
     @staticmethod
     def _get_sample_reporter(table_name: str) -> SampleAccuracyReporter:
@@ -236,10 +231,7 @@ class Syngen:
         )
 
     @staticmethod
-    def _get_accuracy_reporter(
-        table_name: str,
-        report: str = Literal["accuracy", "metrics_only"]
-    ) -> AccuracyReporter:
+    def _get_accuracy_reporter(table_name: str, report: str) -> AccuracyReporter:
         path_to_infer_config = (
             f"model_artifacts/tmp_store/{slugify(table_name)}/"
             f"infer_config.pkl"
@@ -253,10 +245,21 @@ class Syngen:
             metadata=infer_config.metadata
         )
 
+    def _register_reporter(self, table_name: str, report: str, fernet_key: Optional[str]) -> None:
+        """
+        Register a specific type of report
+        """
+        if report in ["accuracy", "metrics_only"]:
+            accuracy_reporter = self._get_accuracy_reporter(table_name, report)
+            Report().register_reporter(table=table_name, reporter=accuracy_reporter)
+        elif report == "sample":
+            sample_reporter = self._get_sample_reporter(table_name)
+            Report().register_reporter(table=table_name, reporter=sample_reporter)
+
     def generate_reports(
         self,
         table_name: str,
-        reports: Union[str, List],
+        reports: Union[List[str], str],
         fernet_key: Optional[str] = None
     ) -> None:
         """
@@ -266,42 +269,43 @@ class Syngen:
         ----------
         table_name: str
             Table name to generate the report for
-            (same as used in the training or in the inference process)
-        reports: str
-            The list of reports to generate.
-            Supported values are 'accuracy', 'metrics_only' and 'sample'.
+            (same as used in the training or in the inference processes)
+        reports: Union[List[str], str]
+            List of report types to generate.
+            Supported values are: "accuracy", "metrics_only", "sample", "none", "all"
         fernet_key: Optional[str]
             the name of the environment variable kept the value of the Fernet key
             for decrypting the input of the original data, if applicable.
         """
         reports = get_reports(reports, type_of_process="train")
         if reports:
-            self._validate_artifacts(table_name, fernet_key, reports)
+            if fernet_key is not None:
+                fernet_key = fetch_env_variables({"fernet_key": fernet_key}).get("fernet_key")
+                DataEncryptor.validate_fernet_key(fernet_key)
+            self._validate_artifacts(
+                table_name=table_name,
+                fernet_key=fernet_key,
+                reports={
+                    "accuracy"
+                    if report in ["accuracy", "metrics_only"]
+                    else report
+                    for report in reports
+                }
+            )
+        for report in reports:
+            self._register_reporter(table_name, report, fernet_key)
+
+        if reports:
+            Report().generate_report()
         else:
             logger.warning(
                 "No reports to generate. Please specify the report type "
                 "from 'accuracy', 'metrics_only' or 'sample'."
             )
-            return
-
-        for report in reports:
-            if report in ["accuracy", "metrics_only"]:
-                accuracy_reporter = self._get_accuracy_reporter(table_name, report)
-                Report().register_reporter(table=table_name, reporter=accuracy_reporter)
-            elif report == "sample":
-                sample_reporter = self._get_sample_reporter(table_name)
-                Report().register_reporter(table=table_name, reporter=sample_reporter)
-            else:
-                raise ValueError(
-                    f"Invalid report type - '{report}'. "
-                    "Use 'accuracy', 'metrics_only' or 'sample'."
-                )
-
-        Report().generate_report()
 
 
 if __name__ == "__main__":
     Syngen().generate_reports(
-        table_name="bgb_batchlogs",
-        reports=["sample"]
+        table_name="table",
+        reports="accuracy",
     )

@@ -12,7 +12,7 @@ from cryptography.fernet import Fernet
 
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.data_loaders import DataEncryptor
-
+from syngen.sdk import DataIO
 
 SUCCESSFUL_MESSAGE = "The test passed successfully"
 os.environ["FERNET_KEY"] = "VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY="
@@ -232,6 +232,11 @@ def valid_simple_dataframe():
 @pytest.fixture
 def data_encryptor(tmp_path, valid_fernet_key):
     return DataEncryptor(path=str(tmp_path / "test.dat"), fernet_key=valid_fernet_key)
+
+
+@pytest.fixture
+def dataio_data_encryptor(tmp_path):
+    return DataIO(path=str(tmp_path / "test.dat"), fernet_key="FERNET_KEY")
 
 
 @pytest.fixture

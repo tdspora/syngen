@@ -2,11 +2,13 @@ from unittest.mock import patch
 import pytest
 
 from marshmallow import ValidationError
+from cryptography.fernet import Fernet
 
-from syngen.sdk import Syngen, DataIO
+from syngen.sdk import Syngen
 from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
 from syngen.ml.reporters import Report
+from syngen.ml.data_loaders import DataEncryptor
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 TABLE_NAME = "test_table"
@@ -178,9 +180,7 @@ def test_train_table_with_invalid_epochs(rp_logger, caplog):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_drop_null(
-    mock_post_init, mock_launch_train, rp_logger
-):
+def test_train_table_with_valid_drop_null(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
         "Launch the training process with the valid 'drop_null' parameter equals 'True'"
     )
@@ -786,7 +786,9 @@ def test_generate_sample_report(
 ):
     rp_logger.info("Launch the generation of the sample report")
     Syngen().generate_reports(table_name="test_table", reports=report)
-    mock_validate_artifacts.assert_called_once_with("test_table", None, ["sample"])
+    mock_validate_artifacts.assert_called_once_with(
+        table_name="test_table", fernet_key=None, reports={"sample"}
+    )
     mock_get_sample_reporter.assert_called_once_with("test_table")
     mock_get_accuracy_reporter.assert_not_called()
     mock_register_reporter.assert_called_once()
@@ -811,7 +813,9 @@ def test_generate_accuracy_report(
 ):
     rp_logger.info("Launch the generation of the accuracy report")
     Syngen().generate_reports(table_name="test_table", reports=report)
-    mock_validate_artifacts.assert_called_once_with("test_table", None, ["accuracy"])
+    mock_validate_artifacts.assert_called_once_with(
+        table_name="test_table", fernet_key=None, reports={"accuracy"}
+    )
     mock_get_accuracy_reporter.assert_called_once_with("test_table", "accuracy")
     mock_get_sample_reporter.assert_not_called()
     mock_register_reporter.assert_called_once()
@@ -836,7 +840,9 @@ def test_generate_metrics_only_report(
 ):
     rp_logger.info("Launch the generation of the 'metrics_only' report")
     Syngen().generate_reports(table_name="test_table", reports=report)
-    mock_validate_artifacts.assert_called_once_with("test_table", None, ["metrics_only"])
+    mock_validate_artifacts.assert_called_once_with(
+        table_name="test_table", fernet_key=None, reports={"accuracy"}
+    )
     mock_get_accuracy_reporter.assert_called_once_with("test_table", "metrics_only")
     mock_get_sample_reporter.assert_not_called()
     mock_register_reporter.assert_called_once()
@@ -861,8 +867,10 @@ def test_generate_all_reports(
 ):
     rp_logger.info("Launch the generation of the 'metrics_only' report")
     Syngen().generate_reports(table_name="test_table", reports=report)
-    mock_validate_artifacts.assert_called_once()
-    assert mock_get_accuracy_reporter.call_count == 1
+    mock_validate_artifacts.assert_called_once_with(
+        table_name="test_table", fernet_key=None, reports={"accuracy", "sample"}
+    )
+    mock_get_accuracy_reporter.assert_called_once()
     mock_get_sample_reporter.assert_called_once()
     assert mock_register_reporter.call_count == 2
     mock_generate_report.assert_called_once()
@@ -886,8 +894,8 @@ def test_generate_none_reports(
     caplog
 ):
     rp_logger.info("Launch the generation of the 'none' report")
-    Syngen().generate_reports(table_name="test_table", reports=report)
     with caplog.at_level("WARNING"):
+        Syngen().generate_reports(table_name="test_table", reports=report)
         mock_validate_artifacts.assert_not_called()
         mock_get_accuracy_reporter.assert_not_called()
         mock_get_sample_reporter.assert_not_called()
@@ -921,7 +929,9 @@ def test_generate_full_set_of_reports(
         table_name="test_table",
         reports=["accuracy", "metrics_only", "sample"]
     )
-    mock_validate_artifacts.assert_called_once()
+    mock_validate_artifacts.assert_called_once_with(
+        table_name="test_table", fernet_key=None, reports={"accuracy", "sample"}
+    )
     assert mock_get_accuracy_reporter.call_count == 2
     mock_get_sample_reporter.assert_called_once()
     assert mock_register_reporter.call_count == 3
@@ -935,11 +945,46 @@ def test_generate_report_with_wrong_report_type(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen().generate_reports(table_name="test_table", reports="test")
             assert str(error.value) == (
-                f"Invalid report type - 'test'. "
-                "Use 'accuracy', 'metrics_only' or 'sample'."
+                "Invalid input: Acceptable values for the parameter 'reports' "
+                "are none, all, accuracy, metrics_only, sample"
             )
             assert caplog.text == (
-                f"Invalid report type - 'test'. "
-                "Use 'accuracy', 'metrics_only' or 'sample'."
+                "Invalid input: Acceptable values for the parameter 'reports' "
+                "are none, all, accuracy, metrics_only, sample"
             )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("report", [["sample"], "sample"])
+@patch.object(Report, "generate_report")
+@patch.object(Report, "register_reporter")
+@patch.object(Syngen, "_get_sample_reporter")
+@patch.object(Syngen, "_get_accuracy_reporter")
+@patch.object(Syngen, "_validate_artifacts")
+@patch.object(DataEncryptor, "validate_fernet_key")
+def test_generate_report_for_encrypted_data(
+    mock_validate_fernet_key,
+    mock_validate_artifacts,
+    mock_get_accuracy_reporter,
+    mock_get_sample_reporter,
+    mock_register_reporter,
+    mock_generate_report,
+    report,
+    monkeypatch,
+    rp_logger
+):
+    rp_logger.info("Launch the generation of the sample report")
+    fernet_key = Fernet.generate_key().decode()
+    monkeypatch.setenv("FERNET_KEY", fernet_key)
+    Syngen().generate_reports(
+        table_name="test_table", reports=report, fernet_key="FERNET_KEY"
+    )
+    mock_validate_fernet_key.assert_called_once_with(fernet_key)
+    mock_validate_artifacts.assert_called_once_with(
+        table_name="test_table", fernet_key=fernet_key, reports={"sample"}
+    )
+    mock_get_sample_reporter.assert_called_once_with("test_table")
+    mock_get_accuracy_reporter.assert_not_called()
+    mock_register_reporter.assert_called_once()
+    mock_generate_report.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)

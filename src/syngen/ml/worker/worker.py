@@ -129,7 +129,6 @@ class Worker:
         """
         ValidationSchema(
             metadata=self.metadata,
-            metadata_path=self.metadata_path,
             validation_source=self.validation_source,
             process=self.type_of_process
         ).validate_schema()
