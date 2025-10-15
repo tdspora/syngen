@@ -125,7 +125,7 @@ class Syngen:
         size: int = 100,
         table_name: Optional[str] = None,
         run_parallel: bool = False,
-        batch_size: int = 32,
+        batch_size: int = None,
         random_seed: Optional[int] = None,
         reports: Union[str, List[str]] = "none",
         log_level: str = "INFO",
