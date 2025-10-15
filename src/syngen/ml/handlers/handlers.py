@@ -1,15 +1,18 @@
-from typing import Tuple, Optional, Dict, List, Callable
+from typing import Tuple, Optional, Dict, List, Callable, Any
 from abc import ABC, abstractmethod
 import os
 import math
 from ulid import ULID
 from uuid import UUID
+
+import multiprocessing as mp
+import functools
+import psutil
 from copy import deepcopy
 
 import pandas as pd
 import numpy as np
 from numpy.random import seed, choice
-from pathos.multiprocessing import ProcessingPool
 import dill
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
@@ -26,9 +29,14 @@ from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
     get_initial_table_name,
-    ProgressBarHandler
+    ProgressBarHandler,
+    timing,
 )
 from syngen.ml.context import get_context
+
+
+MEMORY_THRESHOLD = 90  # Memory usage threshold in percent
+BATCH_SIZE_REDUCTION_FACTOR = 4  # Recommended factor to reduce batch size in case of memory overflow
 
 
 class AbstractHandler(ABC):
@@ -62,7 +70,11 @@ class BaseHandler(AbstractHandler):
 
     @staticmethod
     def create_wrapper(
-        cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
+        cls_name,
+        data: Optional[pd.DataFrame] = None,
+        schema: Optional[Dict] = None,
+        initial_dataset_to_pass: Optional[Any] = None,
+        **kwargs
     ):
         return globals()[cls_name](
             data,
@@ -73,6 +85,7 @@ class BaseHandler(AbstractHandler):
             batch_size=kwargs["batch_size"],
             main_process=kwargs["main_process"],
             process=kwargs["process"],
+            preloaded_dataset=initial_dataset_to_pass,
         )
 
 
@@ -211,7 +224,7 @@ class VaeInferHandler(BaseHandler):
     wrapper_name: str = field(kw_only=True)
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
-    random_seed_list: List = field(init=False)
+    random_seeds_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)  # noqa: F405
     dataset: Dataset = field(init=False)
     original_schema: Dict = field(init=False)
@@ -220,7 +233,7 @@ class VaeInferHandler(BaseHandler):
     batch_num: int = field(init=False)
 
     def __attrs_post_init__(self):
-        if self.random_seed:
+        if self.random_seed is not None:
             seed(self.random_seed)
         self.batch_num = math.ceil(self.size / self.batch_size)
         self.random_seeds_list = list()
@@ -230,12 +243,108 @@ class VaeInferHandler(BaseHandler):
         self.original_schema = (
             fetch_config(path_to_schema) if os.path.exists(path_to_schema) else None
         )
+
         self.has_vae = len(self.dataset.features) > 0
 
-        if self.has_vae:
-            self.vae = self.__get_wrapper()
-
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
+
+        # set it to None to avoid serialization issues
+        self._pool = None
+
+        if self.has_vae and not self.run_parallel:
+            self.vae = self._get_wrapper(dataset_to_preload=self.dataset)
+
+        if self.has_vae and self.run_parallel:
+            self._setup_parallel_processing()
+
+    def _cleanup_pool(self):
+        if self._pool is not None:
+            self._pool.close()
+            self._pool.join()
+            self._pool = None
+
+    @staticmethod
+    def _initialize_worker_vae_model(handler_instance, dataset_for_worker):
+        return handler_instance._get_wrapper(
+            dataset_to_preload=dataset_for_worker
+        )
+
+    @timing
+    def _setup_parallel_processing(self):
+        mp.set_start_method('fork', force=True)
+
+        logger.info("Running in parallel mode")
+
+        logger.warning(
+            "Note: Running in parallel mode causes "
+            "some log messages to appear multiple times. "
+            "This is expected behavior as the model is loaded "
+            "on multiple devices to ensure efficient processing."
+        )
+
+        self.batch_size, self.batch_num, n_jobs = (
+            self._calculate_batch_configuration()
+        )
+
+        func_for_worker_init = functools.partial(
+            self.__class__._initialize_worker_vae_model,
+            handler_instance=self,
+            dataset_for_worker=self.dataset
+        )
+
+        self._pool = mp.Pool(
+            processes=n_jobs,
+            initializer=self.__class__.worker_init,
+            initargs=(func_for_worker_init,)
+        )
+
+    def _calculate_batch_configuration(self) -> Tuple[int, int, int]:
+        """
+        Calculate optimal batch size, batch number, and worker count
+        for parallel processing.
+
+        Returns:
+            Tuple[int, int, int]: (batch_size, batch_num, n_jobs)
+        """
+        cpu_count = mp.cpu_count()
+
+        if self.batch_num > 1:
+            n_jobs = min(self.batch_num, cpu_count)
+        else:
+            self.batch_num = min(self.size, cpu_count)
+
+            # equal batches for each process in last batch keep the remainder
+            self.batch_size = math.ceil(self.size / self.batch_num)
+
+            # ensure that we have at least 1 record in the last batch
+            if self.batch_size * (self.batch_num - 1) >= self.size:
+                self.batch_size = math.floor(self.size / self.batch_num)
+
+            logger.info(
+                f"Splitting data into {self.batch_num} "
+                f"batches with batch_size={self.batch_size} "
+                f"to run in parallel mode"
+            )
+
+            n_jobs = self.batch_num
+
+        return self.batch_size, self.batch_num, n_jobs
+
+    @staticmethod
+    def worker_init(get_wrapper_func_from_main):
+        global vae_model
+        vae_model = get_wrapper_func_from_main()
+
+    @staticmethod
+    def worker_process(params, random_seed,
+                       random_seeds_list, run_separate_func):
+        global vae_model  # noqa: F824
+        i, size = params
+        if random_seed:
+            seed(random_seeds_list[i % len(random_seeds_list)])
+
+        result = run_separate_func((i, size), vae_model)
+        return result
 
     @staticmethod
     def _synth_word(size, indexes, counts):
@@ -250,18 +359,23 @@ class VaeInferHandler(BaseHandler):
             )
         )
 
-    def __get_wrapper(self):
+    def _get_wrapper(self, dataset_to_preload: Optional[Dataset] = None):
         """
         Create and get the wrapper for the VAE model
         """
+        wrapper_kwargs = {
+            "metadata": deepcopy(self.metadata),
+            "table_name": self.table_name,
+            "paths": self.paths,
+            "batch_size": self.batch_size,
+            "main_process": self.type_of_process,
+            "process": "infer"
+        }
+
         return self.create_wrapper(
-            self.wrapper_name,
-            metadata=deepcopy(self.metadata),
-            table_name=self.table_name,
-            paths=self.paths,
-            batch_size=self.batch_size,
-            main_process=self.type_of_process,
-            process="infer",
+            cls_name=self.wrapper_name,
+            initial_dataset_to_pass=dataset_to_preload,
+            **wrapper_kwargs
         )
 
     def _prepare_dir(self):
@@ -286,8 +400,8 @@ class VaeInferHandler(BaseHandler):
                         cumm_len += len(frame)
         return pd.concat(df_slices, ignore_index=True)
 
-    def generate_vae(self, size):
-        synthetic_infer = self.vae.predict_sampled_df(size)
+    def generate_vae(self, size, vae_model):
+        synthetic_infer = vae_model.predict_sampled_df(size)
         return synthetic_infer
 
     def generate_long_texts(self, size, synthetic_infer):
@@ -311,17 +425,17 @@ class VaeInferHandler(BaseHandler):
             synthetic_infer[col] = generated_column
         return synthetic_infer
 
-    def run_separate(self, params: Tuple):
+    def run_separate(self, params: Tuple, vae_model):
         i, size = params
 
-        if self.random_seed:
+        if self.batch_num > 1:
             seed(self.random_seeds_list[i])
 
         synthetic_infer = pd.DataFrame()
 
         if self.has_vae:
-            logger.info(f"VAE generation for '{self.table_name}' started.")
-            synthetic_infer = self.generate_vae(size)
+            synthetic_infer = self.generate_vae(size, vae_model)
+
         if self.has_no_ml:
             logger.info(f"Long texts generation for '{self.table_name}' started.")
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
@@ -338,30 +452,122 @@ class VaeInferHandler(BaseHandler):
         Each batch will have a size equal to batch_size,
         except for the last batch, which will contain the remaining size
         """
-        quote = self.batch_size
+        full_batch_size = self.batch_size
         nodes = self.batch_num
-        data = [quote] * (nodes - 1)
-        data.append(self.size - quote * (nodes - 1))
+        data = [full_batch_size] * (nodes - 1)
+        data.append(self.size - full_batch_size * (nodes - 1))
         return data
 
     def run(self, size: int, run_parallel: bool):
         logger.info("Start data synthesis")
-        if run_parallel:
-            pool = ProcessingPool()
-            if self.random_seed:
-                self.random_seeds_list = choice(
-                    range(0, max(100, pool.nodes)), pool.nodes, replace=False
-                )
+        batches = list(enumerate(self.split_by_batches()))
+        delta = ProgressBarHandler().delta / self.batch_num
 
-            frames = pool.map(
-                self.run_separate, enumerate(self.split_by_batches())
-            )
-            generated = self._concat_slices_with_unique_pk(frames)
+        if self.has_vae:
+            logger.info(f'VAE generation for {self.table_name} started')
+
+        if self.batch_num > 1:
+            self._set_random_seeds()
+
+        if run_parallel:
+            generated_data = self._run_parallel(batches)
+            return generated_data
         else:
-            if self.random_seed:
-                self.random_seeds_list = [self.random_seed]
-            generated = self.run_separate((0, size))
-        return generated
+            generated_data = self._run_sequential(batches, delta)
+            return generated_data
+
+    def _run_parallel(self, batches: List[Tuple[int, int]]) -> pd.DataFrame:
+        """
+        Handle parallel processing
+        """
+        worker_func = functools.partial(
+            self.worker_process,
+            random_seed=self.random_seed,
+            random_seeds_list=self.random_seeds_list,
+            run_separate_func=self.run_separate
+        )
+
+        frames = []
+        for result in self._pool.imap_unordered(
+                worker_func,
+                ((i, batch_size) for i, batch_size in batches)
+        ):
+            frames.append(result)
+            self._check_memory_usage(len(frames))
+
+        logger.trace(
+            "Finished processing all batches. "
+            f"Memory usage: {psutil.virtual_memory().percent}%"
+        )
+
+        generated_data = frames if frames else pd.DataFrame()
+        return generated_data
+
+    def _run_sequential(self, batches: List[Tuple[int, int]], delta: float) -> pd.DataFrame:
+        """
+        Handle sequential processing
+        """
+        prepared_batches = []
+
+        for i, batch_size in batches:
+            log_message = (
+                f"Data synthesis for the table - '{self.table_name}'. "
+                f"Generating the batch {i + 1} of {self.batch_num}"
+            )
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta,
+                delta=delta,
+                message=log_message,
+            )
+            logger.info(log_message)
+
+            prepared_batch = self.run_separate((i, batch_size), self.vae)
+            prepared_batches.append(prepared_batch)
+
+            self._check_memory_usage(len(prepared_batches))
+
+        generated_data = prepared_batches if prepared_batches else pd.DataFrame()
+        return generated_data
+
+    def _check_memory_usage(self, processed_count: int) -> None:
+        """
+        Check memory usage and log progress
+        """
+        memory_usage = psutil.virtual_memory().percent
+
+        logger.info(
+            f"{processed_count} batches out of {self.batch_num} are processed. "
+            f"Memory usage: {memory_usage}%"
+        )
+
+        if memory_usage > MEMORY_THRESHOLD:
+            self._handle_memory_overflow(memory_usage)
+
+    def _handle_memory_overflow(self, memory_usage: float) -> None:
+        """
+        Handle memory overflow situation by cleaning up and raising error.
+
+        Args:
+            memory_usage: Current memory usage percentage
+
+        Raises:
+            MemoryError: Always raises to stop processing
+        """
+        recommended_batch_size = self.batch_size // BATCH_SIZE_REDUCTION_FACTOR
+
+        error_message = (
+            f"High memory usage detected: {memory_usage}%. "
+            "To avoid memory overflow, reduce the batch size "
+            "and launch the process again. "
+            f"Current batch_size={self.batch_size}. "
+            f"Recommended batch_size={recommended_batch_size}. "
+            "Stopping the process to avoid memory overflow."
+        )
+
+        logger.warning(error_message)
+        self._cleanup_pool()
+
+        raise MemoryError(error_message)
 
     def kde_gen(self, pk_table, pk_column_label, size, fk_label):
         pk = pk_table[pk_column_label]
@@ -476,6 +682,7 @@ class VaeInferHandler(BaseHandler):
             format=get_context().get_config(),
         )
 
+    @timing
     def handle(self, **kwargs):
         self._prepare_dir()
         list_of_reports = [f'\'{report}\'' for report in self.reports]
@@ -489,25 +696,14 @@ class VaeInferHandler(BaseHandler):
             log_message += f", reports - {list_of_reports}"
         logger.debug(log_message)
         logger.info(f"Total of {self.batch_num} batch(es)")
-        batches = self.split_by_batches()
-        delta = ProgressBarHandler().delta / self.batch_num
-        prepared_batches = []
-        for i, batch in enumerate(batches):
-            log_message = (f"Data synthesis for the table - '{self.table_name}'. "
-                           f"Generating the batch {i + 1} of {self.batch_num}")
-            ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress + delta,
-                delta=delta,
-                message=log_message,
-            )
-            logger.info(log_message)
-            prepared_batch = self.run(batch, self.run_parallel)
-            prepared_batches.append(prepared_batch)
+        generated_data = self.run(self.size, self.run_parallel)
+
         prepared_data = (
-            self._concat_slices_with_unique_pk(prepared_batches)
-            if len(prepared_batches) > 0
-            else pd.DataFrame()
+            self._concat_slices_with_unique_pk(
+                generated_data
+                ) if generated_data else pd.DataFrame()
         )
+
         prepared_data = self._restore_empty_columns(prepared_data)
 
         prepared_data = self._drop_technical_columns(prepared_data)
@@ -529,5 +725,45 @@ class VaeInferHandler(BaseHandler):
                 self._save_data(prepared_data)
         if self.metadata_path is None:
             prepared_data = prepared_data[self.dataset.order_of_columns]
-
             self._save_data(prepared_data)
+
+        self._cleanup_pool()
+
+    # unused for now
+    def check_memory_usage_and_adjust_batch_size(
+        self,
+        current_usage,
+        target_usage=80,
+        current_batch_size=None
+    ) -> Optional[int]:
+        """
+        Check the current memory usage and adjust the batch size if necessary.
+        If the current memory usage exceeds the target usage,
+        it reduces the batch size proportionally to the target usage.
+        :param current_usage: Current memory usage in percentage.
+        :param target_usage: Target memory usage in percentage (default is 80%).
+        :param current_batch_size: Current batch size to be adjusted.
+        :return: New batch size if reduced, otherwise the current batch size.
+        """
+        if current_usage > target_usage and (current_batch_size is not None):
+            reduction_factor = target_usage / current_usage
+            new_batch_size = (
+                max(1, math.floor(current_batch_size * reduction_factor))
+            )
+            logger.info(
+                f"Memory usage is {current_usage}%. "
+                f"Reducing batch size from {current_batch_size} "
+                f"to {new_batch_size}"
+            )
+            return new_batch_size
+
+        return current_batch_size
+
+    def _set_random_seeds(self):
+        seed_range = self.batch_num * 100
+        self.random_seeds_list = choice(
+                    seed_range,
+                    size=self.batch_num,
+                    replace=False
+            ).tolist()
+        return self.random_seeds_list
