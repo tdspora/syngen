@@ -1,0 +1,3 @@
+test_table:
+  train_settings:
+    source: tests/unit/processors/fixtures/data_with_column_contained_mixed_data.csv

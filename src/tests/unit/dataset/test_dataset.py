@@ -83,8 +83,8 @@ def test_is_valid_uuid_defined_in_csv_table_without_missing_values(
         paths={},
         main_process="train"
     )
-    assert mock_dataset.fields == expected_schema
     mock_dataset.launch_detection()
+    assert mock_dataset.fields == expected_schema
 
     assert mock_dataset.uuid_columns == {
         "UUIDv1",
@@ -298,8 +298,8 @@ def test_check_non_existent_columns(rp_logger):
         paths={},
         main_process="train"
     )
-    mock_dataset.dropped_columns = set()
     mock_dataset.launch_detection()
+    mock_dataset.dropped_columns = set()
     assert mock_dataset.non_existent_columns == {
         "non_existent_pk_column",
         "non_existent_uq_column",
@@ -799,7 +799,7 @@ def test_set_email_columns(rp_logger):
     df, schema = DataLoader(f"{DIR_NAME}/unit/dataset/fixtures/data_with_emails.csv").load_data()
     mock_dataset = Dataset(
         df=df,
-        schema=schema,
+        schema=CSV_SCHEMA,
         metadata=metadata,
         table_name="mock_table",
         paths={},

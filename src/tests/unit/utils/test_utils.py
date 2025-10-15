@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 from unittest.mock import Mock
 from datetime import datetime, timedelta
@@ -8,13 +9,18 @@ from syngen.ml.utils import (
     slugify_parameters,
     datetime_to_timestamp,
     timestamp_to_datetime,
-    fetch_timezone
+    fetch_timezone,
+    convert_to_timestamp,
+    convert_to_date_string,
+    fetch_env_variables,
+    safe_flatten
 )
 
 from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 def test_slugify_attribute(rp_logger):
+    rp_logger.info("Test the decorator 'slugify_attribute'")
     mock = Mock(attr_1="My Test Attribute", attr_2="Мой другой аттрибут", attr_3="@#$12345*&^")
 
     @slugify_attribute(attr_1="slug_attr1", attr_2="slug_attr2", attr_3="slug_attr3")
@@ -52,6 +58,7 @@ def test_slugify_parameters(parameter, expected_parameter, rp_logger):
 
 
 def test_datetime_to_timestamp(rp_logger):
+    rp_logger.info("Test the function 'datetime_to_timestamp'")
     test_cases = [
         ("0001-01-01", -62135596800.0, "%Y-%m-%d"),
         ("1970-01-01", 0, "%Y-%m-%d"),
@@ -85,7 +92,7 @@ def test_timestamp_to_datetime(rp_logger):
         (np.nan, np.nan),
         (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0)),
     ]
-    rp_logger.info("Test the method 'timestamp_to_datetime'")
+    rp_logger.info("Test the function 'timestamp_to_datetime'")
     for timestamp, expected_datetime in test_cases:
         calculated_datetime = timestamp_to_datetime(timestamp)
         if isinstance(expected_datetime, float) and np.isnan(expected_datetime):
@@ -110,6 +117,39 @@ def test_timestamp_to_datetime_with_delta(rp_logger):
             assert np.isnan(calculated_datetime)
         else:
             assert calculated_datetime == expected_datetime
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "date_column, date_format, na_values, expected_result", [
+        (
+            pd.Series(["01-02-2023", "03-04-2023", "05-06-2023"]),
+            "%d-%m-%Y",
+            [],
+            [1675209600.0, 1680480000.0, 1685923200.0]
+        ),
+        (
+            pd.Series(["01-02-2023", "03-04-2023", "05-06-2023", "label"]),
+            "%d-%m-%Y",
+            ["label"],
+            [1675209600.0, 1680480000.0, 1685923200.0, np.NaN]
+        ),
+    ]
+)
+def test_convert_to_timestamp(date_column, date_format, na_values, expected_result, rp_logger):
+    rp_logger.info("Test the function 'convert_to_timestamp'")
+    assert convert_to_timestamp(date_column, date_format, na_values) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("value, date_format, expected_result", [
+    (1675209600.0, "%d-%m-%Y", "01-02-2023"),
+    (1680480000.0, "%d-%m-%Y", "03-04-2023"),
+    (1685923200.0, "%d-%m-%Y", "05-06-2023"),
+])
+def test_convert_to_date_string(value, date_format, expected_result, rp_logger):
+    rp_logger.info("Test the function 'convert_to_date_string'")
+    assert convert_to_date_string(value, date_format) == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -150,4 +190,139 @@ def test_fetch_timezone_from_date_string_with_tz(
         "containing timezone information"
     )
     assert fetch_timezone(date_string) == expected_timezone
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("value, expected_result", [
+    (
+        '{"key_1": "value_1", "key_2": "value_2"}',
+        {
+            'flattened_data': {'key_1': 'value_1', 'key_2': 'value_2'},
+            'original_data': None
+        }
+    ),
+    (
+        b'{"key_1": "value_1", "key_2": "value_2"}',
+        {
+            'flattened_data': {'key_1': 'value_1', 'key_2': 'value_2'},
+            'original_data': None
+        }
+    ),
+    (
+        '''
+        {
+        "member_1": {"name": "John", "occupation": "doctor"},
+        "member_2": {"name": "Jane", "occupation": "manager", "department": "financial"}
+        }
+        ''',
+        {
+            "flattened_data": {
+                "member_1.name": "John",
+                "member_1.occupation": "doctor",
+                "member_2.department": "financial",
+                "member_2.name": "Jane",
+                "member_2.occupation": "manager"
+            },
+            "original_data": None
+        }
+    ),
+    (
+        b'''
+        {
+        "member_1": {"name": "John", "occupation": "doctor"},
+        "member_2": {"name": "Jane", "occupation": "manager", "department": "financial"}
+        }
+        ''',
+        {
+            "flattened_data": {
+                "member_1.name": "John",
+                "member_1.occupation": "doctor",
+                "member_2.department": "financial",
+                "member_2.name": "Jane",
+                "member_2.occupation": "manager"
+            },
+            "original_data": None
+        }
+    ),
+    (
+        bytearray(b'''
+        {
+        "member_1": {"name": "John", "occupation": "doctor"},
+        "member_2": {"name": "Jane", "occupation": "manager", "department": "financial"}
+        }
+        '''),
+        {
+            "flattened_data": {
+                "member_1.name": "John",
+                "member_1.occupation": "doctor",
+                "member_2.department": "financial",
+                "member_2.name": "Jane",
+                "member_2.occupation": "manager"
+            },
+            "original_data": None
+        }
+    ),
+    ("[1, 2, 3, 4, 5]", {"flattened_data": {}, "original_data": '[1, 2, 3, 4, 5]'}),
+    ("Not a JSON string", {"flattened_data": {}, "original_data": "Not a JSON string"}),
+    (12345, {"flattened_data": {}, "original_data": 12345}),
+    (123.45, {"flattened_data": {}, "original_data": 123.45}),
+    (np.nan, {"flattened_data": {}, "original_data": np.nan}),
+    (None, {"flattened_data": {}, "original_data": None}),
+    (True, {"flattened_data": {}, "original_data": True}),
+    (False, {"flattened_data": {}, "original_data": False}),
+])
+def test_safe_flatten(value, expected_result, rp_logger):
+    rp_logger.info("Test the method 'safe_flatten'")
+    assert safe_flatten(value) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_fetch_env_variables_if_all_env_variables_exist(rp_logger, monkeypatch):
+    rp_logger.info(
+        "Test the function 'fetch_env_variables' when all environment variables exist"
+    )
+    monkeypatch.setenv("TEST_ENV_VAR1", "value1")
+    monkeypatch.setenv("TEST_ENV_VAR2", "value2")
+
+    env_vars = fetch_env_variables(
+        {"secret_1": "TEST_ENV_VAR1", "secret_2": "TEST_ENV_VAR2"}
+    )
+
+    assert env_vars == {
+        "secret_1": "value1",
+        "secret_2": "value2"
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_fetch_env_variables_if_one_of_all_env_variables_exist(rp_logger, monkeypatch):
+    rp_logger.info(
+        "Test the function 'fetch_env_variables' when one of all environment variables exist"
+    )
+    monkeypatch.setenv("TEST_ENV_VAR1", "value1")
+    with pytest.raises(ValueError) as error:
+        fetch_env_variables(
+            {"secret_1": "TEST_ENV_VAR1", "secret_2": "TEST_ENV_VAR2"}
+        )
+        assert (
+            "The value of the environment variable 'TEST_ENV_VAR2' wasn't fetched. "
+            "Please, check whether it is set correctly."
+        ) in str(error.value)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_fetch_env_variables_if_all_env_variables_dont_exist(rp_logger):
+    rp_logger.info(
+        "Test the function 'fetch_env_variables' if all environment variables don't exist"
+    )
+    with pytest.raises(ValueError) as error:
+        fetch_env_variables(
+            {"secret_1": "TEST_ENV_VAR1", "secret_2": "TEST_ENV_VAR2"}
+        )
+        assert (
+            "The value of the environment variable 'TEST_ENV_VAR1' wasn't fetched. "
+            "Please, check whether it is set correctly. "
+            "The value of the environment variable 'TEST_ENV_VAR2' wasn't fetched. "
+            "Please, check whether it is set correctly."
+        ) in str(error.value)
     rp_logger.info(SUCCESSFUL_MESSAGE)

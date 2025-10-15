@@ -68,32 +68,29 @@ class Worker:
             slugified_table = slugify(table)
 
             if self.type_of_process == "train":
-                self._clean_training_directories(slugified_table)
+                self._clean_training_artifacts(slugified_table)
             elif self.type_of_process == "infer":
-                self._clean_inference_directories(slugified_table)
+                self._clean_inference_artifacts(slugified_table)
 
-    def _clean_training_directories(self, table):
+    def _clean_training_artifacts(self, table):
         """
-        Remove existing artifacts and prepare directories before a training process
+        Remove existing artifacts related to the previous training process
+        and prepare directories
         """
         resources_path = f"model_artifacts/resources/{table}/"
-        tmp_store_path = f"model_artifacts/tmp_store/{table}/"
 
         self._remove_existed_artifact(resources_path)
-        self._remove_existed_artifact(tmp_store_path)
         self._prepare_dirs(table)
 
-    def _clean_inference_directories(self, table):
+    def _clean_inference_artifacts(self, table):
         """
-        Remove existing artifacts before an inference process
+        Remove existing artifacts related to the previous inference process
         """
-        path_to_reports = f"model_artifacts/tmp_store/{table}/reports"
         default_path_to_merged_infer = (
             f"model_artifacts/tmp_store/{table}/merged_infer_{table}.csv"
         )
         success_file_path = f"model_artifacts/tmp_store/{table}/infer_message.success"
 
-        self._remove_existed_artifact(path_to_reports)
         self._remove_existed_artifact(default_path_to_merged_infer)
         self._remove_existed_artifact(success_file_path)
 

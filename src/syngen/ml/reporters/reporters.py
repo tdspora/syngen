@@ -5,20 +5,22 @@ from typing import (
     Optional,
     Callable,
     Union,
-    List
+    List,
+    Set
 )
 import itertools
 from collections import defaultdict
 from copy import deepcopy
+import os
+import json
 
 import pandas as pd
-import numpy as np
 from loguru import logger
 
 from syngen.ml.utils import (
     nan_labels_to_float,
-    fetch_config,
-    datetime_to_timestamp,
+    convert_to_timestamp,
+    fetch_config
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
@@ -48,6 +50,19 @@ class Reporter:
         self.dataset = None
         self.columns_nan_labels = dict()
         self.na_values = dict()
+        self.technical_columns = self._fetch_technical_columns()
+
+    def _fetch_technical_columns(self) -> Set[str]:
+        """
+        Check if there are technical columns in the dataframe and return them
+        """
+        path_to_flatten_metadata = self.paths.get("path_to_flatten_metadata")
+        if os.path.exists(path_to_flatten_metadata):
+            with open(path_to_flatten_metadata, "r") as f:
+                flattening_mapping = json.load(f).get(self.table_name).get("flattening_mapping")
+                technical_columns = set(f"{col}_" for col in flattening_mapping.keys())
+                return technical_columns
+        return set()
 
     def _fetch_dataframe(self) -> pd.DataFrame:
         """
@@ -75,6 +90,12 @@ class Reporter:
                 sensitive=True
             ).load_data()
         synthetic, schema = DataLoader(path=self.paths["path_to_merged_infer"]).load_data()
+        synthetic = synthetic[
+            [col for col in synthetic.columns if col not in self.technical_columns]
+        ]
+        original = original[
+            [col for col in original.columns if col not in self.technical_columns]
+        ]
         return original, synthetic
 
     def fetch_data_types(self):
@@ -97,19 +118,9 @@ class Reporter:
             set(self.dataset.fk_columns) |
             set(self.dataset.uq_columns)
         )
-        types = tuple(columns - keys_columns for columns in types)
+        types = tuple(columns - keys_columns - self.technical_columns for columns in types)
 
         return types
-
-    @staticmethod
-    def convert_to_timestamp(df, col_name, date_format, na_values):
-        """
-        Convert date column to timestamp
-        """
-        return [
-            datetime_to_timestamp(d, date_format)
-            if d not in na_values else np.NaN for d in df[col_name]
-        ]
 
     def preprocess_data(self, original: pd.DataFrame, synthetic: pd.DataFrame):
         """
@@ -118,9 +129,6 @@ class Reporter:
         without keys columns
         """
         types = self.fetch_data_types()
-        missing_columns = set(original) - set(synthetic)
-        for col in missing_columns:
-            synthetic[col] = np.nan
         exclude_columns = self.dataset.uuid_columns
         for column in self.dataset.cast_to_integer:
             original[column] = pd.to_numeric(
@@ -157,12 +165,8 @@ class Reporter:
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
         na_values = self.dataset.format.get("na_values", [])
         for date_col, date_format in self.dataset.date_mapping.items():
-            original[date_col] = self.convert_to_timestamp(
-                original, date_col, date_format, na_values
-            )
-            synthetic[date_col] = self.convert_to_timestamp(
-                synthetic, date_col, date_format, na_values
-            )
+            original[date_col] = convert_to_timestamp(original[date_col], date_format, na_values)
+            synthetic[date_col] = convert_to_timestamp(synthetic[date_col], date_format, na_values)
 
         int_columns = date_columns | int_columns
         text_columns = str_columns | long_text_columns | email_columns
@@ -179,8 +183,8 @@ class Reporter:
         categorical_columns = categorical_columns | binary_columns
 
         for col in categorical_columns:
-            original[col] = original[col].astype(str)
-            synthetic[col] = synthetic[col].astype(str)
+            original[col] = original[col].fillna("nan").astype(str)
+            synthetic[col] = synthetic[col].fillna("nan").astype(str)
         return (
             original,
             synthetic,

@@ -1,10 +1,13 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable, Literal
+from typing import List, Dict, Optional, Union, Set, Callable
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
+import json
+from json import JSONDecodeError
+from flatten_json import flatten
 
 import pandas as pd
 import numpy as np
@@ -159,6 +162,13 @@ def timestamp_to_datetime(timestamp: int, delta=False):
         return epoch_datetime + delta_of_time
 
 
+def convert_to_date_string(value: Union[int, float], date_format: str) -> str:
+    """
+    Convert timestamp to string values represented dates in a column
+    """
+    return timestamp_to_datetime(int(value)).strftime(date_format)
+
+
 def generate_uuids(version: Union[int, str], size: int):
     ulid = ULID()
     generated_uuid_column = []
@@ -211,6 +221,16 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     return set(names)
 
 
+def convert_to_timestamp(data: pd.Series, date_format: str, na_values: List[str]):
+    """
+    Convert the string values to timestamp
+    """
+    return [
+        datetime_to_timestamp(d, date_format)
+        if d not in na_values else np.NaN for d in data
+    ]
+
+
 def fetch_timezone(date_string: str) -> Union[str, float]:
     """
     Attempts to find and extract a timezone string from a date string.
@@ -245,7 +265,7 @@ def get_nan_labels(df: pd.DataFrame, excluded_columns: Set[str]) -> Dict:
     Get labels that represent nan values in float/int columns
     """
     columns_nan_labels = {}
-    object_columns = df.select_dtypes(include=[pd.StringDtype(), "object"]).columns
+    object_columns = df.select_dtypes(include=[pd.StringDtype(), "object", "string"]).columns
     columns = set(object_columns) - excluded_columns
     for column in columns:
         if df[column].isna().sum() > 0:
@@ -405,7 +425,7 @@ def get_log_path(table_name: Optional[str], metadata_path: Optional[str], type_o
     """
     logs_dir_name = "model_artifacts/system_store/logs"
     unique_name = fetch_unique_root(table_name, metadata_path)
-    unique_name = f"{unique_name}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    unique_name = f"{unique_name}_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
     file_name_without_extension = f"logs_{type_of_process}_{unique_name}"
     file_path = os.path.join(
         logs_dir_name, f"{slugify(file_name_without_extension)}.log"
@@ -421,6 +441,28 @@ def fetch_log_message(message):
     log_message = (f'{record["time"]} | {record["level"]} | '
                    f'{record["file"]}:{record["function"]}:{record["line"]} - {record["message"]}')
     return log_message
+
+
+def fetch_env_variables(options: Dict) -> Dict:
+    """
+    Fetches the values of environment variables specified in options
+    """
+    errors = []
+    options = options.copy()
+    for option, value in options.items():
+        if value is not None:
+            fetched_value = os.getenv(value)
+            if fetched_value is None:
+                error_message = (
+                    f"The value of the environment variable '{value}' wasn't fetched. "
+                    "Please, check whether it is set correctly."
+                )
+                errors.append(error_message)
+            options[option] = fetched_value
+    if errors:
+        errors = " ".join(errors)
+        raise ValueError(errors)
+    return options
 
 
 def file_sink(message):
@@ -451,7 +493,7 @@ def setup_logger():
 
 
 def setup_log_process(
-    type_of_process: Literal["train", "infer"],
+    type_of_process: str,
     log_level: str,
     table_name: Optional[str],
     metadata_path: Optional[str]
@@ -538,3 +580,30 @@ class ValidationError(Exception):
     ):
         super().__init__(message)
         self.message = message
+
+
+def safe_flatten(val):
+    """
+    Safely flatten a JSON string into a flat dictionary.
+    If the input won't be flattened, return the original value.
+    """
+    if not isinstance(val, (str, bytes, bytearray)):
+        return {
+            "original_data": val,
+            "flattened_data": {}
+        }
+
+    try:
+        parsed = json.loads(val)
+        if isinstance(parsed, dict):
+            return {
+                "flattened_data": flatten(parsed, "."),
+                "original_data": None
+            }
+    except JSONDecodeError:
+        pass
+
+    return {
+        "original_data": val,
+        "flattened_data": {}
+    }

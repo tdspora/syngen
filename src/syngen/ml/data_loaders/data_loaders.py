@@ -20,7 +20,7 @@ from cryptography.fernet import Fernet
 
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
-from syngen.ml.utils import trim_string
+from syngen.ml.utils import trim_string, fetch_env_variables
 from syngen.ml.context import get_context, global_context
 from syngen.ml.validation_schema import (
     ExcelFormatSettingsSchema,
@@ -456,11 +456,35 @@ class YAMLLoader(BaseDataLoader):
             self._normalize_reports(settings, "infer")
         return metadata
 
+    def _fetch_encryption_settings(self, metadata: dict) -> dict:
+        """
+        Fetch the encryption settings, expecially 'fernet_key' parameter,
+        from environment variables
+        """
+        errors = list()
+        for table, settings in metadata.items():
+            try:
+                if "encryption" not in settings:
+                    settings["encryption"] = {}
+                else:
+                    settings["encryption"] = fetch_env_variables(settings["encryption"])
+            except ValueError as error:
+                errors.append(str(error))
+                continue
+        if errors:
+            errors = " ".join(errors)
+            logger.error(errors)
+            raise ValueError(errors)
+        else:
+            return metadata
+
     def _load_data(self, metadata_file) -> Dict:
         try:
             metadata = yaml.load(metadata_file, Loader=SafeLoader)
-            metadata = self.replace_none_values_of_metadata_settings(metadata)
+            metadata = self._replace_none_values_of_metadata_settings(metadata)
+            metadata = self._fetch_encryption_settings(metadata)
             metadata = self._normalize_parameter_reports(metadata)
+
             return metadata
         except ScannerError as error:
             message = (
@@ -475,7 +499,7 @@ class YAMLLoader(BaseDataLoader):
         with open(self.path, "r", encoding="utf-8") as f:
             return self._load_data(f)
 
-    def replace_none_values_of_metadata_settings(self, metadata: dict):
+    def _replace_none_values_of_metadata_settings(self, metadata: dict):
         """
         Replace None values for parameters in the metadata
         """
@@ -633,6 +657,14 @@ class DataEncryptor(BaseDataLoader):
         data, schema = self.load_data()
         return data.columns.tolist()
 
+    @staticmethod
+    def _save_data(path: str, data: bytes):
+        """
+        Save the encrypted dataframe to the disk
+        """
+        with open(path, "wb") as encrypted_file:
+            encrypted_file.write(data)
+
     def save_data(self, df: pd.DataFrame):
         """
         Save the encrypted dataframe to the disk
@@ -643,8 +675,7 @@ class DataEncryptor(BaseDataLoader):
 
             # Use atomic write operation for better safety
             temp_path = f"{self.path}.tmp"
-            with open(temp_path, "wb") as encrypted_file:
-                encrypted_file.write(encrypted_data)
+            self._save_data(temp_path, encrypted_data)
             os.replace(temp_path, self.path)
 
             logger.info(
@@ -656,14 +687,19 @@ class DataEncryptor(BaseDataLoader):
             logger.error(f"Encryption failed: {str(e)}")
             raise e
 
+    def _load_data(self) -> bytes:
+        """
+        Read encrypted data from disk.
+        """
+        with open(self.path, "rb") as encrypted_file:
+            return encrypted_file.read()
+
     def load_data(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
-        Load the decrypted data from the disk
+        Load the decrypted data from the disk.
         """
         try:
-            with open(self.path, "rb") as encrypted_file:
-                encrypted_data = encrypted_file.read()
-
+            encrypted_data = self._load_data()
             decrypted_data = self.fernet.decrypt(encrypted_data)
             df_decrypted = pkl.loads(decrypted_data)
 

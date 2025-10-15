@@ -9,6 +9,9 @@ from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
 
 
+TIMESTAMP = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
+
+
 @dataclass
 class TrainConfig:
     """
@@ -63,17 +66,15 @@ class TrainConfig:
         """
         Create the paths which used in training process
         """
-        losses_file_name = (
-            f"losses_{self.table_name}_"
-            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        )
         fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
             "tmp_store_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/",
             "source_path": self.source,
-            "reports_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/reports",
+            "reports_path": f"model_artifacts/resources/{self.slugify_table_name}/reports",
+            "path_to_sample_report": f"model_artifacts/resources/{self.slugify_table_name}/"
+                                     f"reports/sample-report-{TIMESTAMP}.html",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}."
                                f"{'dat' if fernet_key is not None else 'pkl'}",
@@ -93,7 +94,8 @@ class TrainConfig:
             "path_to_flatten_metadata":
                 f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
-            "losses_path": f"model_artifacts/system_store/losses/{slugify(losses_file_name)}.csv"
+            "losses_path": f"model_artifacts/system_store/losses/"
+                           f"losses-{self.slugify_table_name}-{TIMESTAMP}.csv"
         }
 
 
@@ -185,7 +187,12 @@ class InferConfig:
             "path_to_flatten_metadata":
                 f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
-            "input_data_path": self.train_config.paths["input_data_path"]
+            "input_data_path": self.train_config.paths["input_data_path"],
+            "path_to_accuracy_report": (
+                "model_artifacts/"
+                f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
+                f"/{self.slugify_table_name}/reports/accuracy-report-{TIMESTAMP}.html"
+            )
         })
 
     @slugify_attribute(table_name="slugify_table_name")
@@ -197,7 +204,11 @@ class InferConfig:
             self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         )
         self.paths = {
-            "reports_path": f"model_artifacts/tmp_store/{dynamic_name}/reports",
+            "reports_path": (
+                f"model_artifacts/"
+                f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
+                f"/{dynamic_name}/reports"
+            ),
             "train_config_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
