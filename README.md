@@ -629,14 +629,14 @@ df = data_io.load_data()
 data_io.save_data(df)
 ```
 
-### Key SDK Features
+### Key SDK features
 
-- **Training and Inference**: All CLI parameters are available as method arguments
-- **Report Generation**: Generate quality reports separately for a ceratin table after training/inference processes
+- **Training and inference**: All CLI parameters are available as method arguments
+- **Report generation**: Generate quality reports separately for a certain table after training/inference processes
 - **Data I/O**: Load and save data in multiple formats (CSV, Avro, Excel) with custom settings
-- **Encryption Support**: Use Fernet keys for secure data handling
-- **Metadata Support**: Use YAML metadata files for complex workflows with multiple tables
-- **Format Configuration**: Customize delimiters, encodings, and other format-specific settings
+- **Encryption support**: Use Fernet keys for secure data handling
+- **Metadata support**: Use YAML metadata files for complex workflows with multiple tables
+- **Format configuration**: Customize delimiters, encodings, and other format-specific settings
 
 ### SDK Examples
 
