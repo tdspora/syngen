@@ -308,3 +308,17 @@ class Syngen:
                 "No reports to generate. Please specify the report type "
                 "from 'accuracy', 'metrics_only' or 'sample'."
             )
+
+
+if __name__ == "__main__":
+    from syngen.sdk import Syngen
+
+    Syngen.train(
+        source="../../examples/example-data/housing.csv",
+        table_name="housing",
+        epochs=5,
+        drop_null=False,
+        row_limit=1000,
+        batch_size=32,
+        reports="all"
+    )

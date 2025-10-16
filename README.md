@@ -564,6 +564,85 @@ Then you should set the generated key as an environment variable in your termina
 export YOUR_FERNET_KEY_NAME='YOUR_GENERATED_FERNET_KEY'
 ```
 
+## Using SDK (Programmatic Interface)
+
+In addition to the CLI, *Syngen* provides a Python SDK for programmatic access to the main functionality. The SDK is useful when you want to integrate synthetic data generation into your Python applications, notebooks, or data pipelines.
+
+### SDK Classes
+
+The SDK provides two main classes:
+
+#### 1. `Syngen` - Core functionality for training, inference, and report generation
+
+```python
+from syngen.sdk import Syngen
+
+# Training
+Syngen.train(
+  source="path/to/data.csv",
+  table_name="my_table",
+  epochs=10,
+  row_limit=1000,
+  batch_size=32,
+  log_level="DEBUG",
+  reports="all"
+)
+
+Syngen.train(
+  metadata_path="path/to/metadata.yaml",
+  log_level="DEBUG"
+)
+
+# Inference
+Syngen.infer(
+  table_name="my_table",
+  size=1000,
+  random_seed=42,
+  reports="accuracy"
+)
+
+Syngen.infer(
+  metadata_path="path/to/metadata.yaml",
+  log_level="DEBUG"
+)
+
+# Generate reports separately for a certain table
+Syngen.generate_reports(
+    table_name="my_table",
+    reports=["accuracy", "sample"]
+)
+```
+
+#### 2. `DataIO` - Data loading and saving
+
+```python
+from syngen.sdk import DataIO
+
+data_io = DataIO(
+    path="data.csv",
+    sep=',',
+    encoding='utf-8',
+    header=0
+)
+df = data_io.load_data()
+
+data_io.save_data(df)
+```
+
+### Key SDK Features
+
+- **Training and Inference**: All CLI parameters are available as method arguments
+- **Report Generation**: Generate quality reports separately for a ceratin table after training/inference processes
+- **Data I/O**: Load and save data in multiple formats (CSV, Avro, Excel) with custom settings
+- **Encryption Support**: Use Fernet keys for secure data handling
+- **Metadata Support**: Use YAML metadata files for complex workflows with multiple tables
+- **Format Configuration**: Customize delimiters, encodings, and other format-specific settings
+
+### SDK Examples
+
+For detailed examples and usage patterns, please refer to the SDK demonstration notebook [SDK_demonstration.ipynb](demo-notebooks/SDK_demonstration.ipynb)
+
+
 ## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10 or 3.11
 
 ### Prerequisites
