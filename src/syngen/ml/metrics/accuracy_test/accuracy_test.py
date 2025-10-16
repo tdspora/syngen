@@ -312,7 +312,6 @@ class AccuracyTest(BaseTest):
                 "Correlation": corr_result,
             }
         )
-
         if self.plot_exists:
             self._generate_report(
                 acc_median,

@@ -25,7 +25,7 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     file_sink,
     ProgressBarHandler,
     get_initial_table_name,
-    validate_parameter_reports,
+    get_reports,
     timing,
     ValidationError,
     TIMEZONE_REGEX,

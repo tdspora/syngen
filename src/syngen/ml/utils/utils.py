@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable
+from typing import List, Dict, Optional, Union, Set, Literal, Tuple
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -17,6 +17,7 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
+from syngen.ml.validation_schema import ReportTypes
 
 
 MAX_ALLOWED_TIME_MS = 253402214400
@@ -535,39 +536,49 @@ def timing(func):
     return wrapper
 
 
-def validate_parameter_reports(report_types: list, full_list: list) -> Callable:
+def get_reports(
+    value: Union[List[str], Tuple[str], str],
+    type_of_process: Literal["train", "infer"]
+) -> List[str]:
     """
-    Validate the values of the parameter 'reports'
+    Validate the values provided by the parameter 'reports',
+    and get the list of reports
     """
-    def validator(ctx, param, value) -> List[str]:
-        input_values = set(value)
-        valid_values: List = ["none", "all"]
-        valid_values.extend(report_types)
+    input_values = set(value) if isinstance(value, (list, tuple)) else {value}
+    valid_values: List = ["none", "all"]
+    valid_values.extend(
+        ReportTypes().train_report_types
+        if type_of_process == "train"
+        else ReportTypes().infer_report_types
+    )
 
-        if not input_values.issubset(set(valid_values)):
+    if not input_values.issubset(set(valid_values)):
+        raise ValueError(
+            f"Invalid input: Acceptable values for the parameter 'reports' are "
+            f"{', '.join(valid_values)}."
+        )
+    if "none" in input_values and "all" in input_values:
+        raise ValueError(
+            "Invalid input: The 'reports' parameter cannot be set to both 'none' and 'all'. "
+            "Please provide only one of these options."
+        )
+
+    if "none" in input_values or "all" in input_values:
+        if len(input_values) > 1:
             raise ValueError(
-                f"Invalid input: Acceptable values for the parameter '--reports' are "
-                f"{', '.join(valid_values)}."
+                "Invalid input: When 'reports' option is set to 'none' or 'all', "
+                "no other values should be provided."
             )
-        if "none" in input_values and "all" in input_values:
-            raise ValueError(
-                "Invalid input: The '--reports' parameter cannot be set to both 'none' and 'all'. "
-                "Please provide only one of these options."
+        if list(input_values)[0] == "all":
+            return (
+                ReportTypes().full_list_of_train_report_types
+                if type_of_process == "train"
+                else ReportTypes().full_list_of_infer_report_types
             )
+        if list(input_values)[0] == "none":
+            return list()
 
-        if "none" in input_values or "all" in input_values:
-            if len(input_values) > 1:
-                raise ValueError(
-                    "Invalid input: When '--reports' option is set to 'none' or 'all', "
-                    "no other values should be provided."
-                )
-            if value[0] == "all":
-                return full_list
-            if value[0] == "none":
-                return list()
-
-        return list(input_values)
-    return validator
+    return list(input_values)
 
 
 class ValidationError(Exception):

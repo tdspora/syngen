@@ -172,7 +172,16 @@ class InferStrategy(Strategy):
         configuration = InferConfig(**kwargs)
         self.config = configuration
         self.metadata = deepcopy(self.config.metadata)
+        self._save_infer_config()
         return self
+
+    def _save_infer_config(self):
+        metadata = deepcopy(self.config.metadata)
+        self.config.metadata = clean_up_metadata(metadata=metadata)
+
+        BinaryLoader(
+            path=self.config.paths["infer_config_pickle_path"]
+        ).save_data(data=self.config)
 
     def add_handler(self, type_of_process: str):
         """

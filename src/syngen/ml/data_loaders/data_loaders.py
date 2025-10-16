@@ -665,7 +665,7 @@ class DataEncryptor(BaseDataLoader):
         with open(path, "wb") as encrypted_file:
             encrypted_file.write(data)
 
-    def save_data(self, df: pd.DataFrame):
+    def save_data(self, df: pd.DataFrame, **kwargs):
         """
         Save the encrypted dataframe to the disk
         """
