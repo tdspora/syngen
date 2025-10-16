@@ -608,8 +608,8 @@ Syngen.infer(
 
 # Generate reports separately for a certain table
 Syngen.generate_reports(
-    table_name="my_table",
-    reports=["accuracy", "sample"]
+  table_name="my_table",
+  reports=["accuracy", "sample"]
 )
 ```
 
@@ -619,10 +619,10 @@ Syngen.generate_reports(
 from syngen.sdk import DataIO
 
 data_io = DataIO(
-    path="data.csv",
-    sep=',',
-    encoding='utf-8',
-    header=0
+  path="data.csv",
+  sep=',',
+  encoding='utf-8',
+  header=0
 )
 df = data_io.load_data()
 
