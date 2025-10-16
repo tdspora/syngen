@@ -215,7 +215,7 @@ class Syngen:
             raise FileNotFoundError("\n".join(errors))
 
     @staticmethod
-    def _get_sample_reporter(table_name: str) -> SampleAccuracyReporter:
+    def _get_sample_reporter(table_name: str, fernet_key: Optional[str]) -> SampleAccuracyReporter:
         """
         Return a SampleAccuracyReporter instance for the specified table
         """
@@ -223,6 +223,7 @@ class Syngen:
             f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints/train_config.pkl"
         )
         train_config = fetch_config(config_pickle_path=path_to_train_config)
+        train_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return SampleAccuracyReporter(
             table_name=table_name,
             paths=train_config.paths,
@@ -231,13 +232,18 @@ class Syngen:
         )
 
     @staticmethod
-    def _get_accuracy_reporter(table_name: str, report: str) -> AccuracyReporter:
+    def _get_accuracy_reporter(
+        table_name: str,
+        report: str,
+        fernet_key: Optional[str]
+    ) -> AccuracyReporter:
         path_to_infer_config = (
             f"model_artifacts/tmp_store/{slugify(table_name)}/"
             f"infer_config.pkl"
         )
         infer_config = fetch_config(config_pickle_path=path_to_infer_config)
         infer_config.reports = [report]
+        infer_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return AccuracyReporter(
             table_name=table_name,
             paths=infer_config.paths,
@@ -250,10 +256,10 @@ class Syngen:
         Register a specific type of report
         """
         if report in ["accuracy", "metrics_only"]:
-            accuracy_reporter = self._get_accuracy_reporter(table_name, report)
+            accuracy_reporter = self._get_accuracy_reporter(table_name, report, fernet_key)
             Report().register_reporter(table=table_name, reporter=accuracy_reporter)
         elif report == "sample":
-            sample_reporter = self._get_sample_reporter(table_name)
+            sample_reporter = self._get_sample_reporter(table_name, fernet_key)
             Report().register_reporter(table=table_name, reporter=sample_reporter)
 
     def generate_reports(
@@ -302,10 +308,3 @@ class Syngen:
                 "No reports to generate. Please specify the report type "
                 "from 'accuracy', 'metrics_only' or 'sample'."
             )
-
-
-if __name__ == "__main__":
-    Syngen().generate_reports(
-        table_name="table",
-        reports="accuracy",
-    )

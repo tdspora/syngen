@@ -1,5 +1,6 @@
 from unittest.mock import patch
 import pytest
+import os
 
 from marshmallow import ValidationError
 from cryptography.fernet import Fernet
@@ -789,7 +790,7 @@ def test_generate_sample_report(
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, reports={"sample"}
     )
-    mock_get_sample_reporter.assert_called_once_with("test_table")
+    mock_get_sample_reporter.assert_called_once_with("test_table", None)
     mock_get_accuracy_reporter.assert_not_called()
     mock_register_reporter.assert_called_once()
     mock_generate_report.assert_called_once()
@@ -816,7 +817,7 @@ def test_generate_accuracy_report(
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, reports={"accuracy"}
     )
-    mock_get_accuracy_reporter.assert_called_once_with("test_table", "accuracy")
+    mock_get_accuracy_reporter.assert_called_once_with("test_table", "accuracy", None)
     mock_get_sample_reporter.assert_not_called()
     mock_register_reporter.assert_called_once()
     mock_generate_report.assert_called_once()
@@ -843,7 +844,7 @@ def test_generate_metrics_only_report(
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, reports={"accuracy"}
     )
-    mock_get_accuracy_reporter.assert_called_once_with("test_table", "metrics_only")
+    mock_get_accuracy_reporter.assert_called_once_with("test_table", "metrics_only", None)
     mock_get_sample_reporter.assert_not_called()
     mock_register_reporter.assert_called_once()
     mock_generate_report.assert_called_once()
@@ -983,7 +984,7 @@ def test_generate_report_for_encrypted_data(
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=fernet_key, reports={"sample"}
     )
-    mock_get_sample_reporter.assert_called_once_with("test_table")
+    mock_get_sample_reporter.assert_called_once_with("test_table", os.getenv("FERNET_KEY"))
     mock_get_accuracy_reporter.assert_not_called()
     mock_register_reporter.assert_called_once()
     mock_generate_report.assert_called_once()
