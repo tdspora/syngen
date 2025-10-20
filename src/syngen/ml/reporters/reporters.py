@@ -1,13 +1,5 @@
 from abc import abstractmethod
-from typing import (
-    Dict,
-    Tuple,
-    Optional,
-    Callable,
-    Union,
-    List,
-    Set
-)
+from typing import Dict, Tuple, Optional, Callable, Union, List, Set
 import itertools
 from collections import defaultdict
 from copy import deepcopy

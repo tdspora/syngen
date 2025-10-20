@@ -72,7 +72,7 @@ class TrainConfig:
             "source_path": self.source,
             "reports_path": f"model_artifacts/resources/{self.slugify_table_name}/reports",
             "path_to_sample_report": f"model_artifacts/resources/{self.slugify_table_name}/"
-                                     f"reports/sample-report-{timestamp}.html",
+                                     f"reports/sample-report.html",
             "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                f"input_data_{self.slugify_table_name}."
                                f"{'dat' if fernet_key is not None else 'pkl'}",
@@ -179,7 +179,6 @@ class InferConfig:
         """
         Create the paths which used in inference process
         """
-        timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
         self.paths.update({
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
@@ -190,7 +189,7 @@ class InferConfig:
             "path_to_accuracy_report": (
                 "model_artifacts/"
                 f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
-                f"/{self.slugify_table_name}/reports/accuracy-report-{timestamp}.html"
+                f"/{self.slugify_table_name}/reports/accuracy-report.html"
             )
         })
 

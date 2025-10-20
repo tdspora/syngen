@@ -279,8 +279,10 @@ class AccuracyTest(BaseTest):
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
             round=round,
         )
-
-        path_to_accuracy_report = f"{self.paths['path_to_accuracy_report']}"
+        path, extension = os.path.splitext(self.paths["path_to_accuracy_report"])
+        path_to_accuracy_report = (
+            f"{path}-{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}{extension}"
+        )
         os.makedirs(os.path.dirname(path_to_accuracy_report), exist_ok=True)
         with open(
             path_to_accuracy_report, "w", encoding="utf-8"
