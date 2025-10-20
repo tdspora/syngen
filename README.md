@@ -572,13 +572,13 @@ In addition to the CLI, *Syngen* provides a Python SDK for programmatic access t
 
 The SDK provides two main classes:
 
-#### 1. `Syngen` - Core functionality for training, inference, and report generation
+#### `Syngen` - Core functionality for training, inference, and report generation
 
 ```python
 from syngen.sdk import Syngen
 
 # Training
-Syngen.train(
+Syngen().train(
   source="path/to/data.csv",
   table_name="my_table",
   epochs=10,
@@ -588,32 +588,32 @@ Syngen.train(
   reports="all"
 )
 
-Syngen.train(
+Syngen().train(
   metadata_path="path/to/metadata.yaml",
   log_level="DEBUG"
 )
 
 # Inference
-Syngen.infer(
+Syngen().infer(
   table_name="my_table",
   size=1000,
   random_seed=42,
   reports="accuracy"
 )
 
-Syngen.infer(
+Syngen().infer(
   metadata_path="path/to/metadata.yaml",
   log_level="DEBUG"
 )
 
 # Generate reports separately for a certain table
-Syngen.generate_reports(
+Syngen().generate_reports(
   table_name="my_table",
   reports=["accuracy", "sample"]
 )
 ```
 
-#### 2. `DataIO` - Data loading and saving
+#### `DataIO` - Data loading and saving
 
 ```python
 from syngen.sdk import DataIO
@@ -635,12 +635,12 @@ data_io.save_data(df)
 - **Report generation**: Generate quality reports separately for a certain table after training/inference processes
 - **Data I/O**: Load and save data in multiple formats (CSV, Avro, Excel) with custom settings
 - **Encryption support**: Use Fernet keys for secure data handling
-- **Metadata support**: Use YAML metadata files for complex workflows with multiple tables
+- **Metadata support**: Use a metadata file for complex workflows with multiple tables
 - **Format configuration**: Customize delimiters, encodings, and other format-specific settings
 
 ### SDK Examples
 
-For detailed examples and usage patterns, please refer to the SDK demonstration notebook [SDK_demonstration.ipynb](demo-notebooks/SDK_demonstration.ipynb)
+For detailed examples and usage patterns, please refer to the [SDK demonstration notebook](demo-notebooks/SDK_demonstration.ipynb)
 
 
 ## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10 or 3.11
