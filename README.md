@@ -633,7 +633,7 @@ data_io.save_data(df)
 
 - **Training and inference**: All CLI parameters are available as method arguments
 - **Report generation**: Generate quality reports separately for a certain table after training/inference processes
-- **Data I/O**: Load and save data in multiple formats (CSV, Avro, Excel) with custom settings
+- **Data I/O**: Load and save data in multiple formats (*CSV*, *Avro*, *Excel*) with custom settings
 - **Encryption support**: Use Fernet keys for secure data handling
 - **Metadata support**: Use a metadata file for complex workflows with multiple tables
 - **Format configuration**: Customize delimiters, encodings, and other format-specific settings

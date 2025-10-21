@@ -226,7 +226,7 @@ def test_load_schema_from_table_in_avro_format(rp_logger):
 
 
 def test_load_data_from_empty_table_in_avro_format(caplog, rp_logger):
-    rp_logger.info("Loading data from the local empty table in the '.avro format")
+    rp_logger.info("Loading data from the local empty table in the '.avro' format")
     path = f"{DIR_NAME}/unit/data_loaders/fixtures/avro_tables/empty_table.avro"
     dataio_loader = DataIO(path)
 
@@ -835,7 +835,7 @@ def test_load_data_from_empty_excel_table(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_save_excel_table_in_xlx_format(test_xls_path, test_df, rp_logger):
+def test_save_excel_table_in_xls_format(test_xls_path, test_df, rp_logger):
     rp_logger.info("Saving the data to the Excel table in the '.xls' format")
     dataio_data_loader = DataIO(test_xls_path)
     dataio_data_loader.save_data(test_df)
