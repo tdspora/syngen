@@ -303,6 +303,7 @@ class Syngen:
 
         if reports:
             Report().generate_report()
+            Report().clear_report()
         else:
             logger.warning(
                 "No reports to generate. Please specify the report type "
