@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Literal, Tuple
+from typing import List, Dict, Optional, Union, Set, Tuple
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -17,7 +17,6 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
-from syngen.ml.validation_schema import ReportTypes
 
 
 MAX_ALLOWED_TIME_MS = 253402214400
@@ -538,19 +537,16 @@ def timing(func):
 
 def get_reports(
     value: Union[List[str], Tuple[str], str],
-    type_of_process: Literal["train", "infer"]
+    list_of_report_types: List[str],
+    full_list_of_report_types: List[str]
 ) -> List[str]:
     """
-    Validate the values provided by the parameter 'reports',
-    and get the list of reports
+    Validate the values provided by the parameter 'value',
+    and convert it and get the appropriate list of reports
     """
     input_values = set(value) if isinstance(value, (list, tuple)) else {value}
     valid_values: List = ["none", "all"]
-    valid_values.extend(
-        ReportTypes().train_report_types
-        if type_of_process == "train"
-        else ReportTypes().infer_report_types
-    )
+    valid_values.extend(list_of_report_types)
 
     if not input_values.issubset(set(valid_values)):
         raise ValueError(
@@ -570,11 +566,7 @@ def get_reports(
                 "no other values should be provided."
             )
         if list(input_values)[0] == "all":
-            return (
-                ReportTypes().full_list_of_train_report_types
-                if type_of_process == "train"
-                else ReportTypes().full_list_of_infer_report_types
-            )
+            return full_list_of_report_types
         if list(input_values)[0] == "none":
             return list()
 

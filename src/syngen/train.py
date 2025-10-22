@@ -11,6 +11,7 @@ from syngen.ml.utils import (
     get_reports,
     fetch_env_variables
 )
+from syngen.ml.validation_schema import ReportTypes
 
 
 def validate_required_parameters(
@@ -87,7 +88,11 @@ def launch_train(
         "drop_null": drop_null,
         "row_limit": row_limit,
         "batch_size": batch_size,
-        "reports": get_reports(reports, type_of_process="train"),
+        "reports": get_reports(
+            reports,
+            ReportTypes().train_report_types,
+            ReportTypes().full_list_of_train_report_types
+        ),
     }
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})

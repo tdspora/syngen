@@ -9,6 +9,7 @@ from syngen.ml.utils import (
     get_reports,
     fetch_env_variables
 )
+from syngen.ml.validation_schema import ReportTypes
 
 
 def validate_required_parameters(metadata_path: Optional[str], table_name: Optional[str]):
@@ -54,7 +55,11 @@ def launch_infer(
         "size": size,
         "run_parallel": run_parallel,
         "batch_size": batch_size,
-        "reports": get_reports(reports, type_of_process="infer"),
+        "reports": get_reports(
+            reports,
+            ReportTypes().infer_report_types,
+            ReportTypes().full_list_of_infer_report_types
+        ),
         "random_seed": random_seed
     }
 

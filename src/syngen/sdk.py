@@ -13,7 +13,7 @@ from syngen.ml.reporters import (
     AccuracyReporter,
     SampleAccuracyReporter,
 )
-from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.validation_schema import ValidationSchema, ReportTypes
 from syngen.ml.context import global_context, get_context
 from syngen.ml.utils import get_reports
 
@@ -283,7 +283,11 @@ class Syngen:
             the name of the environment variable kept the value of the Fernet key
             for decrypting the input of the original data, if applicable.
         """
-        reports = get_reports(reports, type_of_process="train")
+        reports = get_reports(
+            reports,
+            ReportTypes().train_report_types,
+            ReportTypes().full_list_of_train_report_types
+        )
         if reports:
             if fernet_key is not None:
                 fernet_key = fetch_env_variables({"fernet_key": fernet_key}).get("fernet_key")
