@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Tuple
+from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -17,6 +17,8 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
+
+from syngen.ml.validation_schema import ReportTypes
 
 
 MAX_ALLOWED_TIME_MS = 253402214400
@@ -537,13 +539,23 @@ def timing(func):
 
 def get_reports(
     value: Union[List[str], Tuple[str], str],
-    list_of_report_types: List[str],
-    full_list_of_report_types: List[str]
+    report_types: 'ReportTypes',
+    type_of_process: Literal["train", "infer"]
 ) -> List[str]:
     """
     Validate the values provided by the parameter 'value',
     and convert it and get the appropriate list of reports
     """
+    list_of_report_types = (
+        report_types.train_report_types
+        if type_of_process == "train"
+        else report_types.infer_report_types
+    )
+    full_list_of_report_types = (
+        report_types.full_list_of_train_report_types
+        if type_of_process == "train"
+        else report_types.full_list_of_infer_report_types
+    )
     input_values = set(value) if isinstance(value, (list, tuple)) else {value}
     valid_values: List = ["none", "all"]
     valid_values.extend(list_of_report_types)

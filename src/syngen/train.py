@@ -89,9 +89,9 @@ def launch_train(
         "row_limit": row_limit,
         "batch_size": batch_size,
         "reports": get_reports(
-            reports,
-            ReportTypes().train_report_types,
-            ReportTypes().full_list_of_train_report_types
+            value=reports,
+            report_types=ReportTypes(),
+            type_of_process="train"
         ),
     }
 

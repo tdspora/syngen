@@ -56,9 +56,9 @@ def launch_infer(
         "run_parallel": run_parallel,
         "batch_size": batch_size,
         "reports": get_reports(
-            reports,
-            ReportTypes().infer_report_types,
-            ReportTypes().full_list_of_infer_report_types
+            value=reports,
+            report_types=ReportTypes(),
+            type_of_process="infer"
         ),
         "random_seed": random_seed
     }

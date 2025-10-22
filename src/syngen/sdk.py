@@ -285,8 +285,8 @@ class Syngen:
         """
         reports = get_reports(
             reports,
-            ReportTypes().train_report_types,
-            ReportTypes().full_list_of_train_report_types
+            ReportTypes(),
+            "train"
         )
         if reports:
             if fernet_key is not None:
