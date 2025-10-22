@@ -17,7 +17,7 @@ def validate_required_parameters(
     metadata_path: Optional[str],
     source: Optional[str],
     table_name: Optional[str]
-) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+):
     """
     Validate that required parameters are provided
     """
@@ -60,7 +60,6 @@ def validate_required_parameters(
         "from the metadata file, then the values of parameters sent through CLI will be used. "
         "Otherwise, the values of parameters will be defaulted"
     )
-    return metadata_path, source, table_name
 
 
 def launch_train(
