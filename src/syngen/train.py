@@ -80,11 +80,7 @@ def launch_train(
         table_name=table_name,
         metadata_path=metadata_path
     )
-    metadata_path, source, table_name = validate_required_parameters(
-        metadata_path,
-        source,
-        table_name
-    )
+    validate_required_parameters(metadata_path, source, table_name)
     settings = {
         "source": source,
         "epochs": epochs,
