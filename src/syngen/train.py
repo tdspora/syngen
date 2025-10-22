@@ -13,6 +13,56 @@ from syngen.ml.utils import (
 )
 
 
+def validate_required_parameters(
+    metadata_path: Optional[str],
+    source: Optional[str],
+    table_name: Optional[str]
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    Validate that required parameters are provided
+    """
+    if not metadata_path and not source and not table_name:
+        raise AttributeError(
+            "It seems that the information of 'metadata_path' or 'table_name' "
+            "and 'source' is absent. Please provide either the information of "
+            "'metadata_path' or the information of 'source' and 'table_name'"
+        )
+    elif not metadata_path and source and not table_name:
+        raise AttributeError(
+            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information of 'metadata_path' or "
+            "the information of 'source' and 'table_name'"
+        )
+    elif not metadata_path and table_name and not source:
+        raise AttributeError(
+            "It seems that the information of 'metadata_path' or 'source' is absent. "
+            "Please provide either the information of 'metadata_path' or "
+            "the information of 'source' and 'table_name'"
+        )
+    elif metadata_path and table_name and source:
+        logger.warning(
+            "The information of 'metadata_path' was provided. "
+            "In this case the information of 'table_name' and 'source' will be ignored"
+        )
+    elif metadata_path and source:
+        logger.warning(
+            "The information of 'metadata_path' was provided. "
+            "In this case the information of 'source' will be ignored"
+        )
+    elif metadata_path and table_name:
+        logger.warning(
+            "The information of 'metadata_path' was provided. "
+            "In this case the information of 'table_name' will be ignored"
+        )
+    logger.info(
+        "The training process will be executed according to the information mentioned "
+        "in 'train_settings' in the metadata file. If appropriate information is absent "
+        "from the metadata file, then the values of parameters sent through CLI will be used. "
+        "Otherwise, the values of parameters will be defaulted"
+    )
+    return metadata_path, source, table_name
+
+
 def launch_train(
     metadata_path: Optional[str] = None,
     source: Optional[str] = None,
@@ -31,46 +81,10 @@ def launch_train(
         table_name=table_name,
         metadata_path=metadata_path
     )
-    if not metadata_path and not source and not table_name:
-        raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' "
-            "and 'source' is absent. Please provide either the information of "
-            "'metadata_path' or the information of 'source' and 'table_name'"
-        )
-    elif metadata_path and table_name and source:
-        logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored"
-        )
-        table_name = None
-    elif metadata_path and source:
-        logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored"
-        )
-    elif metadata_path and table_name:
-        logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored"
-        )
-        table_name = None
-    elif source and not table_name:
-        raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'"
-        )
-    elif table_name and not source:
-        raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'source' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'"
-        )
-    logger.info(
-        "The training process will be executed according to the information mentioned "
-        "in 'train_settings' in the metadata file. If appropriate information is absent "
-        "from the metadata file, then the values of parameters sent through CLI will be used. "
-        "Otherwise, the values of parameters will be defaulted"
+    metadata_path, source, table_name = validate_required_parameters(
+        metadata_path,
+        source,
+        table_name
     )
     settings = {
         "source": source,

@@ -413,10 +413,10 @@ def fetch_unique_root(table_name: Optional[str], metadata_path: Optional[str]):
     Construct the unique constant substring for use in the name of the experiment and log file
     """
     unique_name = str()
-    if table_name:
-        unique_name = table_name
     if metadata_path:
         unique_name = os.path.basename(metadata_path)
+    elif table_name:
+        unique_name = table_name
     return slugify(unique_name)
 
 

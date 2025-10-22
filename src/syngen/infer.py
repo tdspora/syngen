@@ -11,6 +11,26 @@ from syngen.ml.utils import (
 )
 
 
+def validate_required_parameters(metadata_path: Optional[str], table_name: Optional[str]):
+    if not metadata_path and not table_name:
+        raise AttributeError(
+            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information of 'metadata_path' or the information "
+            "of 'table_name'"
+        )
+    if metadata_path and table_name:
+        logger.warning(
+            "The information of 'metadata_path' was provided. "
+            "In this case the information of 'table_name' will be ignored"
+        )
+    logger.info(
+        "The inference process will be executed according to the information mentioned "
+        "in 'infer_settings' in the metadata file. If appropriate information is absent "
+        "from the metadata file, then the values of parameters sent through CLI will be used. "
+        "Otherwise, the values of parameters will be defaulted"
+    )
+
+
 def launch_infer(
     metadata_path: Optional[str] = None,
     size: Optional[int] = 100,
@@ -28,24 +48,8 @@ def launch_infer(
         table_name=table_name,
         metadata_path=metadata_path
     )
-    if not metadata_path and not table_name:
-        raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or the information "
-            "of 'table_name'"
-        )
-    if metadata_path and table_name:
-        logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored"
-        )
-        table_name = None
-    logger.info(
-        "The inference process will be executed according to the information mentioned "
-        "in 'infer_settings' in the metadata file. If appropriate information is absent "
-        "from the metadata file, then the values of parameters sent through CLI will be used. "
-        "Otherwise, the values of parameters will be defaulted"
-    )
+    validate_required_parameters(metadata_path, table_name)
+
     settings = {
         "size": size,
         "run_parallel": run_parallel,
