@@ -358,7 +358,7 @@ def test_launch_train_table_with_valid_epochs(mock_post_init, mock_launch_train,
 
 def test_cli_launch_train_table_with_invalid_epochs(rp_logger):
     rp_logger.info(
-        "Launch the training process through CLI with the invalid 'epochs' parameter"
+        "Launch the training process through CLI with the invalid '--epochs' parameter"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -399,19 +399,20 @@ def test_launch_train_table_with_invalid_epochs(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("valid_value", [True, False])
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_cli_launch_train_table_with_valid_drop_null(
-    mock_post_init, mock_launch_train, rp_logger
+    mock_post_init, mock_launch_train, valid_value, rp_logger
 ):
     rp_logger.info(
         "Launch the training process through CLI "
-        "with the valid 'drop_null' parameter equals 'True'"
+        f"with the valid '--drop_null' parameter equals '{valid_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
         cli_launch_train,
-        ["--drop_null", True, "--table_name", TABLE_NAME, "--source", PATH_TO_TABLE],
+        ["--drop_null", valid_value, "--table_name", TABLE_NAME, "--source", PATH_TO_TABLE],
     )
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
@@ -419,16 +420,17 @@ def test_cli_launch_train_table_with_valid_drop_null(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("valid_value", [True, False])
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_launch_train_table_with_valid_drop_null(
-    mock_post_init, mock_launch_train, rp_logger
+    mock_post_init, mock_launch_train, valid_value, rp_logger
 ):
     rp_logger.info(
         "Launch the training process by using the function 'launch_train' "
-        "with the valid 'drop_null' parameter equals 'True'"
+        f"with the valid 'drop_null' parameter equals '{valid_value}'"
     )
-    launch_train(drop_null=True, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    launch_train(drop_null=valid_value, table_name=TABLE_NAME, source=PATH_TO_TABLE)
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -437,7 +439,7 @@ def test_launch_train_table_with_valid_drop_null(
 def test_cli_launch_train_table_with_invalid_drop_null(rp_logger):
     rp_logger.info(
         "Launch the training process through CLI "
-        "with the invalid 'drop_null' parameter equals 'test'"
+        "with the invalid '--drop_null' parameter equals 'test'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -482,7 +484,7 @@ def test_launch_train_table_with_invalid_drop_null(rp_logger, caplog):
 @patch.object(Worker, "__attrs_post_init__")
 def test_cli_launch_train_table_with_valid_row_limit(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
-        "Launch the training process through CLI with the valid 'row_limit' parameter equals 100"
+        "Launch the training process through CLI with the valid '--row_limit' parameter equals 100"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -510,7 +512,7 @@ def test_launch_train_table_with_valid_row_limit(mock_post_init, mock_launch_tra
 
 def test_cli_launch_train_table_with_invalid_row_limit(rp_logger):
     rp_logger.info(
-        "Launch the training process through CLI with the invalid 'row_limit' parameter equals 0"
+        "Launch the training process through CLI with the invalid '--row_limit' parameter equals 0"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -559,7 +561,7 @@ def test_cli_launch_train_table_with_valid_parameter_reports(
 ):
     rp_logger.info(
         "Launch the training process through CLI "
-        f"with the valid 'reports' the parameter equals '{valid_value}'"
+        f"with the valid '--reports' the parameter equals '{valid_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -602,7 +604,7 @@ def test_cli_launch_train_table_with_several_valid_parameter_reports(
 ):
     rp_logger.info(
         "Launch the training process through CLI "
-        f"with several valid 'reports' parameters equals '{first_value}' and '{second_value}'"
+        f"with several valid '--reports' parameters equals '{first_value}' and '{second_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -649,8 +651,8 @@ def test_launch_train_table_with_several_valid_values_in_reports(
 )
 def test_cli_launch_train_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     rp_logger.info(
-        f"Launch the training process through CLI "
-        f"with the invalid 'reports' parameter equals '{invalid_value}'"
+        "Launch the training process through CLI "
+        f"with the invalid '--reports' parameter equals '{invalid_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -674,7 +676,7 @@ def test_cli_launch_train_table_with_invalid_parameter_reports(invalid_value, rp
 )
 def test_launch_train_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     rp_logger.info(
-        f"Launch the training process by using the function 'launch_train' "
+        "Launch the training process by using the function 'launch_train' "
         f"with the invalid 'reports' parameter equals '{invalid_value}'"
     )
     with pytest.raises(ValueError):
@@ -689,7 +691,7 @@ def test_launch_train_table_with_invalid_parameter_reports(invalid_value, rp_log
 def test_cli_launch_train_table_with_redundant_parameter_reports(prior_value, value, rp_logger):
     rp_logger.info(
         f"Launch the training process through CLI "
-        f"with the redundant 'reports' parameter: '{value}'"
+        f"with the redundant '--reports' parameter: '{value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -718,7 +720,7 @@ def test_cli_launch_train_table_with_redundant_parameter_reports(prior_value, va
 )
 def test_launch_train_table_with_redundant_parameter_reports(value, rp_logger):
     rp_logger.info(
-        f"Launch the training process by using the function 'launch_train' "
+        "Launch the training process by using the function 'launch_train' "
         f"with the redundant 'reports' parameter: '{value}'"
     )
     with pytest.raises(ValueError) as error:
@@ -736,7 +738,8 @@ def test_cli_launch_train_table_with_valid_batch_size(
     mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
-        "Launch the training process through CLI with the valid 'batch_size' parameter equals 100"
+        "Launch the training process through CLI "
+        "with the valid '--batch_size' parameter equals 100"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -764,7 +767,8 @@ def test_launch_train_table_with_valid_batch_size(mock_post_init, mock_launch_tr
 
 def test_cli_launch_train_table_with_invalid_batch_size(rp_logger):
     rp_logger.info(
-        "Launch the training process through CLI with the invalid 'batch_size' parameter equals 0"
+        "Launch the training process through CLI "
+        "with the invalid '--batch_size' parameter equals 0"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -811,8 +815,8 @@ def test_cli_launch_train_table_with_valid_fernet_key(
     mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info(
-        "Launch the training process through CLI with the valid 'fernet_key' parameter "
-        "equals to the value of the environment variable 'FERNET_KEY'"
+        "Launch the training process through CLI with the '--fernet_key' parameter "
+        "equals to the value of the existed environment variable 'FERNET_KEY'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -830,8 +834,8 @@ def test_cli_launch_train_table_with_valid_fernet_key(
 def test_launch_train_table_with_valid_fernet_key(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
         "Launch the training process by using the function 'launch_train' "
-        "with the valid 'fernet_key' parameter "
-        "equals to the value of the environment variable 'FERNET_KEY'"
+        "with the 'fernet_key' parameter "
+        "equals to the value of the existed environment variable 'FERNET_KEY'"
     )
     launch_train(fernet_key="FERNET_KEY", table_name=TABLE_NAME, source=PATH_TO_TABLE)
     mock_post_init.assert_called_once()
@@ -841,7 +845,7 @@ def test_launch_train_table_with_valid_fernet_key(mock_post_init, mock_launch_tr
 
 def test_cli_launch_train_table_with_nonexistent_fernet_key(rp_logger):
     rp_logger.info(
-        "Launch the training process through CLI with the invalid 'fernet_key' parameter "
+        "Launch the training process through CLI with the '--fernet_key' parameter "
         "equals to non-existent environment variable name"
     )
     runner = CliRunner()
@@ -866,7 +870,7 @@ def test_cli_launch_train_table_with_nonexistent_fernet_key(rp_logger):
 def test_launch_train_table_with_nonexistent_fernet_key(rp_logger, caplog):
     rp_logger.info(
         "Launch the training process by using the function 'launch_train' "
-        "with the invalid 'fernet_key' parameter equals to non-existent environment variable name"
+        "with the 'fernet_key' parameter equals to non-existent environment variable name"
     )
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
@@ -894,7 +898,7 @@ def test_cli_launch_train_table_with_valid_log_level(
 ):
     rp_logger.info(
         "Launch the training process through CLI "
-        f"with the valid 'log_level' parameter equals '{valid_value}'"
+        f"with the valid '--log_level' parameter equals '{valid_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -926,7 +930,7 @@ def test_launch_train_table_with_valid_log_level(
 def test_cli_launch_train_table_with_invalid_log_level(rp_logger):
     rp_logger.info(
         "Launch the training process through CLI "
-        "with the invalid 'log_level' parameter equals 'test'"
+        "with the invalid '--log_level' parameter equals 'test'"
     )
     runner = CliRunner()
     result = runner.invoke(
