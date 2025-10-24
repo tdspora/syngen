@@ -145,7 +145,7 @@ def test_launch_infer_table_without_parameters(rp_logger):
 @patch.object(Worker, "__attrs_post_init__")
 def test_cli_launch_infer_table_with_valid_size(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info(
-        "Launch the inference process through CLI with the valid 'size' parameter equals 10"
+        "Launch the inference process through CLI with the valid '--size' parameter equals 10"
     )
     runner = CliRunner()
     result = runner.invoke(cli_launch_infer, ["--size", 10, "--table_name", TABLE_NAME])
@@ -170,7 +170,7 @@ def test_launch_infer_table_with_valid_size(mock_post_init, mock_launch_infer, r
 
 def test_cli_launch_infer_table_with_invalid_size(rp_logger):
     rp_logger.info(
-        "Launch the inference process through CLI with the invalid 'size' parameter equals 0"
+        "Launch the inference process through CLI with the invalid '--size' parameter equals 0"
     )
     runner = CliRunner()
     result = runner.invoke(cli_launch_infer, ["--size", 0, "--table_name", TABLE_NAME])
@@ -215,7 +215,7 @@ def test_cli_launch_infer_table_with_valid_run_parallel(
 ):
     rp_logger.info(
         "Launch the inference process through CLI "
-        "with the valid 'run_parallel' parameter equals True"
+        "with the valid '--run_parallel' parameter equals True"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -245,7 +245,7 @@ def test_launch_infer_table_with_valid_run_parallel(
 def test_cli_launch_infer_table_with_invalid_run_parallel(rp_logger):
     rp_logger.info(
         "Launch the inference process through CLI "
-        "with the invalid 'run_parallel' parameter equals 'test'"
+        "with the invalid '--run_parallel' parameter equals 'test'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -291,7 +291,8 @@ def test_cli_launch_infer_table_with_valid_batch_size(
     mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info(
-        "Launch the inference process through CLI with the valid 'batch_size' parameter equals 100"
+        "Launch the inference process through CLI "
+        "with the valid '--batch_size' parameter equals 100"
     )
     runner = CliRunner()
     result = runner.invoke(cli_launch_infer, ["--batch_size", 100, "--table_name", TABLE_NAME])
@@ -316,7 +317,8 @@ def test_launch_infer_table_with_valid_batch_size(mock_post_init, mock_launch_in
 
 def test_cli_launch_infer_table_with_invalid_batch_size(rp_logger):
     rp_logger.info(
-        "Launch the inference process through CLI with the invalid 'batch_size' parameter equals 0"
+        "Launch the inference process through CLI "
+        "with the invalid '--batch_size' parameter equals 0"
     )
     runner = CliRunner()
     result = runner.invoke(cli_launch_infer, ["--batch_size", 0, "--table_name", TABLE_NAME])
@@ -327,7 +329,8 @@ def test_cli_launch_infer_table_with_invalid_batch_size(rp_logger):
 @patch("syngen.infer.setup_log_process")
 def test_launch_infer_table_with_invalid_batch_size(rp_logger, caplog):
     rp_logger.info(
-        "Launch the inference process through CLI with the invalid 'batch_size' parameter equals 0"
+        "Launch the inference process by using the function 'launch_infer' "
+        "with the invalid 'batch_size' parameter equals 0"
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR") as caplog:
@@ -359,7 +362,8 @@ def test_cli_launch_infer_table_with_valid_random_seed(
     mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info(
-        "Launch the inference process through CLI with the valid 'random_seed' parameter equals 1"
+        "Launch the inference process through CLI "
+        "with the valid '--random_seed' parameter equals 1"
     )
     runner = CliRunner()
     result = runner.invoke(cli_launch_infer, ["--random_seed", 1, "--table_name", TABLE_NAME])
@@ -387,7 +391,7 @@ def test_launch_infer_table_with_valid_random_seed(
 def test_cli_launch_infer_table_with_invalid_random_seed(rp_logger):
     rp_logger.info(
         "Launch the inference process through CLI "
-        "with the invalid 'random_seed' parameter equals -1"
+        "with the invalid '--random_seed' parameter equals -1"
     )
     runner = CliRunner()
     result = runner.invoke(cli_launch_infer, ["--random_seed", -1, "--table_name", TABLE_NAME])
@@ -433,7 +437,7 @@ def test_cli_launch_infer_table_with_valid_parameter_reports(
 ):
     rp_logger.info(
         f"Launch the inference process through CLI "
-        f"with the valid 'reports' parameter equals '{valid_value}'"
+        f"with the valid '--reports' parameter equals '{valid_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -475,7 +479,7 @@ def test_cli_launch_infer_table_with_several_valid_parameter_reports(
 ):
     rp_logger.info(
         "Launch the inference process through CLI "
-        f"with several valid 'reports' parameters equals '{first_value}' and '{second_value}'"
+        f"with several valid '--reports' parameters equals '{first_value}' and '{second_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -523,7 +527,7 @@ def test_launch_infer_table_with_several_valid_parameter_reports(
 def test_cli_launch_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     rp_logger.info(
         "Launch the inference process through CLI "
-        f"with the invalid 'reports' parameter equals '{invalid_value}'"
+        f"with the invalid '--reports' parameter equals '{invalid_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -535,7 +539,6 @@ def test_cli_launch_infer_table_with_invalid_parameter_reports(invalid_value, rp
         "Invalid input: Acceptable values for the parameter 'reports' "
         "are none, all, accuracy, metrics_only.",
     )
-    rp_logger.info(SUCCESSFUL_MESSAGE)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -562,7 +565,7 @@ def test_launch_infer_table_with_invalid_parameter_reports(invalid_value, rp_log
 )
 def test_cli_launch_infer_table_with_redundant_parameter_reports(prior_value, value, rp_logger):
     rp_logger.info(
-        f"Launch the inference process through CLI with redundant 'reports' parameter: '{value}'"
+        f"Launch the inference process through CLI with redundant '--reports' parameter: '{value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -607,7 +610,7 @@ def test_cli_launch_infer_table_with_valid_fernet_key(
     mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info(
-        "Launch the inference process through CLI with the valid 'fernet_key' parameter "
+        "Launch the inference process through CLI with the valid '--fernet_key' parameter "
         "equals to the value of the environment variable 'FERNET_KEY'"
     )
     runner = CliRunner()
@@ -639,8 +642,8 @@ def test_launch_infer_table_with_valid_fernet_key(
 
 def test_cli_launch_infer_table_with_non_existent_fernet_key(rp_logger):
     rp_logger.info(
-        "Launch the inference process through CLI with the invalid 'fernet_key' parameter "
-        "equals to non-existent environment variable name"
+        "Launch the inference process through CLI with the '--fernet_key' parameter "
+        "equals to the non-existent environment variable name"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -662,8 +665,8 @@ def test_cli_launch_infer_table_with_non_existent_fernet_key(rp_logger):
 def test_launch_infer_table_with_non_existent_fernet_key(rp_logger):
     rp_logger.info(
         "Launch the inference process by using the function 'launch_infer' "
-        "with the invalid 'fernet_key' parameter "
-        "equals to non-existent environment variable name"
+        "with the 'fernet_key' parameter "
+        "equals to the non-existent environment variable name"
     )
     with pytest.raises(ValueError) as error:
         launch_infer(fernet_key="FERNET_KEY_NONEXISTENT", table_name=TABLE_NAME)
@@ -682,7 +685,7 @@ def test_cli_launch_infer_table_with_valid_log_level(
 ):
     rp_logger.info(
         "Launch the inference process through CLI "
-        f"with the valid 'log_level' parameter equals '{valid_value}'"
+        f"with the valid '--log_level' parameter equals '{valid_value}'"
     )
     runner = CliRunner()
     result = runner.invoke(
@@ -714,7 +717,7 @@ def test_launch_infer_table_with_valid_log_level(
 def test_cli_launch_infer_table_with_invalid_log_level(rp_logger):
     rp_logger.info(
         "Launch the inference process through CLI "
-        "with the invalid 'log_level' parameter equals 'test'"
+        "with the invalid '--log_level' parameter equals 'test'"
     )
     runner = CliRunner()
     result = runner.invoke(
