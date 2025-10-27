@@ -179,13 +179,17 @@ def test_train_table_with_invalid_epochs(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("valid_value", [True, False])
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_drop_null(mock_post_init, mock_launch_train, rp_logger):
+def test_train_table_with_valid_drop_null(
+    mock_post_init, mock_launch_train, valid_value, rp_logger
+):
     rp_logger.info(
-        "Launch the training process with the valid 'drop_null' parameter equals 'True'"
+        "Launch the training process with the valid 'drop_null' parameter "
+        f"equals to '{valid_value}'"
     )
-    Syngen().train(drop_null=True, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    Syngen().train(drop_null=valid_value, table_name=TABLE_NAME, source=PATH_TO_TABLE)
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -371,10 +375,10 @@ def test_train_table_with_invalid_batch_size(rp_logger, caplog):
 
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
-def test_train_table_with_valid_fernet_key(mock_post_init, mock_launch_train, rp_logger):
+def test_train_table_with_existing_fernet_key(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info(
-        "Launch the training process with the valid 'fernet_key' parameter "
-        "equals to the value of the environment variable 'FERNET_KEY'"
+        "Launch the training process with the 'fernet_key' parameter "
+        "equals to the value of the existing environment variable 'FERNET_KEY'"
     )
     Syngen().train(fernet_key="FERNET_KEY", table_name=TABLE_NAME, source=PATH_TO_TABLE)
     mock_post_init.assert_called_once()
@@ -385,8 +389,8 @@ def test_train_table_with_valid_fernet_key(mock_post_init, mock_launch_train, rp
 @patch("syngen.train.setup_log_process")
 def test_train_table_with_nonexistent_fernet_key(rp_logger, caplog):
     rp_logger.info(
-        "Launch the training process with the invalid 'fernet_key' parameter "
-        "equals to non-existent environment variable name"
+        "Launch the training process with the 'fernet_key' parameter "
+        "equals to the non-existent environment variable name"
     )
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
@@ -525,11 +529,15 @@ def test_infer_table_with_invalid_size(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("valid_value", [True, False])
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_valid_run_parallel(mock_post_init, mock_launch_infer, rp_logger):
+def test_infer_table_with_valid_run_parallel(
+    mock_post_init, mock_launch_infer, valid_value, rp_logger
+):
     rp_logger.info(
-        "Launch the inference process with the valid 'run_parallel' parameter equals True"
+        "Launch the inference process with the valid 'run_parallel' parameter "
+        f"equals to '{valid_value}"
     )
     Syngen().infer(run_parallel=True, table_name=TABLE_NAME)
     mock_post_init.assert_called_once()
@@ -718,10 +726,10 @@ def test_infer_table_with_redundant_parameter_reports(value, rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_infer_table_with_valid_fernet_key(mock_post_init, mock_launch_infer, rp_logger):
+def test_infer_table_with_existing_fernet_key(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info(
-        "Launch the inference process with the valid 'fernet_key' parameter "
-        "equals to the value of the environment variable 'FERNET_KEY'"
+        "Launch the inference process with the 'fernet_key' parameter "
+        "equals to the value of the existing environment variable 'FERNET_KEY'"
     )
     Syngen().infer(fernet_key="FERNET_KEY", table_name=TABLE_NAME)
     mock_post_init.assert_called_once()
@@ -731,8 +739,8 @@ def test_infer_table_with_valid_fernet_key(mock_post_init, mock_launch_infer, rp
 
 def test_infer_table_with_non_existent_fernet_key(rp_logger):
     rp_logger.info(
-        "Launch the inference process with the invalid 'fernet_key' parameter "
-        "equals to non-existent environment variable name"
+        "Launch the inference process with the 'fernet_key' parameter "
+        "equals to the non-existent environment variable name"
     )
     with pytest.raises(ValueError) as error:
         Syngen().infer(fernet_key="FERNET_KEY_NONEXISTENT", table_name=TABLE_NAME)
@@ -751,7 +759,7 @@ def test_infer_table_with_valid_log_level(
 ):
     rp_logger.info(
         "Launch the inference process "
-        f"with the valid 'log_level' parameter equals - '{valid_value}'"
+        f"with the valid 'log_level' parameter equals to '{valid_value}'"
     )
     Syngen().infer(log_level=valid_value, table_name=TABLE_NAME)
     mock_post_init.assert_called_once()
