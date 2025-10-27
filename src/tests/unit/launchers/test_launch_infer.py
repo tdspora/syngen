@@ -606,7 +606,7 @@ def test_launch_infer_table_with_redundant_parameter_reports(value, rp_logger):
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_cli_launch_infer_table_with_valid_fernet_key(
+def test_cli_launch_infer_table_with_existed_fernet_key(
     mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info(
@@ -626,7 +626,7 @@ def test_cli_launch_infer_table_with_valid_fernet_key(
 
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
-def test_launch_infer_table_with_valid_fernet_key(
+def test_launch_infer_table_with_existed_fernet_key(
     mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info(
