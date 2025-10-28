@@ -638,7 +638,7 @@ def test_infer_table_with_invalid_random_seed(rp_logger, caplog):
                 'The error(s) found in - "test_table": {\n'
                 '    "infer_settings": {\n'
                 '        "random_seed": [\n'
-                '             "Must be greater than or equal to 1."\n'
+                '             "Must be greater than or equal to 0."\n'
                 '        ]\n'
                 '    }\n'
                 '}'
@@ -647,7 +647,7 @@ def test_infer_table_with_invalid_random_seed(rp_logger, caplog):
                 'The error(s) found in - "test_table": {\n'
                 '    "infer_settings": {\n'
                 '        "random_seed": [\n'
-                '             "Must be greater than or equal to 1."\n'
+                '             "Must be greater than or equal to 0."\n'
                 '        ]\n'
                 '    }\n'
                 '}'
@@ -698,7 +698,7 @@ def test_infer_table_with_several_valid_parameter_reports(
 def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     rp_logger.info(
         "Launch the inference process "
-        "with the invalid 'reports' parameter equals '{invalid_value}'"
+        f"with the invalid 'reports' parameter equals '{invalid_value}'"
     )
     with pytest.raises(ValueError) as error:
         Syngen().infer(reports=invalid_value, table_name=TABLE_NAME)
