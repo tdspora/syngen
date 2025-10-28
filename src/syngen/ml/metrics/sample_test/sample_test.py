@@ -8,6 +8,7 @@ import jinja2
 import pandas as pd
 
 from syngen.ml.metrics.utils import transform_to_base64
+from syngen.ml.utils import fetch_config, save_config
 
 
 class SampleAccuracyTest(BaseTest):
@@ -39,6 +40,15 @@ class SampleAccuracyTest(BaseTest):
         Remove artifacts after creating Sample report
         """
         shutil.rmtree(self.reports_path)
+
+    def _update_list_of_generated_reports(self, report_path: str):
+        """
+        Update the list of generated reports in the training configuration stored on the disk
+        """
+        path_to_train_config = self.paths["train_config_pickle_path"]
+        train_config = fetch_config(config_pickle_path=path_to_train_config)
+        train_config.paths["generated_reports"].update({"sample_report": report_path})
+        save_config(path_to_train_config, train_config)
 
     def report(self, **kwargs):
         univariate = self.__get_univariate_metric()
@@ -78,4 +88,5 @@ class SampleAccuracyTest(BaseTest):
         ) as f:
             f.write(html)
 
+        self._update_list_of_generated_reports(path_to_sample_report)
         self._remove_artifacts()

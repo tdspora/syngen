@@ -409,6 +409,14 @@ def fetch_config(config_pickle_path: str):
         return pkl.load(f)
 
 
+def save_config(config_pickle_path: str, config):
+    """
+    Save the configuration to the disk
+    """
+    with open(config_pickle_path, "wb") as f:
+        pkl.dump(config, f)
+
+
 def fetch_unique_root(table_name: Optional[str], metadata_path: Optional[str]):
     """
     Construct the unique constant substring for use in the name of the experiment and log file

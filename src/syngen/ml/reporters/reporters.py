@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict, Tuple, Optional, Callable, Union, List, Set
+from typing import Dict, Tuple, Optional, Callable, Union, List, Set, Literal
 import itertools
 from collections import defaultdict
 from copy import deepcopy
@@ -189,7 +189,7 @@ class Reporter:
     @abstractmethod
     def report(self, **kwargs):
         """
-        Generate the report for certain test
+        Generate the report for certain table
         """
         pass
 
@@ -316,6 +316,18 @@ class AccuracyReporter(Reporter):
 
     report_type = "accuracy"
 
+    def __init__(
+        self,
+        table_name: str,
+        paths: Dict,
+        config: Dict,
+        metadata: Dict,
+        loader: Optional[Callable[[str], pd.DataFrame]],
+        type_of_process: Literal["train", "infer"]
+    ):
+        super().__init__(table_name, paths, config, metadata, loader)
+        self.type_of_process = type_of_process
+
     def report(self):
         """
         Run the report
@@ -334,6 +346,7 @@ class AccuracyReporter(Reporter):
             synthetic,
             self.paths,
             self.table_name,
+            self.type_of_process,
             self.config
         )
         accuracy_test.report(

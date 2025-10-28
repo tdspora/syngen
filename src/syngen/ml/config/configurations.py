@@ -93,7 +93,8 @@ class TrainConfig:
                 f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
             "losses_path": f"model_artifacts/system_store/losses/"
-                           f"losses-{self.slugify_table_name}-{timestamp}.csv"
+                           f"losses-{self.slugify_table_name}-{timestamp}.csv",
+            "generated_reports": {}
         }
 
 
@@ -190,7 +191,8 @@ class InferConfig:
                 "model_artifacts/"
                 f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
                 f"/{self.slugify_table_name}/reports/accuracy-report.html"
-            )
+            ),
+            "generated_reports": {}
         })
 
     @slugify_attribute(table_name="slugify_table_name")

@@ -11,6 +11,7 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     convert_to_timestamp,
     convert_to_date_string,
     fetch_config,
+    save_config,
     fetch_unique_root,
     generate_uuid,
     generate_uuids,

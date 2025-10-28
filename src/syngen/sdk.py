@@ -1,7 +1,8 @@
-from typing import Optional, Dict, List, Union, Set
+from typing import Optional, Dict, List, Union, Set, Literal
 import os
 import pandas as pd
 from loguru import logger
+from dataclasses import dataclass
 
 from slugify import slugify
 from syngen.ml.data_loaders import DataLoader, DataEncryptor
@@ -88,16 +89,42 @@ class DataIO:
         )
 
 
+@dataclass
 class Syngen:
     """
     SDK class for training, inference, and the generation of reports.
     """
+    metadata_path: Optional[str] = None
+    table_name: Optional[str] = None
+    source: Optional[str] = None
+    execution_artifacts = dict()
 
-    @staticmethod
+    def _set_execution_artifacts(self, source_of_info, type_of_process: Literal["train", "infer"]):
+        for table_name in source_of_info.initial_table_names:
+            if type_of_process == "train":
+                path_to_train_config = (
+                    f"model_artifacts/resources/{slugify(table_name)}/"
+                    "vae/checkpoints/train_config.pkl"
+                )
+                train_config = fetch_config(config_pickle_path=path_to_train_config)
+                self.execution_artifacts[table_name] = {
+                    "losses_path": train_config.paths["losses_path"],
+                    "path_to_input_data": train_config.paths["input_data_path"],
+                    "generated_reports": train_config.paths["generated_reports"],
+                }
+            elif type_of_process == "infer":
+                path_to_infer_config = (
+                    f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
+                )
+                infer_config = fetch_config(config_pickle_path=path_to_infer_config)
+                self.execution_artifacts[table_name] = {
+                    "path_to_input_data": infer_config.paths["input_data_path"],
+                    "path_to_generated_data": infer_config.paths["path_to_merged_infer"],
+                    "generated_reports": infer_config.paths["generated_reports"],
+                }
+
     def train(
-        metadata_path: Optional[str] = None,
-        table_name: Optional[str] = None,
-        source: Optional[str] = None,
+        self,
         epochs: int = 10,
         drop_null: bool = False,
         row_limit: Optional[int] = None,
@@ -106,10 +133,10 @@ class Syngen:
         batch_size: int = 32,
         fernet_key: Optional[str] = None
     ):
-        launch_train(
-            metadata_path=metadata_path,
-            source=source,
-            table_name=table_name,
+        source_of_info = launch_train(
+            metadata_path=self.metadata_path,
+            source=self.source,
+            table_name=self.table_name,
             epochs=epochs,
             drop_null=drop_null,
             row_limit=row_limit,
@@ -118,12 +145,11 @@ class Syngen:
             batch_size=batch_size,
             fernet_key=fernet_key
         )
+        self._set_execution_artifacts(source_of_info, type_of_process="train")
 
-    @staticmethod
     def infer(
-        metadata_path: Optional[str] = None,
+        self,
         size: int = 100,
-        table_name: Optional[str] = None,
         run_parallel: bool = False,
         batch_size: int = None,
         random_seed: Optional[int] = None,
@@ -131,10 +157,10 @@ class Syngen:
         log_level: str = "INFO",
         fernet_key: Optional[str] = None,
     ):
-        launch_infer(
-            metadata_path=metadata_path,
+        source_of_info = launch_infer(
+            metadata_path=self.metadata_path,
             size=size,
-            table_name=table_name,
+            table_name=self.table_name,
             run_parallel=run_parallel,
             batch_size=batch_size,
             reports=reports,
@@ -142,6 +168,7 @@ class Syngen:
             log_level=log_level,
             fernet_key=fernet_key
         )
+        self._set_execution_artifacts(source_of_info, type_of_process="infer")
 
     @staticmethod
     def _validate_artifacts(
@@ -313,3 +340,11 @@ class Syngen:
                 "No reports to generate. Please specify the report type "
                 "from 'accuracy', 'metrics_only' or 'sample'."
             )
+
+
+if __name__ == "__main__":
+    launcher = Syngen(
+        metadata_path="/home/Hanna_Imshenetska/pycharm/metadata/housing_metadata_os.yaml"
+    )
+    launcher.infer()
+    print(launcher.execution_artifacts)

@@ -26,7 +26,7 @@ def test_train_table_with_source_and_table_name(
     mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info("Launch the training process with parameters 'source' and 'table_name'")
-    Syngen().train(source=PATH_TO_TABLE, table_name=TABLE_NAME)
+    Syngen(source=PATH_TO_TABLE, table_name=TABLE_NAME).train()
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -38,7 +38,7 @@ def test_train_table_with_metadata_path(
     mock_post_init, mock_launch_train, rp_logger
 ):
     rp_logger.info("Launch the training process with the parameter 'metadata_path'")
-    Syngen().train(metadata_path=PATH_TO_METADATA)
+    Syngen(metadata_path=PATH_TO_METADATA).train()
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -54,7 +54,7 @@ def test_launch_table_with_metadata_path_and_source(
         "Launch the training process with parameters 'metadata_path' and 'source'"
     )
     with caplog.at_level("WARNING"):
-        Syngen().train(metadata_path=PATH_TO_METADATA, source=PATH_TO_TABLE)
+        Syngen(metadata_path=PATH_TO_METADATA, source=PATH_TO_TABLE).train()
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
         assert (
@@ -72,7 +72,7 @@ def test_train_table_with_metadata_path_and_table_name(
 ):
     rp_logger.info("Launch the training process with parameters 'metadata_path' and 'table_name'")
     with caplog.at_level("WARNING"):
-        Syngen().train(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
+        Syngen(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME).train()
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
         assert (
@@ -92,7 +92,7 @@ def test_train_table_with_metadata_path_and_table_name_and_source(
         "Launch the training process with parameters 'metadata_path', 'table_name' and 'source'"
     )
     with caplog.at_level("WARNING"):
-        Syngen().train(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+        Syngen(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME, source=PATH_TO_TABLE).train()
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
         assert (
@@ -107,7 +107,7 @@ def test_train_table_with_metadata_path_and_table_name_and_source(
 def test_train_table_with_table_name_and_without_source(rp_logger, caplog):
     rp_logger.info("Launch the training process only with the parameter 'table_name'")
     with pytest.raises(AttributeError) as error:
-        Syngen().train(table_name=TABLE_NAME)
+        Syngen(table_name=TABLE_NAME).train()
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'source' is absent. "
             "Please provide either the information of 'metadata_path' or "
@@ -120,7 +120,7 @@ def test_train_table_with_table_name_and_without_source(rp_logger, caplog):
 def test_train_table_with_source_and_without_table_name(rp_logger):
     rp_logger.info("Launch the training process only with the parameter 'source'")
     with pytest.raises(AttributeError) as error:
-        Syngen().train(source=PATH_TO_TABLE)
+        Syngen(source=PATH_TO_TABLE).train()
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "
             "Please provide either the information of 'metadata_path' or "
@@ -146,7 +146,7 @@ def test_train_table_without_parameters(rp_logger):
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_epochs(mock_post_init, mock_launch_train, rp_logger):
     rp_logger.info("Launch the training process with the valid 'epochs' parameter")
-    Syngen().train(epochs=20, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(epochs=20)
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -157,7 +157,7 @@ def test_train_table_with_invalid_epochs(rp_logger, caplog):
     rp_logger.info("Launch the training process with the invalid 'epochs' parameter")
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            Syngen().train(epochs=0, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+            Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(epochs=0)
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
@@ -189,7 +189,7 @@ def test_train_table_with_valid_drop_null(
         "Launch the training process with the valid 'drop_null' parameter "
         f"equals to '{valid_value}'"
     )
-    Syngen().train(drop_null=valid_value, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(drop_null=valid_value)
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -202,7 +202,7 @@ def test_train_table_with_invalid_drop_null(rp_logger, caplog):
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            Syngen().train(drop_null="test", table_name=TABLE_NAME, source=PATH_TO_TABLE)
+            Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(drop_null="test")
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
@@ -230,7 +230,7 @@ def test_train_table_with_valid_row_limit(mock_post_init, mock_launch_train, rp_
     rp_logger.info(
         "Launch the training process with the valid 'row_limit' parameter equals 100"
     )
-    Syngen().train(row_limit=100, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(row_limit=100)
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -243,7 +243,7 @@ def test_train_table_with_invalid_row_limit(rp_logger, caplog):
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            Syngen().train(row_limit=0, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+            Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(row_limit=0)
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
@@ -275,7 +275,7 @@ def test_train_table_with_valid_parameter_reports(
         f"Launch the training process "
         f"with the valid 'reports' the parameter equals '{valid_value}'"
     )
-    Syngen().train(reports=valid_value, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(reports=valid_value)
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -297,7 +297,7 @@ def test_train_table_with_several_valid_values_in_reports(
         "Launch the training process with several valid values "
         f"in the 'reports' parameter equals '{value}'"
     )
-    Syngen().train(reports=value, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(reports=value)
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -312,7 +312,7 @@ def test_train_table_with_invalid_parameter_reports(invalid_value, rp_logger):
         f"with the invalid 'reports' parameter equals '{invalid_value}'"
     )
     with pytest.raises(ValueError):
-        Syngen().train(reports=invalid_value, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+        Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(reports=invalid_value)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -325,7 +325,7 @@ def test_train_table_with_redundant_parameter_reports(value, rp_logger):
         f"Launch the training process with the redundant 'reports' parameter: '{value}'"
     )
     with pytest.raises(ValueError) as error:
-        Syngen().train(reports=value, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+        Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(reports=value)
         assert str(error.value) == (
             "Invalid input: When 'reports' parameter is set to 'none' or 'all', "
             "no other values should be provided."
@@ -340,7 +340,7 @@ def test_train_table_with_valid_batch_size(mock_post_init, mock_launch_train, rp
         "Launch the training process "
         "with the valid 'batch_size' parameter equals 100"
     )
-    Syngen().train(batch_size=100, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(batch_size=100)
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -351,7 +351,7 @@ def test_train_table_with_invalid_batch_size(rp_logger, caplog):
     rp_logger.info("Launch the training process with the invalid 'batch_size' parameter equals 0")
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            Syngen().train(batch_size=0, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+            Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(batch_size=0)
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
@@ -380,7 +380,7 @@ def test_train_table_with_existing_fernet_key(mock_post_init, mock_launch_train,
         "Launch the training process with the 'fernet_key' parameter "
         "equals to the value of the existing environment variable 'FERNET_KEY'"
     )
-    Syngen().train(fernet_key="FERNET_KEY", table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(fernet_key="FERNET_KEY")
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -394,11 +394,10 @@ def test_train_table_with_nonexistent_fernet_key(rp_logger, caplog):
     )
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
-            Syngen().train(
-                fernet_key="FERNET_KEY_NONEXISTENT",
+            Syngen(
                 table_name=TABLE_NAME,
                 source=PATH_TO_TABLE
-            )
+            ).train(fernet_key="FERNET_KEY_NONEXISTENT")
             assert str(error.value) == (
                 "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
                 "Please, check whether it is set correctly."
@@ -419,7 +418,7 @@ def test_train_table_with_valid_log_level(
     rp_logger.info(
         f"Launch the training process with the valid 'log_level' parameter equals {valid_value}"
     )
-    Syngen().train(log_level=valid_value, table_name=TABLE_NAME, source=PATH_TO_TABLE)
+    Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(log_level=valid_value)
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -430,7 +429,7 @@ def test_train_table_with_invalid_log_level(rp_logger):
         "Launch the training process with the invalid 'log_level' parameter equals 'test'"
     )
     with pytest.raises(ValueError) as error:
-        Syngen().train(log_level="test", table_name=TABLE_NAME)
+        Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(log_level="test")
         assert str(error.value) == "ValueError: Level 'test' does not exist"
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -440,7 +439,7 @@ def test_train_table_with_invalid_log_level(rp_logger):
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_table_name(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info("Launch the inference process with the parameter 'table_name'")
-    Syngen().infer(table_name=TABLE_NAME)
+    Syngen(table_name=TABLE_NAME).infer()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -450,7 +449,7 @@ def test_infer_table_with_table_name(mock_post_init, mock_launch_infer, rp_logge
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_metadata_path(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info("Launch the inference process with the parameter 'metadata_path'")
-    Syngen().infer(metadata_path=PATH_TO_METADATA)
+    Syngen(metadata_path=PATH_TO_METADATA).infer()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -466,7 +465,7 @@ def test_infer_table_with_metadata_path_and_table_name(
         "Launch the inference process with parameters 'metadata_path' and 'table_name'"
     )
     with caplog.at_level("WARNING"):
-        Syngen().infer(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
+        Syngen(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME).infer()
         mock_post_init.assert_called_once()
         mock_launch_infer.assert_called_once()
         assert (
@@ -494,7 +493,7 @@ def test_infer_table_with_valid_size(mock_post_init, mock_launch_infer, rp_logge
     rp_logger.info(
         "Launch the inference process with the valid 'size' parameter equals 10"
     )
-    Syngen().infer(size=10, table_name=TABLE_NAME)
+    Syngen(table_name=TABLE_NAME).infer(size=10)
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -507,7 +506,7 @@ def test_infer_table_with_invalid_size(rp_logger, caplog):
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            Syngen().infer(size=0, table_name=TABLE_NAME)
+            Syngen(table_name=TABLE_NAME).infer(size=0)
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "infer_settings": {\n'
@@ -539,7 +538,7 @@ def test_infer_table_with_valid_run_parallel(
         "Launch the inference process with the valid 'run_parallel' parameter "
         f"equals to '{valid_value}"
     )
-    Syngen().infer(run_parallel=True, table_name=TABLE_NAME)
+    Syngen(table_name=TABLE_NAME).infer(run_parallel=True)
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -552,7 +551,7 @@ def test_infer_table_with_invalid_run_parallel(rp_logger, caplog):
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
-            Syngen().infer(run_parallel="test", table_name=TABLE_NAME)
+            Syngen(table_name=TABLE_NAME).infer(run_parallel="test")
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "infer_settings": {\n'
@@ -578,7 +577,7 @@ def test_infer_table_with_invalid_run_parallel(rp_logger, caplog):
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_valid_batch_size(mock_post_init, mock_launch_infer, rp_logger):
     rp_logger.info("Launch infer process with the valid 'batch_size' parameter equals 100")
-    Syngen().infer(batch_size=100, table_name=TABLE_NAME)
+    Syngen(table_name=TABLE_NAME).infer(batch_size=100)
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -591,7 +590,7 @@ def test_infer_table_with_invalid_batch_size(rp_logger, caplog):
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR") as caplog:
-            Syngen().infer(batch_size=0, table_name=TABLE_NAME)
+            Syngen(table_name=TABLE_NAME).infer(batch_size=0)
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "infer_settings": {\n'
@@ -619,7 +618,7 @@ def test_infer_table_with_valid_random_seed(
     mock_post_init, mock_launch_infer, rp_logger
 ):
     rp_logger.info("Launch the inference process with the valid 'random_seed' parameter equals 1")
-    Syngen().infer(random_seed=1, table_name=TABLE_NAME)
+    Syngen(table_name=TABLE_NAME).infer(random_seed=1)
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -633,7 +632,7 @@ def test_infer_table_with_invalid_random_seed(rp_logger, caplog):
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR") as caplog:
-            Syngen().infer(random_seed=-1, table_name=TABLE_NAME)
+            Syngen(table_name=TABLE_NAME).infer(random_seed=-1)
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "infer_settings": {\n'
@@ -664,7 +663,7 @@ def test_infer_table_with_valid_parameter_reports(
     rp_logger.info(
         f"Launch the inference process with the valid 'reports' parameter equals '{valid_value}'"
     )
-    Syngen().infer(reports=valid_value, table_name=TABLE_NAME)
+    Syngen(table_name=TABLE_NAME).infer(reports=valid_value)
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -686,7 +685,7 @@ def test_infer_table_with_several_valid_parameter_reports(
         f"Launch the inference process with several values "
         f"in the 'reports' parameter equals '{value}'"
     )
-    Syngen().infer(reports=value, table_name=TABLE_NAME)
+    Syngen(table_name=TABLE_NAME).infer(reports=value)
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -701,7 +700,7 @@ def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
         f"with the invalid 'reports' parameter equals '{invalid_value}'"
     )
     with pytest.raises(ValueError) as error:
-        Syngen().infer(reports=invalid_value, table_name=TABLE_NAME)
+        Syngen(table_name=TABLE_NAME).infer(reports=invalid_value)
         assert str(error.value) == (
             "Invalid input: Acceptable values for the parameter 'reports' "
             "are none, all, accuracy, metrics_only."
@@ -716,7 +715,7 @@ def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
 def test_infer_table_with_redundant_parameter_reports(value, rp_logger):
     rp_logger.info(f"Launch the inference process with redundant 'reports' parameter: '{value}'")
     with pytest.raises(ValueError) as error:
-        Syngen().infer(reports=value, table_name=TABLE_NAME)
+        Syngen(table_name=TABLE_NAME).infer(reports=value)
         assert str(error.value) == (
             "Invalid input: When 'reports' option is set to 'none' or 'all', "
             "no other values should be provided."
@@ -731,7 +730,7 @@ def test_infer_table_with_existing_fernet_key(mock_post_init, mock_launch_infer,
         "Launch the inference process with the 'fernet_key' parameter "
         "equals to the value of the existing environment variable 'FERNET_KEY'"
     )
-    Syngen().infer(fernet_key="FERNET_KEY", table_name=TABLE_NAME)
+    Syngen(table_name=TABLE_NAME).infer(fernet_key="FERNET_KEY")
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -743,7 +742,7 @@ def test_infer_table_with_non_existent_fernet_key(rp_logger):
         "equals to the non-existent environment variable name"
     )
     with pytest.raises(ValueError) as error:
-        Syngen().infer(fernet_key="FERNET_KEY_NONEXISTENT", table_name=TABLE_NAME)
+        Syngen(table_name=TABLE_NAME).infer(fernet_key="FERNET_KEY_NONEXISTENT")
         assert str(error.value) == (
             "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
             "Please, check whether it is set correctly."
@@ -761,7 +760,7 @@ def test_infer_table_with_valid_log_level(
         "Launch the inference process "
         f"with the valid 'log_level' parameter equals to '{valid_value}'"
     )
-    Syngen().infer(log_level=valid_value, table_name=TABLE_NAME)
+    Syngen(table_name=TABLE_NAME).infer(log_level=valid_value)
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -772,7 +771,7 @@ def test_infer_table_with_invalid_log_level(rp_logger):
         "Launch the inference process with the invalid 'log_level' parameter equals 'test'"
     )
     with pytest.raises(ValueError) as error:
-        Syngen().infer(log_level="test", table_name=TABLE_NAME)
+        Syngen(table_name=TABLE_NAME).infer(log_level="test")
         assert str(error.value) == "ValueError: Level 'test' does not exist"
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
