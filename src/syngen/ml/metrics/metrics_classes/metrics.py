@@ -1114,9 +1114,9 @@ class Clustering(BaseMetric):
 
         if len(original_transformed) < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
             logger.warning(
-                f"Not enough rows ({len(original_transformed)}) "
-                "in the original dataset after dropping null values "
-                f"to perform clustering. "
+                f"There are {len(original_transformed)} rows "
+                "in the original dataset after dropping null values. "
+                f"It is not sufficient to perform clustering. "
                 f"Minimum required is {MIN_NUMBER_OF_ROWS_FOR_CLUSTERING}. "
                 f"Clustering metric will not be calculated."
             )
@@ -1134,8 +1134,8 @@ class Clustering(BaseMetric):
 
         if row_limit < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
             logger.warning(
-                f"Not enough rows ({row_limit}) in the datasets "
-                "to perform clustering. "
+                f"There are {row_limit} rows in the synthetic dataset. "
+                "It is not sufficient to perform clustering. "
                 f"Minimum required is {MIN_NUMBER_OF_ROWS_FOR_CLUSTERING}. "
                 "Clustering metric will not be calculated."
             )
