@@ -39,6 +39,9 @@ from syngen.ml.vae.models.features import KURTOSIS_THRESHOLD
 
 matplotlib.use("Agg")
 
+# minimal number of rows in original dataset to perform clustering
+MIN_NUMBER_OF_ROWS_FOR_CLUSTERING = 3
+
 
 class BaseMetric(ABC):
     def __init__(
@@ -1109,6 +1112,16 @@ class Clustering(BaseMetric):
             )
             return None
 
+        if len(original_transformed) < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
+            logger.warning(
+                f"Not enough rows ({len(original_transformed)}) "
+                "in the original dataset after dropping null values "
+                f"to perform clustering. "
+                f"Minimum required is {MIN_NUMBER_OF_ROWS_FOR_CLUSTERING}. "
+                f"Clustering metric will not be calculated."
+            )
+            return None
+
         optimal_clust_num = self.__get_optimal_number_of_clusters(
             original_transformed
             )
@@ -1118,6 +1131,15 @@ class Clustering(BaseMetric):
                      )
 
         row_limit = min(len(self.original), len(self.synthetic))
+
+        if row_limit < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
+            logger.warning(
+                f"Not enough rows ({row_limit}) in the datasets "
+                "to perform clustering. "
+                f"Minimum required is {MIN_NUMBER_OF_ROWS_FOR_CLUSTERING}. "
+                "Clustering metric will not be calculated."
+            )
+            return None
 
         # TODO check whether random_state affects the results
         self.merged = (
