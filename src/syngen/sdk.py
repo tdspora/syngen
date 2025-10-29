@@ -131,12 +131,16 @@ class Syngen:
         self.execution_artifacts[table_name] = {"generated_reports": {}}
 
         if "sample" in reports:
-            sample_reports = self._get_reports_from_train_config(table_name)
-            self.execution_artifacts[table_name]["generated_reports"].update(sample_reports)
+            reports = self._get_reports_from_train_config(table_name)
+            self.execution_artifacts[table_name]["generated_reports"]["sample_report"] = (
+                reports.get("sample_report")
+            )
 
         if "accuracy" in reports:
-            accuracy_reports = self._get_reports_from_infer_config(table_name)
-            self.execution_artifacts[table_name]["generated_reports"].update(accuracy_reports)
+            reports = self._get_reports_from_infer_config(table_name)
+            self.execution_artifacts[table_name]["generated_reports"]["accuracy_report"] = (
+                reports.get("accuracy_report")
+            )
 
     def _set_process_artifacts(self, type_of_process: str):
         """
