@@ -8,7 +8,7 @@ from slugify import slugify
 from syngen.ml.data_loaders import DataLoader, DataEncryptor, MetadataLoader
 from syngen.train import launch_train
 from syngen.infer import launch_infer
-from syngen.ml.utils import fetch_config, fetch_env_variables
+from syngen.ml.utils import fetch_config, save_config, fetch_env_variables
 from syngen.ml.reporters import (
     Report,
     AccuracyReporter,
@@ -332,6 +332,7 @@ class Syngen:
         )
         train_config = fetch_config(config_pickle_path=path_to_train_config)
         train_config.paths["generated_reports"] = {}
+        save_config(path_to_train_config, train_config)
         train_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return SampleAccuracyReporter(
             table_name=table_name,
@@ -348,8 +349,9 @@ class Syngen:
     ) -> AccuracyReporter:
         path_to_infer_config = f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
         infer_config = fetch_config(config_pickle_path=path_to_infer_config)
-        infer_config.reports = [report]
         infer_config.paths["generated_reports"] = {}
+        save_config(path_to_infer_config, infer_config)
+        infer_config.reports = [report]
         infer_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return AccuracyReporter(
             table_name=table_name,
