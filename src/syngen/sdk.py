@@ -1,11 +1,11 @@
-from typing import Optional, Dict, List, Union, Set, Literal
+from typing import Optional, Dict, List, Union, Set
 import os
 import pandas as pd
 from loguru import logger
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from slugify import slugify
-from syngen.ml.data_loaders import DataLoader, DataEncryptor
+from syngen.ml.data_loaders import DataLoader, DataEncryptor, MetadataLoader
 from syngen.train import launch_train
 from syngen.infer import launch_infer
 from syngen.ml.utils import fetch_config, fetch_env_variables
@@ -92,36 +92,113 @@ class DataIO:
 @dataclass
 class Syngen:
     """
-    SDK class for training, inference, and the generation of reports.
+    SDK class for training, inference, and the generation of reports
     """
+    list_of_tables: List = field(default_factory=list)
     metadata_path: Optional[str] = None
     table_name: Optional[str] = None
     source: Optional[str] = None
-    execution_artifacts = dict()
+    execution_artifacts: dict = None
 
-    def _set_execution_artifacts(self, source_of_info, type_of_process: Literal["train", "infer"]):
-        for table_name in source_of_info.initial_table_names:
+    def __post_init__(self):
+        self.list_of_tables = (
+            [self.table_name]
+            if self.table_name is not None
+            else [
+                table_name
+                for table_name in MetadataLoader(path=self.metadata_path).load_data().keys()
+                if table_name != "global"
+            ]
+        )
+
+    def _set_execution_artifacts(
+        self,
+        type_of_process: str,
+        table_name: Optional[str] = None,
+        reports: List[str] = list()
+    ):
+        self.execution_artifacts = dict()
+
+        if type_of_process == "report" and reports:
+            self._set_report_artifacts(table_name, reports)
+        else:
+            self._set_process_artifacts(type_of_process)
+
+    def _set_report_artifacts(self, table_name: str, reports: List[str]):
+        """
+        Set execution artifacts for report generation
+        """
+        self.execution_artifacts[table_name] = {"generated_reports": {}}
+
+        if "sample" in reports:
+            sample_reports = self._get_reports_from_train_config(table_name)
+            self.execution_artifacts[table_name]["generated_reports"].update(sample_reports)
+
+        if "accuracy" in reports:
+            accuracy_reports = self._get_reports_from_infer_config(table_name)
+            self.execution_artifacts[table_name]["generated_reports"].update(accuracy_reports)
+
+    def _set_process_artifacts(self, type_of_process: str):
+        """
+        Set execution artifacts for 'train' or 'infer' processes
+        """
+        for table_name in self.list_of_tables:
             if type_of_process == "train":
-                path_to_train_config = (
-                    f"model_artifacts/resources/{slugify(table_name)}/"
-                    "vae/checkpoints/train_config.pkl"
-                )
-                train_config = fetch_config(config_pickle_path=path_to_train_config)
-                self.execution_artifacts[table_name] = {
-                    "losses_path": train_config.paths["losses_path"],
-                    "path_to_input_data": train_config.paths["input_data_path"],
-                    "generated_reports": train_config.paths["generated_reports"],
-                }
+                self.execution_artifacts[table_name] = self._get_train_artifacts(table_name)
             elif type_of_process == "infer":
-                path_to_infer_config = (
-                    f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
-                )
-                infer_config = fetch_config(config_pickle_path=path_to_infer_config)
-                self.execution_artifacts[table_name] = {
-                    "path_to_input_data": infer_config.paths["input_data_path"],
-                    "path_to_generated_data": infer_config.paths["path_to_merged_infer"],
-                    "generated_reports": infer_config.paths["generated_reports"],
-                }
+                self.execution_artifacts[table_name] = self._get_infer_artifacts(table_name)
+
+    @staticmethod
+    def _get_reports_from_train_config(table_name: str) -> Dict:
+        """
+        Get generated reports fetched from the training configuration
+        """
+        path_to_train_config = (
+            f"model_artifacts/resources/{slugify(table_name)}/"
+            "vae/checkpoints/train_config.pkl"
+        )
+        train_config = fetch_config(config_pickle_path=path_to_train_config)
+        return train_config.paths["generated_reports"]
+
+    @staticmethod
+    def _get_reports_from_infer_config(table_name: str) -> Dict:
+        """
+        Get generated reports fetched from the inference configuration
+        """
+        path_to_infer_config = f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
+        infer_config = fetch_config(config_pickle_path=path_to_infer_config)
+        return infer_config.paths["generated_reports"]
+
+    @staticmethod
+    def _get_train_artifacts(table_name: str) -> Dict:
+        """
+        Get execution artifacts for a training process for a certain table
+        """
+        path_to_train_config = (
+            f"model_artifacts/resources/{slugify(table_name)}/"
+            "vae/checkpoints/train_config.pkl"
+        )
+        train_config = fetch_config(config_pickle_path=path_to_train_config)
+        return {
+            "losses_path": train_config.paths["losses_path"],
+            "path_to_input_data": train_config.paths["input_data_path"],
+            "generated_reports": train_config.paths["generated_reports"],
+        }
+
+    @staticmethod
+    def _get_infer_artifacts(table_name: str) -> Dict:
+        """
+        Get execution artifacts for an inference process for a certain table
+        """
+        path_to_infer_config = (
+            f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
+        )
+        infer_config = fetch_config(config_pickle_path=path_to_infer_config)
+        return {
+            "path_to_input_data": infer_config.paths["input_data_path"],
+            "path_to_generated_data": infer_config.paths["path_to_merged_infer"],
+            "generated_reports": infer_config.paths["generated_reports"],
+        }
 
     def train(
         self,
@@ -133,7 +210,7 @@ class Syngen:
         batch_size: int = 32,
         fernet_key: Optional[str] = None
     ):
-        source_of_info = launch_train(
+        launch_train(
             metadata_path=self.metadata_path,
             source=self.source,
             table_name=self.table_name,
@@ -145,7 +222,7 @@ class Syngen:
             batch_size=batch_size,
             fernet_key=fernet_key
         )
-        self._set_execution_artifacts(source_of_info, type_of_process="train")
+        self._set_execution_artifacts(type_of_process="train")
 
     def infer(
         self,
@@ -157,7 +234,7 @@ class Syngen:
         log_level: str = "INFO",
         fernet_key: Optional[str] = None,
     ):
-        source_of_info = launch_infer(
+        launch_infer(
             metadata_path=self.metadata_path,
             size=size,
             table_name=self.table_name,
@@ -168,7 +245,7 @@ class Syngen:
             log_level=log_level,
             fernet_key=fernet_key
         )
-        self._set_execution_artifacts(source_of_info, type_of_process="infer")
+        self._set_execution_artifacts(type_of_process="infer")
 
     @staticmethod
     def _validate_artifacts(
@@ -250,6 +327,7 @@ class Syngen:
             f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints/train_config.pkl"
         )
         train_config = fetch_config(config_pickle_path=path_to_train_config)
+        train_config.paths["generated_reports"] = {}
         train_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return SampleAccuracyReporter(
             table_name=table_name,
@@ -264,18 +342,18 @@ class Syngen:
         report: str,
         fernet_key: Optional[str]
     ) -> AccuracyReporter:
-        path_to_infer_config = (
-            f"model_artifacts/tmp_store/{slugify(table_name)}/"
-            f"infer_config.pkl"
-        )
+        path_to_infer_config = f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
         infer_config = fetch_config(config_pickle_path=path_to_infer_config)
         infer_config.reports = [report]
+        infer_config.paths["generated_reports"] = {}
         infer_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return AccuracyReporter(
             table_name=table_name,
             paths=infer_config.paths,
             config=infer_config.to_dict(),
-            metadata=infer_config.metadata
+            metadata=infer_config.metadata,
+            loader=None,
+            type_of_process=infer_config.type_of_process
         )
 
     def _register_reporter(self, table_name: str, report: str, fernet_key: Optional[str]) -> None:
@@ -310,11 +388,8 @@ class Syngen:
             the name of the environment variable kept the value of the Fernet key
             for decrypting the input of the original data, if applicable.
         """
-        reports = get_reports(
-            reports,
-            ReportTypes(),
-            "train"
-        )
+        reports = get_reports(reports, ReportTypes(), "train")
+
         if reports:
             if fernet_key is not None:
                 fernet_key = fetch_env_variables({"fernet_key": fernet_key}).get("fernet_key")
@@ -329,6 +404,7 @@ class Syngen:
                     for report in reports
                 }
             )
+
         for report in reports:
             self._register_reporter(table_name, report, fernet_key)
 
@@ -341,10 +417,8 @@ class Syngen:
                 "from 'accuracy', 'metrics_only' or 'sample'."
             )
 
-
-if __name__ == "__main__":
-    launcher = Syngen(
-        metadata_path="/home/Hanna_Imshenetska/pycharm/metadata/housing_metadata_os.yaml"
-    )
-    launcher.infer()
-    print(launcher.execution_artifacts)
+        self._set_execution_artifacts(
+            type_of_process="report",
+            table_name=table_name,
+            reports=reports
+        )

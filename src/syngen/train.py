@@ -107,7 +107,6 @@ def launch_train(
     )
 
     worker.launch_train()
-    return worker
 
 
 @click.command()

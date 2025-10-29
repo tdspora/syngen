@@ -75,7 +75,6 @@ def launch_infer(
     )
 
     worker.launch_infer()
-    return worker
 
 
 @click.command()
