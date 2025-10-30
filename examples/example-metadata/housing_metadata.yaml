@@ -19,7 +19,7 @@ housing_properties:                       # Use table name here
     row_limit: 1800                       # Limit of rows for training process
     reports: all                          # Controls the generation of quality reports
 
-  infer_settings:                         # Settings for infer process Supported formats include local files in CSV, Avro formats. Required parameter
+  infer_settings:                         # Settings for infer process. Supported formats include local files in CSV, Avro formats. Required parameter
     size: 90                              # Size for generated data
     run_parallel: false                   # Turn on or turn off parallel training process
     random_seed: 10                       # Ensure reproducible tables generation
