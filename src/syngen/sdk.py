@@ -98,7 +98,7 @@ class Syngen:
     metadata_path: Optional[str] = None
     table_name: Optional[str] = None
     source: Optional[str] = None
-    execution_artifacts: dict = None
+    execution_artifacts: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.list_of_tables = (
