@@ -552,7 +552,7 @@ def get_reports(
 ) -> List[str]:
     """
     Validate the values provided by the parameter 'value',
-    and convert it and get the appropriate list of reports
+    convert it, and get the appropriate list of reports
     """
     list_of_report_types = (
         report_types.train_report_types
