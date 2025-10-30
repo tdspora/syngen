@@ -152,52 +152,56 @@ class Syngen:
             elif type_of_process == "infer":
                 self.execution_artifacts[table_name] = self._get_infer_artifacts(table_name)
 
-    @staticmethod
-    def _get_reports_from_train_config(table_name: str) -> Dict:
+    def _get_reports_from_train_config(self, table_name: str) -> Dict:
         """
         Get generated reports fetched from the training configuration
         """
-        path_to_train_config = (
-            f"model_artifacts/resources/{slugify(table_name)}/"
-            "vae/checkpoints/train_config.pkl"
-        )
-        train_config = fetch_config(config_pickle_path=path_to_train_config)
+        train_config = self._get_config(table_name, type_of_process="train")
         return train_config.paths["generated_reports"]
 
     @staticmethod
-    def _get_reports_from_infer_config(table_name: str) -> Dict:
+    def _get_config(table_name: str, type_of_process: str):
+        """
+        Get configuration for a certain table and process type
+        """
+        if type_of_process == "train":
+            path_to_config = (
+                f"model_artifacts/resources/{slugify(table_name)}/"
+                "vae/checkpoints/train_config.pkl"
+            )
+        elif type_of_process == "infer":
+            path_to_config = (
+                f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
+            )
+        else:
+            raise ValueError(f"Unsupported process type: {type_of_process}")
+
+        config = fetch_config(config_pickle_path=path_to_config)
+        return config
+
+    def _get_reports_from_infer_config(self, table_name: str) -> Dict:
         """
         Get generated reports fetched from the inference configuration
         """
-        path_to_infer_config = f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
-        infer_config = fetch_config(config_pickle_path=path_to_infer_config)
+        infer_config = self._get_config(table_name, type_of_process="infer")
         return infer_config.paths["generated_reports"]
 
-    @staticmethod
-    def _get_train_artifacts(table_name: str) -> Dict:
+    def _get_train_artifacts(self, table_name: str) -> Dict:
         """
         Get execution artifacts for a training process for a certain table
         """
-        path_to_train_config = (
-            f"model_artifacts/resources/{slugify(table_name)}/"
-            "vae/checkpoints/train_config.pkl"
-        )
-        train_config = fetch_config(config_pickle_path=path_to_train_config)
+        train_config = self._get_config(table_name, type_of_process="train")
         return {
             "losses_path": train_config.paths["losses_path"],
             "path_to_input_data": train_config.paths["input_data_path"],
             "generated_reports": train_config.paths["generated_reports"],
         }
 
-    @staticmethod
-    def _get_infer_artifacts(table_name: str) -> Dict:
+    def _get_infer_artifacts(self, table_name: str) -> Dict:
         """
         Get execution artifacts for an inference process for a certain table
         """
-        path_to_infer_config = (
-            f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
-        )
-        infer_config = fetch_config(config_pickle_path=path_to_infer_config)
+        infer_config = self._get_config(table_name, type_of_process="infer")
         return {
             "path_to_input_data": infer_config.paths["input_data_path"],
             "path_to_generated_data": infer_config.paths["path_to_merged_infer"],
@@ -301,14 +305,14 @@ class Syngen:
                 (
                     path_to_infer_config,
                     (
-                        f"The inference configuration wasn't found for table '{table_name}' "
+                        f"The inference configuration wasn't found for the table '{table_name}' "
                         f"in the path - {path_to_infer_config}"
                     ),
                 ),
                 (
                     path_to_infer_success_file,
                     (
-                        f"The inference success file wasn't found for table '{table_name}' "
+                        f"The inference success file wasn't found for the table '{table_name}' "
                         f"in the path - {path_to_infer_success_file}."
                     ),
                 ),
@@ -322,15 +326,15 @@ class Syngen:
         if errors:
             raise FileNotFoundError("\n".join(errors))
 
-    @staticmethod
-    def _get_sample_reporter(table_name: str, fernet_key: Optional[str]) -> SampleAccuracyReporter:
+    def _get_sample_reporter(
+        self,
+        table_name: str,
+        fernet_key: Optional[str]
+    ) -> SampleAccuracyReporter:
         """
         Return a SampleAccuracyReporter instance for the specified table
         """
-        path_to_train_config = (
-            f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints/train_config.pkl"
-        )
-        train_config = fetch_config(config_pickle_path=path_to_train_config)
+        train_config = self._get_config(table_name, type_of_process="train")
         train_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return SampleAccuracyReporter(
             table_name=table_name,
@@ -339,14 +343,13 @@ class Syngen:
             metadata=train_config.metadata,
         )
 
-    @staticmethod
     def _get_accuracy_reporter(
+        self,
         table_name: str,
         report: str,
         fernet_key: Optional[str]
     ) -> AccuracyReporter:
-        path_to_infer_config = f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
-        infer_config = fetch_config(config_pickle_path=path_to_infer_config)
+        infer_config = self._get_config(table_name, type_of_process="infer")
         infer_config.reports = [report]
         infer_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return AccuracyReporter(
