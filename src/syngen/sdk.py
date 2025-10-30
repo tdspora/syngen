@@ -92,7 +92,7 @@ class DataIO:
 @dataclass
 class Syngen:
     """
-    SDK class for training, inference, and the generation of reports
+    SDK class for a training, inference, and generation of reports
     """
     list_of_tables: List = field(default_factory=list)
     metadata_path: Optional[str] = None
