@@ -232,9 +232,7 @@ class AccuracyTest(BaseTest):
             else self.paths["train_config_pickle_path"]
         )
         config = fetch_config(config_pickle_path=path_to_config)
-        config.paths["generated_reports"].update(
-            {"accuracy_report": path_to_accuracy_report}
-        )
+        config.paths["generated_reports"].update({"accuracy_report": path_to_accuracy_report})
         save_config(path_to_config, config)
 
     def _generate_report(

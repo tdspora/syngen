@@ -8,7 +8,7 @@ from slugify import slugify
 from syngen.ml.data_loaders import DataLoader, DataEncryptor, MetadataLoader
 from syngen.train import launch_train
 from syngen.infer import launch_infer
-from syngen.ml.utils import fetch_config, save_config, fetch_env_variables
+from syngen.ml.utils import fetch_config, fetch_env_variables
 from syngen.ml.reporters import (
     Report,
     AccuracyReporter,
@@ -129,18 +129,18 @@ class Syngen:
         Set execution artifacts for report generation
         """
         self.execution_artifacts[table_name] = {"generated_reports": {}}
+        for report in reports:
+            if report == "sample":
+                reports = self._get_reports_from_train_config(table_name)
+                self.execution_artifacts[table_name]["generated_reports"]["sample_report"] = (
+                    reports.get("sample_report")
+                )
 
-        if "sample" in reports:
-            reports = self._get_reports_from_train_config(table_name)
-            self.execution_artifacts[table_name]["generated_reports"]["sample_report"] = (
-                reports.get("sample_report")
-            )
-
-        if "accuracy" in reports:
-            reports = self._get_reports_from_infer_config(table_name)
-            self.execution_artifacts[table_name]["generated_reports"]["accuracy_report"] = (
-                reports.get("accuracy_report")
-            )
+            if report == "accuracy":
+                reports = self._get_reports_from_infer_config(table_name)
+                self.execution_artifacts[table_name]["generated_reports"]["accuracy_report"] = (
+                    reports.get("accuracy_report")
+                )
 
     def _set_process_artifacts(self, type_of_process: str):
         """
@@ -331,8 +331,6 @@ class Syngen:
             f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints/train_config.pkl"
         )
         train_config = fetch_config(config_pickle_path=path_to_train_config)
-        train_config.paths["generated_reports"] = {}
-        save_config(path_to_train_config, train_config)
         train_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return SampleAccuracyReporter(
             table_name=table_name,
@@ -349,8 +347,6 @@ class Syngen:
     ) -> AccuracyReporter:
         path_to_infer_config = f"model_artifacts/tmp_store/{slugify(table_name)}/infer_config.pkl"
         infer_config = fetch_config(config_pickle_path=path_to_infer_config)
-        infer_config.paths["generated_reports"] = {}
-        save_config(path_to_infer_config, infer_config)
         infer_config.reports = [report]
         infer_config.metadata[table_name]["encryption"]["fernet_key"] = fernet_key
         return AccuracyReporter(
