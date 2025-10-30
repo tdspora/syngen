@@ -572,42 +572,36 @@ In addition to the CLI, *Syngen* provides a Python SDK for programmatic access t
 
 The SDK provides two main classes:
 
-#### `Syngen` - Core functionality for training, inference, and report generation
+#### `Syngen` - Core functionality for a training, inference, and report generation
 
 ```python
 from syngen.sdk import Syngen
 
 # Training
-Syngen().train(
-  source="path/to/data.csv",
-  table_name="my_table",
-  epochs=10,
-  row_limit=1000,
-  batch_size=32,
-  log_level="DEBUG",
-  reports="all"
+Syngen(
+    source="path/to/data.csv",
+    table_name="my_table",
+).train(
+    epochs=10,
+    row_limit=1000,
+    batch_size=32,
+    log_level="DEBUG",
+    reports="all"
 )
 
-Syngen().train(
-  metadata_path="path/to/metadata.yaml",
-  log_level="DEBUG"
-)
+Syngen(metadata_path="path/to/metadata.yaml").train(log_level="DEBUG")
 
 # Inference
-Syngen().infer(
-  table_name="my_table",
+Syngen(table_name="my_table").infer(
   size=1000,
   random_seed=42,
   reports="accuracy"
 )
 
-Syngen().infer(
-  metadata_path="path/to/metadata.yaml",
-  log_level="DEBUG"
-)
+Syngen(metadata_path="path/to/metadata.yaml").infer(log_level="DEBUG")
 
 # Generate reports separately for a certain table
-Syngen().generate_reports(
+Syngen(metadata_path="path/to/metadata.yaml").generate_reports(
   table_name="my_table",
   reports=["accuracy", "sample"]
 )
@@ -632,9 +626,9 @@ data_io.save_data(df)
 ### Key SDK features
 
 - **Training and inference**: All CLI parameters are available as method arguments
-- **Report generation**: Generate quality reports separately for a certain table after training/inference processes
+- **Report generation**: Generate quality reports separately for a certain table after a training/inference processes
 - **Data I/O**: Load and save data in multiple formats (*CSV*, *Avro*, *Excel*) with custom settings
-- **Encryption support**: Use Fernet keys for secure data handling
+- **Encryption support**: Use a Fernet key for secure data handling
 - **Metadata support**: Use a metadata file for complex workflows with multiple tables
 - **Format configuration**: Customize delimiters, encodings, and other format-specific settings
 
