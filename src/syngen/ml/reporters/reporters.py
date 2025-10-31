@@ -32,7 +32,8 @@ class Reporter:
         paths: Dict[str, str],
         config: Dict[str, str],
         metadata: Dict,
-        loader: Optional[Callable[[str], pd.DataFrame]] = None
+        loader: Optional[Callable[[str], pd.DataFrame]] = None,
+        type_of_process: Literal["train", "infer"] = "train"
     ):
         self.table_name = table_name
         self.paths = paths
@@ -43,6 +44,7 @@ class Reporter:
         self.columns_nan_labels = dict()
         self.na_values = dict()
         self.technical_columns = self._fetch_technical_columns()
+        self.type_of_process = type_of_process
 
     def _fetch_technical_columns(self) -> Set[str]:
         """
@@ -325,8 +327,7 @@ class AccuracyReporter(Reporter):
         loader: Optional[Callable[[str], pd.DataFrame]],
         type_of_process: Literal["train", "infer"]
     ):
-        super().__init__(table_name, paths, config, metadata, loader)
-        self.type_of_process = type_of_process
+        super().__init__(table_name, paths, config, metadata, loader, type_of_process)
 
     def report(self):
         """

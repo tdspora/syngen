@@ -18,8 +18,6 @@ from ulid import ULID
 import random
 from loguru import logger
 
-from syngen.ml.validation_schema import ReportTypes
-
 
 MAX_ALLOWED_TIME_MS = 253402214400
 MIN_ALLOWED_TIME_MS = -62135596800

@@ -8,7 +8,6 @@ import jinja2
 import pandas as pd
 
 from syngen.ml.metrics.utils import transform_to_base64
-from syngen.ml.utils import fetch_config, save_config
 
 
 class SampleAccuracyTest(BaseTest):
