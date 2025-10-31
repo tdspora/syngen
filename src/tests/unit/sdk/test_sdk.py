@@ -849,8 +849,8 @@ def test_infer_table_with_invalid_log_level(rp_logger):
 @patch.object(Report, "clear_report")
 @patch.object(Report, "generate_report")
 @patch.object(Report, "register_reporter")
-@patch.object(Syngen, "_get_sample_reporter")
-@patch.object(Syngen, "_get_accuracy_reporter")
+@patch.object(Syngen, "_Syngen__get_sample_reporter")
+@patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
 def test_generate_sample_report(
     mock_validate_artifacts,
@@ -866,7 +866,7 @@ def test_generate_sample_report(
     rp_logger.info("Launch the generation of the sample report")
     Syngen(table_name="test_table").generate_reports(table_name="test_table", reports=report)
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, reports={"sample"}
+        table_name="test_table", fernet_key=None, completed_processes={"train"}
     )
     mock_get_sample_reporter.assert_called_once_with("test_table", None)
     mock_get_accuracy_reporter.assert_not_called()
@@ -884,8 +884,8 @@ def test_generate_sample_report(
 @patch.object(Report, "clear_report")
 @patch.object(Report, "generate_report")
 @patch.object(Report, "register_reporter")
-@patch.object(Syngen, "_get_sample_reporter")
-@patch.object(Syngen, "_get_accuracy_reporter")
+@patch.object(Syngen, "_Syngen__get_sample_reporter")
+@patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
 def test_generate_accuracy_report(
     mock_validate_artifacts,
@@ -901,7 +901,7 @@ def test_generate_accuracy_report(
     rp_logger.info("Launch the generation of the accuracy report")
     Syngen(table_name="test_table").generate_reports(table_name="test_table", reports=report)
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, reports={"accuracy"}
+        table_name="test_table", fernet_key=None, completed_processes={"infer"}
     )
     mock_get_accuracy_reporter.assert_called_once_with("test_table", "accuracy", None)
     mock_get_sample_reporter.assert_not_called()
@@ -919,8 +919,8 @@ def test_generate_accuracy_report(
 @patch.object(Report, "clear_report")
 @patch.object(Report, "generate_report")
 @patch.object(Report, "register_reporter")
-@patch.object(Syngen, "_get_sample_reporter")
-@patch.object(Syngen, "_get_accuracy_reporter")
+@patch.object(Syngen, "_Syngen__get_sample_reporter")
+@patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
 def test_generate_metrics_only_report(
     mock_validate_artifacts,
@@ -936,7 +936,7 @@ def test_generate_metrics_only_report(
     rp_logger.info("Launch the generation of the 'metrics_only' report")
     Syngen(table_name="test_table").generate_reports(table_name="test_table", reports=report)
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, reports={"accuracy"}
+        table_name="test_table", fernet_key=None, completed_processes={"infer"}
     )
     mock_get_accuracy_reporter.assert_called_once_with("test_table", "metrics_only", None)
     mock_get_sample_reporter.assert_not_called()
@@ -954,8 +954,8 @@ def test_generate_metrics_only_report(
 @patch.object(Report, "clear_report")
 @patch.object(Report, "generate_report")
 @patch.object(Report, "register_reporter")
-@patch.object(Syngen, "_get_sample_reporter")
-@patch.object(Syngen, "_get_accuracy_reporter")
+@patch.object(Syngen, "_Syngen__get_sample_reporter")
+@patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
 def test_generate_all_reports(
     mock_validate_artifacts,
@@ -971,7 +971,7 @@ def test_generate_all_reports(
     rp_logger.info("Launch the generation of the 'metrics_only' report")
     Syngen(table_name="test_table").generate_reports(table_name="test_table", reports=report)
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, reports={"accuracy", "sample"}
+        table_name="test_table", fernet_key=None, completed_processes={"train", "infer"}
     )
     mock_get_accuracy_reporter.assert_called_once()
     mock_get_sample_reporter.assert_called_once()
@@ -988,8 +988,8 @@ def test_generate_all_reports(
 @patch.object(Report, "clear_report")
 @patch.object(Report, "generate_report")
 @patch.object(Report, "register_reporter")
-@patch.object(Syngen, "_get_sample_reporter")
-@patch.object(Syngen, "_get_accuracy_reporter")
+@patch.object(Syngen, "_Syngen__get_sample_reporter")
+@patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
 def test_generate_none_reports(
     mock_validate_artifacts,
@@ -1026,8 +1026,8 @@ def test_generate_none_reports(
 @patch.object(Report, "clear_report")
 @patch.object(Report, "generate_report")
 @patch.object(Report, "register_reporter")
-@patch.object(Syngen, "_get_sample_reporter")
-@patch.object(Syngen, "_get_accuracy_reporter")
+@patch.object(Syngen, "_Syngen__get_sample_reporter")
+@patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
 def test_generate_full_set_of_reports(
     mock_validate_artifacts,
@@ -1048,7 +1048,7 @@ def test_generate_full_set_of_reports(
         reports=["accuracy", "metrics_only", "sample"]
     )
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, reports={"accuracy", "sample"}
+        table_name="test_table", fernet_key=None, completed_processes={"train", "infer"}
     )
     assert mock_get_accuracy_reporter.call_count == 2
     mock_get_sample_reporter.assert_called_once()
@@ -1082,8 +1082,8 @@ def test_generate_report_with_wrong_report_type(rp_logger, caplog):
 @patch.object(Report, "clear_report")
 @patch.object(Report, "generate_report")
 @patch.object(Report, "register_reporter")
-@patch.object(Syngen, "_get_sample_reporter")
-@patch.object(Syngen, "_get_accuracy_reporter")
+@patch.object(Syngen, "_Syngen__get_sample_reporter")
+@patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
 @patch.object(DataEncryptor, "validate_fernet_key")
 def test_generate_report_for_encrypted_data(
@@ -1107,7 +1107,7 @@ def test_generate_report_for_encrypted_data(
     )
     mock_validate_fernet_key.assert_called_once_with(fernet_key)
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=fernet_key, reports={"sample"}
+        table_name="test_table", fernet_key=fernet_key, completed_processes={"train"}
     )
     mock_get_sample_reporter.assert_called_once_with("test_table", os.getenv("FERNET_KEY"))
     mock_get_accuracy_reporter.assert_not_called()

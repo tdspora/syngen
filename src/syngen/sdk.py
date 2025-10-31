@@ -99,6 +99,7 @@ class Syngen:
     table_name: Optional[str] = None
     source: Optional[str] = None
     execution_artifacts: Dict = field(default_factory=dict)
+    report_types: object = field(init=False)
 
     def __post_init__(self):
         self.list_of_tables = (
@@ -110,6 +111,7 @@ class Syngen:
                 if table_name != "global"
             ]
         )
+        self.report_types = ReportTypes()
 
     def _set_execution_artifacts(
         self,
@@ -136,10 +138,10 @@ class Syngen:
                     reports.get("sample_report")
                 )
 
-            if report == "accuracy":
+            if report in self.report_types.full_list_of_infer_report_type:
                 reports = self._get_reports_from_infer_config(table_name)
-                self.execution_artifacts[table_name]["generated_reports"]["accuracy_report"] = (
-                    reports.get("accuracy_report")
+                self.execution_artifacts[table_name]["generated_reports"][f"{report}_report"] = (
+                    reports.get(f"{report}_report")
                 )
 
     def _set_process_artifacts(self, type_of_process: str):
@@ -259,7 +261,7 @@ class Syngen:
     def _validate_artifacts(
         table_name: str,
         fernet_key: Optional[str],
-        reports: Set[str]
+        completed_processes: Set[str]
     ):
         errors: List[str] = []
 
@@ -285,7 +287,7 @@ class Syngen:
         path_to_infer_config = f"model_artifacts/tmp_store/{slug}/infer_config.pkl"
         path_to_infer_success_file = f"model_artifacts/tmp_store/{slug}/infer_message.success"
         checks_of_artifacts = {
-            "sample": [
+            "train": [
                 (
                     path_to_train_config,
                     (
@@ -301,7 +303,7 @@ class Syngen:
                     ),
                 ),
             ],
-            "accuracy": [
+            "infer": [
                 (
                     path_to_infer_config,
                     (
@@ -318,15 +320,15 @@ class Syngen:
                 ),
             ],
         }
-        for report in reports:
-            for path, message in checks_of_artifacts.get(report, []):
+        for process in completed_processes:
+            for path, message in checks_of_artifacts.get(process, []):
                 if not os.path.exists(path):
                     errors.append(message)
 
         if errors:
             raise FileNotFoundError("\n".join(errors))
 
-    def _get_sample_reporter(
+    def __get_sample_reporter(
         self,
         table_name: str,
         fernet_key: Optional[str]
@@ -343,7 +345,7 @@ class Syngen:
             metadata=train_config.metadata,
         )
 
-    def _get_accuracy_reporter(
+    def __get_accuracy_reporter(
         self,
         table_name: str,
         report: str,
@@ -361,15 +363,15 @@ class Syngen:
             type_of_process=infer_config.type_of_process
         )
 
-    def _register_reporter(self, table_name: str, report: str, fernet_key: Optional[str]) -> None:
+    def __register_reporter(self, table_name: str, report: str, fernet_key: Optional[str]) -> None:
         """
         Register a specific type of report
         """
         if report in ["accuracy", "metrics_only"]:
-            accuracy_reporter = self._get_accuracy_reporter(table_name, report, fernet_key)
+            accuracy_reporter = self.__get_accuracy_reporter(table_name, report, fernet_key)
             Report().register_reporter(table=table_name, reporter=accuracy_reporter)
         elif report == "sample":
-            sample_reporter = self._get_sample_reporter(table_name, fernet_key)
+            sample_reporter = self.__get_sample_reporter(table_name, fernet_key)
             Report().register_reporter(table=table_name, reporter=sample_reporter)
 
     def generate_reports(
@@ -385,15 +387,14 @@ class Syngen:
         ----------
         table_name: str
             Table name to generate the report for
-            (same as used in the training or in the inference processes)
+            (same as used in the training or in the inference processes).
         reports: Union[List[str], str]
             List of report types to generate.
-            Supported values are: "accuracy", "metrics_only", "sample", "none", "all"
         fernet_key: Optional[str]
             the name of the environment variable kept the value of the Fernet key
             for decrypting the input of the original data, if applicable.
         """
-        reports = get_reports(reports, ReportTypes(), "train")
+        reports = get_reports(reports, self.report_types, "train")
 
         if reports:
             if fernet_key is not None:
@@ -402,16 +403,16 @@ class Syngen:
             self._validate_artifacts(
                 table_name=table_name,
                 fernet_key=fernet_key,
-                reports={
-                    "accuracy"
-                    if report in ["accuracy", "metrics_only"]
-                    else report
+                completed_processes={
+                    "infer"
+                    if report in self.report_types.infer_report_types
+                    else "train"
                     for report in reports
                 }
             )
 
         for report in reports:
-            self._register_reporter(table_name, report, fernet_key)
+            self.__register_reporter(table_name, report, fernet_key)
 
         if reports:
             Report().generate_report()

@@ -547,7 +547,7 @@ def timing(func):
 
 def get_reports(
     value: Union[List[str], Tuple[str], str],
-    report_types: 'ReportTypes',
+    report_types,
     type_of_process: Literal["train", "infer"]
 ) -> List[str]:
     """

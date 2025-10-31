@@ -31,6 +31,7 @@ class BaseTest(ABC):
         paths: dict,
         table_name: str,
         config: Dict,
+        type_of_process: Literal["train", "infer"] = "train"
     ):
         self.original = original
         self.synthetic = synthetic
@@ -45,6 +46,7 @@ class BaseTest(ABC):
             ]
         )
         self.reports_path = str()
+        self.type_of_process = type_of_process
 
     @abstractmethod
     def report(
@@ -104,6 +106,19 @@ class BaseTest(ABC):
         }
 
         return cleaned_config
+
+    def _update_list_of_generated_reports(self, path_to_report: str, report_type: str):
+        """
+        Update the list of generated reports in the configuration stored on the disk
+        """
+        path_to_config = (
+            self.paths["infer_config_pickle_path"]
+            if self.type_of_process == "infer"
+            else self.paths["train_config_pickle_path"]
+        )
+        config = fetch_config(config_pickle_path=path_to_config)
+        config.paths["generated_reports"].update({f"{report_type}_report": path_to_report})
+        save_config(path_to_config, config)
 
 
 class AccuracyTest(BaseTest):
@@ -222,19 +237,6 @@ class AccuracyTest(BaseTest):
             bi_images,
         )
 
-    def _update_list_of_generated_reports(self, path_to_accuracy_report):
-        """
-        Update the list of generated reports in the configuration stored on the disk
-        """
-        path_to_config = (
-            self.paths["infer_config_pickle_path"]
-            if self.type_of_process == "infer"
-            else self.paths["train_config_pickle_path"]
-        )
-        config = fetch_config(config_pickle_path=path_to_config)
-        config.paths["generated_reports"].update({"accuracy_report": path_to_accuracy_report})
-        save_config(path_to_config, config)
-
     def _generate_report(
         self,
         acc_median,
@@ -302,7 +304,10 @@ class AccuracyTest(BaseTest):
         with open(path_to_accuracy_report, "w", encoding="utf-8") as f:
             f.write(html)
 
-        self._update_list_of_generated_reports(path_to_accuracy_report)
+        self._update_list_of_generated_reports(
+            path_to_report=path_to_accuracy_report,
+            report_type="accuracy"
+        )
         self._log_report_to_mlflow(path_to_accuracy_report)
 
     def report(self, *args, **kwargs):
