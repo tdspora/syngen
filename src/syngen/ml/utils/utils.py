@@ -567,9 +567,10 @@ def get_reports(
     valid_values.extend(list_of_report_types)
 
     if not input_values.issubset(set(valid_values)):
+        list_of_valid_values = ", ".join([f"'{value}'" for value in valid_values])
         raise ValueError(
-            f"Invalid input: Acceptable values for the parameter 'reports' are "
-            f"{', '.join(valid_values)}."
+            "Invalid input: Acceptable values for the parameter 'reports' are "
+            f"{list_of_valid_values}."
         )
     if "none" in input_values and "all" in input_values:
         raise ValueError(
