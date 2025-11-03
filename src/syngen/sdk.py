@@ -363,7 +363,7 @@ class Syngen:
             type_of_process=infer_config.type_of_process
         )
 
-    def __register_reporter(self, table_name: str, report: str, fernet_key: Optional[str]) -> None:
+    def _register_reporter(self, table_name: str, report: str, fernet_key: Optional[str]) -> None:
         """
         Register a specific type of report
         """
@@ -412,7 +412,7 @@ class Syngen:
             )
 
         for report in reports:
-            self.__register_reporter(table_name, report, fernet_key)
+            self._register_reporter(table_name, report, fernet_key)
 
         if reports:
             Report().generate_report()
