@@ -1017,7 +1017,7 @@ def test_generate_none_reports(
         )
         assert (
             "No reports to generate. Please specify the report type "
-            "from 'accuracy', 'metrics_only' or 'sample'."
+            "from 'accuracy', 'metrics_only', 'sample'."
         ) in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

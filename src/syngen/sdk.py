@@ -418,9 +418,12 @@ class Syngen:
             Report().generate_report()
             Report().clear_report()
         else:
+            list_of_available_reports = ", ".join(
+                f"'{rt}'" for rt in self.report_types.train_report_types
+            )
             logger.warning(
                 "No reports to generate. Please specify the report type "
-                "from 'accuracy', 'metrics_only' or 'sample'."
+                f"from {list_of_available_reports}."
             )
 
         self._set_execution_artifacts(
