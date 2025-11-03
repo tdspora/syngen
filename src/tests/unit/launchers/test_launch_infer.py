@@ -537,7 +537,7 @@ def test_cli_launch_infer_table_with_invalid_parameter_reports(invalid_value, rp
     assert isinstance(result.exception, ValueError)
     assert result.exception.args == (
         "Invalid input: Acceptable values for the parameter 'reports' "
-        "are none, all, accuracy, metrics_only.",
+        "are 'none', 'all', 'accuracy', 'metrics_only'.",
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -554,7 +554,7 @@ def test_launch_infer_table_with_invalid_parameter_reports(invalid_value, rp_log
         launch_infer(reports=invalid_value, table_name=TABLE_NAME)
         assert str(error.value) == (
             "Invalid input: Acceptable values for the parameter 'reports' "
-            "are none, all, accuracy, metrics_only."
+            "are 'none', 'all', 'accuracy', 'metrics_only'."
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
