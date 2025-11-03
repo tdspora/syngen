@@ -863,7 +863,7 @@ def test_generate_sample_report(
     report,
     rp_logger
 ):
-    rp_logger.info("Launch the generation of the sample report")
+    rp_logger.info("Launch the generation of the 'sample' report")
     Syngen(table_name="test_table").generate_reports(table_name="test_table", reports=report)
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, completed_processes={"train"}
@@ -898,7 +898,7 @@ def test_generate_accuracy_report(
     report,
     rp_logger
 ):
-    rp_logger.info("Launch the generation of the accuracy report")
+    rp_logger.info("Launch the generation of the 'accuracy' report")
     Syngen(table_name="test_table").generate_reports(table_name="test_table", reports=report)
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, completed_processes={"infer"}
@@ -968,7 +968,7 @@ def test_generate_all_reports(
     report,
     rp_logger
 ):
-    rp_logger.info("Launch the generation of the 'metrics_only' report")
+    rp_logger.info("Launch the generation of the 'all' report")
     Syngen(table_name="test_table").generate_reports(table_name="test_table", reports=report)
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, completed_processes={"train", "infer"}
@@ -1099,7 +1099,7 @@ def test_generate_report_for_encrypted_data(
     monkeypatch,
     rp_logger
 ):
-    rp_logger.info("Launch the generation of the sample report")
+    rp_logger.info("Launch the generation of the 'sample' report for the encrypted data")
     fernet_key = Fernet.generate_key().decode()
     monkeypatch.setenv("FERNET_KEY", fernet_key)
     Syngen(table_name="test_table").generate_reports(
