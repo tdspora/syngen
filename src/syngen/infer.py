@@ -12,7 +12,10 @@ from syngen.ml.utils import (
 from syngen.ml.validation_schema import ReportTypes
 
 
-def validate_required_parameters(metadata_path: Optional[str], table_name: Optional[str]):
+def validate_required_parameters(
+        metadata_path: Optional[str] = None,
+        table_name: Optional[str] = None
+):
     if not metadata_path and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "
@@ -22,14 +25,8 @@ def validate_required_parameters(metadata_path: Optional[str], table_name: Optio
     if metadata_path and table_name:
         logger.warning(
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored"
+            "In this case the information of 'table_name' will be ignored."
         )
-    logger.info(
-        "The inference process will be executed according to the information mentioned "
-        "in 'infer_settings' in the metadata file. If appropriate information is absent "
-        "from the metadata file, then the values of parameters sent through CLI will be used. "
-        "Otherwise, the values of parameters will be defaulted"
-    )
 
 
 def launch_infer(
@@ -49,29 +46,33 @@ def launch_infer(
         table_name=table_name,
         metadata_path=metadata_path
     )
-    validate_required_parameters(metadata_path, table_name)
-
-    settings = {
-        "size": size,
-        "run_parallel": run_parallel,
-        "batch_size": batch_size,
-        "reports": get_reports(
-            value=reports,
-            report_types=ReportTypes(),
-            type_of_process="infer"
-        ),
-        "random_seed": random_seed
-    }
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
 
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
-        settings=settings,
+        settings={
+            "size": size,
+            "run_parallel": run_parallel,
+            "batch_size": batch_size,
+            "reports": get_reports(
+                value=reports,
+                report_types=ReportTypes(),
+                type_of_process="infer"
+            ),
+            "random_seed": random_seed
+        },
         log_level=log_level,
         type_of_process="infer",
         encryption_settings=encryption_settings
+    )
+
+    logger.info(
+        "The inference process will be executed according to the information mentioned "
+        "in 'infer_settings' in the metadata file. If appropriate information is absent "
+        "from the metadata file, then the values of parameters sent through CLI will be used. "
+        "Otherwise, the values of parameters will be defaulted"
     )
 
     worker.launch_infer()
@@ -169,6 +170,7 @@ def cli_launch_infer(
     fernet_key
     -------
     """
+    validate_required_parameters(metadata_path=metadata_path, table_name=table_name)
     launch_infer(
         metadata_path=metadata_path,
         size=size,

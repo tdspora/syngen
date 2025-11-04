@@ -15,9 +15,9 @@ from syngen.ml.validation_schema import ReportTypes
 
 
 def validate_required_parameters(
-    metadata_path: Optional[str],
-    source: Optional[str],
-    table_name: Optional[str]
+    metadata_path: Optional[str] = None,
+    source: Optional[str] = None,
+    table_name: Optional[str] = None
 ):
     """
     Validate that required parameters are provided
@@ -55,12 +55,6 @@ def validate_required_parameters(
             "The information of 'metadata_path' was provided. "
             "In this case the information of 'table_name' will be ignored"
         )
-    logger.info(
-        "The training process will be executed according to the information mentioned "
-        "in 'train_settings' in the metadata file. If appropriate information is absent "
-        "from the metadata file, then the values of parameters sent through CLI will be used. "
-        "Otherwise, the values of parameters will be defaulted"
-    )
 
 
 def launch_train(
@@ -81,29 +75,34 @@ def launch_train(
         table_name=table_name,
         metadata_path=metadata_path
     )
-    validate_required_parameters(metadata_path, source, table_name)
-    settings = {
-        "source": source,
-        "epochs": epochs,
-        "drop_null": drop_null,
-        "row_limit": row_limit,
-        "batch_size": batch_size,
-        "reports": get_reports(
-            value=reports,
-            report_types=ReportTypes(),
-            type_of_process="train"
-        ),
-    }
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
 
     worker = Worker(
         table_name=table_name,
         metadata_path=metadata_path,
-        settings=settings,
+        settings={
+            "source": source,
+            "epochs": epochs,
+            "drop_null": drop_null,
+            "row_limit": row_limit,
+            "batch_size": batch_size,
+            "reports": get_reports(
+                value=reports,
+                report_types=ReportTypes(),
+                type_of_process="train"
+            ),
+        },
         log_level=log_level,
         type_of_process="train",
         encryption_settings=encryption_settings
+    )
+
+    logger.info(
+        "The training process will be executed according to the information mentioned "
+        "in 'train_settings' in the metadata file. If appropriate information is absent "
+        "from the metadata file, then the values of parameters sent through CLI will be used. "
+        "Otherwise, the values of parameters will be defaulted."
     )
 
     worker.launch_train()
@@ -212,6 +211,11 @@ def cli_launch_train(
     fernet_key
     -------
     """
+    validate_required_parameters(
+        metadata_path=metadata_path,
+        source=source,
+        table_name=table_name
+    )
     launch_train(
         metadata_path=metadata_path,
         source=source,

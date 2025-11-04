@@ -4,7 +4,7 @@ import pytest
 from click.testing import CliRunner
 from marshmallow import ValidationError
 
-from syngen.infer import launch_infer, cli_launch_infer
+from syngen.infer import launch_infer, cli_launch_infer, validate_required_parameters
 from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -95,14 +95,15 @@ def test_cli_launch_infer_table_with_metadata_path_and_table_name(
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.infer.setup_log_process")
-def test_launch_infer_table_with_metadata_path_and_table_name(
+def test_validate_parameters_with_metadata_path_and_table_name(
     mock_logger, mock_post_init, mock_launch_infer, rp_logger, caplog
 ):
     rp_logger.info(
-        "Launch the inference process by using the function 'launch_infer' "
+        "Validate of required parameters before launching the inference process "
         "with parameters 'metadata_path' and 'table_name'"
     )
     with caplog.at_level("WARNING"):
+        validate_required_parameters(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
         launch_infer(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
         mock_post_init.assert_called_once()
         mock_launch_infer.assert_called_once()
@@ -127,12 +128,12 @@ def test_cli_launch_infer_table_without_parameters(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_launch_infer_table_without_parameters(rp_logger):
+def test_validate_parameters_without_parameters(rp_logger):
     rp_logger.info(
-        "Launch the inference process by using the function 'launch_infer' without parameters"
+        "Validate of required parameters before launching the inference process without parameters"
     )
     with pytest.raises(AttributeError) as error:
-        launch_infer()
+        validate_required_parameters()
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "
             "Please provide either the information of 'metadata_path' or "

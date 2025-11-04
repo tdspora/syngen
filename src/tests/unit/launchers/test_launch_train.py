@@ -4,7 +4,7 @@ import pytest
 from click.testing import CliRunner
 from marshmallow import ValidationError
 
-from syngen.train import launch_train, cli_launch_train
+from syngen.train import launch_train, cli_launch_train, validate_required_parameters
 from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -110,14 +110,15 @@ def test_cli_launch_train_table_with_metadata_path_and_source(
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.train.setup_log_process")
-def test_launch_train_table_with_metadata_path_and_source(
+def test_validate_parameters_with_metadata_path_and_source(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
-        "Launch the training process by using the function 'launch_train' "
+        "Validate of required parameters before launching of the training process "
         "with parameters 'metadata_path' and 'source'"
     )
     with caplog.at_level("WARNING"):
+        validate_required_parameters(metadata_path=PATH_TO_METADATA, source=PATH_TO_TABLE)
         launch_train(metadata_path=PATH_TO_METADATA, source=PATH_TO_TABLE)
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
@@ -157,14 +158,15 @@ def test_cli_launch_train_table_with_metadata_path_and_table_name(
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.train.setup_log_process")
-def test_launch_train_table_with_metadata_path_and_table_name(
+def test_validate_parameters_with_metadata_path_and_table_name(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
-        "Launch the training process by using the function 'launch_train' "
+        "Validate of required parameters before launching of the training process "
         "with parameters 'metadata_path' and 'table_name'"
     )
     with caplog.at_level("WARNING"):
+        validate_required_parameters(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
         launch_train(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
@@ -212,14 +214,19 @@ def test_cli_launch_train_table_with_metadata_path_and_table_name_and_source(
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 @patch("syngen.train.setup_log_process")
-def test_launch_train_table_with_metadata_path_and_table_name_and_source(
+def test_validate_parameters_with_metadata_path_and_table_name_and_source(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
-        "Launch the training process by using the function 'launch_train' with parameters "
+        "Validate of required parameters before the launching training process with parameters "
         "'metadata_path', 'table_name' and 'source'"
     )
     with caplog.at_level("WARNING"):
+        validate_required_parameters(
+            metadata_path=PATH_TO_METADATA,
+            table_name=TABLE_NAME,
+            source=PATH_TO_TABLE
+        )
         launch_train(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME, source=PATH_TO_TABLE)
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
@@ -247,14 +254,13 @@ def test_cli_launch_train_table_with_table_name_and_without_source(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch("syngen.train.setup_log_process")
-def test_launch_train_table_with_table_name_and_without_source(rp_logger, caplog):
+def test_validate_parameters_with_table_name_and_without_source(rp_logger, caplog):
     rp_logger.info(
-        "Launch the training process by using the function 'launch_train' "
+        "Validate  of required parameters before launching the training process "
         "only with the parameter 'table_name'"
     )
     with pytest.raises(AttributeError) as error:
-        launch_train(table_name=TABLE_NAME)
+        validate_required_parameters(table_name=TABLE_NAME)
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'source' is absent. "
             "Please provide either the information of 'metadata_path' or "
@@ -279,14 +285,13 @@ def test_cli_launch_train_table_with_source_and_without_table_name(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch("syngen.train.setup_log_process")
-def test_launch_train_table_with_source_and_without_table_name(rp_logger):
+def test_validate_parameters_with_source_and_without_table_name(rp_logger):
     rp_logger.info(
-        "Launch the training process by using the function 'launch_train' "
+        "Validate of required parameters before launching the training process "
         "only with the parameter 'source'"
     )
     with pytest.raises(AttributeError) as error:
-        launch_train(source=PATH_TO_TABLE)
+        validate_required_parameters(source=PATH_TO_TABLE)
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "
             "Please provide either the information of 'metadata_path' or "
@@ -311,13 +316,12 @@ def test_cli_launch_train_table_without_parameters(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch("syngen.train.setup_log_process")
-def test_launch_train_table_without_parameters(rp_logger):
+def test_validate_parameters_without_parameters(rp_logger):
     rp_logger.info(
-        "Launch the training process by using the function 'launch_train' without parameters"
+        "Validate of required parameters before launching of training process without parameters"
     )
     with pytest.raises(AttributeError) as error:
-        launch_train()
+        validate_required_parameters()
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'table_name' "
             "and 'source' is absent. Please provide either the information of "

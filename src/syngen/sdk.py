@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from slugify import slugify
 from syngen.ml.data_loaders import DataLoader, DataEncryptor, MetadataLoader
-from syngen.train import launch_train
+from syngen.train import launch_train, validate_required_parameters
 from syngen.infer import launch_infer
 from syngen.ml.utils import fetch_config, fetch_env_variables
 from syngen.ml.reporters import (
@@ -102,14 +102,19 @@ class Syngen:
     report_types: object = field(init=False)
 
     def __post_init__(self):
+        validate_required_parameters(
+            metadata_path=self.metadata_path,
+            source=self.source,
+            table_name=self.table_name
+        )
         self.list_of_tables = (
-            [self.table_name]
-            if self.table_name is not None
-            else [
+            [
                 table_name
                 for table_name in MetadataLoader(path=self.metadata_path).load_data().keys()
                 if table_name != "global"
             ]
+            if self.metadata_path is not None
+            else [self.table_name]
         )
         self.report_types = ReportTypes()
 
@@ -374,14 +379,15 @@ class Syngen:
             sample_reporter = self.__get_sample_reporter(table_name, fernet_key)
             Report().register_reporter(table=table_name, reporter=sample_reporter)
 
-    def generate_reports(
+    def generate_quality_reports(
         self,
         table_name: str,
         reports: Union[List[str], str],
         fernet_key: Optional[str] = None
     ) -> None:
         """
-        Generate reports for a table using existing artifacts.
+        Generate reports for a table using existing artifacts to
+        evaluate the quality of the input data or the generated data
 
         Parameters
         ----------
@@ -418,8 +424,9 @@ class Syngen:
             Report().generate_report()
             Report().clear_report()
         else:
-            list_of_available_reports = ", ".join(
-                f"'{rt}'" for rt in self.report_types.train_report_types
+            self.report_types.train_report_types.extend(["none", "all"])
+            list_of_available_reports = (
+                ", ".join(f"'{rt}'" for rt in self.report_types.train_report_types)
             )
             logger.warning(
                 "No reports to generate. Please specify the report type "
