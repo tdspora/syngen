@@ -143,7 +143,7 @@ class Syngen:
                     reports.get("sample_report")
                 )
 
-            if report in self.report_types.full_list_of_infer_report_type:
+            if report in self.report_types.full_list_of_infer_report_types:
                 reports = self._get_reports_from_infer_config(table_name)
                 self.execution_artifacts[table_name]["generated_reports"][f"{report}_report"] = (
                     reports.get(f"{report}_report")
