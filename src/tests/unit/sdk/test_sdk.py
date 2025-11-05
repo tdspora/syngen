@@ -57,7 +57,7 @@ def test_initialization_with_metadata_path_and_source(rp_logger, caplog):
         assert instance.execution_artifacts == dict()
         assert (
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored" in caplog.text
+            "In this case the information of 'source' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -75,7 +75,7 @@ def test_initialization_with_metadata_path_and_table_name(rp_logger, caplog):
         assert instance.execution_artifacts == dict()
         assert (
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored" in caplog.text
+            "In this case the information of 'table_name' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -98,7 +98,7 @@ def test_initialization_with_metadata_path_and_table_name_and_source(rp_logger, 
         assert instance.execution_artifacts == dict()
         assert (
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored"
+            "In this case the information of 'table_name' and 'source' will be ignored."
             in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -111,7 +111,7 @@ def test_initialization_with_table_name_and_without_source(rp_logger, caplog):
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'source' is absent. "
             "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'",
+            "the information of 'source' and 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -123,7 +123,7 @@ def test_initialization_with_source_and_without_table_name(rp_logger):
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "
             "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'",
+            "the information of 'source' and 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -135,7 +135,7 @@ def test_initialization_without_parameters(rp_logger):
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'table_name' "
             "and 'source' is absent. Please provide either the information of "
-            "'metadata_path' or the information of 'source' and 'table_name'",
+            "'metadata_path' or the information of 'source' and 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

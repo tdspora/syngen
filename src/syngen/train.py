@@ -26,34 +26,34 @@ def validate_required_parameters(
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' "
             "and 'source' is absent. Please provide either the information of "
-            "'metadata_path' or the information of 'source' and 'table_name'"
+            "'metadata_path' or the information of 'source' and 'table_name'."
         )
     elif not metadata_path and source and not table_name:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "
             "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'"
+            "the information of 'source' and 'table_name'."
         )
     elif not metadata_path and table_name and not source:
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'source' is absent. "
             "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'"
+            "the information of 'source' and 'table_name'."
         )
     elif metadata_path and table_name and source:
         logger.warning(
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored"
+            "In this case the information of 'table_name' and 'source' will be ignored."
         )
     elif metadata_path and source:
         logger.warning(
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored"
+            "In this case the information of 'source' will be ignored."
         )
     elif metadata_path and table_name:
         logger.warning(
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored"
+            "In this case the information of 'table_name' will be ignored."
         )
 
 

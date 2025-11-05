@@ -102,7 +102,7 @@ def test_cli_launch_train_table_with_metadata_path_and_source(
         mock_launch_train.assert_called_once()
         assert (
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored" in caplog.text
+            "In this case the information of 'source' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -124,7 +124,7 @@ def test_validate_parameters_with_metadata_path_and_source(
         mock_launch_train.assert_called_once()
         assert (
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored" in caplog.text
+            "In this case the information of 'source' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -150,7 +150,7 @@ def test_cli_launch_train_table_with_metadata_path_and_table_name(
         mock_launch_train.assert_called_once()
         assert (
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored" in caplog.text
+            "In this case the information of 'table_name' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -172,7 +172,7 @@ def test_validate_parameters_with_metadata_path_and_table_name(
         mock_launch_train.assert_called_once()
         assert (
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored" in caplog.text
+            "In this case the information of 'table_name' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -205,7 +205,7 @@ def test_cli_launch_train_table_with_metadata_path_and_table_name_and_source(
         mock_launch_train.assert_called_once()
         assert (
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored"
+            "In this case the information of 'table_name' and 'source' will be ignored."
             in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -232,7 +232,7 @@ def test_validate_parameters_with_metadata_path_and_table_name_and_source(
         mock_launch_train.assert_called_once()
         assert (
             "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored"
+            "In this case the information of 'table_name' and 'source' will be ignored."
             in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -249,7 +249,7 @@ def test_cli_launch_train_table_with_table_name_and_without_source(rp_logger):
     assert result.exception.args == (
         "It seems that the information of 'metadata_path' or 'source' is absent. "
         "Please provide either the information of 'metadata_path' or "
-        "the information of 'source' and 'table_name'",
+        "the information of 'source' and 'table_name'.",
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -264,7 +264,7 @@ def test_validate_parameters_with_table_name_and_without_source(rp_logger, caplo
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'source' is absent. "
             "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'",
+            "the information of 'source' and 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -280,7 +280,7 @@ def test_cli_launch_train_table_with_source_and_without_table_name(rp_logger):
     assert result.exception.args == (
         "It seems that the information of 'metadata_path' or 'table_name' is absent. "
         "Please provide either the information of 'metadata_path' or "
-        "the information of 'source' and 'table_name'",
+        "the information of 'source' and 'table_name'.",
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -295,7 +295,7 @@ def test_validate_parameters_with_source_and_without_table_name(rp_logger):
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "
             "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'",
+            "the information of 'source' and 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -311,7 +311,7 @@ def test_cli_launch_train_table_without_parameters(rp_logger):
     assert result.exception.args == (
         "It seems that the information of 'metadata_path' or 'table_name' and 'source' is absent. "
         "Please provide either the information of 'metadata_path' or "
-        "the information of 'source' and 'table_name'",
+        "the information of 'source' and 'table_name'.",
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -325,7 +325,7 @@ def test_validate_parameters_without_parameters(rp_logger):
         assert str(error.value) == (
             "It seems that the information of 'metadata_path' or 'table_name' "
             "and 'source' is absent. Please provide either the information of "
-            "'metadata_path' or the information of 'source' and 'table_name'",
+            "'metadata_path' or the information of 'source' and 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

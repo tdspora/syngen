@@ -20,7 +20,7 @@ def validate_required_parameters(
         raise AttributeError(
             "It seems that the information of 'metadata_path' or 'table_name' is absent. "
             "Please provide either the information of 'metadata_path' or the information "
-            "of 'table_name'"
+            "of 'table_name'."
         )
     if metadata_path and table_name:
         logger.warning(
@@ -72,7 +72,7 @@ def launch_infer(
         "The inference process will be executed according to the information mentioned "
         "in 'infer_settings' in the metadata file. If appropriate information is absent "
         "from the metadata file, then the values of parameters sent through CLI will be used. "
-        "Otherwise, the values of parameters will be defaulted"
+        "Otherwise, the values of parameters will be defaulted."
     )
 
     worker.launch_infer()
