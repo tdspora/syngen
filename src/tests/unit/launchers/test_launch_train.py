@@ -114,7 +114,7 @@ def test_validate_parameters_with_metadata_path_and_source(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
-        "Validate of required parameters before launching of the training process "
+        "Validate required parameters before launching of the training process "
         "with parameters 'metadata_path' and 'source'"
     )
     with caplog.at_level("WARNING"):
@@ -162,7 +162,7 @@ def test_validate_parameters_with_metadata_path_and_table_name(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
-        "Validate of required parameters before launching of the training process "
+        "Validate required parameters before launching of the training process "
         "with parameters 'metadata_path' and 'table_name'"
     )
     with caplog.at_level("WARNING"):
@@ -218,7 +218,7 @@ def test_validate_parameters_with_metadata_path_and_table_name_and_source(
     mock_logger, mock_post_init, mock_launch_train, rp_logger, caplog
 ):
     rp_logger.info(
-        "Validate of required parameters before the launching training process with parameters "
+        "Validate required parameters before the launching training process with parameters "
         "'metadata_path', 'table_name' and 'source'"
     )
     with caplog.at_level("WARNING"):
@@ -256,7 +256,7 @@ def test_cli_launch_train_table_with_table_name_and_without_source(rp_logger):
 
 def test_validate_parameters_with_table_name_and_without_source(rp_logger, caplog):
     rp_logger.info(
-        "Validate  of required parameters before launching the training process "
+        "Validate required parameters before launching the training process "
         "only with the parameter 'table_name'"
     )
     with pytest.raises(AttributeError) as error:
@@ -287,7 +287,7 @@ def test_cli_launch_train_table_with_source_and_without_table_name(rp_logger):
 
 def test_validate_parameters_with_source_and_without_table_name(rp_logger):
     rp_logger.info(
-        "Validate of required parameters before launching the training process "
+        "Validate required parameters before launching the training process "
         "only with the parameter 'source'"
     )
     with pytest.raises(AttributeError) as error:
@@ -318,7 +318,7 @@ def test_cli_launch_train_table_without_parameters(rp_logger):
 
 def test_validate_parameters_without_parameters(rp_logger):
     rp_logger.info(
-        "Validate of required parameters before launching of training process without parameters"
+        "Validate required parameters before launching of training process without parameters"
     )
     with pytest.raises(AttributeError) as error:
         validate_required_parameters()

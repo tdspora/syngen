@@ -99,7 +99,7 @@ def test_validate_parameters_with_metadata_path_and_table_name(
     mock_logger, mock_post_init, mock_launch_infer, rp_logger, caplog
 ):
     rp_logger.info(
-        "Validate of required parameters before launching the inference process "
+        "Validate required parameters before launching the inference process "
         "with parameters 'metadata_path' and 'table_name'"
     )
     with caplog.at_level("WARNING"):
@@ -130,7 +130,7 @@ def test_cli_launch_infer_table_without_parameters(rp_logger):
 
 def test_validate_parameters_without_parameters(rp_logger):
     rp_logger.info(
-        "Validate of required parameters before launching the inference process without parameters"
+        "Validate required parameters before launching the inference process without parameters"
     )
     with pytest.raises(AttributeError) as error:
         validate_required_parameters()
