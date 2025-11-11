@@ -327,7 +327,14 @@ class AccuracyReporter(Reporter):
         loader: Optional[Callable[[str], pd.DataFrame]],
         type_of_process: Literal["train", "infer"]
     ):
-        super().__init__(table_name, paths, config, metadata, loader, type_of_process)
+        super().__init__(
+            table_name=table_name,
+            paths=paths,
+            config=config,
+            metadata=metadata,
+            loader=loader,
+            type_of_process=type_of_process
+        )
 
     def report(self):
         """
