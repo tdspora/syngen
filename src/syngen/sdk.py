@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List, Union, Set
+from typing import Optional, Dict, List, Union, Set, Literal
 import os
 import pandas as pd
 from loguru import logger
@@ -16,7 +16,7 @@ from syngen.ml.reporters import (
 )
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
 from syngen.ml.context import global_context, get_context
-from syngen.ml.utils import get_reports
+from syngen.ml.utils import get_reports, setup_log_process
 
 
 class DataIO:
@@ -221,7 +221,7 @@ class Syngen:
         drop_null: bool = False,
         row_limit: Optional[int] = None,
         reports: Union[str, List[str]] = "none",
-        log_level: str = "INFO",
+        log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         batch_size: int = 32,
         fernet_key: Optional[str] = None
     ):
@@ -246,7 +246,7 @@ class Syngen:
         batch_size: int = None,
         random_seed: Optional[int] = None,
         reports: Union[str, List[str]] = "none",
-        log_level: str = "INFO",
+        log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         fernet_key: Optional[str] = None,
     ):
         launch_infer(
@@ -383,6 +383,7 @@ class Syngen:
         self,
         table_name: str,
         reports: Union[List[str], str],
+        log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         fernet_key: Optional[str] = None
     ) -> None:
         """
@@ -400,6 +401,13 @@ class Syngen:
             the name of the environment variable kept the value of the Fernet key
             for decrypting the input of the original data, if applicable.
         """
+        setup_log_process(
+            type_of_process="report",
+            log_level=log_level,
+            table_name=table_name,
+            metadata_path=None,
+        )
+
         reports = get_reports(reports, self.report_types, "train")
 
         if reports:

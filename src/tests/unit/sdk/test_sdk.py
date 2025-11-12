@@ -779,7 +779,9 @@ def test_infer_table_with_invalid_log_level(rp_logger):
 @patch.object(Syngen, "_Syngen__get_sample_reporter")
 @patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
+@patch("syngen.sdk.setup_log_process")
 def test_generate_sample_report(
+    mock_setup_log_process,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -817,7 +819,9 @@ def test_generate_sample_report(
 @patch.object(Syngen, "_Syngen__get_sample_reporter")
 @patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
+@patch("syngen.sdk.setup_log_process")
 def test_generate_accuracy_report(
+    mock_setup_log_process,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -855,7 +859,9 @@ def test_generate_accuracy_report(
 @patch.object(Syngen, "_Syngen__get_sample_reporter")
 @patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
+@patch("syngen.sdk.setup_log_process")
 def test_generate_metrics_only_report(
+    mock_setup_log_process,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -893,7 +899,9 @@ def test_generate_metrics_only_report(
 @patch.object(Syngen, "_Syngen__get_sample_reporter")
 @patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
+@patch("syngen.sdk.setup_log_process")
 def test_generate_all_reports(
+    mock_setup_log_process,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -930,7 +938,9 @@ def test_generate_all_reports(
 @patch.object(Syngen, "_Syngen__get_sample_reporter")
 @patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
+@patch("syngen.sdk.setup_log_process")
 def test_generate_none_reports(
+    mock_setup_log_process,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -971,7 +981,9 @@ def test_generate_none_reports(
 @patch.object(Syngen, "_Syngen__get_sample_reporter")
 @patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
+@patch("syngen.sdk.setup_log_process")
 def test_generate_full_set_of_reports(
+    mock_setup_log_process,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -1001,7 +1013,8 @@ def test_generate_full_set_of_reports(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_generate_report_with_wrong_report_type(rp_logger, caplog):
+@patch("syngen.sdk.setup_log_process")
+def test_generate_report_with_wrong_report_type(mock_setup_log_process, rp_logger, caplog):
     rp_logger.info("Launch the generation of the report with the wrong report type")
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
@@ -1028,7 +1041,9 @@ def test_generate_report_with_wrong_report_type(rp_logger, caplog):
 @patch.object(Syngen, "_Syngen__get_accuracy_reporter")
 @patch.object(Syngen, "_validate_artifacts")
 @patch.object(DataEncryptor, "validate_fernet_key")
+@patch("syngen.sdk.setup_log_process")
 def test_generate_report_for_encrypted_data(
+    mock_setup_log_process,
     mock_validate_fernet_key,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
