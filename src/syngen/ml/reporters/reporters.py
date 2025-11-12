@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from typing import Dict, Tuple, Optional, Callable, Union, List, Set, Literal
 import itertools
 from collections import defaultdict
@@ -187,13 +186,6 @@ class Reporter:
             categorical_columns,
             date_columns,
         )
-
-    @abstractmethod
-    def report(self, **kwargs):
-        """
-        Generate the report for certain table
-        """
-        pass
 
 
 class Report:
