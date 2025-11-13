@@ -21,9 +21,6 @@ from syngen.ml.utils import ProgressBarHandler
 
 
 class Reporter:
-    """
-    Abstract class for reporters
-    """
 
     def __init__(
         self,
