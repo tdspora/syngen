@@ -19,7 +19,13 @@ class SampleAccuracyTest(BaseTest):
         table_name: str,
         train_config: Dict,
     ):
-        super().__init__(original, sampled, paths, table_name, train_config)
+        super().__init__(
+            original=original,
+            synthetic=sampled,
+            paths=paths,
+            table_name=table_name,
+            config=train_config
+        )
         self.reports_path = f"{self.paths['reports_path']}/sample_accuracy"
 
     def __get_univariate_metric(self):

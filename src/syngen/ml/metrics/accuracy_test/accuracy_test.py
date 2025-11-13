@@ -128,10 +128,17 @@ class AccuracyTest(BaseTest):
         synthetic: pd.DataFrame,
         paths: dict,
         table_name: str,
-        type_of_process: Literal["train", "infer"],
-        infer_config: Dict
+        config: Dict,
+        type_of_process: Literal["train", "infer"] = "train"
     ):
-        super().__init__(original, synthetic, paths, table_name, infer_config)
+        super().__init__(
+            original=original,
+            synthetic=synthetic,
+            paths=paths,
+            table_name=table_name,
+            config=config,
+            type_of_process=type_of_process
+        )
         self.reports_path = f"{self.paths['reports_path']}/accuracy"
         self.type_of_process = type_of_process
         self.dataset_pickle_path = self.paths["dataset_pickle_path"]

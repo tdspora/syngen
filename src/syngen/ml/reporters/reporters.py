@@ -21,7 +21,6 @@ from syngen.ml.utils import ProgressBarHandler
 
 
 class Reporter:
-
     def __init__(
         self,
         table_name: str,
@@ -321,12 +320,12 @@ class AccuracyReporter(Reporter):
             date_columns,
         ) = self.preprocess_data(original, synthetic)
         accuracy_test = AccuracyTest(
-            original,
-            synthetic,
-            self.paths,
-            self.table_name,
-            self.type_of_process,
-            self.config
+            original=original,
+            synthetic=synthetic,
+            paths=self.paths,
+            table_name=self.table_name,
+            type_of_process=self.type_of_process,
+            config=self.config
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),
