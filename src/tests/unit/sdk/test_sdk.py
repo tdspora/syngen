@@ -795,7 +795,8 @@ def test_generate_sample_report(
     rp_logger.info("Launch the generation of the 'sample' report")
     Syngen(metadata_path=PATH_TO_METADATA).generate_quality_reports(
         table_name="test_table",
-        reports=report
+        reports=report,
+        log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, completed_processes={"train"}
@@ -835,7 +836,8 @@ def test_generate_accuracy_report(
     rp_logger.info("Launch the generation of the 'accuracy' report")
     Syngen(metadata_path=PATH_TO_METADATA).generate_quality_reports(
         table_name="test_table",
-        reports=report
+        reports=report,
+        log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, completed_processes={"infer"}
@@ -875,7 +877,8 @@ def test_generate_metrics_only_report(
     rp_logger.info("Launch the generation of the 'metrics_only' report")
     Syngen(metadata_path=PATH_TO_METADATA).generate_quality_reports(
         table_name="test_table",
-        reports=report
+        reports=report,
+        log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, completed_processes={"infer"}
@@ -915,7 +918,8 @@ def test_generate_all_reports(
     rp_logger.info("Launch the generation of the 'all' report")
     Syngen(metadata_path=PATH_TO_METADATA).generate_quality_reports(
         table_name="test_table",
-        reports=report
+        reports=report,
+        log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, completed_processes={"train", "infer"}
@@ -956,7 +960,8 @@ def test_generate_none_reports(
     with caplog.at_level("WARNING"):
         Syngen(metadata_path=PATH_TO_METADATA).generate_quality_reports(
             table_name="test_table",
-            reports=report
+            reports=report,
+            log_level="DEBUG"
         )
         mock_validate_artifacts.assert_not_called()
         mock_get_accuracy_reporter.assert_not_called()
@@ -999,7 +1004,8 @@ def test_generate_full_set_of_reports(
     )
     Syngen(metadata_path=PATH_TO_METADATA).generate_quality_reports(
         table_name="test_table",
-        reports=["accuracy", "metrics_only", "sample"]
+        reports=["accuracy", "metrics_only", "sample"],
+        log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", fernet_key=None, completed_processes={"train", "infer"}
@@ -1060,7 +1066,10 @@ def test_generate_report_for_encrypted_data(
     fernet_key = Fernet.generate_key().decode()
     monkeypatch.setenv("FERNET_KEY", fernet_key)
     Syngen(metadata_path=PATH_TO_METADATA).generate_quality_reports(
-        table_name="test_table", reports=report, fernet_key="FERNET_KEY"
+        table_name="test_table",
+        reports=report,
+        fernet_key="FERNET_KEY",
+        log_level="DEBUG"
     )
     mock_validate_fernet_key.assert_called_once_with(fernet_key)
     mock_validate_artifacts.assert_called_once_with(
