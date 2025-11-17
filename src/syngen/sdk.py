@@ -8,7 +8,7 @@ from slugify import slugify
 from syngen.ml.data_loaders import DataLoader, DataEncryptor, MetadataLoader
 from syngen.train import launch_train, validate_required_parameters
 from syngen.infer import launch_infer
-from syngen.ml.utils import fetch_config, fetch_env_variables
+from syngen.ml.utils import fetch_config, fetch_env_variables, get_reports, setup_log_process
 from syngen.ml.reporters import (
     Report,
     AccuracyReporter,
@@ -16,7 +16,6 @@ from syngen.ml.reporters import (
 )
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
 from syngen.ml.context import global_context, get_context
-from syngen.ml.utils import get_reports, setup_log_process
 
 
 class DataIO:
@@ -138,13 +137,13 @@ class Syngen:
         self.execution_artifacts[table_name] = {"generated_reports": {}}
         for report in reports:
             if report == "sample":
-                reports = self._get_reports_from_train_config(table_name)
+                reports = self._get_train_reports(table_name)
                 self.execution_artifacts[table_name]["generated_reports"]["sample_report"] = (
                     reports.get("sample_report")
                 )
 
             if report in self.report_types.full_list_of_infer_report_types:
-                reports = self._get_reports_from_infer_config(table_name)
+                reports = self._get_infer_reports(table_name)
                 self.execution_artifacts[table_name]["generated_reports"][f"{report}_report"] = (
                     reports.get(f"{report}_report")
                 )
@@ -159,9 +158,9 @@ class Syngen:
             elif type_of_process == "infer":
                 self.execution_artifacts[table_name] = self._get_infer_artifacts(table_name)
 
-    def _get_reports_from_train_config(self, table_name: str) -> Dict:
+    def _get_train_reports(self, table_name: str) -> Dict:
         """
-        Get generated reports fetched from the training configuration
+        Get generated reports generated during a training process for a certain table
         """
         train_config = self._get_config(table_name, type_of_process="train")
         return train_config.paths["generated_reports"]
@@ -186,11 +185,15 @@ class Syngen:
         config = fetch_config(config_pickle_path=path_to_config)
         return config
 
-    def _get_reports_from_infer_config(self, table_name: str) -> Dict:
+    def _get_infer_reports(self, table_name: str) -> Dict:
         """
-        Get generated reports fetched from the inference configuration
+        Get the list of generated reports generated during an inference process for a certain table
         """
         infer_config = self._get_config(table_name, type_of_process="infer")
+        type_of_process = infer_config.type_of_process
+        if type_of_process == "train":
+            train_config = self._get_config(table_name, type_of_process="train")
+            return train_config.paths["generated_reports"]
         return infer_config.paths["generated_reports"]
 
     def _get_train_artifacts(self, table_name: str) -> Dict:
