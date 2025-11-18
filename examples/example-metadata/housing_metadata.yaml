@@ -13,13 +13,13 @@ global:                                 # In this section you can specify traini
 
 housing_properties:                       # Use table name here
   train_settings:                         # Settings for training process
-    source: "../examples/example-data/housing_properties.csv" # The path to the original data. Supported formats include local files in CSV, Avro formats. Required parameter
+    source: "../examples/example-data/housing_properties.csv" # The path to the original data. Supported formats include local files in CSV, Avro, Excel formats. Required parameter
     epochs: 8                             # Number of epochs
     drop_null: true                       # Drop rows with NULL values
     row_limit: 1800                       # Limit of rows for training process
     reports: all                          # Controls the generation of quality reports
 
-  infer_settings:                         # Settings for infer process. Supported formats include local files in CSV, Avro formats. Required parameter
+  infer_settings:                         # Settings for infer process. Supported formats include local files in CSV, Avro, Excel formats. Required parameter
     size: 90                              # Size for generated data
     run_parallel: false                   # Turn on or turn off parallel training process
     random_seed: 10                       # Ensure reproducible tables generation
