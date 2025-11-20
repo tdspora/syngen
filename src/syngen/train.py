@@ -3,7 +3,6 @@ from typing import Optional, List
 
 import click
 from loguru import logger
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (

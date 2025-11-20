@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+import numpy as _np
 from unittest.mock import patch, MagicMock
 from sklearn.preprocessing import (
     StandardScaler,
@@ -103,12 +103,13 @@ def test_top_p_filtering(rp_logger):
         name="text_column",
         text_max_len=4
     )
-    data = tf.nn.softmax(
-        np.loadtxt(
-            f"{DIR_NAME}/unit/features/fixtures/tensor.csv"
-        ).reshape((20, 4, 12)).astype(np.float32),
-        axis=-1
-    )
+    # Softmax in NumPy for test
+    x = np.loadtxt(
+        f"{DIR_NAME}/unit/features/fixtures/tensor.csv"
+    ).reshape((20, 4, 12)).astype(np.float32)
+    x_max = x.max(axis=-1, keepdims=True)
+    e = np.exp(x - x_max)
+    data = e / e.sum(axis=-1, keepdims=True)
 
     result = feature._top_p_filtering(data, top_p=0.7)
     result /= result.sum(axis=2, keepdims=True)
