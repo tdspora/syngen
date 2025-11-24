@@ -88,8 +88,8 @@ class TrainConfig:
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
             "initial_order_of_columns_path": (
-                f"model_artifacts/tmp_store/{slugify(self.table_name)}"
-                f"/initial_order_of_columns_{slugify(self.table_name)}.pkl"
+                f"model_artifacts/tmp_store/{self.slugify_table_name}"
+                f"/initial_order_of_columns_{self.slugify_table_name}.pkl"
             ),
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"merged_infer_{self.slugify_table_name}.csv",
