@@ -469,9 +469,14 @@ class PostprocessHandler(Processor):
                 flattening_mapping = flatten_metadata.get("flattening_mapping")
                 duplicated_columns = flatten_metadata.get("duplicated_columns")
                 order_of_columns = flatten_metadata.get("order_of_columns")
-                path_to_generated_data = (
+                default_path_to_generated_data = (
                     f"model_artifacts/tmp_store/{slugify(table)}/"
                     f"merged_infer_{slugify(table)}.csv"
+                )
+                path_to_generated_data = (
+                    self.metadata[table].get("infer_settings", {}).get(
+                        "destination", default_path_to_generated_data
+                    )
                 )
                 data = self._load_generated_data(path_to_generated_data, table)
                 data = self._postprocess_generated_data(
@@ -479,9 +484,12 @@ class PostprocessHandler(Processor):
                     flattening_mapping,
                     duplicated_columns
                 )
-                destination = self.metadata[table].get("infer_settings", {}).get("destination", "")
-                path_to_destination = destination if destination else path_to_generated_data
-                self._save_generated_data(data, path_to_destination, order_of_columns, table)
+                self._save_generated_data(
+                    data,
+                    path_to_generated_data,
+                    order_of_columns,
+                    table
+                )
                 logger.info("Finish postprocessing of the generated data")
 
     @staticmethod
