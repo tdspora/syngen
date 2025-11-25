@@ -1833,7 +1833,7 @@ def test_train_tables_without_generation_reports(
     mock_validate_metadata.assert_called_once_with("test_table")
     mock_train_table.assert_called_once()
     mock_infer_table.assert_not_called()
-    mock_generate_reports.assert_not_called()
+    mock_generate_reports.assert_called_once()
     mock_postprocess_data.assert_not_called()
     mock_collect_metrics_in_train.assert_called_once_with(["test_table"], ["test_table"], False)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -2128,7 +2128,7 @@ def test_train_tables_without_provided_fernet_key(
     mock_validate_metadata.assert_called_once_with("test_table")
     mock_train_table.assert_called_once()
     mock_infer_table.assert_not_called()
-    mock_generate_reports.assert_not_called()
+    mock_generate_reports.assert_called_once()
     mock_postprocess_data.assert_not_called()
     mock_collect_metrics_in_train.assert_called_once_with(["test_table"], ["test_table"], False)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -2209,7 +2209,7 @@ def test_train_tables_with_provided_fernet_key(
     mock_validate_metadata.assert_called_once_with("test_table")
     mock_train_table.assert_called_once()
     mock_infer_table.assert_not_called()
-    mock_generate_reports.assert_not_called()
+    mock_generate_reports.assert_called_once()
     mock_postprocess_data.assert_not_called()
     mock_collect_metrics_in_train.assert_called_once_with(["test_table"], ["test_table"], False)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -3576,14 +3576,14 @@ def test_launch_infer_of_not_pretrained_table_and_success_file_with_wrong_conten
 
 ])
 @patch.object(Worker, "__attrs_post_init__")
-def test_should_generate_reports(
+def test_should_generate_synth_reports(
     mock_post_init,
     metadata,
     type_of_process,
     expected_result,
     rp_logger
 ):
-    rp_logger.info("Test the method '_should_generate_data' of the 'Worker' class")
+    rp_logger.info("Test the method '_should_generate_synth_data' of the 'Worker' class")
     worker = Worker(
         table_name="table",
         metadata_path=None,
@@ -3593,5 +3593,5 @@ def test_should_generate_reports(
         loader=None,
         encryption_settings=fetch_env_variables({"fernet_key": None})
     )
-    worker._should_generate_data(metadata, type_of_process) == expected_result
+    worker._should_generate_synth_data(metadata, type_of_process) == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
