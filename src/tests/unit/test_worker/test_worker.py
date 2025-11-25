@@ -404,8 +404,6 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Worker, "_Worker__postprocess_data")
-@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
@@ -421,8 +419,6 @@ def test_launch_train_with_metadata(
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
     mock_validate_metadata,
-    mock_generate_reports,
-    mock_postprocess_data,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -507,8 +503,6 @@ def test_launch_train_with_metadata(
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_fernet_key.assert_called_once_with("table", FERNET_KEY)
     mock_validate_metadata.assert_called_once_with("table")
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["table"],
         ["table"],
@@ -518,8 +512,6 @@ def test_launch_train_with_metadata(
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Worker, "_Worker__postprocess_data")
-@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
@@ -535,8 +527,6 @@ def test_launch_train_with_metadata_of_related_tables(
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
     mock_validate_metadata,
-    mock_generate_reports,
-    mock_postprocess_data,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -665,8 +655,6 @@ def test_launch_train_with_metadata_of_related_tables(
     assert mock_check_existence_of_referenced_columns.call_count == 2
     mock_validate_fernet_key.assert_not_called()
     assert mock_validate_metadata.call_count == 2
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
@@ -676,8 +664,6 @@ def test_launch_train_with_metadata_of_related_tables(
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Worker, "_Worker__postprocess_data")
-@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
@@ -693,8 +679,6 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
     mock_validate_metadata,
-    mock_generate_reports,
-    mock_postprocess_data,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -843,8 +827,6 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     assert mock_check_existence_of_referenced_columns.call_count == 2
     mock_validate_fernet_key.assert_not_called()
     assert mock_validate_metadata.call_count == 2
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["tdm_models", "tdm_clusters"],
         ["tdm_clusters", "tdm_models_pk", "tdm_models_fk"],
@@ -854,8 +836,6 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Worker, "_Worker__postprocess_data")
-@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
@@ -871,8 +851,6 @@ def test_launch_train_without_metadata(
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
     mock_validate_metadata,
-    mock_generate_reports,
-    mock_postprocess_data,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -943,8 +921,6 @@ def test_launch_train_without_metadata(
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_fernet_key.assert_not_called()
     mock_validate_metadata.assert_called_once_with("table")
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["table"],
         ["table"],
@@ -954,8 +930,6 @@ def test_launch_train_without_metadata(
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Worker, "_Worker__postprocess_data")
-@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
@@ -971,8 +945,6 @@ def test_launch_train_with_metadata_contained_global_settings(
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
     mock_validate_metadata,
-    mock_generate_reports,
-    mock_postprocess_data,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -1084,8 +1056,6 @@ def test_launch_train_with_metadata_contained_global_settings(
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
     assert mock_validate_fernet_key.call_count == 2
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
@@ -1863,8 +1833,8 @@ def test_train_tables_without_generation_reports(
     mock_validate_metadata.assert_called_once_with("test_table")
     mock_train_table.assert_called_once()
     mock_infer_table.assert_not_called()
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
+    mock_generate_reports.assert_not_called()
+    mock_postprocess_data.assert_not_called()
     mock_collect_metrics_in_train.assert_called_once_with(["test_table"], ["test_table"], False)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -2158,8 +2128,8 @@ def test_train_tables_without_provided_fernet_key(
     mock_validate_metadata.assert_called_once_with("test_table")
     mock_train_table.assert_called_once()
     mock_infer_table.assert_not_called()
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
+    mock_generate_reports.assert_not_called()
+    mock_postprocess_data.assert_not_called()
     mock_collect_metrics_in_train.assert_called_once_with(["test_table"], ["test_table"], False)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -2239,15 +2209,13 @@ def test_train_tables_with_provided_fernet_key(
     mock_validate_metadata.assert_called_once_with("test_table")
     mock_train_table.assert_called_once()
     mock_infer_table.assert_not_called()
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
+    mock_generate_reports.assert_not_called()
+    mock_postprocess_data.assert_not_called()
     mock_collect_metrics_in_train.assert_called_once_with(["test_table"], ["test_table"], False)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Worker, "_Worker__postprocess_data")
-@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
@@ -2263,8 +2231,6 @@ def test_launch_train_with_metadata_contained_several_fernet_keys(
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
     mock_validate_metadata,
-    mock_generate_reports,
-    mock_postprocess_data,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -2420,8 +2386,6 @@ def test_launch_train_with_metadata_contained_several_fernet_keys(
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_fernet_key.call_count == 2
     assert mock_validate_metadata.call_count == 2
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],
@@ -2917,8 +2881,6 @@ def test_infer_tables_without_generation_report_and_without_provided_fernet_key(
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Worker, "_Worker__postprocess_data")
-@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -2932,8 +2894,6 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
-    mock_generate_reports,
-    mock_postprocess_data,
     mock_collect_metrics_in_train,
     rp_logger
 ):
@@ -3020,8 +2980,6 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     mock_validate_metadata.assert_called_once()
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["table"],
         ["table"],
@@ -3031,8 +2989,6 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
 
 
 @patch.object(Worker, "_collect_metrics_in_train")
-@patch.object(Worker, "_Worker__postprocess_data")
-@patch.object(Worker, "_generate_reports")
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
@@ -3046,8 +3002,6 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
-    mock_generate_reports,
-    mock_postprocess_data,
     mock_collect_metrics_in_train,
     rp_logger,
 ):
@@ -3191,8 +3145,6 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_validate_metadata.call_count == 2
-    mock_generate_reports.assert_called_once()
-    mock_postprocess_data.assert_called_once()
     mock_collect_metrics_in_train.assert_called_once_with(
         ["pk_test", "fk_test"],
         ["pk_test", "fk_test"],

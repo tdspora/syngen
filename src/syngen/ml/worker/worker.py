@@ -486,6 +486,8 @@ class Worker:
                 delta,
                 type_of_process="train"
             )
+            self._generate_reports()
+            self.__postprocess_data()
 
     def _get_surrogate_tables_mapping(self):
         """
@@ -657,9 +659,6 @@ class Worker:
             metadata_for_inference,
             generation_of_reports
         )
-
-        self._generate_reports()
-        self.__postprocess_data()
         self._collect_metrics_in_train(
             tables_for_training,
             tables_for_inference,
