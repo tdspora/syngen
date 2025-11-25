@@ -166,7 +166,8 @@ class Worker:
         PostprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
-            table_name=self.table_name
+            table_name=self.table_name,
+            type_of_process=self.type_of_process
         ).run()
 
     def _set_mlflow(self):
@@ -658,6 +659,7 @@ class Worker:
         )
 
         self._generate_reports()
+        self.__postprocess_data()
         self._collect_metrics_in_train(
             tables_for_training,
             tables_for_inference,

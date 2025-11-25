@@ -1,6 +1,6 @@
 import os
 from collections import Counter
-from typing import List, Tuple, Dict, Any, Optional, Callable, Union
+from typing import List, Tuple, Dict, Any, Optional, Callable, Union, Literal
 import json
 from json import JSONDecodeError
 from slugify import slugify
@@ -316,8 +316,10 @@ class PostprocessHandler(Processor):
         metadata: Dict,
         metadata_path: Optional[str],
         table_name: Optional[str],
+        type_of_process: Literal["train", "infer"]
     ):
         super().__init__(metadata, metadata_path, table_name)
+        self.type_of_process = type_of_process
 
     def _fetch_flatten_config(self, table_name: str) -> Dict:
         """
@@ -482,7 +484,7 @@ class PostprocessHandler(Processor):
             path_to_generated_data = (
                 self.metadata[table].get("infer_settings", {}).get(
                     "destination", default_path_to_generated_data
-                )
+                ) if self.type_of_process == "infer" else default_path_to_generated_data
             )
             data = self._load_generated_data(path_to_generated_data, table)
             if os.path.exists(self.path_to_flatten_metadata):

@@ -284,7 +284,8 @@ def test_postprocess_generated_data_with_one_json_column(rp_logger):
     handler = PostprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name=None,
+        type_of_process="infer"
     )
     data = handler._load_generated_data(path_to_flattened_data)
     un_flattened_data = handler._postprocess_generated_data(
@@ -342,7 +343,8 @@ def test_postprocess_generated_data_with_two_json_columns(rp_logger):
     handler = PostprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name=None,
+        type_of_process="infer"
     )
     data = handler._load_generated_data(path_to_flattened_data)
     un_flattened_data = handler._postprocess_generated_data(
@@ -411,7 +413,8 @@ def test_postprocess_generated_data_with_mixed_data(rp_logger):
     handler = PostprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name=None,
+        type_of_process="infer"
     )
     data = handler._load_generated_data(path_to_flattened_data)
     un_flattened_data = handler._postprocess_generated_data(
