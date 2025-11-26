@@ -97,10 +97,10 @@ class PreprocessHandler(Processor):
         Prepare the subset of the data for the training process,
         and get the preprocessed data and schema
         """
-        data, schema, original_schema, order_of_columns = self._load_source()
+        data, schema, original_schema = self._load_source()
         self._check_if_data_is_empty(data)
         self._save_original_schema(original_schema)
-        self._save_initial_order_of_columns(order_of_columns)
+        self._save_initial_order_of_columns(order_of_columns=data.columns.to_list())
         preprocessed_data, preprocessed_schema = self._preprocess_data(data, schema)
         return preprocessed_data, preprocessed_schema
 
@@ -249,7 +249,7 @@ class PreprocessHandler(Processor):
         with open(f"{self.path_to_flatten_metadata}", "w") as f:
             json.dump(metadata, f)
 
-    def _load_source(self) -> Tuple[pd.DataFrame, Dict, Dict, List[str]]:
+    def _load_source(self) -> Tuple[pd.DataFrame, Dict, Dict]:
         """
         Load the data from the predefined source
         """
@@ -260,13 +260,11 @@ class PreprocessHandler(Processor):
             )
             original_schema = dataframe_fetcher.original_schema
             data, schema = dataframe_fetcher.fetch_data()
-            order_of_columns = data.columns.to_list()
-            return data, schema, original_schema, order_of_columns
+            return data, schema, original_schema
         path_to_source = self.metadata[self.table_name]["train_settings"]["source"]
         data, schema = DataLoader(path=path_to_source).load_data()
         original_schema = DataLoader(path=path_to_source).original_schema
-        order_of_columns = data.columns.to_list()
-        return data, schema, original_schema, order_of_columns
+        return data, schema, original_schema
 
     def _handle_json_columns(self, data: pd.DataFrame):
         """
