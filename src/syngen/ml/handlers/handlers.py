@@ -519,7 +519,6 @@ class VaeInferHandler(BaseHandler):
                 generated_data = self.generate_keys(
                     prepared_data, self.size, self.metadata, self.table_name
                 )
-                generated_data = generated_data[self.dataset.order_of_columns]
 
                 if generated_data is None:
                     self._save_data(prepared_data)
@@ -528,6 +527,4 @@ class VaeInferHandler(BaseHandler):
             else:
                 self._save_data(prepared_data)
         if self.metadata_path is None:
-            prepared_data = prepared_data[self.dataset.order_of_columns]
-
             self._save_data(prepared_data)

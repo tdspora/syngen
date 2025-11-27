@@ -1,6 +1,6 @@
 import os
 from collections import Counter
-from typing import List, Tuple, Dict, Any, Optional, Callable, Union
+from typing import List, Tuple, Dict, Any, Optional, Callable, Union, Literal
 import json
 from json import JSONDecodeError
 from slugify import slugify
@@ -11,7 +11,7 @@ import numpy as np
 from flatten_json import unflatten_list
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import fetch_unique_root, safe_flatten
+from syngen.ml.utils import fetch_unique_root, safe_flatten, fetch_config
 from syngen.ml.context import get_context
 
 
@@ -58,6 +58,16 @@ class PreprocessHandler(Processor):
         )
         DataLoader(path).save_data(data=original_schema)
 
+    def _save_initial_order_of_columns(self, order_of_columns: List[str]):
+        """
+        Save the initial order of columns of the original data
+        """
+        path = (
+            f"model_artifacts/tmp_store/{slugify(self.table_name)}"
+            f"/initial_order_of_columns_{slugify(self.table_name)}.pkl"
+        )
+        DataLoader(path).save_data(data=order_of_columns)
+
     def _check_if_data_is_empty(self, data: pd.DataFrame):
         """
         Check if the provided data is empty or not
@@ -90,6 +100,7 @@ class PreprocessHandler(Processor):
         data, schema, original_schema = self._load_source()
         self._check_if_data_is_empty(data)
         self._save_original_schema(original_schema)
+        self._save_initial_order_of_columns(order_of_columns=data.columns.to_list())
         preprocessed_data, preprocessed_schema = self._preprocess_data(data, schema)
         return preprocessed_data, preprocessed_schema
 
@@ -303,8 +314,10 @@ class PostprocessHandler(Processor):
         metadata: Dict,
         metadata_path: Optional[str],
         table_name: Optional[str],
+        type_of_process: Literal["train", "infer"]
     ):
         super().__init__(metadata, metadata_path, table_name)
+        self.type_of_process = type_of_process
 
     def _fetch_flatten_config(self, table_name: str) -> Dict:
         """
@@ -458,31 +471,40 @@ class PostprocessHandler(Processor):
 
     def run(self):
         """
-        Launch the postprocessing of generated data,
+        Launch the postprocessing of the generated data,
         and save the processed data to the predefined path
         """
-
-        if os.path.exists(self.path_to_flatten_metadata):
-            logger.info("Start postprocessing of the generated data")
-            for table in self.metadata.keys():
+        for table in self.metadata.keys():
+            default_path_to_generated_data = (
+                f"model_artifacts/tmp_store/{slugify(table)}/"
+                f"merged_infer_{slugify(table)}.csv"
+            )
+            path_to_generated_data = (
+                self.metadata[table].get("infer_settings", {}).get(
+                    "destination", default_path_to_generated_data
+                ) if self.type_of_process == "infer" else default_path_to_generated_data
+            )
+            data = self._load_generated_data(path_to_generated_data, table)
+            if os.path.exists(self.path_to_flatten_metadata):
+                logger.info("Start postprocessing of the generated data")
                 flatten_metadata = self._fetch_flatten_config(table)
                 flattening_mapping = flatten_metadata.get("flattening_mapping")
                 duplicated_columns = flatten_metadata.get("duplicated_columns")
-                order_of_columns = flatten_metadata.get("order_of_columns")
-                path_to_generated_data = (
-                    f"model_artifacts/tmp_store/{slugify(table)}/"
-                    f"merged_infer_{slugify(table)}.csv"
-                )
-                data = self._load_generated_data(path_to_generated_data, table)
                 data = self._postprocess_generated_data(
                     data,
                     flattening_mapping,
                     duplicated_columns
                 )
-                destination = self.metadata[table].get("infer_settings", {}).get("destination", "")
-                path_to_destination = destination if destination else path_to_generated_data
-                self._save_generated_data(data, path_to_destination, order_of_columns, table)
                 logger.info("Finish postprocessing of the generated data")
+            order_of_columns = fetch_config(
+                config_pickle_path=f"model_artifacts/tmp_store/{slugify(table)}"
+                                   f"/initial_order_of_columns_{slugify(table)}.pkl")
+            self._save_generated_data(
+                data,
+                path_to_generated_data,
+                order_of_columns,
+                table
+            )
 
     @staticmethod
     def _save_generated_data(

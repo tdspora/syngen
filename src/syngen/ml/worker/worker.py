@@ -166,7 +166,8 @@ class Worker:
         PostprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
-            table_name=self.table_name
+            table_name=self.table_name,
+            type_of_process=self.type_of_process
         ).run()
 
     def _set_mlflow(self):
@@ -359,7 +360,7 @@ class Worker:
         return config
 
     @staticmethod
-    def _should_generate_data(
+    def _should_generate_synth_data(
         config_of_tables: Dict,
         type_of_process: str
     ):
@@ -394,7 +395,7 @@ class Worker:
         self,
         tables_for_training: List[str],
         tables_for_inference: List[str],
-        generation_of_reports: bool
+        generation_of_synth_data: bool
     ):
         """
         Collect the integral metrics for the training process
@@ -404,7 +405,7 @@ class Worker:
             tags={"process": "bottleneck"}
         )
         self._collect_integral_metrics(tables=tables_for_training, type_of_process="train")
-        if generation_of_reports:
+        if generation_of_synth_data:
             self._collect_integral_metrics(tables=tables_for_inference, type_of_process="infer")
         MlflowTracker().end_run()
 
@@ -463,7 +464,7 @@ class Worker:
         tables_for_inference: List,
         metadata_for_training: Dict,
         metadata_for_inference: Dict,
-        generation_of_reports: bool
+        generation_of_synth_data: bool
     ):
         """
         Run training process for the list of tables
@@ -478,13 +479,16 @@ class Worker:
             data, schema = self.__preprocess_data(table_name=table)
             self._train_table(data, schema, table, metadata_for_training, delta)
 
-        if generation_of_reports:
+        if generation_of_synth_data:
             self.__infer_tables(
                 tables_for_inference,
                 metadata_for_inference,
                 delta,
                 type_of_process="train"
             )
+        self._generate_reports()
+        if generation_of_synth_data:
+            self.__postprocess_data()
 
     def _get_surrogate_tables_mapping(self):
         """
@@ -644,7 +648,7 @@ class Worker:
             metadata_for_inference,
         ) = metadata_for_inference
 
-        generation_of_reports = self._should_generate_data(
+        generation_of_synth_data = self._should_generate_synth_data(
             metadata_for_training,
             "train"
         )
@@ -654,20 +658,19 @@ class Worker:
             tables_for_inference,
             metadata_for_training,
             metadata_for_inference,
-            generation_of_reports
+            generation_of_synth_data
         )
-
-        self._generate_reports()
         self._collect_metrics_in_train(
             tables_for_training,
             tables_for_inference,
-            generation_of_reports
+            generation_of_synth_data
         )
 
-    def _collect_metrics_in_infer(self, tables):
+    def _collect_metrics_in_infer(self):
         """
         Collect the integral metrics for the inference process
         """
+        tables = list(self.metadata.keys())
         MlflowTracker().start_run(
             run_name="integral_metrics",
             tags={"process": "bottleneck"}
@@ -681,13 +684,13 @@ class Worker:
         """
         tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
 
-        generation_of_reports = self._should_generate_data(
+        generation_of_synth_data = self._should_generate_synth_data(
             config_of_tables,
             "infer"
         )
-        delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
+        delta = 0.25 / len(tables) if generation_of_synth_data else 0.5 / len(tables)
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
         self._generate_reports()
         self.__postprocess_data()
-        self._collect_metrics_in_infer(tables)
+        self._collect_metrics_in_infer()
