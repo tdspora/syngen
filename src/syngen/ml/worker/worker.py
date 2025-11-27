@@ -666,10 +666,11 @@ class Worker:
             generation_of_synth_data
         )
 
-    def _collect_metrics_in_infer(self, tables):
+    def _collect_metrics_in_infer(self):
         """
         Collect the integral metrics for the inference process
         """
+        tables = list(self.metadata.keys())
         MlflowTracker().start_run(
             run_name="integral_metrics",
             tags={"process": "bottleneck"}
@@ -692,4 +693,4 @@ class Worker:
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
         self._generate_reports()
         self.__postprocess_data()
-        self._collect_metrics_in_infer(tables)
+        self._collect_metrics_in_infer()
