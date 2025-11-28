@@ -29,6 +29,7 @@ from syngen.ml.utils import (
     nan_labels_to_float,
     get_date_columns,
     fetch_timezone,
+    fetch_config,
     TIMEZONE_REGEX
 )
 from syngen.ml.utils import slugify_parameters
@@ -106,7 +107,9 @@ class Dataset:
     def __post_init__(self):
         self.fields = self.schema.get("fields", {})
         self.schema_format = self.schema.get("format")
-        self.order_of_columns: List = list(self.df.columns)
+        self.order_of_columns: List = fetch_config(
+            config_pickle_path=self.paths["initial_order_of_columns_path"]
+        )
         self.dropped_columns: Set = {
             column for column in self.fields if self.fields[column] == "removed"
         }

@@ -549,7 +549,7 @@ class BinaryLoader(BaseDataLoader):
 
     def _save_data(self, data):
         with open(self.path, "wb") as f:
-            pkl.dump(data, f)
+            pkl.dump(data, f, protocol=pkl.HIGHEST_PROTOCOL)
 
     def save_data(self, data, **kwargs):
         """
