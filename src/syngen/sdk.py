@@ -25,7 +25,8 @@ class DataIO:
     def __init__(self, path: str, fernet_key: Optional[str] = None, **kwargs):
         self.path = path
         self.fernet_key = fernet_key
-        self.metadata = self.__create_metadata(**kwargs)
+        self.format_settings = kwargs
+        self.metadata = self.__create_metadata()
         self.__validate_metadata()
         global_context(metadata=kwargs)
         self.data_loader = DataLoader(
@@ -34,7 +35,7 @@ class DataIO:
             metadata=self.metadata
         )
 
-    def __create_metadata(self, **kwargs) -> Dict:
+    def __create_metadata(self) -> Dict:
         """
         Create the metadata dictionary for data loading and saving
         """
@@ -48,7 +49,7 @@ class DataIO:
                         fetch_env_variables({"fernet_key": self.fernet_key}).get("fernet_key")
                     )
                 },
-                "format": kwargs
+                "format": self.format_settings
             }
         }
 
