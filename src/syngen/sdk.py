@@ -25,8 +25,8 @@ class DataIO:
     def __init__(self, path: str, fernet_key: Optional[str] = None, **kwargs):
         self.path = path
         self.fernet_key = fernet_key
-        self.metadata = self._create_metadata(**kwargs)
-        self._validate_metadata(self.metadata)
+        self.metadata = self.__create_metadata(**kwargs)
+        self.__validate_metadata()
         global_context(metadata=kwargs)
         self.data_loader = DataLoader(
             path=self.path,
@@ -34,9 +34,9 @@ class DataIO:
             metadata=self.metadata
         )
 
-    def _create_metadata(self, **kwargs) -> Dict:
+    def __create_metadata(self, **kwargs) -> Dict:
         """
-        Create metadata dictionary for data loading and saving
+        Create the metadata dictionary for data loading and saving
         """
         return {
             "table": {
@@ -52,10 +52,9 @@ class DataIO:
             }
         }
 
-    @staticmethod
-    def _validate_metadata(metadata: Dict):
+    def __validate_metadata(self):
         ValidationSchema(
-            metadata=metadata,
+            metadata=self.metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
