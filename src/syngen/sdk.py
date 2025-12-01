@@ -29,6 +29,9 @@ class DataIO:
         self.metadata = self.__create_metadata()
         self.__validate_metadata()
         global_context(metadata=kwargs)
+        self.__create_data_loader()
+
+    def __create_data_loader(self):
         self.data_loader = DataLoader(
             path=self.path,
             table_name="table",
