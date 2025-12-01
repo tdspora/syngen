@@ -592,7 +592,10 @@ Syngen(
 Syngen(metadata_path="path/to/metadata.yaml").train(log_level="DEBUG")
 
 # Inference
-Syngen(table_name="my_table").infer(
+Syngen(
+    source="path/to/data.csv",
+    table_name="my_table"
+).infer(
   size=1000,
   random_seed=42,
   reports="accuracy"
@@ -601,7 +604,7 @@ Syngen(table_name="my_table").infer(
 Syngen(metadata_path="path/to/metadata.yaml").infer(log_level="DEBUG")
 
 # Generate reports separately for a certain table
-Syngen(metadata_path="path/to/metadata.yaml").generate_reports(
+Syngen(metadata_path="path/to/metadata.yaml").generate_quality_reports(
   table_name="my_table",
   reports=["accuracy", "sample"]
 )
