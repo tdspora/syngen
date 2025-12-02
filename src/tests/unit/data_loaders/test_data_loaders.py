@@ -936,7 +936,7 @@ def test_load_pipe_delimited_csv(rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/pipe_delimited_text.csv")
     rp_logger.info("Loading CSV with pipe delimiter")
-    global_context({"sep": "|", "quoting": "None"})
+    global_context({"sep": "|", "quoting": "none"})
     data, schema = CSVLoader(path_to_source).load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -946,7 +946,7 @@ def test_save_pipe_delimited_csv(test_csv_path, rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/"
                       "fixtures/csv_tables/pipe_delimited_text.csv")
     rp_logger.info("Saving CSV with pipe delimiter")
-    format_params = {"sep": "|", "quoting": "None"}
+    format_params = {"sep": "|", "quoting": "none"}
     global_context(format_params)
     data, schema = CSVLoader(path_to_source).load_data()
     assert get_context().get_config() == {"sep": "|", "quoting": 3, "skiprows": None}
@@ -960,7 +960,7 @@ def test_load_semicolon_delimited_csv(rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/semicolon_delimited_text.csv")
     rp_logger.info("Loading CSV with semicolon delimiter")
-    global_context({"sep": ";", "quoting": "None"})
+    global_context({"sep": ";", "quoting": "none"})
     data, schema = CSVLoader(path_to_source).load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -970,7 +970,7 @@ def test_save_semicolon_delimited_csv(test_csv_path, rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/semicolon_delimited_text.csv")
     rp_logger.info("Saving CSV with semicolon delimiter")
-    format_settings = {"sep": ";", "quoting": "None"}
+    format_settings = {"sep": ";", "quoting": "none"}
     global_context(format_settings)
     data, schema = CSVLoader(path_to_source).load_data()
     assert get_context().get_config() == {"sep": ";", "quoting": 3, "skiprows": None}
@@ -983,7 +983,7 @@ def test_save_semicolon_delimited_csv(test_csv_path, rp_logger):
 def test_load_tab_delimited_csv(rp_logger):
     path_to_source = f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.csv"
     rp_logger.info("Loading CSV with tab delimiter")
-    global_context({"sep": "\t", "quoting": "None", "engine": "python"})
+    global_context({"sep": "\t", "quoting": "none", "engine": "python"})
     data, schema = CSVLoader(path_to_source).load_data()
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -993,7 +993,7 @@ def test_save_tab_delimited_csv(test_csv_path, rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/"
                       "fixtures/csv_tables/tab_delimited_text.csv")
     rp_logger.info("Saving CSV with tab delimiter")
-    format_params = {"sep": "\t", "quoting": "None"}
+    format_params = {"sep": "\t", "quoting": "none"}
     global_context(format_params)
     data, schema = CSVLoader(path_to_source).load_data()
     assert get_context().get_config() == {"sep": "\t", "quoting": 3, "skiprows": None}
@@ -1324,7 +1324,7 @@ def test_save_csv_with_na_values(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV contained NA values")
     format_settings = {
         "na_values": ["-", "Missing", "NaN"],
-        "quoting": 0,
+        "quoting": "minimal",
         "skiprows": None,
     }
     global_context(format_settings)
