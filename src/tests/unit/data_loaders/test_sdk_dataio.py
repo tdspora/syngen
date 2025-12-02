@@ -24,6 +24,7 @@ def test_initialize_dataio_for_local_csv_table(rp_logger):
     dataio_loader = DataIO(path_to_table)
     assert dataio_loader.path == path_to_table
     assert dataio_loader.fernet_key is None
+    assert dataio_loader.format_settings == {}
     assert dataio_loader.metadata == {
         "table": {
             "train_settings": {"source": path_to_table},
@@ -43,6 +44,7 @@ def test_initialize_dataio_for_local_avro_table(rp_logger):
     dataio_loader = DataIO(path_to_table)
     assert dataio_loader.path == path_to_table
     assert dataio_loader.fernet_key is None
+    assert dataio_loader.format_settings == {}
     assert dataio_loader.metadata == {
         "table": {
             "train_settings": {"source": path_to_table},
@@ -62,6 +64,7 @@ def test_initialize_dataio_for_local_pickle_table(rp_logger):
     dataio_loader = DataIO(path_to_table)
     assert dataio_loader.path == path_to_table
     assert dataio_loader.fernet_key is None
+    assert dataio_loader.format_settings == {}
     assert dataio_loader.metadata == {
         "table": {
             "train_settings": {"source": path_to_table},
@@ -339,6 +342,7 @@ def test_load_pipe_delimited_csv(rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/pipe_delimited_text.csv")
     dataio_loader = DataIO(path_to_source, sep="|", quoting="none")
+    assert dataio_loader.format_settings == {"sep": "|", "quoting": "none"}
     data = dataio_loader.load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -722,6 +726,7 @@ def test_initialize_data_loader_for_local_excel_table(rp_logger):
     test_data_loader = DataIO(path_to_table)
     assert test_data_loader.path == path_to_table
     assert test_data_loader.fernet_key is None
+    assert test_data_loader.format_settings == {}
     assert test_data_loader.metadata == {
         "table": {
             "train_settings": {"source": path_to_table},
@@ -775,6 +780,7 @@ def test_load_data_from_table_in_excel_format_from_1_sheet_of_2_sheets(rp_logger
         "excel_tables/table_with_data_and_2_nonempty_sheets.xlsx",
         sheet_name="TestName"
     )
+    assert test_data_loader.format_settings == {"sheet_name": "TestName"}
     df = test_data_loader.load_data()
     assert isinstance(test_data_loader.data_loader.file_loader, ExcelLoader)
     assert (
