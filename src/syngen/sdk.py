@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from loguru import logger
 from dataclasses import dataclass, field
+from abc import ABC, abstractmethod
 
 from slugify import slugify
 from syngen.ml.data_loaders import DataLoader, DataEncryptor, MetadataLoader
@@ -18,27 +19,47 @@ from syngen.ml.validation_schema import ValidationSchema, ReportTypes
 from syngen.ml.context import global_context, get_context
 
 
-class DataIO:
+class BaseDataIO(ABC):
     """
-    SDK class for loading and saving data with optional encryption and format settings.
+    Base class for DataIO and AdvancedDataIO to handle common initialization logic
     """
     def __init__(self, path: str, fernet_key: Optional[str] = None, **kwargs):
         self.path = path
         self.fernet_key = fernet_key
         self.format_settings = kwargs
-        self.metadata = self.__create_metadata()
-        self.__validate_metadata()
+        self.metadata = self._create_metadata()
+        self._validate_metadata()
         global_context(metadata=kwargs)
-        self.__create_data_loader()
+        self._create_data_loader()
 
-    def __create_data_loader(self):
+    @abstractmethod
+    def _create_metadata(self):
+        pass
+
+    @abstractmethod
+    def _validate_metadata(self):
+        pass
+
+    @abstractmethod
+    def _create_data_loader(self):
+        pass
+
+
+class DataIO(BaseDataIO):
+    """
+    SDK class for loading and saving data with optional encryption and format settings.
+    """
+    def __init__(self, path: str, fernet_key: Optional[str] = None, **kwargs):
+        super().__init__(path, fernet_key, **kwargs)
+
+    def _create_data_loader(self):
         self.data_loader = DataLoader(
             path=self.path,
             table_name="table",
             metadata=self.metadata
         )
 
-    def __create_metadata(self) -> Dict:
+    def _create_metadata(self) -> Dict:
         """
         Create the metadata dictionary for data loading and saving
         """
@@ -56,7 +77,7 @@ class DataIO:
             }
         }
 
-    def __validate_metadata(self):
+    def _validate_metadata(self):
         ValidationSchema(
             metadata=self.metadata,
             validation_source=True,
