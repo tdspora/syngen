@@ -289,8 +289,16 @@ class CVAE:
 
     def load_state(self, path: str):
         pth = Path(path)
-        self.model.load_weights(str(pth / "vae.weights.h5"))
-        self.generator_model.load_weights(str(pth / "vae_generator.weights.h5"))
+        # Load main model weights with fallback to .ckpt
+        model_weights_file = pth / "vae.weights.h5"
+        if not model_weights_file.exists():
+            model_weights_file = pth / "vae.ckpt"
+        self.model.load_weights(str(model_weights_file))
+        # Load generator model weights with fallback to .ckpt
+        generator_weights_file = pth / "vae_generator.weights.h5"
+        if not generator_weights_file.exists():
+            generator_weights_file = pth / "vae_generator.ckpt"
+        self.generator_model.load_weights(str(generator_weights_file))
 
         with open(str(pth / "latent_model.pkl"), "rb") as f:
             self.latent_model = pickle.loads(f.read())
