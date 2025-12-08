@@ -483,13 +483,21 @@ class VAEWrapper(BaseWrapper):
             # KL loss is disabled (weight 0) in original code
             kl_loss = 0.0
 
-            # Map losses to feature names (losses are in same order as features)
+            # Map losses to feature names by layer name, not by index
+            # Build a mapping from loss layer name to loss value
+            loss_name_to_value = {}
+            for loss in losses:
+                # Try to get the layer name from the loss tensor's _keras_history
+                # _keras_history: (layer, node_index, tensor_index)
+                layer = getattr(loss, '_keras_history', [None])[0]
+                layer_name = getattr(layer, 'name', None)
+                if layer_name is not None:
+                    loss_name_to_value[layer_name] = float(loss.numpy())
+
             feature_losses = {}
-            for i, name in enumerate(order_of_features):
-                if i < len(losses):
-                    feature_losses[name] = float(losses[i].numpy())
-                else:
-                    feature_losses[name] = 0.0
+            for name in order_of_features:
+                # Use the loss value if present, else 0.0
+                feature_losses[name] = loss_name_to_value.get(name, 0.0)
 
         # Compute gradients and apply them
         gradients = tape.gradient(loss, self.model.trainable_weights)
