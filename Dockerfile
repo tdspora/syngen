@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.11-bookworm
+FROM python:3.12-bookworm
 
 WORKDIR /src
 
@@ -8,7 +8,7 @@ COPY requirements.txt .
 COPY requirements-streamlit.txt .
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git build-essential python3.11-dev && \
+    apt-get install -y --no-install-recommends git build-essential python3.12-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir --upgrade pip setuptools wheel && \

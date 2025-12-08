@@ -1,9 +1,12 @@
 from pathlib import Path
+from typing import Optional, Dict
 
 import tensorflow as tf
+import keras
+import keras.ops as ops
 import pickle
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (
+from keras.models import Model
+from keras.layers import (
     Input,
     Dense,
     Dropout,
@@ -11,14 +14,13 @@ from tensorflow.keras.layers import (
     concatenate,
     Lambda,
     BatchNormalization,
-    Activation,
 )
 from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
 from loguru import logger
 
-from syngen.ml.vae.models.custom_layers import FeatureLossLayer
+from syngen.ml.vae.models.custom_layers import FeatureLossLayer, set_seed_generator
 from syngen.ml.utils import slugify_parameters, ProgressBarHandler
 
 
@@ -27,12 +29,21 @@ class CVAE:
     A class implementing the model architecture.
     """
 
-    def __init__(self, dataset, batch_size, latent_dim, intermediate_dim, latent_components):
+    def __init__(
+        self,
+        dataset,
+        batch_size,
+        latent_dim,
+        intermediate_dim,
+        latent_components,
+        random_seed: Optional[int] = None
+    ):
         self.dataset = dataset
         self.intermediate_dim = intermediate_dim
         self.batch_size = batch_size
         self.latent_dim = latent_dim
         self.latent_components = min(latent_components, len(self.dataset.order_of_columns))
+        self.random_seed = random_seed
         self.model = None
         self.latent_model = None
         self.metrics = {}
@@ -47,11 +58,13 @@ class CVAE:
         self.cond_inputs = list()
         self.global_decoder = None
         self.generator = None
+        # Set up seed generator for reproducible random operations
+        set_seed_generator(random_seed)
 
     def sample_z(self, args):
         mu, log_sigma = args
-        eps = tf.random.normal(shape=(self.latent_dim,), mean=0.0, stddev=1.0)
-        return mu + tf.exp(log_sigma / 2) * eps
+        eps = keras.random.normal(shape=(self.latent_dim,), mean=0.0, stddev=1.0)
+        return mu + ops.exp(log_sigma / 2) * eps
 
     @staticmethod
     @slugify_parameters(exclude_params=("feature",))
@@ -95,12 +108,6 @@ class CVAE:
             decoder_input = z
             encoder_output = self.mu
 
-        kl_loss = (
-            1
-            * 0.5
-            * tf.reduce_sum(tf.exp(self.log_sigma) + self.mu**2 - 1.0 - self.log_sigma, 1)
-        )
-
         generator_input = Input(shape=(gen_inp_shape,))
 
         self.__build_decoder(decoder_input, generator_input)
@@ -109,19 +116,34 @@ class CVAE:
         for i, (name, feature) in enumerate(self.dataset.features.items()):
             feature_decoder = feature.create_decoder(self.global_decoder)
 
-            self._create_feature_loss_layer(feature=feature, name=name)
-            feature_tensor = feature_decoder
-            self.feature_losses[name] = feature.loss
+            # Determine loss type based on feature type
+            loss_type = 'categorical'  # default
+            if hasattr(feature, 'feature_type'):
+                ft = feature.feature_type
+                if ft in ('continuous', 'float', 'int'):
+                    loss_type = 'continuous'
+                elif ft == 'binary':
+                    loss_type = 'binary'
+
+            # Create a loss layer that's actually wired into the graph
+            loss_layer = FeatureLossLayer(
+                feature=feature,
+                loss_type=loss_type,
+                weight=getattr(feature, 'weight', 1.0),
+                name=f"loss_{name}"
+            )
+            # Wire the loss layer into the graph by passing input and decoder through it
+            feature_tensor = loss_layer([feature.input, feature_decoder])
+
+            self.feature_losses[name] = feature.loss  # Keep for compatibility
             self.feature_types[name] = feature.feature_type
 
             self.feature_decoders.append(feature_tensor)
 
             generator_outputs.append(feature.create_decoder(self.generator))
 
+        # Use standard Model since losses are added via FeatureLossLayer
         self.model = Model(self.inputs, self.feature_decoders)
-        losses = list(self.feature_losses.values())
-        self.model.add_loss(losses)
-        self.model.add_loss(kl_loss * 0)
 
         self.encoder_model = Model(self.inputs, encoder_output)
 
@@ -133,17 +155,17 @@ class CVAE:
     def __build_encoder(self, input):
         h0 = Dense(self.intermediate_dim, name="Encoder_0")(input)
         h0 = BatchNormalization(name="First_encoder_BN")(h0)
-        h0 = Activation(tf.nn.leaky_relu)(h0)
+        h0 = LeakyReLU()(h0)
         h0 = Dropout(0.2)(h0)
 
         h1 = Dense(self.intermediate_dim, name="Encoder_1")(h0)
         h1 = BatchNormalization(name="Second_encoder_BN")(h1)
-        h1 = Activation(tf.nn.leaky_relu)(h1)
+        h1 = LeakyReLU()(h1)
         h1 = Dropout(0.2)(h1)
 
         h2 = Dense(self.intermediate_dim, name="Encoder_2")(h1)
         h2 = BatchNormalization(name="Third_encoder_BN")(h2)
-        h2 = Activation(tf.nn.leaky_relu)(h2)
+        h2 = LeakyReLU()(h2)
         h2 = Dropout(0.2)(h2)
 
         mu = Dense(self.latent_dim, name="mu")(h2)
@@ -249,10 +271,10 @@ class CVAE:
         pth = Path(path)
 
         if self.model is not None:
-            self.model.save_weights(str(pth / "vae.ckpt"))
+            self.model.save_weights(str(pth / "vae.weights.h5"))
 
         if self.generator_model is not None:
-            self.generator_model.save_weights(str(pth / "vae_generator.ckpt"))
+            self.generator_model.save_weights(str(pth / "vae_generator.weights.h5"))
 
         if self.latent_model is not None:
             with open(str(pth / "latent_model.pkl"), "wb") as f:
@@ -260,8 +282,8 @@ class CVAE:
 
     def load_state(self, path: str):
         pth = Path(path)
-        self.model.load_weights(str(pth / "vae.ckpt"))
-        self.generator_model.load_weights(str(pth / "vae_generator.ckpt"))
+        self.model.load_weights(str(pth / "vae.weights.h5"))
+        self.generator_model.load_weights(str(pth / "vae_generator.weights.h5"))
 
         with open(str(pth / "latent_model.pkl"), "rb") as f:
             self.latent_model = pickle.loads(f.read())
