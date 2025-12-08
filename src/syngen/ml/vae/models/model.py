@@ -116,21 +116,28 @@ class CVAE:
         for i, (name, feature) in enumerate(self.dataset.features.items()):
             feature_decoder = feature.create_decoder(self.global_decoder)
 
-            # Determine loss type based on feature type
+            # Determine loss type based on feature type, and use feature.loss if available
             loss_type = 'categorical'  # default
+            custom_loss = getattr(feature, 'loss', None)
             if hasattr(feature, 'feature_type'):
                 ft = feature.feature_type
                 if ft in ('continuous', 'float', 'int'):
                     loss_type = 'continuous'
                 elif ft == 'binary':
                     loss_type = 'binary'
+                elif ft in ('char_text', 'charbasedtext', 'charbasedtextfeature'):
+                    loss_type = 'char_text'
+                elif ft in ('datetime', 'datetimefeature'):
+                    loss_type = 'datetime'
+                # Add more explicit mappings as needed for other feature types
 
             # Create a loss layer that's actually wired into the graph
             loss_layer = FeatureLossLayer(
                 feature=feature,
                 loss_type=loss_type,
                 weight=getattr(feature, 'weight', 1.0),
-                name=f"loss_{name}"
+                name=f"loss_{name}",
+                custom_loss=custom_loss
             )
             # Wire the loss layer into the graph by passing input and decoder through it
             feature_tensor = loss_layer([feature.input, feature_decoder])
