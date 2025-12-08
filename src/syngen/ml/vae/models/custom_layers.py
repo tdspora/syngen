@@ -36,12 +36,13 @@ class FeatureLossLayer(Layer):
     """
 
     def __init__(self, feature, loss_type='categorical', weight=1.0, 
-                 weight_randomizer=None, seed_generator=None, **kwargs):
+                 weight_randomizer=None, seed_generator=None, custom_loss=None, **kwargs):
         super().__init__(**kwargs)
         self.feature = feature
         self.loss_type = loss_type
         self.weight = weight
         self.seed_generator = seed_generator
+        self.custom_loss = custom_loss
         
         # Handle weight_randomizer: convert to (low, high) tuple
         if weight_randomizer is None:
@@ -97,6 +98,7 @@ class FeatureLossLayer(Layer):
             "loss_type": self.loss_type,
             "weight": self.weight,
             "weight_randomizer": self.weight_randomizer,
+            # Note: custom_loss is not serializable, so we omit it from config
         })
         return config
 

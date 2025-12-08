@@ -650,7 +650,7 @@ class CharBasedTextFeature(BaseFeature):
 
         return self.weight * ops.mean(
             keras.losses.categorical_crossentropy(
-                target=self.input, output=self.decoder, from_logits=True
+                y_true=self.input, y_pred=self.decoder, from_logits=True
             )
         )
 
