@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
-# Standard Dockerfile for Python 3.11 (stable)
-# For Python 3.12 with Keras 3 support, use Dockerfile.python3.12
+# Dockerfile for Python 3.12 with Keras 3 support
+# This is an experimental build for Python 3.12 compatibility.
+# For production use with Python 3.11, use the standard Dockerfile.
 
-FROM python:3.11-bookworm
+FROM python:3.12-bookworm
 
 WORKDIR /src
 
@@ -10,7 +11,7 @@ COPY requirements.txt .
 COPY requirements-streamlit.txt .
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git build-essential python3.11-dev && \
+    apt-get install -y --no-install-recommends git build-essential python3.12-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir --upgrade pip setuptools wheel && \

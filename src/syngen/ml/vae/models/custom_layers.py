@@ -31,30 +31,62 @@ class FeatureLossLayer(Layer):
     Custom layer that computes and adds reconstruction loss for a feature.
     In Keras 3, Model.add_loss() doesn't work for Functional models,
     so we use this layer to add losses via Layer.add_loss() in the call method.
+    
+    Supports weight_randomizer for dynamic loss weighting during training.
     """
 
-    def __init__(self, feature, loss_type='categorical', weight=1.0, **kwargs):
+    def __init__(self, feature, loss_type='categorical', weight=1.0, 
+                 weight_randomizer=None, seed_generator=None, **kwargs):
         super().__init__(**kwargs)
         self.feature = feature
         self.loss_type = loss_type
         self.weight = weight
+        self.seed_generator = seed_generator
+        
+        # Handle weight_randomizer: convert to (low, high) tuple
+        if weight_randomizer is None:
+            # Get from feature if available, else use fixed weight
+            if hasattr(feature, 'weight_randomizer'):
+                self.weight_randomizer = feature.weight_randomizer
+            else:
+                self.weight_randomizer = (weight, weight)
+        elif isinstance(weight_randomizer, (list, tuple)) and len(weight_randomizer) == 2:
+            self.weight_randomizer = tuple(weight_randomizer)
+        elif isinstance(weight_randomizer, bool):
+            self.weight_randomizer = (0, 1) if weight_randomizer else (weight, weight)
+        elif isinstance(weight_randomizer, (int, float)):
+            self.weight_randomizer = (weight_randomizer, weight_randomizer)
+        else:
+            self.weight_randomizer = (weight, weight)
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs, training=None, **kwargs):
         """
         Compute the reconstruction loss from input and decoder output.
 
         Args:
             inputs: tuple of (feature_input, feature_decoder)
+            training: whether the model is in training mode
         """
         feature_input, feature_decoder = inputs
 
+        # Compute random weight for loss (weight_randomizer support)
+        low, high = self.weight_randomizer
+        if low == high:
+            random_weight = low
+        else:
+            # Use random weight during training for regularization
+            seed = self.seed_generator if self.seed_generator is not None else get_seed_generator()
+            random_weight = keras.random.uniform(
+                shape=(1,), minval=low, maxval=high, seed=seed
+            )
+
         # Compute loss based on feature type
         if self.loss_type == 'continuous':
-            loss = self.weight * ops.mean(keras.losses.mean_squared_error(feature_input, feature_decoder))
+            loss = random_weight * ops.mean(keras.losses.mean_squared_error(feature_input, feature_decoder))
         elif self.loss_type == 'binary':
-            loss = self.weight * ops.mean(keras.losses.binary_crossentropy(feature_input, feature_decoder))
+            loss = random_weight * ops.mean(keras.losses.binary_crossentropy(feature_input, feature_decoder))
         else:  # categorical
-            loss = self.weight * ops.mean(keras.losses.categorical_crossentropy(feature_input, feature_decoder))
+            loss = random_weight * ops.mean(keras.losses.categorical_crossentropy(feature_input, feature_decoder))
 
         self.add_loss(loss)
         return feature_decoder
@@ -64,6 +96,7 @@ class FeatureLossLayer(Layer):
         config.update({
             "loss_type": self.loss_type,
             "weight": self.weight,
+            "weight_randomizer": self.weight_randomizer,
         })
         return config
 

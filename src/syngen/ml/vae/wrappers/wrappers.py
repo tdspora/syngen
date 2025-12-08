@@ -465,6 +465,22 @@ class VAEWrapper(BaseWrapper):
         dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
         return dataset.batch(self.batch_size, drop_remainder=True)
 
+    def _compute_kl_loss(self) -> tf.Tensor:
+        """
+        Compute KL divergence loss from the VAE's latent space.
+        KL(q(z|x) || p(z)) where p(z) is standard normal N(0,1).
+        
+        Formula: -0.5 * sum(1 + log_sigma - mu^2 - exp(log_sigma))
+        """
+        mu = self.vae.mu
+        log_sigma = self.vae.log_sigma
+        
+        kl_loss = -0.5 * tf.reduce_sum(
+            1 + log_sigma - tf.square(mu) - tf.exp(log_sigma),
+            axis=-1
+        )
+        return tf.reduce_mean(kl_loss)
+
     def _train_step(self, batch: Tuple[tf.Tensor]):
         with tf.GradientTape() as tape:
             # Forward pass - this will trigger loss computation in FeatureLossLayers
@@ -473,26 +489,32 @@ class VAEWrapper(BaseWrapper):
             # Get losses from the model (populated by FeatureLossLayer.add_loss)
             losses = self.model.losses
             if losses:
-                loss = tf.add_n(losses) if len(losses) > 1 else losses[0]
+                reconstruction_loss = tf.add_n(losses) if len(losses) > 1 else losses[0]
             else:
-                loss = tf.constant(0.0)
+                reconstruction_loss = tf.constant(0.0)
+
+            # Compute KL divergence loss if kl_weight > 0
+            kl_weight = getattr(self.vae, 'kl_weight', 0.0)
+            if kl_weight > 0:
+                kl_loss = self._compute_kl_loss()
+                loss = reconstruction_loss + kl_weight * kl_loss
+            else:
+                kl_loss = tf.constant(0.0)
+                loss = reconstruction_loss
 
             # Get feature names for logging
             order_of_features = list(self.vae.feature_losses.keys())
 
-            # KL loss is disabled (weight 0) in original code
-            kl_loss = 0.0
-
             # Map losses to feature names by layer name, not by index
             # Build a mapping from loss layer name to loss value
             loss_name_to_value = {}
-            for loss in losses:
+            for layer_loss in losses:
                 # Try to get the layer name from the loss tensor's _keras_history
                 # _keras_history: (layer, node_index, tensor_index)
-                layer = getattr(loss, '_keras_history', [None])[0]
+                layer = getattr(layer_loss, '_keras_history', [None])[0]
                 layer_name = getattr(layer, 'name', None)
                 if layer_name is not None:
-                    loss_name_to_value[layer_name] = float(loss.numpy())
+                    loss_name_to_value[layer_name] = float(layer_loss.numpy())
 
             feature_losses = {}
             for name in order_of_features:
@@ -501,11 +523,21 @@ class VAEWrapper(BaseWrapper):
 
         # Compute gradients and apply them
         gradients = tape.gradient(loss, self.model.trainable_weights)
-        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_weights))
+        
+        # Filter out None gradients to prevent apply_gradients from failing
+        # None gradients can occur for variables not connected to the loss
+        grads_and_vars = [
+            (g, v) for g, v in zip(gradients, self.model.trainable_weights) 
+            if g is not None
+        ]
+        if grads_and_vars:
+            self.optimizer.apply_gradients(grads_and_vars)
 
         self.loss_metric(loss)
 
-        return loss, kl_loss, feature_losses
+        # Convert kl_loss to float for return value
+        kl_loss_value = float(kl_loss.numpy()) if hasattr(kl_loss, 'numpy') else float(kl_loss)
+        return loss, kl_loss_value, feature_losses
 
     @staticmethod
     def display_losses(feature_losses: Dict):

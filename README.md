@@ -422,6 +422,10 @@ The train and inference components of <i>syngen</i> is available as public docke
 
 <https://hub.docker.com/r/tdspora/syngen>
 
+**Note:** Two Dockerfiles are available:
+- `Dockerfile` - Standard build using Python 3.11 (stable, recommended for production)
+- `Dockerfile.python3.12` - Experimental build using Python 3.12 with Keras 3 support
+
 To run dockerized code (see parameters description in *Training* and *Inference* sections) for one table call:
 
 ```bash
@@ -655,6 +659,17 @@ If you encounter any issues during installation, consider the following steps:
 - Ensure all dependencies are up-to-date.
 - Check for any compatibility issues with other installed packages.
 - Consult the Syngen [documentation](https://github.com/tdspora/syngen) or raise an issue on GitHub.
+
+### Model Weight File Migration
+
+If you are upgrading from a previous version of syngen that used Keras 2.x, note that model weight files have been migrated from `.ckpt` format to `.weights.h5` format. The library automatically handles backward compatibility:
+
+- **Loading old models**: When loading existing models, syngen will first look for `.weights.h5` files. If not found, it will fall back to `.ckpt` files automatically.
+- **Saving new models**: New models are saved using the `.weights.h5` extension.
+
+If you want to manually migrate your model artifacts, simply rename:
+- `vae.ckpt` → `vae.weights.h5`
+- `vae_generator.ckpt` → `vae_generator.weights.h5`
 
 ## Contribution
 

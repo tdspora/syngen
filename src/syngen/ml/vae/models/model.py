@@ -36,7 +36,8 @@ class CVAE:
         latent_dim,
         intermediate_dim,
         latent_components,
-        random_seed: Optional[int] = None
+        random_seed: Optional[int] = None,
+        kl_weight: float = 0.0
     ):
         self.dataset = dataset
         self.intermediate_dim = intermediate_dim
@@ -44,6 +45,7 @@ class CVAE:
         self.latent_dim = latent_dim
         self.latent_components = min(latent_components, len(self.dataset.order_of_columns))
         self.random_seed = random_seed
+        self.kl_weight = kl_weight
         self.model = None
         self.latent_model = None
         self.metrics = {}
@@ -59,6 +61,9 @@ class CVAE:
         self.global_decoder = None
         self.generator = None
         # Set up seed generator for reproducible random operations
+        # Store as instance variable for thread-safety with multiple CVAE instances
+        self.seed_generator = keras.random.SeedGenerator(random_seed) if random_seed is not None else None
+        # Also set module-level for backward compatibility with features
         set_seed_generator(random_seed)
 
     def sample_z(self, args):
@@ -116,9 +121,8 @@ class CVAE:
         for i, (name, feature) in enumerate(self.dataset.features.items()):
             feature_decoder = feature.create_decoder(self.global_decoder)
 
-            # Determine loss type based on feature type, and use feature.loss if available
+            # Determine loss type based on feature type
             loss_type = 'categorical'  # default
-            custom_loss = getattr(feature, 'loss', None)
             if hasattr(feature, 'feature_type'):
                 ft = feature.feature_type
                 if ft in ('continuous', 'float', 'int'):
@@ -131,13 +135,17 @@ class CVAE:
                     loss_type = 'datetime'
                 # Add more explicit mappings as needed for other feature types
 
+            # Get weight_randomizer from feature if available
+            weight_randomizer = getattr(feature, 'weight_randomizer', None)
+
             # Create a loss layer that's actually wired into the graph
             loss_layer = FeatureLossLayer(
                 feature=feature,
                 loss_type=loss_type,
                 weight=getattr(feature, 'weight', 1.0),
-                name=f"loss_{name}",
-                custom_loss=custom_loss
+                weight_randomizer=weight_randomizer,
+                seed_generator=self.seed_generator,
+                name=f"loss_{name}"
             )
             # Wire the loss layer into the graph by passing input and decoder through it
             feature_tensor = loss_layer([feature.input, feature_decoder])
