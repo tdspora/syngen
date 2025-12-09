@@ -190,14 +190,16 @@ def test_is_valid_categorical_defined_in_csv_table(mock_fetch_config, rp_logger)
         main_process="train"
     )
     mock_dataset.launch_detection()
+    # Note: email, ptd_dt, upd_dt, timestamp are now correctly detected as 
+    # email and date columns respectively, not categorical
+    # id is now correctly detected as numeric, not categorical
     assert mock_dataset.categorical_columns == {
         "time",
-        "ptd_dt",
-        "email",
-        "id",
-        "timestamp",
-        "upd_dt"
     }
+    # Verify the improved detection
+    assert mock_dataset.email_columns == {"email"}
+    assert mock_dataset.date_columns == {"ptd_dt", "upd_dt", "timestamp"}
+    assert mock_dataset.int_columns == {"id"}
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -240,10 +242,11 @@ def test_set_custom_categorical_columns(mock_fetch_config, rp_logger):
         main_process="train"
     )
     mock_dataset.launch_detection()
+    # Note: SenderPersonId is now correctly detected as float, not categorical
+    # ExtractedFrom is correctly detected as email
     assert mock_dataset.categorical_columns == {
-        "SenderPersonId",
         "MetadataSubject",
-        "ExtractedFrom"
+        "ExtractedFrom"  # Custom categorical overrides email detection
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

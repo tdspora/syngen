@@ -535,24 +535,92 @@ class Dataset:
 
     def _set_binary_columns(self):
         """
-        Set up the list of binary columns based on the count of unique values in the column
+        Set up the list of binary columns based on the count of unique values in the column.
+        
+        Note: We check nunique BEFORE fillna to correctly handle boolean columns 
+        with NaN values (True/False + NaN should still be binary).
         """
-        self.binary_columns = set(
-            [col for col in self.df.columns if self.df[col].fillna("?").nunique() == 2]
-        )
+        self.binary_columns = set()
+        for col in self.df.columns:
+            # Get unique non-null values
+            unique_values = self.df[col].dropna().unique()
+            num_unique = len(unique_values)
+            
+            # Binary if exactly 2 unique non-null values
+            # (NaN will be handled separately during preprocessing)
+            if num_unique == 2:
+                self.binary_columns.add(col)
+            # Also binary if only 1 unique value but column has nulls
+            # (this means the column has value + null = 2 states)
+            elif num_unique == 1 and self.df[col].isna().any():
+                self.binary_columns.add(col)
 
     def _define_categorical_columns(self):
         """
-        Define the list of categorical columns based on the count of unique values in the column
+        Define the list of categorical columns based on the count of unique values in the column.
+        
+        Note: Threshold increased from 50 to 100 to better handle columns like
+        US states (50), countries (195+), etc. Using < instead of <= to avoid
+        edge cases with exactly 100 unique values.
         """
-        self.categorical_columns = set(
-            [
-                col
-                for col in self.df.columns
-                if self.df[col].fillna("?").nunique() <= 50
-                and col not in self.binary_columns
-            ]
-        )
+        CATEGORICAL_THRESHOLD = 100
+        
+        # Common date patterns to check (both 2-digit and 4-digit years)
+        date_patterns = [
+            r'^\d{4}-\d{2}-\d{2}',  # 2020-01-01, 2020-01-01T...
+            r'^\d{2}-\d{2}-\d{2,4}',  # 01-01-2020 or 01-01-20
+            r'^\d{2}/\d{2}/\d{2,4}',  # 01/01/2020 or 01/01/20
+            r'^\d{4}/\d{2}/\d{2}',  # 2020/01/01
+            r'^\d{2}\.\d{2}\.\d{2,4}',  # 01.01.2020 or 01.01.20
+            r'^\d{2}-[A-Za-z]{3}-\d{2,4}',  # 01-Jan-20 or 01-Jan-2020
+        ]
+        combined_date_pattern = '|'.join(date_patterns)
+        
+        # UUID pattern (standard 8-4-4-4-12 format)
+        uuid_pattern = r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        
+        self.categorical_columns = set()
+        for col in self.df.columns:
+            if col in self.binary_columns:
+                continue
+            
+            # Skip columns that are already numeric types (int, float)
+            # These should be processed as numeric features, not categorical
+            if pd.api.types.is_numeric_dtype(self.df[col]):
+                continue
+            
+            col_data = self.df[col].dropna()
+            if len(col_data) == 0:
+                continue
+                
+            str_data = col_data.astype(str)
+            
+            # Skip columns that look like emails (contain @ in majority of values)
+            at_ratio = str_data.str.contains('@', regex=False).mean()
+            if at_ratio > 0.8:
+                continue
+            
+            # Skip columns that look like dates
+            date_ratio = str_data.str.match(combined_date_pattern, na=False).mean()
+            if date_ratio > 0.8:
+                continue
+            
+            # Skip columns that look like UUIDs
+            uuid_ratio = str_data.str.match(uuid_pattern, na=False).mean()
+            if uuid_ratio > 0.8:
+                continue
+            
+            # Skip columns that contain mostly numeric values
+            # (these will be cast to numeric later in the pipeline)
+            numeric_ratio = str_data.str.match(r'^-?\d+\.?\d*$', na=False).mean()
+            if numeric_ratio > 0.8:
+                continue
+            
+            # Count unique non-null values (use < instead of <= to avoid edge cases)
+            num_unique = col_data.nunique()
+            if num_unique < CATEGORICAL_THRESHOLD:
+                self.categorical_columns.add(col)
+        
         self.categorical_columns.update(self.custom_categorical_columns)
 
     def _set_categorical_columns(self):
