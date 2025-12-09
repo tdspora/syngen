@@ -128,6 +128,7 @@ class BinaryFeature(BaseFeature):
         return data.astype("float32")
 
     def inverse_transform(self, data: List) -> np.ndarray:
+        data = np.clip(data, 0, 1)  # Ensure [0, 1] range before rounding
         data = np.round(data)
         inversed = self.inverse_vectorizer(data)
         return np.where(inversed == "?", None, inversed)
@@ -668,9 +669,25 @@ class EmailFeature(CharBasedTextFeature):
                          text_max_len=text_max_len,
                          rnn_units=rnn_units,
                          dropout=dropout)
-        self.domain = domain
+        self.domain = domain  # fallback domain
+        self.domains = None  # will be populated by fit()
+        self.domain_probs = None
 
     def fit(self, data: pd.DataFrame, **kwargs):
+        # Extract and store domain distribution from actual data
+        col = data.iloc[:, 0].dropna().astype(str)
+        domains = col.str.extract(r'@(.+)$')[0].dropna()
+        
+        if len(domains) > 0:
+            domain_counts = domains.value_counts(normalize=True)
+            self.domains = domain_counts.index.tolist()
+            self.domain_probs = domain_counts.values.tolist()
+        else:
+            # Fallback to default domain if no valid emails found
+            self.domains = [self.domain]
+            self.domain_probs = [1.0]
+        
+        # Continue with original fit (local part only)
         super().fit(self.extract_email_name(data))
 
     @staticmethod
@@ -686,10 +703,19 @@ class EmailFeature(CharBasedTextFeature):
         return super().transform(self.extract_email_name(data))
 
     def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
-        return [
-            s + "@" +
-            self.domain for s in super().inverse_transform(data, **kwargs)
-        ]
+        local_parts = super().inverse_transform(data, **kwargs)
+        
+        # Sample domains from original distribution
+        if self.domains and self.domain_probs:
+            sampled_domains = np.random.choice(
+                self.domains,
+                size=len(local_parts),
+                p=self.domain_probs
+            )
+            return [f"{local}@{domain}" for local, domain in zip(local_parts, sampled_domains)]
+        else:
+            # Fallback to default domain
+            return [f"{s}@{self.domain}" for s in local_parts]
 
 
 class DateFeature(BaseFeature):

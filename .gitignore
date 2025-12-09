@@ -58,3 +58,11 @@ dist/
 
 # Syngen test data
 test_data/
+
+# Generated test files
+examples/generated-data/
+test_*.py
+ANALYSIS_*.md
+COMPREHENSIVE_*.md
+IMPLEMENTATION_*.md
+VALIDATION_*.md

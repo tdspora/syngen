@@ -397,6 +397,21 @@ class VAEWrapper(BaseWrapper):
             mean_loss = np.mean(total_loss / self.num_batches)
             mean_kl_loss = np.mean(total_kl_loss / self.num_batches)
 
+            # Sanity check for NaN/Inf losses
+            if np.isnan(mean_loss) or np.isinf(mean_loss):
+                logger.error(
+                    f"Loss became NaN/Inf at epoch {epoch}. "
+                    f"This may indicate data preprocessing issues or numerical instability. "
+                    f"Stopping training."
+                )
+                break
+
+            if mean_loss > 100 and epoch > 5:
+                logger.warning(
+                    f"Loss is very high ({mean_loss:.2f}) at epoch {epoch}. "
+                    f"Consider checking data preprocessing or model configuration."
+                )
+
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
             else:
@@ -489,7 +504,10 @@ class VAEWrapper(BaseWrapper):
             # Get losses from the model (populated by FeatureLossLayer.add_loss)
             losses = self.model.losses
             if losses:
-                reconstruction_loss = tf.add_n(losses) if len(losses) > 1 else losses[0]
+                # Cap individual feature losses to prevent outliers from dominating
+                MAX_FEATURE_LOSS = 10.0
+                capped_losses = [tf.minimum(l, MAX_FEATURE_LOSS) for l in losses]
+                reconstruction_loss = tf.add_n(capped_losses) if len(capped_losses) > 1 else capped_losses[0]
             else:
                 reconstruction_loss = tf.constant(0.0)
 
@@ -523,6 +541,12 @@ class VAEWrapper(BaseWrapper):
 
         # Compute gradients and apply them
         gradients = tape.gradient(loss, self.model.trainable_weights)
+        
+        # Clip gradients to prevent explosion
+        gradients = [
+            tf.clip_by_norm(g, 1.0) if g is not None else g
+            for g in gradients
+        ]
         
         # Filter out None gradients to prevent apply_gradients from failing
         # None gradients can occur for variables not connected to the loss
