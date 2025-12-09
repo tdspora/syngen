@@ -6,6 +6,7 @@ import base32_crockford
 from collections import Counter
 import re
 from dataclasses import dataclass, field
+import math
 
 import numpy as np
 import dill
@@ -555,37 +556,160 @@ class Dataset:
             elif num_unique == 1 and self.df[col].isna().any():
                 self.binary_columns.add(col)
 
+    def _calculate_positional_entropy(self, data: pd.Series, max_positions: int = 20) -> float:
+        """
+        Calculate average character entropy per position in string data.
+        
+        Low entropy (< 2.5) indicates structured text where characters at each
+        position are predictable (e.g., phone numbers, dates, IPs, zip codes).
+        High entropy (> 3.5) indicates unstructured text with random characters.
+        
+        Args:
+            data: Series of string values to analyze
+            max_positions: Maximum number of character positions to analyze
+            
+        Returns:
+            Average entropy across positions (0 = perfectly structured, ~4.7 = random alphanumeric)
+        """
+        # Sample for performance (500 values is enough for statistics)
+        sample = data.sample(min(500, len(data)), random_state=42)
+        sample = sample.astype(str)
+        
+        # Get the length to analyze (95th percentile to handle outliers)
+        lengths = sample.str.len()
+        max_len = min(max_positions, int(lengths.quantile(0.95)))
+        
+        if max_len == 0:
+            return 5.0  # Empty strings = high entropy (not structured)
+        
+        entropies = []
+        for pos in range(max_len):
+            # Get character at this position for each string
+            chars = [s[pos] if len(s) > pos else '' for s in sample]
+            
+            # Count character frequencies
+            char_counts = Counter(chars)
+            total = sum(char_counts.values())
+            
+            if total == 0:
+                continue
+            
+            # Calculate Shannon entropy: -sum(p * log2(p))
+            entropy = 0.0
+            for count in char_counts.values():
+                if count > 0:
+                    p = count / total
+                    entropy -= p * math.log2(p)
+            
+            entropies.append(entropy)
+        
+        return sum(entropies) / len(entropies) if entropies else 5.0
+
+    def _is_structured_text(self, col_data: pd.Series) -> bool:
+        """
+        Detect if a column contains structured text using entropy analysis.
+        
+        Structured text has:
+        - Consistent length (low coefficient of variation)
+        - Low positional entropy (predictable characters at each position)
+        
+        Examples of structured text:
+        - Phone numbers: (555) 123-4567
+        - IP addresses: 192.168.1.1
+        - ZIP codes: 12345, 12345-6789
+        - Product codes: ABC-123-XYZ
+        - Dates: 2020-01-01
+        
+        Args:
+            col_data: Non-null string data from a column
+            
+        Returns:
+            True if the column appears to be structured text
+        """
+        str_data = col_data.astype(str)
+        
+        # For very small datasets (< 10 rows), use simple pattern matching
+        # Entropy-based detection needs more samples to be reliable
+        if len(col_data) < 10:
+            # Check common structured patterns
+            date_patterns = [
+                r'^\d{4}-\d{2}-\d{2}',  # 2020-01-01
+                r'^\d{2}-\d{2}-\d{2,4}',  # 01-01-2020
+                r'^\d{2}/\d{2}/\d{2,4}',  # 01/01/2020
+                r'^\d{4}/\d{2}/\d{2}',  # 2020/01/01
+            ]
+            for pattern in date_patterns:
+                if str_data.str.match(pattern, na=False).mean() > 0.8:
+                    return True
+            return False
+        
+        lengths = str_data.str.len()
+        avg_len = lengths.mean()
+        
+        # Too long (sentences) or too short (codes < 3 chars)
+        if avg_len > 50 or avg_len < 3:
+            return False
+        
+        # Check length consistency (CV < 0.3 = very consistent lengths)
+        length_cv = lengths.std() / avg_len if avg_len > 0 else 1.0
+        has_consistent_length = length_cv < 0.3
+        has_very_consistent_length = length_cv < 0.1  # Almost identical lengths
+        
+        # Check positional entropy
+        entropy = self._calculate_positional_entropy(str_data)
+        has_low_entropy = entropy < 2.5
+        has_medium_entropy = entropy < 3.3  # Allow higher entropy for very consistent lengths
+        
+        # Structured if consistent length + low entropy
+        if has_consistent_length and has_low_entropy:
+            logger.debug(
+                f"Column detected as structured text: "
+                f"length_cv={length_cv:.3f}, entropy={entropy:.3f}"
+            )
+            return True
+        
+        # Also structured if VERY consistent length (CV < 0.1) even with medium entropy
+        # This catches IPs, ZIPs, phone numbers where each char is random but format is fixed
+        if has_very_consistent_length and has_medium_entropy:
+            logger.debug(
+                f"Column detected as structured text (very consistent length): "
+                f"length_cv={length_cv:.3f}, entropy={entropy:.3f}"
+            )
+            return True
+        
+        # Also structured if entropy is very low even with variable length
+        if entropy < 1.5:
+            logger.debug(
+                f"Column detected as structured text (low entropy): "
+                f"entropy={entropy:.3f}"
+            )
+            return True
+        
+        return False
+
     def _define_categorical_columns(self):
         """
         Define the list of categorical columns based on the count of unique values in the column.
         
-        Note: Threshold increased from 50 to 100 to better handle columns like
-        US states (50), countries (195+), etc. Using < instead of <= to avoid
-        edge cases with exactly 100 unique values.
+        Uses a hybrid approach:
+        1. Fast checks for known patterns (numeric, email, UUID)
+        2. Entropy-based detection for structured text (dates, phones, IPs, etc.)
+        
+        Note: Threshold is 100 to handle columns like US states (50), countries, etc.
         """
         CATEGORICAL_THRESHOLD = 100
         
-        # Common date patterns to check (both 2-digit and 4-digit years)
-        date_patterns = [
-            r'^\d{4}-\d{2}-\d{2}',  # 2020-01-01, 2020-01-01T...
-            r'^\d{2}-\d{2}-\d{2,4}',  # 01-01-2020 or 01-01-20
-            r'^\d{2}/\d{2}/\d{2,4}',  # 01/01/2020 or 01/01/20
-            r'^\d{4}/\d{2}/\d{2}',  # 2020/01/01
-            r'^\d{2}\.\d{2}\.\d{2,4}',  # 01.01.2020 or 01.01.20
-            r'^\d{2}-[A-Za-z]{3}-\d{2,4}',  # 01-Jan-20 or 01-Jan-2020
-        ]
-        combined_date_pattern = '|'.join(date_patterns)
-        
-        # UUID pattern (standard 8-4-4-4-12 format)
+        # UUID pattern (standard 8-4-4-4-12 format) - keep as it's standardized
         uuid_pattern = r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
         
         self.categorical_columns = set()
+        self.structured_text_columns = set()  # Track for later feature assignment
+        
         for col in self.df.columns:
             if col in self.binary_columns:
                 continue
             
             # Skip columns that are already numeric types (int, float)
-            # These should be processed as numeric features, not categorical
             if pd.api.types.is_numeric_dtype(self.df[col]):
                 continue
             
@@ -595,28 +719,27 @@ class Dataset:
                 
             str_data = col_data.astype(str)
             
-            # Skip columns that look like emails (contain @ in majority of values)
+            # Fast check: Skip columns that look like emails (contain @ in majority)
             at_ratio = str_data.str.contains('@', regex=False).mean()
             if at_ratio > 0.8:
                 continue
             
-            # Skip columns that look like dates
-            date_ratio = str_data.str.match(combined_date_pattern, na=False).mean()
-            if date_ratio > 0.8:
-                continue
-            
-            # Skip columns that look like UUIDs
+            # Fast check: Skip UUIDs (standardized format)
             uuid_ratio = str_data.str.match(uuid_pattern, na=False).mean()
             if uuid_ratio > 0.8:
                 continue
             
-            # Skip columns that contain mostly numeric values
-            # (these will be cast to numeric later in the pipeline)
+            # Fast check: Skip mostly numeric strings (will be cast to int/float)
             numeric_ratio = str_data.str.match(r'^-?\d+\.?\d*$', na=False).mean()
             if numeric_ratio > 0.8:
                 continue
             
-            # Count unique non-null values (use < instead of <= to avoid edge cases)
+            # Entropy-based check: Skip structured text (dates, phones, IPs, etc.)
+            if self._is_structured_text(col_data):
+                self.structured_text_columns.add(col)
+                continue
+            
+            # Count unique non-null values
             num_unique = col_data.nunique()
             if num_unique < CATEGORICAL_THRESHOLD:
                 self.categorical_columns.add(col)
