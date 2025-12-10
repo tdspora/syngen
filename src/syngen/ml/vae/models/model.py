@@ -129,7 +129,12 @@ class CVAE:
                     loss_type = 'continuous'
                 elif ft == 'binary':
                     loss_type = 'binary'
-                elif ft in ('char_text', 'charbasedtext', 'charbasedtextfeature'):
+                elif ft == 'smart_text':
+                    # SmartTextFeature: uses sparse categorical crossentropy
+                    # Input is indices [batch, seq_len], output is logits [batch, seq_len, vocab]
+                    loss_type = 'sparse_categorical'
+                elif ft in ('char_text', 'charbasedtext', 'charbasedtextfeature', 'text'):
+                    # CharBasedTextFeature and EmailFeature use one-hot encoding
                     loss_type = 'char_text'
                 elif ft in ('datetime', 'datetimefeature'):
                     loss_type = 'datetime'

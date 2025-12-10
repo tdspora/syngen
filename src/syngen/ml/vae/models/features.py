@@ -830,7 +830,7 @@ class SmartTextFeature(BaseFeature):
         self.text_max_len = text_max_len
         self.embedding_dim = embedding_dim  # character embedding dimension
         self.hidden_dim = hidden_dim  # dense layer hidden dimension
-        self.feature_type = "text"
+        self.feature_type = "smart_text"  # distinct from "text" which uses one-hot
         self.position_weights = None  # will be computed during fit
 
     def fit(self, data: pd.DataFrame, **kwargs):

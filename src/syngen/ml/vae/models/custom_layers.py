@@ -86,6 +86,11 @@ class FeatureLossLayer(Layer):
             loss = random_weight * ops.mean(keras.losses.mean_squared_error(feature_input, feature_decoder))
         elif self.loss_type == 'binary':
             loss = random_weight * ops.mean(keras.losses.binary_crossentropy(feature_input, feature_decoder))
+        elif self.loss_type == 'sparse_categorical':
+            # For SmartTextFeature: input is indices [batch, seq_len], decoder is logits [batch, seq_len, vocab]
+            loss = random_weight * ops.mean(keras.losses.sparse_categorical_crossentropy(
+                feature_input, feature_decoder, from_logits=True
+            ))
         else:  # categorical
             loss = random_weight * ops.mean(keras.losses.categorical_crossentropy(feature_input, feature_decoder))
 
