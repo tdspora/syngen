@@ -226,6 +226,16 @@ class CVAE:
         ProgressBarHandler().set_progress(message=log_message)
         latent_points = self.encoder_model.predict(transformed_data)
 
+        # Handle NaN values in latent points (can happen if training became unstable)
+        if np.isnan(latent_points).any() or np.isinf(latent_points).any():
+            nan_count = np.isnan(latent_points).sum()
+            inf_count = np.isinf(latent_points).sum()
+            logger.warning(
+                f"Latent points contain {nan_count} NaN and {inf_count} Inf values. "
+                f"Replacing with zeros. This may affect generation quality."
+            )
+            latent_points = np.nan_to_num(latent_points, nan=0.0, posinf=0.0, neginf=0.0)
+
         logger.info("Creating BayesianGaussianMixture")
         self.latent_model = BayesianGaussianMixture(n_components=self.latent_components, n_init=10)
         logger.info("Fitting BayesianGaussianMixture")
