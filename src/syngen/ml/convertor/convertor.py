@@ -32,11 +32,13 @@ class Convertor:
         for column, data_type in schema.get("fields", {}).items():
             if data_type in ["binary", "date", "string"]:
                 df[column] = df[column].astype("string")
-            elif data_type == "int":
+            elif data_type in ["int", "bool"]:
                 if any(df[column].isnull()):
                     df[column] = df[column].astype("float64")
                 else:
                     df[column] = df[column].astype("int64")
+            elif data_type in ["double", "float", "decimal"]:
+                df[column] = df[column].astype("float64")
             elif data_type == "null":
                 if df[column].isnull().all():
                     continue
@@ -54,6 +56,7 @@ class Convertor:
                     df[column] = df[column].astype(float)
                 elif df[column].apply(self._check_dtype_or_nan(dtypes=(str, bytes))).all():
                     df[column] = df[column].astype(pd.StringDtype())
+        return df
 
     @staticmethod
     def _set_none_values_to_nan(df: pd.DataFrame):
@@ -93,7 +96,7 @@ class Convertor:
             try:
                 df = self._set_none_values_to_nan(df)
                 df = self._cast_values_to_string(df)
-                self._update_data_types(schema, df)
+                df = self._update_data_types(schema, df)
                 return df
             except Exception as e:
                 logger.error(e)
