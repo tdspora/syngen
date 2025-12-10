@@ -1323,7 +1323,18 @@ class Dataset:
             len(data) + len(self.fk_columns) == len(self.features)
         )
 
-    def inverse_transform(self, data, excluded_features=set()):
+    def inverse_transform(self, data, excluded_features=set(), temperature: float = 0.0):
+        """
+        Inverse transform decoded data back to original format.
+        
+        Args:
+            data: Decoded feature data from the VAE
+            excluded_features: Set of feature names to exclude
+            temperature: Sampling temperature for probabilistic features (categorical, binary).
+                        0 = deterministic (argmax - default, backward compatible)
+                        >0 = probabilistic sampling with temperature scaling
+                        Recommended values: 0.5 (conservative), 1.0 (balanced), 2.0 (exploratory)
+        """
         inverse_transformed_data = list()
         column_names = list()
         if not isinstance(data, list):
@@ -1338,7 +1349,9 @@ class Dataset:
             if name not in excluded_features and name not in self.fk_columns:
                 column_names.extend(self.columns[name])
                 logger.trace(f'Column {name} is being inverse transformed.')
-                inverse_transformed_data.append(feature.inverse_transform(transformed_data))
+                inverse_transformed_data.append(
+                    feature.inverse_transform(transformed_data, temperature=temperature)
+                )
 
         stacked_data = np.column_stack(inverse_transformed_data)
         data = pd.DataFrame(stacked_data, columns=column_names)

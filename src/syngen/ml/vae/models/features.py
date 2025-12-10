@@ -70,9 +70,16 @@ class BaseFeature:
         """
         pass
 
-    def inverse_transform(self, data: List) -> np.ndarray:
+    def inverse_transform(self, data: List, temperature: float = 1.0, **kwargs) -> np.ndarray:
         """
-        Inverse transform feature from numeric to original format to obtain an original-like table
+        Inverse transform feature from numeric to original format to obtain an original-like table.
+        
+        Args:
+            data: Decoder output (numeric format)
+            temperature: Sampling temperature for probabilistic features.
+                        0 = deterministic (argmax), >0 = probabilistic sampling.
+                        Lower values = more deterministic, higher = more random.
+            **kwargs: Additional feature-specific arguments
         """
         pass
 
@@ -127,9 +134,40 @@ class BinaryFeature(BaseFeature):
         data = data.replace(self.mapping)
         return data.astype("float32")
 
-    def inverse_transform(self, data: List) -> np.ndarray:
-        data = np.clip(data, 0, 1)  # Ensure [0, 1] range before rounding
-        data = np.round(data)
+    def inverse_transform(self, data: List, temperature: float = 0.0, **kwargs) -> np.ndarray:
+        """
+        Convert decoder output back to binary values.
+        
+        Args:
+            data: Decoder output probabilities
+            temperature: Sampling temperature (default 0 = deterministic argmax)
+                        0 = deterministic (hard threshold at 0.5)
+                        >0 = probabilistic sampling based on sigmoid output
+                        Lower temperature = more deterministic, higher = more random
+        """
+        data = np.clip(data, 0, 1)  # Ensure [0, 1] range
+        
+        if temperature == 0:
+            # Deterministic: hard threshold at 0.5
+            data = np.round(data)
+        else:
+            # Probabilistic sampling based on sigmoid output
+            # Apply temperature scaling to make sampling more/less deterministic
+            # temperature < 1 = sharper (more deterministic)
+            # temperature > 1 = softer (more random)
+            probs = data.flatten()
+            if temperature != 1.0:
+                # Scale probabilities using temperature
+                # For binary, we treat the output as probability of class 1
+                logits = np.clip(np.log(probs / (1 - probs + 1e-10)), -10, 10)
+                scaled_probs = 1 / (1 + np.exp(-logits / temperature))
+            else:
+                scaled_probs = probs
+            
+            # Sample from Bernoulli distribution
+            random_vals = np.random.random(len(scaled_probs))
+            data = (random_vals < scaled_probs).astype(float).reshape(data.shape)
+        
         inversed = self.inverse_vectorizer(data)
         return np.where(inversed == "?", None, inversed)
 
@@ -195,12 +233,36 @@ class ContinuousFeature(BaseFeature):
         self.scaler = self._select_scaler(data)
         self.scaler.fit(data)
         self.input_dimension = data.shape[1]
+        
+        # Store learned bounds for clipping during generation
+        # Use percentiles to be robust to outliers
+        self.learned_min = float(data.values.min())
+        self.learned_max = float(data.values.max())
+        # Also store percentile bounds for optional stricter clipping
+        self.learned_p01 = float(np.percentile(data.values, 1))
+        self.learned_p99 = float(np.percentile(data.values, 99))
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
         return self.scaler.transform(data).astype("float32")
 
-    def inverse_transform(self, data: np.ndarray) -> np.ndarray:
+    def inverse_transform(self, data: np.ndarray, temperature: float = 0.0, **kwargs) -> np.ndarray:
+        """
+        Convert scaled data back to original values.
+        
+        Args:
+            data: Decoder output (scaled values)
+            temperature: Not used for continuous features (kept for API consistency)
+        """
         reverse_transformed = self.scaler.inverse_transform(data)
+        
+        # Apply learned bounds if available
+        if hasattr(self, 'learned_min') and hasattr(self, 'learned_max'):
+            reverse_transformed = np.clip(
+                reverse_transformed, 
+                self.learned_min, 
+                self.learned_max
+            )
+        
         reverse_transformed = (
             np.abs(reverse_transformed) if self.is_positive else reverse_transformed
         )
@@ -393,13 +455,36 @@ class CategoricalFeature(BaseFeature):
 
         return self.one_hot_encoder.transform(data).astype("float32")
 
-    def inverse_transform(self, data: np.ndarray) -> np.ndarray:
+    def inverse_transform(self, data: np.ndarray, temperature: float = 0.0, **kwargs) -> np.ndarray:
         """
         Convert one-hot encoded data back to original categories.
+        
+        Args:
+            data: Decoder output logits/probabilities [batch, num_categories]
+            temperature: Sampling temperature (default 0 = deterministic argmax)
+                        0 = deterministic (argmax - original behavior)
+                        >0 = probabilistic sampling with temperature scaling
+                        Lower temperature = sharper distribution, higher = flatter
         """
-        data = data.argmax(axis=1)
-        inversed = self.inverse_vectorizer(data)
-
+        if temperature == 0:
+            # Deterministic: argmax (original behavior)
+            indices = data.argmax(axis=1)
+        else:
+            # Probabilistic sampling with temperature
+            # Apply softmax with temperature scaling
+            # Lower temp = sharper peaks, higher temp = flatter distribution
+            scaled_logits = data / temperature
+            # Numerical stability: subtract max before exp
+            scaled_logits = scaled_logits - scaled_logits.max(axis=1, keepdims=True)
+            exp_logits = np.exp(scaled_logits)
+            probs = exp_logits / exp_logits.sum(axis=1, keepdims=True)
+            
+            # Sample from categorical distribution
+            indices = np.array([
+                np.random.choice(len(p), p=p) for p in probs
+            ])
+        
+        inversed = self.inverse_vectorizer(indices)
         return np.where(inversed == "?", None, inversed)
 
     @lazy
@@ -1095,7 +1180,14 @@ class DateFeature(BaseFeature):
     def transform(self, data):
         return self.scaler.transform(self.data)
 
-    def inverse_transform(self, data):
+    def inverse_transform(self, data, temperature: float = 0.0, **kwargs):
+        """
+        Convert scaled timestamp back to date string.
+        
+        Args:
+            data: Decoder output (scaled timestamps)
+            temperature: Not used for dates (kept for API consistency)
+        """
         unscaled = self.scaler.inverse_transform(data)
         unscaled = chain.from_iterable(unscaled)
         return list(

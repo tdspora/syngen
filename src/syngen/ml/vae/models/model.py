@@ -232,12 +232,25 @@ class CVAE:
         prediction = self.model.predict(transformed_data, batch_size=self.batch_size)
         return self.dataset.inverse_transform(prediction)
 
-    def sample(self, nb_samples: int) -> pd.DataFrame:
+    def sample(self, nb_samples: int, temperature: float = 0.0) -> pd.DataFrame:
+        """
+        Sample synthetic data from the learned distribution.
+        
+        Args:
+            nb_samples: Number of samples to generate
+            temperature: Sampling temperature for probabilistic features.
+                        0 = deterministic (argmax - default, backward compatible)
+                        0.5 = conservative (sharper distributions)
+                        1.0 = balanced probabilistic sampling
+                        2.0 = exploratory (flatter distributions, more variety)
+        """
         latent_sample = self.latent_model.sample(nb_samples)[0]
         np.random.shuffle(latent_sample)
 
         synthetic_prediction = self.generator_model.predict(latent_sample)
-        self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
+        self.inverse_transformed_df = self.dataset.inverse_transform(
+            synthetic_prediction, temperature=temperature
+        )
         pk_uq_keys_mapping = self.dataset.primary_keys_mapping
         if pk_uq_keys_mapping:
             self.__make_pk_uq_unique(pk_uq_keys_mapping, self.dataset.dropped_columns)

@@ -593,8 +593,19 @@ class VAEWrapper(BaseWrapper):
                 )
         return df
 
-    def predict_sampled_df(self, n: int) -> pd.DataFrame:
-        sampled_df = self.vae.sample(n)
+    def predict_sampled_df(self, n: int, temperature: float = 0.0) -> pd.DataFrame:
+        """
+        Generate synthetic data samples.
+        
+        Args:
+            n: Number of samples to generate
+            temperature: Sampling temperature for probabilistic features.
+                        0 = deterministic (argmax - default, backward compatible)
+                        0.5 = conservative (sharper distributions, closer to training data)
+                        1.0 = balanced probabilistic sampling
+                        2.0 = exploratory (flatter distributions, more variety)
+        """
+        sampled_df = self.vae.sample(n, temperature=temperature)
 
         # uuid columns are generated here to restore nan values
         uuid_columns = self.dataset.uuid_columns
