@@ -122,6 +122,7 @@ class InferConfig:
     log_level: str
     loader: Optional[Callable[[str], pd.DataFrame]]
     type_of_process: Literal["train", "infer"]
+    temperature: float = 1.0  # Sampling temperature for diversity control
     slugify_table_name: str = field(init=False)
     paths: Dict = field(init=False)
 
@@ -143,6 +144,7 @@ class InferConfig:
             "batch_size": self.batch_size,
             "random_seed": self.random_seed,
             "reports": self.reports,
+            "temperature": self.temperature,
         }
 
     def _set_up_size(self):

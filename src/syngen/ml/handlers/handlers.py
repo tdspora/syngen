@@ -212,6 +212,7 @@ class VaeInferHandler(BaseHandler):
     wrapper_name: str = field(kw_only=True)
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
+    temperature: float = field(kw_only=True, default=1.0)  # Sampling temperature for diversity
     random_seed_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)  # noqa: F405
     dataset: Dataset = field(init=False)
@@ -289,7 +290,7 @@ class VaeInferHandler(BaseHandler):
         return pd.concat(df_slices, ignore_index=True)
 
     def generate_vae(self, size):
-        synthetic_infer = self.vae.predict_sampled_df(size)
+        synthetic_infer = self.vae.predict_sampled_df(size, temperature=self.temperature)
         return synthetic_infer
 
     def generate_long_texts(self, size, synthetic_infer):

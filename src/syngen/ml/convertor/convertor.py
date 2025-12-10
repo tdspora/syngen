@@ -48,7 +48,11 @@ class Convertor:
 
         if not schema.get("fields"):
             for column in df.columns:
-                if df[column].apply(lambda x: isinstance(x, int)).all():
+                # Check for boolean first (bool is subclass of int in Python)
+                if df[column].apply(lambda x: isinstance(x, bool)).all():
+                    # Keep boolean columns as-is, don't convert to int
+                    continue
+                elif df[column].apply(lambda x: isinstance(x, int) and not isinstance(x, bool)).all():
                     df[column] = df[column].astype(int)
                 elif df[column].apply(self._check_dtype_or_nan(dtypes=(int, float))).all():
                     df[column] = df[column].astype(float)

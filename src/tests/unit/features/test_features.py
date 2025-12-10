@@ -121,30 +121,37 @@ def test_top_p_filtering(rp_logger):
 
 
 @pytest.mark.parametrize(
-    "mock_pvalue, mock_kurt, kurtosis_threshold, expected_scaler_type",
+    "mock_pvalue, mock_kurt, kurtosis_threshold, n_unique, expected_scaler_type",
     [
-        # Normal distribution case - use StandardScaler
-        (0.1, 3.0, 50, StandardScaler),
-        # Non-normal, low kurtosis case - use MinMaxScaler
-        (0.01, 3.0, 50, MinMaxScaler),
-        # Non-normal, high kurtosis case - use QuantileTransformer
-        (0.01, 60.0, 50, QuantileTransformer),
-        # Custom threshold - below threshold uses MinMaxScaler
-        (0.01, 24.0, 25, MinMaxScaler),
-        # Custom threshold - above threshold uses QuantileTransformer
-        (0.01, 26.0, 25, QuantileTransformer),
+        # Binary data (2 unique values) - use MinMaxScaler regardless of distribution
+        (0.1, 3.0, 50, 2, MinMaxScaler),
+        # Low cardinality numeric (< 10 unique) - use MinMaxScaler
+        (0.01, 3.0, 50, 5, MinMaxScaler),
+        # Continuous data (>= 10 unique) - use QuantileTransformer with uniform output
+        (0.1, 3.0, 50, 100, QuantileTransformer),
+        # Continuous data (>= 10 unique) - use QuantileTransformer with uniform output
+        (0.01, 3.0, 50, 100, QuantileTransformer),
+        # High kurtosis with continuous data - still QuantileTransformer
+        (0.01, 60.0, 50, 100, QuantileTransformer),
     ]
 )
 def test_select_scaler(
     mock_pvalue, mock_kurt,
-    kurtosis_threshold, expected_scaler_type,
+    kurtosis_threshold, n_unique, expected_scaler_type,
     rp_logger
 ):
     rp_logger.info(
         "Testing _select_scaler method with different data distributions and thresholds"
     )
     feature = ContinuousFeature(name="test_feature")
-    data = pd.DataFrame(np.random.uniform(0, 1, size=(1000, 1)))
+    # Create data with specified number of unique values
+    if n_unique == 2:
+        data = pd.DataFrame(np.random.choice([0, 1], size=(1000, 1)))
+    elif n_unique < 10:
+        data = pd.DataFrame(np.random.choice(range(n_unique), size=(1000, 1)))
+    else:
+        data = pd.DataFrame(np.random.uniform(0, 1, size=(1000, 1)))
+    
     # Mock shapiro to return configured p-value
     # Mock kurtosis to return configured kurtosis value
     with patch('syngen.ml.vae.models.features.shapiro',
@@ -160,7 +167,7 @@ def test_select_scaler(
                 return_value={
                     'n_quantiles': 10000,
                     'subsample': None,
-                    'output_distribution': 'normal'
+                    'output_distribution': 'uniform'
                 }
             ):
                 scaler = feature._select_scaler(

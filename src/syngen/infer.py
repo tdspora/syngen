@@ -58,6 +58,14 @@ validate_reports = validate_parameter_reports(
     "use the same int in this command.",
 )
 @click.option(
+    "--temperature",
+    default=1.0,
+    type=click.FloatRange(0.0, 2.0),
+    help="Sampling temperature for probabilistic features. Controls diversity vs accuracy trade-off. "
+         "0 = deterministic (may show mode collapse), 1.0 = balanced (recommended), "
+         "2.0 = high diversity. Defaults to 1.0.",
+)
+@click.option(
     "--reports",
     default=("none",),
     type=click.UNPROCESSED,
@@ -93,6 +101,7 @@ def launch_infer(
     batch_size: Optional[int],
     reports: List[str],
     random_seed: Optional[int],
+    temperature: float,
     log_level: str,
     fernet_key: Optional[str]
 ):
@@ -107,6 +116,7 @@ def launch_infer(
     batch_size
     reports
     random_seed
+    temperature
     log_level
     fernet_key
     -------
@@ -141,7 +151,8 @@ def launch_infer(
         "run_parallel": run_parallel,
         "batch_size": batch_size,
         "reports": reports,
-        "random_seed": random_seed
+        "random_seed": random_seed,
+        "temperature": temperature
     }
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})

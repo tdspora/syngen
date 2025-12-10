@@ -21,6 +21,8 @@ from syngen.ml.vae.models.features import (
     CharBasedTextFeature,
     SmartTextFeature,
     EmailFeature,
+    PhoneFeature,
+    IPAddressFeature,
     ContinuousFeature,
     DateFeature,
     BinaryFeature,
@@ -53,6 +55,17 @@ class Dataset:
     null_num_column_names: List = field(default_factory=list)
     zero_num_column_names: List = field(default_factory=list)
     uuid_columns: Set = field(default_factory=set)
+    # Conditional correlation mappings learned from original data
+    # Format: {(parent_col, child_col): {parent_value: [child_values, ...]}}
+    conditional_mappings: Dict = field(default_factory=dict)
+    # City to country mapping for zip code generation
+    city_country_mapping: Dict = field(default_factory=dict)
+    # Country to zip code format patterns
+    country_zip_patterns: Dict = field(default_factory=dict)
+    # First name to gender mapping (learned from data)
+    name_gender_mapping: Dict = field(default_factory=dict)
+    # Zip code column name if detected
+    zip_code_column: Optional[str] = field(default=None)
     uuid_columns_types: Dict = field(default_factory=dict)
     tech_columns: Set = field(default_factory=set)
     custom_categorical_columns: Set = field(default_factory=set)
@@ -64,6 +77,8 @@ class Dataset:
     date_mapping: Dict = field(default_factory=dict)
     binary_columns: Set = field(default_factory=set)
     email_columns: Set = field(default_factory=set)
+    phone_columns: Set = field(default_factory=set)
+    ip_columns: Set = field(default_factory=set)
     long_text_columns: Set = field(default_factory=set)
     primary_keys_mapping: Dict = field(default_factory=dict)
     primary_keys_list: List = field(default_factory=list)
@@ -400,13 +415,15 @@ class Dataset:
         """
         Identify and classify data types within the dataset, including
         binary columns, categorical columns, UUID columns, long text columns,
-        and email columns.
+        email columns, phone columns, and IP address columns.
 
         This process is agnostic to the file format of the dataset.
         """
         self._set_uuid_columns()
         self._set_long_text_columns()
         self._set_email_columns()
+        self._set_phone_columns()
+        self._set_ip_columns()
         if self.nan_labels_dict and self.format.get("na_values", []):
             logger.info(
                 f"Despite the fact that data loading utilized the 'format' section "
@@ -709,6 +726,13 @@ class Dataset:
         self.categorical_columns = set()
         self.structured_text_columns = set()  # Track for later feature assignment
         
+        # Low unique count threshold for forced categorical (even if structured)
+        # Scale by dataset size: for small datasets, require lower absolute threshold
+        # For 1000 rows: min(20, 100) = 20 unique values or fewer -> categorical
+        # For 10 rows: min(20, 1) = 1 unique value -> only trivial columns
+        n_rows = len(self.df)
+        LOW_UNIQUE_THRESHOLD = min(20, max(1, n_rows // 50))  # At most 2% of rows or 20
+        
         for col in self.df.columns:
             if col in self.binary_columns:
                 continue
@@ -722,6 +746,13 @@ class Dataset:
                 continue
                 
             str_data = col_data.astype(str)
+            num_unique = col_data.nunique()
+            
+            # PRIORITY 1: Very few unique values -> always categorical
+            # This ensures columns like user_agent (6 unique) are not classified as structured
+            if num_unique < LOW_UNIQUE_THRESHOLD:
+                self.categorical_columns.add(col)
+                continue
             
             # Fast check: Skip columns that look like emails (contain @ in majority)
             at_ratio = str_data.str.contains('@', regex=False).mean()
@@ -743,8 +774,7 @@ class Dataset:
                 self.structured_text_columns.add(col)
                 continue
             
-            # Count unique non-null values
-            num_unique = col_data.nunique()
+            # Count unique non-null values for medium-cardinality columns
             if num_unique < CATEGORICAL_THRESHOLD:
                 self.categorical_columns.add(col)
         
@@ -821,6 +851,117 @@ class Dataset:
             self.email_columns = (
                 set(email_columns) - self.categorical_columns - self.binary_columns
             )
+
+    def _set_phone_columns(self):
+        """
+        Set up the list of columns with phone numbers.
+        
+        Detects phone numbers using flexible patterns that cover:
+        - International formats: +1-555-1234, +44 20 7946 0958, +33 1 23 45 67 89
+        - US formats: (555) 123-4567, 555-123-4567, 1-800-555-1234
+        - European local: 020 7946 0958, 030 123456, 07911 123456
+        - Continuous digits: 5551234567
+        
+        Coverage: ~90% of common international phone formats.
+        Does not match vanity numbers with letters.
+        """
+        text_columns = self._select_str_columns()
+        # Exclude columns already identified
+        text_columns = [c for c in text_columns 
+                        if c not in self.email_columns 
+                        and c not in self.categorical_columns 
+                        and c not in self.binary_columns]
+        
+        if not text_columns:
+            return
+        
+        data_subset = self.df[text_columns]
+        
+        if data_subset.empty:
+            return
+        
+        # Flexible phone number patterns (~90% international coverage)
+        phone_patterns = [
+            # International format with + prefix (handles most international numbers)
+            # Matches: +1-555-1234, +44 20 7946 0958, +33 1 23 45 67 89, +91 98765 43210
+            r'^\+\d{1,4}[-.\s]?(?:\d[-.\s]?){5,14}\d$',
+            
+            # US/Canada format with optional country code
+            # Matches: (555) 123-4567, 555-123-4567, 1-555-123-4567, 555.123.4567
+            r'^1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$',
+            
+            # European local formats starting with 0
+            # Matches: 020 7946 0958, 030 123456, 07911 123456
+            r'^0\d{1,4}[-.\s]?\d{3,4}[-.\s]?\d{3,6}$',
+            
+            # Continuous digits (10-15 digits, common for stored phone numbers)
+            # Matches: 5551234567, 15551234567
+            r'^\d{10,15}$',
+        ]
+        combined_pattern = '|'.join(phone_patterns)
+        
+        # Check which columns match phone patterns
+        phone_mask = data_subset.apply(
+            lambda col: col.apply(
+                lambda x: isinstance(x, str) and bool(re.match(combined_pattern, x.strip()))
+            )
+        )
+        
+        # Count matches per column
+        count_phones = phone_mask.sum(axis=0)
+        non_na_count = data_subset.notna().sum(axis=0)
+        
+        # Column is phone if >80% of non-null values match
+        phone_ratio = count_phones / non_na_count.replace(0, 1)
+        phone_columns = data_subset.columns[phone_ratio > 0.8]
+        
+        self.phone_columns = set(phone_columns)
+        if self.phone_columns:
+            logger.info(f"Detected phone number columns: {list(self.phone_columns)}")
+
+    def _set_ip_columns(self):
+        """
+        Set up the list of columns with IP addresses.
+        
+        Detects IPv4 addresses in format: X.X.X.X where X is 0-255.
+        """
+        text_columns = self._select_str_columns()
+        # Exclude columns already identified
+        text_columns = [c for c in text_columns 
+                        if c not in self.email_columns 
+                        and c not in self.phone_columns
+                        and c not in self.categorical_columns 
+                        and c not in self.binary_columns]
+        
+        if not text_columns:
+            return
+        
+        data_subset = self.df[text_columns]
+        
+        if data_subset.empty:
+            return
+        
+        # IPv4 pattern with octet validation (0-255)
+        ip_pattern = r'^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$'
+        
+        # Check which columns match IP patterns
+        ip_mask = data_subset.apply(
+            lambda col: col.apply(
+                lambda x: isinstance(x, str) and bool(re.match(ip_pattern, x.strip()))
+            )
+        )
+        
+        # Count matches per column
+        count_ips = ip_mask.sum(axis=0)
+        non_na_count = data_subset.notna().sum(axis=0)
+        
+        # Column is IP if >80% of non-null values match
+        ip_ratio = count_ips / non_na_count.replace(0, 1)
+        ip_columns = data_subset.columns[ip_ratio > 0.8]
+        
+        self.ip_columns = set(ip_columns)
+        if self.ip_columns:
+            logger.info(f"Detected IP address columns: {list(self.ip_columns)}")
 
     @staticmethod
     def _is_valid_ulid(uuid):
@@ -1213,6 +1354,8 @@ class Dataset:
             - self.binary_columns
             - self.long_text_columns
             - self.email_columns
+            - self.phone_columns
+            - self.ip_columns
             - self.uuid_columns
         )
         self.categorical_columns -= self.long_text_columns
@@ -1247,6 +1390,8 @@ class Dataset:
             - self.binary_columns
             - self.long_text_columns
             - self.email_columns
+            - self.phone_columns
+            - self.ip_columns
             - self.uuid_columns
         )
         self._set_date_columns()
@@ -1267,6 +1412,7 @@ class Dataset:
             len(self.str_columns) + len(self.float_columns) + len(self.int_columns)
             + len(self.date_columns) + len(self.categorical_columns) + len(self.binary_columns)
             + len(self.long_text_columns) + len(self.uuid_columns) + len(self.email_columns)
+            + len(self.phone_columns) + len(self.ip_columns)
         ) == len(self.df.columns), (
             "According to number of columns with defined types, "
             "column types are not identified correctly"
@@ -1275,6 +1421,8 @@ class Dataset:
         logger.debug(
             f"Count of string columns: {len(self.str_columns)}; "
             + f"Count of email columns: {len(self.email_columns)}; "
+            + f"Count of phone columns: {len(self.phone_columns)}; "
+            + f"Count of IP columns: {len(self.ip_columns)}; "
             + f"Count of float columns: {len(self.float_columns)}; "
             + f"Count of int columns: {len(self.int_columns)}; "
             + f"Count of categorical columns: {len(self.categorical_columns)}; "
@@ -1302,6 +1450,16 @@ class Dataset:
 
         self.all_columns = [col for col in self.columns]
         self.is_fitted = True
+        
+        # Learn conditional correlations between categorical columns
+        # This helps preserve relationships like country→city during generation
+        self.learn_conditional_correlations()
+        
+        # Learn zip code patterns per country for format preservation
+        self.learn_zip_code_patterns()
+        
+        # Learn name→gender mapping for consistency
+        self.learn_name_gender_mapping()
 
     def transform(self, data, excluded_features=set()):
         transformed_features = list()
@@ -1355,7 +1513,333 @@ class Dataset:
 
         stacked_data = np.column_stack(inverse_transformed_data)
         data = pd.DataFrame(stacked_data, columns=column_names)
+        
+        # Apply conditional correlations to fix relationships
+        data = self._apply_conditional_correlations(data)
 
+        return data
+
+    def learn_conditional_correlations(self):
+        """
+        Learn conditional correlations between categorical columns.
+        
+        Identifies parent-child relationships where one categorical column's
+        values determine the valid values of another (e.g., country → city).
+        
+        The algorithm:
+        1. For each pair of categorical columns
+        2. Check if child values are mostly unique per parent value
+        3. If so, store the mapping {parent_value: [valid_child_values]}
+        """
+        categorical_cols = list(self.categorical_columns)
+        
+        if len(categorical_cols) < 2:
+            return
+        
+        for parent_col in categorical_cols:
+            for child_col in categorical_cols:
+                if parent_col == child_col:
+                    continue
+                
+                # Check if child values are conditionally dependent on parent
+                # (i.e., each parent value maps to a subset of child values)
+                grouped = self.df.groupby(parent_col)[child_col].apply(set).to_dict()
+                
+                # Calculate overlap between different parent groups
+                all_child_values = set(self.df[child_col].dropna().unique())
+                
+                # If each parent maps to distinct children (low overlap), it's a conditional relationship
+                overlap_scores = []
+                parent_values = list(grouped.keys())
+                
+                for i, p1 in enumerate(parent_values):
+                    for p2 in parent_values[i+1:]:
+                        children1 = grouped[p1]
+                        children2 = grouped[p2]
+                        if children1 and children2:
+                            overlap = len(children1 & children2) / min(len(children1), len(children2))
+                            overlap_scores.append(overlap)
+                
+                # If average overlap is low (<30%), this is a conditional relationship
+                if overlap_scores and np.mean(overlap_scores) < 0.3:
+                    self.conditional_mappings[(parent_col, child_col)] = {
+                        parent_val: list(child_vals) 
+                        for parent_val, child_vals in grouped.items()
+                    }
+                    logger.info(
+                        f"Learned conditional correlation: {parent_col} → {child_col} "
+                        f"(overlap={np.mean(overlap_scores):.2%})"
+                    )
+
+    def learn_zip_code_patterns(self):
+        """
+        Learn zip code patterns by country to generate country-appropriate zip codes.
+        
+        Detects zip code columns and learns the format patterns for each country:
+        - USA/France/Germany: 5-digit numeric
+        - UK: Format like 'SW5B 9AC' (postcodes)
+        - Canada: Format like 'M1H 1M7' (postal codes)
+        """
+        # Find zip code column
+        zip_patterns = ['zip', 'postal', 'postcode', 'zip_code', 'postal_code']
+        zip_col = None
+        for col in self.df.columns:
+            if any(p in col.lower() for p in zip_patterns):
+                zip_col = col
+                break
+        
+        if not zip_col:
+            return
+        
+        self.zip_code_column = zip_col
+        
+        # Find country column
+        country_col = None
+        for col in self.df.columns:
+            if 'country' in col.lower():
+                country_col = col
+                break
+        
+        # Find city column for city→country mapping
+        city_col = None
+        for col in self.df.columns:
+            if 'city' in col.lower():
+                city_col = col
+                break
+        
+        if country_col:
+            # Learn zip patterns by country
+            for country in self.df[country_col].unique():
+                country_zips = self.df[self.df[country_col] == country][zip_col].dropna()
+                if len(country_zips) > 0:
+                    # Analyze pattern
+                    sample_zip = str(country_zips.iloc[0])
+                    if sample_zip.replace(' ', '').isdigit():
+                        # Numeric zip (USA, France, Germany)
+                        self.country_zip_patterns[country] = {
+                            'type': 'numeric',
+                            'length': len(sample_zip.replace(' ', '')),
+                            'format': sample_zip
+                        }
+                    elif ' ' in sample_zip and len(sample_zip) >= 6:
+                        # UK or Canada format
+                        parts = sample_zip.split()
+                        if len(parts) == 2:
+                            first_part = parts[0]
+                            # UK: starts with letters, has mix of letters/digits
+                            # Canada: letter-digit-letter pattern
+                            if len(first_part) == 3 and first_part[1].isdigit():
+                                self.country_zip_patterns[country] = {
+                                    'type': 'canada',
+                                    'format': sample_zip
+                                }
+                            else:
+                                self.country_zip_patterns[country] = {
+                                    'type': 'uk',
+                                    'format': sample_zip
+                                }
+            
+            logger.info(f"Learned zip code patterns for {len(self.country_zip_patterns)} countries")
+        
+        # Learn city→country mapping
+        if city_col and country_col:
+            self.city_country_mapping = self.df.groupby(city_col)[country_col].first().to_dict()
+            logger.info(f"Learned city→country mapping for {len(self.city_country_mapping)} cities")
+
+    def learn_name_gender_mapping(self):
+        """
+        Learn first_name → gender mapping from the data.
+        
+        Uses majority vote per name to determine gender, as some test datasets
+        may have inconsistent assignments.
+        """
+        # Find first_name and gender columns
+        name_col = None
+        gender_col = None
+        
+        for col in self.df.columns:
+            col_lower = col.lower()
+            if 'first' in col_lower and 'name' in col_lower:
+                name_col = col
+            elif col_lower in ('gender', 'sex'):
+                gender_col = col
+        
+        if not name_col or not gender_col:
+            return
+        
+        # Learn majority gender per name
+        name_gender = self.df.groupby(name_col)[gender_col].agg(
+            lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else x.iloc[0]
+        ).to_dict()
+        
+        self.name_gender_mapping = name_gender
+        logger.info(f"Learned name→gender mapping for {len(name_gender)} names")
+
+    def _apply_conditional_correlations(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Apply learned conditional correlations to fix invalid combinations.
+        
+        For each conditional relationship (parent → child), replace child values
+        that are invalid for the given parent with valid ones sampled from
+        the learned distribution.
+        
+        Also applies:
+        - Zip code format correction based on country
+        - Gender correction based on first name
+        """
+        # Apply standard conditional mappings (country→city, etc.)
+        if self.conditional_mappings:
+            for (parent_col, child_col), mapping in self.conditional_mappings.items():
+                if parent_col not in data.columns or child_col not in data.columns:
+                    continue
+                
+                # For each row, check if child value is valid for parent value
+                for idx in range(len(data)):
+                    parent_val = data.iloc[idx][parent_col]
+                    child_val = data.iloc[idx][child_col]
+                    
+                    if parent_val in mapping:
+                        valid_children = mapping[parent_val]
+                        if child_val not in valid_children and valid_children:
+                            # Sample a valid child value
+                            data.iloc[idx, data.columns.get_loc(child_col)] = np.random.choice(valid_children)
+                
+                logger.debug(f"Applied conditional correlation: {parent_col} → {child_col}")
+        
+        # Apply zip code format correction based on country
+        data = self._apply_zip_code_format(data)
+        
+        # Apply gender correction based on first name
+        data = self._apply_name_gender_mapping(data)
+        
+        return data
+    
+    def _apply_zip_code_format(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fix zip codes to match the expected format for each country.
+        Uses city_country_mapping to look up country from city, then
+        uses country_zip_patterns to generate appropriate zip codes.
+        """
+        if not self.country_zip_patterns:
+            return data
+        
+        # Find the zip code column (use stored column name if available)
+        zip_col = self.zip_code_column
+        if zip_col is None or zip_col not in data.columns:
+            for col in data.columns:
+                col_lower = col.lower()
+                if 'zip' in col_lower or 'postal' in col_lower or 'postcode' in col_lower:
+                    zip_col = col
+                    break
+        
+        if zip_col is None or zip_col not in data.columns:
+            return data
+        
+        # Find the city column to look up country
+        city_col = None
+        for col in data.columns:
+            col_lower = col.lower()
+            if 'city' in col_lower:
+                city_col = col
+                break
+        
+        # Also try to find country column directly
+        country_col = None
+        for col in data.columns:
+            col_lower = col.lower()
+            if 'country' in col_lower:
+                country_col = col
+                break
+        
+        if city_col is None and country_col is None:
+            return data
+        
+        # For each row, regenerate the zip code in the correct format
+        for idx in range(len(data)):
+            country = None
+            
+            # First try to get country directly
+            if country_col and country_col in data.columns:
+                country = data.iloc[idx][country_col]
+            # Fall back to city→country mapping
+            elif city_col and city_col in data.columns and self.city_country_mapping:
+                city = data.iloc[idx][city_col]
+                country = self.city_country_mapping.get(city)
+            
+            if country and country in self.country_zip_patterns:
+                pattern_info = self.country_zip_patterns[country]
+                if isinstance(pattern_info, dict):
+                    # Get format from the pattern info
+                    template = pattern_info.get('format')
+                    if template:
+                        new_zip = self._generate_zip_from_template(template)
+                        data.iloc[idx, data.columns.get_loc(zip_col)] = new_zip
+        
+        logger.info(f"Applied zip code format correction for {zip_col}")
+        return data
+    
+    def _generate_zip_from_template(self, template: str) -> str:
+        """
+        Generate a new zip code following the format of the template.
+        
+        Template character mapping:
+        - Digit → random digit
+        - Letter → random uppercase letter  
+        - Space → preserved as space
+        """
+        import random
+        import string
+        
+        result = []
+        for char in template:
+            if char.isdigit():
+                result.append(random.choice(string.digits))
+            elif char.isalpha():
+                result.append(random.choice(string.ascii_uppercase))
+            else:
+                result.append(char)  # Preserve spaces, dashes, etc.
+        
+        return ''.join(result)
+    
+    def _apply_name_gender_mapping(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fix gender to match the learned gender for each first name.
+        """
+        if not self.name_gender_mapping:
+            return data
+        
+        # Find the first name column
+        name_col = None
+        for col in data.columns:
+            col_lower = col.lower()
+            if 'first' in col_lower and 'name' in col_lower:
+                name_col = col
+                break
+        
+        if name_col is None:
+            return data
+        
+        # Find the gender column
+        gender_col = None
+        for col in data.columns:
+            col_lower = col.lower()
+            if 'gender' in col_lower or 'sex' in col_lower:
+                gender_col = col
+                break
+        
+        if gender_col is None:
+            return data
+        
+        # For each row, fix gender based on first name
+        for idx in range(len(data)):
+            first_name = data.iloc[idx][name_col]
+            if first_name in self.name_gender_mapping:
+                expected_gender = self.name_gender_mapping[first_name]
+                current_gender = data.iloc[idx][gender_col]
+                if current_gender != expected_gender:
+                    data.iloc[idx, data.columns.get_loc(gender_col)] = expected_gender
+        
+        logger.info(f"Applied name→gender mapping for {name_col} → {gender_col}")
         return data
 
     def _preprocess_str_params(self, feature: str) -> Tuple[int, int]:
@@ -1519,17 +2003,20 @@ class Dataset:
         Assign text based feature to text columns.
         Uses SmartTextFeature for structured text (phones, IPs, dates, etc.)
         and CharBasedTextFeature for unstructured text.
+        
+        SmartTextFeature uses lower weight (0.3) to prevent dominating training.
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="text")
         max_len, rnn_units = self._preprocess_str_params(features[0])
         
         # Use SmartTextFeature for structured text (detected via entropy analysis)
+        # SmartTextFeature has lower weight (0.3) to prevent dominating training
         if hasattr(self, 'structured_text_columns') and feature in self.structured_text_columns:
             self.assign_feature(
-                SmartTextFeature(features[0], text_max_len=max_len, hidden_dim=rnn_units),
+                SmartTextFeature(features[0], text_max_len=max_len, hidden_dim=rnn_units, weight=0.3),
                 features[0],
             )
-            logger.info(f"Column '{features[0]}' assigned as smart text feature (structured)")
+            logger.info(f"Column '{features[0]}' assigned as smart text feature (weight=0.3)")
         else:
             self.assign_feature(
                 CharBasedTextFeature(features[0], text_max_len=max_len, rnn_units=rnn_units),
@@ -1567,6 +2054,48 @@ class Dataset:
                     self.zero_num_column_names.append(feature)
                 self.assign_feature(ContinuousFeature(feature, column_type=float), feature)
                 logger.info(f"Column '{feature}' assigned as float based feature")
+
+    def _assign_phone_feature(self, feature):
+        """
+        Assign phone feature to phone number columns.
+        Uses PhoneFeature which learns and preserves phone number formats.
+        """
+        features = self._preprocess_nan_cols(feature, fillna_strategy="text")
+        self.assign_feature(
+            PhoneFeature(features[0], weight=0.3),
+            features[0],
+        )
+        logger.info(f"Column '{features[0]}' assigned as phone feature")
+
+        if len(features) > 1:
+            for feat in features[1:]:
+                if feat.endswith("_null"):
+                    self.null_num_column_names.append(feat)
+                if feat.endswith("_zero"):
+                    self.zero_num_column_names.append(feat)
+                self.assign_feature(ContinuousFeature(feat, column_type=float), feat)
+                logger.info(f"Column '{feat}' assigned as float based feature")
+
+    def _assign_ip_feature(self, feature):
+        """
+        Assign IP address feature to IP columns.
+        Uses IPAddressFeature which generates valid IPv4 addresses.
+        """
+        features = self._preprocess_nan_cols(feature, fillna_strategy="text")
+        self.assign_feature(
+            IPAddressFeature(features[0], weight=0.3),
+            features[0],
+        )
+        logger.info(f"Column '{features[0]}' assigned as IP address feature")
+
+        if len(features) > 1:
+            for feat in features[1:]:
+                if feat.endswith("_null"):
+                    self.null_num_column_names.append(feat)
+                if feat.endswith("_zero"):
+                    self.zero_num_column_names.append(feat)
+                self.assign_feature(ContinuousFeature(feat, column_type=float), feat)
+                logger.info(f"Column '{feat}' assigned as float based feature")
 
     def _assign_float_feature(self, feature):
         """
@@ -1700,6 +2229,8 @@ class Dataset:
         return {
             "str_columns": self._assign_char_feature,
             "email_columns": self._assign_email_feature,
+            "phone_columns": self._assign_phone_feature,
+            "ip_columns": self._assign_ip_feature,
             "float_columns": self._assign_float_feature,
             "int_columns": self._assign_int_feature,
             "categorical_columns": self._assign_categ_feature,

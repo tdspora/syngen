@@ -191,7 +191,8 @@ class InferStrategy(Strategy):
             reports=self.config.reports,
             log_level=self.config.log_level,
             type_of_process=type_of_process,
-            loader=self.config.loader
+            loader=self.config.loader,
+            temperature=self.config.temperature
         )
         return self
 

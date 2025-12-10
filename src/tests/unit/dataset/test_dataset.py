@@ -151,6 +151,8 @@ def test_save_dataset(mock_fetch_config, rp_logger):
         "date_mapping",
         "binary_columns",
         "email_columns",
+        "phone_columns",
+        "ip_columns",
         "long_text_columns",
         "primary_keys_mapping",
         "primary_keys_list",
@@ -168,6 +170,11 @@ def test_save_dataset(mock_fetch_config, rp_logger):
         "format",
         "cast_to_float",
         "cast_to_integer",
+        "conditional_mappings",
+        "city_country_mapping",
+        "country_zip_patterns",
+        "name_gender_mapping",
+        "zip_code_column",
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

@@ -20,6 +20,7 @@ from slugify import slugify
 
 from syngen.ml.vae.models.model import CVAE
 from syngen.ml.vae.models import Dataset
+from syngen.ml.vae.models.custom_layers import build_discriminator
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import (
     generate_uuid,
@@ -64,10 +65,13 @@ class VAEWrapper(BaseWrapper):
     batch_size: int
     log_level: str
     random_seed: Optional[int] = field(default=None)
+    use_discriminator: bool = field(default=True)  # Enable VAE-GAN hybrid
     losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
+    discriminator: Model = field(init=False, default=None)  # Discriminator for VAE-GAN
+    disc_optimizer: object = field(init=False, default=None)
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
@@ -176,6 +180,15 @@ class VAEWrapper(BaseWrapper):
 
         self.optimizer = self.__create_optimizer()
         self.loss_metric = self._create_loss()
+        
+        # Initialize discriminator for VAE-GAN hybrid training
+        # Helps prevent mode collapse by ensuring latent space coverage
+        if self.use_discriminator:
+            import keras
+            latent_dim = self.vae.latent_dim
+            self.discriminator = build_discriminator(latent_dim)
+            self.disc_optimizer = keras.optimizers.Adam(learning_rate=1e-4)
+            logger.info(f"VAE-GAN hybrid mode: discriminator initialized (latent_dim={latent_dim})")
 
         # Start of the run of training process
         MlflowTracker().start_run(
@@ -497,6 +510,7 @@ class VAEWrapper(BaseWrapper):
         return tf.reduce_mean(kl_loss)
 
     def _train_step(self, batch: Tuple[tf.Tensor]):
+        # Step 1: Train VAE first
         with tf.GradientTape() as tape:
             # Forward pass - this will trigger loss computation in FeatureLossLayers
             self.model(batch, training=True)
@@ -558,10 +572,68 @@ class VAEWrapper(BaseWrapper):
             self.optimizer.apply_gradients(grads_and_vars)
 
         self.loss_metric(loss)
+        
+        # Step 2: Train discriminator (if enabled) - after VAE step
+        # Use encoder model to get actual latent vectors
+        if self.use_discriminator and self.discriminator is not None:
+            self._train_discriminator_step(batch)
 
         # Convert kl_loss to float for return value
         kl_loss_value = float(kl_loss.numpy()) if hasattr(kl_loss, 'numpy') else float(kl_loss)
         return loss, kl_loss_value, feature_losses
+    
+    def _train_discriminator_step(self, batch: Tuple[tf.Tensor]) -> float:
+        """
+        Train discriminator to distinguish real latent samples from random noise.
+        
+        This helps prevent mode collapse by ensuring the encoder produces
+        latent vectors that cover the latent space well (like random noise).
+        """
+        import keras
+        import keras.ops as ops
+        
+        latent_dim = self.vae.latent_dim
+        
+        # Get actual encoded latent vectors using encoder model
+        real_latent = self.vae.encoder_model.predict(batch, verbose=0)
+        batch_size = real_latent.shape[0]
+        
+        with tf.GradientTape() as disc_tape:
+            # Generate random noise samples (fake)
+            fake_latent = np.random.normal(size=(batch_size, latent_dim)).astype(np.float32)
+            
+            # Discriminator predictions
+            real_pred = self.discriminator(real_latent, training=True)
+            fake_pred = self.discriminator(fake_latent, training=True)
+            
+            # Discriminator loss: real=1, fake=0
+            ones = np.ones((batch_size, 1), dtype=np.float32)
+            zeros = np.zeros((batch_size, 1), dtype=np.float32)
+            
+            real_loss = tf.reduce_mean(
+                keras.losses.binary_crossentropy(ones, real_pred)
+            )
+            fake_loss = tf.reduce_mean(
+                keras.losses.binary_crossentropy(zeros, fake_pred)
+            )
+            disc_loss = (real_loss + fake_loss) / 2.0
+        
+        # Update discriminator
+        disc_gradients = disc_tape.gradient(
+            disc_loss, self.discriminator.trainable_weights
+        )
+        disc_gradients = [
+            tf.clip_by_norm(g, 1.0) if g is not None else g
+            for g in disc_gradients
+        ]
+        grads_and_vars = [
+            (g, v) for g, v in zip(disc_gradients, self.discriminator.trainable_weights)
+            if g is not None
+        ]
+        if grads_and_vars:
+            self.disc_optimizer.apply_gradients(grads_and_vars)
+        
+        return float(disc_loss.numpy())
 
     @staticmethod
     def display_losses(feature_losses: Dict):
@@ -675,12 +747,24 @@ class VanillaVAEWrapper(VAEWrapper):
             log_level,
             random_seed,
         )
-        self.latent_dim = min(latent_dim, int(len(self.dataset.columns) / 2))
+        
+        # Dynamic latent dimension based on dataset complexity
+        # More columns = more relationships to capture
+        num_columns = len(self.dataset.columns)
+        
+        # Formula:
+        # - Minimum 10 for simple datasets (< 10 columns)
+        # - Equal to num_columns for medium datasets (10-50 columns)
+        # - Cap at 50 to prevent overfitting (> 50 columns)
+        self.latent_dim = max(10, min(num_columns, 50))
+        
+        logger.info(f"Dynamic latent dimension: {self.latent_dim} (based on {num_columns} columns)")
+        
         self.vae = CVAE(
             self.dataset,
             batch_size=self.batch_size,
-            latent_dim=latent_dim,
-            latent_components=min(latent_components, latent_dim * 2),
+            latent_dim=self.latent_dim,
+            latent_components=min(latent_components, self.latent_dim * 3),
             intermediate_dim=128,
             random_seed=random_seed,
         )

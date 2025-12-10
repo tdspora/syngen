@@ -1,12 +1,47 @@
 from typing import Optional
 
 import keras
-from keras.layers import Layer
+from keras.layers import Layer, Dense, LeakyReLU, Dropout, BatchNormalization
+from keras.models import Model
+from keras.layers import Input
 import keras.ops as ops
 
 
 # Module-level seed generator for reproducible random operations
 _seed_generator: Optional[keras.random.SeedGenerator] = None
+
+
+def build_discriminator(input_dim: int, hidden_dim: int = 128) -> Model:
+    """
+    Build a discriminator network for VAE-GAN hybrid training.
+    
+    The discriminator learns to distinguish between real encoded samples
+    and random noise samples, which helps prevent mode collapse by ensuring
+    the latent space has good coverage.
+    
+    Args:
+        input_dim: Dimension of the latent space
+        hidden_dim: Hidden layer dimension
+        
+    Returns:
+        Keras Model that outputs probability of input being "real"
+    """
+    inputs = Input(shape=(input_dim,), name="disc_input")
+    
+    x = Dense(hidden_dim, name="disc_dense_0")(inputs)
+    x = LeakyReLU(negative_slope=0.2)(x)
+    x = Dropout(0.3)(x)
+    
+    x = Dense(hidden_dim // 2, name="disc_dense_1")(x)
+    x = LeakyReLU(negative_slope=0.2)(x)
+    x = Dropout(0.3)(x)
+    
+    x = Dense(hidden_dim // 4, name="disc_dense_2")(x)
+    x = LeakyReLU(negative_slope=0.2)(x)
+    
+    outputs = Dense(1, activation='sigmoid', name="disc_output")(x)
+    
+    return Model(inputs, outputs, name="discriminator")
 
 
 def set_seed_generator(seed: Optional[int] = None):

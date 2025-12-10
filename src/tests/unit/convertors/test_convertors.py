@@ -184,7 +184,7 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "firstname": pd.StringDtype(),
         "lastname": pd.StringDtype(),
         "middlename": pd.StringDtype(),
-        "namestyle": dtype("int64"),
+        "namestyle": dtype("bool"),  # Boolean columns preserved as bool
         "title": pd.StringDtype(),
         "hiredate": pd.StringDtype(),
         "birthdate": pd.StringDtype(),
@@ -194,14 +194,14 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "maritalstatus": pd.StringDtype(),
         "emergencycontactname": pd.StringDtype(),
         "emergencycontactphone": pd.StringDtype(),
-        "salariedflag": dtype("int64"),
+        "salariedflag": dtype("bool"),  # Boolean columns preserved as bool
         "gender": pd.StringDtype(),
         "payfrequency": dtype("int64"),
         "baserate": dtype("float64"),
         "vacationhours": dtype("int64"),
         "sickleavehours": dtype("int64"),
-        "currentflag": dtype("int64"),
-        "salespersonflag": dtype("int64"),
+        "currentflag": dtype("bool"),  # Boolean columns preserved as bool
+        "salespersonflag": dtype("bool"),  # Boolean columns preserved as bool
         "departmentname": pd.StringDtype(),
         "startdate": pd.StringDtype(),
         "enddate": pd.StringDtype(),
@@ -222,7 +222,7 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "firstname": pd.StringDtype(),
         "lastname": pd.StringDtype(),
         "middlename": pd.StringDtype(),
-        "namestyle": dtype("int64"),
+        "namestyle": dtype("bool"),  # Boolean columns preserved as bool
         "title": pd.StringDtype(),
         "hiredate": pd.StringDtype(),
         "birthdate": pd.StringDtype(),
@@ -232,14 +232,14 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "maritalstatus": pd.StringDtype(),
         "emergencycontactname": pd.StringDtype(),
         "emergencycontactphone": pd.StringDtype(),
-        "salariedflag": dtype("int64"),
+        "salariedflag": dtype("bool"),  # Boolean columns preserved as bool
         "gender": pd.StringDtype(),
         "payfrequency": dtype("int64"),
         "baserate": dtype("float64"),
         "vacationhours": dtype("int64"),
         "sickleavehours": dtype("int64"),
-        "currentflag": dtype("int64"),
-        "salespersonflag": dtype("int64"),
+        "currentflag": dtype("bool"),  # Boolean columns preserved as bool
+        "salespersonflag": dtype("bool"),  # Boolean columns preserved as bool
         "departmentname": pd.StringDtype(),
         "startdate": pd.StringDtype(),
         "enddate": pd.StringDtype(),
