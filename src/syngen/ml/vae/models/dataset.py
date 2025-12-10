@@ -19,6 +19,7 @@ from loguru import logger
 from syngen.ml.vae.models.features import (
     CategoricalFeature,
     CharBasedTextFeature,
+    SmartTextFeature,
     EmailFeature,
     ContinuousFeature,
     DateFeature,
@@ -650,17 +651,19 @@ class Dataset:
         if avg_len > 50 or avg_len < 3:
             return False
         
-        # Check length consistency (CV < 0.3 = very consistent lengths)
+        # Check length consistency (CV < 0.15 = very consistent lengths)
         length_cv = lengths.std() / avg_len if avg_len > 0 else 1.0
-        has_consistent_length = length_cv < 0.3
-        has_very_consistent_length = length_cv < 0.1  # Almost identical lengths
+        has_consistent_length = length_cv < 0.15  # Consistent formats
+        has_very_consistent_length = length_cv < 0.05  # Almost identical lengths
         
         # Check positional entropy
         entropy = self._calculate_positional_entropy(str_data)
-        has_low_entropy = entropy < 2.5
-        has_medium_entropy = entropy < 3.3  # Allow higher entropy for very consistent lengths
+        has_low_entropy = entropy < 2.0  # Low entropy - clearly structured
+        has_medium_entropy = entropy < 2.3  # Medium entropy - structured if length is very consistent
+        has_very_low_entropy = entropy < 1.6  # Very low entropy - structured regardless of length
         
         # Structured if consistent length + low entropy
+        # This catches: phone numbers (1.90), product codes (1.64), dates
         if has_consistent_length and has_low_entropy:
             logger.debug(
                 f"Column detected as structured text: "
@@ -668,8 +671,8 @@ class Dataset:
             )
             return True
         
-        # Also structured if VERY consistent length (CV < 0.1) even with medium entropy
-        # This catches IPs, ZIPs, phone numbers where each char is random but format is fixed
+        # Also structured if VERY consistent length (CV < 0.05) AND medium entropy
+        # This needs stricter entropy to avoid natural language with consistent sentence lengths
         if has_very_consistent_length and has_medium_entropy:
             logger.debug(
                 f"Column detected as structured text (very consistent length): "
@@ -678,7 +681,8 @@ class Dataset:
             return True
         
         # Also structured if entropy is very low even with variable length
-        if entropy < 1.5:
+        # This catches IPs (1.52), some date formats, etc.
+        if has_very_low_entropy:
             logger.debug(
                 f"Column detected as structured text (low entropy): "
                 f"entropy={entropy:.3f}"
@@ -1499,15 +1503,26 @@ class Dataset:
 
     def _assign_char_feature(self, feature):
         """
-        Assign text based feature to text columns
+        Assign text based feature to text columns.
+        Uses SmartTextFeature for structured text (phones, IPs, dates, etc.)
+        and CharBasedTextFeature for unstructured text.
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="text")
         max_len, rnn_units = self._preprocess_str_params(features[0])
-        self.assign_feature(
-            CharBasedTextFeature(features[0], text_max_len=max_len, rnn_units=rnn_units),
-            features[0],
-        )
-        logger.info(f"Column '{features[0]}' assigned as text based feature")
+        
+        # Use SmartTextFeature for structured text (detected via entropy analysis)
+        if hasattr(self, 'structured_text_columns') and feature in self.structured_text_columns:
+            self.assign_feature(
+                SmartTextFeature(features[0], text_max_len=max_len, hidden_dim=rnn_units),
+                features[0],
+            )
+            logger.info(f"Column '{features[0]}' assigned as smart text feature (structured)")
+        else:
+            self.assign_feature(
+                CharBasedTextFeature(features[0], text_max_len=max_len, rnn_units=rnn_units),
+                features[0],
+            )
+            logger.info(f"Column '{features[0]}' assigned as text based feature")
 
         if len(features) > 1:
             for feature in features[1:]:

@@ -718,6 +718,336 @@ class EmailFeature(CharBasedTextFeature):
             return [f"{s}@{self.domain}" for s in local_parts]
 
 
+class SmartTextFeature(BaseFeature):
+    """
+    A feature for structured text data (phone numbers, IPs, dates, etc.)
+    that leverages positional patterns rather than sequential dependencies.
+    
+    Uses character embeddings + sinusoidal positional encoding instead of 
+    one-hot + LSTM, which is more efficient for text with fixed structure.
+    
+    Key differences from CharBasedTextFeature:
+    - Character embeddings (learnable, 32-dim) instead of one-hot
+    - Sinusoidal positional encoding (32-dim) captures position semantics
+    - Dense encoder instead of LSTM (positions matter, not sequence)
+    - Per-position weighted loss focuses on variable positions
+    """
+
+    def __init__(
+        self,
+        name: str,
+        text_max_len: int,
+        embedding_dim: int = 32,
+        hidden_dim: int = 128,
+    ):
+        super().__init__(name=name)
+        self.decoder = None
+        self.text_max_len = text_max_len
+        self.embedding_dim = embedding_dim  # character embedding dimension
+        self.hidden_dim = hidden_dim  # dense layer hidden dimension
+        self.feature_type = "text"
+        self.position_weights = None  # will be computed during fit
+
+    def fit(self, data: pd.DataFrame, **kwargs):
+        """Fit tokenizer and compute position-wise entropy for weighting."""
+        from tensorflow.keras.preprocessing.text import Tokenizer
+
+        if len(data.columns) > 1:
+            raise Exception("SmartTextFeature can work only with one text column")
+
+        data = data[data.columns[0]]
+
+        # Build character tokenizer
+        tokenizer = Tokenizer(lower=False, char_level=True)
+        tokenizer.fit_on_texts(data)
+        tokenizer.inverse_dict = inverse_dict(tokenizer.word_index)
+
+        self.vocab_size = len(tokenizer.word_index) + 1  # +1 for padding (0)
+        self.tokenizer = tokenizer
+
+        # Compute position-wise entropy for adaptive weighting
+        # Positions with higher entropy (variable characters) get higher weight
+        self._compute_position_weights(data)
+
+    def _compute_position_weights(self, data: pd.Series):
+        """
+        Compute per-position weights based on character entropy.
+        Positions with variable characters get higher weight during training.
+        """
+        # Pad strings and convert to character matrix
+        padded = data.fillna('').astype(str).str.pad(self.text_max_len, side='right', fillchar='\x00')
+        padded = padded.str.slice(0, self.text_max_len)
+        
+        char_matrix = np.array([list(s) for s in padded])
+        
+        weights = np.ones(self.text_max_len, dtype=np.float32)
+        
+        for pos in range(min(self.text_max_len, char_matrix.shape[1])):
+            chars_at_pos = char_matrix[:, pos]
+            unique, counts = np.unique(chars_at_pos, return_counts=True)
+            probs = counts / counts.sum()
+            # Shannon entropy
+            entropy = -np.sum(probs * np.log2(probs + 1e-10))
+            # Higher entropy = more variable = higher weight
+            # Scale entropy to range [0.5, 2.0]
+            weights[pos] = 0.5 + min(entropy / 3.0, 1.5)
+        
+        self.position_weights = weights
+
+    def _get_positional_encoding(self, seq_len: int, d_model: int) -> np.ndarray:
+        """
+        Generate sinusoidal positional encoding.
+        
+        PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
+        PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
+        """
+        positions = np.arange(seq_len)[:, np.newaxis]
+        dimensions = np.arange(d_model)[np.newaxis, :]
+        
+        angles = positions / np.power(10000.0, (2 * (dimensions // 2)) / d_model)
+        
+        # Apply sin to even indices, cos to odd indices
+        pos_encoding = np.zeros((seq_len, d_model), dtype=np.float32)
+        pos_encoding[:, 0::2] = np.sin(angles[:, 0::2])
+        pos_encoding[:, 1::2] = np.cos(angles[:, 1::2])
+        
+        return pos_encoding
+
+    def transform(self, data: pd.DataFrame) -> np.ndarray:
+        """
+        Transform text data to character indices (not one-hot).
+        Positional encoding will be added in the model.
+        """
+        if len(data.columns) > 1:
+            raise Exception("SmartTextFeature can work only with one text column")
+
+        data = data[data.columns[0]]
+
+        from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+        data_gen = self.tokenizer.texts_to_sequences(data)
+        data_gen = pad_sequences(
+            data_gen,
+            maxlen=self.text_max_len,
+            padding="post",
+            truncating="post",
+            value=0,  # 0 is padding index
+        )
+        
+        # Return indices (shape: [batch, seq_len])
+        # The model will handle embeddings and positional encoding
+        return data_gen.astype(np.int32)
+
+    @staticmethod
+    def _top_p_filtering(logits: np.ndarray, top_p: float = 0.9):
+        """Top-p (nucleus) sampling filter."""
+        logits = tf.convert_to_tensor(logits, dtype=tf.float32)
+        
+        sorted_logits = tf.sort(logits, direction="DESCENDING", axis=-1)
+        sorted_indices = tf.argsort(logits, direction="DESCENDING", axis=-1)
+        
+        cumulative_probs = tf.cumsum(sorted_logits, axis=-1)
+        
+        sorted_indices_to_remove = cumulative_probs >= top_p
+        
+        zeros_for_shift = tf.zeros_like(sorted_indices_to_remove[:, :, :1], dtype=tf.bool)
+        sorted_indices_to_remove = tf.concat(
+            [zeros_for_shift, sorted_indices_to_remove[:, :, :-1]],
+            axis=-1
+        )
+        
+        batch_size, seq_length, vocab_size = logits.shape
+        
+        batch_indices = tf.repeat(tf.range(batch_size), seq_length * vocab_size)
+        feature_length_indices = tf.tile(
+            tf.repeat(tf.range(seq_length), vocab_size),
+            [batch_size]
+        )
+        vocab_selection_indices = tf.reshape(sorted_indices, [-1])
+        update_indices = tf.stack(
+            [batch_indices, feature_length_indices, vocab_selection_indices],
+            axis=1
+        )
+        flattened_update_values = tf.reshape(sorted_indices_to_remove, [-1])
+        indices_to_remove = tf.tensor_scatter_nd_update(
+            tf.zeros_like(logits, dtype=sorted_indices_to_remove.dtype),
+            update_indices,
+            flattened_update_values,
+        )
+        
+        logits_removed = tf.where(indices_to_remove, tf.fill(indices_to_remove.shape, 0.0), logits)
+        
+        return logits_removed.numpy().astype(np.float64)
+
+    def _process_batch(self, batch: np.ndarray) -> List[str]:
+        """Process a batch of decoder outputs to generate strings."""
+        probs = tf.nn.softmax(batch, axis=-1).numpy().astype(float)
+        probs = self._top_p_filtering(probs, top_p=0.9)
+        
+        # Normalize
+        probs_sum = probs.sum(axis=2, keepdims=True)
+        probs_sum = np.where(probs_sum == 0, 1, probs_sum)  # avoid division by zero
+        probs /= probs_sum
+        
+        # Sample from distribution
+        multinomial_samples = np.apply_along_axis(
+            lambda x: np.argmax(np.random.multinomial(1, x)), -1, probs
+        )
+        
+        # Convert indices to characters
+        chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ''))(
+            multinomial_samples)
+        
+        # Join characters into strings
+        words = ["".join(sample) for sample in chars_array]
+        
+        return words
+
+    def inverse_transform(self, data: np.ndarray, **kwargs) -> List[str]:
+        """Transform decoder output back to strings."""
+        batch_size = 10000
+        num_batches = (len(data) + batch_size - 1) // batch_size
+        feature_values = []
+
+        for i in range(num_batches):
+            batch = data[i * batch_size: (i + 1) * batch_size]
+            feature_values.extend(self._process_batch(batch))
+
+        return feature_values
+
+    @lazy
+    def input(self) -> tf.Tensor:
+        """
+        Input: character indices [batch, seq_len].
+        Unlike CharBasedTextFeature which uses one-hot [batch, seq_len, vocab_size].
+        """
+        self.index_input = Input(
+            shape=(self.text_max_len,), dtype="int32", name="input_%s" % self.name
+        )
+        return self.index_input
+
+    @lazy
+    def encoder(self) -> tf.Tensor:
+        """
+        Encoder with character embeddings + positional encoding.
+        
+        1. Embed character indices -> [batch, seq_len, embedding_dim]
+        2. Add positional encoding -> [batch, seq_len, embedding_dim * 2]
+        3. Flatten and dense layers -> latent representation
+        """
+        from keras.layers import Embedding, Flatten, Dropout, Concatenate, Lambda
+        
+        # Character embedding layer
+        char_embedding = Embedding(
+            input_dim=self.vocab_size,
+            output_dim=self.embedding_dim,
+            name=f"{self.name}_char_embedding"
+        )(self.input)
+        
+        # Precompute positional encoding as a constant
+        pos_encoding = self._get_positional_encoding(self.text_max_len, self.embedding_dim)
+        
+        # Use a Lambda layer to add positional encoding (Keras 3 compatible)
+        def add_positional_encoding(x, pos_enc=pos_encoding):
+            """Add precomputed positional encoding to the embeddings."""
+            batch_size = ops.shape(x)[0]
+            pos_enc_tensor = ops.convert_to_tensor(pos_enc, dtype=x.dtype)
+            # Broadcast positional encoding to batch
+            pos_enc_broadcast = ops.broadcast_to(
+                ops.expand_dims(pos_enc_tensor, 0),
+                (batch_size, pos_enc_tensor.shape[0], pos_enc_tensor.shape[1])
+            )
+            # Concatenate along last dimension
+            return ops.concatenate([x, pos_enc_broadcast], axis=-1)
+        
+        # Apply positional encoding
+        combined = Lambda(
+            add_positional_encoding,
+            name=f"{self.name}_pos_encoding"
+        )(char_embedding)
+        
+        # Flatten and encode
+        # Shape: [batch, seq_len * embedding_dim * 2]
+        flattened = Flatten()(combined)
+        
+        # Dense encoding layers
+        encoded = Dense(self.hidden_dim, activation="relu", name=f"{self.name}_enc_dense1")(flattened)
+        encoded = Dropout(0.1)(encoded)
+        encoded = Dense(self.hidden_dim // 2, activation="relu", name=f"{self.name}_enc_dense2")(encoded)
+        
+        return encoded
+
+    @lazy
+    def __decoder_layer(self) -> List[tf.Tensor]:
+        """Build decoder layers for per-position character prediction."""
+        decoder_layers = []
+        
+        # Expand from latent to full sequence representation
+        decoder_layers.append(
+            Dense(self.hidden_dim, activation="relu", name=f"{self.name}_dec_dense1")
+        )
+        decoder_layers.append(
+            Dense(self.text_max_len * self.hidden_dim // 2, activation="relu", name=f"{self.name}_dec_dense2")
+        )
+        
+        return decoder_layers
+
+    def create_decoder(self, encoder_output: tf.Tensor) -> tf.Tensor:
+        """
+        Create decoder that outputs logits for each position.
+        Output shape: [batch, seq_len, vocab_size]
+        """
+        from keras.layers import Reshape
+        
+        x = encoder_output
+        
+        # Apply dense layers
+        for layer in self.__decoder_layer:
+            x = layer(x)
+        
+        # Reshape to [batch, seq_len, hidden_dim // 2]
+        x = Reshape((self.text_max_len, self.hidden_dim // 2))(x)
+        
+        # Per-position prediction: [batch, seq_len, vocab_size]
+        x = TimeDistributed(
+            Dense(self.vocab_size, activation="linear", name=f"{self.name}_char_logits"),
+            name=f"{self.name}_time_dist"
+        )(x)
+        
+        self.decoder = x
+        return self.decoder
+
+    @lazy
+    def loss(self) -> tf.Tensor:
+        """
+        Per-position weighted categorical crossentropy loss.
+        
+        Positions with higher entropy (more variable characters) get higher weight.
+        Uses sparse categorical crossentropy since input is indices, not one-hot.
+        """
+        if not hasattr(self, "decoder"):
+            raise Exception("Decoder isn't created")
+        
+        # Convert position weights to tensor
+        if self.position_weights is not None:
+            weights = tf.constant(self.position_weights, dtype=tf.float32)
+        else:
+            weights = tf.ones(self.text_max_len, dtype=tf.float32)
+        
+        # Sparse categorical crossentropy per position
+        # Input shape: [batch, seq_len] (indices)
+        # Decoder shape: [batch, seq_len, vocab_size] (logits)
+        per_position_loss = keras.losses.sparse_categorical_crossentropy(
+            y_true=self.input, y_pred=self.decoder, from_logits=True
+        )
+        
+        # Apply position weights: [batch, seq_len] * [seq_len] -> [batch, seq_len]
+        weighted_loss = per_position_loss * weights
+        
+        # Mean over positions and batch
+        return self.weight * ops.mean(weighted_loss)
+
+
 class DateFeature(BaseFeature):
     """
     A class to process datetime features
