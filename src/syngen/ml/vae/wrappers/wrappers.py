@@ -65,7 +65,7 @@ class VAEWrapper(BaseWrapper):
     batch_size: int
     log_level: str
     random_seed: Optional[int] = field(default=None)
-    use_discriminator: bool = field(default=True)  # Enable VAE-GAN hybrid
+    use_discriminator: bool = field(default=False)  # Disable VAE-GAN hybrid by default (can cause instability)
     losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
@@ -381,9 +381,19 @@ class VAEWrapper(BaseWrapper):
         pth = Path(self.paths["state_path"])
         # loss that corresponds to the best saved weights
         saved_weights_loss = float("inf")
+        
+        # Learning rate decay settings
+        initial_lr = float(self.optimizer.learning_rate)
+        lr_decay_start_epoch = 20  # Start decaying after epoch 20
+        lr_decay_rate = 0.95  # Decay by 5% each epoch after start
 
         delta = ProgressBarHandler().delta / (epochs * 2)
         for epoch in range(epochs):
+            # Apply learning rate decay after initial training
+            if epoch >= lr_decay_start_epoch:
+                new_lr = initial_lr * (lr_decay_rate ** (epoch - lr_decay_start_epoch))
+                self.optimizer.learning_rate.assign(new_lr)
+            
             log_message = (
                 f"Training process of the table - '{self.table_name}' "
                 f"on the epoch: {epoch}"
