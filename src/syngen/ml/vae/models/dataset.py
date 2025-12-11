@@ -70,6 +70,7 @@ class Dataset:
     tech_columns: Set = field(default_factory=set)
     custom_categorical_columns: Set = field(default_factory=set)
     categorical_columns: Set = field(default_factory=set)
+    numeric_correlation_rules: list = field(default_factory=list)
     str_columns: Set = field(default_factory=set)
     float_columns: Set = field(default_factory=set)
     int_columns: Set = field(default_factory=set)
@@ -717,8 +718,18 @@ class Dataset:
         2. Entropy-based detection for structured text (dates, phones, IPs, etc.)
         
         Note: Threshold is 100 to handle columns like US states (50), countries, etc.
+        For small datasets (< 200 rows), thresholds are adjusted for better stability.
         """
-        CATEGORICAL_THRESHOLD = 100
+        n_rows = len(self.df)
+        is_small_dataset = n_rows < 200
+        
+        # For small datasets, be more aggressive with categorical classification
+        # This improves stability when there's not enough data for text features
+        if is_small_dataset:
+            CATEGORICAL_THRESHOLD = min(50, n_rows // 2)  # Up to half unique values
+            logger.info(f"Small dataset mode ({n_rows} rows): categorical threshold={CATEGORICAL_THRESHOLD}")
+        else:
+            CATEGORICAL_THRESHOLD = 100
         
         # UUID pattern (standard 8-4-4-4-12 format) - keep as it's standardized
         uuid_pattern = r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
@@ -728,10 +739,11 @@ class Dataset:
         
         # Low unique count threshold for forced categorical (even if structured)
         # Scale by dataset size: for small datasets, require lower absolute threshold
-        # For 1000 rows: min(20, 100) = 20 unique values or fewer -> categorical
-        # For 10 rows: min(20, 1) = 1 unique value -> only trivial columns
-        n_rows = len(self.df)
-        LOW_UNIQUE_THRESHOLD = min(20, max(1, n_rows // 50))  # At most 2% of rows or 20
+        # For small datasets: more aggressive categorical to improve stability
+        if is_small_dataset:
+            LOW_UNIQUE_THRESHOLD = min(15, max(3, n_rows // 10))  # ~10% of rows or 15
+        else:
+            LOW_UNIQUE_THRESHOLD = min(20, max(1, n_rows // 50))  # ~2% of rows or 20
         
         for col in self.df.columns:
             if col in self.binary_columns:
@@ -1461,6 +1473,9 @@ class Dataset:
         # Learn name→gender mapping for consistency
         self.learn_name_gender_mapping()
 
+        # Learn strong numeric correlations to preserve them during postprocess
+        self.learn_numeric_correlations()
+
     def transform(self, data, excluded_features=set()):
         transformed_features = list()
         selected_features = {
@@ -1675,6 +1690,117 @@ class Dataset:
         self.name_gender_mapping = name_gender
         logger.info(f"Learned name→gender mapping for {len(name_gender)} names")
 
+    def _is_numeric_candidate(self, col: str) -> bool:
+        """Heuristic: numeric and not a PK/FK or perfectly unique ID column."""
+        if col not in self.df.columns:
+            return False
+        if not pd.api.types.is_numeric_dtype(self.df[col]):
+            return False
+        # Skip PK and FK columns explicitly
+        if col in self.pk_columns or col in self.fk_columns:
+            return False
+        # Only skip if ALL values are unique (true ID columns)
+        uniq_ratio = self.df[col].nunique(dropna=True) / max(len(self.df[col]), 1)
+        return uniq_ratio < 0.99
+
+    def learn_numeric_correlations(self, threshold: float = 0.5, max_pairs: int = 10, bins: int = 10):
+        """
+        Learn strong numeric correlations and store bin-based conditional distributions.
+        This is data-driven and on by default; no metadata toggle needed.
+        """
+        numeric_cols = [c for c in self.df.columns if self._is_numeric_candidate(c)]
+        if len(numeric_cols) < 2:
+            return
+
+        corr = self.df[numeric_cols].corr().abs()
+        pairs = []
+        for i, a in enumerate(numeric_cols):
+            for b in numeric_cols[i + 1:]:
+                val = corr.loc[a, b]
+                if val >= threshold:
+                    pairs.append((val, a, b))
+
+        # Keep strongest pairs first
+        pairs.sort(reverse=True, key=lambda x: x[0])
+        pairs = pairs[:max_pairs]
+
+        rules = []
+        for _, parent_col, child_col in pairs:
+            parent_series = self.df[parent_col]
+            child_series = self.df[child_col]
+
+            # Bin parent into quantiles; drop duplicate bins if needed
+            try:
+                parent_bins = pd.qcut(parent_series, q=bins, duplicates="drop")
+            except ValueError:
+                continue
+
+            # Collect child distributions per bin
+            bin_edges = []
+            bin_samples = {}
+            categories = parent_bins.cat.categories
+            for idx, interval in enumerate(categories):
+                mask = parent_bins == interval
+                vals = child_series[mask].dropna()
+                if len(vals) == 0:
+                    continue
+                bin_edges.append((float(interval.left), float(interval.right)))
+                bin_samples[idx] = vals.to_numpy()
+
+            if not bin_samples:
+                continue
+
+            rules.append({
+                "parent": parent_col,
+                "child": child_col,
+                "bins": bin_edges,
+                "samples": bin_samples,
+            })
+
+        self.numeric_correlation_rules = rules
+        if rules:
+            logger.info(f"Learned {len(rules)} numeric correlation guardrails")
+        else:
+            logger.info("No strong numeric correlations found for guardrails")
+
+    @staticmethod
+    def _find_bin(value: float, bins: list) -> int:
+        for idx, (left, right) in enumerate(bins):
+            if pd.isna(value):
+                return None
+            # Include right edge for the last bin
+            if (value >= left) and (value <= right):
+                return idx
+        return None
+
+    def _apply_numeric_correlations(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Nudge child values to match learned numeric correlations (bin-based).
+        """
+        if not self.numeric_correlation_rules:
+            return data
+
+        for rule in self.numeric_correlation_rules:
+            parent = rule["parent"]
+            child = rule["child"]
+            if parent not in data.columns or child not in data.columns:
+                continue
+
+            bins = rule["bins"]
+            samples = rule["samples"]
+
+            for idx in range(len(data)):
+                parent_val = data.iloc[idx][parent]
+                bin_idx = self._find_bin(parent_val, bins)
+                if bin_idx is None:
+                    continue
+                bin_vals = samples.get(bin_idx)
+                if bin_vals is None or len(bin_vals) == 0:
+                    continue
+                data.iloc[idx, data.columns.get_loc(child)] = np.random.choice(bin_vals)
+
+        return data
+
     def _apply_conditional_correlations(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Apply learned conditional correlations to fix invalid combinations.
@@ -1711,6 +1837,9 @@ class Dataset:
         
         # Apply gender correction based on first name
         data = self._apply_name_gender_mapping(data)
+
+        # Apply numeric correlation guardrails (data-driven, no metadata required)
+        data = self._apply_numeric_correlations(data)
         
         return data
     
@@ -2004,14 +2133,27 @@ class Dataset:
         Uses SmartTextFeature for structured text (phones, IPs, dates, etc.)
         and CharBasedTextFeature for unstructured text.
         
+        For small datasets (< 200 rows), always uses CharBasedTextFeature
+        because SmartTextFeature needs sufficient samples to learn patterns.
+        
         SmartTextFeature uses lower weight (0.3) to prevent dominating training.
         """
         features = self._preprocess_nan_cols(feature, fillna_strategy="text")
         max_len, rnn_units = self._preprocess_str_params(features[0])
         
+        # For small datasets, always use CharBasedTextFeature for stability
+        is_small_dataset = len(self.df) < 200
+        
         # Use SmartTextFeature for structured text (detected via entropy analysis)
         # SmartTextFeature has lower weight (0.3) to prevent dominating training
-        if hasattr(self, 'structured_text_columns') and feature in self.structured_text_columns:
+        # BUT skip SmartTextFeature on small datasets - not enough data to learn patterns
+        use_smart = (
+            hasattr(self, 'structured_text_columns') 
+            and feature in self.structured_text_columns 
+            and not is_small_dataset
+        )
+        
+        if use_smart:
             self.assign_feature(
                 SmartTextFeature(features[0], text_max_len=max_len, hidden_dim=rnn_units, weight=0.3),
                 features[0],
@@ -2022,7 +2164,10 @@ class Dataset:
                 CharBasedTextFeature(features[0], text_max_len=max_len, rnn_units=rnn_units),
                 features[0],
             )
-            logger.info(f"Column '{features[0]}' assigned as text based feature")
+            if is_small_dataset and hasattr(self, 'structured_text_columns') and feature in self.structured_text_columns:
+                logger.info(f"Column '{features[0]}' assigned as char-based feature (small dataset mode)")
+            else:
+                logger.info(f"Column '{features[0]}' assigned as text based feature")
 
         if len(features) > 1:
             for feature in features[1:]:
