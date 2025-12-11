@@ -153,6 +153,20 @@ class VAEWrapper(BaseWrapper):
             df[column_name] = df[column_name].fillna(nan_label)
         return df
 
+    def _restore_question_mark_nulls(self, df):
+        """
+        Convert "?" values back to null for columns that originally had null values.
+        
+        During preprocessing, some columns (categorical, binary) have their null values
+        replaced with "?" for training. This method restores those to proper null values.
+        """
+        question_mark_columns = getattr(self.dataset, 'question_mark_null_columns', set())
+        for column_name in question_mark_columns:
+            if column_name in df.columns:
+                # Replace "?" with NaN
+                df[column_name] = df[column_name].replace("?", np.nan)
+        return df
+
     def fit_on_df(
         self,
         epochs: int,
@@ -698,6 +712,7 @@ class VAEWrapper(BaseWrapper):
         sampled_df = self._restore_nan_values(sampled_df)
         sampled_df = self._restore_zero_values(sampled_df)
         sampled_df = self._restore_nan_labels(sampled_df)
+        sampled_df = self._restore_question_mark_nulls(sampled_df)
         sampled_df = self._restore_date_columns(sampled_df)
 
         return sampled_df

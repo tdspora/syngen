@@ -176,6 +176,7 @@ def test_save_dataset(mock_fetch_config, rp_logger):
         "name_gender_mapping",
         "zip_code_column",
         "numeric_correlation_rules",
+        "question_mark_null_columns",
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

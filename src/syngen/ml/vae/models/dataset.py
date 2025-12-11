@@ -99,6 +99,9 @@ class Dataset:
     order_of_columns: List = field(default_factory=list)
     nan_labels_dict: Dict = field(default_factory=dict)
     nan_labels_in_uuid: Dict = field(default_factory=dict)
+    # Columns where nulls were filled with "?" during preprocessing
+    # These need to be converted back to null in postprocessing
+    question_mark_null_columns: Set = field(default_factory=set)
     cast_to_integer: Set = field(default_factory=set)
     cast_to_float: Set = field(default_factory=set)
     dropped_columns: Set = field(default_factory=set)
@@ -813,14 +816,15 @@ class Dataset:
         self.structured_text_columns = set()  # Track for later feature assignment
         
         # Low unique count threshold for forced categorical (even if structured)
-        # Scale by dataset size: for small datasets, require lower absolute threshold
-        # For small datasets: more aggressive categorical to improve stability
+        # Scale by dataset size: for small datasets, be more aggressive
+        # Columns with few unique values should be categorical for better generation quality
         if is_small_dataset:
-            # For very small datasets, allow up to n_rows unique values to be categorical
-            # This handles edge cases like 3-row datasets where all values may be unique
-            LOW_UNIQUE_THRESHOLD = min(15, max(4, n_rows // 10 + 1))  # At least 4, or ~10% + 1
+            # For small datasets (<100 rows), use ~20% of rows as threshold
+            # This ensures columns like user_agent (7 unique in 50 rows = 14%) are categorical
+            # Min 8 to handle edge cases, max 20 to cap absolute threshold
+            LOW_UNIQUE_THRESHOLD = min(20, max(8, n_rows // 5))  # ~20% of rows
         else:
-            LOW_UNIQUE_THRESHOLD = min(20, max(1, n_rows // 50))  # ~2% of rows or 20
+            LOW_UNIQUE_THRESHOLD = min(25, max(10, n_rows // 50))  # ~2% of rows or 10-25
         
         for col in self.df.columns:
             if col in self.binary_columns:
@@ -2187,11 +2191,15 @@ class Dataset:
 
     def _preprocess_categ_params(self, feature: str, strategy: Literal["?", "fill"] = "?"):
         """
-        Preprocess categorical columns by filling NaN values with a strategy
+        Preprocess categorical columns by filling NaN values with a strategy.
+        
+        When strategy="?", the column is tracked for restoration during postprocessing.
         """
         if self.df[feature].isnull().any():
             if strategy == "?":
                 self.df[feature] = self.df[feature].fillna("?").astype(str)
+                # Track this column so "?" can be converted back to null in postprocessing
+                self.question_mark_null_columns.add(feature)
             if strategy == "fill":
                 self.df[feature] = self.df[feature].fillna(method="bfill").fillna(method="ffill")
                 logger.info(
