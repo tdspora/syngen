@@ -1671,11 +1671,16 @@ class Dataset:
         1. For each pair of categorical columns
         2. Check if child values are mostly unique per parent value
         3. If so, store the mapping {parent_value: [valid_child_values]}
+        4. IMPORTANT: Only keep hierarchical direction (fewer → more unique values)
+           to avoid bidirectional conflicts during correction
         """
         categorical_cols = list(self.categorical_columns)
         
         if len(categorical_cols) < 2:
             return
+        
+        # First pass: collect all candidate mappings with their scores
+        candidates = {}
         
         for parent_col in categorical_cols:
             for child_col in categorical_cols:
@@ -1701,16 +1706,47 @@ class Dataset:
                             overlap = len(children1 & children2) / min(len(children1), len(children2))
                             overlap_scores.append(overlap)
                 
-                # If average overlap is low (<30%), this is a conditional relationship
+                # If average overlap is low (<30%), this is a conditional relationship candidate
                 if overlap_scores and np.mean(overlap_scores) < 0.3:
-                    self.conditional_mappings[(parent_col, child_col)] = {
-                        parent_val: list(child_vals) 
-                        for parent_val, child_vals in grouped.items()
+                    n_parent_unique = self.df[parent_col].nunique()
+                    n_child_unique = self.df[child_col].nunique()
+                    avg_overlap = np.mean(overlap_scores)
+                    
+                    candidates[(parent_col, child_col)] = {
+                        'mapping': {
+                            parent_val: list(child_vals) 
+                            for parent_val, child_vals in grouped.items()
+                        },
+                        'overlap': avg_overlap,
+                        'parent_unique': n_parent_unique,
+                        'child_unique': n_child_unique
                     }
+        
+        # Second pass: resolve bidirectional conflicts
+        # Keep only the hierarchical direction (fewer unique → more unique)
+        for (parent_col, child_col), candidate in candidates.items():
+            reverse_key = (child_col, parent_col)
+            
+            # Check if reverse direction also exists
+            if reverse_key in candidates:
+                # Keep only the one where parent has fewer unique values
+                # (hierarchical: country→city, not city→country)
+                if candidate['parent_unique'] <= candidate['child_unique']:
+                    # This direction is correct (parent has fewer unique values)
+                    self.conditional_mappings[(parent_col, child_col)] = candidate['mapping']
                     logger.info(
                         f"Learned conditional correlation: {parent_col} → {child_col} "
-                        f"(overlap={np.mean(overlap_scores):.2%})"
+                        f"(overlap={candidate['overlap']:.2%}, "
+                        f"{candidate['parent_unique']}→{candidate['child_unique']} unique values)"
                     )
+                # else: skip this direction, reverse will be kept
+            else:
+                # No conflict, keep this mapping
+                self.conditional_mappings[(parent_col, child_col)] = candidate['mapping']
+                logger.info(
+                    f"Learned conditional correlation: {parent_col} → {child_col} "
+                    f"(overlap={candidate['overlap']:.2%})"
+                )
 
     def learn_zip_code_patterns(self):
         """
@@ -1950,27 +1986,75 @@ class Dataset:
         that are invalid for the given parent with valid ones sampled from
         the learned distribution.
         
+        IMPORTANT: Applies mappings in priority order:
+        1. Geographic hierarchy (country → city) - highest priority
+        2. Other semantic mappings (first_name → last_name)
+        
+        Once a child column is processed by a higher-priority mapping,
+        lower-priority mappings to the same child are skipped to avoid conflicts.
+        
         Also applies:
         - Zip code format correction based on country
         - Gender correction based on first name
         """
-        # Apply standard conditional mappings (country→city, etc.)
-        if self.conditional_mappings:
-            for (parent_col, child_col), mapping in self.conditional_mappings.items():
-                if parent_col not in data.columns or child_col not in data.columns:
-                    continue
+        if not self.conditional_mappings:
+            return data
+        
+        # Define priority patterns: columns that should take precedence as parents
+        # Geographic hierarchy: country → state → city
+        priority_parent_patterns = ['country', 'region', 'state', 'province']
+        
+        # Track which child columns have been processed by priority mappings
+        # These should not be overwritten by non-priority mappings
+        children_locked_by_priority = set()
+        
+        # Sort mappings: priority mappings first
+        def get_priority(mapping_key):
+            parent_col, child_col = mapping_key
+            parent_lower = parent_col.lower()
+            for i, pattern in enumerate(priority_parent_patterns):
+                if pattern in parent_lower:
+                    return i  # Lower number = higher priority
+            return len(priority_parent_patterns) + 1  # Lower priority
+        
+        sorted_mappings = sorted(
+            self.conditional_mappings.items(),
+            key=lambda x: get_priority(x[0])
+        )
+        
+        # Apply mappings in priority order
+        for (parent_col, child_col), mapping in sorted_mappings:
+            if parent_col not in data.columns or child_col not in data.columns:
+                continue
+            
+            # Check if this is a priority parent
+            is_priority = any(p in parent_col.lower() for p in priority_parent_patterns)
+            
+            # Skip if this child column was already processed by a priority mapping
+            if child_col in children_locked_by_priority and not is_priority:
+                logger.debug(f"Skipping {parent_col} → {child_col} (child already locked by priority mapping)")
+                continue
+            
+            corrections_made = 0
+            # For each row, check if child value is valid for parent value
+            for idx in range(len(data)):
+                parent_val = data.iloc[idx][parent_col]
+                child_val = data.iloc[idx][child_col]
                 
-                # For each row, check if child value is valid for parent value
-                for idx in range(len(data)):
-                    parent_val = data.iloc[idx][parent_col]
-                    child_val = data.iloc[idx][child_col]
-                    
-                    if parent_val in mapping:
-                        valid_children = mapping[parent_val]
-                        if child_val not in valid_children and valid_children:
-                            # Sample a valid child value
-                            data.iloc[idx, data.columns.get_loc(child_col)] = np.random.choice(valid_children)
-                
+                if parent_val in mapping:
+                    valid_children = mapping[parent_val]
+                    if child_val not in valid_children and valid_children:
+                        # Sample a valid child value
+                        data.iloc[idx, data.columns.get_loc(child_col)] = np.random.choice(valid_children)
+                        corrections_made += 1
+            
+            # Lock this child column if processed by priority mapping
+            if is_priority:
+                children_locked_by_priority.add(child_col)
+            
+            if corrections_made > 0:
+                logger.debug(f"Applied conditional correlation: {parent_col} → {child_col} ({corrections_made} corrections)")
+            else:
                 logger.debug(f"Applied conditional correlation: {parent_col} → {child_col}")
         
         # Apply zip code format correction based on country
@@ -1981,6 +2065,8 @@ class Dataset:
 
         # Apply numeric correlation guardrails (data-driven, no metadata required)
         data = self._apply_numeric_correlations(data)
+        
+        return data
         
         return data
     
