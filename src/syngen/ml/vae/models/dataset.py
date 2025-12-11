@@ -515,6 +515,9 @@ class Dataset:
                 f"'{self.table_name}'"
             )
             columns.discard(column)
+            # Also remove from custom_categorical_columns if it's categorical type
+            if column_type == "categorical":
+                self.custom_categorical_columns.discard(column)
         setattr(
             self,
             f"{column_type}_columns",
@@ -709,6 +712,77 @@ class Dataset:
         
         return False
 
+    def _is_natural_language_column(self, col_data: pd.Series) -> bool:
+        """
+        Detect if a column contains natural language tokens (names, locations, labels).
+        
+        These columns should be categorical even with high cardinality because
+        CharBasedTextFeature generates gibberish for them.
+        
+        Detection is purely data-driven without any hardcoded column name hints.
+        
+        Characteristics:
+        - Short strings (avg < 30 chars)
+        - Mostly alphabetic (letters, spaces, common punctuation)
+        - Capitalized words (proper nouns pattern)
+        - No special formatting characters (@, /, :, etc.)
+        - Low digit ratio
+        """
+        str_data = col_data.astype(str)
+        
+        # Length check - natural language tokens are typically short
+        avg_len = str_data.str.len().mean()
+        if avg_len > 30:  # Too long - likely sentences or structured text
+            return False
+        if avg_len < 2:  # Too short - likely codes
+            return False
+        
+        # Check for formatting characters that indicate structured data
+        # These are strong negative indicators
+        at_ratio = str_data.str.contains('@', regex=False).mean()
+        if at_ratio > 0.1:  # Emails
+            return False
+        
+        slash_ratio = str_data.str.contains('/', regex=False).mean()
+        if slash_ratio > 0.2:  # Paths, dates
+            return False
+        
+        colon_ratio = str_data.str.contains(':', regex=False).mean()
+        if colon_ratio > 0.2:  # Times, URLs
+            return False
+        
+        # Check digit ratio - natural language has few digits
+        digit_ratio = str_data.str.count(r'\d').sum() / str_data.str.len().sum()
+        if digit_ratio > 0.3:  # Too many digits - likely IDs or codes
+            return False
+        
+        # Check if mostly alphabetic (letters, spaces, common punctuation for names)
+        # Pattern allows: letters, spaces, apostrophes, hyphens, dots, commas
+        alpha_pattern = r'^[A-Za-z\s\'\-\.\,]+$'
+        alpha_ratio = str_data.str.match(alpha_pattern, na=False).mean()
+        
+        # Check for capitalized words pattern (typical for proper nouns)
+        cap_pattern = r'^[A-Z]'
+        cap_ratio = str_data.str.match(cap_pattern, na=False).mean()
+        
+        # Check for word-like structure (contains spaces between words)
+        # Names like "New York", "Mary Jane" have spaces
+        has_spaces = str_data.str.contains(' ', regex=False).mean()
+        
+        # Strong indicator: high alpha ratio + capitalized + short
+        if alpha_ratio > 0.9 and cap_ratio > 0.7 and avg_len < 25:
+            return True
+        
+        # Also accept: high alpha ratio + short even without caps (lowercase names)
+        if alpha_ratio > 0.95 and avg_len < 20:
+            return True
+        
+        # Accept multi-word proper nouns (cities like "New York")
+        if alpha_ratio > 0.85 and cap_ratio > 0.8 and has_spaces > 0.2:
+            return True
+        
+        return False
+
     def _define_categorical_columns(self):
         """
         Define the list of categorical columns based on the count of unique values in the column.
@@ -716,6 +790,7 @@ class Dataset:
         Uses a hybrid approach:
         1. Fast checks for known patterns (numeric, email, UUID)
         2. Entropy-based detection for structured text (dates, phones, IPs, etc.)
+        3. Natural language detection for tokens like names, locations, labels
         
         Note: Threshold is 100 to handle columns like US states (50), countries, etc.
         For small datasets (< 200 rows), thresholds are adjusted for better stability.
@@ -741,7 +816,9 @@ class Dataset:
         # Scale by dataset size: for small datasets, require lower absolute threshold
         # For small datasets: more aggressive categorical to improve stability
         if is_small_dataset:
-            LOW_UNIQUE_THRESHOLD = min(15, max(3, n_rows // 10))  # ~10% of rows or 15
+            # For very small datasets, allow up to n_rows unique values to be categorical
+            # This handles edge cases like 3-row datasets where all values may be unique
+            LOW_UNIQUE_THRESHOLD = min(15, max(4, n_rows // 10 + 1))  # At least 4, or ~10% + 1
         else:
             LOW_UNIQUE_THRESHOLD = min(20, max(1, n_rows // 50))  # ~2% of rows or 20
         
@@ -779,6 +856,13 @@ class Dataset:
             # Fast check: Skip mostly numeric strings (will be cast to int/float)
             numeric_ratio = str_data.str.match(r'^-?\d+\.?\d*$', na=False).mean()
             if numeric_ratio > 0.8:
+                continue
+            
+            # PRIORITY 2: Natural language columns -> force categorical even with high cardinality
+            # CharBasedTextFeature generates gibberish for names, locations, labels
+            if self._is_natural_language_column(col_data):
+                self.categorical_columns.add(col)
+                logger.info(f"Column '{col}' detected as natural language, forcing categorical")
                 continue
             
             # Entropy-based check: Skip structured text (dates, phones, IPs, etc.)
@@ -860,8 +944,9 @@ class Dataset:
             email_columns = data_subset.columns[filter_mask]
 
             # Update the email_columns attribute
+            # Exclude binary columns and custom categorical (user override takes priority)
             self.email_columns = (
-                set(email_columns) - self.categorical_columns - self.binary_columns
+                set(email_columns) - self.binary_columns - self.custom_categorical_columns
             )
 
     def _set_phone_columns(self):
@@ -1109,12 +1194,21 @@ class Dataset:
         """
         Set up the list of date columns
         """
+        # Get all potential date columns - check categorical too since dates may have been
+        # classified as categorical first due to low unique count
+        potential_date_cols = list(self.str_columns | self.categorical_columns)
+        # Filter to only string-like columns
+        string_cols = [col for col in potential_date_cols 
+                      if col in self.df.columns and self.df[col].dtype == 'object' 
+                      or str(self.df[col].dtype).startswith('string')]
+        
+        # Exclude custom categorical columns (user override takes priority)
         self.date_columns = (
-            get_date_columns(self.df, list(self.str_columns))
+            get_date_columns(self.df, string_cols)
             - self.email_columns
-            - self.categorical_columns
             - self.binary_columns
             - self.long_text_columns
+            - self.custom_categorical_columns
         )
 
     def _remove_non_existent_columns(self, columns: list, key: str, key_type: str) -> list:
@@ -1371,8 +1465,22 @@ class Dataset:
             - self.uuid_columns
         )
         self.categorical_columns -= self.long_text_columns
+        # Remove email columns from categorical (email detection has priority)
+        # BUT preserve custom categorical columns set by user metadata
+        auto_detected_categorical = self.categorical_columns - self.custom_categorical_columns
+        self.categorical_columns = (
+            self.custom_categorical_columns | 
+            (auto_detected_categorical - self.email_columns)
+        )
         self._set_date_columns()
         self.str_columns -= self.date_columns
+        # Remove date columns from categorical (date detection has priority)
+        # BUT preserve custom categorical columns set by user metadata
+        auto_detected_categorical = self.categorical_columns - self.custom_categorical_columns
+        self.categorical_columns = (
+            self.custom_categorical_columns | 
+            (auto_detected_categorical - self.date_columns)
+        )
         self.uuid_columns = self.uuid_columns - self.categorical_columns - self.binary_columns
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
@@ -1396,6 +1504,13 @@ class Dataset:
             column for column, data_type in self.fields.items() if data_type == "string"
         )
         self.categorical_columns -= self.long_text_columns
+        # Remove email columns from categorical (email detection has priority)
+        # BUT preserve custom categorical columns set by user metadata
+        auto_detected_categorical = self.categorical_columns - self.custom_categorical_columns
+        self.categorical_columns = (
+            self.custom_categorical_columns | 
+            (auto_detected_categorical - self.email_columns)
+        )
         self.str_columns = (
             self.str_columns
             - self.categorical_columns
@@ -1408,6 +1523,13 @@ class Dataset:
         )
         self._set_date_columns()
         self.str_columns -= self.date_columns
+        # Remove date columns from categorical (date detection has priority)
+        # BUT preserve custom categorical columns set by user metadata
+        auto_detected_categorical = self.categorical_columns - self.custom_categorical_columns
+        self.categorical_columns = (
+            self.custom_categorical_columns | 
+            (auto_detected_categorical - self.date_columns)
+        )
         self.uuid_columns = self.uuid_columns - self.categorical_columns - self.binary_columns
         self.uuid_columns_types = {
             k: v for k, v in self.uuid_columns_types.items() if k in self.uuid_columns
@@ -1594,6 +1716,8 @@ class Dataset:
         - USA/France/Germany: 5-digit numeric
         - UK: Format like 'SW5B 9AC' (postcodes)
         - Canada: Format like 'M1H 1M7' (postal codes)
+        - Japan: Format like '100-0001' (dash-separated)
+        - Brazil: Format like '01310-100' (dash-separated)
         """
         # Find zip code column
         zip_patterns = ['zip', 'postal', 'postcode', 'zip_code', 'postal_code']
@@ -1627,32 +1751,45 @@ class Dataset:
             for country in self.df[country_col].unique():
                 country_zips = self.df[self.df[country_col] == country][zip_col].dropna()
                 if len(country_zips) > 0:
-                    # Analyze pattern
+                    # Analyze pattern from first sample
                     sample_zip = str(country_zips.iloc[0])
+                    
+                    # Pure numeric (USA, France, Germany, Australia, Spain, etc.)
                     if sample_zip.replace(' ', '').isdigit():
-                        # Numeric zip (USA, France, Germany)
                         self.country_zip_patterns[country] = {
                             'type': 'numeric',
                             'length': len(sample_zip.replace(' ', '')),
                             'format': sample_zip
                         }
+                    # Dash-separated format (Japan: 100-0001, Brazil: 01310-100)
+                    elif '-' in sample_zip and sample_zip.replace('-', '').isdigit():
+                        self.country_zip_patterns[country] = {
+                            'type': 'dash_numeric',
+                            'format': sample_zip
+                        }
+                    # Space-separated alphanumeric (UK, Canada)
                     elif ' ' in sample_zip and len(sample_zip) >= 6:
-                        # UK or Canada format
                         parts = sample_zip.split()
                         if len(parts) == 2:
                             first_part = parts[0]
-                            # UK: starts with letters, has mix of letters/digits
-                            # Canada: letter-digit-letter pattern
+                            # Canada: letter-digit-letter pattern (e.g., M5H)
                             if len(first_part) == 3 and first_part[1].isdigit():
                                 self.country_zip_patterns[country] = {
                                     'type': 'canada',
                                     'format': sample_zip
                                 }
                             else:
+                                # UK format (e.g., SW1A)
                                 self.country_zip_patterns[country] = {
                                     'type': 'uk',
                                     'format': sample_zip
                                 }
+                    # Any other format - store as template for character-by-character generation
+                    else:
+                        self.country_zip_patterns[country] = {
+                            'type': 'template',
+                            'format': sample_zip
+                        }
             
             logger.info(f"Learned zip code patterns for {len(self.country_zip_patterns)} countries")
         
