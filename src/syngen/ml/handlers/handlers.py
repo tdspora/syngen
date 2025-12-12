@@ -73,6 +73,7 @@ class BaseHandler(AbstractHandler):
             batch_size=kwargs["batch_size"],
             main_process=kwargs["main_process"],
             process=kwargs["process"],
+            random_seed=kwargs.get("random_seed"),
         )
 
 
@@ -262,6 +263,7 @@ class VaeInferHandler(BaseHandler):
             batch_size=self.batch_size,
             main_process=self.type_of_process,
             process="infer",
+            random_seed=self.random_seed,
         )
 
     def _prepare_dir(self):

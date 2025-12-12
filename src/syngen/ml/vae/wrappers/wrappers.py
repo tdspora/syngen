@@ -63,6 +63,7 @@ class VAEWrapper(BaseWrapper):
     main_process: str
     batch_size: int
     log_level: str
+    random_seed: Optional[int] = field(default=None)
     losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
@@ -399,7 +400,7 @@ class VAEWrapper(BaseWrapper):
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
             else:
-                self.model.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                self.model.save_weights(str(pth / "vae_best_weights_tmp.weights.h5"))
                 loss_grows_num_epochs = 0
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
@@ -424,7 +425,7 @@ class VAEWrapper(BaseWrapper):
             prev_total_loss = mean_loss
 
             if loss_grows_num_epochs == es_patience:
-                self.model.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                self.model.load_weights(str(pth / "vae_best_weights_tmp.weights.h5"))
                 logger.info(
                     f"The loss does not become lower for "
                     f"{loss_grows_num_epochs} epochs in a row. "
@@ -437,12 +438,8 @@ class VAEWrapper(BaseWrapper):
 
     @staticmethod
     def _create_optimizer(learning_rate):
-        import platform
-        if platform.processor() == 'arm':
-            logger.info('Mac ARM processor is detected. Legacy Adam optimizer has been created.')
-            return tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-        else:
-            return tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        import keras
+        return keras.optimizers.Adam(learning_rate=learning_rate)
 
     def __create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
@@ -468,27 +465,79 @@ class VAEWrapper(BaseWrapper):
         dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
         return dataset.batch(self.batch_size, drop_remainder=True)
 
+    def _compute_kl_loss(self) -> tf.Tensor:
+        """
+        Compute KL divergence loss from the VAE's latent space.
+        KL(q(z|x) || p(z)) where p(z) is standard normal N(0,1).
+        
+        Formula: -0.5 * sum(1 + log_sigma - mu^2 - exp(log_sigma))
+        """
+        mu = self.vae.mu
+        log_sigma = self.vae.log_sigma
+        
+        kl_loss = -0.5 * tf.reduce_sum(
+            1 + log_sigma - tf.square(mu) - tf.exp(log_sigma),
+            axis=-1
+        )
+        return tf.reduce_mean(kl_loss)
+
     def _train_step(self, batch: Tuple[tf.Tensor]):
         with tf.GradientTape() as tape:
-            self.model(batch)
+            # Forward pass - this will trigger loss computation in FeatureLossLayers
+            self.model(batch, training=True)
 
-            # Compute reconstruction loss
-            loss = sum(self.model.losses)
+            # Get losses from the model (populated by FeatureLossLayer.add_loss)
+            losses = self.model.losses
+            if losses:
+                reconstruction_loss = tf.add_n(losses) if len(losses) > 1 else losses[0]
+            else:
+                reconstruction_loss = tf.constant(0.0)
+
+            # Compute KL divergence loss if kl_weight > 0
+            kl_weight = getattr(self.vae, 'kl_weight', 0.0)
+            if kl_weight > 0:
+                kl_loss = self._compute_kl_loss()
+                loss = reconstruction_loss + kl_weight * kl_loss
+            else:
+                kl_loss = tf.constant(0.0)
+                loss = reconstruction_loss
+
+            # Get feature names for logging
             order_of_features = list(self.vae.feature_losses.keys())
-            kl_loss = self.model.losses[-1].numpy()
-            feature_losses = {
-                name: loss.numpy()
-                for name, loss in
-                zip(order_of_features, self.model.losses[:-1])
-            }
 
-        self.optimizer.minimize(
-            loss=loss,
-            var_list=self.model.trainable_weights,
-            tape=tape
-        )
+            # Map losses to feature names by layer name, not by index
+            # Build a mapping from loss layer name to loss value
+            loss_name_to_value = {}
+            for layer_loss in losses:
+                # Try to get the layer name from the loss tensor's _keras_history
+                # _keras_history: (layer, node_index, tensor_index)
+                layer = getattr(layer_loss, '_keras_history', [None])[0]
+                layer_name = getattr(layer, 'name', None)
+                if layer_name is not None:
+                    loss_name_to_value[layer_name] = float(layer_loss.numpy())
+
+            feature_losses = {}
+            for name in order_of_features:
+                # Use the loss value if present, else 0.0
+                feature_losses[name] = loss_name_to_value.get(name, 0.0)
+
+        # Compute gradients and apply them
+        gradients = tape.gradient(loss, self.model.trainable_weights)
+        
+        # Filter out None gradients to prevent apply_gradients from failing
+        # None gradients can occur for variables not connected to the loss
+        grads_and_vars = [
+            (g, v) for g, v in zip(gradients, self.model.trainable_weights) 
+            if g is not None
+        ]
+        if grads_and_vars:
+            self.optimizer.apply_gradients(grads_and_vars)
+
         self.loss_metric(loss)
-        return loss, kl_loss, feature_losses
+
+        # Convert kl_loss to float for return value
+        kl_loss_value = float(kl_loss.numpy()) if hasattr(kl_loss, 'numpy') else float(kl_loss)
+        return loss, kl_loss_value, feature_losses
 
     @staticmethod
     def display_losses(feature_losses: Dict):
@@ -574,7 +623,8 @@ class VanillaVAEWrapper(VAEWrapper):
             main_process: str,
             batch_size: int,
             latent_dim: int = 10,
-            latent_components: int = 30):
+            latent_components: int = 30,
+            random_seed: Optional[int] = None):
 
         log_level = os.getenv("LOGURU_LEVEL")
 
@@ -587,7 +637,8 @@ class VanillaVAEWrapper(VAEWrapper):
             process,
             main_process,
             batch_size,
-            log_level
+            log_level,
+            random_seed,
         )
         self.latent_dim = min(latent_dim, int(len(self.dataset.columns) / 2))
         self.vae = CVAE(
@@ -596,6 +647,7 @@ class VanillaVAEWrapper(VAEWrapper):
             latent_dim=latent_dim,
             latent_components=min(latent_components, latent_dim * 2),
             intermediate_dim=128,
+            random_seed=random_seed,
         )
         self.vae.build_model()
         if self.process == "infer":

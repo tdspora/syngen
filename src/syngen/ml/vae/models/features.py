@@ -3,10 +3,11 @@ from typing import Union, List
 from lazy import lazy
 from loguru import logger
 
+import keras
+import keras.ops as ops
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import tensorflow.keras.backend as K
 from scipy.stats import shapiro, kurtosis
 from sklearn.preprocessing import (
     StandardScaler,
@@ -14,8 +15,8 @@ from sklearn.preprocessing import (
     QuantileTransformer,
     OneHotEncoder
 )
-from tensorflow.keras import losses
-from tensorflow.keras.layers import (
+from keras import losses
+from keras.layers import (
     Bidirectional,
     Dense,
     Input,
@@ -31,6 +32,7 @@ from syngen.ml.utils import (
     datetime_to_timestamp,
     convert_to_date_string
 )
+from syngen.ml.vae.models.custom_layers import get_seed_generator
 
 KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
 
@@ -324,9 +326,11 @@ class ContinuousFeature(BaseFeature):
 
         low = self.weight_randomizer[0]
         high = self.weight_randomizer[1]
-        random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
+        random_weight = keras.random.uniform(
+            shape=(1,), minval=low, maxval=high, seed=get_seed_generator()
+        )
 
-        return random_weight * tf.keras.losses.MSE(self.input, self.decoder)
+        return random_weight * keras.losses.mean_squared_error(self.input, self.decoder)
 
 
 class CategoricalFeature(BaseFeature):
@@ -449,9 +453,11 @@ class CategoricalFeature(BaseFeature):
 
         low = self.weight_randomizer[0]
         high = self.weight_randomizer[1]
-        random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
+        random_weight = keras.random.uniform(
+            shape=(1,), minval=low, maxval=high, seed=get_seed_generator()
+        )
 
-        return random_weight * tf.keras.losses.categorical_crossentropy(self.input, self.decoder)
+        return random_weight * keras.losses.categorical_crossentropy(self.input, self.decoder)
 
 
 class CharBasedTextFeature(BaseFeature):
@@ -506,7 +512,7 @@ class CharBasedTextFeature(BaseFeature):
             value=0.0,
         )
         # return data_gen
-        return K.one_hot(K.cast(data_gen, "int32"), self.vocab_size)
+        return tf.one_hot(tf.cast(data_gen, "int32"), self.vocab_size)
 
     @staticmethod
     def _top_p_filtering(
@@ -642,9 +648,9 @@ class CharBasedTextFeature(BaseFeature):
         if not hasattr(self, "decoder"):
             Exception("Decoder isn't created")
 
-        return self.weight * K.mean(
-            tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
-                labels=self.input, logits=self.decoder
+        return self.weight * ops.mean(
+            keras.losses.categorical_crossentropy(
+                y_true=self.input, y_pred=self.decoder, from_logits=True
             )
         )
 
@@ -794,6 +800,8 @@ class DateFeature(BaseFeature):
 
         low = self.weight_randomizer[0]
         high = self.weight_randomizer[1]
-        random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
+        random_weight = keras.random.uniform(
+            shape=(1,), minval=low, maxval=high, seed=get_seed_generator()
+        )
 
-        return random_weight * tf.keras.losses.MSE(self.input, self.decoder)
+        return random_weight * keras.losses.mean_squared_error(self.input, self.decoder)

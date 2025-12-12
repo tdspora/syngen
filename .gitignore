@@ -55,3 +55,6 @@ build/
 dist/
 *.egg-info/
 *.egg
+
+# Syngen test data
+test_data/
