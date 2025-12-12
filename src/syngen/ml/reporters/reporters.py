@@ -1,13 +1,4 @@
-from abc import abstractmethod
-from typing import (
-    Dict,
-    Tuple,
-    Optional,
-    Callable,
-    Union,
-    List,
-    Set
-)
+from typing import Dict, Tuple, Optional, Callable, Union, List, Set, Literal
 import itertools
 from collections import defaultdict
 from copy import deepcopy
@@ -30,17 +21,14 @@ from syngen.ml.utils import ProgressBarHandler
 
 
 class Reporter:
-    """
-    Abstract class for reporters
-    """
-
     def __init__(
         self,
         table_name: str,
         paths: Dict[str, str],
         config: Dict[str, str],
         metadata: Dict,
-        loader: Optional[Callable[[str], pd.DataFrame]] = None
+        loader: Optional[Callable[[str], pd.DataFrame]] = None,
+        type_of_process: Literal["train", "infer"] = "train"
     ):
         self.table_name = table_name
         self.paths = paths
@@ -51,6 +39,7 @@ class Reporter:
         self.columns_nan_labels = dict()
         self.na_values = dict()
         self.technical_columns = self._fetch_technical_columns()
+        self.type_of_process = type_of_process
 
     def _fetch_technical_columns(self) -> Set[str]:
         """
@@ -194,13 +183,6 @@ class Reporter:
             date_columns,
         )
 
-    @abstractmethod
-    def report(self, **kwargs):
-        """
-        Generate the report for certain test
-        """
-        pass
-
 
 class Report:
     """
@@ -338,11 +320,12 @@ class AccuracyReporter(Reporter):
             date_columns,
         ) = self.preprocess_data(original, synthetic)
         accuracy_test = AccuracyTest(
-            original,
-            synthetic,
-            self.paths,
-            self.table_name,
-            self.config
+            original=original,
+            synthetic=synthetic,
+            paths=self.paths,
+            table_name=self.table_name,
+            type_of_process=self.type_of_process,
+            config=self.config
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),

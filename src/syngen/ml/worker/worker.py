@@ -48,9 +48,8 @@ class Worker:
         )
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
-        # The validation of the initial metadata provided by the user
-        self.__validate_schema()
         self._update_metadata()
+        self.__validate_schema()
         self._clean_up()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
@@ -130,7 +129,6 @@ class Worker:
         """
         ValidationSchema(
             metadata=self.metadata,
-            metadata_path=self.metadata_path,
             validation_source=self.validation_source,
             process=self.type_of_process
         ).validate_schema()
@@ -233,7 +231,7 @@ class Worker:
         if self.metadata_path:
             self._update_metadata_for_tables()
             self.metadata.pop("global", None)
-        if self.table_name:
+        elif self.table_name:
             self._update_metadata_for_table()
 
     def __fetch_metadata(self) -> Dict:
@@ -243,7 +241,7 @@ class Worker:
         if self.metadata_path:
             metadata = MetadataLoader(path=self.metadata_path).load_data()
             return metadata
-        if self.table_name:
+        elif self.table_name:
             source = self.settings.get("source")
             metadata = {
                 self.table_name: {

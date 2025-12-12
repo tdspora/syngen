@@ -1,5 +1,5 @@
 import os
-from typing import Optional, List
+from typing import Optional, List, Union, Tuple
 
 import click
 from loguru import logger
@@ -8,16 +8,104 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
-    validate_parameter_reports,
+    get_reports,
     fetch_env_variables
 )
 from syngen.ml.validation_schema import ReportTypes
 
 
-validate_reports = validate_parameter_reports(
-    report_types=ReportTypes().train_report_types,
-    full_list=ReportTypes().full_list_of_train_report_types
-)
+def validate_required_parameters(
+    metadata_path: Optional[str] = None,
+    source: Optional[str] = None,
+    table_name: Optional[str] = None
+):
+    """
+    Validate that required parameters are provided
+    """
+    if not metadata_path and not source and not table_name:
+        raise AttributeError(
+            "It seems that the information of 'metadata_path' or 'table_name' "
+            "and 'source' is absent. Please provide either the information of "
+            "'metadata_path' or the information of 'source' and 'table_name'."
+        )
+    elif not metadata_path and source and not table_name:
+        raise AttributeError(
+            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information of 'metadata_path' or "
+            "the information of 'source' and 'table_name'."
+        )
+    elif not metadata_path and table_name and not source:
+        raise AttributeError(
+            "It seems that the information of 'metadata_path' or 'source' is absent. "
+            "Please provide either the information of 'metadata_path' or "
+            "the information of 'source' and 'table_name'."
+        )
+    elif metadata_path and table_name and source:
+        logger.warning(
+            "The information of 'metadata_path' was provided. "
+            "In this case the information of 'table_name' and 'source' will be ignored."
+        )
+    elif metadata_path and source:
+        logger.warning(
+            "The information of 'metadata_path' was provided. "
+            "In this case the information of 'source' will be ignored."
+        )
+    elif metadata_path and table_name:
+        logger.warning(
+            "The information of 'metadata_path' was provided. "
+            "In this case the information of 'table_name' will be ignored."
+        )
+
+
+def launch_train(
+    metadata_path: Optional[str] = None,
+    source: Optional[str] = None,
+    table_name: Optional[str] = None,
+    epochs: int = 10,
+    drop_null: bool = False,
+    row_limit: Optional[int] = None,
+    reports: Union[List[str], Tuple[str], str] = "none",
+    log_level: str = "INFO",
+    batch_size: int = 32,
+    fernet_key: Optional[str] = None
+):
+    setup_log_process(
+        type_of_process="train",
+        log_level=log_level,
+        table_name=table_name,
+        metadata_path=metadata_path
+    )
+
+    encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
+
+    worker = Worker(
+        table_name=table_name,
+        metadata_path=metadata_path,
+        settings={
+            "source": source,
+            "epochs": epochs,
+            "drop_null": drop_null,
+            "row_limit": row_limit,
+            "batch_size": batch_size,
+            "reports": get_reports(
+                value=reports,
+                report_types=ReportTypes(),
+                type_of_process="train"
+            ),
+        },
+        log_level=log_level,
+        type_of_process="train",
+        encryption_settings=encryption_settings
+    )
+
+    logger.info(
+        "The training process will be executed according to the information mentioned "
+        "in 'train_settings' in the metadata file. If appropriate information is absent "
+        "from the metadata file, then the values of parameters sent through CLI will be used. "
+        "Otherwise, the values of parameters will be defaulted."
+    )
+
+    worker.launch_train()
 
 
 @click.command()
@@ -64,7 +152,6 @@ validate_reports = validate_parameter_reports(
     default=("none",),
     type=click.UNPROCESSED,
     multiple=True,
-    callback=validate_reports,
     help="Controls the generation of quality reports. "
     "Might require significant time for big generated tables (>1000 rows). "
     "If set to 'sample', generates a sample report. "
@@ -95,7 +182,7 @@ validate_reports = validate_parameter_reports(
     help="The name of the environment variable that kept the value of the Fernet key "
          "to encrypt and decrypt the sensitive data stored on the disk",
 )
-def launch_train(
+def cli_launch_train(
     metadata_path: Optional[str],
     source: Optional[str],
     table_name: Optional[str],
@@ -123,77 +210,25 @@ def launch_train(
     batch_size
     fernet_key
     -------
-
     """
-    setup_log_process(
-        type_of_process="train",
-        log_level=log_level,
-        table_name=table_name,
-        metadata_path=metadata_path
-    )
-    if not metadata_path and not source and not table_name:
-        raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' "
-            "and 'source' is absent. Please provide either the information of "
-            "'metadata_path' or the information of 'source' and 'table_name'"
-        )
-    elif metadata_path and table_name and source:
-        logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored"
-        )
-        table_name = None
-    elif metadata_path and source:
-        logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored"
-        )
-    elif metadata_path and table_name:
-        logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored"
-        )
-        table_name = None
-    elif source and not table_name:
-        raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'"
-        )
-    elif table_name and not source:
-        raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'source' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'"
-        )
-    logger.info(
-        "The training process will be executed according to the information mentioned "
-        "in 'train_settings' in the metadata file. If appropriate information is absent "
-        "from the metadata file, then the values of parameters sent through CLI will be used. "
-        "Otherwise, the values of parameters will be defaulted"
-    )
-    settings = {
-        "source": source,
-        "epochs": epochs,
-        "drop_null": drop_null,
-        "row_limit": row_limit,
-        "batch_size": batch_size,
-        "reports": reports,
-    }
-
-    encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
-
-    worker = Worker(
-        table_name=table_name,
+    validate_required_parameters(
         metadata_path=metadata_path,
-        settings=settings,
-        log_level=log_level,
-        type_of_process="train",
-        encryption_settings=encryption_settings
+        source=source,
+        table_name=table_name
     )
-
-    worker.launch_train()
+    launch_train(
+        metadata_path=metadata_path,
+        source=source,
+        table_name=table_name,
+        epochs=epochs,
+        drop_null=drop_null,
+        row_limit=row_limit,
+        reports=reports,
+        log_level=log_level,
+        batch_size=batch_size,
+        fernet_key=fernet_key
+    )
 
 
 if __name__ == "__main__":
-    launch_train()
+    cli_launch_train()
