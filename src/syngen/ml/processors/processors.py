@@ -8,10 +8,10 @@ from slugify import slugify
 from loguru import logger
 import pandas as pd
 import numpy as np
-from flatten_json import unflatten_list
+from syngen.ml.flatten_json import unflatten_list, safe_flatten
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import fetch_unique_root, safe_flatten, fetch_config
+from syngen.ml.utils import fetch_unique_root, fetch_config
 from syngen.ml.context import get_context
 
 
