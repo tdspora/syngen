@@ -285,8 +285,14 @@ class CVAE:
             )
             latent_points = np.nan_to_num(latent_points, nan=0.0, posinf=0.0, neginf=0.0)
 
-        logger.info("Creating BayesianGaussianMixture")
-        self.latent_model = BayesianGaussianMixture(n_components=self.latent_components, n_init=10)
+        n_samples = int(getattr(latent_points, "shape", [len(latent_points)])[0])
+        n_components = max(1, min(int(self.latent_components), n_samples))
+
+        logger.info(
+            "Creating BayesianGaussianMixture"
+            + (f" (n_components capped to {n_components} due to n_samples={n_samples})" if n_components != int(self.latent_components) else "")
+        )
+        self.latent_model = BayesianGaussianMixture(n_components=n_components, n_init=10)
         logger.info("Fitting BayesianGaussianMixture")
         self.latent_model.fit(latent_points)
         logger.info("Finished fitting BayesianGaussianMixture")

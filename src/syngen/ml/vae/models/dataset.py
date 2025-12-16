@@ -1928,11 +1928,26 @@ class Dataset:
         if not name_col or not gender_col:
             return
         
-        # Learn majority gender per name
-        name_gender = self.df.groupby(name_col)[gender_col].agg(
-            lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else x.iloc[0]
-        ).to_dict()
-        
+        # Learn majority gender per name.
+        # IMPORTANT: during preprocessing, null genders may be represented as "?".
+        # Exclude such sentinel values (and blanks) so we never *force* generated output
+        # to contain the placeholder.
+        def _pick_gender(values: pd.Series):
+            cleaned = values.dropna()
+            if cleaned.empty:
+                return None
+            # Normalize to strings for sentinel filtering, but keep original values.
+            as_str = cleaned.astype(str).str.strip()
+            cleaned = cleaned[~as_str.isin(["?", ""]) ]
+            if cleaned.empty:
+                return None
+            mode = cleaned.mode()
+            return mode.iloc[0] if not mode.empty else cleaned.iloc[0]
+
+        name_gender = self.df.groupby(name_col)[gender_col].agg(_pick_gender).to_dict()
+        # Drop names without a reliable (non-sentinel) gender.
+        name_gender = {k: v for k, v in name_gender.items() if v is not None}
+
         self.name_gender_mapping = name_gender
         logger.info(f"Learned name→gender mapping for {len(name_gender)} names")
 

@@ -271,17 +271,9 @@ class CSVLoader(BaseDataLoader):
                     "1 character, the 'separator' will be set to ',' in accordance with "
                     "the standard 'RFC 4180'"
                 )
-            if (
-                "na_values" in format_params
-                and format_params.get("na_values", [])
-                and df.isnull().values.any()
-            ):
-                filtered_kwargs["na_rep"] = format_params["na_values"][0]
-                logger.warning(
-                    "Since the 'na_values' parameter in the 'format' sections is not empty, "
-                    "the missing values will be filled with "
-                    "the first value from the 'na_values' parameter"
-                )
+            # NOTE: `na_values` is a read-time parsing option; don't implicitly use it
+            # as a write-time replacement for missing values. If callers want a specific
+            # representation, they should pass `na_rep` explicitly.
 
             self._write_data(df, **filtered_kwargs)
 
@@ -293,6 +285,50 @@ class AvroLoader(BaseDataLoader):
     """
     Class for loading and saving data in '.avro' format
     """
+
+    @staticmethod
+    def _normalize_nullable_values_for_avro(df: pd.DataFrame, schema: Optional[Dict]) -> pd.DataFrame:
+        """Ensure Avro unions with null receive real Python None.
+
+        `pandavro.to_avro` can serialize pandas missing values (NaN/<NA>) in a surprising way
+        for nullable union fields. To keep writer-schema compatibility, convert missing markers
+        to `None` for fields whose schema explicitly allows `null`.
+        """
+        if df is None or schema is None:
+            return df
+
+        fields = schema.get("fields")
+        if not isinstance(fields, list):
+            return df
+
+        df = df.copy()
+        for field in fields:
+            name = field.get("name")
+            field_type = field.get("type")
+            if not name or name not in df.columns:
+                continue
+
+            # Identify unions (e.g. ["null", "string"]) that allow null.
+            union_types = field_type if isinstance(field_type, list) else None
+            allows_null = bool(union_types) and any(
+                (t == "null") or (isinstance(t, dict) and t.get("type") == "null")
+                for t in union_types
+            )
+            if not allows_null:
+                continue
+
+            series = df[name]
+            # Convert pandas missing markers to None so the Avro union selects the null branch.
+            series = series.where(~series.isna(), None)
+
+            # Common missing sentinel used by the pipeline for categorical/string fields.
+            # If the schema allows null, treat "?" as missing.
+            if series.dtype == object or str(series.dtype) == "string":
+                series = series.replace({"?": None})
+
+            df[name] = series
+
+        return df
 
     def _load_data(self) -> pd.DataFrame:
         """
@@ -344,6 +380,7 @@ class AvroLoader(BaseDataLoader):
 
         preprocessed_schema = self._get_preprocessed_schema(schema)
         df = AvroConvertor(preprocessed_schema, df).preprocessed_df
+        df = self._normalize_nullable_values_for_avro(df, schema)
         self._save_data(df, schema)
 
     def __load_original_schema(self):

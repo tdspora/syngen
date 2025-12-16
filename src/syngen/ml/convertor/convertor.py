@@ -32,6 +32,13 @@ class Convertor:
         for column, data_type in schema.get("fields", {}).items():
             if data_type in ["binary", "date", "string"]:
                 df[column] = df[column].astype("string")
+            elif data_type == "boolean":
+                # Preserve booleans as booleans (Avro schema boolean should not be coerced to int).
+                # If there are missing values, use pandas nullable boolean dtype.
+                if any(df[column].isnull()):
+                    df[column] = df[column].astype("boolean")
+                else:
+                    df[column] = df[column].astype(bool)
             elif data_type == "int":
                 if any(df[column].isnull()):
                     df[column] = df[column].astype("float64")
@@ -133,20 +140,34 @@ class AvroConvertor(Convertor):
         """
         Convert the schema of Avro file to unified format, preprocess dataframe
         """
+        def _extract_type_names(avro_type) -> set[str]:
+            if isinstance(avro_type, list):
+                names: set[str] = set()
+                for t in avro_type:
+                    names |= _extract_type_names(t)
+                return names
+            if isinstance(avro_type, dict):
+                return _extract_type_names(avro_type.get("type"))
+            if avro_type is None:
+                return {"null"}
+            return {str(avro_type)}
+
         converted_schema = dict()
         converted_schema["fields"] = dict()
         schema = schema if schema else dict()
         for column, data_type in schema.items():
             fields = converted_schema["fields"]
-            if "int" in data_type or "long" in data_type or "boolean" in data_type:
+            type_names = _extract_type_names(data_type)
+
+            if "boolean" in type_names:
+                fields[column] = "boolean"
+            elif type_names & {"int", "long"}:
                 fields[column] = "int"
-            elif "float" in data_type or "double" in data_type:
+            elif type_names & {"float", "double"}:
                 fields[column] = "float"
-            elif "string" in data_type:
+            elif "string" in type_names or "bytes" in type_names:
                 fields[column] = "string"
-            elif "bytes" in data_type:
-                fields[column] = "string"
-            elif "null" in data_type:
+            elif type_names == {"null"}:
                 fields[column] = "null"
             else:
                 message = (
