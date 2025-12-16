@@ -213,7 +213,7 @@ class VaeInferHandler(BaseHandler):
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
     temperature: float = field(kw_only=True, default=1.0)  # Sampling temperature for diversity
-    random_seed_list: List = field(init=False)
+    random_seeds_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)  # noqa: F405
     dataset: Dataset = field(init=False)
     original_schema: Dict = field(init=False)
@@ -474,10 +474,11 @@ class VaeInferHandler(BaseHandler):
         """
         Save generated data to the path
         """
-        DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
-            data=generated_data,
-            format=get_context().get_config(),
-        )
+        destination = self.paths["path_to_merged_infer"]
+        if destination.endswith(".avro"):
+            DataLoader(path=destination).save_data(generated_data, schema=self.original_schema)
+        else:
+            DataLoader(path=destination).save_data(generated_data, format=get_context().get_config())
 
     def handle(self, **kwargs):
         self._prepare_dir()

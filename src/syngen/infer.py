@@ -51,6 +51,13 @@ validate_reports = validate_parameter_reports(
     help="If specified, the generation is split into batches. This can save the RAM",
 )
 @click.option(
+    "--preview",
+    default=None,
+    type=click.IntRange(1),
+    help="If specified, saves an additional CSV preview file with the suffix '_preview' "
+         "containing the first N generated rows (useful for UI previews).",
+)
+@click.option(
     "--random_seed",
     default=None,
     type=click.IntRange(0),
@@ -99,6 +106,7 @@ def launch_infer(
     table_name: Optional[str],
     run_parallel: bool,
     batch_size: Optional[int],
+    preview: Optional[int],
     reports: List[str],
     random_seed: Optional[int],
     temperature: float,
@@ -150,6 +158,7 @@ def launch_infer(
         "size": size,
         "run_parallel": run_parallel,
         "batch_size": batch_size,
+        "preview": preview,
         "reports": reports,
         "random_seed": random_seed,
         "temperature": temperature

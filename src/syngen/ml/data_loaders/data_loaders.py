@@ -376,6 +376,11 @@ class AvroLoader(BaseDataLoader):
         """
         Preprocess schema and dataframe
         """
+        # `pandavro.from_avro()` may return an empty DataFrame without columns when
+        # the Avro file contains a schema but zero records. In this case, materialize
+        # the columns from the schema so downstream code can still reason about fields.
+        if df.empty and len(df.columns) == 0 and schema:
+            df = pd.DataFrame(columns=list(schema.keys()))
         convertor = AvroConvertor(schema, df)
         schema, preprocessed_df = convertor.converted_schema, convertor.preprocessed_df
         return preprocessed_df, schema

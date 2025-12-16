@@ -351,6 +351,27 @@ class TestKLLossComputation:
         
         rp_logger.info(SUCCESSFUL_MESSAGE)
 
+    def test_wrapper_kl_loss_is_finite_with_extreme_values(self, rp_logger):
+        """Ensure wrapper KL loss stays finite for extreme mu/log_sigma.
+
+        This guards against exp(log_sigma) overflow which can produce Inf/NaN and
+        destabilize training.
+        """
+        from types import SimpleNamespace
+        from syngen.ml.vae.wrappers.wrappers import VAEWrapper
+
+        wrapper = VAEWrapper.__new__(VAEWrapper)
+        wrapper.vae = SimpleNamespace(
+            mu=tf.constant([[1e6, -1e6]], dtype=tf.float32),
+            log_sigma=tf.constant([[1e6, -1e6]], dtype=tf.float32),
+        )
+
+        kl = wrapper._compute_kl_loss()
+        assert np.isfinite(float(kl.numpy()))
+        assert float(kl.numpy()) >= 0.0
+
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
 
 class TestTrainStepGradientHandling:
     """Tests for gradient handling in _train_step."""

@@ -1,0 +1,11 @@
+product_id,product_name,category,price,stock_quantity,weight_kg,launch_date,rating,is_available,description
+101,Wireless Mouse,Electronics,25.50,150,0.12,2022-05-10,4.5,true,Ergonomic wireless mouse with USB receiver
+102,Mechanical Keyboard,Electronics,89.99,75,0.85,2022-06-15,4.7,true,RGB backlit mechanical keyboard
+103,USB-C Cable,Accessories,12.99,500,0.05,2023-01-20,4.2,true,2-meter USB-C charging cable
+104,Laptop Stand,Accessories,45.00,200,1.20,2022-08-01,4.6,true,Adjustable aluminum laptop stand
+105,Noise Cancelling Headphones,Electronics,159.99,50,0.28,2022-09-12,4.8,true,Premium noise cancelling headphones
+106,Webcam HD,Electronics,79.99,100,0.18,2023-02-05,4.4,true,1080p HD webcam with microphone
+107,Phone Case,Accessories,19.99,300,0.08,2023-03-01,4.3,true,Protective silicone phone case
+108,Desk Lamp,Furniture,34.99,120,0.65,2022-07-20,4.5,true,LED desk lamp with adjustable brightness
+109,External SSD 1TB,Storage,149.99,80,0.15,2022-10-15,4.9,true,Portable external SSD drive
+110,Bluetooth Speaker,Electronics,69.99,90,0.35,2022-11-30,4.6,true,Waterproof portable Bluetooth speaker

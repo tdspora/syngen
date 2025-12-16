@@ -140,9 +140,19 @@ class Validator:
             self.merged_metadata[parent_table].get("infer_settings", {}).get("destination")
         )
         if destination is None:
+            source = self.merged_metadata[parent_table].get("train_settings", {}).get("source")
+            if not source:
+                train_cfg_path = (
+                    f"model_artifacts/resources/{slugify(parent_table)}/"
+                    f"vae/checkpoints/train_config.pkl"
+                )
+                if os.path.exists(train_cfg_path):
+                    train_cfg = fetch_config(train_cfg_path)
+                    source = getattr(train_cfg, "source", None)
+            suffix = ".avro" if str(source).endswith(".avro") else ".csv"
             destination = (
                 f"model_artifacts/tmp_store/{slugify(parent_table)}/"
-                f"merged_infer_{slugify(parent_table)}.csv"
+                f"merged_infer_{slugify(parent_table)}{suffix}"
             )
         if not DataLoader(path=destination).has_existed_path:
             message = (
@@ -170,11 +180,21 @@ class Validator:
         """
         destination = self.merged_metadata[table_name].get("infer_settings", {}).get("destination")
         if destination is None:
+            source = self.merged_metadata[table_name].get("train_settings", {}).get("source")
+            if not source:
+                train_cfg_path = (
+                    f"model_artifacts/resources/{slugify(table_name)}/"
+                    f"vae/checkpoints/train_config.pkl"
+                )
+                if os.path.exists(train_cfg_path):
+                    train_cfg = fetch_config(train_cfg_path)
+                    source = getattr(train_cfg, "source", None)
+            suffix = ".avro" if str(source).endswith(".avro") else ".csv"
             logger.warning(
                 f"As the destination path wasn't specified for the table - "
                 f"'{table_name}', the synthetic data will be stored "
                 f"at the default path - './model_artifacts/tmp_store/{slugify(table_name)}/"
-                f"merged_infer_{slugify(table_name)}.csv'"
+                f"merged_infer_{slugify(table_name)}{suffix}'"
             )
         if destination is not None and not DataLoader(path=destination).has_existed_destination:
             message = (

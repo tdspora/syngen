@@ -1,0 +1,51 @@
+customer_id,first_name,last_name,email,phone,age,gender,country,city,registration_date,last_purchase_date,total_spent,num_orders,is_premium,credit_score,annual_income,zip_code,ip_address,user_agent,preferred_category
+1,John,Smith,john.smith@email.com,+1-555-0101,34,Male,USA,New York,2020-01-15,2024-11-20,2547.89,23,TRUE,720,75000,10001,192.168.1.1,Mozilla/5.0 (Windows NT 10.0),Electronics
+2,Emily,Johnson,emily.j@email.com,+1-555-0102,28,Female,USA,Los Angeles,2020-03-22,2024-12-01,1823.45,18,TRUE,680,62000,90001,192.168.1.2,Mozilla/5.0 (Macintosh),Fashion
+3,Michael,Williams,m.williams@email.com,+1-555-0103,45,Male,UK,London,2019-11-08,2024-10-15,4521.30,45,TRUE,750,85000,SW1A 1AA,10.0.0.1,Mozilla/5.0 (X11; Linux),Books
+4,Sarah,Brown,sarah.b@email.com,,31,Female,Canada,Toronto,2021-02-14,2024-11-28,987.60,12,FALSE,650,58000,M5H 2N2,10.0.0.2,Mozilla/5.0 (iPhone),Beauty
+5,David,Jones,d.jones@email.com,+44-20-7946-0958,38,Male,UK,Manchester,2020-07-19,2024-12-03,3245.78,31,TRUE,700,72000,M1 1AE,,Mozilla/5.0 (iPad),Sports
+6,Jessica,Garcia,jessica.g@email.com,+1-555-0106,25,,USA,Chicago,2021-05-30,,654.20,8,FALSE,620,45000,60601,172.16.0.1,Mozilla/5.0 (Android),Fashion
+7,James,Miller,james.miller@email.com,+1-555-0107,52,Male,USA,Houston,2019-08-12,2024-09-22,5892.15,58,TRUE,780,95000,77001,172.16.0.2,Mozilla/5.0 (Windows NT 10.0),Electronics
+8,Linda,Davis,linda.d@email.com,+1-555-0108,29,Female,Canada,Vancouver,2020-12-05,2024-11-30,1456.89,15,FALSE,,52000,V6B 1A1,172.16.0.3,Mozilla/5.0 (Macintosh),Home
+9,Robert,Rodriguez,r.rodriguez@email.com,,41,Male,USA,Phoenix,2021-01-20,2024-10-28,2145.67,20,FALSE,640,68000,85001,192.168.2.1,Mozilla/5.0 (Linux),Books
+10,Maria,Martinez,maria.m@email.com,+34-91-123-4567,35,Female,Spain,Madrid,2020-09-17,2024-12-02,3678.90,35,TRUE,710,65000,28001,192.168.2.2,Mozilla/5.0 (iPhone),Fashion
+11,William,Hernandez,w.hernandez@email.com,+1-555-0111,48,Male,USA,Philadelphia,2019-12-03,2024-11-15,4123.45,40,TRUE,740,88000,19101,,Mozilla/5.0 (Windows NT 10.0),Electronics
+12,Patricia,Lopez,patricia.l@email.com,+1-555-0112,33,Female,USA,San Antonio,2020-04-28,2024-11-25,1987.60,19,FALSE,670,61000,78201,10.10.0.1,Mozilla/5.0 (Macintosh),Beauty
+13,Richard,Gonzalez,r.gonzalez@email.com,+1-555-0113,27,,USA,San Diego,2021-06-15,,876.50,10,FALSE,630,48000,92101,10.10.0.2,Mozilla/5.0 (Android),Sports
+14,Jennifer,Wilson,jennifer.w@email.com,+1-555-0114,36,Female,Canada,Montreal,2020-08-22,2024-12-01,2543.78,25,TRUE,690,70000,H2X 1Y6,10.10.0.3,Mozilla/5.0 (iPad),Home
+15,Charles,Anderson,charles.a@email.com,,44,Male,UK,Birmingham,2019-10-11,2024-10-30,3987.20,38,TRUE,730,82000,B1 1AA,192.168.3.1,Mozilla/5.0 (X11; Linux),Electronics
+16,Mary,Thomas,mary.thomas@email.com,+1-555-0116,30,Female,USA,Dallas,2021-03-08,2024-11-28,1234.56,14,FALSE,,55000,75201,192.168.3.2,Mozilla/5.0 (iPhone),Fashion
+17,Christopher,Taylor,c.taylor@email.com,+61-2-1234-5678,39,Male,Australia,Sydney,2020-05-19,2024-11-22,3456.89,32,TRUE,720,78000,2000,192.168.3.3,Mozilla/5.0 (Macintosh),Books
+18,Nancy,Moore,nancy.m@email.com,+1-555-0118,26,Female,USA,San Jose,2021-07-25,,789.40,9,FALSE,615,44000,95101,172.17.0.1,Mozilla/5.0 (Android),Beauty
+19,Daniel,Jackson,d.jackson@email.com,+1-555-0119,50,Male,USA,Austin,2019-09-14,2024-11-18,5234.67,52,TRUE,760,92000,78701,172.17.0.2,Mozilla/5.0 (Windows NT 10.0),Sports
+20,Lisa,Martin,lisa.martin@email.com,+1-555-0120,32,,Canada,Calgary,2020-11-30,2024-12-03,1876.54,17,FALSE,660,59000,T2P 0L1,,Mozilla/5.0 (iPad),Home
+21,Matthew,Lee,matthew.l@email.com,+1-555-0121,37,Male,USA,Jacksonville,2020-02-17,2024-10-25,2987.45,28,TRUE,700,74000,32099,10.20.0.1,Mozilla/5.0 (Linux),Electronics
+22,Betty,Perez,betty.p@email.com,,29,Female,USA,San Francisco,2021-04-12,,1654.32,16,FALSE,645,56000,94101,10.20.0.2,Mozilla/5.0 (iPhone),Fashion
+23,Donald,White,d.white@email.com,+49-30-1234-5678,46,Male,Germany,Berlin,2019-11-25,2024-11-20,4567.89,44,TRUE,745,86000,10115,10.20.0.3,Mozilla/5.0 (Macintosh),Books
+24,Sandra,Harris,sandra.h@email.com,+1-555-0124,31,Female,USA,Columbus,2020-06-09,2024-11-29,1765.43,18,FALSE,,60000,43004,192.168.4.1,Mozilla/5.0 (Android),Beauty
+25,Paul,Sanchez,paul.s@email.com,+1-555-0125,43,Male,USA,Fort Worth,2020-01-28,2024-12-02,3321.90,33,TRUE,715,79000,76101,192.168.4.2,Mozilla/5.0 (Windows NT 10.0),Sports
+26,Karen,Clark,karen.c@email.com,+1-555-0126,28,Female,Canada,Ottawa,2021-05-14,,987.65,11,FALSE,635,51000,K1A 0A9,192.168.4.3,Mozilla/5.0 (iPad),Home
+27,Steven,Ramirez,s.ramirez@email.com,+33-1-23-45-67-89,40,,France,Paris,2020-07-22,2024-11-27,3654.78,34,TRUE,725,81000,75001,,Mozilla/5.0 (X11; Linux),Electronics
+28,Donna,Lewis,donna.l@email.com,+1-555-0128,34,Female,USA,Charlotte,2020-03-15,2024-10-31,2123.45,21,FALSE,665,63000,28201,10.30.0.1,Mozilla/5.0 (iPhone),Fashion
+29,Kenneth,Robinson,k.robinson@email.com,+1-555-0129,49,Male,USA,Indianapolis,2019-12-08,2024-11-19,4876.32,47,TRUE,755,90000,46201,10.30.0.2,Mozilla/5.0 (Macintosh),Books
+30,Carol,Walker,carol.w@email.com,,27,Female,UK,Liverpool,2021-06-20,,876.54,10,FALSE,625,47000,L1 0AA,10.30.0.3,Mozilla/5.0 (Android),Beauty
+31,Kevin,Young,kevin.y@email.com,+1-555-0131,38,Male,USA,Seattle,2020-08-11,2024-12-01,3234.56,30,TRUE,705,76000,98101,172.18.0.1,Mozilla/5.0 (Windows NT 10.0),Sports
+32,Helen,Allen,helen.a@email.com,+1-555-0132,33,Female,Canada,Edmonton,2020-10-26,2024-11-26,1987.89,19,FALSE,,58000,T5J 0K1,172.18.0.2,Mozilla/5.0 (iPad),Home
+33,Brian,King,brian.k@email.com,+39-06-1234-5678,42,Male,Italy,Rome,2020-02-09,2024-10-28,3987.65,37,TRUE,730,83000,00118,172.18.0.3,Mozilla/5.0 (Linux),Electronics
+34,Michelle,Wright,michelle.w@email.com,+1-555-0134,30,,USA,Denver,2021-03-24,,1543.21,15,FALSE,650,57000,80201,192.168.5.1,Mozilla/5.0 (iPhone),Fashion
+35,George,Lopez,george.l@email.com,+1-555-0135,45,Male,USA,Washington,2019-09-30,2024-11-23,4321.09,42,TRUE,740,87000,20001,192.168.5.2,Mozilla/5.0 (Macintosh),Books
+36,Dorothy,Hill,dorothy.h@email.com,+1-555-0136,29,Female,USA,Boston,2021-04-17,2024-12-03,1234.67,13,FALSE,640,54000,02101,,Mozilla/5.0 (Android),Beauty
+37,Edward,Scott,e.scott@email.com,+1-555-0137,51,Male,USA,Nashville,2019-11-19,2024-10-20,5123.45,50,TRUE,765,93000,37201,10.40.0.1,Mozilla/5.0 (Windows NT 10.0),Sports
+38,Margaret,Green,margaret.g@email.com,+1-555-0138,35,Female,Canada,Winnipeg,2020-05-28,2024-11-30,2345.67,23,TRUE,695,69000,R3C 0V8,10.40.0.2,Mozilla/5.0 (iPad),Home
+39,Timothy,Adams,t.adams@email.com,,39,Male,USA,El Paso,2020-07-13,2024-10-26,2987.54,27,FALSE,685,71000,79901,10.40.0.3,Mozilla/5.0 (Linux),Electronics
+40,Laura,Baker,laura.b@email.com,+1-555-0140,26,Female,USA,Detroit,2021-08-05,,765.43,8,FALSE,620,46000,48201,172.19.0.1,Mozilla/5.0 (iPhone),Fashion
+41,Jason,Gonzalez,jason.g@email.com,+55-11-1234-5678,44,,Brazil,Sao Paulo,2020-01-22,2024-11-21,3876.90,36,TRUE,735,84000,01310-100,172.19.0.2,Mozilla/5.0 (Macintosh),Books
+42,Sarah,Nelson,sarah.n@email.com,+1-555-0142,32,Female,USA,Memphis,2020-09-03,2024-12-02,1876.54,18,FALSE,,61000,37501,172.19.0.3,Mozilla/5.0 (Android),Beauty
+43,Ryan,Carter,ryan.c@email.com,+1-555-0143,47,Male,USA,Portland,2019-10-27,2024-11-17,4567.32,43,TRUE,750,89000,97201,192.168.6.1,Mozilla/5.0 (Windows NT 10.0),Sports
+44,Kimberly,Mitchell,k.mitchell@email.com,+1-555-0144,31,Female,Canada,Quebec City,2020-12-14,2024-11-29,1654.89,16,FALSE,655,59000,G1R 1A1,,Mozilla/5.0 (iPad),Home
+45,Jeffrey,Perez,jeffrey.p@email.com,+1-555-0145,36,Male,USA,Las Vegas,2020-04-06,2024-10-30,3123.45,29,TRUE,710,77000,89101,10.50.0.1,Mozilla/5.0 (Linux),Electronics
+46,Deborah,Roberts,deborah.r@email.com,,28,Female,USA,Louisville,2021-05-23,,987.32,11,FALSE,630,50000,40201,10.50.0.2,Mozilla/5.0 (iPhone),Fashion
+47,Gary,Turner,gary.t@email.com,+81-3-1234-5678,41,Male,Japan,Tokyo,2020-06-18,2024-11-25,3765.43,35,TRUE,725,80000,100-0001,10.50.0.3,Mozilla/5.0 (Macintosh),Books
+48,Sharon,Phillips,sharon.p@email.com,+1-555-0148,33,Female,USA,Baltimore,2020-08-30,2024-12-01,2012.34,20,FALSE,670,64000,21201,192.168.7.1,Mozilla/5.0 (Android),Beauty
+49,Larry,Campbell,l.campbell@email.com,+1-555-0149,48,,USA,Milwaukee,2019-11-05,2024-11-19,4432.10,41,TRUE,745,88000,53201,192.168.7.2,Mozilla/5.0 (Windows NT 10.0),Sports
+50,Cynthia,Parker,cynthia.p@email.com,+1-555-0150,30,Female,Canada,Hamilton,2021-02-28,2024-11-27,1543.67,15,FALSE,,56000,L8P 0A1,192.168.7.3,Mozilla/5.0 (iPad),Home

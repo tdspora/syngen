@@ -124,6 +124,17 @@ class TrainingSettingsSchema(Schema):
     epochs = fields.Integer(validate=validate.Range(min=1), required=False)
     drop_null = fields.Boolean(required=False)
     row_limit = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
+    sampler_row_limit = fields.Integer(
+        validate=validate.Range(min=1),
+        allow_none=True,
+        required=False,
+    )
+    profile = fields.Boolean(required=False)
+    profile_batch_interval = fields.Integer(
+        validate=validate.Range(min=1),
+        allow_none=True,
+        required=False,
+    )
     batch_size = fields.Integer(validate=validate.Range(min=1), required=False)
     reports = fields.Raw(
         required=False,
@@ -161,6 +172,11 @@ class InferSettingsSchema(Schema):
 
     destination = fields.String(required=False)
     size = fields.Integer(validate=validate.Range(min=1), required=False)
+    preview = fields.Integer(
+        validate=validate.Range(min=1),
+        allow_none=True,
+        required=False,
+    )
     run_parallel = fields.Boolean(required=False)
     batch_size = fields.Integer(validate=validate.Range(min=1), allow_none=True, required=False)
     random_seed = fields.Integer(validate=validate.Range(min=0), allow_none=True, required=False)

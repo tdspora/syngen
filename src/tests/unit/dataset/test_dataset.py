@@ -288,6 +288,30 @@ def test_is_valid_binary_defined_in_csv_table(mock_fetch_config, rp_logger):
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_constant_boolean_column_is_detected_as_binary(mock_fetch_config, rp_logger):
+    rp_logger.info(
+        "Test that a constant boolean column (all true) is still detected as binary"
+    )
+    df, schema = DataLoader(
+        f"{DIR_NAME}/unit/dataset/fixtures/table_with_constant_bool_column.csv"
+    ).load_data()
+    assert str(df["flag"].dtype) in {"bool", "boolean"}
+
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    mock_dataset.launch_detection()
+
+    assert "flag" in mock_dataset.binary_columns
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
 def test_check_non_existent_columns(mock_fetch_config, rp_logger):
     rp_logger.info("Test the process of checking non-existent columns")
     df, schema = DataLoader(f"{DIR_NAME}/unit/dataset/fixtures/data.csv").load_data()
@@ -1028,4 +1052,139 @@ def test_cast_to_numeric_in_avro_file(mock_fetch_config, rp_logger):
     mock_dataset.launch_detection()
     assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     assert mock_dataset.float_columns == {"column6"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_conditional_correlations_restore_text_child_column(mock_fetch_config, rp_logger):
+    rp_logger.info(
+        "Test restoring a description-like text column via conditional correlations "
+        "(categorical parent → deterministic text child)"
+    )
+
+    df, schema = DataLoader(
+        f"{DIR_NAME}/unit/dataset/fixtures/table_with_product_description_mapping.csv"
+    ).load_data()
+
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    mock_dataset.launch_detection()
+
+    # Ensure the parent is treated as categorical and the child as non-categorical string.
+    mock_dataset.categorical_columns.add("product_name")
+    mock_dataset.categorical_columns.discard("description")
+    mock_dataset.str_columns.add("description")
+    mock_dataset.long_text_columns.discard("description")
+
+    mock_dataset.conditional_mappings = {}
+    mock_dataset.learn_conditional_correlations()
+
+    assert ("product_name", "description") in mock_dataset.conditional_mappings
+
+    generated = pd.DataFrame(
+        {
+            "product_name": ["Wireless Mouse", "USB-C Cable"],
+            "description": ["GIBBERISH 123", "RANDOM ###"],
+        }
+    )
+    corrected = mock_dataset._apply_conditional_correlations(generated)
+
+    assert corrected.loc[0, "description"] == "Ergonomic wireless mouse with USB receiver"
+    assert corrected.loc[1, "description"] == "2-meter USB-C charging cable"
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_conditional_correlations_restore_text_child_column_one_to_many(mock_fetch_config, rp_logger):
+    rp_logger.info(
+        "Test restoring a description-like text column via conditional correlations "
+        "when the parent maps to multiple valid text values"
+    )
+
+    df, schema = DataLoader(
+        f"{DIR_NAME}/unit/dataset/fixtures/table_with_product_description_one_to_many.csv"
+    ).load_data()
+
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    mock_dataset.launch_detection()
+
+    mock_dataset.categorical_columns.add("product_name")
+    mock_dataset.categorical_columns.discard("description")
+    mock_dataset.str_columns.add("description")
+    mock_dataset.long_text_columns.discard("description")
+
+    mock_dataset.conditional_mappings = {}
+    mock_dataset.learn_conditional_correlations()
+
+    assert ("product_name", "description") in mock_dataset.conditional_mappings
+    mapping = mock_dataset.conditional_mappings[("product_name", "description")]
+    assert set(mapping["Wireless Mouse"]) == {
+        "Ergonomic wireless mouse with USB receiver",
+        "Compact wireless mouse for travel",
+    }
+
+    generated = pd.DataFrame(
+        {
+            "product_name": ["Wireless Mouse", "USB-C Cable"],
+            "description": ["GIBBERISH 123", "RANDOM ###"],
+        }
+    )
+    corrected = mock_dataset._apply_conditional_correlations(generated)
+
+    assert corrected.loc[0, "description"] in mapping["Wireless Mouse"]
+    assert corrected.loc[1, "description"] in mapping["USB-C Cable"]
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_description_text_child_product_name_precedence_over_category(mock_fetch_config, rp_logger):
+    rp_logger.info(
+        "Test that product_name→description takes precedence over category→description "
+        "for description-like text children"
+    )
+
+    # Build a minimal dataset instance; we will directly inject conditional mappings
+    # to make the precedence behavior deterministic.
+    df = pd.DataFrame(
+        {
+            "product_name": ["A"],
+            "category": ["C"],
+            "description": ["gibberish"],
+        }
+    )
+    schema = {"format": "CSV", "fields": {}}
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="infer",
+    )
+
+    # Both mappings are applicable, but category→description would overwrite to descB
+    # if applied after product_name→description and if description isn't locked.
+    mock_dataset.conditional_mappings = {
+        ("product_name", "description"): {"A": ["descA"], "B": ["descB"]},
+        ("category", "description"): {"C": ["descB"]},
+    }
+
+    corrected = mock_dataset._apply_conditional_correlations(df.copy())
+    assert corrected.loc[0, "description"] == "descA"
+
     rp_logger.info(SUCCESSFUL_MESSAGE)

@@ -70,7 +70,7 @@ class Worker:
             if self.type_of_process == "train":
                 self._clean_training_artifacts(slugified_table)
             elif self.type_of_process == "infer":
-                self._clean_inference_artifacts(slugified_table)
+                self._clean_inference_artifacts(table, slugified_table)
 
     def _clean_training_artifacts(self, table):
         """
@@ -82,14 +82,16 @@ class Worker:
         self._remove_existed_artifact(resources_path)
         self._prepare_dirs(table)
 
-    def _clean_inference_artifacts(self, table):
+    def _clean_inference_artifacts(self, table_name: str, slugified_table: str):
         """
         Remove existing artifacts related to the previous inference process
         """
+        source = self.metadata.get(table_name, {}).get("train_settings", {}).get("source")
+        suffix = ".avro" if str(source).endswith(".avro") else ".csv"
         default_path_to_merged_infer = (
-            f"model_artifacts/tmp_store/{table}/merged_infer_{table}.csv"
+            f"model_artifacts/tmp_store/{slugified_table}/merged_infer_{slugified_table}{suffix}"
         )
-        success_file_path = f"model_artifacts/tmp_store/{table}/infer_message.success"
+        success_file_path = f"model_artifacts/tmp_store/{slugified_table}/infer_message.success"
 
         self._remove_existed_artifact(default_path_to_merged_infer)
         self._remove_existed_artifact(success_file_path)
@@ -198,7 +200,9 @@ class Worker:
         Update the table settings with the provided settings that are not already defined
         """
         for setting, value in settings_to_update.items():
-            if setting not in table_settings:
+            # Treat explicit nulls in metadata as "absent" so programmatic/CLI settings
+            # can take effect (e.g., infer_settings.preview: null).
+            if setting not in table_settings or table_settings.get(setting) is None:
                 table_settings[setting] = value
 
     def _update_metadata_for_tables(self):

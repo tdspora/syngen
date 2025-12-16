@@ -1,0 +1,101 @@
+customer_id,first_name,last_name,email,phone,age,gender,country,city,registration_date,last_purchase_date,total_spent,num_orders,is_premium,credit_score,annual_income,zip_code,preferred_category
+1,John,Smith,john.smith@email.com,+1-555-0101,34,Male,USA,New York,2020-01-15,2024-11-20,2547.89,23,TRUE,720,75000,10001,Electronics
+2,Emily,Johnson,emily.j@email.com,+1-555-0102,28,Female,USA,Los Angeles,2020-03-22,2024-12-01,1823.45,18,TRUE,680,62000,90001,Fashion
+3,Michael,Williams,m.williams@email.com,+1-555-0103,45,Male,UK,London,2019-11-08,2024-10-15,4521.30,45,TRUE,750,85000,SW1A 1AA,Books
+4,Sarah,Brown,sarah.b@email.com,+1-555-0104,31,Female,Canada,Toronto,2021-02-14,2024-11-28,987.60,12,FALSE,650,58000,M5H 2N2,Beauty
+5,David,Jones,d.jones@email.com,+44-20-7946-0958,38,Male,UK,Manchester,2020-07-19,2024-12-03,3245.78,31,TRUE,700,72000,M1 1AE,Sports
+6,Jessica,Garcia,jessica.g@email.com,+1-555-0106,25,Female,USA,Chicago,2021-05-30,2024-11-10,654.20,8,FALSE,620,45000,60601,Fashion
+7,James,Miller,james.miller@email.com,+1-555-0107,52,Male,USA,Houston,2019-08-12,2024-09-22,5892.15,58,TRUE,780,95000,77001,Electronics
+8,Linda,Davis,linda.d@email.com,+1-555-0108,29,Female,Canada,Vancouver,2020-12-05,2024-11-30,1456.89,15,FALSE,670,52000,V6B 1A1,Home
+9,Robert,Rodriguez,r.rodriguez@email.com,+1-555-0109,41,Male,USA,Phoenix,2021-01-20,2024-10-28,2145.67,20,FALSE,640,68000,85001,Books
+10,Maria,Martinez,maria.m@email.com,+34-91-123-4567,35,Female,Spain,Madrid,2020-09-17,2024-12-02,3678.90,35,TRUE,710,65000,28001,Fashion
+11,William,Hernandez,w.hernandez@email.com,+1-555-0111,48,Male,USA,Philadelphia,2019-12-03,2024-11-15,4123.45,40,TRUE,740,88000,19101,Electronics
+12,Patricia,Lopez,patricia.l@email.com,+1-555-0112,33,Female,USA,San Antonio,2020-04-28,2024-11-25,1987.60,19,FALSE,670,61000,78201,Beauty
+13,Richard,Gonzalez,r.gonzalez@email.com,+1-555-0113,27,Male,USA,San Diego,2021-06-15,2024-11-05,876.50,10,FALSE,630,48000,92101,Sports
+14,Jennifer,Wilson,jennifer.w@email.com,+1-555-0114,36,Female,Canada,Montreal,2020-08-22,2024-12-01,2543.78,25,TRUE,690,70000,H2X 1Y6,Home
+15,Charles,Anderson,charles.a@email.com,+44-121-496-0200,44,Male,UK,Birmingham,2019-10-11,2024-10-30,3987.20,38,TRUE,730,82000,B1 1AA,Electronics
+16,Mary,Thomas,mary.thomas@email.com,+1-555-0116,30,Female,USA,Dallas,2021-03-08,2024-11-28,1234.56,14,FALSE,655,55000,75201,Fashion
+17,Christopher,Taylor,c.taylor@email.com,+61-2-1234-5678,39,Male,Australia,Sydney,2020-05-19,2024-11-22,3456.89,32,TRUE,720,78000,2000,Books
+18,Nancy,Moore,nancy.m@email.com,+1-555-0118,26,Female,USA,San Jose,2021-07-25,2024-10-12,789.40,9,FALSE,615,44000,95101,Beauty
+19,Daniel,Jackson,d.jackson@email.com,+1-555-0119,50,Male,USA,Austin,2019-09-14,2024-11-18,5234.67,52,TRUE,760,92000,78701,Sports
+20,Lisa,Martin,lisa.martin@email.com,+1-555-0120,32,Female,Canada,Calgary,2020-11-30,2024-12-03,1876.54,17,FALSE,660,59000,T2P 0L1,Home
+21,Matthew,Lee,matthew.l@email.com,+1-555-0121,37,Male,USA,Jacksonville,2020-02-17,2024-10-25,2987.45,28,TRUE,700,74000,32099,Electronics
+22,Betty,Perez,betty.p@email.com,+1-555-0122,29,Female,USA,San Francisco,2021-04-12,2024-11-19,1654.32,16,FALSE,645,56000,94101,Fashion
+23,Donald,White,d.white@email.com,+49-30-1234-5678,46,Male,Germany,Berlin,2019-11-25,2024-11-20,4567.89,44,TRUE,745,86000,10115,Books
+24,Sandra,Harris,sandra.h@email.com,+1-555-0124,31,Female,USA,Columbus,2020-06-09,2024-11-29,1765.43,18,FALSE,665,60000,43004,Beauty
+25,Paul,Sanchez,paul.s@email.com,+1-555-0125,43,Male,USA,Fort Worth,2020-01-28,2024-12-02,3321.90,33,TRUE,715,79000,76101,Sports
+26,Karen,Clark,karen.c@email.com,+1-555-0126,28,Female,Canada,Ottawa,2021-05-14,2024-10-08,987.65,11,FALSE,635,51000,K1A 0A9,Home
+27,Steven,Ramirez,s.ramirez@email.com,+33-1-23-45-67-89,40,Male,France,Paris,2020-07-22,2024-11-27,3654.78,34,TRUE,725,81000,75001,Electronics
+28,Donna,Lewis,donna.l@email.com,+1-555-0128,34,Female,USA,Charlotte,2020-03-15,2024-10-31,2123.45,21,FALSE,665,63000,28201,Fashion
+29,Kenneth,Robinson,k.robinson@email.com,+1-555-0129,49,Male,USA,Indianapolis,2019-12-08,2024-11-19,4876.32,47,TRUE,755,90000,46201,Books
+30,Carol,Walker,carol.w@email.com,+44-151-123-4567,27,Female,UK,Liverpool,2021-06-20,2024-10-18,876.54,10,FALSE,625,47000,L1 0AA,Beauty
+31,Kevin,Young,kevin.y@email.com,+1-555-0131,38,Male,USA,Seattle,2020-08-11,2024-12-01,3234.56,30,TRUE,705,76000,98101,Sports
+32,Helen,Allen,helen.a@email.com,+1-555-0132,33,Female,Canada,Edmonton,2020-10-26,2024-11-26,1987.89,19,FALSE,675,58000,T5J 0K1,Home
+33,Brian,King,brian.k@email.com,+39-06-1234-5678,42,Male,Italy,Rome,2020-02-09,2024-10-28,3987.65,37,TRUE,730,83000,00118,Electronics
+34,Michelle,Wright,michelle.w@email.com,+1-555-0134,30,Female,USA,Denver,2021-03-24,2024-11-14,1543.21,15,FALSE,650,57000,80201,Fashion
+35,George,Lopez,george.l@email.com,+1-555-0135,45,Male,USA,Washington,2019-09-30,2024-11-23,4321.09,42,TRUE,740,87000,20001,Books
+36,Dorothy,Hill,dorothy.h@email.com,+1-555-0136,29,Female,USA,Boston,2021-04-17,2024-12-03,1234.67,13,FALSE,640,54000,02101,Beauty
+37,Edward,Scott,e.scott@email.com,+1-555-0137,51,Male,USA,Nashville,2019-11-19,2024-10-20,5123.45,50,TRUE,765,93000,37201,Sports
+38,Margaret,Green,margaret.g@email.com,+1-555-0138,35,Female,Canada,Winnipeg,2020-05-28,2024-11-30,2345.67,23,TRUE,695,69000,R3C 0V8,Home
+39,Timothy,Adams,t.adams@email.com,+1-555-0139,39,Male,USA,El Paso,2020-07-13,2024-10-26,2987.54,27,FALSE,685,71000,79901,Electronics
+40,Laura,Baker,laura.b@email.com,+1-555-0140,26,Female,USA,Detroit,2021-08-05,2024-11-07,765.43,8,FALSE,620,46000,48201,Fashion
+41,Jason,Gonzalez,jason.g@email.com,+55-11-1234-5678,44,Male,Brazil,Sao Paulo,2020-01-22,2024-11-21,3876.90,36,TRUE,735,84000,01310-100,Books
+42,Sarah,Nelson,sarah.n@email.com,+1-555-0142,32,Female,USA,Memphis,2020-09-03,2024-12-02,1876.54,18,FALSE,668,61000,37501,Beauty
+43,Ryan,Carter,ryan.c@email.com,+1-555-0143,47,Male,USA,Portland,2019-10-27,2024-11-17,4567.32,43,TRUE,750,89000,97201,Sports
+44,Kimberly,Mitchell,k.mitchell@email.com,+1-555-0144,31,Female,Canada,Quebec City,2020-12-14,2024-11-29,1654.89,16,FALSE,655,59000,G1R 1A1,Home
+45,Jeffrey,Perez,jeffrey.p@email.com,+1-555-0145,36,Male,USA,Las Vegas,2020-04-06,2024-10-30,3123.45,29,TRUE,710,77000,89101,Electronics
+46,Deborah,Roberts,deborah.r@email.com,+1-555-0146,28,Female,USA,Louisville,2021-05-23,2024-11-12,987.32,11,FALSE,630,50000,40201,Fashion
+47,Gary,Turner,gary.t@email.com,+81-3-1234-5678,41,Male,Japan,Tokyo,2020-06-18,2024-11-25,3765.43,35,TRUE,725,80000,100-0001,Books
+48,Sharon,Phillips,sharon.p@email.com,+1-555-0148,33,Female,USA,Baltimore,2020-08-30,2024-12-01,2012.34,20,FALSE,670,64000,21201,Beauty
+49,Larry,Campbell,l.campbell@email.com,+1-555-0149,48,Male,USA,Milwaukee,2019-11-05,2024-11-19,4432.10,41,TRUE,745,88000,53201,Sports
+50,Cynthia,Parker,cynthia.p@email.com,+1-555-0150,30,Female,Canada,Hamilton,2021-02-28,2024-11-27,1543.67,15,FALSE,652,56000,L8P 0A1,Home
+51,Anthony,Evans,anthony.e@email.com,+1-555-0151,37,Male,USA,Albuquerque,2020-03-19,2024-10-24,2876.45,26,TRUE,708,75000,87101,Electronics
+52,Ruth,Edwards,ruth.e@email.com,+1-555-0152,29,Female,USA,Tucson,2021-06-11,2024-11-16,1345.78,14,FALSE,642,53000,85701,Fashion
+53,Mark,Collins,mark.c@email.com,+1-555-0153,43,Male,USA,Fresno,2020-01-07,2024-11-22,3654.21,33,TRUE,722,79000,93701,Books
+54,Brenda,Stewart,brenda.s@email.com,+1-555-0154,32,Female,USA,Sacramento,2020-07-24,2024-12-03,1876.90,17,FALSE,663,60000,94203,Beauty
+55,Scott,Sanchez,scott.s@email.com,+1-555-0155,46,Male,USA,Mesa,2019-10-16,2024-11-20,4234.56,39,TRUE,738,85000,85201,Sports
+56,Angela,Morris,angela.m@email.com,+1-555-0156,31,Female,USA,Kansas City,2020-11-29,2024-11-28,1765.43,18,FALSE,658,59000,64101,Home
+57,Kevin,Rogers,kevin.r@email.com,+1-555-0157,40,Male,USA,Atlanta,2020-04-22,2024-10-29,3456.78,31,TRUE,715,78000,30301,Electronics
+58,Virginia,Reed,virginia.r@email.com,+1-555-0158,28,Female,USA,Colorado Springs,2021-07-08,2024-11-11,987.65,10,FALSE,628,49000,80901,Fashion
+59,Raymond,Cook,raymond.c@email.com,+1-555-0159,44,Male,USA,Raleigh,2020-02-13,2024-11-24,3987.32,36,TRUE,733,82000,27601,Books
+60,Janet,Morgan,janet.m@email.com,+1-555-0160,33,Female,USA,Omaha,2020-08-26,2024-12-02,2123.45,19,FALSE,672,62000,68101,Beauty
+61,Jerry,Bell,jerry.b@email.com,+1-555-0161,49,Male,USA,Miami,2019-12-19,2024-11-18,4654.32,44,TRUE,752,90000,33101,Sports
+62,Carolyn,Murphy,carolyn.m@email.com,+1-555-0162,30,Female,USA,Oakland,2021-03-16,2024-11-29,1654.21,15,FALSE,648,56000,94601,Home
+63,Dennis,Bailey,dennis.b@email.com,+1-555-0163,42,Male,USA,Minneapolis,2020-05-11,2024-10-27,3543.67,32,TRUE,720,80000,55401,Electronics
+64,Catherine,Rivera,catherine.r@email.com,+1-555-0164,27,Female,USA,Tulsa,2021-08-14,2024-11-09,876.54,9,FALSE,622,47000,74101,Fashion
+65,Frank,Cooper,frank.c@email.com,+1-555-0165,45,Male,USA,Arlington,2020-01-30,2024-11-21,4123.90,38,TRUE,742,86000,76001,Books
+66,Christine,Richardson,christine.r@email.com,+1-555-0166,31,Female,USA,New Orleans,2020-09-09,2024-12-01,1987.43,18,FALSE,666,61000,70112,Beauty
+67,Harold,Cox,harold.c@email.com,+1-555-0167,47,Male,USA,Wichita,2019-11-23,2024-11-17,4432.21,40,TRUE,748,88000,67201,Sports
+68,Diane,Howard,diane.h@email.com,+1-555-0168,34,Female,USA,Cleveland,2020-06-05,2024-11-26,2234.56,21,FALSE,678,64000,44101,Home
+69,Douglas,Ward,douglas.w@email.com,+1-555-0169,39,Male,USA,Tampa,2020-02-27,2024-10-30,3123.78,28,TRUE,712,76000,33601,Electronics
+70,Joyce,Torres,joyce.t@email.com,+1-555-0170,29,Female,USA,Bakersfield,2021-05-19,2024-11-13,1234.89,13,FALSE,636,52000,93301,Fashion
+71,Peter,Peterson,peter.p@email.com,+1-555-0171,41,Male,USA,Aurora,2020-07-31,2024-11-23,3654.32,33,TRUE,726,81000,80010,Books
+72,Evelyn,Gray,evelyn.g@email.com,+1-555-0172,32,Female,USA,Anaheim,2020-10-14,2024-12-03,1876.21,17,FALSE,662,60000,92801,Beauty
+73,Adam,Ramirez,adam.r@email.com,+1-555-0173,48,Male,USA,Honolulu,2019-09-26,2024-11-19,4567.89,42,TRUE,746,87000,96801,Sports
+74,Katherine,James,katherine.j@email.com,+1-555-0174,30,Female,USA,Santa Ana,2021-04-03,2024-11-28,1543.76,14,FALSE,650,57000,92701,Home
+75,Henry,Watson,henry.w@email.com,+1-555-0175,43,Male,USA,Corpus Christi,2020-01-14,2024-10-26,3876.54,35,TRUE,730,83000,78401,Electronics
+76,Martha,Brooks,martha.b@email.com,+1-555-0176,28,Female,USA,Riverside,2021-06-28,2024-11-15,1123.45,12,FALSE,632,51000,92501,Fashion
+77,Carl,Kelly,carl.k@email.com,+1-555-0177,46,Male,USA,Lexington,2020-03-02,2024-11-22,4234.67,39,TRUE,740,85000,40502,Books
+78,Judith,Sanders,judith.s@email.com,+1-555-0178,33,Female,USA,Stockton,2020-08-18,2024-12-02,2012.89,19,FALSE,668,62000,95201,Beauty
+79,Willie,Price,willie.p@email.com,+1-555-0179,50,Male,USA,Henderson,2019-10-09,2024-11-20,4876.43,46,TRUE,758,91000,89002,Sports
+80,Rose,Bennett,rose.b@email.com,+1-555-0180,31,Female,USA,Saint Paul,2020-12-22,2024-11-29,1654.32,16,FALSE,656,58000,55101,Home
+81,Joe,Wood,joe.w@email.com,+1-555-0181,38,Male,USA,Cincinnati,2020-05-07,2024-10-28,3234.21,29,TRUE,714,77000,45201,Electronics
+82,Theresa,Barnes,theresa.b@email.com,+1-555-0182,27,Female,USA,Pittsburgh,2021-07-21,2024-11-10,987.76,10,FALSE,626,48000,15201,Fashion
+83,Arthur,Ross,arthur.r@email.com,+1-555-0183,44,Male,USA,Greensboro,2020-02-25,2024-11-25,3765.89,34,TRUE,728,80000,27401,Books
+84,Frances,Henderson,frances.h@email.com,+1-555-0184,32,Female,USA,Anchorage,2020-09-21,2024-12-01,1987.54,18,FALSE,664,61000,99501,Beauty
+85,Ralph,Coleman,ralph.c@email.com,+1-555-0185,47,Male,USA,Plano,2019-11-12,2024-11-18,4321.76,40,TRUE,744,86000,75023,Sports
+86,Teresa,Jenkins,teresa.j@email.com,+1-555-0186,30,Female,USA,Lincoln,2021-02-06,2024-11-27,1765.89,17,FALSE,654,59000,68501,Home
+87,Eugene,Perry,eugene.p@email.com,+1-555-0187,42,Male,USA,Orlando,2020-06-13,2024-10-31,3543.21,31,TRUE,718,78000,32801,Electronics
+88,Norma,Powell,norma.p@email.com,+1-555-0188,29,Female,USA,Irvine,2021-08-29,2024-11-14,1234.65,13,FALSE,638,53000,92602,Fashion
+89,Philip,Long,philip.l@email.com,+1-555-0189,45,Male,USA,Newark,2020-03-25,2024-11-23,4012.34,37,TRUE,736,84000,07102,Books
+90,Marilyn,Patterson,marilyn.p@email.com,+1-555-0190,33,Female,USA,Durham,2020-10-08,2024-12-03,2123.67,20,FALSE,670,63000,27701,Beauty
+91,Albert,Hughes,albert.h@email.com,+1-555-0191,49,Male,USA,Chula Vista,2019-12-01,2024-11-19,4654.89,43,TRUE,754,89000,91910,Sports
+92,Phyllis,Flores,phyllis.f@email.com,+1-555-0192,31,Female,USA,Toledo,2021-01-18,2024-11-28,1543.98,15,FALSE,646,56000,43601,Home
+93,Bruce,Washington,bruce.w@email.com,+1-555-0193,40,Male,USA,Fort Wayne,2020-04-29,2024-10-29,3321.54,30,TRUE,716,77000,46801,Electronics
+94,Doris,Butler,doris.b@email.com,+1-555-0194,28,Female,USA,St Petersburg,2021-06-16,2024-11-16,1123.76,12,FALSE,634,52000,33701,Fashion
+95,Samuel,Simmons,samuel.s@email.com,+1-555-0195,46,Male,USA,Laredo,2020-01-21,2024-11-24,4123.21,38,TRUE,738,85000,78040,Books
+96,Ann,Foster,ann.f@email.com,+1-555-0196,32,Female,USA,Jersey City,2020-08-06,2024-12-02,1987.65,18,FALSE,660,60000,07302,Beauty
+97,Billy,Gonzales,billy.g@email.com,+1-555-0197,48,Male,USA,Chandler,2019-10-20,2024-11-20,4432.98,41,TRUE,750,88000,85224,Sports
+98,Gloria,Bryant,gloria.b@email.com,+1-555-0198,30,Female,USA,Madison,2021-03-12,2024-11-29,1654.43,16,FALSE,648,57000,53701,Home
+99,Aaron,Alexander,aaron.a@email.com,+1-555-0199,43,Male,USA,Lubbock,2020-05-26,2024-10-27,3654.87,32,TRUE,724,80000,79401,Electronics
+100,Joan,Russell,joan.r@email.com,+1-555-0200,29,Female,USA,Norfolk,2021-07-14,2024-11-12,1234.21,13,FALSE,640,54000,23501,Fashion

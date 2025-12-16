@@ -1,0 +1,101 @@
+customer_id,first_name,last_name,email,phone,age,gender,country,city,registration_date,last_purchase_date,total_spent,num_orders,is_premium,credit_score,annual_income,zip_code,ip_address,user_agent,preferred_category
+1,Daniel,Wilson,emily.smith12@email.com,+1-555-1409,31,Male,USA,Boston,2019-10-13,2024-02-22,6059.99,72,True,651,123850,95181,190.140.125.58,Mozilla/5.0 (Linux),Sports
+2,William,Rodriguez,david.miller98@email.com,+49-30-4611,39,Male,Germany,Munich,2023-07-09,2024-03-22,3861.28,46,False,726,109131,44671,115.142.3.195,Mozilla/5.0 (Windows NT 10.0),Beauty
+3,Daniel,Miller,mark.williams6@email.com,+49-30-9785,60,Male,Germany,Cologne,2020-08-23,2024-11-17,9853.69,30,False,601,79823,46434,32.193.40.142,Mozilla/5.0 (Android),Beauty
+4,Karen,Lee,jessica.moore94@email.com,+1-416-3664,33,Male,Canada,Quebec City,2020-06-30,2024-11-27,3856.61,82,True,835,58785,M1H 1M7,95.181.107.172,Mozilla/5.0 (iPhone),Electronics
+5,Robert,Jones,linda.harris72@email.com,+44-20-6155,52,Female,UK,Belfast,2022-08-09,2024-08-22,4341.49,75,True,754,77447,SE3D 2AA,55.255.202.227,Mozilla/5.0 (Macintosh),Beauty
+6,Nancy,Walker,john.thompson93@email.com,+44-20-7916,25,Female,UK,Bristol,2022-05-05,2024-08-27,1204.37,56,False,630,89470,SW5B 9AC,153.32.197.98,Mozilla/5.0 (Linux),Sports
+7,Karen,Hernandez,mary.smith15@email.com,+33-1-4258,41,Female,France,Toulouse,2023-05-14,2024-09-28,673.46,73,True,590,41226,73699,40.191.82.139,Mozilla/5.0 (Windows NT 10.0),Sports
+8,James,King,nancy.clark94@email.com,+44-20-3103,62,Male,UK,Liverpool,2021-12-16,2024-11-06,4050.02,86,False,741,87422,WC8A 4BA,169.243.84.68,Mozilla/5.0 (iPhone),Electronics
+9,Linda,Williams,andrew.johnson43@email.com,+33-1-4770,22,Male,France,Nice,2022-12-20,2024-11-19,6722.88,28,True,826,47342,84847,151.112.3.19,Mozilla/5.0 (iPad),Home
+10,Patricia,Wilson,jennifer.anderson94@email.com,+44-20-8749,21,Male,UK,London,2019-07-18,2024-12-03,4085.95,44,False,605,62591,SE4D 3DB,207.208.97.25,Mozilla/5.0 (iPhone),Home
+11,Ashley,Clark,sandra.davis22@email.com,+44-20-2235,44,Female,UK,Glasgow,2022-01-12,2024-01-08,2216.1,52,True,580,51579,EC1D 5DC,114.50.25.167,Mozilla/5.0 (Android),Beauty
+12,Betty,Hernandez,emily.johnson75@email.com,+33-1-8973,48,Male,France,Paris,2019-04-30,2024-10-23,9611.71,11,True,645,38981,87992,40.97.151.56,Mozilla/5.0 (Windows NT 10.0),Beauty
+13,Ashley,Rodriguez,james.thompson92@email.com,+44-20-7615,38,Male,UK,Liverpool,2019-06-17,2024-08-02,4018.28,86,False,703,89929,NW2A 8AA,31.126.20.159,Mozilla/5.0 (iPad),Fashion
+14,Jessica,Anderson,paul.moore91@email.com,+33-1-5345,37,Male,France,Lille,2020-05-15,2024-07-08,3063.85,85,False,603,145097,27601,34.178.35.226,Mozilla/5.0 (iPhone),Electronics
+15,Christopher,Thomas,robert.young7@email.com,+1-555-3546,23,Female,USA,Phoenix,2020-12-03,2024-04-14,536.46,43,False,616,113507,44335,70.144.107.184,Mozilla/5.0 (Macintosh),Beauty
+16,Paul,Lopez,daniel.moore19@email.com,+49-30-8007,45,Male,Germany,Berlin,2023-12-14,2024-03-17,3151.76,6,True,733,57535,99399,144.4.57.20,Mozilla/5.0 (Macintosh),Beauty
+17,Andrew,Wilson,john.garcia95@email.com,+1-555-6794,39,Female,USA,Houston,2020-04-29,2024-03-24,2741.38,90,True,605,80140,15075,200.208.79.237,Mozilla/5.0 (Android),Fashion
+18,Richard,Hernandez,robert.walker9@email.com,+44-20-8541,67,Female,UK,Bristol,2019-02-18,2024-12-03,6450.67,52,True,824,73404,SW2C 3CA,90.156.116.58,Mozilla/5.0 (Windows NT 10.0),Sports
+19,Andrew,Jackson,james.rodriguez6@email.com,+49-30-6663,63,Female,Germany,Berlin,2021-11-13,2024-02-29,5247.21,69,False,650,77739,66531,187.160.223.156,Mozilla/5.0 (Windows NT 10.0),Beauty
+20,Richard,White,maria.moore17@email.com,+1-416-6143,30,Female,Canada,Winnipeg,2020-09-25,2024-07-28,6805.45,23,False,841,69446,P9A 5L4,170.63.153.130,Mozilla/5.0 (Android),Sports
+21,Dorothy,Young,dorothy.harris22@email.com,+33-1-6279,60,Male,France,Nice,2020-03-13,2024-09-18,5202.97,82,False,721,42240,40784,120.226.226.173,Mozilla/5.0 (Linux),Books
+22,Charles,Wilson,andrew.lee74@email.com,+44-20-4262,30,Female,UK,Glasgow,2021-08-31,2024-11-08,4056.56,19,True,552,147002,SW7B 3DA,38.12.23.63,Mozilla/5.0 (iPad),Fashion
+23,Paul,King,nancy.anderson21@email.com,+1-555-8478,65,Female,USA,Austin,2023-03-27,2024-08-14,2666.0,32,False,691,130376,78327,35.237.162.244,Mozilla/5.0 (Android),Beauty
+24,Andrew,Moore,michael.jones20@email.com,+44-20-5499,32,Female,UK,Birmingham,2020-07-10,2024-06-20,7093.55,9,False,762,83424,NW9D 7AB,113.39.146.61,Mozilla/5.0 (Android),Home
+25,Sandra,Young,paul.wilson69@email.com,+33-1-1320,65,Male,France,Bordeaux,2020-12-21,2024-06-01,2272.27,56,False,798,33804,60968,220.194.244.2,Mozilla/5.0 (iPhone),Beauty
+26,Ashley,Gonzalez,daniel.jackson85@email.com,+49-30-3704,19,Male,Germany,Dusseldorf,2022-06-28,2024-09-30,1443.42,60,True,643,36590,44099,216.239.65.252,Mozilla/5.0 (Android),Books
+27,Paul,Williams,mary.smith96@email.com,+44-20-8449,52,Male,UK,Bristol,2023-03-21,2024-08-03,2319.8,9,False,570,128858,SW4B 1BB,84.172.194.72,Mozilla/5.0 (Macintosh),Home
+28,Steven,Robinson,jessica.martinez14@email.com,+1-555-4571,55,Male,USA,Phoenix,2022-05-25,2024-11-06,5800.39,49,True,753,123718,35995,120.131.188.43,Mozilla/5.0 (Windows NT 10.0),Sports
+29,Nancy,Wilson,lisa.lopez9@email.com,+44-20-2669,50,Female,UK,London,2022-03-05,2024-01-22,8510.8,63,False,604,86822,NW8B 7BC,179.154.61.204,Mozilla/5.0 (iPad),Sports
+30,Andrew,Anderson,linda.clark60@email.com,+49-30-8616,54,Female,Germany,Stuttgart,2020-05-17,2024-02-14,384.13,42,False,643,93904,37802,112.137.165.219,Mozilla/5.0 (iPhone),Books
+31,Betty,Wilson,mary.moore98@email.com,+1-416-5581,33,Female,Canada,Quebec City,2020-01-27,2024-02-13,4536.93,3,True,597,68566,H7H 5X6,226.141.5.133,Mozilla/5.0 (Android),Sports
+32,Robert,Davis,sarah.harris25@email.com,+33-1-6632,38,Male,France,Lille,2021-07-18,2024-05-18,9513.69,89,False,644,55105,38361,109.169.180.180,Mozilla/5.0 (Linux),Home
+33,Patricia,Garcia,maria.smith91@email.com,+1-416-9595,52,Male,Canada,Ottawa,2020-02-02,2024-05-31,550.61,7,True,833,68290,E8D 1X5,153.144.51.214,Mozilla/5.0 (Android),Home
+34,Paul,Williams,richard.thomas10@email.com,+49-30-6582,54,Male,Germany,Hamburg,2023-10-31,2024-09-01,1577.06,73,True,705,41164,42530,48.26.129.241,Mozilla/5.0 (Windows NT 10.0),Sports
+35,Maria,Jackson,karen.johnson79@email.com,+49-30-4697,65,Male,Germany,Frankfurt,2021-06-25,2024-06-01,6292.6,34,False,591,50585,41439,199.194.230.233,Mozilla/5.0 (Macintosh),Sports
+36,Emily,Davis,maria.white37@email.com,+1-555-3564,62,Female,USA,Los Angeles,2022-05-01,2024-08-28,6905.11,34,False,651,85723,25043,1.209.230.177,Mozilla/5.0 (iPad),Fashion
+37,Charles,Brown,charles.white39@email.com,+44-20-5352,62,Female,UK,Liverpool,2019-12-06,2024-06-06,5054.67,64,False,774,40543,WC1D 6CA,212.72.36.16,Mozilla/5.0 (Windows NT 10.0),Fashion
+38,Christopher,Lee,charles.king36@email.com,+33-1-1339,29,Female,France,Bordeaux,2023-03-29,2024-03-30,9693.65,61,False,728,83523,53687,196.137.20.196,Mozilla/5.0 (iPhone),Beauty
+39,Charles,Williams,william.rodriguez42@email.com,+1-555-3634,25,Female,USA,Boston,2022-09-18,2024-07-24,8266.78,1,True,827,90552,64165,85.210.253.74,Mozilla/5.0 (Windows NT 10.0),Fashion
+40,Nancy,Jones,ashley.martinez57@email.com,+33-1-6927,62,Female,France,Lyon,2019-04-16,2024-04-14,385.81,81,False,672,123032,30758,160.255.226.195,Mozilla/5.0 (iPhone),Sports
+41,Mary,King,mark.martinez66@email.com,+1-555-7684,63,Female,USA,Dallas,2019-08-29,2024-11-27,8363.77,61,True,674,89871,82255,24.115.58.119,Mozilla/5.0 (Macintosh),Home
+42,Ashley,Lewis,christopher.rodriguez1@email.com,+44-20-9327,36,Female,UK,Belfast,2023-05-02,2024-07-31,5841.24,85,False,800,143411,SE8D 6CD,192.69.35.71,Mozilla/5.0 (Android),Books
+43,William,Harris,mary.white49@email.com,+44-20-4912,42,Male,UK,Glasgow,2023-05-08,2024-07-29,9651.76,17,True,807,107356,NW2D 2DA,147.196.119.220,Mozilla/5.0 (Linux),Fashion
+44,Sandra,Hernandez,sandra.thompson69@email.com,+49-30-3529,42,Female,Germany,Leipzig,2022-06-30,2024-07-22,8736.59,5,True,585,60771,92727,20.240.135.87,Mozilla/5.0 (Linux),Books
+45,Emily,Hernandez,dorothy.johnson38@email.com,+44-20-2480,40,Female,UK,Edinburgh,2019-12-07,2024-06-02,1541.14,68,True,760,104177,SE3B 2DB,112.50.51.114,Mozilla/5.0 (Android),Sports
+46,Andrew,Martinez,lisa.moore21@email.com,+44-20-4804,22,Female,UK,Bristol,2022-09-27,2024-01-05,9877.75,39,False,767,120480,NW8C 4DD,119.130.235.66,Mozilla/5.0 (Windows NT 10.0),Fashion
+47,Robert,Smith,daniel.walker88@email.com,+49-30-6881,67,Male,Germany,Hannover,2023-08-27,2024-12-03,7477.2,37,False,667,109569,56179,148.151.151.6,Mozilla/5.0 (Macintosh),Beauty
+48,Maria,Lewis,charles.johnson75@email.com,+44-20-5106,41,Male,UK,Manchester,2022-07-09,2024-11-26,9105.32,42,True,762,53021,SE3C 9CB,174.70.49.232,Mozilla/5.0 (iPhone),Home
+49,Sandra,Thompson,betty.thompson51@email.com,+1-416-6549,69,Female,Canada,Vancouver,2019-06-04,2024-03-13,7927.75,2,True,685,100329,D8N 5X7,206.58.239.247,Mozilla/5.0 (Linux),Books
+50,Thomas,Robinson,charles.king90@email.com,+1-555-4830,37,Female,USA,Los Angeles,2022-06-03,2024-04-23,1483.79,5,True,705,94569,25220,121.12.167.235,Mozilla/5.0 (Windows NT 10.0),Fashion
+51,Daniel,Harris,betty.jones54@email.com,+33-1-3222,59,Male,France,Bordeaux,2023-03-02,2024-10-03,6194.96,36,False,566,120476,58566,100.232.189.172,Mozilla/5.0 (Macintosh),Home
+52,Emily,Gonzalez,robert.miller16@email.com,+49-30-4868,70,Female,Germany,Munich,2022-11-05,2024-07-07,6661.41,83,False,560,36629,53713,219.185.50.252,Mozilla/5.0 (Macintosh),Fashion
+53,Steven,Jones,dorothy.young77@email.com,+33-1-4362,18,Female,France,Marseille,2023-11-17,2024-04-29,9876.52,70,False,678,134662,32871,18.106.110.209,Mozilla/5.0 (Windows NT 10.0),Beauty
+54,Robert,Johnson,david.harris54@email.com,+1-555-3159,51,Male,USA,Los Angeles,2020-10-25,2024-01-09,4814.84,100,True,735,97271,87812,4.183.121.151,Mozilla/5.0 (Windows NT 10.0),Home
+55,Mary,Walker,richard.wilson88@email.com,+33-1-4629,24,Female,France,Bordeaux,2022-08-10,2024-01-16,827.56,11,True,714,109730,29442,243.22.154.118,Mozilla/5.0 (Windows NT 10.0),Fashion
+56,Charles,Taylor,karen.wilson13@email.com,+1-416-9984,68,Male,Canada,Hamilton,2022-05-08,2024-09-28,7236.32,28,False,770,89186,H7M 8P7,183.166.195.255,Mozilla/5.0 (Linux),Electronics
+57,Michael,Robinson,michael.williams56@email.com,+1-416-7992,24,Female,Canada,Montreal,2019-11-09,2024-08-30,5608.07,76,True,837,103620,M2R 6R1,81.130.191.245,Mozilla/5.0 (iPhone),Sports
+58,Patricia,Walker,nancy.lopez15@email.com,+1-416-6761,66,Female,Canada,Halifax,2021-09-14,2024-04-24,2338.98,55,True,837,130588,Y9A 5A3,27.108.79.169,Mozilla/5.0 (iPhone),Beauty
+59,Michael,Jones,betty.lee4@email.com,+1-416-6567,23,Male,Canada,Winnipeg,2019-10-21,2024-10-16,4256.34,44,False,630,78503,L6X 2B3,90.3.92.223,Mozilla/5.0 (Macintosh),Sports
+60,Robert,Miller,steven.taylor15@email.com,+1-555-2336,40,Female,USA,Los Angeles,2022-05-28,2024-08-14,2904.14,87,False,799,99066,97442,70.226.217.125,Mozilla/5.0 (iPhone),Electronics
+61,Steven,Rodriguez,maria.hernandez16@email.com,+44-20-7475,18,Female,UK,Edinburgh,2020-09-09,2024-04-18,1839.38,49,True,822,122231,SE9C 2DA,253.28.3.53,Mozilla/5.0 (Android),Electronics
+62,Maria,Brown,richard.smith42@email.com,+49-30-2275,28,Female,Germany,Stuttgart,2021-04-08,2024-11-23,972.49,14,False,674,87104,87184,221.160.219.147,Mozilla/5.0 (Android),Sports
+63,Christopher,Lee,sarah.taylor66@email.com,+1-555-7484,30,Female,USA,San Diego,2020-11-13,2024-03-27,7301.05,83,True,625,60968,23474,223.158.173.57,Mozilla/5.0 (Macintosh),Books
+64,Charles,Clark,daniel.clark75@email.com,+44-20-3842,46,Female,UK,Bristol,2023-05-02,2024-11-17,1594.48,9,False,790,87961,NW5A 6AC,155.78.38.46,Mozilla/5.0 (Android),Home
+65,Charles,Jackson,nancy.lewis95@email.com,+1-555-1932,20,Female,USA,Seattle,2023-11-05,2024-02-16,6553.19,42,False,793,95715,29773,95.146.39.166,Mozilla/5.0 (Windows NT 10.0),Home
+66,Christopher,Taylor,karen.garcia47@email.com,+1-555-6626,41,Female,USA,Dallas,2020-05-22,2024-08-12,4146.82,44,False,576,133445,92691,252.43.88.11,Mozilla/5.0 (Linux),Books
+67,William,Williams,daniel.thompson19@email.com,+1-555-6401,40,Female,USA,Dallas,2023-01-22,2024-12-02,1376.62,91,True,593,70577,83259,25.197.145.65,Mozilla/5.0 (Android),Beauty
+68,Maria,Garcia,james.hernandez99@email.com,+1-416-3093,49,Male,Canada,Calgary,2021-01-11,2024-01-10,9999.77,20,False,589,68770,D9W 9B6,172.47.216.131,Mozilla/5.0 (iPad),Fashion
+69,Betty,Anderson,emily.wilson47@email.com,+33-1-7172,61,Male,France,Bordeaux,2022-11-19,2024-11-15,6144.89,97,True,779,60671,79993,40.83.92.213,Mozilla/5.0 (Macintosh),Books
+70,Jessica,Robinson,james.lewis78@email.com,+49-30-4178,26,Female,Germany,Berlin,2020-07-31,2024-07-14,6447.67,48,False,833,43446,77621,95.225.236.197,Mozilla/5.0 (Windows NT 10.0),Books
+71,Paul,Anderson,andrew.lopez4@email.com,+1-555-3626,44,Male,USA,Dallas,2021-06-14,2024-02-16,5069.87,31,True,747,40696,59140,70.230.75.213,Mozilla/5.0 (Macintosh),Electronics
+72,Mark,Robinson,david.clark91@email.com,+1-416-2623,48,Female,Canada,Halifax,2019-03-20,2024-05-26,151.99,11,False,559,63544,G3W 9R2,215.171.74.36,Mozilla/5.0 (iPhone),Fashion
+73,Michael,Brown,paul.young64@email.com,+1-416-2996,56,Male,Canada,Hamilton,2023-06-14,2024-11-14,5792.97,92,False,623,68177,R1Y 6H7,13.122.214.164,Mozilla/5.0 (Macintosh),Beauty
+74,Richard,Walker,mary.johnson82@email.com,+1-555-9576,42,Female,USA,Phoenix,2021-12-13,2024-10-05,7498.43,46,True,584,75193,41604,250.184.34.245,Mozilla/5.0 (Linux),Beauty
+75,Paul,Clark,lisa.anderson90@email.com,+1-555-6447,48,Male,USA,Chicago,2020-11-24,2024-11-25,724.7,100,True,784,34847,48462,35.22.180.140,Mozilla/5.0 (Macintosh),Electronics
+76,Robert,Johnson,steven.lee25@email.com,+44-20-1686,36,Female,UK,London,2023-07-28,2024-10-05,8671.4,43,False,689,46315,NW7D 8DC,81.158.203.254,Mozilla/5.0 (Macintosh),Home
+77,Karen,Robinson,jessica.moore38@email.com,+49-30-7018,38,Male,Germany,Munich,2021-05-19,2024-02-10,3346.41,38,False,706,88447,88986,237.136.42.187,Mozilla/5.0 (Linux),Home
+78,Robert,Lee,dorothy.johnson10@email.com,+44-20-8272,60,Female,UK,Bristol,2023-11-17,2024-06-29,5179.55,96,False,631,34081,SE8A 3AB,90.228.21.187,Mozilla/5.0 (Linux),Books
+79,Charles,Clark,michael.jackson18@email.com,+1-416-7272,51,Female,Canada,Winnipeg,2021-07-10,2024-07-08,3212.42,36,False,677,44869,A3T 9P9,244.16.78.174,Mozilla/5.0 (Windows NT 10.0),Books
+80,Charles,Garcia,andrew.white57@email.com,+1-416-8311,23,Female,Canada,Edmonton,2019-09-09,2024-03-10,7124.45,71,True,827,68058,L3Z 3N9,55.146.251.52,Mozilla/5.0 (Macintosh),Electronics
+81,Charles,Lewis,nancy.jones79@email.com,+44-20-3275,23,Male,UK,Liverpool,2022-02-08,2024-10-20,4041.78,92,False,795,98903,EC7A 3CA,61.252.13.93,Mozilla/5.0 (Android),Home
+82,Christopher,Jones,maria.garcia21@email.com,+33-1-6644,38,Male,France,Nantes,2021-10-26,2024-01-29,9480.08,67,True,695,140878,20336,33.93.66.111,Mozilla/5.0 (iPhone),Fashion
+83,Jessica,Thompson,karen.harris78@email.com,+33-1-5496,39,Male,France,Paris,2022-08-05,2024-03-27,904.11,83,True,845,64688,95344,33.155.47.129,Mozilla/5.0 (Macintosh),Sports
+84,Charles,Williams,mark.johnson21@email.com,+49-30-1496,46,Female,Germany,Leipzig,2020-05-16,2024-07-26,4697.98,44,False,623,70970,51853,128.148.154.124,Mozilla/5.0 (Linux),Books
+85,Robert,Anderson,linda.jones13@email.com,+49-30-3142,21,Female,Germany,Dusseldorf,2020-05-10,2024-08-26,8655.22,54,True,677,143417,30932,195.189.54.82,Mozilla/5.0 (iPhone),Sports
+86,Andrew,Martinez,mary.smith12@email.com,+1-416-4110,43,Female,Canada,Calgary,2021-11-20,2024-08-27,2229.93,46,False,574,36624,L8Y 8L9,196.81.255.255,Mozilla/5.0 (Windows NT 10.0),Electronics
+87,Richard,Johnson,daniel.moore25@email.com,+49-30-3194,41,Female,Germany,Munich,2021-04-05,2024-07-06,3924.85,58,True,831,66663,91689,226.135.187.196,Mozilla/5.0 (Linux),Sports
+88,Steven,Jones,james.martin66@email.com,+1-555-3108,43,Male,USA,New York,2023-06-16,2024-06-22,485.25,92,False,720,135377,72094,250.49.201.96,Mozilla/5.0 (iPad),Home
+89,Daniel,Hernandez,christopher.robinson66@email.com,+44-20-9446,52,Female,UK,Belfast,2021-03-15,2024-11-11,3067.93,3,False,738,73416,SW7C 1DC,36.167.163.42,Mozilla/5.0 (Linux),Sports
+90,David,Robinson,lisa.davis5@email.com,+33-1-4728,54,Male,France,Toulouse,2021-12-09,2024-11-18,287.48,41,False,764,49848,64127,185.26.245.44,Mozilla/5.0 (Linux),Fashion
+91,Nancy,Hernandez,lisa.thomas68@email.com,+49-30-9221,42,Female,Germany,Hamburg,2019-10-10,2024-09-22,4650.67,69,True,725,101601,56437,199.241.31.181,Mozilla/5.0 (Linux),Beauty
+92,Steven,Martinez,mark.miller89@email.com,+1-416-8932,63,Female,Canada,Edmonton,2020-09-03,2024-04-25,4850.05,72,False,690,67721,D9P 7N3,50.126.142.143,Mozilla/5.0 (iPhone),Electronics
+93,Paul,Moore,robert.king72@email.com,+1-416-2294,62,Female,Canada,Montreal,2021-09-08,2024-04-19,1181.34,95,True,850,61363,H1V 4Z4,89.226.131.192,Mozilla/5.0 (Windows NT 10.0),Electronics
+94,Nancy,King,jessica.wilson84@email.com,+49-30-6411,48,Female,Germany,Frankfurt,2023-04-28,2024-03-11,7583.52,37,True,714,67409,94659,184.241.51.175,Mozilla/5.0 (Windows NT 10.0),Electronics
+95,Paul,Gonzalez,dorothy.thomas24@email.com,+33-1-4804,65,Female,France,Paris,2023-12-12,2024-03-31,191.74,73,True,604,73914,47298,137.19.89.107,Mozilla/5.0 (Android),Beauty
+96,Jessica,Harris,charles.lee33@email.com,+33-1-9590,63,Male,France,Paris,2020-01-30,2024-02-27,7392.52,38,False,840,118395,35318,127.68.239.70,Mozilla/5.0 (Macintosh),Sports
+97,David,Thomas,william.king32@email.com,+49-30-8007,18,Female,Germany,Dusseldorf,2022-10-02,2024-02-18,2431.66,97,True,686,73204,49576,132.167.44.103,Mozilla/5.0 (iPad),Beauty
+98,Maria,Garcia,richard.thompson65@email.com,+33-1-1187,63,Female,France,Lyon,2022-09-29,2024-03-01,6423.24,38,False,738,110560,38947,67.184.120.16,Mozilla/5.0 (Macintosh),Fashion
+99,Steven,Davis,lisa.clark77@email.com,+49-30-3509,68,Male,Germany,Dresden,2022-01-29,2024-08-29,4522.8,91,True,735,40237,83946,117.191.212.180,Mozilla/5.0 (Windows NT 10.0),Electronics
+100,Sarah,Thompson,james.white75@email.com,+33-1-9281,49,Male,France,Lille,2023-10-16,2024-09-23,4510.28,8,False,782,47294,77272,52.76.84.84,Mozilla/5.0 (Android),Home

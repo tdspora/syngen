@@ -29,6 +29,7 @@ from syngen.ml.utils import (
     ProgressBarHandler
 )
 from syngen.ml.data_loaders import DataLoader
+from syngen.ml.utils.profiling import ProfileLogger
 
 warnings.filterwarnings("ignore")
 
@@ -67,6 +68,7 @@ class VAEWrapper(BaseWrapper):
     random_seed: Optional[int] = field(default=None)
     use_discriminator: bool = field(default=False)  # Disable VAE-GAN hybrid by default (can cause instability)
     losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
+    losses_info_chunks: List[pd.DataFrame] = field(init=False, default_factory=list)
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
@@ -74,6 +76,8 @@ class VAEWrapper(BaseWrapper):
     disc_optimizer: object = field(init=False, default=None)
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
+    profiler: Optional[ProfileLogger] = field(init=False, default=None)
+    profile_batch_interval: Optional[int] = field(init=False, default=None)
 
     def __post_init__(self):
         if self.process == "train":
@@ -187,7 +191,33 @@ class VAEWrapper(BaseWrapper):
 
         df = self.df.loc[:, list(set(columns_subset))]
 
+        train_settings = self.metadata.get(self.table_name, {}).get("train_settings", {})
+        profiling_enabled = bool(train_settings.get("profile", False))
+        self.profile_batch_interval = train_settings.get("profile_batch_interval")
+
+        if profiling_enabled:
+            profile_dir = Path("model_artifacts/system_store/profiling") / slugify(self.table_name)
+            profile_path = profile_dir / f"train_profile_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.csv"
+            self.profiler = ProfileLogger(enabled=True, out_path=profile_path)
+            logger.info(f"Profiling is enabled; writing training profile to '{profile_path}'")
+            self.profiler.log(
+                "train_start",
+                table_name=self.table_name,
+                epochs=epochs,
+                row_subset=len(df),
+                batch_size=self.batch_size,
+                sampler_row_limit=train_settings.get("sampler_row_limit"),
+                profile_batch_interval=self.profile_batch_interval,
+            )
+
+        if self.profiler:
+            self.profiler.log("create_batched_dataset_start")
+
         train_dataset = self._create_batched_dataset(df)
+
+        if self.profiler:
+            self.profiler.log("create_batched_dataset_done", num_batches=len(train_dataset))
+
         self.num_batches = len(train_dataset)
         self.model = self.vae.model
         self.feature_types = self.vae.feature_types
@@ -212,7 +242,12 @@ class VAEWrapper(BaseWrapper):
         config = fetch_config(self.paths["train_config_pickle_path"])
         MlflowTracker().log_params(config.to_dict())
 
-        self._train(train_dataset, epochs)
+        try:
+            self._train(train_dataset, epochs)
+        finally:
+            if self.profiler:
+                # Persist partial profile even if training fails.
+                self.profiler.flush()
 
         MlflowTracker().end_run()
 
@@ -220,7 +255,13 @@ class VAEWrapper(BaseWrapper):
             run_name=f"{self.table_name}-POSTPROCESS",
             tags={"table_name": self.table_name, "process": "postprocess"},
         )
+        if self.profiler:
+            self.profiler.log("fit_sampler_start")
         self.fit_sampler(df)
+        if self.profiler:
+            self.profiler.log("fit_sampler_done")
+            self.profiler.log("train_end")
+            self.profiler.flush()
 
     def _calculate_loss_by_type(
         self,
@@ -347,12 +388,17 @@ class VAEWrapper(BaseWrapper):
         Add the information about losses of all features fetched during the certain epoch
         """
         data = self._fetch_feature_losses_info(feature_losses, epoch)
-        self.losses_info = pd.concat([self.losses_info, data])
+        # Avoid repeated DataFrame concatenation in the training loop.
+        # Pandas concat copies data and can cause significant memory growth across epochs.
+        self.losses_info_chunks.append(data)
 
     def __save_losses(self):
         """
         Save the information about losses of every feature in every epoch
         """
+        if self.losses_info_chunks:
+            self.losses_info = pd.concat(self.losses_info_chunks, ignore_index=True)
+            self.losses_info_chunks.clear()
         DataLoader(path=self.paths["losses_path"]).save_data(data=self.losses_info)
 
     def _gather_losses_info(self, total_feature_losses, mean_loss, mean_kl_loss, epoch):
@@ -403,6 +449,8 @@ class VAEWrapper(BaseWrapper):
 
         delta = ProgressBarHandler().delta / (epochs * 2)
         for epoch in range(epochs):
+            if self.profiler:
+                self.profiler.log("epoch_start", epoch=epoch)
             # Apply learning rate decay after initial training
             if epoch >= lr_decay_start_epoch:
                 new_lr = initial_lr * (lr_decay_rate ** (epoch - lr_decay_start_epoch))
@@ -423,6 +471,12 @@ class VAEWrapper(BaseWrapper):
 
             # Iterate over the batches of the dataset.
             for i, x_batch_train in tqdm.tqdm(iterable=enumerate(dataset)):
+                if (
+                    self.profiler
+                    and self.profile_batch_interval
+                    and i % int(self.profile_batch_interval) == 0
+                ):
+                    self.profiler.log("batch_start", epoch=epoch, batch=i)
                 loss, kl_loss, feature_losses = step(x_batch_train)
                 total_loss += loss
                 total_kl_loss += kl_loss
@@ -430,6 +484,12 @@ class VAEWrapper(BaseWrapper):
                     feature_losses,
                     total_feature_losses
                 )
+                if (
+                    self.profiler
+                    and self.profile_batch_interval
+                    and i % int(self.profile_batch_interval) == 0
+                ):
+                    self.profiler.log("batch_end", epoch=epoch, batch=i)
 
             mean_loss = np.mean(total_loss / self.num_batches)
             mean_kl_loss = np.mean(total_kl_loss / self.num_batches)
@@ -461,6 +521,15 @@ class VAEWrapper(BaseWrapper):
                 f"epoch: {epoch}, total loss: {mean_loss}, time: {(time.time() - t1):.4f} sec"
             )
             logger.info(log_message)
+
+            if self.profiler:
+                self.profiler.log(
+                    "epoch_end",
+                    epoch=epoch,
+                    epoch_time_s=round(time.time() - t1, 6),
+                    mean_loss=float(mean_loss),
+                    mean_kl_loss=float(mean_kl_loss),
+                )
 
             ProgressBarHandler().set_progress(
                 progress=ProgressBarHandler().progress + delta,
@@ -505,7 +574,15 @@ class VAEWrapper(BaseWrapper):
         """
         Define batched dataset for training vae
         """
+        if self.profiler:
+            self.profiler.log("dataset_transform_start")
         transformed_data = self.dataset.transform(df)
+        if self.profiler:
+            try:
+                shapes = [getattr(x, "shape", None) for x in transformed_data]
+            except Exception:
+                shapes = None
+            self.profiler.log("dataset_transform_done", transformed_shapes=str(shapes))
 
         feature_datasets = []
         options = tf.data.Options()
@@ -524,13 +601,20 @@ class VAEWrapper(BaseWrapper):
         
         Formula: -0.5 * sum(1 + log_sigma - mu^2 - exp(log_sigma))
         """
-        mu = self.vae.mu
-        log_sigma = self.vae.log_sigma
-        
+        mu = tf.convert_to_tensor(self.vae.mu)
+        log_sigma = tf.convert_to_tensor(self.vae.log_sigma)
+
+        # Guard against numerical explosion: exp(log_sigma) can overflow for large values.
+        mu = tf.clip_by_value(mu, -10.0, 10.0)
+        log_sigma = tf.clip_by_value(log_sigma, -10.0, 10.0)
+
         kl_loss = -0.5 * tf.reduce_sum(
             1 + log_sigma - tf.square(mu) - tf.exp(log_sigma),
-            axis=-1
+            axis=-1,
         )
+
+        # If any non-finite values slip through, ignore them rather than poisoning training.
+        kl_loss = tf.where(tf.math.is_finite(kl_loss), kl_loss, tf.zeros_like(kl_loss))
         return tf.reduce_mean(kl_loss)
 
     def _train_step(self, batch: Tuple[tf.Tensor]):
@@ -544,7 +628,12 @@ class VAEWrapper(BaseWrapper):
             if losses:
                 # Cap individual feature losses to prevent outliers from dominating
                 MAX_FEATURE_LOSS = 10.0
-                capped_losses = [tf.minimum(l, MAX_FEATURE_LOSS) for l in losses]
+                capped_losses = []
+                for l in losses:
+                    # If a loss becomes NaN/Inf, clamp it to a safe value so the
+                    # reconstruction term remains finite.
+                    l = tf.where(tf.math.is_finite(l), l, tf.cast(MAX_FEATURE_LOSS, l.dtype))
+                    capped_losses.append(tf.minimum(l, tf.cast(MAX_FEATURE_LOSS, l.dtype)))
                 reconstruction_loss = tf.add_n(capped_losses) if len(capped_losses) > 1 else capped_losses[0]
             else:
                 reconstruction_loss = tf.constant(0.0)
@@ -558,6 +647,9 @@ class VAEWrapper(BaseWrapper):
                 kl_loss = tf.constant(0.0)
                 loss = reconstruction_loss
 
+            # Hard guard: never allow NaN/Inf to propagate into gradients or epoch totals.
+            loss_is_finite = bool(tf.reduce_all(tf.math.is_finite(loss)).numpy())
+
             # Get feature names for logging
             order_of_features = list(self.vae.feature_losses.keys())
 
@@ -570,7 +662,10 @@ class VAEWrapper(BaseWrapper):
                 layer = getattr(layer_loss, '_keras_history', [None])[0]
                 layer_name = getattr(layer, 'name', None)
                 if layer_name is not None:
-                    loss_name_to_value[layer_name] = float(layer_loss.numpy())
+                    layer_loss_value = layer_loss.numpy()
+                    if not np.isfinite(layer_loss_value):
+                        layer_loss_value = MAX_FEATURE_LOSS
+                    loss_name_to_value[layer_name] = float(layer_loss_value)
 
             feature_losses = {}
             for name in order_of_features:
@@ -579,12 +674,24 @@ class VAEWrapper(BaseWrapper):
 
         # Compute gradients and apply them
         gradients = tape.gradient(loss, self.model.trainable_weights)
-        
-        # Clip gradients to prevent explosion
-        gradients = [
-            tf.clip_by_norm(g, 1.0) if g is not None else g
-            for g in gradients
-        ]
+
+        if not loss_is_finite:
+            # Skip the update for this batch to avoid corrupting weights.
+            logger.warning("Non-finite batch loss encountered; skipping optimizer update")
+            safe_loss = tf.constant(10.0, dtype=tf.float32)
+            self.loss_metric(safe_loss)
+            return float(safe_loss.numpy()), 0.0, feature_losses
+
+        # Sanitize and clip gradients to prevent explosion.
+        sanitized_gradients = []
+        for g in gradients:
+            if g is None:
+                sanitized_gradients.append(None)
+                continue
+            g = tf.where(tf.math.is_finite(g), g, tf.zeros_like(g))
+            g = tf.clip_by_norm(g, 1.0)
+            sanitized_gradients.append(g)
+        gradients = sanitized_gradients
         
         # Filter out None gradients to prevent apply_gradients from failing
         # None gradients can occur for variables not connected to the loss
@@ -604,7 +711,8 @@ class VAEWrapper(BaseWrapper):
 
         # Convert kl_loss to float for return value
         kl_loss_value = float(kl_loss.numpy()) if hasattr(kl_loss, 'numpy') else float(kl_loss)
-        return loss, kl_loss_value, feature_losses
+        safe_loss_value = float(loss.numpy()) if np.isfinite(loss.numpy()) else 10.0
+        return safe_loss_value, kl_loss_value, feature_losses
     
     def _train_discriminator_step(self, batch: Tuple[tf.Tensor]) -> float:
         """
@@ -669,7 +777,9 @@ class VAEWrapper(BaseWrapper):
         return plt.show()
 
     def fit_sampler(self, df: pd.DataFrame):
-        self.vae.fit_sampler(df)
+        train_settings = self.metadata.get(self.table_name, {}).get("train_settings", {})
+        sampler_row_limit = train_settings.get("sampler_row_limit")
+        self.vae.fit_sampler(df, max_fit_rows=sampler_row_limit)
 
     def _restore_date_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -714,6 +824,11 @@ class VAEWrapper(BaseWrapper):
         sampled_df = self._restore_nan_labels(sampled_df)
         sampled_df = self._restore_question_mark_nulls(sampled_df)
         sampled_df = self._restore_date_columns(sampled_df)
+
+        # Enforce learned conditional correlations as the final step.
+        # Some restore_* post-steps can reintroduce invalid combinations; re-applying
+        # makes precedence rules (e.g., product_name → description) reliable end-to-end.
+        sampled_df = self.dataset._apply_conditional_correlations(sampled_df)
 
         return sampled_df
 

@@ -1,0 +1,20 @@
+customers:
+  train_settings:
+    source: "./examples/example-data/customers.csv"
+    epochs: 10
+    drop_null: false
+    row_limit: 1000
+    reports: none
+
+  infer_settings:
+    destination: "./examples/generated-data/customers_generated.csv"
+    size: 500
+    run_parallel: false
+    random_seed: 42
+    reports: none
+
+  keys:
+    customer_pk:
+      type: "PK"
+      columns:
+        - customer_id

@@ -60,6 +60,25 @@ validate_reports = validate_parameter_reports(
          "length will randomly subset the specified rows number",
 )
 @click.option(
+    "--sampler_row_limit",
+    default=None,
+    type=click.IntRange(1),
+    help="Cap the number of rows used to fit the latent sampler (BayesianGaussianMixture). "
+         "This can significantly reduce post-train time/memory on large datasets.",
+)
+@click.option(
+    "--profile",
+    is_flag=True,
+    default=False,
+    help="Enable lightweight profiling (time + RSS/VMS memory) and write a CSV of events.",
+)
+@click.option(
+    "--profile_batch_interval",
+    default=None,
+    type=click.IntRange(1),
+    help="If profiling is enabled, also record memory every N batches.",
+)
+@click.option(
     "--reports",
     default=("none",),
     type=click.UNPROCESSED,
@@ -102,6 +121,9 @@ def launch_train(
     epochs: int,
     drop_null: bool,
     row_limit: Optional[int],
+    sampler_row_limit: Optional[int],
+    profile: bool,
+    profile_batch_interval: Optional[int],
     reports: List[str],
     log_level: str,
     batch_size: int,
@@ -177,6 +199,9 @@ def launch_train(
         "epochs": epochs,
         "drop_null": drop_null,
         "row_limit": row_limit,
+        "sampler_row_limit": sampler_row_limit,
+        "profile": profile,
+        "profile_batch_interval": profile_batch_interval,
         "batch_size": batch_size,
         "reports": reports,
     }

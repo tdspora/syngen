@@ -79,6 +79,7 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
             "size": 100,
             "run_parallel": False,
             "batch_size": 100,
+            "preview": 10,
             "reports": [],
             "random_seed": 1,
         },
@@ -93,6 +94,7 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
                 "size": 100,
                 "run_parallel": False,
                 "batch_size": 100,
+                "preview": 10,
                 "reports": [],
                 "random_seed": 1,
             },
@@ -103,6 +105,42 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
             "format": {}
         }
     }
+    mock_validator_run.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "run")
+@patch("syngen.ml.worker.worker.MetadataLoader.load_data")
+def test_worker_infer_preview_overrides_null_in_metadata(
+    mock_metadata_load, mock_validator_run, rp_logger
+):
+    """Settings passed to Worker should override explicit nulls in metadata (preview: null)."""
+    rp_logger.info(
+        "Test that Worker.settings.preview overrides infer_settings.preview when it is null in metadata"
+    )
+    mock_metadata_load.return_value = {
+        "global": {
+            "infer_settings": {"preview": None},
+        },
+        "table": {
+            "train_settings": {"source": "./path/to/table.csv"},
+            "infer_settings": {"preview": None, "size": 100},
+            "keys": {},
+        },
+    }
+
+    worker = Worker(
+        table_name=None,
+        metadata_path="/tmp/fake_metadata.yaml",
+        settings={
+            "preview": 7,
+        },
+        log_level="INFO",
+        type_of_process="infer",
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+    )
+
+    assert worker.metadata["table"]["infer_settings"]["preview"] == 7
     mock_validator_run.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

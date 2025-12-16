@@ -1532,25 +1532,27 @@ class DateFeature(BaseFeature):
 
     def fit(self, data, **kwargs):
         self.date_format = kwargs["date_mapping"][self.original_name]
-        self.data = chain.from_iterable(data.values)
-        self.data = pd.DataFrame(
-            list(
-                map(
-                    lambda d: datetime_to_timestamp(d, self.date_format),
-                    self.data
-                )
-            )
+        timestamps = chain.from_iterable(data.values)
+        timestamps = pd.DataFrame(
+            list(map(lambda d: datetime_to_timestamp(d, self.date_format), timestamps))
         )
-        self.is_positive = (self.data >= 0).sum().item() >= len(self.data) * 0.99
-        normality = shapiro(self.data.sample(n=min(len(self.data), 500))).pvalue
-        self.data = np.array(self.data).reshape(-1, 1)
+        self.is_positive = (timestamps >= 0).sum().item() >= len(timestamps) * 0.99
+        normality = shapiro(timestamps.sample(n=min(len(timestamps), 500))).pvalue
+        timestamps = np.array(timestamps).reshape(-1, 1)
 
         self.scaler = StandardScaler() if normality >= 0.05 else MinMaxScaler()
-        self.scaler.fit(self.data)
-        self.input_dimension = self.data.shape[1]
+        self.scaler.fit(timestamps)
+        self.input_dimension = timestamps.shape[1]
 
     def transform(self, data):
-        return self.scaler.transform(self.data)
+        # Important: transform must depend on the passed data.
+        # Using the full training data here breaks row-subsetting and causes
+        # inconsistent feature sizes during sampler fitting.
+        timestamps = chain.from_iterable(data.values)
+        timestamps = np.array(
+            list(map(lambda d: datetime_to_timestamp(d, self.date_format), timestamps))
+        ).reshape(-1, 1)
+        return self.scaler.transform(timestamps)
 
     def inverse_transform(self, data, temperature: float = 0.0, **kwargs):
         """

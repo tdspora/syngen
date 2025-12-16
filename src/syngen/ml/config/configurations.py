@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Dict, List, Callable, Literal
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 from slugify import slugify
@@ -209,21 +210,32 @@ class InferConfig:
         dynamic_name = (
             self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         )
+
+        train_config_pickle_path = (
+            f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl"
+        )
+
+        if self.destination:
+            output_suffix = Path(self.destination).suffix.lower() or ".csv"
+        else:
+            train_cfg = fetch_config(train_config_pickle_path)
+            source = getattr(train_cfg, "source", None)
+            output_suffix = ".avro" if str(source).endswith(".avro") else ".csv"
+
         self.paths = {
             "reports_path": (
                 f"model_artifacts/"
                 f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
                 f"/{dynamic_name}/reports"
             ),
-            "train_config_pickle_path":
-                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+            "train_config_pickle_path": train_config_pickle_path,
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
-                                            f"merged_infer_{dynamic_name}.csv",
+                                            f"merged_infer_{dynamic_name}{output_suffix}",
             "path_to_merged_infer": (
                 self.destination
                 if self.destination is not None
                 else f"model_artifacts/tmp_store/{dynamic_name}/"
-                     f"merged_infer_{dynamic_name}.csv"
+                     f"merged_infer_{dynamic_name}{output_suffix}"
             ),
             "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",

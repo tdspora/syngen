@@ -216,15 +216,64 @@ class CVAE:
         transformed_data = self.dataset.transform(data)
         return self.model.fit(transformed_data, batch_size=self.batch_size, **kwargs)
 
-    def fit_sampler(self, data: pd.DataFrame):
+    def fit_sampler(self, data: pd.DataFrame, max_fit_rows: Optional[int] = None):
         log_message = "Fit sampler"
         logger.info(log_message)
         ProgressBarHandler().set_progress(message=log_message)
-        transformed_data = self.dataset.transform(data)
+
+        transformed_data = None
+        if max_fit_rows is not None and len(data) > max_fit_rows:
+            logger.info(
+                f"Sampler fit row cap is enabled: using {max_fit_rows} of {len(data)} rows"
+            )
+
+            # Choose by row position (not index labels) so we can reliably subset arrays later.
+            rng = np.random.default_rng(self.random_seed)
+            row_indices = rng.choice(len(data), size=max_fit_rows, replace=False)
+            row_indices.sort()
+
+            # Fast path: transform only the sampled subset.
+            # Some feature transformers may return arrays aligned to the original dataset index,
+            # which can cause inconsistent cardinalities. If that happens, we fall back to
+            # transforming the full data and slicing per-feature.
+            data_for_sampler = data.iloc[row_indices]
+            transformed_data = self.dataset.transform(data_for_sampler)
+
+            try:
+                sizes = [int(getattr(x, "shape", [len(x)])[0]) for x in transformed_data]
+                if len(set(sizes)) != 1:
+                    raise ValueError(f"Mismatched transformed feature sizes: {sizes}")
+            except Exception as e:
+                logger.warning(
+                    "Sampler subset transform produced inconsistent feature sizes; "
+                    f"falling back to full transform + slicing. Details: {e}"
+                )
+                transformed_full = self.dataset.transform(data)
+
+                def _subset_rows(arr):
+                    # pandas DataFrame/Series use [] as column selection; slice rows via iloc.
+                    if isinstance(arr, tf.Tensor):
+                        return tf.gather(arr, row_indices, axis=0)
+                    if hasattr(arr, "iloc"):
+                        arr = arr.iloc[row_indices]
+                    else:
+                        arr = arr[row_indices]
+                    return arr.to_numpy() if hasattr(arr, "to_numpy") else arr
+
+                transformed_data = [_subset_rows(x) for x in transformed_full]
+        else:
+            transformed_data = self.dataset.transform(data)
+
         log_message = "Start encoding"
         logger.info(log_message)
         ProgressBarHandler().set_progress(message=log_message)
-        latent_points = self.encoder_model.predict(transformed_data)
+        latent_points = self.encoder_model.predict(
+            transformed_data,
+            batch_size=self.batch_size,
+            verbose=0,
+        )
+        # Free potentially large intermediate feature arrays as early as possible.
+        del transformed_data
 
         # Handle NaN values in latent points (can happen if training became unstable)
         if np.isnan(latent_points).any() or np.isinf(latent_points).any():

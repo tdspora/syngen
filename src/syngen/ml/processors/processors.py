@@ -309,6 +309,11 @@ class PostprocessHandler(Processor):
     Class for the postprocessing of the generated data
     """
 
+    @staticmethod
+    def _build_preview_path(path_to_destination: str) -> str:
+        root, _ = os.path.splitext(path_to_destination)
+        return f"{root}_preview.csv"
+
     def __init__(
         self,
         metadata: Dict,
@@ -475,15 +480,30 @@ class PostprocessHandler(Processor):
         and save the processed data to the predefined path
         """
         for table in self.metadata.keys():
+            slugified_table = slugify(table)
+            train_config_path = (
+                f"model_artifacts/resources/{slugified_table}/vae/checkpoints/train_config.pkl"
+            )
+            suffix = ".csv"
+            if os.path.exists(train_config_path):
+                train_cfg = fetch_config(train_config_path)
+                source = getattr(train_cfg, "source", None)
+                suffix = ".avro" if str(source).endswith(".avro") else ".csv"
+
             default_path_to_generated_data = (
-                f"model_artifacts/tmp_store/{slugify(table)}/"
-                f"merged_infer_{slugify(table)}.csv"
+                f"model_artifacts/tmp_store/{slugified_table}/"
+                f"merged_infer_{slugified_table}{suffix}"
             )
             path_to_generated_data = (
                 self.metadata[table].get("infer_settings", {}).get(
                     "destination", default_path_to_generated_data
                 ) if self.type_of_process == "infer" else default_path_to_generated_data
             )
+            preview_rows = (
+                self.metadata[table]
+                .get("infer_settings", {})
+                .get("preview")
+            ) if self.type_of_process == "infer" else None
             data = self._load_generated_data(path_to_generated_data, table)
             if os.path.exists(self.path_to_flatten_metadata):
                 logger.info("Start postprocessing of the generated data")
@@ -503,7 +523,8 @@ class PostprocessHandler(Processor):
                 data,
                 path_to_generated_data,
                 order_of_columns,
-                table
+                table_name=table,
+                preview_rows=preview_rows
             )
 
     @staticmethod
@@ -511,13 +532,35 @@ class PostprocessHandler(Processor):
         generated_data: pd.DataFrame,
         path_to_destination: str,
         order_of_columns: List[str],
-        *args
+        table_name: str,
+        preview_rows: Optional[int] = None
     ):
         """
         Save generated data to the path
         """
         generated_data = generated_data[order_of_columns]
-        DataLoader(path=path_to_destination).save_data(
-            generated_data,
-            format=get_context().get_config(),
-        )
+        if path_to_destination.endswith(".avro"):
+            path_to_schema = (
+                f"model_artifacts/tmp_store/{slugify(table_name)}"
+                f"/original_schema_{slugify(table_name)}.pkl"
+            )
+            original_schema = (
+                fetch_config(path_to_schema) if os.path.exists(path_to_schema) else None
+            )
+            DataLoader(path=path_to_destination).save_data(generated_data, schema=original_schema)
+        else:
+            DataLoader(path=path_to_destination).save_data(
+                generated_data,
+                format=get_context().get_config(),
+            )
+
+        if preview_rows is not None:
+            preview_path = PostprocessHandler._build_preview_path(path_to_destination)
+            preview_df = generated_data.head(int(preview_rows))
+            DataLoader(path=preview_path).save_data(
+                preview_df,
+                format=get_context().get_config(),
+            )
+            logger.info(
+                f"Preview saved in '{preview_path}' (first {len(preview_df)} rows)"
+            )

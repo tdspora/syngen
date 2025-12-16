@@ -568,9 +568,23 @@ class Dataset:
         """
         self.binary_columns = set()
         for col in self.df.columns:
+            # Treat boolean dtypes as binary even if the column is constant.
+            # Pandas may infer a CSV column containing "true"/"false" as bool.
+            # If all values are True (or all False), nunique=1 and the generic
+            # heuristic below would miss it, causing the column to fall through
+            # to text feature assignment and crash (len(bool) TypeError).
+            if pd.api.types.is_bool_dtype(self.df[col]):
+                self.binary_columns.add(col)
+                continue
+
             # Get unique non-null values
             unique_values = self.df[col].dropna().unique()
             num_unique = len(unique_values)
+
+            # Also treat object/mixed columns containing only bool values as binary.
+            if num_unique > 0 and all(isinstance(v, (bool, np.bool_)) for v in unique_values):
+                self.binary_columns.add(col)
+                continue
             
             # Binary if exactly 2 unique non-null values
             # (NaN will be handled separately during preprocessing)
@@ -1676,20 +1690,73 @@ class Dataset:
         """
         categorical_cols = list(self.categorical_columns)
         
-        if len(categorical_cols) < 2:
+        if len(categorical_cols) < 1:
             return
+
+        # Also learn mappings from categorical parents to free-text children.
+        # This helps restore lookup-like text fields (e.g., product_name → description)
+        # when the text generator is undertrained and produces gibberish.
+        excluded_text_children = (
+            set(self.categorical_columns)
+            | set(self.email_columns)
+            | set(self.phone_columns)
+            | set(self.ip_columns)
+            | set(self.uuid_columns)
+            | set(self.pk_columns)
+            | set(self.fk_columns)
+        )
+
+        candidate_text_children = (
+            set(self.str_columns) | set(self.long_text_columns)
+        ) - excluded_text_children
+
+        text_children = []
+        for col in candidate_text_children:
+            if col not in self.df.columns:
+                continue
+            s = self.df[col].dropna()
+            if s.empty:
+                continue
+            s = s.astype(str)
+            # Heuristic: "description-like" text tends to have spaces and non-trivial length.
+            frac_has_space = s.str.contains(r"\s").mean()
+            avg_len = s.str.len().mean()
+            if frac_has_space >= 0.3 and avg_len >= 12:
+                text_children.append(col)
+
+        child_candidates = list(dict.fromkeys(categorical_cols + text_children))
+
+        # Avoid storing huge per-parent lists for large datasets.
+        # This is a pragmatic cap for postprocessing; it does not affect VAE training.
+        max_text_values_per_parent = 100
         
         # First pass: collect all candidate mappings with their scores
         candidates = {}
         
         for parent_col in categorical_cols:
-            for child_col in categorical_cols:
+            for child_col in child_candidates:
                 if parent_col == child_col:
                     continue
                 
                 # Check if child values are conditionally dependent on parent
                 # (i.e., each parent value maps to a subset of child values)
-                grouped = self.df.groupby(parent_col)[child_col].apply(set).to_dict()
+                if child_col in text_children:
+                    grouped = (
+                        self.df.groupby(parent_col)[child_col]
+                        .apply(lambda x: set(x.dropna().astype(str)))
+                        .to_dict()
+                    )
+                    # Cap stored values per parent to keep state size bounded.
+                    for k, v in list(grouped.items()):
+                        if not v:
+                            grouped[k] = []
+                        elif len(v) > max_text_values_per_parent:
+                            # Keep a stable subset to reduce memory usage.
+                            grouped[k] = sorted(v)[:max_text_values_per_parent]
+                        else:
+                            grouped[k] = list(v)
+                else:
+                    grouped = self.df.groupby(parent_col)[child_col].apply(set).to_dict()
                 
                 # Calculate overlap between different parent groups
                 all_child_values = set(self.df[child_col].dropna().unique())
@@ -1703,7 +1770,9 @@ class Dataset:
                         children1 = grouped[p1]
                         children2 = grouped[p2]
                         if children1 and children2:
-                            overlap = len(children1 & children2) / min(len(children1), len(children2))
+                            overlap = len(set(children1) & set(children2)) / min(
+                                len(children1), len(children2)
+                            )
                             overlap_scores.append(overlap)
                 
                 # If average overlap is low (<30%), this is a conditional relationship candidate
@@ -2002,7 +2071,12 @@ class Dataset:
         
         # Define priority patterns: columns that should take precedence as parents
         # Geographic hierarchy: country → state → city
-        priority_parent_patterns = ['country', 'region', 'state', 'province']
+        geo_priority_parent_patterns = ['country', 'region', 'state', 'province']
+
+        # For description-like text fields, prefer more specific product identifiers
+        # (e.g., product_name → description) over coarse groupings (e.g., category → description).
+        description_child_patterns = ['description', 'desc']
+        product_priority_parent_patterns = ['product_name', 'product']
         
         # Track which child columns have been processed by priority mappings
         # These should not be overwritten by non-priority mappings
@@ -2012,10 +2086,24 @@ class Dataset:
         def get_priority(mapping_key):
             parent_col, child_col = mapping_key
             parent_lower = parent_col.lower()
-            for i, pattern in enumerate(priority_parent_patterns):
+            child_lower = child_col.lower()
+
+            is_description_child = any(p in child_lower for p in description_child_patterns)
+
+            if is_description_child:
+                # Ensure product_name/product mappings run before category-style mappings.
+                if 'product_name' in parent_lower:
+                    return (-1, 0)
+                if any(p in parent_lower for p in product_priority_parent_patterns):
+                    return (-1, 1)
+                if 'category' in parent_lower:
+                    return (-1, 5)
+                return (-1, 10)
+
+            for i, pattern in enumerate(geo_priority_parent_patterns):
                 if pattern in parent_lower:
-                    return i  # Lower number = higher priority
-            return len(priority_parent_patterns) + 1  # Lower priority
+                    return (0, i)  # Lower number = higher priority
+            return (1, 0)  # Lower priority
         
         sorted_mappings = sorted(
             self.conditional_mappings.items(),
@@ -2027,8 +2115,17 @@ class Dataset:
             if parent_col not in data.columns or child_col not in data.columns:
                 continue
             
-            # Check if this is a priority parent
-            is_priority = any(p in parent_col.lower() for p in priority_parent_patterns)
+            parent_lower = parent_col.lower()
+            child_lower = child_col.lower()
+
+            # Check if this mapping should lock the child column
+            is_geo_priority = any(p in parent_lower for p in geo_priority_parent_patterns)
+            is_description_child = any(p in child_lower for p in description_child_patterns)
+            is_product_priority = is_description_child and any(
+                p in parent_lower for p in product_priority_parent_patterns
+            )
+
+            is_priority = is_geo_priority or is_product_priority
             
             # Skip if this child column was already processed by a priority mapping
             if child_col in children_locked_by_priority and not is_priority:
@@ -2199,7 +2296,12 @@ class Dataset:
         return data
 
     def _preprocess_str_params(self, feature: str) -> Tuple[int, int]:
-        max_len = int(self.df[feature].apply(lambda line: len(line)).max())
+        series = self.df[feature].dropna()
+        if series.empty:
+            max_len = 0
+        else:
+            # Be defensive: some pipelines may contain non-string objects.
+            max_len = int(series.astype(str).map(len).max())
         rnn_units = 16
         if 1 <= max_len < 7:
             rnn_units = 32
