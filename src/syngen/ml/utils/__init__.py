@@ -29,6 +29,5 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     timing,
     ValidationError,
     TIMEZONE_REGEX,
-    safe_flatten,
     fetch_env_variables
 )
