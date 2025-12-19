@@ -17,7 +17,6 @@ def test_valid_metadata_file(rp_logger, caplog):
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -56,7 +55,6 @@ def test_valid_metadata_file_with_diff_types_of_reports(
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -79,7 +77,6 @@ def test_valid_metadata_file_with_source_contained_path_to_excel_table(
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -100,7 +97,6 @@ def test_valid_metadata_file_without_global_settings(rp_logger, caplog):
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -121,7 +117,6 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -199,7 +194,6 @@ def test_metadata_file_with_invalid_training_settings(
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -269,7 +263,6 @@ def test_metadata_file_with_invalid_global_training_settings(
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -332,7 +325,6 @@ def test_metadata_file_with_invalid_infer_settings(
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -392,7 +384,6 @@ def test_metadata_file_with_invalid_global_infer_settings(
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -426,7 +417,6 @@ def test_metadata_file_with_invalid_global_encryption_settings(
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -461,7 +451,6 @@ def test_metadata_file_with_invalid_encryption_settings(
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -550,7 +539,6 @@ def test_metadata_file_with_invalid_format_settings_for_csv_table(
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -614,7 +602,6 @@ def test_metadata_file_with_invalid_format_settings_for_excel_table(
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -635,7 +622,6 @@ def test_metadata_file_with_absent_required_fields(rp_logger):
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -660,7 +646,6 @@ def test_metadata_file_with_invalid_PK_key_contained_references_section(rp_logge
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -685,7 +670,6 @@ def test_metadata_file_with_invalid_UQ_key_contained_references_section(rp_logge
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -710,7 +694,6 @@ def test_metadata_file_with_invalid_FK_key_without_references_section(rp_logger)
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -795,7 +778,6 @@ def test_validation_schema_of_keys(rp_logger, path_to_metadata, expected_error):
     with pytest.raises(ValidationError) as error:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -819,7 +801,6 @@ def test_valid_metadata_file_without_sources_during_training_process_without_val
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=False,
             process="train"
         ).validate_schema()
@@ -842,7 +823,6 @@ def test_valid_metadata_file_without_sources_during_training_process_with_valida
     with pytest.raises(ValidationError) as e:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -870,7 +850,6 @@ def test_valid_metadata_file_without_sources_during_infer_process_without_valida
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=False,
             process="infer"
         ).validate_schema()
@@ -893,7 +872,6 @@ def test_valid_metadata_file_without_sources_during_inference_process_with_valid
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="infer"
         ).validate_schema()
@@ -916,7 +894,6 @@ def test_valid_metadata_file_without_training_settings_during_train_process_with
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=False,
             process="train"
         ).validate_schema()
@@ -939,7 +916,6 @@ def test_valid_metadata_file_without_training_settings_during_train_process_with
     with pytest.raises(ValidationError) as e:
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="train"
         ).validate_schema()
@@ -967,7 +943,6 @@ def test_valid_metadata_file_without_training_settings_during_infer_process_with
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=False,
             process="infer"
         ).validate_schema()
@@ -991,7 +966,6 @@ def test_valid_metadata_file_without_training_settings_during_infer_process_with
     with caplog.at_level(level="DEBUG"):
         ValidationSchema(
             metadata=metadata,
-            metadata_path=path_to_metadata,
             validation_source=True,
             process="infer"
         ).validate_schema()

@@ -19,7 +19,13 @@ class SampleAccuracyTest(BaseTest):
         table_name: str,
         train_config: Dict,
     ):
-        super().__init__(original, sampled, paths, table_name, train_config)
+        super().__init__(
+            original=original,
+            synthetic=sampled,
+            paths=paths,
+            table_name=table_name,
+            config=train_config
+        )
         self.reports_path = f"{self.paths['reports_path']}/sample_accuracy"
 
     def __get_univariate_metric(self):
@@ -66,7 +72,10 @@ class SampleAccuracyTest(BaseTest):
             config=config,
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
         )
-        path_to_sample_report = f"{self.paths['path_to_sample_report']}"
+        path, extension = os.path.splitext(self.paths["path_to_sample_report"])
+        path_to_sample_report = (
+            f"{path}-{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}{extension}"
+        )
         os.makedirs(os.path.dirname(path_to_sample_report), exist_ok=True)
         with open(
             path_to_sample_report,
@@ -75,4 +84,5 @@ class SampleAccuracyTest(BaseTest):
         ) as f:
             f.write(html)
 
+        self._update_list_of_generated_reports(path_to_sample_report, "sample")
         self._remove_artifacts()

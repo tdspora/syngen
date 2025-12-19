@@ -264,12 +264,10 @@ class ValidationSchema:
     def __init__(
         self,
         metadata: Dict,
-        metadata_path: str,
         validation_source: bool,
         process: Literal["train", "infer"]
     ):
         self.metadata = metadata
-        self.metadata_path = metadata_path
         self.global_schema = GlobalSettingsSchema()
         self.configuration_schema = (
             RestrictedConfigurationSchema()

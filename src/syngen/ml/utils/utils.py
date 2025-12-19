@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import List, Dict, Optional, Union, Set, Callable
+from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
@@ -404,15 +404,23 @@ def fetch_config(config_pickle_path: str):
         return pkl.load(f)
 
 
+def save_config(config_pickle_path: str, config):
+    """
+    Save the configuration to the disk
+    """
+    with open(config_pickle_path, "wb") as f:
+        pkl.dump(config, f)
+
+
 def fetch_unique_root(table_name: Optional[str], metadata_path: Optional[str]):
     """
     Construct the unique constant substring for use in the name of the experiment and log file
     """
     unique_name = str()
-    if table_name:
-        unique_name = table_name
     if metadata_path:
         unique_name = os.path.basename(metadata_path)
+    elif table_name:
+        unique_name = table_name
     return slugify(unique_name)
 
 
@@ -532,39 +540,53 @@ def timing(func):
     return wrapper
 
 
-def validate_parameter_reports(report_types: list, full_list: list) -> Callable:
+def get_reports(
+    value: Union[List[str], Tuple[str], str],
+    report_types,
+    type_of_process: Literal["train", "infer"]
+) -> List[str]:
     """
-    Validate the values of the parameter 'reports'
+    Validate the values provided by the parameter 'value',
+    convert it, and get the appropriate list of reports
     """
-    def validator(ctx, param, value) -> List[str]:
-        input_values = set(value)
-        valid_values: List = ["none", "all"]
-        valid_values.extend(report_types)
+    list_of_report_types = (
+        report_types.train_report_types
+        if type_of_process == "train"
+        else report_types.infer_report_types
+    )
+    full_list_of_report_types = (
+        report_types.full_list_of_train_report_types
+        if type_of_process == "train"
+        else report_types.full_list_of_infer_report_types
+    )
+    input_values = set(value) if isinstance(value, (list, tuple)) else {value}
+    valid_values: List = ["none", "all"]
+    valid_values.extend(list_of_report_types)
 
-        if not input_values.issubset(set(valid_values)):
+    if not input_values.issubset(set(valid_values)):
+        list_of_valid_values = ", ".join([f"'{value}'" for value in valid_values])
+        raise ValueError(
+            "Invalid input: Acceptable values for the parameter 'reports' are "
+            f"{list_of_valid_values}."
+        )
+    if "none" in input_values and "all" in input_values:
+        raise ValueError(
+            "Invalid input: The 'reports' parameter cannot be set to both 'none' and 'all'. "
+            "Please provide only one of these options."
+        )
+
+    if "none" in input_values or "all" in input_values:
+        if len(input_values) > 1:
             raise ValueError(
-                f"Invalid input: Acceptable values for the parameter '--reports' are "
-                f"{', '.join(valid_values)}."
+                "Invalid input: When 'reports' option is set to 'none' or 'all', "
+                "no other values should be provided."
             )
-        if "none" in input_values and "all" in input_values:
-            raise ValueError(
-                "Invalid input: The '--reports' parameter cannot be set to both 'none' and 'all'. "
-                "Please provide only one of these options."
-            )
+        if list(input_values)[0] == "all":
+            return full_list_of_report_types
+        if list(input_values)[0] == "none":
+            return list()
 
-        if "none" in input_values or "all" in input_values:
-            if len(input_values) > 1:
-                raise ValueError(
-                    "Invalid input: When '--reports' option is set to 'none' or 'all', "
-                    "no other values should be provided."
-                )
-            if value[0] == "all":
-                return full_list
-            if value[0] == "none":
-                return list()
-
-        return list(input_values)
-    return validator
+    return list(input_values)
 
 
 class ValidationError(Exception):

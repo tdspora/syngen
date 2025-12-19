@@ -167,7 +167,7 @@ The parameters which you can set up for generation process:
 
 - <i>size</i> - the desired number of rows to generate
 - <i>table_name</i> – required parameter for inference of single table, the name of the table, same as in training
-- <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 5000 rows)
+- <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 50000 rows)
 - <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
 - <i>random_seed</i> – if specified, generates a reproducible result
 - <i>reports</i> - controls the generation of quality reports, might require significant time for big generated tables (>10000 rows)
@@ -563,6 +563,76 @@ Then you should set the generated key as an environment variable in your termina
 ```bash
 export YOUR_FERNET_KEY_NAME='YOUR_GENERATED_FERNET_KEY'
 ```
+
+## Using SDK (Programmatic Interface)
+
+In addition to the CLI, *Syngen* provides a Python SDK for programmatic access to the main functionality. The SDK is useful when you want to integrate synthetic data generation into your Python applications, notebooks, or data pipelines.
+
+### SDK Classes
+
+The SDK provides two main classes:
+
+#### `Syngen` - Core functionality for a training, inference, and report generation
+
+```python
+from syngen.sdk import Syngen
+
+# Training
+Syngen(source="path/to/data.csv", table_name="my_table").train(
+    epochs=10,
+    row_limit=1000,
+    batch_size=32,
+    log_level="DEBUG",
+    reports="all"
+)
+
+Syngen(metadata_path="path/to/metadata.yaml").train(log_level="DEBUG")
+
+# Inference
+Syngen(source="path/to/data.csv", table_name="my_table").infer(
+  size=1000,
+  random_seed=42,
+  reports="accuracy"
+)
+
+Syngen(metadata_path="path/to/metadata.yaml").infer(log_level="DEBUG")
+
+# Generate reports separately for a certain table
+Syngen(metadata_path="path/to/metadata.yaml").generate_quality_reports(
+  table_name="my_table",
+  reports=["accuracy", "sample"]
+)
+```
+
+#### `DataIO` - Data loading and saving
+
+```python
+from syngen.sdk import DataIO
+
+data_io = DataIO(
+  path="data.csv",
+  sep=',',
+  encoding='utf-8',
+  header=0
+)
+df = data_io.load_data()
+
+data_io.save_data(df)
+```
+
+### Key SDK features
+
+- **Training and inference**: All CLI parameters are available as method arguments
+- **Report generation**: Generate quality reports separately for a certain table after a training/inference processes
+- **Data I/O**: Load and save data in multiple formats (*CSV*, *Avro*, *Excel*) with custom settings
+- **Encryption support**: Use a Fernet key for secure data handling
+- **Metadata support**: Use a metadata file for complex workflows with multiple tables
+- **Format configuration**: Customize delimiters, encodings, and other format-specific settings
+
+### SDK Examples
+
+For detailed examples and usage patterns, please refer to the [SDK demonstration notebook](demo-notebooks/SDK_demonstration.ipynb)
+
 
 ## Syngen Installation Guide for MacOS ARM (M1/M2) with Python 3.10 or 3.11
 

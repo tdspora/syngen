@@ -1,7 +1,7 @@
 import shutil
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Literal
 import os
 
 import jinja2
@@ -18,7 +18,7 @@ from syngen.ml.metrics import (
     Utility,
 )
 from syngen.ml.metrics.utils import transform_to_base64
-from syngen.ml.utils import fetch_config, ProgressBarHandler
+from syngen.ml.utils import fetch_config, save_config, ProgressBarHandler
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.validation_schema import ReportTypes
 
@@ -31,6 +31,7 @@ class BaseTest(ABC):
         paths: dict,
         table_name: str,
         config: Dict,
+        type_of_process: Literal["train", "infer"] = "train"
     ):
         self.original = original
         self.synthetic = synthetic
@@ -45,6 +46,7 @@ class BaseTest(ABC):
             ]
         )
         self.reports_path = str()
+        self.type_of_process = type_of_process
 
     @abstractmethod
     def report(
@@ -105,6 +107,19 @@ class BaseTest(ABC):
 
         return cleaned_config
 
+    def _update_list_of_generated_reports(self, path_to_report: str, report_type: str):
+        """
+        Update the list of generated reports in the configuration stored on the disk
+        """
+        path_to_config = (
+            self.paths["infer_config_pickle_path"]
+            if self.type_of_process == "infer"
+            else self.paths["train_config_pickle_path"]
+        )
+        config = fetch_config(config_pickle_path=path_to_config)
+        config.paths["generated_reports"].update({f"{report_type}_report": path_to_report})
+        save_config(path_to_config, config)
+
 
 class AccuracyTest(BaseTest):
     def __init__(
@@ -113,10 +128,19 @@ class AccuracyTest(BaseTest):
         synthetic: pd.DataFrame,
         paths: dict,
         table_name: str,
-        infer_config: Dict
+        config: Dict,
+        type_of_process: Literal["train", "infer"] = "train"
     ):
-        super().__init__(original, synthetic, paths, table_name, infer_config)
+        super().__init__(
+            original=original,
+            synthetic=synthetic,
+            paths=paths,
+            table_name=table_name,
+            config=config,
+            type_of_process=type_of_process
+        )
         self.reports_path = f"{self.paths['reports_path']}/accuracy"
+        self.type_of_process = type_of_process
         self.dataset_pickle_path = self.paths["dataset_pickle_path"]
         self.univariate = UnivariateMetric(
             self.original,
@@ -279,13 +303,18 @@ class AccuracyTest(BaseTest):
             time=datetime.now().strftime("%H:%M:%S %d/%m/%Y"),
             round=round,
         )
-
-        path_to_accuracy_report = f"{self.paths['path_to_accuracy_report']}"
+        path, extension = os.path.splitext(self.paths["path_to_accuracy_report"])
+        path_to_accuracy_report = (
+            f"{path}-{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}{extension}"
+        )
         os.makedirs(os.path.dirname(path_to_accuracy_report), exist_ok=True)
-        with open(
-            path_to_accuracy_report, "w", encoding="utf-8"
-        ) as f:
+        with open(path_to_accuracy_report, "w", encoding="utf-8") as f:
             f.write(html)
+
+        self._update_list_of_generated_reports(
+            path_to_report=path_to_accuracy_report,
+            report_type="accuracy"
+        )
         self._log_report_to_mlflow(path_to_accuracy_report)
 
     def report(self, *args, **kwargs):
@@ -312,7 +341,6 @@ class AccuracyTest(BaseTest):
                 "Correlation": corr_result,
             }
         )
-
         if self.plot_exists:
             self._generate_report(
                 acc_median,
