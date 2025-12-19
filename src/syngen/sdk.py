@@ -1,22 +1,19 @@
-from typing import Optional, Dict, List, Union, Set, Literal
-import os
-import pandas as pd
-from loguru import logger
-from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+import os
+from typing import Dict, List, Literal, Optional, Set, Union
 
+import pandas as pd
 from slugify import slugify
-from syngen.ml.data_loaders import DataLoader, DataEncryptor, MetadataLoader
-from syngen.train import launch_train, validate_required_parameters
+from loguru import logger
+
 from syngen.infer import launch_infer
+from syngen.ml.context import get_context, global_context
+from syngen.ml.data_loaders import DataEncryptor, DataLoader, MetadataLoader
+from syngen.ml.reporters import AccuracyReporter, Report, SampleAccuracyReporter
 from syngen.ml.utils import fetch_config, fetch_env_variables, get_reports, setup_log_process
-from syngen.ml.reporters import (
-    Report,
-    AccuracyReporter,
-    SampleAccuracyReporter,
-)
-from syngen.ml.validation_schema import ValidationSchema, ReportTypes
-from syngen.ml.context import global_context, get_context
+from syngen.ml.validation_schema import ReportTypes, ValidationSchema
+from syngen.train import launch_train, validate_required_parameters
 
 
 class BaseDataIO(ABC):
@@ -115,9 +112,19 @@ class DataIO(BaseDataIO):
 @dataclass
 class Syngen:
     """
-    SDK class for a training, inference, and generation of reports
+    SDK class for training, inference, and generation of reports.
+
+    Attributes:
+        list_of_tables (List[str]): The list of table names.
+        metadata_path (Optional[str]): The path to the metadata file.
+        table_name (Optional[str]): The name of the table.
+        source (Optional[str]): The source of the data.
+        execution_artifacts (Dict): The dictionary to store the information about paths
+        to execution artifacts.
+        report_types (ReportTypes): The object containing the information
+        about available report types.
     """
-    list_of_tables: List = field(default_factory=list)
+    list_of_tables: List[str] = field(default_factory=list)
     metadata_path: Optional[str] = None
     table_name: Optional[str] = None
     source: Optional[str] = None
