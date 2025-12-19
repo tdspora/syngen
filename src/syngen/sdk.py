@@ -1,19 +1,28 @@
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 import os
 from typing import Dict, List, Literal, Optional, Set, Union
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 
 import pandas as pd
 from slugify import slugify
 from loguru import logger
 
 from syngen.infer import launch_infer
-from syngen.ml.context import get_context, global_context
 from syngen.ml.data_loaders import DataEncryptor, DataLoader, MetadataLoader
-from syngen.ml.reporters import AccuracyReporter, Report, SampleAccuracyReporter
-from syngen.ml.utils import fetch_config, fetch_env_variables, get_reports, setup_log_process
-from syngen.ml.validation_schema import ReportTypes, ValidationSchema
 from syngen.train import launch_train, validate_required_parameters
+from syngen.ml.utils import (
+    fetch_config,
+    fetch_env_variables,
+    get_reports,
+    setup_log_process
+)
+from syngen.ml.reporters import (
+    Report,
+    AccuracyReporter,
+    SampleAccuracyReporter,
+)
+from syngen.ml.validation_schema import ValidationSchema, ReportTypes
+from syngen.ml.context import global_context, get_context
 
 
 class BaseDataIO(ABC):
@@ -257,7 +266,8 @@ class Syngen:
         reports: Union[str, List[str]] = "none",
         log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         batch_size: int = 32,
-        fernet_key: Optional[str] = None
+        fernet_key: Optional[str] = None,
+        loader_path: Optional[str] = None
     ):
         launch_train(
             metadata_path=self.metadata_path,
@@ -269,7 +279,8 @@ class Syngen:
             reports=reports,
             log_level=log_level,
             batch_size=batch_size,
-            fernet_key=fernet_key
+            fernet_key=fernet_key,
+            loader_path=loader_path
         )
         self._set_execution_artifacts(type_of_process="train")
 
@@ -282,6 +293,7 @@ class Syngen:
         reports: Union[str, List[str]] = "none",
         log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         fernet_key: Optional[str] = None,
+        loader_path: Optional[str] = None
     ):
         launch_infer(
             metadata_path=self.metadata_path,
@@ -292,31 +304,19 @@ class Syngen:
             reports=reports,
             random_seed=random_seed,
             log_level=log_level,
-            fernet_key=fernet_key
+            fernet_key=fernet_key,
+            loader_path=loader_path
         )
         self._set_execution_artifacts(type_of_process="infer")
 
     @staticmethod
     def _validate_artifacts(
         table_name: str,
-        fernet_key: Optional[str],
         completed_processes: Set[str]
     ):
         errors: List[str] = []
 
         slug = slugify(table_name)
-
-        path_to_input_data = (
-            f"model_artifacts/tmp_store/{slug}/"
-            f"input_data_{slug}.{'dat' if fernet_key is not None else 'pkl'}"
-        )
-        if not os.path.exists(path_to_input_data):
-            errors.append(
-                (
-                    f"The input data file wasn't found for the table '{table_name}' "
-                    f"in the path - {path_to_input_data}."
-                )
-            )
 
         # Type-specific validations
         path_to_train_config = (
@@ -398,7 +398,7 @@ class Syngen:
             paths=infer_config.paths,
             config=infer_config.to_dict(),
             metadata=infer_config.metadata,
-            loader=None,
+            loader=infer_config.loader,
             type_of_process=infer_config.type_of_process
         )
 
@@ -450,7 +450,6 @@ class Syngen:
                 DataEncryptor.validate_fernet_key(fernet_key)
             self._validate_artifacts(
                 table_name=table_name,
-                fernet_key=fernet_key,
                 completed_processes={
                     "infer"
                     if report in self.report_types.infer_report_types

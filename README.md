@@ -77,7 +77,8 @@ train --source PATH_TO_ORIGINAL_CSV \
     --reports STR \
     --batch_size INT \
     --log_level STR \ 
-    --fernet_key STR
+    --fernet_key STR \
+    --loader STR
 ```
 
 *Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
@@ -115,6 +116,7 @@ Parameters that you can set up for training process:
 - <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
 - <i>log_level</i> - logging level for the process
 - <i>fernet_key</i> - the name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
+- <i>loader</i> - the path to a custom data loader function in format 'module.path:function_name' to load the original data. The function should accept a name of a table and return a pandas DataFrame. The example: 'my_package.loaders:custom_loader'.
 
 Requirements for parameters of training process:
 * <i>source</i> - data type - string
@@ -128,6 +130,8 @@ Requirements for parameters of training process:
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 * <i>log_level</i> - data type - string, must be one of the next values - *TRACE*, *"DEBUG"*, *"INFO"*, *"WARNING"*, *"ERROR"*, *"CRITICAL"*, default value is *"INFO"*
 * <i>fernet_key</i> - data type - string, the name of the environment variable that kept the value of the fernet key. It must be a 44-character URL-safe base64-encoded string, default value is None
+* <i>loader</i> - data type - string
+
 ### Inference (generation)
 
 You can customize the inference processes by calling for one table:
@@ -140,7 +144,8 @@ infer --size INT \
     --random_seed INT \
     --reports STR \
     --log_level STR \ 
-    --fernet_key STR
+    --fernet_key STR \
+    --loader STR
 ```
 
 *Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
@@ -174,6 +179,7 @@ The parameters which you can set up for generation process:
 - <i>metadata_path</i> – a path to metadata file
 - <i>log_level</i> - logging level for the process
 - <i>fernet_key</i> - the name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
+- <i>loader</i> - the path to a custom data loader function in format 'module.path:function_name' to load the original data. The function should accept a name of a table and return a pandas DataFrame. The example: 'my_package.loaders:custom_loader'.
 
 Requirements for parameters of generation process:
 * <i>size</i> - data type - integer, must be equal to or more than 1, default value is 100
@@ -185,6 +191,7 @@ Requirements for parameters of generation process:
 * <i>metadata_path</i> - data type - string
 * <i>log_level</i> - data type - string, must be one of the next values - *TRACE*, *"DEBUG"*, *"INFO"*, *"WARNING"*, *"ERROR"*, *"CRITICAL"*, default value is *"INFO"*
 * <i>fernet_key</i> - data type - string, the name of the environment variable that kept the value of the fernet key. It must be a 44-character URL-safe base64-encoded string, default value is None
+* <i>loader<\i> - data type - string
 
 The metadata can contain any of the arguments above for each table. If so, the duplicated arguments from the CLI
 will be ignored.
@@ -563,6 +570,65 @@ Then you should set the generated key as an environment variable in your termina
 ```bash
 export YOUR_FERNET_KEY_NAME='YOUR_GENERATED_FERNET_KEY'
 ```
+
+### Custom Data Loader Functions
+
+Syngen allows you to provide custom data loader functions through the CLI using the `--loader` parameter. 
+This is useful when you need to load the original data with specific parameters, or from formats that require 
+custom handling, or to avoid saving the subset of the original data on a disk even if it's encrypted.
+
+#### How It Works
+
+The `--loader` parameter accepts a string in the format `module.path:function_name`, 
+which tells Syngen where to find your custom loader function.
+
+##### Requirements for Custom Loader Functions
+
+Your custom loader function must:
+1. Accept a single parameter: the name of the table as a string
+2. Return a pandas DataFrame
+3. Be importable from Python's module system
+
+```python
+import pandas as pd
+
+def my_custom_loader(table_name: str) -> pd.DataFrame:
+    # Your custom loading logic here
+    pass
+```
+
+#### The example: Complete Workflow
+
+1. Create a custom loader module:
+2. Use it for training:
+
+```bash
+train --source test_table.csv \
+      --table_name test_table \
+      --epochs 20 \
+      --loader "my_project.loaders:custom_loader"
+```
+
+```bash
+train --metadata_path path/to/metadata.yaml \
+      --loader "my_project.loaders:custom_loader"
+```
+
+3. Use it for inference:
+
+```bash
+infer --table_name test_table \
+      --size 1000 \
+      --reports all \
+      --loader "my_project.loaders:custom_loader"
+```
+
+```bash
+infer --metadata_path path/to/metadata.yaml \
+      --reports all \
+      --loader "my_project.loaders:custom_loader"
+```
+
 
 ## Using SDK (Programmatic Interface)
 

@@ -7,14 +7,15 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     get_reports,
-    fetch_env_variables
+    fetch_env_variables,
+    get_loader_function
 )
 from syngen.ml.validation_schema import ReportTypes
 
 
 def validate_required_parameters(
-        metadata_path: Optional[str] = None,
-        table_name: Optional[str] = None
+    metadata_path: Optional[str] = None,
+    table_name: Optional[str] = None
 ):
     if not metadata_path and not table_name:
         raise AttributeError(
@@ -38,7 +39,8 @@ def launch_infer(
     reports: Union[List[str], Tuple[str], str] = "none",
     random_seed: Optional[int] = None,
     log_level: str = "INFO",
-    fernet_key: Optional[str] = None
+    fernet_key: Optional[str] = None,
+    loader_path: Optional[str] = None
 ):
     setup_log_process(
         type_of_process="infer",
@@ -48,6 +50,8 @@ def launch_infer(
     )
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
+
+    loader_function = get_loader_function(loader_path)
 
     worker = Worker(
         table_name=table_name,
@@ -65,7 +69,8 @@ def launch_infer(
         },
         log_level=log_level,
         type_of_process="infer",
-        encryption_settings=encryption_settings
+        encryption_settings=encryption_settings,
+        loader=loader_function
     )
 
     logger.info(
@@ -144,6 +149,15 @@ def launch_infer(
     help="The name of the environment variable that kept the value of the Fernet key "
          "to decrypt the sensitive data stored on the disk",
 )
+@click.option(
+    "--loader",
+    default=None,
+    type=str,
+    help="The path to a custom data loader function in format 'module.path:function_name' "
+         "to load the original data. "
+         "The function should accept a name of a table and return a pandas DataFrame. "
+         "Example: 'my_package.loaders:custom_loader'",
+)
 def cli_launch_infer(
     metadata_path: Optional[str],
     size: Optional[int],
@@ -153,7 +167,8 @@ def cli_launch_infer(
     reports: List[str],
     random_seed: Optional[int],
     log_level: str,
-    fernet_key: Optional[str]
+    fernet_key: Optional[str],
+    loader: Optional[str]
 ):
     """
     Launch the work of infer process
@@ -168,9 +183,11 @@ def cli_launch_infer(
     random_seed
     log_level
     fernet_key
+    loader
     -------
     """
     validate_required_parameters(metadata_path=metadata_path, table_name=table_name)
+
     launch_infer(
         metadata_path=metadata_path,
         size=size,
@@ -180,7 +197,8 @@ def cli_launch_infer(
         reports=reports,
         random_seed=random_seed,
         log_level=log_level,
-        fernet_key=fernet_key
+        fernet_key=fernet_key,
+        loader_path=loader
     )
 
 

@@ -9,7 +9,8 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     get_reports,
-    fetch_env_variables
+    fetch_env_variables,
+    get_loader_function
 )
 from syngen.ml.validation_schema import ReportTypes
 
@@ -67,7 +68,8 @@ def launch_train(
     reports: Union[List[str], Tuple[str], str] = "none",
     log_level: str = "INFO",
     batch_size: int = 32,
-    fernet_key: Optional[str] = None
+    fernet_key: Optional[str] = None,
+    loader_path: Optional[str] = None
 ):
     setup_log_process(
         type_of_process="train",
@@ -77,6 +79,8 @@ def launch_train(
     )
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
+
+    loader_function = get_loader_function(loader_path)
 
     worker = Worker(
         table_name=table_name,
@@ -95,7 +99,8 @@ def launch_train(
         },
         log_level=log_level,
         type_of_process="train",
-        encryption_settings=encryption_settings
+        encryption_settings=encryption_settings,
+        loader=loader_function
     )
 
     logger.info(
@@ -113,39 +118,39 @@ def launch_train(
     "--metadata_path",
     type=str,
     default=None,
-    help="Path to the metadata file"
+    help="The path to the metadata file."
 )
 @click.option(
     "--source",
     type=str,
     default=None,
-    help="Path to the table that you want to use as a reference",
+    help="The path to the table that you want to use as a reference.",
 )
 @click.option(
     "--table_name",
     type=str,
     default=None,
-    help="Arbitrary string to name the directories",
+    help="The arbitrary string to name the directories.",
 )
 @click.option(
     "--epochs",
     default=10,
     type=click.IntRange(1),
-    help="Number of trained epochs. If absent, it's defaulted to 10",
+    help="The number of trained epochs. If absent, it's defaulted to 10.",
 )
 @click.option(
     "--drop_null",
     default=False,
     type=click.BOOL,
-    help="Flag which set whether to drop rows with at least one missing value. "
-    "If absent, it's defaulted to False",
+    help="The flag which set whether to drop rows with at least one missing value. "
+    "If absent, it's defaulted to False.",
 )
 @click.option(
     "--row_limit",
     default=None,
     type=click.IntRange(1),
-    help="Number of rows to train over. A number less than the original table "
-         "length will randomly subset the specified rows number",
+    help="The number of rows to train over. A number less than the original table "
+         "length will randomly subset the specified rows number.",
 )
 @click.option(
     "--reports",
@@ -172,7 +177,7 @@ def launch_train(
     "--batch_size",
     default=32,
     type=click.IntRange(1),
-    help="Number of rows that goes in one batch. "
+    help="The number of rows that goes in one batch. "
          "This parameter can help to control memory consumption.",
 )
 @click.option(
@@ -180,7 +185,16 @@ def launch_train(
     default=None,
     type=str,
     help="The name of the environment variable that kept the value of the Fernet key "
-         "to encrypt and decrypt the sensitive data stored on the disk",
+         "to encrypt and decrypt the sensitive data stored on the disk.",
+)
+@click.option(
+    "--loader",
+    default=None,
+    type=str,
+    help="The path to a custom data loader function in format 'module.path:function_name' "
+         "to load the original data. "
+         "The function should accept a name of a table and return a pandas DataFrame. "
+         "The example: 'my_package.loaders:custom_loader'.",
 )
 def cli_launch_train(
     metadata_path: Optional[str],
@@ -192,7 +206,8 @@ def cli_launch_train(
     reports: List[str],
     log_level: str,
     batch_size: int,
-    fernet_key: Optional[str]
+    fernet_key: Optional[str],
+    loader: Optional[str]
 ):
     """
     Launch the work of training process
@@ -209,6 +224,7 @@ def cli_launch_train(
     log_level
     batch_size
     fernet_key
+    loader
     -------
     """
     validate_required_parameters(
@@ -226,7 +242,8 @@ def cli_launch_train(
         reports=reports,
         log_level=log_level,
         batch_size=batch_size,
-        fernet_key=fernet_key
+        fernet_key=fernet_key,
+        loader_path=loader
     )
 
 

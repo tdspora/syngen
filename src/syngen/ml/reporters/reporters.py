@@ -355,6 +355,20 @@ class SampleAccuracyReporter(Reporter):
         """
         Run the report
         """
+        # TODO: now the sample report isn't generated if the flatten metadata exists
+        # This should be refactored in the future
+        flatten_metadata_exists = os.path.exists(self.paths["path_to_flatten_metadata"])
+        if flatten_metadata_exists:
+            logger.warning(
+                "The sample report isn't available for a table containing JSON column(s)."
+            )
+            return
+        if self.loader:
+            logger.warning(
+                "The sample report cannot be generated "
+                "when the original data is supplied via a callback function."
+            )
+            return
         original, sampled = self._extract_report_data()
         (
             original,
