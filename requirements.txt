@@ -6,7 +6,6 @@ boto3
 click
 cryptography
 Jinja2
-flatten_json
 keras==2.15.*
 lazy==1.4
 loguru
