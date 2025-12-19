@@ -167,7 +167,7 @@ The parameters which you can set up for generation process:
 
 - <i>size</i> - the desired number of rows to generate
 - <i>table_name</i> – required parameter for inference of single table, the name of the table, same as in training
-- <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 5000 rows)
+- <i>run_parallel</i> – whether to use multiprocessing (feasible for tables > 50000 rows)
 - <i>batch_size</i> – if specified, the generation is split into batches. This can save the RAM
 - <i>random_seed</i> – if specified, generates a reproducible result
 - <i>reports</i> - controls the generation of quality reports, might require significant time for big generated tables (>10000 rows)
