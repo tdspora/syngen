@@ -578,10 +578,7 @@ The SDK provides two main classes:
 from syngen.sdk import Syngen
 
 # Training
-Syngen(
-    source="path/to/data.csv",
-    table_name="my_table",
-).train(
+Syngen(source="path/to/data.csv", table_name="my_table").train(
     epochs=10,
     row_limit=1000,
     batch_size=32,
@@ -592,10 +589,7 @@ Syngen(
 Syngen(metadata_path="path/to/metadata.yaml").train(log_level="DEBUG")
 
 # Inference
-Syngen(
-    source="path/to/data.csv",
-    table_name="my_table"
-).infer(
+Syngen(source="path/to/data.csv", table_name="my_table").infer(
   size=1000,
   random_seed=42,
   reports="accuracy"
