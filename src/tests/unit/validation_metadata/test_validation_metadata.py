@@ -80,12 +80,12 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_
 ):
     """
     Test the validation of the metadata of one table contained only the primary key
-    during the training process with 'validation_source' set to 'False'
+    during the training process with 'validation_of_source' set to 'False'
     """
     rp_logger.info(
         "Test the validation of the metadata of one table "
         "contained only the primary key during the training process "
-        "with 'validation_source' set to 'False'"
+        "with 'validation_of_source' set to 'False'"
     )
     test_metadata = {
         "table_a": {
@@ -113,7 +113,7 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH,
-        validation_source=False
+        validation_of_source=False
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -332,12 +332,12 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
     """
     Test the validation of the metadata of related tables
     contained the primary key and the foreign key
-    during the training process with 'validation_source' set to 'False'
+    during the training process with 'validation_of_source' set to 'False'
     """
     rp_logger.info(
         "Test the validation of the metadata of related tables "
         "contained the primary key and the foreign key "
-        "during the training process with 'validation_source' set to 'False'"
+        "during the training process with 'validation_of_source' set to 'False'"
     )
     test_metadata = {
         "table_a": {
@@ -369,7 +369,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH,
-        validation_source=False
+        validation_of_source=False
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -517,11 +517,11 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
     Test the validation of the metadata of related tables
     contained several foreign keys
     during the training process
-    with 'validation_source' set to 'False'
+    with 'validation_of_source' set to 'False'
     """
     rp_logger.info(
         "Test the validation of the metadata of related tables contained several foreign keys "
-        "during the training process with 'validation_source' set to 'False"
+        "during the training process with 'validation_of_source' set to 'False"
     )
     test_metadata = {
         "table_a": {
@@ -561,7 +561,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH,
-        validation_source=False
+        validation_of_source=False
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()

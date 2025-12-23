@@ -88,7 +88,7 @@ def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_
     )
     assert worker.metadata == {
         "table": {
-            "train_settings": {"source": None},
+            "train_settings": {},
             "infer_settings": {
                 "size": 100,
                 "run_parallel": False,
@@ -1430,7 +1430,7 @@ def test_launch_infer_without_metadata(
         ["table"],
         {
             "table": {
-                "train_settings": {"source": None},
+                "train_settings": {},
                 "infer_settings": {
                     "size": 200,
                     "run_parallel": True,
@@ -2922,7 +2922,6 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
     assert worker.metadata == {
         "table": {
             "train_settings": {
-                "source": None,
                 "batch_size": 1000,
                 "drop_null": True,
                 "epochs": 20,
@@ -2942,7 +2941,6 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
         {
             "table": {
                 "train_settings": {
-                    "source": None,
                     "epochs": 20,
                     "drop_null": True,
                     "row_limit": 1000,
@@ -2958,7 +2956,6 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
         {
             "table": {
                 "train_settings": {
-                    "source": None,
                     "epochs": 20,
                     "drop_null": True,
                     "row_limit": 1000,
@@ -3365,9 +3362,7 @@ def test_launch_infer_of_pretrained_table(
     )
     metadata = {
         "table": {
-            "train_settings": {
-                "source": None
-            },
+            "train_settings": {},
             "infer_settings": {
                 "size": 300,
                 "run_parallel": True,

@@ -1,16 +1,16 @@
 import os
-from typing import Optional, List, Union, Tuple
+from typing import Optional, List, Union, Tuple, Callable
 
 import click
 from loguru import logger
+import pandas as pd
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     get_reports,
-    fetch_env_variables,
-    get_loader_function
+    fetch_env_variables
 )
 from syngen.ml.validation_schema import ReportTypes
 
@@ -69,7 +69,7 @@ def launch_train(
     log_level: str = "INFO",
     batch_size: int = 32,
     fernet_key: Optional[str] = None,
-    loader_path: Optional[str] = None
+    loader: Optional[Callable[[str], pd.DataFrame]] = None,
 ):
     setup_log_process(
         type_of_process="train",
@@ -80,7 +80,12 @@ def launch_train(
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
 
-    loader_function = get_loader_function(loader_path)
+    if source and loader:
+        error_message = (
+            "Please provide either the 'source' parameter or the 'loader' parameter, "
+            "not both of them simultaneously."
+        )
+        raise AttributeError(error_message)
 
     worker = Worker(
         table_name=table_name,
@@ -100,7 +105,7 @@ def launch_train(
         log_level=log_level,
         type_of_process="train",
         encryption_settings=encryption_settings,
-        loader=loader_function
+        loader=loader
     )
 
     logger.info(
@@ -187,15 +192,6 @@ def launch_train(
     help="The name of the environment variable that kept the value of the Fernet key "
          "to encrypt and decrypt the sensitive data stored on the disk.",
 )
-@click.option(
-    "--loader",
-    default=None,
-    type=str,
-    help="The path to a custom data loader function in format 'module.path:function_name' "
-         "to load the original data. "
-         "The function should accept a name of a table and return a pandas DataFrame. "
-         "The example: 'my_package.loaders:custom_loader'.",
-)
 def cli_launch_train(
     metadata_path: Optional[str],
     source: Optional[str],
@@ -206,8 +202,7 @@ def cli_launch_train(
     reports: List[str],
     log_level: str,
     batch_size: int,
-    fernet_key: Optional[str],
-    loader: Optional[str]
+    fernet_key: Optional[str]
 ):
     """
     Launch the work of training process
@@ -224,7 +219,6 @@ def cli_launch_train(
     log_level
     batch_size
     fernet_key
-    loader
     -------
     """
     validate_required_parameters(
@@ -243,7 +237,7 @@ def cli_launch_train(
         log_level=log_level,
         batch_size=batch_size,
         fernet_key=fernet_key,
-        loader_path=loader
+        loader=None
     )
 
 

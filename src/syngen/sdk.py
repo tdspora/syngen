@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Literal, Optional, Set, Union
+from typing import Dict, List, Literal, Optional, Set, Union, Callable
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
@@ -86,7 +86,7 @@ class DataIO(BaseDataIO):
     def _validate_metadata(self):
         ValidationSchema(
             metadata=self.metadata,
-            validation_source=True,
+            validation_of_source=True,
             process="train"
         ).validate_schema()
 
@@ -267,7 +267,7 @@ class Syngen:
         log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         batch_size: int = 32,
         fernet_key: Optional[str] = None,
-        loader_path: Optional[str] = None
+        loader: Optional[Callable[[str], pd.DataFrame]] = None
     ):
         launch_train(
             metadata_path=self.metadata_path,
@@ -280,7 +280,7 @@ class Syngen:
             log_level=log_level,
             batch_size=batch_size,
             fernet_key=fernet_key,
-            loader_path=loader_path
+            loader=loader
         )
         self._set_execution_artifacts(type_of_process="train")
 
@@ -293,7 +293,7 @@ class Syngen:
         reports: Union[str, List[str]] = "none",
         log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         fernet_key: Optional[str] = None,
-        loader_path: Optional[str] = None
+        loader: Optional[Callable[[str], pd.DataFrame]] = None
     ):
         launch_infer(
             metadata_path=self.metadata_path,
@@ -305,7 +305,7 @@ class Syngen:
             random_seed=random_seed,
             log_level=log_level,
             fernet_key=fernet_key,
-            loader_path=loader_path
+            loader=loader
         )
         self._set_execution_artifacts(type_of_process="infer")
 

@@ -21,7 +21,7 @@ class Validator:
     metadata: Dict
     metadata_path: str
     type_of_process: Literal["train", "infer"]
-    validation_source: bool = True
+    validation_of_source: bool = True
     type_of_fk_keys = ["FK"]
     infer_report_types: List[str] = field(
         default_factory=lambda: ReportTypes().infer_report_types
@@ -96,7 +96,7 @@ class Validator:
         """
         ValidationSchema(
             metadata=self.metadata,
-            validation_source=self.validation_source,
+            validation_of_source=self.validation_of_source,
             process=self.type_of_process
         ).validate_schema()
 
@@ -378,7 +378,7 @@ class Validator:
         """
         Launch the validation process
         """
-        if self.type_of_process == "train" and self.validation_source:
+        if self.type_of_process == "train" and self.validation_of_source:
             for table_name in self.merged_metadata.keys():
                 self._gather_existed_columns(table_name)
 
@@ -403,7 +403,7 @@ class Validator:
                     f"hasn't been validated because it will not be used"
                 )
 
-            if self.type_of_process == "train" and self.validation_source:
+            if self.type_of_process == "train" and self.validation_of_source:
                 self._check_existence_of_source(table_name)
                 self._check_existence_of_key_columns(table_name)
                 self._check_existence_of_referenced_columns(table_name)

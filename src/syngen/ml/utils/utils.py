@@ -622,32 +622,23 @@ def get_function_from_namespace(function_name: str) -> Callable:
     NameError
         If the function is not found in the caller's namespace
     """
-    # Get the function from the caller's namespace
-    # We need to traverse up the stack to find the actual caller
-    frame = inspect.currentframe()
-    caller_frame = frame.f_back  # Start from the immediate caller
+    MAX_STACK_DEPTH = 10  # Limit to avoid infinite loops
 
-    # Traverse up the stack looking for the function in any frame
-    while caller_frame is not None:
+    frame = inspect.currentframe()
+    caller_frame = frame.f_back
+
+    depth = 0
+    while caller_frame is not None and depth < MAX_STACK_DEPTH:
         caller_locals = caller_frame.f_locals
         caller_globals = caller_frame.f_globals
 
-        # Try to find the function in this frame's namespace
         if function_name in caller_locals:
             return caller_locals[function_name]
         elif function_name in caller_globals:
             return caller_globals[function_name]
 
-        # Move up one frame
         caller_frame = caller_frame.f_back
-
-        # Limit the search to avoid going too far up
-        # (stop after checking ~10 frames)
-        if frame.f_back is None:
-            break
-        frame = frame.f_back
-        if caller_frame and caller_frame.f_back is None:
-            break
+        depth += 1
 
     raise NameError(
         f"Function '{function_name}' is not found in the caller's namespace. "

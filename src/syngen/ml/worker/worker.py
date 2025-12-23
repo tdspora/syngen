@@ -38,14 +38,12 @@ class Worker:
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
-    validation_source: bool = field(default=False)
+    validation_of_source: bool = field(default=False)
     train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
-        self.validation_source = (
-            False if self.loader and self.type_of_process == "train" else True
-        )
+        self.validation_of_source = False if self.loader else True
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
         self._update_metadata()
@@ -129,7 +127,7 @@ class Worker:
         """
         ValidationSchema(
             metadata=self.metadata,
-            validation_source=self.validation_source,
+            validation_of_source=self.validation_of_source,
             process=self.type_of_process
         ).validate_schema()
 
@@ -141,7 +139,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_source=self.validation_source
+            validation_of_source=self.validation_of_source
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -247,7 +245,7 @@ class Worker:
                 self.table_name: {
                     "train_settings": {
                         "source": source,
-                    },
+                    } if source is not None else {},
                     "infer_settings": {},
                     "encryption": {"fernet_key": self.encryption_settings.get("fernet_key")},
                     "keys": {},
