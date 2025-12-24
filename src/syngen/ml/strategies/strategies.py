@@ -118,6 +118,7 @@ class TrainStrategy(Strategy, ABC):
                 paths=self.config.paths,
                 config=self.config.to_dict(),
                 metadata=self.metadata,
+                loader=self.config.loader,
             )
             Report().register_reporter(table=table_name, reporter=sample_reporter)
 

@@ -1,4 +1,6 @@
 from unittest.mock import patch
+
+import pandas as pd
 import pytest
 import os
 
@@ -28,6 +30,21 @@ def test_initialization_with_source_and_table_name(rp_logger):
     assert instance.table_name == TABLE_NAME
     assert instance.source == PATH_TO_TABLE
     assert instance.metadata_path is None
+    assert instance.loader is None
+    assert instance.list_of_tables == ["test_table"]
+    assert instance.execution_artifacts == dict()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialization_with_loader_and_table_name(rp_logger):
+    rp_logger.info(
+        "Initialization of the instance 'Syngen' by providing 'loader' and 'table_name'"
+    )
+    instance = Syngen(loader=lambda x: pd.DataFrame(), table_name=TABLE_NAME)
+    assert instance.table_name == TABLE_NAME
+    assert instance.source is None
+    assert callable(instance.loader) is True
+    assert instance.metadata_path is None
     assert instance.list_of_tables == ["test_table"]
     assert instance.execution_artifacts == dict()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -38,6 +55,7 @@ def test_initialization_with_metadata_path(rp_logger):
     instance = Syngen(metadata_path=PATH_TO_METADATA)
     assert instance.table_name is None
     assert instance.source is None
+    assert instance.loader is None
     assert instance.metadata_path == PATH_TO_METADATA
     assert instance.list_of_tables == ["test_table"]
     assert instance.execution_artifacts == dict()
@@ -52,12 +70,13 @@ def test_initialization_with_metadata_path_and_source(rp_logger, caplog):
         instance = Syngen(metadata_path=PATH_TO_METADATA, source=PATH_TO_TABLE)
         assert instance.table_name is None
         assert instance.source == PATH_TO_TABLE
+        assert instance.loader is None
         assert instance.metadata_path == PATH_TO_METADATA
         assert instance.list_of_tables == ["test_table"]
         assert instance.execution_artifacts == dict()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'source' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -70,13 +89,28 @@ def test_initialization_with_metadata_path_and_table_name(rp_logger, caplog):
         instance = Syngen(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
         assert instance.table_name == TABLE_NAME
         assert instance.source is None
+        assert instance.loader is None
         assert instance.metadata_path == PATH_TO_METADATA
         assert instance.list_of_tables == ["test_table"]
         assert instance.execution_artifacts == dict()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored." in caplog.text
         )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialization_with_metadata_path_and_loader(rp_logger, caplog):
+    rp_logger.info(
+        "Initialization of the instance 'Syngen' by providing 'metadata_path' and 'loader'"
+    )
+    instance = Syngen(metadata_path=PATH_TO_METADATA, loader=lambda x: pd.DataFrame())
+    assert instance.table_name is None
+    assert instance.source is None
+    assert callable(instance.loader) is True
+    assert instance.metadata_path == PATH_TO_METADATA
+    assert instance.list_of_tables == ["test_table"]
+    assert instance.execution_artifacts == dict()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -93,37 +127,102 @@ def test_initialization_with_metadata_path_and_table_name_and_source(rp_logger, 
         )
         assert instance.table_name == TABLE_NAME
         assert instance.source == PATH_TO_TABLE
+        assert instance.loader is None
         assert instance.metadata_path == PATH_TO_METADATA
         assert instance.list_of_tables == ["test_table"]
         assert instance.execution_artifacts == dict()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'source' and 'table_name' will be ignored."
             in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_initialization_with_table_name_and_without_source(rp_logger, caplog):
-    rp_logger.info("Initialization of the instance 'Syngen' by providing 'table_name'")
-    with pytest.raises(AttributeError) as error:
-        Syngen(table_name=TABLE_NAME)
-        assert str(error.value) == (
-            "It seems that the information of 'metadata_path' or 'source' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'.",
+def test_initialization_with_metadata_path_and_table_name_and_loader(rp_logger, caplog):
+    rp_logger.info(
+        "Initialization of the instance 'Syngen' "
+        "by providing 'metadata_path', 'table_name' and 'loader'"
+    )
+    with caplog.at_level("WARNING"):
+        instance = Syngen(
+            metadata_path=PATH_TO_METADATA,
+            table_name=TABLE_NAME,
+            loader=lambda x: pd.DataFrame()
+        )
+        assert instance.table_name == TABLE_NAME
+        assert instance.source is None
+        assert callable(instance.loader) is True
+        assert instance.metadata_path == PATH_TO_METADATA
+        assert instance.list_of_tables == ["test_table"]
+        assert instance.execution_artifacts == dict()
+        assert (
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'loader' and 'table_name' will be ignored."
+            in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_initialization_with_source_and_without_table_name(rp_logger):
-    rp_logger.info("Initialization of the instance 'Syngen' by providing 'source'")
+def test_initialization_only_with_table_name(rp_logger, caplog):
+    rp_logger.info(
+        "Initialization of the instance 'Syngen' by providing only 'table_name'"
+    )
+    with pytest.raises(AttributeError) as error:
+        Syngen(table_name=TABLE_NAME)
+        assert str(error.value) == (
+            "It seems that the information about 'metadata_path' or 'source' (or 'loader') "
+            "is absent. Please provide either the information about 'metadata_path' or "
+            "the information of 'source' (or 'loader') and 'table_name'."
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialization_only_with_source(rp_logger):
+    rp_logger.info("Initialization of the instance 'Syngen' by providing only 'source'")
     with pytest.raises(AttributeError) as error:
         Syngen(source=PATH_TO_TABLE)
         assert str(error.value) == (
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'.",
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'source' (or 'loader') and 'table_name'."
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialization_only_with_loader(rp_logger):
+    rp_logger.info("Initialization of the instance 'Syngen' by providing only 'loader'")
+    with pytest.raises(AttributeError) as error:
+        Syngen(loader=lambda x: pd.DataFrame())
+        assert str(error.value) == (
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'source' (or 'loader') and 'table_name'."
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialization_with_source_and_loader(rp_logger):
+    rp_logger.info("Initialization of the instance 'Syngen' by providing 'source' and 'loader'")
+    with pytest.raises(AttributeError) as error:
+        Syngen(source=PATH_TO_TABLE, loader=lambda x: pd.DataFrame())
+        assert str(error.value) == (
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'source' (or 'loader') and 'table_name'."
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialization_with_source_and_loader_and_table_name(rp_logger):
+    rp_logger.info(
+        "Initialization of the instance 'Syngen' by providing 'source', 'loader', and 'table_name'"
+    )
+    with pytest.raises(AttributeError) as error:
+        Syngen(source=PATH_TO_TABLE, loader=lambda x: pd.DataFrame(), table_name=TABLE_NAME)
+        assert str(error.value) == (
+            "The information of both 'source' and 'loader' was provided. "
+            "Please provide only one of them along with 'table_name'."
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -133,9 +232,9 @@ def test_initialization_without_parameters(rp_logger):
     with pytest.raises(AttributeError) as error:
         Syngen()
         assert str(error.value) == (
-            "It seems that the information of 'metadata_path' or 'table_name' "
-            "and 'source' is absent. Please provide either the information of "
-            "'metadata_path' or the information of 'source' and 'table_name'.",
+            "It seems that the information about 'metadata_path' or 'table_name' "
+            "and 'source' (or 'loader') is absent. Please provide either the information about "
+            "'metadata_path' or the information about ('source' or 'loader') and 'table_name'."
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

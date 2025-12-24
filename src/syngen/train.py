@@ -25,36 +25,36 @@ def validate_required_parameters(
     """
     if not metadata_path and not source and not table_name:
         raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' "
-            "and 'source' is absent. Please provide either the information of "
-            "'metadata_path' or the information of 'source' and 'table_name'."
+            "It seems that the information about 'metadata_path' or 'table_name' "
+            "and 'source' is absent. Please provide either the information about "
+            "'metadata_path' or the information about 'source' and 'table_name'."
         )
     elif not metadata_path and source and not table_name:
         raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'."
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'source' and 'table_name'."
         )
     elif not metadata_path and table_name and not source:
         raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'source' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'."
+            "It seems that the information about 'metadata_path' or 'source' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'source' and 'table_name'."
         )
     elif metadata_path and table_name and source:
         logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' and 'source' will be ignored."
         )
     elif metadata_path and source:
         logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'source' will be ignored."
         )
     elif metadata_path and table_name:
         logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored."
         )
 
 
@@ -79,13 +79,6 @@ def launch_train(
     )
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
-
-    if source and loader:
-        error_message = (
-            "Please provide either the 'source' parameter or the 'loader' parameter, "
-            "not both of them simultaneously."
-        )
-        raise AttributeError(error_message)
 
     worker = Worker(
         table_name=table_name,

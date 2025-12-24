@@ -19,14 +19,14 @@ def validate_required_parameters(
 ):
     if not metadata_path and not table_name:
         raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or the information "
-            "of 'table_name'."
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or the information "
+            "about 'table_name'."
         )
     if metadata_path and table_name:
         logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored."
         )
 
 

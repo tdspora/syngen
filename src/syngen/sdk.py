@@ -7,9 +7,9 @@ import pandas as pd
 from slugify import slugify
 from loguru import logger
 
+from syngen.train import launch_train
 from syngen.infer import launch_infer
 from syngen.ml.data_loaders import DataEncryptor, DataLoader, MetadataLoader
-from syngen.train import launch_train, validate_required_parameters
 from syngen.ml.utils import (
     fetch_config,
     fetch_env_variables,
@@ -128,6 +128,8 @@ class Syngen:
         metadata_path (Optional[str]): The path to the metadata file.
         table_name (Optional[str]): The name of the table.
         source (Optional[str]): The source of the data.
+        loader (Optional[Callable[[str], pd.DataFrame]]): The custom data loader function
+        that returns a sample of an original data
         execution_artifacts (Dict): The dictionary to store the information about paths
         to execution artifacts.
         report_types (ReportTypes): The object containing the information
@@ -137,15 +139,67 @@ class Syngen:
     metadata_path: Optional[str] = None
     table_name: Optional[str] = None
     source: Optional[str] = None
+    loader: Optional[Callable[[str], pd.DataFrame]] = None
     execution_artifacts: Dict = field(default_factory=dict)
     report_types: object = field(init=False)
 
+    def _validate_required_parameters(self):
+        """
+        Validate that required parameters are provided
+        """
+        if not self.metadata_path and not (self.source or self.loader) and not self.table_name:
+            raise AttributeError(
+                "It seems that the information about 'metadata_path' or 'table_name' "
+                "and 'source' (or 'loader') is absent. Please provide either the information "
+                "about 'metadata_path' or the information about 'source' (or 'loader') "
+                "and 'table_name'."
+            )
+        elif not self.metadata_path and (self.source or self.loader) and not self.table_name:
+            raise AttributeError(
+                "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+                "Please provide either the information about 'metadata_path' or "
+                "the information about 'source' (or 'loader') and 'table_name'."
+            )
+        elif not self.metadata_path and self.table_name and not (self.source or self.loader):
+            raise AttributeError(
+                "It seems that the information about 'metadata_path' or 'source' (or 'loader') "
+                "is absent. Please provide either the information about 'metadata_path' or "
+                "the information about 'source' (or 'loader') and 'table_name'."
+            )
+        elif self.metadata_path and self.table_name and self.source and self.loader:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'table_name' and 'source' "
+                "and 'loader' will be ignored."
+            )
+        elif self.metadata_path and self.table_name and self.source:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'source' and 'table_name' will be ignored."
+            )
+        elif self.metadata_path and self.loader and self.table_name:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'loader' and 'table_name' will be ignored."
+            )
+        elif self.metadata_path and self.source:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'source' will be ignored."
+            )
+        elif self.metadata_path and self.table_name:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'table_name' will be ignored."
+            )
+        elif self.source and self.loader and self.table_name:
+            raise AttributeError(
+                "The information about both 'source' and 'loader' was provided. "
+                "Please provide only one of them along with 'table_name'."
+            )
+
     def __post_init__(self):
-        validate_required_parameters(
-            metadata_path=self.metadata_path,
-            source=self.source,
-            table_name=self.table_name
-        )
+        self._validate_required_parameters()
         self.list_of_tables = (
             [
                 table_name
@@ -266,8 +320,7 @@ class Syngen:
         reports: Union[str, List[str]] = "none",
         log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         batch_size: int = 32,
-        fernet_key: Optional[str] = None,
-        loader: Optional[Callable[[str], pd.DataFrame]] = None
+        fernet_key: Optional[str] = None
     ):
         launch_train(
             metadata_path=self.metadata_path,
@@ -280,7 +333,7 @@ class Syngen:
             log_level=log_level,
             batch_size=batch_size,
             fernet_key=fernet_key,
-            loader=loader
+            loader=self.loader
         )
         self._set_execution_artifacts(type_of_process="train")
 

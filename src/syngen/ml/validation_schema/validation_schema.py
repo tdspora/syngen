@@ -140,10 +140,21 @@ class ExtendedTrainingSettingsSchemaWithSource(TrainingSettingsSchema):
 
 
 class ExtendedTrainingSettingsSchemaWithoutSource(TrainingSettingsSchema):
+    source = fields.String(required=False, allow_none=True)
+
     column_types = fields.Dict(
         keys=fields.String(validate=validate.OneOf(["categorical"])),
         values=fields.List(fields.String()),
     )
+
+    @post_load
+    def process_source_field(self, data, **kwargs):
+        path_to_source = data.get("source")
+        if path_to_source is not None:
+            raise ValidationError(
+                "The 'source' field is not allowed when the 'loader' parameter is provided. "
+                "Please, review your metadata file."
+            )
 
 
 class ExtendedTrainingSettingsSchemaWithOptionalSource(TrainingSettingsSchema):
@@ -290,16 +301,6 @@ class ConfigurationSchemaWithoutSource(BaseConfigurationSchema):
         required=False,
         allow_none=True
     )
-
-    @post_load
-    def process_source_field(self, data, **kwargs):
-        train_settings = data.get("train_settings", {})
-        path_to_source = train_settings.get("source") if train_settings else None
-        if train_settings and path_to_source:
-            raise ValidationError(
-                "The 'source' field is not allowed when the 'loader' parameter is provided. "
-                "Please, review your metadata file."
-            )
 
 
 class ValidationSchema:

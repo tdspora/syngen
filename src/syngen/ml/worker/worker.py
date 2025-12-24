@@ -245,7 +245,7 @@ class Worker:
                 self.table_name: {
                     "train_settings": {
                         "source": source,
-                    } if source is not None else {},
+                    },
                     "infer_settings": {},
                     "encryption": {"fernet_key": self.encryption_settings.get("fernet_key")},
                     "keys": {},

@@ -107,8 +107,8 @@ def test_valid_metadata_file_without_global_settings(rp_logger, caplog):
 def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
     rp_logger.info(
         "Test the validation of the schema of the valid metadata file "
-        "with only 'source' fields during the training process "
-        "when the loader isn't provided."
+        "with only provided 'source' fields during the training process "
+        "when the 'loader' isn't provided."
     )
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/"
@@ -617,7 +617,7 @@ def test_metadata_file_with_invalid_format_settings_for_excel_table(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_absent_required_fields_in_train_without_loader(rp_logger):
+def test_metadata_file_with_absent_source_fields_in_train_without_loader(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the absent 'source' field "
         "in the training process if the loader isn't provided."
@@ -640,7 +640,7 @@ def test_metadata_file_with_absent_required_fields_in_train_without_loader(rp_lo
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_absent_required_fields_in_train_with_loader(caplog, rp_logger):
+def test_metadata_file_with_absent_source_fields_in_train_with_loader(caplog, rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the absent 'source' field "
         "in the training process if the loader is provided."
@@ -659,8 +659,34 @@ def test_metadata_file_with_absent_required_fields_in_train_with_loader(caplog, 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_metadata_file_with_source_and_loader_in_train(rp_logger):
+    rp_logger.info(
+        "Test the validation of the schema of the metadata file "
+        "with the provided 'source' and 'loader' in the training process."
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=False,
+            process="train"
+        ).validate_schema()
+    assert str(error.value) == (
+        "Validation error(s) found in the schema of the metadata. "
+        "The details are - {\'pk_test\': {\'train_settings\': {"
+        "\'_schema\': [\"The \'source\' field is not allowed when the \'loader\' parameter "
+        "is provided. Please, review your metadata file.\"]}}, \'fk_test\': {\'train_settings\': {"
+        "\'_schema\': [\"The \'source\' field is not allowed when the \'loader\' parameter "
+        "is provided. Please, review your metadata file.\"]}}}"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @pytest.mark.parametrize("validation_of_source", [True, False])
-def test_metadata_file_with_absent_required_fields_in_infer(
+def test_metadata_file_with_absent_source_fields_in_infer(
     validation_of_source, caplog, rp_logger
 ):
     rp_logger.info(
