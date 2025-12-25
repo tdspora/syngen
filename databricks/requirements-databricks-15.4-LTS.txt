@@ -36,3 +36,4 @@ tqdm==4.66.3
 Werkzeug==3.0.3
 xlrd
 xlwt
+urllib3>=2.5.0 # not directly required, pinned by Snyk to avoid a vulnerability
