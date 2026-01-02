@@ -435,6 +435,7 @@ class Syngen:
             paths=train_config.paths,
             config=train_config.to_dict(),
             metadata=train_config.metadata,
+            loader=train_config.loader,
         )
 
     def __get_accuracy_reporter(

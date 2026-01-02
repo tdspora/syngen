@@ -629,20 +629,20 @@ data_io.save_data(df)
 - **Data I/O**: Load and save data in multiple formats (*CSV*, *Avro*, *Excel*) with custom settings
 - **Encryption support**: Use a Fernet key for secure data handling
 - **Metadata support**: Use a metadata file for complex workflows with multiple tables
-- **Format configuration**: Customize delimiters, encodings, and other format-specific settings
-- **Loader function**: Provide a custom data loader function for advanced data loading scenarios
+- **Format configuration**: Customize delimiters, encodings, and other format-specific settings for loading data
+- **Loader function**: Opportunity to provide a custom data loader function for advanced data loading scenarios
 
-### Custom Data Loader Function
+### Custom data loader function
 
-SDK allows you to provide a custom data loader function instead of 'source' during the initialization of the 'Syngen' class. 
+SDK allows you to provide a custom data loader function instead of `source` during the initialization of the `Syngen` class. 
 This is useful when you need to load the original data with specific parameters, or from formats that require 
-custom handling, or to avoid saving the subset of the original data on a disk even if it's encrypted.
+custom handling.
 
-#### How It Works
+#### How it works
 
-The `loader` attribute of the class Syngen accepts an object of the function.
+The `loader` attribute of the class `Syngen` accepts an object of the function.
 
-##### Requirements for Custom Loader Functions
+##### Requirements for a custom loader function
 
 Your custom loader function must:
 1. Accept a single parameter: the name of the table as a string
@@ -657,9 +657,9 @@ def my_custom_loader(table_name: str) -> pd.DataFrame:
     pass
 ```
 
-#### The example: Complete Workflow
+#### The example: the complete workflow
 
-1. Create a custom loader module:
+1. Create a custom loader function
 2. Use it for training and inference:
 
 ```python
