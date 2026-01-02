@@ -24,7 +24,7 @@ LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 def test_initialization_with_source_and_table_name(rp_logger):
     rp_logger.info(
-        "Initialization of the instance 'Syngen' by providing 'source' and 'table_name'"
+        "Initialization of the instance 'Syngen' by providing with 'source' and 'table_name'"
     )
     instance = Syngen(source=PATH_TO_TABLE, table_name=TABLE_NAME)
     assert instance.table_name == TABLE_NAME
@@ -38,7 +38,7 @@ def test_initialization_with_source_and_table_name(rp_logger):
 
 def test_initialization_with_loader_and_table_name(rp_logger):
     rp_logger.info(
-        "Initialization of the instance 'Syngen' by providing 'loader' and 'table_name'"
+        "Initialization of the instance 'Syngen' by providing with 'loader' and 'table_name'"
     )
     instance = Syngen(loader=lambda x: pd.DataFrame(), table_name=TABLE_NAME)
     assert instance.table_name == TABLE_NAME
@@ -51,7 +51,7 @@ def test_initialization_with_loader_and_table_name(rp_logger):
 
 
 def test_initialization_with_metadata_path(rp_logger):
-    rp_logger.info("Initialization of the instance 'Syngen' by providing 'metadata_path'")
+    rp_logger.info("Initialization of the instance 'Syngen' by providing with 'metadata_path'")
     instance = Syngen(metadata_path=PATH_TO_METADATA)
     assert instance.table_name is None
     assert instance.source is None
@@ -64,7 +64,7 @@ def test_initialization_with_metadata_path(rp_logger):
 
 def test_initialization_with_metadata_path_and_source(rp_logger, caplog):
     rp_logger.info(
-        "Initialization of the instance 'Syngen' by providing 'metadata_path' and 'source'"
+        "Initialization of the instance 'Syngen' by providing with 'metadata_path' and 'source'"
     )
     with caplog.at_level("WARNING"):
         instance = Syngen(metadata_path=PATH_TO_METADATA, source=PATH_TO_TABLE)
@@ -83,7 +83,8 @@ def test_initialization_with_metadata_path_and_source(rp_logger, caplog):
 
 def test_initialization_with_metadata_path_and_table_name(rp_logger, caplog):
     rp_logger.info(
-        "Initialization of the instance 'Syngen' by providing 'metadata_path' and 'table_name'"
+        "Initialization of the instance 'Syngen' "
+        "by providing with 'metadata_path' and 'table_name'"
     )
     with caplog.at_level("WARNING"):
         instance = Syngen(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
@@ -102,7 +103,7 @@ def test_initialization_with_metadata_path_and_table_name(rp_logger, caplog):
 
 def test_initialization_with_metadata_path_and_loader(rp_logger, caplog):
     rp_logger.info(
-        "Initialization of the instance 'Syngen' by providing 'metadata_path' and 'loader'"
+        "Initialization of the instance 'Syngen' by providing with 'metadata_path' and 'loader'"
     )
     instance = Syngen(metadata_path=PATH_TO_METADATA, loader=lambda x: pd.DataFrame())
     assert instance.table_name is None
@@ -117,7 +118,7 @@ def test_initialization_with_metadata_path_and_loader(rp_logger, caplog):
 def test_initialization_with_metadata_path_and_table_name_and_source(rp_logger, caplog):
     rp_logger.info(
         "Initialization of the instance 'Syngen' "
-        "by providing 'metadata_path', 'table_name' and 'source'"
+        "by providing with 'metadata_path', 'table_name' and 'source'"
     )
     with caplog.at_level("WARNING"):
         instance = Syngen(
@@ -142,7 +143,7 @@ def test_initialization_with_metadata_path_and_table_name_and_source(rp_logger, 
 def test_initialization_with_metadata_path_and_table_name_and_loader(rp_logger, caplog):
     rp_logger.info(
         "Initialization of the instance 'Syngen' "
-        "by providing 'metadata_path', 'table_name' and 'loader'"
+        "by providing with 'metadata_path', 'table_name' and 'loader'"
     )
     with caplog.at_level("WARNING"):
         instance = Syngen(
@@ -166,7 +167,7 @@ def test_initialization_with_metadata_path_and_table_name_and_loader(rp_logger, 
 
 def test_initialization_only_with_table_name(rp_logger, caplog):
     rp_logger.info(
-        "Initialization of the instance 'Syngen' by providing only 'table_name'"
+        "Initialization of the instance 'Syngen' by providing with only 'table_name'"
     )
     with pytest.raises(AttributeError) as error:
         Syngen(table_name=TABLE_NAME)
@@ -179,7 +180,7 @@ def test_initialization_only_with_table_name(rp_logger, caplog):
 
 
 def test_initialization_only_with_source(rp_logger):
-    rp_logger.info("Initialization of the instance 'Syngen' by providing only 'source'")
+    rp_logger.info("Initialization of the instance 'Syngen' by providing with only 'source'")
     with pytest.raises(AttributeError) as error:
         Syngen(source=PATH_TO_TABLE)
         assert str(error.value) == (
@@ -191,7 +192,7 @@ def test_initialization_only_with_source(rp_logger):
 
 
 def test_initialization_only_with_loader(rp_logger):
-    rp_logger.info("Initialization of the instance 'Syngen' by providing only 'loader'")
+    rp_logger.info("Initialization of the instance 'Syngen' by providing with only 'loader'")
     with pytest.raises(AttributeError) as error:
         Syngen(loader=lambda x: pd.DataFrame())
         assert str(error.value) == (
@@ -203,7 +204,9 @@ def test_initialization_only_with_loader(rp_logger):
 
 
 def test_initialization_with_source_and_loader(rp_logger):
-    rp_logger.info("Initialization of the instance 'Syngen' by providing 'source' and 'loader'")
+    rp_logger.info(
+        "Initialization of the instance 'Syngen' by providing with 'source' and 'loader'"
+    )
     with pytest.raises(AttributeError) as error:
         Syngen(source=PATH_TO_TABLE, loader=lambda x: pd.DataFrame())
         assert str(error.value) == (
@@ -216,7 +219,8 @@ def test_initialization_with_source_and_loader(rp_logger):
 
 def test_initialization_with_source_and_loader_and_table_name(rp_logger):
     rp_logger.info(
-        "Initialization of the instance 'Syngen' by providing 'source', 'loader', and 'table_name'"
+        "Initialization of the instance 'Syngen' "
+        "by providing with 'source', 'loader', and 'table_name'"
     )
     with pytest.raises(AttributeError) as error:
         Syngen(source=PATH_TO_TABLE, loader=lambda x: pd.DataFrame(), table_name=TABLE_NAME)
