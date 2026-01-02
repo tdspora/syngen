@@ -69,15 +69,12 @@ class Reporter:
         return data
 
     def _extract_report_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        if self.loader:
-            original = self._fetch_dataframe()
-        else:
-            original, _ = DataLoader(
-                path=self.paths["input_data_path"],
-                table_name=self.table_name,
-                metadata=self.metadata,
-                sensitive=True
-            ).load_data()
+        original, _ = DataLoader(
+            path=self.paths["input_data_path"],
+            table_name=self.table_name,
+            metadata=self.metadata,
+            sensitive=True
+        ).load_data()
         synthetic, _ = DataLoader(path=self.paths["path_to_merged_infer"]).load_data()
         synthetic = synthetic[
             [col for col in synthetic.columns if col not in self.technical_columns]
@@ -342,7 +339,10 @@ class SampleAccuracyReporter(Reporter):
     report_type = "sample"
 
     def _extract_report_data(self):
-        original, _ = DataLoader(path=self.paths["source_path"]).load_data()
+        if self.loader:
+            original, _ = self._fetch_dataframe()
+        else:
+            original, _ = DataLoader(path=self.paths["source_path"]).load_data()
         sampled, _ = DataLoader(
             path=self.paths["input_data_path"],
             table_name=self.table_name,
@@ -361,12 +361,6 @@ class SampleAccuracyReporter(Reporter):
         if flatten_metadata_exists:
             logger.warning(
                 "The sample report isn't available for a table containing JSON column(s)."
-            )
-            return
-        if self.loader:
-            logger.warning(
-                "The sample report cannot be generated "
-                "when the original data is supplied via a callback function."
             )
             return
         original, sampled = self._extract_report_data()
