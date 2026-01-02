@@ -340,7 +340,7 @@ class SampleAccuracyReporter(Reporter):
 
     def _extract_report_data(self):
         if self.loader:
-            original, _ = self._fetch_dataframe()
+            original = self._fetch_dataframe()
         else:
             original, _ = DataLoader(path=self.paths["source_path"]).load_data()
         sampled, _ = DataLoader(
