@@ -8,7 +8,7 @@ from syngen.ml.data_loaders import MetadataLoader
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
-def test_valid_metadata_file(rp_logger, caplog):
+def test_validation_of_metadata_file(rp_logger, caplog):
     rp_logger.info("Test the validation of the schema of the valid metadata file")
     path_to_metadata = (
         f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
@@ -40,7 +40,7 @@ def test_valid_metadata_file(rp_logger, caplog):
         ("train", ["sample", "metrics_only"])
     ]
 )
-def test_valid_metadata_file_with_diff_types_of_reports(
+def test_validation_of_metadata_file_with_diff_types_of_reports(
     type_of_process, reports, rp_logger, caplog
 ):
     rp_logger.info(
@@ -62,7 +62,7 @@ def test_valid_metadata_file_with_diff_types_of_reports(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_valid_metadata_file_with_source_contained_path_to_excel_table(
+def test_validation_of_metadata_file_with_source_contained_path_to_excel_table(
     rp_logger, caplog
 ):
     rp_logger.info(
@@ -84,7 +84,7 @@ def test_valid_metadata_file_with_source_contained_path_to_excel_table(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_valid_metadata_file_without_global_settings(rp_logger, caplog):
+def test_validation_of_metadata_file_without_global_settings(rp_logger, caplog):
     rp_logger.info(
         "Test the validation of the schema of the valid metadata file "
         "with the absent 'global' settings"
@@ -104,7 +104,7 @@ def test_valid_metadata_file_without_global_settings(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
+def test_validation_of_metadata_file_only_with_required_fields(rp_logger, caplog):
     rp_logger.info(
         "Test the validation of the schema of the valid metadata file "
         "with only provided 'source' fields during the training process "
@@ -181,7 +181,7 @@ def test_valid_metadata_file_only_with_required_fields(rp_logger, caplog):
         ),
     ],
 )
-def test_metadata_file_with_invalid_training_settings(
+def test_validation_of_metadata_file_with_invalid_training_settings(
     rp_logger, wrong_setting, expected_error
 ):
     rp_logger.info(
@@ -250,7 +250,7 @@ def test_metadata_file_with_invalid_training_settings(
         ),
     ],
 )
-def test_metadata_file_with_invalid_global_training_settings(
+def test_validation_of_metadata_file_with_invalid_global_training_settings(
     rp_logger, wrong_setting, expected_error
 ):
     rp_logger.info(
@@ -315,7 +315,7 @@ def test_metadata_file_with_invalid_global_training_settings(
         ),
     ],
 )
-def test_metadata_file_with_invalid_infer_settings(
+def test_validation_of_metadata_file_with_invalid_infer_settings(
     rp_logger, wrong_setting, expected_error
 ):
     rp_logger.info("Test the validation of the metadata with the invalid infer settings")
@@ -372,7 +372,7 @@ def test_metadata_file_with_invalid_infer_settings(
         ),
     ],
 )
-def test_metadata_file_with_invalid_global_infer_settings(
+def test_validation_of_metadata_file_with_invalid_global_infer_settings(
     rp_logger, wrong_setting, expected_error
 ):
     rp_logger.info(
@@ -405,7 +405,7 @@ def test_metadata_file_with_invalid_global_infer_settings(
         )
     ],
 )
-def test_metadata_file_with_invalid_global_encryption_settings(
+def test_validation_of_metadata_file_with_invalid_global_encryption_settings(
     rp_logger, wrong_setting, expected_error
 ):
     rp_logger.info(
@@ -440,7 +440,7 @@ def test_metadata_file_with_invalid_global_encryption_settings(
         )
     ],
 )
-def test_metadata_file_with_invalid_encryption_settings(
+def test_validation_of_metadata_file_with_invalid_encryption_settings(
     rp_logger, wrong_setting, expected_error
 ):
     rp_logger.info(
@@ -528,7 +528,7 @@ def test_metadata_file_with_invalid_encryption_settings(
         ),
     ],
 )
-def test_metadata_file_with_invalid_format_settings_for_csv_table(
+def test_validation_of_metadata_file_with_invalid_format_settings_for_csv_table(
     rp_logger, wrong_setting, expected_error
 ):
     rp_logger.info(
@@ -591,7 +591,7 @@ def test_metadata_file_with_invalid_format_settings_for_csv_table(
         ),
     ],
 )
-def test_metadata_file_with_invalid_format_settings_for_excel_table(
+def test_validation_of_metadata_file_with_invalid_format_settings_for_excel_table(
     rp_logger, wrong_setting, expected_error
 ):
     rp_logger.info(
@@ -617,7 +617,7 @@ def test_metadata_file_with_invalid_format_settings_for_excel_table(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_absent_source_fields_in_train_without_loader(rp_logger):
+def test_validation_of_metadata_file_with_absent_source_fields_in_train_without_loader(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the absent 'source' field "
         "in the training process if the loader isn't provided."
@@ -640,7 +640,9 @@ def test_metadata_file_with_absent_source_fields_in_train_without_loader(rp_logg
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_absent_source_fields_in_train_with_loader(caplog, rp_logger):
+def test_validation_of_metadata_file_with_absent_source_fields_in_train_with_loader(
+    caplog, rp_logger
+):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the absent 'source' field "
         "in the training process if the loader is provided."
@@ -659,7 +661,7 @@ def test_metadata_file_with_absent_source_fields_in_train_with_loader(caplog, rp
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_source_and_loader_in_train(rp_logger):
+def test_validation_of_metadata_file_with_source_and_loader_in_train(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file "
         "with the provided 'source' and 'loader' in the training process."
@@ -686,7 +688,7 @@ def test_metadata_file_with_source_and_loader_in_train(rp_logger):
 
 
 @pytest.mark.parametrize("validation_of_source", [True, False])
-def test_metadata_file_with_absent_source_fields_in_infer(
+def test_validation_of_metadata_file_with_absent_source_fields_in_infer(
     validation_of_source, caplog, rp_logger
 ):
     rp_logger.info(
@@ -706,7 +708,7 @@ def test_metadata_file_with_absent_source_fields_in_infer(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_invalid_PK_key_contained_references_section(rp_logger):
+def test_validation_of_metadata_file_with_invalid_PK_key_contained_references_section(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the invalid PK "
         "which contained 'references' section"
@@ -730,7 +732,7 @@ def test_metadata_file_with_invalid_PK_key_contained_references_section(rp_logge
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_invalid_UQ_key_contained_references_section(rp_logger):
+def test_validation_of_metadata_file_with_invalid_UQ_key_contained_references_section(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the invalid UQ "
         "contained 'references' section"
@@ -754,7 +756,7 @@ def test_metadata_file_with_invalid_UQ_key_contained_references_section(rp_logge
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_metadata_file_with_invalid_FK_key_without_references_section(rp_logger):
+def test_validation_of_metadata_file_with_invalid_FK_key_without_references_section(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the invalid FK "
         "which doesn't contain 'references' section"
@@ -858,7 +860,7 @@ def test_validation_schema_of_keys(path_to_metadata, expected_error, rp_logger):
     )
 
 
-def test_valid_metadata_file_without_sources_during_training_process_with_loader(
+def test_validation_of__metadata_file_without_sources_during_training_process_with_loader(
     rp_logger, caplog
 ):
     rp_logger.info(
@@ -880,7 +882,7 @@ def test_valid_metadata_file_without_sources_during_training_process_with_loader
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_valid_metadata_file_without_sources_during_training_process_without_loader(
+def test_validation_of__metadata_file_without_sources_during_training_process_without_loader(
     rp_logger
 ):
     rp_logger.info(
@@ -908,7 +910,7 @@ def test_valid_metadata_file_without_sources_during_training_process_without_loa
 
 
 @pytest.mark.parametrize("validation_of_source", [True, False])
-def test_valid_metadata_file_without_sources_during_infer_process(
+def test_validation_of__metadata_file_without_sources_during_infer_process(
     validation_of_source, rp_logger, caplog
 ):
     rp_logger.info(
@@ -930,7 +932,7 @@ def test_valid_metadata_file_without_sources_during_infer_process(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_valid_metadata_file_without_training_settings_during_train_process_with_loader(
+def test_validation_of__metadata_file_without_training_settings_during_train_process_with_loader(
     rp_logger, caplog
 ):
     rp_logger.info(
@@ -952,7 +954,7 @@ def test_valid_metadata_file_without_training_settings_during_train_process_with
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_valid_metadata_file_without_training_settings_during_train_process_without_loader(
+def test_validation_of_metadata_file_without_training_settings_during_train_process_without_loader(
     rp_logger
 ):
     rp_logger.info(
@@ -979,7 +981,7 @@ def test_valid_metadata_file_without_training_settings_during_train_process_with
 
 
 @pytest.mark.parametrize("validation_of_source", [True, False])
-def test_valid_metadata_file_without_training_settings_during_infer_process(
+def test_validation_of_metadata_file_without_training_settings_during_infer_process(
     validation_of_source, rp_logger, caplog
 ):
     rp_logger.info(

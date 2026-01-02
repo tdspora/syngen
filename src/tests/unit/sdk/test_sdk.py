@@ -101,7 +101,7 @@ def test_initialization_with_metadata_path_and_table_name(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_initialization_with_metadata_path_and_loader(rp_logger, caplog):
+def test_initialization_with_metadata_path_and_loader(rp_logger):
     rp_logger.info(
         "Initialization of the instance 'Syngen' by providing with 'metadata_path' and 'loader'"
     )
