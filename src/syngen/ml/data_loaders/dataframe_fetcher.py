@@ -18,13 +18,13 @@ class DataFrameFetcher:
         try:
             df = self.loader(self.table_name)
             default_schema = {"fields": {}, "format": "CSV"}
-            logger.info(f"Successfully fetched dataframe for table: {self.table_name}")
+            logger.info(f"Successfully fetched dataframe for table: '{self.table_name}'")
             return df, default_schema
         except Exception as error:
             message = (
                 "Failed to fetch the dataframe for the training process "
                 "using the provided callback function. "
-                f"Table: {self.table_name}, Error: {error}"
+                f"Table: '{self.table_name}', Error: {error}"
             )
             logger.error(message)
             raise
