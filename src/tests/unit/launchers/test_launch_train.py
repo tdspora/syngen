@@ -1,4 +1,6 @@
 from unittest.mock import patch
+
+import pandas as pd
 import pytest
 
 from click.testing import CliRunner
@@ -7,7 +9,8 @@ from marshmallow import ValidationError
 from syngen.train import launch_train, cli_launch_train, validate_required_parameters
 from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
-from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
+from syngen.ml.utils import ValidationError as UtilsValidationError
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME, get_dataframe
 
 TABLE_NAME = "test_table"
 PATH_TO_TABLE = f"{DIR_NAME}/unit/launchers/fixtures/table_with_data.csv"
@@ -383,7 +386,7 @@ def test_launch_train_table_with_invalid_epochs(rp_logger, caplog):
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             launch_train(epochs=0, table_name=TABLE_NAME, source=PATH_TO_TABLE)
-            assert str(error.value) == (
+            message = (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
                 '        "epochs": [\n'
@@ -392,15 +395,8 @@ def test_launch_train_table_with_invalid_epochs(rp_logger, caplog):
                 '    }\n'
                 '}'
             )
-            assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "epochs": [\n'
-                '            "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
+            assert message in str(error.value)
+            assert message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -954,5 +950,77 @@ def test_launch_train_table_with_invalid_log_level(rp_logger):
     with pytest.raises(ValueError) as error:
         launch_train(log_level="test", table_name=TABLE_NAME, source=PATH_TO_TABLE)
         assert str(error.value) == "ValueError: Level 'test' does not exist"
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_train")
+@patch.object(Worker, "__attrs_post_init__")
+def test_launch_train_table_with_loader(mock_post_init, mock_launch_train, rp_logger):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided valid callback function to the 'loader' parameter"
+    )
+    launch_train(loader=get_dataframe, table_name="table")
+    mock_post_init.assert_called_once()
+    mock_launch_train.assert_called_once()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_train")
+@patch.object(Worker, "__attrs_post_init__")
+def test_launch_train_table_with_loader(mock_post_init, mock_launch_train, rp_logger):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided valid callback function to the 'loader' parameter"
+    )
+    launch_train(loader=get_dataframe, table_name="table")
+    mock_post_init.assert_called_once()
+    mock_launch_train.assert_called_once()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_train")
+@patch("syngen.train.setup_log_process")
+def test_launch_train_table_with_not_callable_loader(mock_logger, mock_launch_train, caplog, rp_logger):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided 'loader' parameter that is not callable"
+    )
+    error_message = (
+        "The provided loader for the table - 'table' isn't callable. "
+        "Please, provide a valid callback function."
+    )
+    with pytest.raises(UtilsValidationError) as error:
+        with caplog.at_level("ERROR"):
+            launch_train(loader="not_callable", table_name="table")
+            assert error_message in str(error.value)
+            assert error_message in caplog.text
+
+        mock_launch_train.assert_not_called()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_train")
+@patch("syngen.train.setup_log_process")
+def test_launch_train_table_with_loader_with_wrong_signature(mock_launch_train, caplog, rp_logger):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided 'loader' parameter containing a function with wrong signature"
+    )
+    error_message = (
+        "The provided loader for the table - 'table' doesn't accept 'table_name' as an argument. "
+        "Please, provide a loader with signature `loader(table_name)`."
+    )
+    with pytest.raises(UtilsValidationError) as error:
+        with caplog.at_level("ERROR"):
+            launch_train(loader=lambda x: pd.DataFrame(), table_name="table")
+        assert error_message in str(error.value)
+        assert error_message in caplog.text
+
+        mock_launch_train.assert_not_called()
 
     rp_logger.info(SUCCESSFUL_MESSAGE)

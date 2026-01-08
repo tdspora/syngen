@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 from loguru import logger
-from typing import Callable, Tuple, Dict
+from typing import Callable, Tuple, Dict, List
 
 
 @dataclass
@@ -28,3 +28,10 @@ class DataFrameFetcher:
             )
             logger.error(message)
             raise
+
+    def get_columns(self) -> List[str]:
+        """
+        Get the column names of the table
+        """
+        data, schema = self.fetch_data()
+        return data.columns.tolist()

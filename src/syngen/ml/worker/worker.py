@@ -43,7 +43,6 @@ class Worker:
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
-        self.validation_of_source = False if self.loader else True
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
         self._update_metadata()
@@ -127,7 +126,7 @@ class Worker:
         """
         ValidationSchema(
             metadata=self.metadata,
-            validation_of_source=self.validation_of_source,
+            validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
         ).validate_schema()
 
@@ -139,7 +138,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_of_source=self.validation_of_source
+            loader=self.loader
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata

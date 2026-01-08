@@ -242,3 +242,16 @@ def dataio_data_encryptor(tmp_path):
 @pytest.fixture
 def invalid_fernet_key():
     return "invalid_key"
+
+
+def get_dataframe(table_name: str) -> pd.DataFrame:
+    """
+    A mock function to simulate data loading.
+    Returns a simple DataFrame-like object based on the table name.
+    """
+    data = {
+        "table_a": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}],
+        "table_b": [{"id": 1, "department": "financial"}, {"id": 2, "department": "engineering"}],
+        "table": [{"id": 1, "value": 10}, {"id": 2, "value": 20}],
+    }
+    return pd.DataFrame(data.get(table_name, []))
