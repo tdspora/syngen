@@ -86,8 +86,8 @@ def test_cli_launch_infer_table_with_metadata_path_and_table_name(
         mock_launch_infer.assert_called_once()
         assert result.exit_code == 0
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -108,8 +108,8 @@ def test_validate_parameters_with_metadata_path_and_table_name(
         mock_post_init.assert_called_once()
         mock_launch_infer.assert_called_once()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -121,9 +121,9 @@ def test_cli_launch_infer_table_without_parameters(rp_logger):
     assert result.exit_code == 1
     assert isinstance(result.exception, AttributeError)
     assert result.exception.args == (
-        "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-        "Please provide either the information of 'metadata_path' or "
-        "the information of 'table_name'.",
+        "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+        "Please provide either the information about 'metadata_path' or "
+        "the information about 'table_name'.",
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -135,9 +135,9 @@ def test_validate_parameters_without_parameters(rp_logger):
     with pytest.raises(AttributeError) as error:
         validate_required_parameters()
         assert str(error.value) == (
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'table_name'.",
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

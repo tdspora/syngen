@@ -128,6 +128,7 @@ Requirements for parameters of training process:
 * <i>column_types</i> - data type - dictionary with the key <i>categorical</i> - the list of columns (data type - string)
 * <i>log_level</i> - data type - string, must be one of the next values - *TRACE*, *"DEBUG"*, *"INFO"*, *"WARNING"*, *"ERROR"*, *"CRITICAL"*, default value is *"INFO"*
 * <i>fernet_key</i> - data type - string, the name of the environment variable that kept the value of the fernet key. It must be a 44-character URL-safe base64-encoded string, default value is None
+
 ### Inference (generation)
 
 You can customize the inference processes by calling for one table:
@@ -139,8 +140,7 @@ infer --size INT \
     --batch_size INT \
     --random_seed INT \
     --reports STR \
-    --log_level STR \ 
-    --fernet_key STR
+    --log_level STR
 ```
 
 *Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
@@ -564,6 +564,7 @@ Then you should set the generated key as an environment variable in your termina
 export YOUR_FERNET_KEY_NAME='YOUR_GENERATED_FERNET_KEY'
 ```
 
+
 ## Using SDK (Programmatic Interface)
 
 In addition to the CLI, *Syngen* provides a Python SDK for programmatic access to the main functionality. The SDK is useful when you want to integrate synthetic data generation into your Python applications, notebooks, or data pipelines.
@@ -576,6 +577,7 @@ The SDK provides two main classes:
 
 ```python
 from syngen.sdk import Syngen
+
 
 # Training
 Syngen(source="path/to/data.csv", table_name="my_table").train(
@@ -627,7 +629,68 @@ data_io.save_data(df)
 - **Data I/O**: Load and save data in multiple formats (*CSV*, *Avro*, *Excel*) with custom settings
 - **Encryption support**: Use a Fernet key for secure data handling
 - **Metadata support**: Use a metadata file for complex workflows with multiple tables
-- **Format configuration**: Customize delimiters, encodings, and other format-specific settings
+- **Format configuration**: Customize delimiters, encodings, and other format-specific settings for loading data
+- **Loader function**: Opportunity to provide a custom data loader function for advanced data loading scenarios
+
+### Custom data loader function
+
+SDK allows you to provide a custom data loader function instead of `source` during the initialization of the `Syngen` class. 
+This is useful when you need to load the original data with specific parameters, or from formats that require 
+custom handling.
+
+#### How it works
+
+The `loader` attribute of the class `Syngen` accepts an object of the function.
+
+##### Requirements for a custom loader function
+
+Your custom loader function must:
+1. Accept a single parameter: the name of the table as a string
+2. Return a pandas DataFrame
+3. Be importable from Python's module system
+
+```python
+import pandas as pd
+
+def my_custom_loader(table_name: str) -> pd.DataFrame:
+    # Your custom loading logic here
+    pass
+```
+
+#### The example: the complete workflow
+
+1. Create a custom loader function
+2. Use it for training and inference:
+
+```python
+from syngen.sdk import Syngen
+import pandas as pd
+
+
+def my_custom_loader(table_name: str) -> pd.DataFrame:
+    # Custom logic to load data based on table_name
+    if table_name == "my_table":
+        return pd.read_csv("path/to/my_table.csv")
+    else:
+        raise ValueError(f"Unknown table name: {table_name}")
+
+    
+launcher = Syngen(loader=my_custom_loader, table_name="my_table")
+
+launcher.train(
+    epochs=10,
+    row_limit=1000,
+    batch_size=32,
+    log_level="DEBUG",
+    reports="all"
+)
+
+launcher.infer(
+  size=1000,
+  random_seed=42,
+  reports="accuracy"
+)
+```
 
 ### SDK Examples
 

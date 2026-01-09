@@ -27,7 +27,7 @@ class Reporter:
         paths: Dict[str, str],
         config: Dict[str, str],
         metadata: Dict,
-        loader: Optional[Callable[[str], pd.DataFrame]] = None,
+        loader: Optional[Callable[[str], pd.DataFrame]],
         type_of_process: Literal["train", "infer"] = "train"
     ):
         self.table_name = table_name
@@ -57,7 +57,7 @@ class Reporter:
         """
         Fetch the data using the callback function
         """
-        data, schema = DataFrameFetcher(
+        data, _ = DataFrameFetcher(
             loader=self.loader,
             table_name=self.table_name
         ).fetch_data()
@@ -69,16 +69,13 @@ class Reporter:
         return data
 
     def _extract_report_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        if self.loader:
-            original = self._fetch_dataframe()
-        else:
-            original, schema = DataLoader(
-                path=self.paths["input_data_path"],
-                table_name=self.table_name,
-                metadata=self.metadata,
-                sensitive=True
-            ).load_data()
-        synthetic, schema = DataLoader(path=self.paths["path_to_merged_infer"]).load_data()
+        original, _ = DataLoader(
+            path=self.paths["input_data_path"],
+            table_name=self.table_name,
+            metadata=self.metadata,
+            sensitive=True
+        ).load_data()
+        synthetic, _ = DataLoader(path=self.paths["path_to_merged_infer"]).load_data()
         synthetic = synthetic[
             [col for col in synthetic.columns if col not in self.technical_columns]
         ]
@@ -342,8 +339,11 @@ class SampleAccuracyReporter(Reporter):
     report_type = "sample"
 
     def _extract_report_data(self):
-        original, schema = DataLoader(path=self.paths["source_path"]).load_data()
-        sampled, schema = DataLoader(
+        if self.loader:
+            original = self._fetch_dataframe()
+        else:
+            original, _ = DataLoader(path=self.paths["source_path"]).load_data()
+        sampled, _ = DataLoader(
             path=self.paths["input_data_path"],
             table_name=self.table_name,
             metadata=self.metadata,
@@ -355,6 +355,14 @@ class SampleAccuracyReporter(Reporter):
         """
         Run the report
         """
+        # TODO: now the sample report isn't generated if the flatten metadata exists
+        # This should be refactored in the future
+        flatten_metadata_exists = os.path.exists(self.paths["path_to_flatten_metadata"])
+        if flatten_metadata_exists:
+            logger.warning(
+                "The sample report isn't available for a table containing JSON column(s)."
+            )
+            return
         original, sampled = self._extract_report_data()
         (
             original,

@@ -5,7 +5,7 @@ from datetime import datetime
 import pandas as pd
 from slugify import slugify
 
-from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
+from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
 
 
@@ -40,7 +40,7 @@ class TrainConfig:
         Return an updated config's instance
         """
         instance = self.__dict__.copy()
-        attribute_keys_to_remove = ["loader", "data"]
+        attribute_keys_to_remove = ["data"]
         for attr_key in attribute_keys_to_remove:
             if attr_key in instance:
                 del instance[attr_key]
@@ -155,14 +155,7 @@ class InferConfig:
                 metadata=self.metadata,
                 sensitive=True
             )
-            data = pd.DataFrame()
-            if data_loader.has_existed_path:
-                data, schema = data_loader.load_data()
-            elif self.loader:
-                data, schema = DataFrameFetcher(
-                    loader=self.loader,
-                    table_name=self.table_name
-                ).fetch_data()
+            data, schema = data_loader.load_data()
             self.size = len(data)
 
     def _set_up_batch_size(self):
