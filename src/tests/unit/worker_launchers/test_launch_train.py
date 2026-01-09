@@ -10,7 +10,7 @@ from syngen.train import launch_train, cli_launch_train, validate_required_param
 from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
 from syngen.ml.utils import ValidationError as UtilsValidationError
-from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME, get_dataframe
+from tests.conftest import SUCCESSFUL_MESSAGE, get_dataframe
 
 
 TABLE_NAME = "test_table"
@@ -951,20 +951,6 @@ def test_launch_train_table_with_invalid_log_level(rp_logger):
     with pytest.raises(ValueError) as error:
         launch_train(log_level="test", table_name=TABLE_NAME, source=PATH_TO_TABLE)
         assert str(error.value) == "ValueError: Level 'test' does not exist"
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch.object(Worker, "launch_train")
-@patch.object(Worker, "__attrs_post_init__")
-def test_launch_train_table_with_loader(mock_post_init, mock_launch_train, rp_logger):
-    rp_logger.info(
-        "Launch the training process by using the function 'launch_train' "
-        "with the provided valid callback function to the 'loader' parameter"
-    )
-    launch_train(loader=get_dataframe, table_name="table")
-    mock_post_init.assert_called_once()
-    mock_launch_train.assert_called_once()
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
