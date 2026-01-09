@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-import pandas as pd
 import pytest
 import os
 
@@ -12,7 +11,7 @@ from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
 from syngen.ml.reporters import Report
 from syngen.ml.data_loaders import DataEncryptor
-from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME, get_dataframe
 
 TABLE_NAME = "test_table"
 PATH_TO_TABLE = "path/to/source.csv"
@@ -40,7 +39,7 @@ def test_initialization_with_loader_and_table_name(rp_logger):
     rp_logger.info(
         "Initialization of the instance 'Syngen' by providing with 'loader' and 'table_name'"
     )
-    instance = Syngen(loader=lambda x: pd.DataFrame(), table_name=TABLE_NAME)
+    instance = Syngen(loader=get_dataframe, table_name=TABLE_NAME)
     assert instance.table_name == TABLE_NAME
     assert instance.source is None
     assert callable(instance.loader) is True
@@ -105,7 +104,7 @@ def test_initialization_with_metadata_path_and_loader(rp_logger):
     rp_logger.info(
         "Initialization of the instance 'Syngen' by providing 'metadata_path' and 'loader'"
     )
-    instance = Syngen(metadata_path=PATH_TO_METADATA, loader=lambda x: pd.DataFrame())
+    instance = Syngen(metadata_path=PATH_TO_METADATA, loader=get_dataframe)
     assert instance.table_name is None
     assert instance.source is None
     assert callable(instance.loader) is True
@@ -149,7 +148,7 @@ def test_initialization_with_metadata_path_and_table_name_and_loader(rp_logger, 
         instance = Syngen(
             metadata_path=PATH_TO_METADATA,
             table_name=TABLE_NAME,
-            loader=lambda x: pd.DataFrame()
+            loader=get_dataframe
         )
         assert instance.table_name == TABLE_NAME
         assert instance.source is None
@@ -194,7 +193,7 @@ def test_initialization_only_with_source(rp_logger):
 def test_initialization_only_with_loader(rp_logger):
     rp_logger.info("Initialization of the instance 'Syngen' by providing only 'loader'")
     with pytest.raises(AttributeError) as error:
-        Syngen(loader=lambda x: pd.DataFrame())
+        Syngen(loader=get_dataframe)
         assert str(error.value) == (
             "It seems that the information about 'metadata_path' or 'table_name' is absent. "
             "Please provide either the information about 'metadata_path' or "
@@ -208,7 +207,7 @@ def test_initialization_with_source_and_loader(rp_logger):
         "Initialization of the instance 'Syngen' by providing 'source' and 'loader'"
     )
     with pytest.raises(AttributeError) as error:
-        Syngen(source=PATH_TO_TABLE, loader=lambda x: pd.DataFrame())
+        Syngen(source=PATH_TO_TABLE, loader=get_dataframe)
         assert str(error.value) == (
             "It seems that the information about 'metadata_path' or 'table_name' is absent. "
             "Please provide either the information about 'metadata_path' or "
@@ -223,7 +222,7 @@ def test_initialization_with_source_and_loader_and_table_name(rp_logger):
         "by providing 'source', 'loader', and 'table_name'"
     )
     with pytest.raises(AttributeError) as error:
-        Syngen(source=PATH_TO_TABLE, loader=lambda x: pd.DataFrame(), table_name=TABLE_NAME)
+        Syngen(source=PATH_TO_TABLE, loader=get_dataframe, table_name=TABLE_NAME)
         assert str(error.value) == (
             "The information of both 'source' and 'loader' was provided. "
             "Please provide only one of them along with 'table_name'."
