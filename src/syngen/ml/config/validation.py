@@ -453,10 +453,10 @@ class Validator:
                         table_name=table_name
                     )
                 else:
-                    self._check_loader(table_name=table_name)
+                    self._check_loader(table_name)
 
-        if self.errors:
-            self._collect_errors()
+            if self.errors:
+                self._collect_errors()
 
         if self.type_of_process == "train":
             for table_name in self.merged_metadata.keys():

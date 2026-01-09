@@ -1,6 +1,6 @@
 test_table:                               # Use table name here
   train_settings:                         # Settings for training process.
-    source: ./tests/unit/launchers/metadata.yaml # Supported formats include cloud storage locations, local files
+    source: ./path/to/source.csv          # Supported formats include cloud storage locations, local files
     epochs: 8                             # Number of epochs
     drop_null: false                      # Drop rows with NULL values
     reports: all                          # Whether to generate accuracy, sampling reports or just fetch accuracy metrics

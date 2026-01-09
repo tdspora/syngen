@@ -15,8 +15,8 @@ from syngen.ml.data_loaders import DataEncryptor
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 TABLE_NAME = "test_table"
-PATH_TO_TABLE = f"{DIR_NAME}/unit/launchers/fixtures/table_with_data.csv"
-PATH_TO_METADATA = f"{DIR_NAME}/unit/launchers/fixtures/metadata.yaml"
+PATH_TO_TABLE = "path,"
+PATH_TO_METADATA = f"{DIR_NAME}/unit/sdk/fixtures/metadata.yaml"
 TRAIN_REPORT_TYPES = ReportTypes().train_report_types
 INFER_REPORT_TYPES = ReportTypes().infer_report_types
 LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]

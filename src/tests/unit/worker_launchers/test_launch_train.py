@@ -12,9 +12,10 @@ from syngen.ml.validation_schema import ReportTypes
 from syngen.ml.utils import ValidationError as UtilsValidationError
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME, get_dataframe
 
+
 TABLE_NAME = "test_table"
-PATH_TO_TABLE = f"{DIR_NAME}/unit/launchers/fixtures/table_with_data.csv"
-PATH_TO_METADATA = f"{DIR_NAME}/unit/launchers/fixtures/metadata.yaml"
+PATH_TO_TABLE = "path/to/test_table.csv"
+PATH_TO_METADATA = "path/to/metadata.yaml"
 TRAIN_REPORT_TYPES = ReportTypes().train_report_types
 LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
@@ -984,7 +985,9 @@ def test_launch_train_table_with_loader(mock_post_init, mock_launch_train, rp_lo
 
 @patch.object(Worker, "launch_train")
 @patch("syngen.train.setup_log_process")
-def test_launch_train_table_with_not_callable_loader(mock_logger, mock_launch_train, caplog, rp_logger):
+def test_launch_train_table_with_not_callable_loader(
+    mock_logger, mock_launch_train, caplog, rp_logger
+):
     rp_logger.info(
         "Launch the training process by using the function 'launch_train' "
         "with the provided 'loader' parameter that is not callable"
@@ -1006,14 +1009,16 @@ def test_launch_train_table_with_not_callable_loader(mock_logger, mock_launch_tr
 
 @patch.object(Worker, "launch_train")
 @patch("syngen.train.setup_log_process")
-def test_launch_train_table_with_loader_with_wrong_signature(mock_launch_train, caplog, rp_logger):
+def test_launch_train_table_with_loader_with_wrong_signature(
+    mock_logger, mock_launch_train, caplog, rp_logger
+):
     rp_logger.info(
         "Launch the training process by using the function 'launch_train' "
         "with the provided 'loader' parameter containing a function with wrong signature"
     )
     error_message = (
-        "The provided loader for the table - 'table' doesn't accept 'table_name' as an argument. "
-        "Please, provide a loader with signature `loader(table_name)`."
+        "The provided loader for the table - 'table' doesn't accept 'table_name' "
+        "as an argument. Please, provide a loader with signature `loader(table_name)`."
     )
     with pytest.raises(UtilsValidationError) as error:
         with caplog.at_level("ERROR"):
