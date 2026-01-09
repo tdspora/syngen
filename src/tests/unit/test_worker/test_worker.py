@@ -16,14 +16,16 @@ FERNET_KEY_2 = os.getenv("FERNET_KEY_2")
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_training_process_with_absent_metadata_path(mock_validator_run, rp_logger):
+def test_init_worker_for_training_process_with_table_name_and_source(
+    mock_validator_run, rp_logger
+):
     """
-    Test the initialization of 'Worker' class with the absent metadata path
+    Test the initialization of 'Worker' class with the table name and the source
     during the training process
     """
     rp_logger.info(
         "Test the initialization of the instance of 'Worker' class "
-        "with the absent metadata during the training process"
+        "with the table name and the source during the training process"
     )
     worker = Worker(
         table_name="table",
@@ -44,6 +46,56 @@ def test_init_worker_for_training_process_with_absent_metadata_path(mock_validat
         "table": {
             "train_settings": {
                 "source": "path/to/source.csv",
+                "batch_size": 1000,
+                "drop_null": True,
+                "epochs": 20,
+                "reports": ["accuracy", "sample"],
+                "row_limit": 1000,
+            },
+            "infer_settings": {},
+            "encryption": {
+                "fernet_key": FERNET_KEY
+            },
+            "keys": {},
+            "format": {}
+        }
+    }
+    mock_validator_run.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Validator, "run")
+def test_init_worker_for_training_process_with_table_name_and_loader(
+    mock_validator_run, rp_logger
+):
+    """
+    Test the initialization of 'Worker' class with the table name and the loader
+    during the training process
+    """
+    rp_logger.info(
+        "Test the initialization of the instance of 'Worker' class "
+        "with the table name and the loader during the training process"
+    )
+    worker = Worker(
+        table_name="table",
+        metadata_path=None,
+        settings={
+            "source": None,
+            "epochs": 20,
+            "drop_null": True,
+            "row_limit": 1000,
+            "batch_size": 1000,
+            "reports": ["accuracy", "sample"],
+        },
+        log_level="INFO",
+        type_of_process="train",
+        encryption_settings=fetch_env_variables({"fernet_key": "FERNET_KEY"}),
+        loader=get_dataframe
+        )
+    assert worker.metadata == {
+        "table": {
+            "train_settings": {
+                "source": None,
                 "batch_size": 1000,
                 "drop_null": True,
                 "epochs": 20,
@@ -525,6 +577,120 @@ def test_launch_train_with_metadata(
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables")
+def test_launch_train_with_metadata_and_provided_loader(
+    mock_train_tables,
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_loader,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_validate_fernet_key,
+    mock_validate_metadata,
+    mock_collect_metrics_in_train,
+    rp_logger,
+):
+    """
+    Test that 'launch_train' method calls all necessary methods
+    in case the metadata file contained the information of one table
+    with only the primary key was provided.
+    The loader function is also provided to the instance of 'Worker'.
+    """
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "in case the metadata file contained the information of one table "
+        "with only the primary key was provided. "
+        "The loader function is also provided to the instance of 'Worker'."
+    )
+    worker = Worker(
+        table_name=None,
+        metadata_path=f"{DIR_NAME}/unit/test_worker/fixtures/metadata_without_source.yaml",
+        settings={
+            "source": None,
+            "epochs": 20,
+            "drop_null": True,
+            "row_limit": 1000,
+            "batch_size": 1000,
+            "reports": ["accuracy", "sample"],
+        },
+        log_level="INFO",
+        type_of_process="train",
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+        loader=get_dataframe
+    )
+    worker.launch_train()
+    mock_train_tables.assert_called_once_with(
+        ["table"],
+        ["table"],
+        {
+            "table": {
+                "train_settings": {
+                    "source": None,
+                    "epochs": 100,
+                    "drop_null": False,
+                    "reports": [],
+                    "row_limit": 800,
+                    "batch_size": 2000,
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "reports": ["accuracy"],
+                    "batch_size": 200,
+                },
+                "encryption": {"fernet_key": FERNET_KEY},
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
+            }
+        },
+        {
+            "table": {
+                "train_settings": {
+                    "source": None,
+                    "epochs": 100,
+                    "drop_null": False,
+                    "reports": [],
+                    "row_limit": 800,
+                    "batch_size": 2000,
+                },
+                "infer_settings": {
+                    "size": 200,
+                    "run_parallel": True,
+                    "random_seed": 2,
+                    "reports": ["accuracy"],
+                    "batch_size": 200,
+                },
+                "encryption": {"fernet_key": FERNET_KEY},
+                "keys": {"pk_id": {"type": "PK", "columns": ["Id"]}},
+                "format": {}
+            }
+        },
+        False
+    )
+    mock_gather_existed_columns.assert_called_once_with("table")
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_loader.assert_called_once_with("table")
+    mock_check_existence_of_key_columns.assert_called_once_with("table")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("table")
+    mock_validate_fernet_key.assert_called_once_with("table", FERNET_KEY)
+    mock_validate_metadata.assert_called_once_with("table")
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["table"],
+        ["table"],
+        False
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_loader")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_of_related_tables(
     mock_train_tables,
     mock_gather_existed_columns,
@@ -855,7 +1021,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables")
-def test_launch_train_without_metadata(
+def test_launch_train_with_provided_source_and_table_name(
     mock_train_tables,
     mock_gather_existed_columns,
     mock_check_existence_of_source,
@@ -869,11 +1035,13 @@ def test_launch_train_without_metadata(
 ):
     """
     Test that 'launch_train' method calls all necessary methods
-    in case the metadata file wasn't provided and training process was launched through CLI
+    in case the 'source' and 'table_name' were provided,
+    and training process was launched through CLI
     """
     rp_logger.info(
         "Test that 'launch_train' method calls all necessary methods "
-        "in case the metadata file wasn't provided and a training process was launched through CLI"
+        "in case the 'source' and 'table_name' were provided, "
+        "and a training process was launched through CLI"
     )
     worker = Worker(
         table_name="table",
@@ -933,6 +1101,106 @@ def test_launch_train_without_metadata(
         path_to_source="./path/to/source.csv", table_name="table"
     )
     mock_check_loader.assert_not_called()
+    mock_check_existence_of_key_columns.assert_called_once_with("table")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("table")
+    mock_validate_fernet_key.assert_not_called()
+    mock_validate_metadata.assert_called_once_with("table")
+    mock_collect_metrics_in_train.assert_called_once_with(
+        ["table"],
+        ["table"],
+        True
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "_collect_metrics_in_train")
+@patch.object(Validator, "_validate_metadata")
+@patch.object(Validator, "_validate_fernet_key")
+@patch.object(Validator, "_check_existence_of_referenced_columns")
+@patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_loader")
+@patch.object(Validator, "_check_existence_of_source")
+@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Worker, "_Worker__train_tables")
+def test_launch_train_with_table_name_and_loader(
+    mock_train_tables,
+    mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_loader,
+    mock_check_existence_of_key_columns,
+    mock_check_existence_of_referenced_columns,
+    mock_validate_fernet_key,
+    mock_validate_metadata,
+    mock_collect_metrics_in_train,
+    rp_logger,
+):
+    """
+    Test that 'launch_train' method calls all necessary methods
+    in case the 'table_name' and 'loader' were provided,
+    and training process was launched through CLI
+    """
+    rp_logger.info(
+        "Test that 'launch_train' method calls all necessary methods "
+        "in case the 'table_name' and 'loader' were provided, "
+        "and a training process was launched through CLI"
+    )
+    worker = Worker(
+        table_name="table",
+        metadata_path=None,
+        settings={
+            "source": None,
+            "epochs": 20,
+            "drop_null": True,
+            "row_limit": 1000,
+            "batch_size": 1000,
+            "reports": ["accuracy", "sample"],
+        },
+        log_level="INFO",
+        type_of_process="train",
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+        loader=get_dataframe
+    )
+    worker.launch_train()
+    mock_train_tables.assert_called_once_with(
+        ["table"],
+        ["table"],
+        {
+            "table": {
+                "train_settings": {
+                    "source": None,
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "reports": ["accuracy", "sample"],
+                },
+                "infer_settings": {},
+                "encryption": {"fernet_key": None},
+                "keys": {},
+                "format": {}
+            }
+        },
+        {
+            "table": {
+                "train_settings": {
+                    "source": None,
+                    "epochs": 20,
+                    "drop_null": True,
+                    "row_limit": 1000,
+                    "batch_size": 1000,
+                    "reports": ["accuracy", "sample"],
+                },
+                "infer_settings": {},
+                "encryption": {"fernet_key": None},
+                "keys": {},
+                "format": {}
+            }
+        },
+        True
+    )
+    mock_gather_existed_columns.assert_called_once_with("table")
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_loader.assert_called_once_with("table")
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_fernet_key.assert_not_called()
