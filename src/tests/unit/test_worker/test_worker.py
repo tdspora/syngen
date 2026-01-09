@@ -3191,6 +3191,7 @@ def test_infer_tables_without_generation_report_and_without_provided_fernet_key(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_loader")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables")
@@ -3198,6 +3199,7 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
     mock_train_tables,
     mock_gather_existed_columns,
     mock_check_existence_of_source,
+    mock_check_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
@@ -3284,6 +3286,7 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
     )
     mock_gather_existed_columns.assert_called_once_with("table")
     mock_check_existence_of_source.assert_not_called()
+    mock_check_loader.assert_called_once_with("table")
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once()
@@ -3299,6 +3302,7 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_loader")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables")
@@ -3306,6 +3310,7 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
     mock_train_tables,
     mock_gather_existed_columns,
     mock_check_existence_of_source,
+    mock_check_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
@@ -3449,6 +3454,7 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
     )
     assert mock_gather_existed_columns.call_count == 2
     mock_check_existence_of_source.assert_not_called()
+    assert mock_check_loader.call_count == 2
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
@@ -3466,6 +3472,7 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_loader")
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables")
@@ -3473,7 +3480,7 @@ def test_launch_train_with_metadata_without_train_settings_and_loader(
     mock_train_tables,
     mock_gather_existed_columns,
     mock_check_existence_of_source,
-    mock_check_existence_of_key_columns,
+    mock_check_loadermock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
     mock_generate_reports,
@@ -3618,6 +3625,7 @@ def test_launch_train_with_metadata_without_train_settings_and_loader(
     )
     assert mock_gather_existed_columns.call_count == 2
     mock_check_existence_of_source.assert_not_called()
+    assert mock_check_loader.call_count == 2
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
