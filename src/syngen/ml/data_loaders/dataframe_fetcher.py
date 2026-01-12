@@ -29,7 +29,7 @@ class DataFrameFetcher:
             logger.error(message)
             raise
 
-    def get_columns(self) -> List[str]:
+    def get_columns(self, **kwargs) -> List[str]:
         """
         Get the column names of the table
         """
