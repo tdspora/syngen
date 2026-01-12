@@ -670,7 +670,7 @@ import pandas as pd
 def my_custom_loader(table_name: str) -> pd.DataFrame:
     # Custom logic to load data based on table_name
     if table_name == "my_table":
-        return pd.read_csv("path/to/my_table.csv")
+        return pd.read_csv(f"path/to/{table_name}.csv")
     else:
         raise ValueError(f"Unknown table name: {table_name}")
 
