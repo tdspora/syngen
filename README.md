@@ -140,7 +140,8 @@ infer --size INT \
     --batch_size INT \
     --random_seed INT \
     --reports STR \
-    --log_level STR
+    --log_level STR \
+    --fernet_key STR
 ```
 
 *Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
