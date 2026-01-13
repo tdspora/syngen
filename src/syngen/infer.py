@@ -184,8 +184,7 @@ def cli_launch_infer(
         reports=reports,
         random_seed=random_seed,
         log_level=log_level,
-        fernet_key=fernet_key,
-        loader=None
+        fernet_key=fernet_key
     )
 
 

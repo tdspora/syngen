@@ -229,8 +229,7 @@ def cli_launch_train(
         reports=reports,
         log_level=log_level,
         batch_size=batch_size,
-        fernet_key=fernet_key,
-        loader=None
+        fernet_key=fernet_key
     )
 
 
