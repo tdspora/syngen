@@ -538,8 +538,7 @@ class Worker:
             reports=settings["reports"],
             log_level=self.log_level,
             both_keys=both_keys,
-            type_of_process=self.type_of_process,
-            loader=self.loader
+            type_of_process=self.type_of_process
         )
         ProgressBarHandler().set_progress(
             delta=delta,

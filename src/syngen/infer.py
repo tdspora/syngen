@@ -1,8 +1,7 @@
-from typing import Optional, List, Union, Tuple, Callable
+from typing import Optional, List, Union, Tuple
 
 import click
 from loguru import logger
-import pandas as pd
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
@@ -39,8 +38,7 @@ def launch_infer(
     reports: Union[List[str], Tuple[str], str] = "none",
     random_seed: Optional[int] = None,
     log_level: str = "INFO",
-    fernet_key: Optional[str] = None,
-    loader: Optional[Callable[[str], pd.DataFrame]] = None
+    fernet_key: Optional[str] = None
 ):
     setup_log_process(
         type_of_process="infer",
@@ -67,8 +65,7 @@ def launch_infer(
         },
         log_level=log_level,
         type_of_process="infer",
-        encryption_settings=encryption_settings,
-        loader=loader
+        encryption_settings=encryption_settings
     )
 
     logger.info(

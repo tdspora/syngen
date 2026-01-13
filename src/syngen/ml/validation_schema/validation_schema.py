@@ -319,7 +319,7 @@ class ValidationSchema:
     def get_configuration_schema(self):
         if self.validation_of_source and self.process == "train":
             return ConfigurationSchemaWithSource()
-        elif self.validation_of_source and self.process == "infer":
+        elif self.process == "infer":
             return ConfigurationSchemaWithOptionalSource()
         return ConfigurationSchemaWithoutSource()
 

@@ -345,8 +345,7 @@ class Syngen:
         random_seed: Optional[int] = None,
         reports: Union[str, List[str]] = "none",
         log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
-        fernet_key: Optional[str] = None,
-        loader: Optional[Callable[[str], pd.DataFrame]] = None
+        fernet_key: Optional[str] = None
     ):
         launch_infer(
             metadata_path=self.metadata_path,
@@ -357,8 +356,7 @@ class Syngen:
             reports=reports,
             random_seed=random_seed,
             log_level=log_level,
-            fernet_key=fernet_key,
-            loader=loader
+            fernet_key=fernet_key
         )
         self._set_execution_artifacts(type_of_process="infer")
 
