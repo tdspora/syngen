@@ -7,6 +7,7 @@ from syngen.ml.validation_schema.validation_schema import (  # noqa: F401;
     ConfigurationSchemaWithoutSource,
     ConfigurationSchemaWithOptionalSource,
     ConfigurationSchemaWithSource,
+    BaseConfigurationSchema,
     KeysSchema,
     ValidationSchema,
     SUPPORTED_EXCEL_EXTENSIONS,
