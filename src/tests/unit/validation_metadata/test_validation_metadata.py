@@ -96,25 +96,13 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_with_loa
         "with the provided 'loader'"
     )
     test_metadata = {
-        "table_a": {
+        "test_table": {
             "keys": {
                 "pk_id": {
                     "type": "PK",
                     "columns": ["id"]
                 }
-            }
-        },
-        "table_b": {
-            "keys": {
-                "pk_id": {
-                    "type": "PK",
-                    "columns": ["id"]
-                },
-                "uq_id": {
-                    "type": "UQ",
-                    "columns": ["name"]
-                }
-            }
+            },
         }
     }
     validator = Validator(
@@ -127,11 +115,11 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_with_loa
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
-    assert mock_gather_existed_columns.call_count == 2
+    mock_gather_existed_columns.assert_called_once_with("test_table")
     mock_check_existence_of_source.assert_not_called()
-    assert mock_check_loader.call_count == 2
-    assert mock_check_existence_of_key_columns.call_count == 2
-    assert mock_check_existence_of_referenced_columns.call_count == 2
+    mock_check_loader.assert_called_once_with("test_table")
+    mock_check_existence_of_key_columns.assert_called_once_with("test_table")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_validate_referential_integrity.assert_not_called()
     mock_check_completion_of_training.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -679,9 +667,13 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_loader")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
     mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -741,6 +733,8 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
     mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_completion_of_training.call_count == 2
@@ -756,9 +750,13 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_loader")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
     mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -827,6 +825,8 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
     }
     assert validator.merged_metadata == test_metadata
     mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_completion_of_training.call_count == 2
@@ -866,9 +866,13 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
+@patch.object(Validator, "_check_loader")
+@patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_process(
     mock_gather_existed_columns,
+    mock_check_existence_of_source,
+    mock_check_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -948,6 +952,8 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
     }
     assert validator.merged_metadata == test_metadata
     mock_gather_existed_columns.assert_not_called()
+    mock_check_existence_of_source.assert_not_called()
+    mock_check_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_completion_of_training.call_count == 2
