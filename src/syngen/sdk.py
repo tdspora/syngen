@@ -452,7 +452,6 @@ class Syngen:
             paths=infer_config.paths,
             config=infer_config.to_dict(),
             metadata=infer_config.metadata,
-            loader=infer_config.loader,
             type_of_process=infer_config.type_of_process
         )
 

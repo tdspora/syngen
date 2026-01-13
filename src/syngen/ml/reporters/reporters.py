@@ -27,7 +27,7 @@ class Reporter:
         paths: Dict[str, str],
         config: Dict[str, str],
         metadata: Dict,
-        loader: Optional[Callable[[str], pd.DataFrame]],
+        loader: Optional[Callable[[str], pd.DataFrame]] = None,
         type_of_process: Literal["train", "infer"] = "train"
     ):
         self.table_name = table_name
@@ -52,21 +52,6 @@ class Reporter:
                 technical_columns = set(f"{col}_" for col in flattening_mapping.keys())
                 return technical_columns
         return set()
-
-    def _fetch_dataframe(self) -> pd.DataFrame:
-        """
-        Fetch the data using the callback function
-        """
-        data, _ = DataFrameFetcher(
-            loader=self.loader,
-            table_name=self.table_name
-        ).fetch_data()
-        logger.warning(
-            f"The original data of the table - '{self.table_name}' "
-            "has been fetched using the callback function. "
-            "The data may have been modified since the beginning of the training process."
-        )
-        return data
 
     def _extract_report_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         original, _ = DataLoader(
@@ -337,6 +322,21 @@ class SampleAccuracyReporter(Reporter):
     """
 
     report_type = "sample"
+
+    def _fetch_dataframe(self) -> pd.DataFrame:
+        """
+        Fetch the data using the callback function
+        """
+        data, _ = DataFrameFetcher(
+            loader=self.loader,
+            table_name=self.table_name
+        ).fetch_data()
+        logger.warning(
+            f"The original data of the table - '{self.table_name}' "
+            "has been fetched using the callback function. "
+            "The data may have been modified since the beginning of the training process."
+        )
+        return data
 
     def _extract_report_data(self):
         if self.loader:

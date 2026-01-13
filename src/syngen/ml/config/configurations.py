@@ -105,7 +105,7 @@ class TrainConfig:
 @dataclass
 class InferConfig:
     """
-    The configuration class to set up the work of infer process
+    The configuration class to set up the work of the inference process
     """
 
     destination: Optional[str]
@@ -119,7 +119,6 @@ class InferConfig:
     reports: List[str]
     both_keys: bool
     log_level: str
-    loader: Optional[Callable[[str], pd.DataFrame]]
     type_of_process: Literal["train", "infer"]
     slugify_table_name: str = field(init=False)
     paths: Dict = field(init=False)
