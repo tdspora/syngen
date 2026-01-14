@@ -1065,7 +1065,9 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
         }
     }
     assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
+    mock_check_existence_of_source.assert_called_once_with(
+        path_to_source="path/to/table_b.csv", table_name="table_b"
+    )
     mock_check_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("table_b")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
@@ -1217,7 +1219,9 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         }
     }
     assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
+    mock_check_existence_of_source.assert_called_once_with(
+        path_to_source="path/to/table_b.csv", table_name="table_b"
+    )
     mock_check_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("table_b")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
@@ -1362,7 +1366,9 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
         }
     }
     assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
+    mock_check_existence_of_source.assert_called_once_with(
+        path_to_source="path/to/table_b.csv", table_name="table_b"
+    )
     mock_check_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("table_b")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")

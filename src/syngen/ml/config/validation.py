@@ -442,9 +442,9 @@ class Validator:
         Launch the validation process
         """
         if self.type_of_process == "train":
-            for table_name in self.merged_metadata.keys():
+            for table_name in self.metadata.keys():
                 if (
-                    path_to_source := self.merged_metadata[table_name].get(
+                    path_to_source := self.metadata[table_name].get(
                         "train_settings", {}
                     ).get("source")
                 ):
