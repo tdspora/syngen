@@ -1004,7 +1004,7 @@ def test_launch_train_table_with_loader_with_wrong_signature(
     )
     error_message = (
         "The provided loader for the table - 'table' doesn't accept 'table_name' "
-        "as an argument. Please, provide a loader with signature `loader(table_name)`."
+        "as an argument. Please, provide a loader with signature 'loader(table_name)'."
     )
     with pytest.raises(UtilsValidationError) as error:
         with caplog.at_level("ERROR"):

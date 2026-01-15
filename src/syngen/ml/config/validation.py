@@ -193,7 +193,7 @@ class Validator:
                 message = (
                     f"The provided loader for the table - '{table_name}' doesn't accept "
                     f"'table_name' as an argument. Please, provide a loader with signature "
-                    f"`loader(table_name)`."
+                    f"'loader(table_name)'."
                 )
                 self.errors["check of the loader"][table_name] = message
                 return
