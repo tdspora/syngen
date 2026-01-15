@@ -38,7 +38,6 @@ class Worker:
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
-    validation_of_source: bool = field(default=False)
     train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
     infer_stages: List = ["INFER", "REPORT"]
 
