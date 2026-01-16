@@ -38,14 +38,10 @@ class Worker:
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
-    validation_source: bool = field(default=False)
     train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
-        self.validation_source = (
-            False if self.loader and self.type_of_process == "train" else True
-        )
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
         self._update_metadata()
@@ -129,7 +125,7 @@ class Worker:
         """
         ValidationSchema(
             metadata=self.metadata,
-            validation_source=self.validation_source,
+            validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
         ).validate_schema()
 
@@ -141,7 +137,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_source=self.validation_source
+            loader=self.loader
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -541,8 +537,7 @@ class Worker:
             reports=settings["reports"],
             log_level=self.log_level,
             both_keys=both_keys,
-            type_of_process=self.type_of_process,
-            loader=self.loader
+            type_of_process=self.type_of_process
         )
         ProgressBarHandler().set_progress(
             delta=delta,

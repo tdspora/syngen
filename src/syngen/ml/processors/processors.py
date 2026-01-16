@@ -114,48 +114,38 @@ class PreprocessHandler(Processor):
         self.initial_data_shape = data.shape
         self.row_subset = len(data)
         data, schema = self._remove_empty_columns(data, schema)
-        if self.loader:
-            warning_message = (
-                "parameter will be ignored because the retrieval of the data "
-                "is handled by a callback function"
-            )
-            if drop_null:
-                logger.warning(f"The 'drop_null' {warning_message}")
-            if row_limit is not None:
-                logger.warning(f"The 'row_limit' {warning_message}")
-        else:
-            if drop_null:
-                if not data.dropna().empty:
-                    data = data.dropna()
-                    if count_of_dropped_rows := self.initial_data_shape[0] - data.shape[0]:
-                        logger.info(
-                            f"As the parameter 'drop_null' set to 'True', "
-                            f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
-                            f"that have empty values have been dropped. "
-                            f"The count of remained rows is {data.shape[0]}."
-                        )
-                else:
-                    logger.warning(
-                        "The specified 'drop_null' argument results in the empty dataframe, "
-                        "so it will be ignored"
+        if drop_null is True:
+            if data.dropna().empty is False:
+                data = data.dropna()
+                if count_of_dropped_rows := self.initial_data_shape[0] - data.shape[0]:
+                    logger.info(
+                        f"As the parameter 'drop_null' set to 'True', "
+                        f"{count_of_dropped_rows} rows of the table - '{self.table_name}' "
+                        f"that have empty values have been dropped. "
+                        f"The count of remained rows is {data.shape[0]}."
                     )
-                self.row_subset = len(data)
+            else:
+                logger.warning(
+                    "The specified 'drop_null' argument results in the empty dataframe, "
+                    "so it will be ignored"
+                )
+            self.row_subset = len(data)
 
-            if row_limit:
-                self.row_subset = min(row_limit, len(data))
-                data = data.sample(n=self.row_subset)
+        if row_limit:
+            self.row_subset = min(row_limit, len(data))
+            data = data.sample(n=self.row_subset)
 
         if len(data) < 100:
             logger.warning(
                 "The input table is too small to provide any meaningful results. "
-                "Please consider: 1) disable drop_null argument, 2) provide bigger table"
+                "Please consider: 1) disable 'drop_null' argument, 2) provide bigger table"
             )
         elif len(data) < 500:
             logger.warning(
                 f"The amount of data is {len(data)} rows. It seems that it isn't enough "
                 f"to supply high-quality results. To improve the quality of generated data "
                 f"please consider any of the steps: 1) provide a bigger table, "
-                f"2) disable drop_null argument"
+                f"2) disable 'drop_null' argument"
             )
         logger.info(f"The subset of rows was set to {self.row_subset}")
         return data, schema
