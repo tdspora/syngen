@@ -164,6 +164,32 @@ def test_initialization_with_metadata_path_and_table_name_and_loader(rp_logger, 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_initialization_with_metadata_path_and_table_name_and_loader_and_source(rp_logger, caplog):
+    rp_logger.info(
+        "Initialization of the instance 'Syngen' "
+        "by providing 'metadata_path', 'table_name', 'loader' and 'source'"
+    )
+    with caplog.at_level("WARNING"):
+        instance = Syngen(
+            metadata_path=PATH_TO_METADATA,
+            table_name=TABLE_NAME,
+            loader=get_dataframe,
+            source="path/to/source.csv"
+        )
+        assert instance.table_name == TABLE_NAME
+        assert instance.source == "path/to/source.csv"
+        assert callable(instance.loader) is True
+        assert instance.metadata_path == PATH_TO_METADATA
+        assert instance.list_of_tables == ["test_table"]
+        assert instance.execution_artifacts == dict()
+        assert (
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' and 'source' "
+            "and 'loader' will be ignored."
+        ) in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_initialization_only_with_table_name(rp_logger, caplog):
     rp_logger.info(
         "Initialization of the instance 'Syngen' by providing only 'table_name'"
@@ -228,6 +254,21 @@ def test_initialization_with_source_and_loader_and_table_name(rp_logger):
             "Please provide only one of them along with 'table_name'."
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_initialization_with_metadata_path_and_source_and_loader(caplog, rp_logger):
+    rp_logger.info(
+        "Initialization of the instance 'Syngen' by providing "
+        "with 'metadata_path', 'loader', and 'source'"
+    )
+    with caplog.at_level("WARNING"):
+        Syngen(source=PATH_TO_TABLE, loader=get_dataframe, metadata_path=PATH_TO_METADATA)
+        assert (
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'source' and 'loader' will be ignored."
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
 
 
 def test_initialization_without_parameters(rp_logger):

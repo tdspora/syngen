@@ -177,6 +177,11 @@ class Syngen:
                 "The information about 'metadata_path' was provided. "
                 "In this case the information about 'source' and 'table_name' will be ignored."
             )
+        elif self.metadata_path and self.loader and self.source:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'source' and 'loader' will be ignored."
+            )
         elif self.metadata_path and self.loader and self.table_name:
             logger.warning(
                 "The information about 'metadata_path' was provided. "
