@@ -253,5 +253,6 @@ def get_dataframe(table_name: str) -> pd.DataFrame:
         "table_a": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}],
         "table_b": [{"id": 1, "department": "financial"}, {"id": 2, "department": "engineering"}],
         "table": [{"id": 1, "value": 10}, {"id": 2, "value": 20}],
+        "test_table": [{"id": 1, "value": 30}, {"id": 2, "value": 40}]
     }
     return pd.DataFrame(data.get(table_name, []))
