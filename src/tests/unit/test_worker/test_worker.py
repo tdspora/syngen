@@ -115,14 +115,14 @@ def test_init_worker_for_training_process_with_table_name_and_loader(
 
 
 @patch.object(Validator, "run")
-def test_init_worker_for_infer_process_with_absent_metadata_path(mock_validator_run, rp_logger):
+def test_init_worker_for_infer_process_with_table_name(mock_validator_run, rp_logger):
     """
-    Test the initialization of 'Worker' class with the absent metadata path
+    Test the initialization of 'Worker' class with the table name
     during the inference process
     """
     rp_logger.info(
         "Test the initialization of the instance of 'Worker' class "
-        "with the absent metadata during the inference process"
+        "with the table name during the inference process"
     )
     worker = Worker(
         table_name="table",
@@ -577,7 +577,7 @@ def test_launch_train_with_metadata(
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables")
-def test_launch_train_with_metadata_and_provided_loader(
+def test_launch_train_with_metadata_and_loader(
     mock_train_tables,
     mock_gather_existed_columns,
     mock_check_existence_of_source,
@@ -1021,7 +1021,7 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
 @patch.object(Validator, "_check_existence_of_source")
 @patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_Worker__train_tables")
-def test_launch_train_with_provided_source_and_table_name(
+def test_launch_train_with_source_and_table_name(
     mock_train_tables,
     mock_gather_existed_columns,
     mock_check_existence_of_source,
@@ -1677,7 +1677,7 @@ def test_launch_infer_with_metadata_of_related_tables_with_diff_keys(
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Worker, "_Worker__infer_tables")
-def test_launch_infer_without_metadata(
+def test_launch_infer_with_table_name(
     mock_infer_tables,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
@@ -1691,12 +1691,12 @@ def test_launch_infer_without_metadata(
 ):
     """
     Test that 'launch_infer' method calls all necessary methods
-    in case the metadata file wasn't provided and the inference process was launched through CLI
+    in case the table name is provided and the inference process is launched through CLI
     """
     rp_logger.info(
         "Test that 'launch_infer' method calls all necessary methods "
-        "in case the metadata file wasn't provided and "
-        "the inference process was launched through CLI"
+        "in case the table name is provided and "
+        "the inference process is launched through CLI"
     )
     worker = Worker(
         table_name="table",
