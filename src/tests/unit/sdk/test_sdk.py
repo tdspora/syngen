@@ -270,7 +270,6 @@ def test_initialization_with_metadata_path_and_source_and_loader(caplog, rp_logg
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-
 def test_initialization_without_parameters(rp_logger):
     rp_logger.info("Initialization of the instance 'Syngen' without providing any attributes")
     with pytest.raises(AttributeError) as error:
