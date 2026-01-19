@@ -617,9 +617,9 @@ def test_validation_of_metadata_file_with_invalid_format_settings_for_excel_tabl
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_validation_of_metadata_file_with_absent_source_fields_in_train_without_loader(rp_logger):
+def test_validation_of_metadata_file_without_source_fields_in_train_without_loader(rp_logger):
     rp_logger.info(
-        "Test the validation of the schema of the metadata file with the absent 'source' field "
+        "Test the validation of the schema of the metadata file without 'source' field "
         "in the training process if the loader isn't provided."
     )
     path_to_metadata = (f"{DIR_NAME}/unit/validation_schema/fixtures/"
@@ -640,11 +640,11 @@ def test_validation_of_metadata_file_with_absent_source_fields_in_train_without_
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_validation_of_metadata_file_with_absent_source_fields_in_train_with_loader(
+def test_validation_of_metadata_file_without_source_fields_in_train_with_loader(
     caplog, rp_logger
 ):
     rp_logger.info(
-        "Test the validation of the schema of the metadata file with the absent 'source' field "
+        "Test the validation of the schema of the metadata file without 'source' field "
         "in the training process if the loader is provided."
     )
     path_to_metadata = (
@@ -688,11 +688,11 @@ def test_validation_of_metadata_file_with_source_and_loader_in_train(rp_logger):
 
 
 @pytest.mark.parametrize("validation_of_source", [True, False])
-def test_validation_of_metadata_file_with_absent_source_fields_in_infer(
+def test_validation_of_metadata_file_without_source_fields_in_infer(
     validation_of_source, caplog, rp_logger
 ):
     rp_logger.info(
-        "Test the validation of the schema of the metadata file with the absent 'source' field "
+        "Test the validation of the schema of the metadata file without 'source' field "
         "in the inference process"
     )
     path_to_metadata = (f"{DIR_NAME}/unit/validation_schema/fixtures/"
@@ -708,7 +708,79 @@ def test_validation_of_metadata_file_with_absent_source_fields_in_infer(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_validation_of_metadata_file_with_invalid_PK_key_contained_references_section(rp_logger):
+def test_validation_of_metadata_file_without_training_settings_during_train_process_with_loader(
+    rp_logger, caplog
+):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file during the training process "
+        "without provided 'training_settings' in case the loader is provided"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
+        "metadata_file_without_training_settings.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=False,
+            process="train"
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_validation_of_metadata_file_without_training_settings_during_train_process_without_loader(
+    rp_logger
+):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file during the training process "
+        "without provided 'training_settings' in case the loader isn't provided"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
+        "metadata_file_without_training_settings.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    with pytest.raises(ValidationError) as e:
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=True,
+            process="train"
+        ).validate_schema()
+        assert str(e.value) == (
+            "Validation error(s) found in the schema of the metadata. "
+            "The details are - {'pk_test': {'train_settings': ['Field may not be null.']}, "
+            "'fk_test': {'train_settings': ['Field may not be null.']}}"
+        )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("validation_of_source", [True, False])
+def test_validation_of_metadata_file_without_training_settings_during_infer_process(
+    validation_of_source, rp_logger, caplog
+):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file "
+        "during the inference process without provided 'training_settings' "
+        "in case the loader is provided"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
+        "metadata_file_without_training_settings.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=validation_of_source,
+            process="infer"
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_validation_of_metadata_file_with_invalid_PK_key(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the invalid PK "
         "which contained 'references' section"
@@ -732,7 +804,7 @@ def test_validation_of_metadata_file_with_invalid_PK_key_contained_references_se
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_validation_of_metadata_file_with_invalid_UQ_key_contained_references_section(rp_logger):
+def test_validation_of_metadata_file_with_invalid_UQ_key(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the invalid UQ "
         "contained 'references' section"
@@ -756,7 +828,7 @@ def test_validation_of_metadata_file_with_invalid_UQ_key_contained_references_se
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_validation_of_metadata_file_with_invalid_FK_key_without_references_section(rp_logger):
+def test_validation_of_metadata_file_with_invalid_FK_key(rp_logger):
     rp_logger.info(
         "Test the validation of the schema of the metadata file with the invalid FK "
         "which doesn't contain 'references' section"
@@ -858,147 +930,3 @@ def test_validation_schema_of_keys(path_to_metadata, expected_error, rp_logger):
     assert str(error.value) == (
         f"Validation error(s) found in the schema of the metadata. {expected_error}"
     )
-
-
-def test_validation_of__metadata_file_without_sources_during_training_process_with_loader(
-    rp_logger, caplog
-):
-    rp_logger.info(
-        "Test the validation of the schema of the valid metadata file without provided sources "
-        "during the training process in case the provided loader"
-    )
-    path_to_metadata = (
-        f"{DIR_NAME}/unit/validation_schema/fixtures/"
-        "metadata_file_without_sources.yaml"
-    )
-    metadata = MetadataLoader(path_to_metadata).load_data()
-    with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
-            metadata=metadata,
-            validation_of_source=False,
-            process="train"
-        ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_validation_of__metadata_file_without_sources_during_training_process_without_loader(
-    rp_logger
-):
-    rp_logger.info(
-        "Test the validation of the schema of the valid metadata file without provided sources "
-        "during the training process in case the loader isn't provided"
-    )
-    path_to_metadata = (
-        f"{DIR_NAME}/unit/validation_schema/fixtures/"
-        "metadata_file_without_sources.yaml"
-    )
-    metadata = MetadataLoader(path_to_metadata).load_data()
-    with pytest.raises(ValidationError) as e:
-        ValidationSchema(
-            metadata=metadata,
-            validation_of_source=True,
-            process="train"
-        ).validate_schema()
-    assert str(e.value) == (
-        "Validation error(s) found in the schema of the metadata. "
-        "The details are - {'pk_test': {'train_settings': {"
-        "'source': ['Missing data for required field.']}}, "
-        "'fk_test': {'train_settings': {'source': ['Missing data for required field.']}}}"
-    )
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@pytest.mark.parametrize("validation_of_source", [True, False])
-def test_validation_of__metadata_file_without_sources_during_infer_process(
-    validation_of_source, rp_logger, caplog
-):
-    rp_logger.info(
-        "Test the validation of the schema of the valid metadata file without provided sources "
-        "during the inference process"
-    )
-    path_to_metadata = (
-        f"{DIR_NAME}/unit/validation_schema/fixtures/"
-        "metadata_file_without_sources.yaml"
-    )
-    metadata = MetadataLoader(path_to_metadata).load_data()
-    with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
-            metadata=metadata,
-            validation_of_source=validation_of_source,
-            process="infer"
-        ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_validation_of__metadata_file_without_training_settings_during_train_process_with_loader(
-    rp_logger, caplog
-):
-    rp_logger.info(
-        "Test the validation of the schema of the valid metadata file during the training process "
-        "without provided 'training_settings' in case the loader is provided"
-    )
-    path_to_metadata = (
-        f"{DIR_NAME}/unit/validation_schema/fixtures/"
-        "metadata_file_without_training_settings.yaml"
-    )
-    metadata = MetadataLoader(path_to_metadata).load_data()
-    with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
-            metadata=metadata,
-            validation_of_source=False,
-            process="train"
-        ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_validation_of_metadata_file_without_training_settings_during_train_process_without_loader(
-    rp_logger
-):
-    rp_logger.info(
-        "Test the validation of the schema of the valid metadata file during the training process "
-        "without provided 'training_settings' in case the loader isn't provided"
-    )
-    path_to_metadata = (
-        f"{DIR_NAME}/unit/validation_schema/fixtures/"
-        "metadata_file_without_training_settings.yaml"
-    )
-    metadata = MetadataLoader(path_to_metadata).load_data()
-    with pytest.raises(ValidationError) as e:
-        ValidationSchema(
-            metadata=metadata,
-            validation_of_source=True,
-            process="train"
-        ).validate_schema()
-        assert str(e.value) == (
-            "Validation error(s) found in the schema of the metadata. "
-            "The details are - {'pk_test': {'train_settings': ['Field may not be null.']}, "
-            "'fk_test': {'train_settings': ['Field may not be null.']}}"
-        )
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@pytest.mark.parametrize("validation_of_source", [True, False])
-def test_validation_of_metadata_file_without_training_settings_during_infer_process(
-    validation_of_source, rp_logger, caplog
-):
-    rp_logger.info(
-        "Test the validation of the schema of the valid metadata file "
-        "during the inference process without provided 'training_settings' "
-        "in case the loader is provided"
-    )
-    path_to_metadata = (
-        f"{DIR_NAME}/unit/validation_schema/fixtures/"
-        "metadata_file_without_training_settings.yaml"
-    )
-    metadata = MetadataLoader(path_to_metadata).load_data()
-    with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
-            metadata=metadata,
-            validation_of_source=validation_of_source,
-            process="infer"
-        ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
