@@ -252,17 +252,6 @@ class BaseConfigurationSchema(Schema):
         allow_none=True,
     )
 
-
-class ConfigurationSchemaWithSource(BaseConfigurationSchema):
-    """
-    Configuration schema for a training process with the 'source' parameter is required
-    """
-    train_settings = fields.Nested(
-        ExtendedTrainingSettingsSchemaWithSource,
-        required=True,
-        allow_none=False
-    )
-
     @staticmethod
     def get_format_schema(source):
         if Path(source).suffix == ".csv":
@@ -279,6 +268,17 @@ class ConfigurationSchemaWithSource(BaseConfigurationSchema):
             if format_schema is not None and data.get("format") is not None:
                 data["format"] = format_schema().load(data["format"])
         return data
+
+
+class ConfigurationSchemaWithSource(BaseConfigurationSchema):
+    """
+    Configuration schema for a training process with the 'source' parameter is required
+    """
+    train_settings = fields.Nested(
+        ExtendedTrainingSettingsSchemaWithSource,
+        required=True,
+        allow_none=False
+    )
 
 
 class ConfigurationSchemaWithOptionalSource(BaseConfigurationSchema):
