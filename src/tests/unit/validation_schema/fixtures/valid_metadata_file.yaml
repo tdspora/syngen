@@ -25,6 +25,18 @@ pk_test:
       columns:
         - Id
 
+  format:
+    sep: ','
+    quotechar: '"'
+    quoting: minimal
+    escapechar: '"'
+    encoding: null
+    header: infer
+    skiprows: null
+    on_bad_lines: error
+    engine: null
+    na_values: null
+
 fk_test:
   train_settings:
     source: ./data/fk_test.csv
@@ -37,14 +49,16 @@ fk_test:
     batch_size: 200
 
   format:
-    sep: ","
+    sep: ','
     quotechar: '"'
-    quoting: "All"
+    quoting: minimal
     escapechar: '"'
-    encoding: "utf-8"
-    header: 0
-    skiprows: 0
-    on_bad_lines: skip
+    encoding: null
+    header: infer
+    skiprows: null
+    on_bad_lines: error
+    engine: null
+    na_values: null
 
   infer_settings:
     size: 90
