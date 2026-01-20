@@ -19,6 +19,10 @@ global:
 pk_test:
   train_settings:
     source: ./data/pk_test.csv
+    column_types:
+      categorical:
+        - gender
+        - marital_status
   keys:
     pk_test_pk_id:
       type: "PK"
