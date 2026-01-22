@@ -459,7 +459,6 @@ class Validator:
             if self.errors:
                 self._collect_errors()
 
-        if self.type_of_process == "train":
             for table_name in self.merged_metadata.keys():
                 self._gather_existed_columns(table_name)
 
