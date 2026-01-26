@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+from unittest.mock import patch
 
 from syngen.ml.config import TrainConfig, InferConfig
 from syngen.ml.data_loaders import DataLoader
@@ -60,8 +61,8 @@ def test_init_train_config(input_batch_size, expected_batch_size, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.fixture
-def test_init_infer_config(mocker, rp_logger):
+@patch.object(InferConfig, "_set_paths", return_value=None)
+def test_init_infer_config(rp_logger):
     rp_logger.info(
         "Test the process of initialization of the instance of the class InferConfig"
     )
@@ -77,8 +78,6 @@ def test_init_infer_config(mocker, rp_logger):
         }
     }
 
-    mocker.patch("syngen.ml.data_loaders.DataLoader.has_existed_path", return_value=True)
-
     infer_config = InferConfig(
         destination="path/to/destination.csv",
         metadata=metadata,
@@ -91,16 +90,16 @@ def test_init_infer_config(mocker, rp_logger):
         reports=["accuracy"],
         both_keys=True,
         log_level="DEBUG",
-        loader=None,
-        type_of_process="train"
+        type_of_process="train",
+        loader=None
     )
 
     assert infer_config.reports == ["accuracy"]
 
     assert set(infer_config.__dict__.keys()) == {
-        "destination", "metadata", "metadata_path", "size", "table_name",
+        "destination", "metadata", "metadata_path", "loader", "size", "table_name",
         "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
-        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
+        "log_level", "type_of_process", "slugify_table_name", "paths"
     }
 
     rp_logger.info(SUCCESSFUL_MESSAGE)

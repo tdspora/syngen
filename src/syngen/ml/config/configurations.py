@@ -5,7 +5,6 @@ from datetime import datetime
 import pandas as pd
 from slugify import slugify
 
-from syngen.ml.data_loaders import DataLoader
 from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
 
 
@@ -73,9 +72,12 @@ class TrainConfig:
             "reports_path": f"model_artifacts/resources/{self.slugify_table_name}/reports",
             "path_to_sample_report": f"model_artifacts/resources/{self.slugify_table_name}/"
                                      f"reports/sample-report.html",
-            "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                               f"input_data_{self.slugify_table_name}."
-                               f"{'dat' if fernet_key is not None else 'pkl'}",
+            "input_data_path": (
+                f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                f"input_data_{self.slugify_table_name}."
+                f"{'dat' if fernet_key is not None else 'pkl'}"
+                if self.loader is None else None
+            ),
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
             "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
                                         f"checkpoints/train_config.pkl",
@@ -111,7 +113,7 @@ class InferConfig:
     destination: Optional[str]
     metadata: Dict
     metadata_path: Optional[str]
-    size: Optional[int]
+    size: int
     table_name: str
     run_parallel: bool
     batch_size: Optional[int]
@@ -119,16 +121,13 @@ class InferConfig:
     reports: List[str]
     both_keys: bool
     log_level: str
+    loader: Optional[Callable[[str], pd.DataFrame]]
     type_of_process: Literal["train", "infer"]
     slugify_table_name: str = field(init=False)
     paths: Dict = field(init=False)
 
     def __post_init__(self):
         self.__set_paths()
-        self._set_infer_parameters()
-
-    def _set_infer_parameters(self):
-        self._set_up_size()
         self._set_up_batch_size()
 
     def to_dict(self) -> Dict:
@@ -142,20 +141,6 @@ class InferConfig:
             "random_seed": self.random_seed,
             "reports": self.reports,
         }
-
-    def _set_up_size(self):
-        """
-        Set up "size" of generated data
-        """
-        if self.size is None:
-            data_loader = DataLoader(
-                path=self.paths["input_data_path"],
-                table_name=self.table_name,
-                metadata=self.metadata,
-                sensitive=True
-            )
-            data, schema = data_loader.load_data()
-            self.size = len(data)
 
     def _set_up_batch_size(self):
         """

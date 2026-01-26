@@ -1,12 +1,12 @@
-from typing import Dict, List, Literal, Optional, Callable
+from typing import Dict, List, Literal, Callable, Optional
 import os
 from dataclasses import dataclass, field
 import json
 from collections import defaultdict
+import inspect
 
 import pandas as pd
 from cryptography.fernet import InvalidToken
-import inspect
 
 from slugify import slugify
 from loguru import logger
@@ -153,25 +153,32 @@ class Validator:
             )
             self.errors["check existence of the generated data"][parent_table] = message
 
-    def _check_existence_of_source(self, path_to_source: str, table_name: str):
+    def _get_columns_of_source(
+        self,
+        path_to_source: str,
+        table_name: str,
+        **format_settings
+    ) -> List[str]:
         """
-        Check if the source of the certain table exists
+        Check if the source of the certain table exists and fetch the list of its columns
         """
         if not DataLoader(path=path_to_source).has_existed_path:
             message = (
                 f"It seems that the path to the source of the table - '{table_name}' "
-                f"isn't correct. Please, check the path to the source of the table - "
+                "isn't correct. Please, check the path to the source of the table - "
                 f"'{table_name}'"
             )
             self.errors["check existence of the source"][table_name] = message
+        else:
+            return DataLoader(path=path_to_source).get_columns(**format_settings)
 
-    def _check_loader(self, table_name: str):
+    def _get_columns_by_loader(self, table_name: str):
         """
-        Check whether the callback function provided to the 'loader'
-        follows the required interface:
-        1) Accepts 'table_name' as an argument
-        2) Returns a pandas DataFrame
+        Check whether the callback function provided for loading the data is callable,
+        has the correct signature, and fetch the list of columns of the source table
+        by calling the `loader`
         """
+        # Check if the loader is callable or not
         if not callable(self.loader):
             message = (
                 f"The provided loader for the table - '{table_name}' isn't callable. "
@@ -180,41 +187,34 @@ class Validator:
             self.errors["check of the loader"][table_name] = message
             return
 
-        # Inspect signature to ensure it accepts `table_name`
+        # Inspect the signature to ensure it accepts only the parameter `table_name`
         try:
             sig = inspect.signature(self.loader)
             params = sig.parameters
-            accepts_table_name = False
-
-            if "table_name" in params and len(params) == 1:
-                accepts_table_name = True
-
-            if not accepts_table_name:
-                message = (
-                    f"The provided loader for the table - '{table_name}' doesn't accept "
-                    "'table_name' as an argument or requires additional arguments "
-                    "besides 'table_name'. "
-                    "Please provide a loader with the signature 'loader(table_name)'."
+            if "table_name" not in params:
+                self.errors["check of the loader"][table_name] = (
+                    "The provided loader should accept `table_name` as an argument. "
+                    "Please, adjust the signature of the loader."
                 )
-                self.errors["check of the loader"][table_name] = message
+                return
+            if "table_name" in params and len(params) > 1:
+                self.errors["check of the loader"][table_name] = (
+                    "The provided loader should accept only the argument - `table_name`. "
+                    "Please, adjust the signature of the loader."
+                )
                 return
         except (ValueError, TypeError, AttributeError) as e:
             self.errors["check of the loader"][table_name] = (
                 f"Couldn't inspect loader signature: {e}"
             )
-            return
 
-        # Call loader and verify it returns a pandas DataFrame
+        # Fetch the columns by calling the `loader`
         try:
-            result = self.loader(table_name)
-            if not isinstance(result, pd.DataFrame):
-                message = (
-                    f"The provided loader for the table - '{table_name}' "
-                    f"doesn't return a pandas DataFrame. "
-                    f"Got type '{type(result).__name__}' instead."
-                )
-                self.errors["check of the loader"][table_name] = message
-                return
+            data_loader = DataFrameFetcher(
+                loader=self.loader,
+                table_name=table_name
+            )
+            return data_loader.get_columns()
         except Exception as e:
             self.errors["check of the loader"][table_name] = (
                 f"The provided loader raised an exception when called: {e}"
@@ -360,15 +360,15 @@ class Validator:
         """
         metadata_of_table = self.merged_metadata[table_name]
         format_settings = metadata_of_table.get("format", {})
-        if self.loader is None:
-            path_to_source = self._fetch_path_to_source(table_name)
-            data_loader = DataLoader(path=path_to_source)
-        else:
-            data_loader = DataFrameFetcher(
-                loader=self.loader,
-                table_name=table_name
+        path_to_source = self._fetch_path_to_source(table_name)
+        if path_to_source is not None:
+            return self._get_columns_of_source(
+                path_to_source=path_to_source,
+                table_name=table_name,
+                **format_settings
             )
-        return data_loader.get_columns(**format_settings)
+        else:
+            return self._get_columns_by_loader(table_name)
 
     def _gather_existed_columns(self, table_name: str):
         """
@@ -385,11 +385,11 @@ class Validator:
         self._define_mapping()
         self._merge_metadata()
 
-    def _fetch_path_to_source(self, table_name):
+    def _fetch_path_to_source(self, table_name: str):
         """
         Fetch the path to the source of the certain table
         """
-        return self.merged_metadata[table_name]["train_settings"]["source"]
+        return self.merged_metadata[table_name].get("train_settings", {}).get("source")
 
     def _validate_fernet_key(self, table_name: str, fernet_key: str):
         """
@@ -443,24 +443,12 @@ class Validator:
         Launch the validation process
         """
         if self.type_of_process == "train":
-            for table_name in self.metadata.keys():
-                if (
-                    path_to_source := self.metadata[table_name].get(
-                        "train_settings", {}
-                    ).get("source")
-                ):
-                    self._check_existence_of_source(
-                        path_to_source=path_to_source,
-                        table_name=table_name
-                    )
-                else:
-                    self._check_loader(table_name)
-
-            if self.errors:
-                self._collect_errors()
 
             for table_name in self.merged_metadata.keys():
                 self._gather_existed_columns(table_name)
+
+            if self.errors:
+                self._collect_errors()
 
         for table_name, table_metadata in self.metadata.items():
             fernet_key = table_metadata.get("encryption", {}).get("fernet_key")

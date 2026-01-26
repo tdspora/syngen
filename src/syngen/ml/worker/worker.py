@@ -38,6 +38,7 @@ class Worker:
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
+    row_subset: int = field(default=0)
     train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
     infer_stages: List = ["INFER", "REPORT"]
 
@@ -142,16 +143,19 @@ class Worker:
         validator.run()
         self.merged_metadata = validator.merged_metadata
 
-    def __preprocess_data(self, table_name: str) -> Tuple[pd.DataFrame, Dict]:
+    def __preprocess_data(self, table_name: str) -> Tuple[pd.DataFrame, Dict, int]:
         """
         Preprocess the data before a training process
         """
-        return PreprocessHandler(
+        handler = PreprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             table_name=table_name,
             loader=self.loader
-        ).run()
+        )
+        data, schema = handler.run()
+        self.row_subset = handler.row_subset
+        return data, schema
 
     def __postprocess_data(self):
         """
@@ -449,7 +453,8 @@ class Worker:
             delta=delta,
             message=f"Training of the table - '{table}' was completed"
         )
-        self._save_input_data(data=data, table_name=table)
+        if self.loader is None:
+            self._save_input_data(data=data, table_name=table)
         self._write_success_file(table_name=table, type_of_process="train")
 
     def __train_tables(
@@ -529,7 +534,7 @@ class Worker:
             destination=settings.get("destination") if type_of_process == "infer" else None,
             metadata=metadata,
             metadata_path=self.metadata_path,
-            size=settings.get("size") if type_of_process == "infer" else None,
+            size=settings.get("size") if type_of_process == "infer" else self.row_subset,
             table_name=table,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
@@ -537,7 +542,8 @@ class Worker:
             reports=settings["reports"],
             log_level=self.log_level,
             both_keys=both_keys,
-            type_of_process=self.type_of_process
+            type_of_process=self.type_of_process,
+            loader=self.loader
         )
         ProgressBarHandler().set_progress(
             delta=delta,

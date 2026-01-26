@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 from loguru import logger
-from typing import Callable, Tuple, Dict, List, Optional
+from typing import Callable, Tuple, Dict, List
 
 
 @dataclass
@@ -14,12 +14,12 @@ class DataFrameFetcher:
     table_name: str
     original_schema = None
 
-    def fetch_data(self, row_limit: Optional[int] = None) -> Tuple[pd.DataFrame, Dict]:
+    def fetch_data(self) -> Tuple[pd.DataFrame, Dict]:
         try:
             df = self.loader(self.table_name)
             default_schema = {"fields": {}, "format": "CSV"}
             logger.info(f"Successfully fetched dataframe for table: '{self.table_name}'")
-            return df if row_limit is None else df.sample(n=row_limit), default_schema
+            return df, default_schema
         except Exception as error:
             message = (
                 "Failed to fetch the dataframe for the training process "
@@ -33,5 +33,5 @@ class DataFrameFetcher:
         """
         Get the column names of the table
         """
-        data, schema = self.fetch_data(row_limit=10)
-        return data.columns.tolist()
+        df = self.loader(self.table_name)
+        return df.dtypes.tolist()

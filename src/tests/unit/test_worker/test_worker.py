@@ -460,15 +460,13 @@ def test_init_worker_for_inference_with_metadata_with_global_settings(
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
@@ -551,11 +549,10 @@ def test_launch_train_with_metadata(
         },
         False
     )
-    mock_gather_existed_columns.assert_called_once_with("table")
-    mock_check_existence_of_source.assert_called_once_with(
+    mock_get_columns_of_source.assert_called_once_with(
         path_to_source="./path/to/table.csv", table_name="table"
     )
-    mock_check_loader.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_fernet_key.assert_called_once_with("table", FERNET_KEY)
@@ -573,15 +570,13 @@ def test_launch_train_with_metadata(
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_and_loader(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
@@ -667,9 +662,8 @@ def test_launch_train_with_metadata_and_loader(
         },
         False
     )
-    mock_gather_existed_columns.assert_called_once_with("table")
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_loader.assert_called_once_with("table")
+    mock_get_columns_of_source.assert_not_called()
+    mock_get_columns_by_loader.assert_called_once_with("table")
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_fernet_key.assert_called_once_with("table", FERNET_KEY)
@@ -687,15 +681,13 @@ def test_launch_train_with_metadata_and_loader(
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_of_related_tables(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
@@ -822,9 +814,8 @@ def test_launch_train_with_metadata_of_related_tables(
         },
         True
     )
-    assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
-    mock_check_loader.assert_not_called()
+    assert mock_get_columns_of_source.call_count == 2
+    mock_get_columns_by_loader.assert_not_called()
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     mock_validate_fernet_key.assert_not_called()
@@ -842,15 +833,13 @@ def test_launch_train_with_metadata_of_related_tables(
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
@@ -997,9 +986,8 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
         },
         True
     )
-    assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
-    mock_check_loader.assert_not_called()
+    assert mock_get_columns_of_source.call_count == 2
+    mock_get_columns_by_loader.assert_not_called()
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     mock_validate_fernet_key.assert_not_called()
@@ -1017,15 +1005,13 @@ def test_launch_train_with_metadata_of_related_tables_with_diff_keys(
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_source_and_table_name(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
@@ -1096,11 +1082,10 @@ def test_launch_train_with_source_and_table_name(
         },
         True
     )
-    mock_gather_existed_columns.assert_called_once_with("table")
-    mock_check_existence_of_source.assert_called_once_with(
+    mock_get_columns_of_source.assert_called_once_with(
         path_to_source="./path/to/source.csv", table_name="table"
     )
-    mock_check_loader.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_fernet_key.assert_not_called()
@@ -1118,15 +1103,13 @@ def test_launch_train_with_source_and_table_name(
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_table_name_and_loader(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
@@ -1198,9 +1181,8 @@ def test_launch_train_with_table_name_and_loader(
         },
         True
     )
-    mock_gather_existed_columns.assert_called_once_with("table")
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_loader.assert_called_once_with("table")
+    mock_get_columns_of_source.assert_not_called()
+    mock_get_columns_by_loader.assert_called_once_with("table")
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_fernet_key.assert_not_called()
@@ -1218,15 +1200,13 @@ def test_launch_train_with_table_name_and_loader(
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_contained_global_settings(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
@@ -1336,9 +1316,8 @@ def test_launch_train_with_metadata_contained_global_settings(
         },
         True
     )
-    assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
-    mock_check_loader.assert_not_called()
+    assert mock_get_columns_of_source.call_count == 2
+    mock_get_columns_by_loader.assert_not_called()
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
@@ -2069,17 +2048,15 @@ def test_launch_infer_with_metadata_contained_all_non_existent_fernet_keys(rp_lo
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_infer_table")
 @patch.object(Worker, "_train_table")
 def test_train_tables_without_generation_reports(
     mock_train_table,
     mock_infer_table,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -2110,11 +2087,10 @@ def test_train_tables_without_generation_reports(
     )
     worker.launch_train()
     mock_preprocess_data.assert_called_once_with(table_name="test_table")
-    mock_gather_existed_columns.assert_called_once_with("test_table")
-    mock_check_existence_of_source.assert_called_once_with(
+    mock_get_columns_of_source.assert_called_once_with(
         path_to_source="./path/to/test_table.csv", table_name="test_table"
     )
-    mock_check_loader.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("test_table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_check_completion_of_training.assert_not_called()
@@ -2155,17 +2131,15 @@ def test_train_tables_without_generation_reports(
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_infer_table")
 @patch.object(Worker, "_train_table")
 def test_train_tables_with_generation_reports(
     mock_train_table,
     mock_infer_table,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -2195,11 +2169,10 @@ def test_train_tables_with_generation_reports(
         encryption_settings=fetch_env_variables({"fernet_key": None})
     )
     worker.launch_train()
-    mock_gather_existed_columns.assert_called_once_with("test_table")
-    mock_check_existence_of_source.assert_called_once_with(
+    mock_get_columns_of_source.assert_called_once_with(
         path_to_source="./path/to/test_table.csv", table_name="test_table"
     )
-    mock_check_loader.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("test_table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_check_completion_of_training.assert_not_called()
@@ -2255,17 +2228,9 @@ def test_train_tables_with_generation_reports(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
-@patch.object(Validator, "_check_existence_of_referenced_columns")
-@patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_infer_table")
 def test_infer_tables_without_generation_reports(
     mock_infer_table,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_existence_of_key_columns,
-    mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
@@ -2299,10 +2264,6 @@ def test_infer_tables_without_generation_reports(
         encryption_settings=fetch_env_variables({"fernet_key": None})
     )
     worker.launch_infer()
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_existence_of_key_columns.assert_not_called()
-    mock_check_existence_of_referenced_columns.assert_not_called()
     mock_check_completion_of_training.assert_called_once_with("test_table")
     mock_check_existence_of_destination.assert_called_once_with("test_table")
     mock_validate_metadata.assert_called_once_with("test_table")
@@ -2373,17 +2334,15 @@ def test_infer_tables_without_generation_reports(
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_infer_table")
 @patch.object(Worker, "_train_table")
 def test_train_tables_without_provided_fernet_key(
     mock_train_table,
     mock_infer_table,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -2414,11 +2373,10 @@ def test_train_tables_without_provided_fernet_key(
     )
     worker.launch_train()
     mock_preprocess_data.assert_called_once_with(table_name="test_table")
-    mock_gather_existed_columns.assert_called_once_with("test_table")
-    mock_check_existence_of_source.assert_called_once_with(
+    mock_get_columns_of_source.assert_called_once_with(
         path_to_source="./path/to/test_table.csv", table_name="test_table"
     )
-    mock_check_loader.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("test_table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_check_completion_of_training.assert_not_called()
@@ -2459,17 +2417,15 @@ def test_train_tables_without_provided_fernet_key(
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_infer_table")
 @patch.object(Worker, "_train_table")
 def test_train_tables_with_provided_fernet_key(
     mock_train_table,
     mock_infer_table,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -2500,11 +2456,10 @@ def test_train_tables_with_provided_fernet_key(
     )
     worker.launch_train()
     mock_preprocess_data.assert_called_once_with(table_name="test_table")
-    mock_gather_existed_columns.assert_called_once_with("test_table")
-    mock_check_existence_of_source.assert_called_once_with(
+    mock_get_columns_of_source.assert_called_once_with(
         path_to_source="./path/to/test_table.csv", table_name="test_table"
     )
-    mock_check_loader.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("test_table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_check_completion_of_training.assert_not_called()
@@ -2524,15 +2479,13 @@ def test_train_tables_with_provided_fernet_key(
 @patch.object(Validator, "_validate_fernet_key")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_contained_several_fernet_keys(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_fernet_key,
@@ -2686,9 +2639,8 @@ def test_launch_train_with_metadata_contained_several_fernet_keys(
         },
         True
     )
-    assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
-    mock_check_loader.assert_not_called()
+    assert mock_get_columns_of_source.call_count == 2
+    mock_get_columns_by_loader.assert_not_called()
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_fernet_key.call_count == 2
@@ -2795,17 +2747,9 @@ def test_launch_train_with_metadata_contained_all_non_existent_fernet_key(rp_log
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
-@patch.object(Validator, "_check_existence_of_referenced_columns")
-@patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_infer_table")
 def test_infer_tables_with_generation_report_and_without_provided_fernet_key(
     mock_infer_table,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_existence_of_key_columns,
-    mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
@@ -2839,10 +2783,6 @@ def test_infer_tables_with_generation_report_and_without_provided_fernet_key(
         encryption_settings=fetch_env_variables({"fernet_key": None})
     )
     worker.launch_infer()
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_existence_of_key_columns.assert_not_called()
-    mock_check_existence_of_referenced_columns.assert_not_called()
     mock_check_completion_of_training.assert_called_once_with("test_table")
     mock_check_existence_of_destination.assert_called_once_with("test_table")
     mock_validate_metadata.assert_called_once_with("test_table")
@@ -2895,17 +2835,9 @@ def test_infer_tables_with_generation_report_and_without_provided_fernet_key(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
-@patch.object(Validator, "_check_existence_of_referenced_columns")
-@patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_infer_table")
 def test_infer_tables_with_generation_report_and_with_provided_fernet_key(
     mock_infer_table,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_existence_of_key_columns,
-    mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
@@ -2939,10 +2871,6 @@ def test_infer_tables_with_generation_report_and_with_provided_fernet_key(
         encryption_settings=fetch_env_variables({"fernet_key": "FERNET_KEY"})
     )
     worker.launch_infer()
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_existence_of_key_columns.assert_not_called()
-    mock_check_existence_of_referenced_columns.assert_not_called()
     mock_check_completion_of_training.assert_called_once_with("test_table")
     mock_check_existence_of_destination.assert_called_once_with("test_table")
     mock_validate_metadata.assert_called_once_with("test_table")
@@ -2995,17 +2923,9 @@ def test_infer_tables_with_generation_report_and_with_provided_fernet_key(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
-@patch.object(Validator, "_check_existence_of_referenced_columns")
-@patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_infer_table")
 def test_infer_tables_without_generation_report_and_with_provided_fernet_key(
     mock_infer_table,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_existence_of_key_columns,
-    mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
@@ -3039,10 +2959,6 @@ def test_infer_tables_without_generation_report_and_with_provided_fernet_key(
         encryption_settings=fetch_env_variables({"fernet_key": "FERNET_KEY"})
     )
     worker.launch_infer()
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_existence_of_key_columns.assert_not_called()
-    mock_check_existence_of_referenced_columns.assert_not_called()
     mock_check_completion_of_training.assert_called_once_with("test_table")
     mock_check_existence_of_destination.assert_called_once_with("test_table")
     mock_validate_metadata.assert_called_once_with("test_table")
@@ -3095,17 +3011,9 @@ def test_infer_tables_without_generation_report_and_with_provided_fernet_key(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_completion_of_training")
-@patch.object(Validator, "_check_existence_of_referenced_columns")
-@patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
 @patch.object(Worker, "_infer_table")
 def test_infer_tables_without_generation_report_and_without_provided_fernet_key(
     mock_infer_table,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_existence_of_key_columns,
-    mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
     mock_check_existence_of_destination,
     mock_validate_metadata,
@@ -3139,10 +3047,6 @@ def test_infer_tables_without_generation_report_and_without_provided_fernet_key(
         encryption_settings=fetch_env_variables({"fernet_key": None})
     )
     worker.launch_infer()
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_existence_of_key_columns.assert_not_called()
-    mock_check_existence_of_referenced_columns.assert_not_called()
     mock_check_completion_of_training.assert_called_once_with("test_table")
     mock_check_existence_of_destination.assert_called_once_with("test_table")
     mock_validate_metadata.assert_called_once_with("test_table")
@@ -3191,15 +3095,13 @@ def test_infer_tables_without_generation_report_and_without_provided_fernet_key(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_absent_metadata_and_callback_loader(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
@@ -3284,9 +3186,8 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
         },
         True
     )
-    mock_gather_existed_columns.assert_called_once_with("table")
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_loader.assert_called_once_with("table")
+    mock_get_columns_of_source.assert_not_called()
+    mock_get_columns_by_loader.assert_called_once_with("table")
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once()
@@ -3302,15 +3203,13 @@ def test_launch_train_with_absent_metadata_and_callback_loader(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_without_source_paths_and_loader(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
@@ -3452,9 +3351,8 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
         },
         True
     )
-    assert mock_gather_existed_columns.call_count == 2
-    mock_check_existence_of_source.assert_not_called()
-    assert mock_check_loader.call_count == 2
+    mock_get_columns_of_source.assert_not_called()
+    assert mock_get_columns_by_loader.call_count == 2
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2
@@ -3472,15 +3370,13 @@ def test_launch_train_with_metadata_without_source_paths_and_loader(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_loader")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 @patch.object(Worker, "_Worker__train_tables")
 def test_launch_train_with_metadata_without_train_settings_and_loader(
     mock_train_tables,
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_loader,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
@@ -3624,9 +3520,8 @@ def test_launch_train_with_metadata_without_train_settings_and_loader(
         },
         True
     )
-    assert mock_gather_existed_columns.call_count == 2
-    mock_check_existence_of_source.assert_not_called()
-    assert mock_check_loader.call_count == 2
+    mock_get_columns_of_source.assert_not_called()
+    assert mock_get_columns_by_loader.call_count == 2
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_metadata.call_count == 2

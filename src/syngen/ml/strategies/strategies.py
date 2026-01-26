@@ -207,7 +207,8 @@ class InferStrategy(Strategy):
                 paths=self.config.paths,
                 config=self.config.to_dict(),
                 metadata=self.metadata,
-                type_of_process=self.config.type_of_process
+                type_of_process=self.config.type_of_process,
+                loader=self.config.loader
             )
             Report().register_reporter(table=table_name, reporter=accuracy_reporter)
 
