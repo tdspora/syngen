@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import pandas as pd
 import pytest
@@ -993,27 +993,53 @@ def test_launch_train_table_with_not_callable_loader(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("loader, error_message", [
+    (
+            lambda x: pd.DataFrame(),
+            "The provided loader should accept `table_name` as an argument. "
+            "Please, adjust the signature of the loader."
+    ),
+    (
+            lambda table_name, y: pd.DataFrame(),
+            "The provided loader should accept only the argument - `table_name`. "
+            "Please, adjust the signature of the loader."
+    )
+])
 @patch.object(Worker, "launch_train")
 @patch("syngen.train.setup_log_process")
 def test_launch_train_table_with_loader_with_wrong_signature(
-    mock_logger, mock_launch_train, caplog, rp_logger
+    mock_logger, mock_launch_train, loader, error_message, caplog, rp_logger
 ):
     rp_logger.info(
         "Launch the training process by using the function 'launch_train' "
         "with the provided 'loader' parameter containing a function with wrong signature"
     )
-    error_message = (
-        "The provided loader for the table - 'table_name' doesn't accept "
-        "'table_name' as an argument or requires additional arguments "
-        "besides 'table_name'. "
-        "Please provide a loader with the signature 'loader(table_name)'."
-    )
     with pytest.raises(UtilsValidationError) as error:
         with caplog.at_level("ERROR"):
-            launch_train(loader=lambda x: pd.DataFrame(), table_name="table")
+            launch_train(loader=loader, table_name="table")
         assert error_message in str(error.value)
         assert error_message in caplog.text
 
         mock_launch_train.assert_not_called()
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_train")
+@patch("syngen.train.setup_log_process")
+def test_launch_train_table_with_loader_with_wrong_return_value(
+    mock_logger, mock_launch_train, caplog, rp_logger
+):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided 'loader' parameter that returns a non-DataFrame object"
+    )
+    error_message = "The provided loader raised an exception when called"
+    with pytest.raises(UtilsValidationError) as error:
+        with caplog.at_level("ERROR"):
+            launch_train(loader=lambda table_name: Mock(), table_name="table")
+        assert error_message in str(error.value)
+        assert error_message in caplog.text
+
+        mock_launch_train.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
