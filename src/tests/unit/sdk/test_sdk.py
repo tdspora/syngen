@@ -941,7 +941,7 @@ def test_generate_sample_report(
         log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, completed_processes={"train"}
+        table_name="test_table", completed_processes={"train"}
     )
     mock_get_sample_reporter.assert_called_once_with("test_table", None)
     mock_get_accuracy_reporter.assert_not_called()
@@ -982,7 +982,7 @@ def test_generate_accuracy_report(
         log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, completed_processes={"infer"}
+        table_name="test_table", completed_processes={"infer"}
     )
     mock_get_accuracy_reporter.assert_called_once_with("test_table", "accuracy", None)
     mock_get_sample_reporter.assert_not_called()
@@ -1023,7 +1023,7 @@ def test_generate_metrics_only_report(
         log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, completed_processes={"infer"}
+        table_name="test_table", completed_processes={"infer"}
     )
     mock_get_accuracy_reporter.assert_called_once_with("test_table", "metrics_only", None)
     mock_get_sample_reporter.assert_not_called()
@@ -1064,7 +1064,7 @@ def test_generate_all_reports(
         log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, completed_processes={"train", "infer"}
+        table_name="test_table", completed_processes={"train", "infer"}
     )
     mock_get_accuracy_reporter.assert_called_once()
     mock_get_sample_reporter.assert_called_once()
@@ -1150,7 +1150,7 @@ def test_generate_full_set_of_reports(
         log_level="DEBUG"
     )
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=None, completed_processes={"train", "infer"}
+        table_name="test_table", completed_processes={"train", "infer"}
     )
     assert mock_get_accuracy_reporter.call_count == 2
     mock_get_sample_reporter.assert_called_once()
@@ -1215,7 +1215,7 @@ def test_generate_report_for_encrypted_data(
     )
     mock_validate_fernet_key.assert_called_once_with(fernet_key)
     mock_validate_artifacts.assert_called_once_with(
-        table_name="test_table", fernet_key=fernet_key, completed_processes={"train"}
+        table_name="test_table", completed_processes={"train"}
     )
     mock_get_sample_reporter.assert_called_once_with("test_table", os.getenv("FERNET_KEY"))
     mock_get_accuracy_reporter.assert_not_called()
