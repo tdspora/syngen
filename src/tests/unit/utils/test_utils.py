@@ -3,7 +3,6 @@ import pytest
 from unittest.mock import Mock
 from datetime import datetime, timedelta
 import numpy as np
-from pandas.core.frame import DataFrame  # noqa: F401
 
 from syngen.ml.utils import (
     slugify_attribute,
@@ -17,10 +16,6 @@ from syngen.ml.utils import (
 )
 
 from tests.conftest import SUCCESSFUL_MESSAGE
-
-
-def get_dataframe():
-    return DataFrame()
 
 
 def test_slugify_attribute(rp_logger):
