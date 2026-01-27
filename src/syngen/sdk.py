@@ -368,11 +368,24 @@ class Syngen:
     @staticmethod
     def _validate_artifacts(
         table_name: str,
+        fernet_key: Optional[str],
         completed_processes: Set[str]
     ):
         errors: List[str] = []
 
         slug = slugify(table_name)
+
+        path_to_input_data = (
+            f"model_artifacts/tmp_store/{slug}/"
+            f"input_data_{slug}.{'dat' if fernet_key is not None else 'pkl'}"
+        )
+        if not os.path.exists(path_to_input_data):
+            errors.append(
+                (
+                    f"The input data file wasn't found for the table '{table_name}' "
+                    f"in the path - {path_to_input_data}."
+                )
+            )
 
         # Type-specific validations
         path_to_train_config = (
@@ -506,6 +519,7 @@ class Syngen:
                 DataEncryptor.validate_fernet_key(fernet_key)
             self._validate_artifacts(
                 table_name=table_name,
+                fernet_key=fernet_key,
                 completed_processes={
                     "infer"
                     if report in self.report_types.infer_report_types
