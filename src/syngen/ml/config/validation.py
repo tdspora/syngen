@@ -42,11 +42,7 @@ class Validator:
         for table_name, table_metadata in self.metadata.items():
             if table_name == "global":
                 continue
-            metadata_keys = (
-                table_metadata.get("keys")
-                if "keys" in table_metadata and table_metadata.get("keys") is not None
-                else {}
-            )
+            metadata_keys = table_metadata.get("keys", {})
             for key_name, key_data in metadata_keys.items():
                 if key_data["type"] not in self.type_of_fk_keys:
                     continue
@@ -58,7 +54,7 @@ class Validator:
 
     def _check_conditions(self, metadata: Dict) -> bool:
         """
-        Check conditions whether to launch validation or not
+        Check conditions whether to launch the validation or not
         """
         reports = metadata.get("train_settings", {}).get("reports", [])
         return (
@@ -149,7 +145,7 @@ class Validator:
         if not DataLoader(path=destination).has_existed_path:
             message = (
                 f"The generated data of the table - '{parent_table}' hasn't been generated. "
-                f"Please, generate the data related to the table '{parent_table}' first"
+                f"Please, generate the data related to the table - '{parent_table}' first"
             )
             self.errors["check existence of the generated data"][parent_table] = message
 

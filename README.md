@@ -631,13 +631,14 @@ data_io.save_data(df)
 - **Encryption support**: Use a Fernet key for secure data handling
 - **Metadata support**: Use a metadata file for complex workflows with multiple tables
 - **Format configuration**: Customize delimiters, encodings, and other format-specific settings for loading data
-- **Loader function**: Opportunity to provide a custom data loader function for advanced data loading scenarios
+- **Loader function**: Provide a custom data loader function for advanced data loading scenarios with an opportunity to skip the process of saving the sample of the original data on the disk
 
 ### Custom data loader function
 
 SDK allows you to provide a custom data loader function instead of `source` during the initialization of the `Syngen` class. 
 This is useful when you need to load the original data with specific parameters, or from formats that require 
-custom handling.
+custom handling, and at the same time keep the original data secure by skipping the process 
+of saving the sample of the original data on the disk.
 
 #### How it works
 
