@@ -192,7 +192,8 @@ class InferStrategy(Strategy):
             run_parallel=self.config.run_parallel,
             reports=self.config.reports,
             log_level=self.config.log_level,
-            type_of_process=type_of_process
+            type_of_process=type_of_process,
+            loader=self.config.loader
         )
         return self
 

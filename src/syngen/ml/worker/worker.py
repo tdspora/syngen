@@ -143,7 +143,7 @@ class Worker:
         validator.run()
         self.merged_metadata = validator.merged_metadata
 
-    def __preprocess_data(self, table_name: str) -> Tuple[pd.DataFrame, Dict, int]:
+    def __preprocess_data(self, table_name: str) -> Tuple[pd.DataFrame, Dict]:
         """
         Preprocess the data before a training process
         """

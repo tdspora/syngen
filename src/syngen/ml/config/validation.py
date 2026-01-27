@@ -156,7 +156,7 @@ class Validator:
         **format_settings
     ) -> List[str]:
         """
-        Check if the source of the certain table exists and fetch the list of its columns
+        Check if the source of the certain table exists, and fetch the list of its columns
         """
         if not DataLoader(path=path_to_source).has_existed_path:
             message = (
