@@ -2060,7 +2060,7 @@ def test_validate_incomplete_metadata_with_absent_gen_data_of_parent_table_in_in
                 "The error(s) found in - \"check existence of the generated data\": {"
                 "\"table_a\": \"The generated data of the table - 'table_a' "
                 "hasn't been generated. "
-                "Please, generate the data related to the table 'table_a' first\"}"
+                "Please, generate the data related to the table - 'table_a' first\"}"
             )
             assert str(error.value) == message
             assert message in caplog.text
