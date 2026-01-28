@@ -34,4 +34,4 @@ class DataFrameFetcher:
         Get the column names of the table
         """
         df = self.loader(self.table_name)
-        return df.dtypes.tolist()
+        return df.columns.tolist()

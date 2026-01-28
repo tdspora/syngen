@@ -261,6 +261,24 @@ class Report:
 
     @classmethod
     def _launch_reporter(cls, reporter, delta: float):
+        if reporter.__class__.report_type == "sample":
+            # TODO: now the sample report isn't generated if the flatten metadata exists
+            # This should be refactored in the future
+            flatten_metadata_exists = os.path.exists(reporter.paths["path_to_flatten_metadata"])
+            table_name = reporter.table_name
+            if flatten_metadata_exists:
+                logger.warning(
+                    f"The sample report isn't available for a table - '{table_name}' "
+                    "as it contains JSON column(s)."
+                )
+                return
+            if reporter.loader is not None:
+                logger.warning(
+                    f"The sample report isn't available for a table - '{table_name}' "
+                    "when a custom 'loader' is provided."
+                )
+                return
+
         cls._log_and_update_progress(
             delta,
             f"The calculation of {reporter.__class__.report_type} metrics for the table - "
@@ -355,21 +373,6 @@ class SampleAccuracyReporter(Reporter):
         """
         Run the report
         """
-        # TODO: now the sample report isn't generated if the flatten metadata exists
-        # This should be refactored in the future
-        flatten_metadata_exists = os.path.exists(self.paths["path_to_flatten_metadata"])
-        if flatten_metadata_exists:
-            logger.warning(
-                f"The sample report isn't available for a table - '{self.table_name}' "
-                f"as it contains JSON column(s)."
-            )
-            return
-        if self.loader is not None:
-            logger.warning(
-                f"The sample report isn't available for a table - '{self.table_name}' "
-                "when a custom 'loader' is provided."
-            )
-            return
         original, sampled = self._extract_report_data()
         (
             original,

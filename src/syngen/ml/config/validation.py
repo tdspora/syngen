@@ -409,12 +409,18 @@ class Validator:
             "to generate reports during the inference process"
         )
         try:
-            data_loader = DataLoader(
-                path=path_to_input_data,
-                table_name=table_name,
-                metadata=self.merged_metadata,
-                sensitive=True
-            )
+            if self.loader is None:
+                data_loader = DataLoader(
+                    path=path_to_input_data,
+                    table_name=table_name,
+                    metadata=self.merged_metadata,
+                    sensitive=True
+                )
+            else:
+                data_loader = DataFrameFetcher(
+                    loader=self.loader,
+                    table_name=table_name
+                )
             data_loader.get_columns()
         except InvalidToken:
             self.errors["check access to input data"][table_name] = (

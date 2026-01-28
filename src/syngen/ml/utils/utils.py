@@ -586,6 +586,9 @@ def get_reports(
         if list(input_values)[0] == "none":
             return list()
 
+    if {"accuracy", "metrics_only"}.issubset(input_values):
+        return [v for v in input_values if v != "metrics_only"]
+
     return list(input_values)
 
 

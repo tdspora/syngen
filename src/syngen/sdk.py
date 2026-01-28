@@ -361,7 +361,8 @@ class Syngen:
             reports=reports,
             random_seed=random_seed,
             log_level=log_level,
-            fernet_key=fernet_key
+            fernet_key=fernet_key,
+            loader=self.loader
         )
         self._set_execution_artifacts(type_of_process="infer")
 
@@ -455,7 +456,8 @@ class Syngen:
             paths=infer_config.paths,
             config=infer_config.to_dict(),
             metadata=infer_config.metadata,
-            type_of_process=infer_config.type_of_process
+            type_of_process=infer_config.type_of_process,
+            loader=infer_config.loader
         )
 
     def _register_reporter(self, table_name: str, report: str, fernet_key: Optional[str]) -> None:

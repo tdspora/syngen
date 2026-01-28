@@ -1152,9 +1152,9 @@ def test_generate_full_set_of_reports(
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", completed_processes={"train", "infer"}
     )
-    assert mock_get_accuracy_reporter.call_count == 2
+    mock_get_accuracy_reporter.assert_called_once()
     mock_get_sample_reporter.assert_called_once()
-    assert mock_register_reporter.call_count == 3
+    assert mock_register_reporter.call_count == 2
     mock_generate_report.assert_called_once()
     mock_clear_report.assert_called_once()
     mock_set_execution_artifacts.assert_called_once()
