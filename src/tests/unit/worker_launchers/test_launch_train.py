@@ -1,4 +1,6 @@
-from unittest.mock import patch
+from unittest.mock import patch, Mock
+
+import pandas as pd
 import pytest
 
 from click.testing import CliRunner
@@ -7,11 +9,13 @@ from marshmallow import ValidationError
 from syngen.train import launch_train, cli_launch_train, validate_required_parameters
 from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
-from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
+from syngen.ml.utils import ValidationError as UtilsValidationError
+from tests.conftest import SUCCESSFUL_MESSAGE, get_dataframe
+
 
 TABLE_NAME = "test_table"
-PATH_TO_TABLE = f"{DIR_NAME}/unit/launchers/fixtures/table_with_data.csv"
-PATH_TO_METADATA = f"{DIR_NAME}/unit/launchers/fixtures/metadata.yaml"
+PATH_TO_TABLE = "path/to/test_table.csv"
+PATH_TO_METADATA = "path/to/metadata.yaml"
 TRAIN_REPORT_TYPES = ReportTypes().train_report_types
 LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
@@ -101,8 +105,8 @@ def test_cli_launch_train_table_with_metadata_path_and_source(
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'source' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -123,8 +127,8 @@ def test_validate_parameters_with_metadata_path_and_source(
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'source' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -149,8 +153,8 @@ def test_cli_launch_train_table_with_metadata_path_and_table_name(
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -171,8 +175,8 @@ def test_validate_parameters_with_metadata_path_and_table_name(
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -204,8 +208,8 @@ def test_cli_launch_train_table_with_metadata_path_and_table_name_and_source(
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' and 'source' will be ignored."
             in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -231,8 +235,8 @@ def test_validate_parameters_with_metadata_path_and_table_name_and_source(
         mock_post_init.assert_called_once()
         mock_launch_train.assert_called_once()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' and 'source' will be ignored."
             in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -247,9 +251,9 @@ def test_cli_launch_train_table_with_table_name_and_without_source(rp_logger):
     assert result.exit_code == 1
     assert isinstance(result.exception, AttributeError)
     assert result.exception.args == (
-        "It seems that the information of 'metadata_path' or 'source' is absent. "
-        "Please provide either the information of 'metadata_path' or "
-        "the information of 'source' and 'table_name'.",
+        "It seems that the information about 'metadata_path' or 'source' is absent. "
+        "Please provide either the information about 'metadata_path' or "
+        "the information about 'source' and 'table_name'.",
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -262,9 +266,9 @@ def test_validate_parameters_with_table_name_and_without_source(rp_logger, caplo
     with pytest.raises(AttributeError) as error:
         validate_required_parameters(table_name=TABLE_NAME)
         assert str(error.value) == (
-            "It seems that the information of 'metadata_path' or 'source' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'.",
+            "It seems that the information about 'metadata_path' or 'source' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'source' and 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -278,9 +282,9 @@ def test_cli_launch_train_table_with_source_and_without_table_name(rp_logger):
     assert result.exit_code == 1
     assert isinstance(result.exception, AttributeError)
     assert result.exception.args == (
-        "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-        "Please provide either the information of 'metadata_path' or "
-        "the information of 'source' and 'table_name'.",
+        "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+        "Please provide either the information about 'metadata_path' or "
+        "the information about 'source' and 'table_name'.",
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -293,9 +297,9 @@ def test_validate_parameters_with_source_and_without_table_name(rp_logger):
     with pytest.raises(AttributeError) as error:
         validate_required_parameters(source=PATH_TO_TABLE)
         assert str(error.value) == (
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'.",
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'source' and 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -309,9 +313,10 @@ def test_cli_launch_train_table_without_parameters(rp_logger):
     assert result.exit_code == 1
     assert isinstance(result.exception, AttributeError)
     assert result.exception.args == (
-        "It seems that the information of 'metadata_path' or 'table_name' and 'source' is absent. "
-        "Please provide either the information of 'metadata_path' or "
-        "the information of 'source' and 'table_name'.",
+        "It seems that the information about 'metadata_path' or "
+        "'table_name' and 'source' is absent. "
+        "Please provide either the information about 'metadata_path' or "
+        "the information about 'source' and 'table_name'.",
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -323,9 +328,9 @@ def test_validate_parameters_without_parameters(rp_logger):
     with pytest.raises(AttributeError) as error:
         validate_required_parameters()
         assert str(error.value) == (
-            "It seems that the information of 'metadata_path' or 'table_name' "
-            "and 'source' is absent. Please provide either the information of "
-            "'metadata_path' or the information of 'source' and 'table_name'.",
+            "It seems that the information about 'metadata_path' or 'table_name' "
+            "and 'source' is absent. Please provide either the information about "
+            "'metadata_path' or the information about 'source' and 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -382,7 +387,7 @@ def test_launch_train_table_with_invalid_epochs(rp_logger, caplog):
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             launch_train(epochs=0, table_name=TABLE_NAME, source=PATH_TO_TABLE)
-            assert str(error.value) == (
+            message = (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
                 '        "epochs": [\n'
@@ -391,15 +396,8 @@ def test_launch_train_table_with_invalid_epochs(rp_logger, caplog):
                 '    }\n'
                 '}'
             )
-            assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "epochs": [\n'
-                '            "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
+            assert message in str(error.value)
+            assert message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -954,4 +952,94 @@ def test_launch_train_table_with_invalid_log_level(rp_logger):
         launch_train(log_level="test", table_name=TABLE_NAME, source=PATH_TO_TABLE)
         assert str(error.value) == "ValueError: Level 'test' does not exist"
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_train")
+@patch.object(Worker, "__attrs_post_init__")
+def test_launch_train_table_with_loader(mock_post_init, mock_launch_train, rp_logger):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided valid callback function to the 'loader' parameter"
+    )
+    launch_train(loader=get_dataframe, table_name="table")
+    mock_post_init.assert_called_once()
+    mock_launch_train.assert_called_once()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_train")
+@patch("syngen.train.setup_log_process")
+def test_launch_train_table_with_not_callable_loader(
+    mock_logger, mock_launch_train, caplog, rp_logger
+):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided 'loader' parameter that is not callable"
+    )
+    error_message = (
+        "The provided loader for the table - 'table' isn't callable. "
+        "Please, provide a valid callback function."
+    )
+    with pytest.raises(UtilsValidationError) as error:
+        with caplog.at_level("ERROR"):
+            launch_train(loader="not_callable", table_name="table")
+            assert error_message in str(error.value)
+            assert error_message in caplog.text
+
+        mock_launch_train.assert_not_called()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("loader, error_message", [
+    (
+            lambda x: pd.DataFrame(),
+            "The provided loader should accept `table_name` as an argument. "
+            "Please, adjust the signature of the loader."
+    ),
+    (
+            lambda table_name, y: pd.DataFrame(),
+            "The provided loader should accept only the argument - `table_name`. "
+            "Please, adjust the signature of the loader."
+    )
+])
+@patch.object(Worker, "launch_train")
+@patch("syngen.train.setup_log_process")
+def test_launch_train_table_with_loader_with_wrong_signature(
+    mock_logger, mock_launch_train, loader, error_message, caplog, rp_logger
+):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided 'loader' parameter containing a function with wrong signature"
+    )
+    with pytest.raises(UtilsValidationError) as error:
+        with caplog.at_level("ERROR"):
+            launch_train(loader=loader, table_name="table")
+        assert error_message in str(error.value)
+        assert error_message in caplog.text
+
+        mock_launch_train.assert_not_called()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_train")
+@patch("syngen.train.setup_log_process")
+def test_launch_train_table_with_loader_with_wrong_return_value(
+    mock_logger, mock_launch_train, caplog, rp_logger
+):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided 'loader' parameter that returns a non-DataFrame object"
+    )
+    error_message = "The provided loader raised an exception when called"
+    with pytest.raises(UtilsValidationError) as error:
+        with caplog.at_level("ERROR"):
+            launch_train(loader=lambda table_name: Mock(), table_name="table")
+        assert error_message in str(error.value)
+        assert error_message in caplog.text
+
+        mock_launch_train.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)

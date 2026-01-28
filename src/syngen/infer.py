@@ -1,7 +1,8 @@
-from typing import Optional, List, Union, Tuple
+from typing import Optional, List, Union, Tuple, Callable
 
 import click
 from loguru import logger
+import pandas as pd
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (
@@ -13,19 +14,19 @@ from syngen.ml.validation_schema import ReportTypes
 
 
 def validate_required_parameters(
-        metadata_path: Optional[str] = None,
-        table_name: Optional[str] = None
+    metadata_path: Optional[str] = None,
+    table_name: Optional[str] = None
 ):
     if not metadata_path and not table_name:
         raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or the information "
-            "of 'table_name'."
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or the information "
+            "about 'table_name'."
         )
     if metadata_path and table_name:
         logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored."
         )
 
 
@@ -38,7 +39,8 @@ def launch_infer(
     reports: Union[List[str], Tuple[str], str] = "none",
     random_seed: Optional[int] = None,
     log_level: str = "INFO",
-    fernet_key: Optional[str] = None
+    fernet_key: Optional[str] = None,
+    loader: Optional[Callable[[str], pd.DataFrame]] = None
 ):
     setup_log_process(
         type_of_process="infer",
@@ -65,7 +67,8 @@ def launch_infer(
         },
         log_level=log_level,
         type_of_process="infer",
-        encryption_settings=encryption_settings
+        encryption_settings=encryption_settings,
+        loader=loader
     )
 
     logger.info(
@@ -171,6 +174,7 @@ def cli_launch_infer(
     -------
     """
     validate_required_parameters(metadata_path=metadata_path, table_name=table_name)
+
     launch_infer(
         metadata_path=metadata_path,
         size=size,

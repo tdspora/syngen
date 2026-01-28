@@ -644,18 +644,12 @@ class Dataset:
         except Exception:
             return
 
-    def _get_uuid_version(self, value):
-        """
-        Get the version of UUID value if the value is a UUID
-        """
-        for v in range(1, 6):
-            try:
-                uuid_obj = UUID(value, version=v)
-                if str(uuid_obj) == value or str(uuid_obj).replace("-", "") == value:
-                    return v
-            except (ValueError, AttributeError, TypeError):
-                continue
-        return None
+    def _get_uuid_version(self, value: str) -> int | None:
+        """Get UUID version if value is a valid UUID"""
+        try:
+            return UUID(value).version
+        except (ValueError, AttributeError, TypeError):
+            return None
 
     def _process_values(self, column: pd.DataFrame):
         """

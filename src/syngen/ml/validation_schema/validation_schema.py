@@ -131,7 +131,7 @@ class TrainingSettingsSchema(Schema):
     )
 
 
-class ExtendedRestrictedTrainingSettingsSchema(TrainingSettingsSchema):
+class ExtendedTrainingSettingsSchemaWithSource(TrainingSettingsSchema):
     source = fields.String(required=True, allow_none=False)
     column_types = fields.Dict(
         keys=fields.String(validate=validate.OneOf(["categorical"])),
@@ -139,8 +139,31 @@ class ExtendedRestrictedTrainingSettingsSchema(TrainingSettingsSchema):
     )
 
 
-class ExtendedTrainingSettingsSchema(ExtendedRestrictedTrainingSettingsSchema):
+class ExtendedTrainingSettingsSchemaWithoutSource(TrainingSettingsSchema):
     source = fields.String(required=False, allow_none=True)
+
+    column_types = fields.Dict(
+        keys=fields.String(validate=validate.OneOf(["categorical"])),
+        values=fields.List(fields.String()),
+    )
+
+    @post_load
+    def process_source_field(self, data, **kwargs):
+        path_to_source = data.get("source")
+        if path_to_source is not None:
+            raise ValidationError(
+                "The 'source' field is not allowed when the 'loader' parameter is provided. "
+                "Please, review your metadata file."
+            )
+
+
+class ExtendedTrainingSettingsSchemaWithOptionalSource(TrainingSettingsSchema):
+    source = fields.String(required=False, allow_none=True)
+
+    column_types = fields.Dict(
+        keys=fields.String(validate=validate.OneOf(["categorical"])),
+        values=fields.List(fields.String()),
+    )
 
 
 class InferSettingsSchema(Schema):
@@ -218,12 +241,7 @@ class GlobalSettingsSchema(Schema):
     encryption = fields.Nested(EncryptionSettings, required=False, allow_none=True)
 
 
-class ConfigurationSchema(Schema):
-    train_settings = fields.Nested(
-        ExtendedTrainingSettingsSchema,
-        required=False,
-        allow_none=True
-    )
+class BaseConfigurationSchema(Schema):
     infer_settings = fields.Nested(InferSettingsSchema, required=False, allow_none=True)
     encryption = fields.Nested(EncryptionSettings, required=False, allow_none=True)
     format = fields.Raw(required=False, allow_none=True)
@@ -252,11 +270,36 @@ class ConfigurationSchema(Schema):
         return data
 
 
-class RestrictedConfigurationSchema(ConfigurationSchema):
+class ConfigurationSchemaWithSource(BaseConfigurationSchema):
+    """
+    Configuration schema for a training process with the 'source' parameter is required
+    """
     train_settings = fields.Nested(
-        ExtendedRestrictedTrainingSettingsSchema,
+        ExtendedTrainingSettingsSchemaWithSource,
         required=True,
         allow_none=False
+    )
+
+
+class ConfigurationSchemaWithOptionalSource(BaseConfigurationSchema):
+    """
+    Configuration schema for inference process with the 'source' parameter isn't required
+    """
+    train_settings = fields.Nested(
+        ExtendedTrainingSettingsSchemaWithOptionalSource,
+        required=False,
+        allow_none=True
+    )
+
+
+class ConfigurationSchemaWithoutSource(BaseConfigurationSchema):
+    """
+    Configuration schema used when the 'loader' parameter is provided
+    """
+    train_settings = fields.Nested(
+        ExtendedTrainingSettingsSchemaWithoutSource,
+        required=False,
+        allow_none=True
     )
 
 
@@ -264,16 +307,21 @@ class ValidationSchema:
     def __init__(
         self,
         metadata: Dict,
-        validation_source: bool,
+        validation_of_source: bool,
         process: Literal["train", "infer"]
     ):
         self.metadata = metadata
         self.global_schema = GlobalSettingsSchema()
-        self.configuration_schema = (
-            RestrictedConfigurationSchema()
-            if validation_source and process == "train"
-            else ConfigurationSchema()
-        )
+        self.process = process
+        self.validation_of_source = validation_of_source
+        self.configuration_schema = self.get_configuration_schema()
+
+    def get_configuration_schema(self):
+        if self.validation_of_source and self.process == "train":
+            return ConfigurationSchemaWithSource()
+        elif self.process == "infer":
+            return ConfigurationSchemaWithOptionalSource()
+        return ConfigurationSchemaWithoutSource()
 
     def validate_schema(self):
         """
