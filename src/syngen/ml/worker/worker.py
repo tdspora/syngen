@@ -38,7 +38,7 @@ class Worker:
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
-    row_subset: int = field(default=0)
+    row_subset_mapping: Dict[str, int] = field(default=dict())
     train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
     infer_stages: List = ["INFER", "REPORT"]
 
@@ -154,7 +154,7 @@ class Worker:
             loader=self.loader
         )
         data, schema = handler.run()
-        self.row_subset = handler.row_subset
+        self.row_subset_mapping[table_name] = handler.row_subset
         return data, schema
 
     def __postprocess_data(self):
@@ -534,7 +534,11 @@ class Worker:
             destination=settings.get("destination") if type_of_process == "infer" else None,
             metadata=metadata,
             metadata_path=self.metadata_path,
-            size=settings.get("size") if type_of_process == "infer" else self.row_subset,
+            size=(
+                settings.get("size")
+                if type_of_process == "infer"
+                else self.row_subset_mapping[table]
+            ),
             table_name=table,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
