@@ -38,14 +38,11 @@ class Worker:
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
-    validation_source: bool = field(default=False)
+    row_subset_mapping: Dict[str, int] = field(default=dict())
     train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
-        self.validation_source = (
-            False if self.loader and self.type_of_process == "train" else True
-        )
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
         self._update_metadata()
@@ -129,7 +126,7 @@ class Worker:
         """
         ValidationSchema(
             metadata=self.metadata,
-            validation_source=self.validation_source,
+            validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
         ).validate_schema()
 
@@ -141,7 +138,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_source=self.validation_source
+            loader=self.loader
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -150,12 +147,15 @@ class Worker:
         """
         Preprocess the data before a training process
         """
-        return PreprocessHandler(
+        handler = PreprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             table_name=table_name,
             loader=self.loader
-        ).run()
+        )
+        data, schema = handler.run()
+        self.row_subset_mapping[table_name] = handler.row_subset
+        return data, schema
 
     def __postprocess_data(self):
         """
@@ -453,7 +453,8 @@ class Worker:
             delta=delta,
             message=f"Training of the table - '{table}' was completed"
         )
-        self._save_input_data(data=data, table_name=table)
+        if self.loader is None:
+            self._save_input_data(data=data, table_name=table)
         self._write_success_file(table_name=table, type_of_process="train")
 
     def __train_tables(
@@ -533,7 +534,11 @@ class Worker:
             destination=settings.get("destination") if type_of_process == "infer" else None,
             metadata=metadata,
             metadata_path=self.metadata_path,
-            size=settings.get("size") if type_of_process == "infer" else None,
+            size=(
+                settings.get("size")
+                if type_of_process == "infer"
+                else self.row_subset_mapping[table]
+            ),
             table_name=table,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,

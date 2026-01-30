@@ -1,13 +1,15 @@
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 import pytest
 
 from click.testing import CliRunner
 from marshmallow import ValidationError
+import pandas as pd
 
 from syngen.infer import launch_infer, cli_launch_infer, validate_required_parameters
 from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
-from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
+from syngen.ml.utils import ValidationError as UtilsValidationError
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME, get_dataframe
 
 
 TABLE_NAME = "test_table"
@@ -86,8 +88,8 @@ def test_cli_launch_infer_table_with_metadata_path_and_table_name(
         mock_launch_infer.assert_called_once()
         assert result.exit_code == 0
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -108,8 +110,8 @@ def test_validate_parameters_with_metadata_path_and_table_name(
         mock_post_init.assert_called_once()
         mock_launch_infer.assert_called_once()
         assert (
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored." in caplog.text
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored." in caplog.text
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -121,9 +123,9 @@ def test_cli_launch_infer_table_without_parameters(rp_logger):
     assert result.exit_code == 1
     assert isinstance(result.exception, AttributeError)
     assert result.exception.args == (
-        "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-        "Please provide either the information of 'metadata_path' or "
-        "the information of 'table_name'.",
+        "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+        "Please provide either the information about 'metadata_path' or "
+        "the information about 'table_name'.",
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -135,9 +137,9 @@ def test_validate_parameters_without_parameters(rp_logger):
     with pytest.raises(AttributeError) as error:
         validate_required_parameters()
         assert str(error.value) == (
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'table_name'.",
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'table_name'.",
         )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -738,4 +740,94 @@ def test_launch_infer_table_with_invalid_log_level(rp_logger):
         launch_infer(log_level="test", table_name=TABLE_NAME)
         assert str(error.value) == "ValueError: Level 'test' does not exist"
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_infer")
+@patch.object(Worker, "__attrs_post_init__")
+def test_launch_infer_table_with_loader(mock_post_init, mock_launch_infer, rp_logger):
+    rp_logger.info(
+        "Launch the inference process by using the function 'launch_infer' "
+        "with the provided valid callback function to the 'loader' parameter"
+    )
+    launch_infer(loader=get_dataframe, table_name="table")
+    mock_post_init.assert_called_once()
+    mock_launch_infer.assert_called_once()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_infer")
+@patch("syngen.infer.setup_log_process")
+def test_launch_infer_table_with_not_callable_loader(
+    mock_logger, mock_launch_infer, caplog, rp_logger
+):
+    rp_logger.info(
+        "Launch the inference process by using the function 'launch_infer' "
+        "with the provided 'loader' parameter that is not callable"
+    )
+    error_message = (
+        "The provided loader for the table - 'table' isn't callable. "
+        "Please, provide a valid callback function."
+    )
+    with pytest.raises(UtilsValidationError) as error:
+        with caplog.at_level("ERROR"):
+            launch_infer(loader="not_callable", table_name="table")
+            assert error_message in str(error.value)
+            assert error_message in caplog.text
+
+        mock_launch_infer.assert_not_called()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("loader, error_message", [
+    (
+        lambda x: pd.DataFrame(),
+        "The provided loader should accept `table_name` as an argument. "
+        "Please, adjust the signature of the loader."
+    ),
+    (
+        lambda table_name, y: pd.DataFrame(),
+        "The provided loader should accept only the argument - `table_name`. "
+        "Please, adjust the signature of the loader."
+    )
+])
+@patch.object(Worker, "launch_infer")
+@patch("syngen.infer.setup_log_process")
+def test_launch_infer_table_with_loader_with_wrong_signature(
+    mock_logger, mock_launch_infer, loader, error_message, caplog, rp_logger
+):
+    rp_logger.info(
+        "Launch the inference process by using the function 'launch_infer' "
+        "with the provided 'loader' parameter containing a function with wrong signature"
+    )
+    with pytest.raises(UtilsValidationError) as error:
+        with caplog.at_level("ERROR"):
+            launch_infer(loader=loader, table_name="table")
+            assert error_message in str(error.value)
+            assert error_message in caplog.text
+
+        mock_launch_infer.assert_not_called()
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "launch_infer")
+@patch("syngen.infer.setup_log_process")
+def test_launch_infer_table_with_loader_with_wrong_return_value(
+    mock_logger, mock_launch_infer, caplog, rp_logger
+):
+    rp_logger.info(
+        "Launch the training process by using the function 'launch_train' "
+        "with the provided 'loader' parameter that returns a non-DataFrame object"
+    )
+    error_message = "The provided loader raised an exception when called"
+    with pytest.raises(UtilsValidationError) as error:
+        with caplog.at_level("ERROR"):
+            launch_infer(loader=lambda table_name: Mock(), table_name="table")
+            assert error_message in str(error.value)
+            assert error_message in caplog.text
+
+        mock_launch_infer.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)

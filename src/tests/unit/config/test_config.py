@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+from unittest.mock import patch, MagicMock
 
 from syngen.ml.config import TrainConfig, InferConfig
 from syngen.ml.data_loaders import DataLoader
@@ -53,15 +54,15 @@ def test_init_train_config(input_batch_size, expected_batch_size, rp_logger):
     }
     assert set(train_config.__getstate__().keys()) == {
         "source", "epochs", "drop_null", "row_limit", "table_name", "metadata",
-        "metadata_path", "reports", "batch_size", "slugify_table_name",
+        "metadata_path", "reports", "batch_size", "loader", "slugify_table_name",
         "paths", "schema", "row_subset"
     }
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.fixture
-def test_init_infer_config(mocker, rp_logger):
+@patch.object(InferConfig, "_set_paths", return_value=None)
+def test_init_infer_config(rp_logger):
     rp_logger.info(
         "Test the process of initialization of the instance of the class InferConfig"
     )
@@ -77,8 +78,6 @@ def test_init_infer_config(mocker, rp_logger):
         }
     }
 
-    mocker.patch("syngen.ml.data_loaders.DataLoader.has_existed_path", return_value=True)
-
     infer_config = InferConfig(
         destination="path/to/destination.csv",
         metadata=metadata,
@@ -91,17 +90,65 @@ def test_init_infer_config(mocker, rp_logger):
         reports=["accuracy"],
         both_keys=True,
         log_level="DEBUG",
-        loader=None,
-        type_of_process="train"
+        type_of_process="train",
+        loader=None
     )
 
     assert infer_config.reports == ["accuracy"]
 
     assert set(infer_config.__dict__.keys()) == {
-        "destination", "metadata", "metadata_path", "size", "table_name",
+        "destination", "metadata", "metadata_path", "loader", "size", "table_name",
         "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
-        "log_level", "loader", "type_of_process", "slugify_table_name", "paths"
+        "log_level", "type_of_process", "slugify_table_name", "paths"
     }
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("batch_size, size, expected_result", [
+    (None, 100, 100),
+    (100, 1000, 100)
+])
+@patch(
+    "syngen.ml.config.configurations.fetch_config",
+    return_value=MagicMock(paths={"input_data_path": "path/to/nonexistent/input_data.pkl"})
+)
+def test_set_up_batch_size(mock_fetch_config, batch_size, size, expected_result, rp_logger):
+    rp_logger.info(
+        "Test the process of setting up of the value "
+        "of the attribute 'batch_size' in the class InferConfig"
+    )
+    table_name = "test_table"
+
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": "path/to/source.csv",
+                "reports": []
+            },
+            "infer_settings": {
+                "reports": []
+            },
+        }
+    }
+
+    infer_config = InferConfig(
+        destination="path/to/destination.csv",
+        metadata=metadata,
+        metadata_path="path/to/metadata.yaml",
+        size=size,
+        table_name=table_name,
+        run_parallel=False,
+        batch_size=batch_size,
+        random_seed=None,
+        reports=[],
+        both_keys=True,
+        log_level="DEBUG",
+        type_of_process="infer",
+        loader=None
+    )
+
+    assert infer_config.batch_size == expected_result
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -140,6 +187,7 @@ def test_get_state_of_train_config(test_df, rp_logger):
         "metadata_path",
         "reports",
         "batch_size",
+        "loader",
         "paths",
         "slugify_table_name",
     }

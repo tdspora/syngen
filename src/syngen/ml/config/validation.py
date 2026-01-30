@@ -1,13 +1,16 @@
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, Callable, Optional
 import os
 from dataclasses import dataclass, field
 import json
 from collections import defaultdict
+import inspect
+
+import pandas as pd
 from cryptography.fernet import InvalidToken
 
 from slugify import slugify
 from loguru import logger
-from syngen.ml.data_loaders import MetadataLoader, DataLoader, DataEncryptor
+from syngen.ml.data_loaders import MetadataLoader, DataLoader, DataEncryptor, DataFrameFetcher
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
 from syngen.ml.utils import ValidationError, fetch_config
 
@@ -21,7 +24,7 @@ class Validator:
     metadata: Dict
     metadata_path: str
     type_of_process: Literal["train", "infer"]
-    validation_source: bool = True
+    loader: Optional[Callable[[str], pd.DataFrame]]
     type_of_fk_keys = ["FK"]
     infer_report_types: List[str] = field(
         default_factory=lambda: ReportTypes().infer_report_types
@@ -39,11 +42,7 @@ class Validator:
         for table_name, table_metadata in self.metadata.items():
             if table_name == "global":
                 continue
-            metadata_keys = (
-                table_metadata.get("keys")
-                if "keys" in table_metadata and table_metadata.get("keys") is not None
-                else {}
-            )
+            metadata_keys = table_metadata.get("keys", {})
             for key_name, key_data in metadata_keys.items():
                 if key_data["type"] not in self.type_of_fk_keys:
                     continue
@@ -55,7 +54,7 @@ class Validator:
 
     def _check_conditions(self, metadata: Dict) -> bool:
         """
-        Check conditions whether to launch validation or not
+        Check conditions whether to launch the validation or not
         """
         reports = metadata.get("train_settings", {}).get("reports", [])
         return (
@@ -96,7 +95,7 @@ class Validator:
         """
         ValidationSchema(
             metadata=self.metadata,
-            validation_source=self.validation_source,
+            validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
         ).validate_schema()
 
@@ -146,22 +145,78 @@ class Validator:
         if not DataLoader(path=destination).has_existed_path:
             message = (
                 f"The generated data of the table - '{parent_table}' hasn't been generated. "
-                f"Please, generate the data related to the table '{parent_table}' first"
+                f"Please, generate the data related to the table - '{parent_table}' first"
             )
             self.errors["check existence of the generated data"][parent_table] = message
 
-    def _check_existence_of_source(self, table_name: str):
+    def _get_columns_of_source(
+        self,
+        path_to_source: str,
+        table_name: str,
+        **format_settings
+    ) -> List[str]:
         """
-        Check if the source of the certain table exists
+        Check if the source of the certain table exists, and fetch the list of its columns
         """
-        path_to_source = self.merged_metadata[table_name]["train_settings"]["source"]
         if not DataLoader(path=path_to_source).has_existed_path:
             message = (
                 f"It seems that the path to the source of the table - '{table_name}' "
-                f"isn't correct. Please, check the path to the source of the table - "
+                "isn't correct. Please, check the path to the source of the table - "
                 f"'{table_name}'"
             )
             self.errors["check existence of the source"][table_name] = message
+        else:
+            return DataLoader(path=path_to_source).get_columns(**format_settings)
+
+    def _get_columns_by_loader(self, table_name: str):
+        """
+        Check whether the callback function provided for loading the data is callable,
+        has the correct signature, and fetch the list of columns of the source table
+        by calling the `loader`
+        """
+        # Check if the loader is callable or not
+        if not callable(self.loader):
+            message = (
+                f"The provided loader for the table - '{table_name}' isn't callable. "
+                "Please, provide a valid callback function."
+            )
+            self.errors["check of the loader"][table_name] = message
+            return
+
+        # Inspect the signature to ensure it accepts only the parameter `table_name`
+        try:
+            sig = inspect.signature(self.loader)
+            params = sig.parameters
+            if "table_name" not in params:
+                self.errors["check of the loader"][table_name] = (
+                    "The provided loader should accept `table_name` as an argument. "
+                    "Please, adjust the signature of the loader."
+                )
+                return
+            if "table_name" in params and len(params) > 1:
+                self.errors["check of the loader"][table_name] = (
+                    "The provided loader should accept only the argument - `table_name`. "
+                    "Please, adjust the signature of the loader."
+                )
+                return
+        except (ValueError, TypeError, AttributeError) as e:
+            self.errors["check of the loader"][table_name] = (
+                f"Couldn't inspect loader signature: {e}"
+            )
+            return
+
+        # Fetch the columns by calling the `loader`
+        try:
+            data_loader = DataFrameFetcher(
+                loader=self.loader,
+                table_name=table_name
+            )
+            return data_loader.get_columns()
+        except Exception as e:
+            self.errors["check of the loader"][table_name] = (
+                f"The provided loader raised an exception when called: {e}"
+            )
+            return
 
     def _check_existence_of_destination(self, table_name: str):
         """
@@ -303,8 +358,14 @@ class Validator:
         metadata_of_table = self.merged_metadata[table_name]
         format_settings = metadata_of_table.get("format", {})
         path_to_source = self._fetch_path_to_source(table_name)
-        data_loader = DataLoader(path=path_to_source)
-        return data_loader.get_columns(**format_settings)
+        if path_to_source is not None:
+            return self._get_columns_of_source(
+                path_to_source=path_to_source,
+                table_name=table_name,
+                **format_settings
+            )
+        else:
+            return self._get_columns_by_loader(table_name)
 
     def _gather_existed_columns(self, table_name: str):
         """
@@ -321,11 +382,11 @@ class Validator:
         self._define_mapping()
         self._merge_metadata()
 
-    def _fetch_path_to_source(self, table_name):
+    def _fetch_path_to_source(self, table_name: str):
         """
         Fetch the path to the source of the certain table
         """
-        return self.merged_metadata[table_name]["train_settings"]["source"]
+        return self.merged_metadata[table_name].get("train_settings", {}).get("source")
 
     def _validate_fernet_key(self, table_name: str, fernet_key: str):
         """
@@ -349,12 +410,18 @@ class Validator:
             "to generate reports during the inference process"
         )
         try:
-            data_loader = DataLoader(
-                path=path_to_input_data,
-                table_name=table_name,
-                metadata=self.merged_metadata,
-                sensitive=True
-            )
+            if self.loader is None:
+                data_loader = DataLoader(
+                    path=path_to_input_data,
+                    table_name=table_name,
+                    metadata=self.merged_metadata,
+                    sensitive=True
+                )
+            else:
+                data_loader = DataFrameFetcher(
+                    loader=self.loader,
+                    table_name=table_name
+                )
             data_loader.get_columns()
         except InvalidToken:
             self.errors["check access to input data"][table_name] = (
@@ -378,9 +445,13 @@ class Validator:
         """
         Launch the validation process
         """
-        if self.type_of_process == "train" and self.validation_source:
+        if self.type_of_process == "train":
+
             for table_name in self.merged_metadata.keys():
                 self._gather_existed_columns(table_name)
+
+            if self.errors:
+                self._collect_errors()
 
         for table_name, table_metadata in self.metadata.items():
             fernet_key = table_metadata.get("encryption", {}).get("fernet_key")
@@ -403,8 +474,7 @@ class Validator:
                     f"hasn't been validated because it will not be used"
                 )
 
-            if self.type_of_process == "train" and self.validation_source:
-                self._check_existence_of_source(table_name)
+            if self.type_of_process == "train":
                 self._check_existence_of_key_columns(table_name)
                 self._check_existence_of_referenced_columns(table_name)
 

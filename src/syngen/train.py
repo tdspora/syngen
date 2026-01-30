@@ -1,8 +1,9 @@
 import os
-from typing import Optional, List, Union, Tuple
+from typing import Optional, List, Union, Tuple, Callable
 
 import click
 from loguru import logger
+import pandas as pd
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
@@ -24,36 +25,36 @@ def validate_required_parameters(
     """
     if not metadata_path and not source and not table_name:
         raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' "
-            "and 'source' is absent. Please provide either the information of "
-            "'metadata_path' or the information of 'source' and 'table_name'."
+            "It seems that the information about 'metadata_path' or 'table_name' "
+            "and 'source' is absent. Please provide either the information about "
+            "'metadata_path' or the information about 'source' and 'table_name'."
         )
     elif not metadata_path and source and not table_name:
         raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'."
+            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'source' and 'table_name'."
         )
     elif not metadata_path and table_name and not source:
         raise AttributeError(
-            "It seems that the information of 'metadata_path' or 'source' is absent. "
-            "Please provide either the information of 'metadata_path' or "
-            "the information of 'source' and 'table_name'."
+            "It seems that the information about 'metadata_path' or 'source' is absent. "
+            "Please provide either the information about 'metadata_path' or "
+            "the information about 'source' and 'table_name'."
         )
     elif metadata_path and table_name and source:
         logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' and 'source' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' and 'source' will be ignored."
         )
     elif metadata_path and source:
         logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'source' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'source' will be ignored."
         )
     elif metadata_path and table_name:
         logger.warning(
-            "The information of 'metadata_path' was provided. "
-            "In this case the information of 'table_name' will be ignored."
+            "The information about 'metadata_path' was provided. "
+            "In this case the information about 'table_name' will be ignored."
         )
 
 
@@ -67,7 +68,8 @@ def launch_train(
     reports: Union[List[str], Tuple[str], str] = "none",
     log_level: str = "INFO",
     batch_size: int = 32,
-    fernet_key: Optional[str] = None
+    fernet_key: Optional[str] = None,
+    loader: Optional[Callable[[str], pd.DataFrame]] = None,
 ):
     setup_log_process(
         type_of_process="train",
@@ -95,7 +97,8 @@ def launch_train(
         },
         log_level=log_level,
         type_of_process="train",
-        encryption_settings=encryption_settings
+        encryption_settings=encryption_settings,
+        loader=loader
     )
 
     logger.info(
@@ -113,39 +116,39 @@ def launch_train(
     "--metadata_path",
     type=str,
     default=None,
-    help="Path to the metadata file"
+    help="The path to the metadata file."
 )
 @click.option(
     "--source",
     type=str,
     default=None,
-    help="Path to the table that you want to use as a reference",
+    help="The path to the table that you want to use as a reference.",
 )
 @click.option(
     "--table_name",
     type=str,
     default=None,
-    help="Arbitrary string to name the directories",
+    help="The arbitrary string to name the directories.",
 )
 @click.option(
     "--epochs",
     default=10,
     type=click.IntRange(1),
-    help="Number of trained epochs. If absent, it's defaulted to 10",
+    help="The number of trained epochs. If absent, it's defaulted to 10.",
 )
 @click.option(
     "--drop_null",
     default=False,
     type=click.BOOL,
-    help="Flag which set whether to drop rows with at least one missing value. "
-    "If absent, it's defaulted to False",
+    help="The flag which set whether to drop rows with at least one missing value. "
+    "If absent, it's defaulted to False.",
 )
 @click.option(
     "--row_limit",
     default=None,
     type=click.IntRange(1),
-    help="Number of rows to train over. A number less than the original table "
-         "length will randomly subset the specified rows number",
+    help="The number of rows to train over. A number less than the original table "
+         "length will randomly subset the specified rows number.",
 )
 @click.option(
     "--reports",
@@ -172,7 +175,7 @@ def launch_train(
     "--batch_size",
     default=32,
     type=click.IntRange(1),
-    help="Number of rows that goes in one batch. "
+    help="The number of rows that goes in one batch. "
          "This parameter can help to control memory consumption.",
 )
 @click.option(
@@ -180,7 +183,7 @@ def launch_train(
     default=None,
     type=str,
     help="The name of the environment variable that kept the value of the Fernet key "
-         "to encrypt and decrypt the sensitive data stored on the disk",
+         "to encrypt and decrypt the sensitive data stored on the disk.",
 )
 def cli_launch_train(
     metadata_path: Optional[str],
