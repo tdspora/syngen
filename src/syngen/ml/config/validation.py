@@ -203,6 +203,7 @@ class Validator:
             self.errors["check of the loader"][table_name] = (
                 f"Couldn't inspect loader signature: {e}"
             )
+            return
 
         # Fetch the columns by calling the `loader`
         try:
