@@ -254,16 +254,15 @@ class PreprocessHandler(Processor):
         Load the data from the predefined source
         """
         if self.loader is not None:
-            dataframe_fetcher = DataFrameFetcher(
+            data_loader = DataFrameFetcher(
                 loader=self.loader,
                 table_name=self.table_name
             )
-            original_schema = dataframe_fetcher.original_schema
-            data, schema = dataframe_fetcher.fetch_data()
-            return data, schema, original_schema
-        path_to_source = self.metadata[self.table_name]["train_settings"]["source"]
-        data, schema = DataLoader(path=path_to_source).load_data()
-        original_schema = DataLoader(path=path_to_source).original_schema
+        else:
+            path_to_source = self.metadata[self.table_name]["train_settings"]["source"]
+            data_loader = DataLoader(path=path_to_source)
+        data, schema = data_loader.load_data()
+        original_schema = data_loader.original_schema
         return data, schema, original_schema
 
     def _handle_json_columns(self, data: pd.DataFrame):

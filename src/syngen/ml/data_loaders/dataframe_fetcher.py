@@ -14,7 +14,7 @@ class DataFrameFetcher:
     table_name: str
     original_schema = None
 
-    def fetch_data(self) -> Tuple[pd.DataFrame, Dict]:
+    def load_data(self) -> Tuple[pd.DataFrame, Dict]:
         try:
             df = self.loader(self.table_name)
             default_schema = {"fields": {}, "format": "CSV"}

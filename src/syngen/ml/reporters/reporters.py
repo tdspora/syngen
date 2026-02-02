@@ -60,7 +60,7 @@ class Reporter:
         data, schema = DataFrameFetcher(
             loader=self.loader,
             table_name=self.table_name
-        ).fetch_data()
+        ).load_data()
         logger.warning(
             f"The original data of the table - '{self.table_name}' "
             "has been fetched using the callback function. "

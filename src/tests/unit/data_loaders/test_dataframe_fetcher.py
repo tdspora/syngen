@@ -22,7 +22,7 @@ def test_fetch_dataframe_with_valid_callback_function(rp_logger):
        "Test the class DataFrameFetcher with provided valid callback function"
     )
     fetcher = DataFrameFetcher(table_name="test_table", loader=get_dataframe)
-    fetched_df, default_schema = fetcher.fetch_data()
+    fetched_df, default_schema = fetcher.load_data()
     assert (
         assert_frame_equal(fetched_df, SAMPLE)
         is None
@@ -43,7 +43,7 @@ def test_fetch_dataframe_with_invalid_callback_function(caplog, rp_logger):
     fetcher = DataFrameFetcher(table_name="test_table", loader=invalid_function)
     with pytest.raises(ValueError):
         with caplog.at_level("ERROR"):
-            fetcher.fetch_data()
+            fetcher.load_data()
             assert ("Failed to fetch the dataframe for the training process "
                     "using the provided callback function") in caplog.text
 
