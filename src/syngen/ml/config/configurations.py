@@ -5,7 +5,6 @@ from datetime import datetime
 import pandas as pd
 from slugify import slugify
 
-from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
 
 
@@ -40,7 +39,7 @@ class TrainConfig:
         Return an updated config's instance
         """
         instance = self.__dict__.copy()
-        attribute_keys_to_remove = ["loader", "data"]
+        attribute_keys_to_remove = ["data"]
         for attr_key in attribute_keys_to_remove:
             if attr_key in instance:
                 del instance[attr_key]
@@ -73,9 +72,12 @@ class TrainConfig:
             "reports_path": f"model_artifacts/resources/{self.slugify_table_name}/reports",
             "path_to_sample_report": f"model_artifacts/resources/{self.slugify_table_name}/"
                                      f"reports/sample-report.html",
-            "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                               f"input_data_{self.slugify_table_name}."
-                               f"{'dat' if fernet_key is not None else 'pkl'}",
+            "input_data_path": (
+                f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                f"input_data_{self.slugify_table_name}."
+                f"{'dat' if fernet_key is not None else 'pkl'}"
+                if self.loader is None else None
+            ),
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
             "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
                                         f"checkpoints/train_config.pkl",
@@ -105,13 +107,13 @@ class TrainConfig:
 @dataclass
 class InferConfig:
     """
-    The configuration class to set up the work of infer process
+    The configuration class to set up the work of the inference process
     """
 
     destination: Optional[str]
     metadata: Dict
     metadata_path: Optional[str]
-    size: Optional[int]
+    size: int
     table_name: str
     run_parallel: bool
     batch_size: Optional[int]
@@ -126,10 +128,6 @@ class InferConfig:
 
     def __post_init__(self):
         self.__set_paths()
-        self._set_infer_parameters()
-
-    def _set_infer_parameters(self):
-        self._set_up_size()
         self._set_up_batch_size()
 
     def to_dict(self) -> Dict:
@@ -143,27 +141,6 @@ class InferConfig:
             "random_seed": self.random_seed,
             "reports": self.reports,
         }
-
-    def _set_up_size(self):
-        """
-        Set up "size" of generated data
-        """
-        if self.size is None:
-            data_loader = DataLoader(
-                path=self.paths["input_data_path"],
-                table_name=self.table_name,
-                metadata=self.metadata,
-                sensitive=True
-            )
-            data = pd.DataFrame()
-            if data_loader.has_existed_path:
-                data, schema = data_loader.load_data()
-            elif self.loader:
-                data, schema = DataFrameFetcher(
-                    loader=self.loader,
-                    table_name=self.table_name
-                ).fetch_data()
-            self.size = len(data)
 
     def _set_up_batch_size(self):
         """

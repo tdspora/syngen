@@ -19,11 +19,27 @@ global:
 pk_test:
   train_settings:
     source: ./data/pk_test.csv
+    column_types:
+      categorical:
+        - gender
+        - marital_status
   keys:
     pk_test_pk_id:
       type: "PK"
       columns:
         - Id
+
+  format:
+    sep: ','
+    quotechar: '"'
+    quoting: minimal
+    escapechar: '"'
+    encoding: null
+    header: infer
+    skiprows: null
+    on_bad_lines: error
+    engine: null
+    na_values: null
 
 fk_test:
   train_settings:
@@ -37,14 +53,16 @@ fk_test:
     batch_size: 200
 
   format:
-    sep: ","
+    sep: ','
     quotechar: '"'
-    quoting: "All"
+    quoting: minimal
     escapechar: '"'
-    encoding: "utf-8"
-    header: 0
-    skiprows: 0
-    on_bad_lines: skip
+    encoding: null
+    header: infer
+    skiprows: null
+    on_bad_lines: error
+    engine: null
+    na_values: null
 
   infer_settings:
     size: 90

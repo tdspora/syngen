@@ -1,19 +1,28 @@
+import os
+from typing import Dict, List, Literal, Optional, Set, Union, Callable
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-import os
-from typing import Dict, List, Literal, Optional, Set, Union
 
 import pandas as pd
 from slugify import slugify
 from loguru import logger
 
+from syngen.train import launch_train
 from syngen.infer import launch_infer
-from syngen.ml.context import get_context, global_context
 from syngen.ml.data_loaders import DataEncryptor, DataLoader, MetadataLoader
-from syngen.ml.reporters import AccuracyReporter, Report, SampleAccuracyReporter
-from syngen.ml.utils import fetch_config, fetch_env_variables, get_reports, setup_log_process
-from syngen.ml.validation_schema import ReportTypes, ValidationSchema
-from syngen.train import launch_train, validate_required_parameters
+from syngen.ml.utils import (
+    fetch_config,
+    fetch_env_variables,
+    get_reports,
+    setup_log_process
+)
+from syngen.ml.reporters import (
+    Report,
+    AccuracyReporter,
+    SampleAccuracyReporter,
+)
+from syngen.ml.validation_schema import ValidationSchema, ReportTypes
+from syngen.ml.context import global_context, get_context
 
 
 class BaseDataIO(ABC):
@@ -77,7 +86,7 @@ class DataIO(BaseDataIO):
     def _validate_metadata(self):
         ValidationSchema(
             metadata=self.metadata,
-            validation_source=True,
+            validation_of_source=True,
             process="train"
         ).validate_schema()
 
@@ -119,6 +128,8 @@ class Syngen:
         metadata_path (Optional[str]): The path to the metadata file.
         table_name (Optional[str]): The name of the table.
         source (Optional[str]): The source of the data.
+        loader (Optional[Callable[[str], pd.DataFrame]]): The custom data loader function
+        that returns a sample of an original data
         execution_artifacts (Dict): The dictionary to store the information about paths
         to execution artifacts.
         report_types (ReportTypes): The object containing the information
@@ -128,15 +139,72 @@ class Syngen:
     metadata_path: Optional[str] = None
     table_name: Optional[str] = None
     source: Optional[str] = None
+    loader: Optional[Callable[[str], pd.DataFrame]] = None
     execution_artifacts: Dict = field(default_factory=dict)
     report_types: object = field(init=False)
 
+    def _validate_required_parameters(self):
+        """
+        Validate that required parameters are provided
+        """
+        if not self.metadata_path and not (self.source or self.loader) and not self.table_name:
+            raise AttributeError(
+                "It seems that the information about 'metadata_path' or 'table_name' "
+                "and 'source' (or 'loader') is absent. Please provide either the information "
+                "about 'metadata_path' or the information about 'source' (or 'loader') "
+                "and 'table_name'."
+            )
+        elif not self.metadata_path and (self.source or self.loader) and not self.table_name:
+            raise AttributeError(
+                "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+                "Please provide either the information about 'metadata_path' or "
+                "the information about 'source' (or 'loader') and 'table_name'."
+            )
+        elif not self.metadata_path and self.table_name and not (self.source or self.loader):
+            raise AttributeError(
+                "It seems that the information about 'metadata_path' or 'source' (or 'loader') "
+                "is absent. Please provide either the information about 'metadata_path' or "
+                "the information about 'source' (or 'loader') and 'table_name'."
+            )
+        elif self.metadata_path and self.table_name and self.source and self.loader:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'table_name' and 'source' "
+                "and 'loader' will be ignored."
+            )
+        elif self.metadata_path and self.table_name and self.source:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'source' and 'table_name' will be ignored."
+            )
+        elif self.metadata_path and self.loader and self.source:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'source' and 'loader' will be ignored."
+            )
+        elif self.metadata_path and self.loader and self.table_name:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'loader' and 'table_name' will be ignored."
+            )
+        elif self.metadata_path and self.source:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'source' will be ignored."
+            )
+        elif self.metadata_path and self.table_name:
+            logger.warning(
+                "The information about 'metadata_path' was provided. "
+                "In this case the information about 'table_name' will be ignored."
+            )
+        elif self.source and self.loader and self.table_name:
+            raise AttributeError(
+                "The information about both 'source' and 'loader' was provided. "
+                "Please provide only one of them along with 'table_name'."
+            )
+
     def __post_init__(self):
-        validate_required_parameters(
-            metadata_path=self.metadata_path,
-            source=self.source,
-            table_name=self.table_name
-        )
+        self._validate_required_parameters()
         self.list_of_tables = (
             [
                 table_name
@@ -269,7 +337,8 @@ class Syngen:
             reports=reports,
             log_level=log_level,
             batch_size=batch_size,
-            fernet_key=fernet_key
+            fernet_key=fernet_key,
+            loader=self.loader
         )
         self._set_execution_artifacts(type_of_process="train")
 
@@ -281,7 +350,7 @@ class Syngen:
         random_seed: Optional[int] = None,
         reports: Union[str, List[str]] = "none",
         log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
-        fernet_key: Optional[str] = None,
+        fernet_key: Optional[str] = None
     ):
         launch_infer(
             metadata_path=self.metadata_path,
@@ -292,31 +361,19 @@ class Syngen:
             reports=reports,
             random_seed=random_seed,
             log_level=log_level,
-            fernet_key=fernet_key
+            fernet_key=fernet_key,
+            loader=self.loader
         )
         self._set_execution_artifacts(type_of_process="infer")
 
     @staticmethod
     def _validate_artifacts(
         table_name: str,
-        fernet_key: Optional[str],
         completed_processes: Set[str]
     ):
         errors: List[str] = []
 
         slug = slugify(table_name)
-
-        path_to_input_data = (
-            f"model_artifacts/tmp_store/{slug}/"
-            f"input_data_{slug}.{'dat' if fernet_key is not None else 'pkl'}"
-        )
-        if not os.path.exists(path_to_input_data):
-            errors.append(
-                (
-                    f"The input data file wasn't found for the table '{table_name}' "
-                    f"in the path - {path_to_input_data}."
-                )
-            )
 
         # Type-specific validations
         path_to_train_config = (
@@ -382,6 +439,7 @@ class Syngen:
             paths=train_config.paths,
             config=train_config.to_dict(),
             metadata=train_config.metadata,
+            loader=train_config.loader,
         )
 
     def __get_accuracy_reporter(
@@ -398,8 +456,8 @@ class Syngen:
             paths=infer_config.paths,
             config=infer_config.to_dict(),
             metadata=infer_config.metadata,
-            loader=None,
-            type_of_process=infer_config.type_of_process
+            type_of_process=infer_config.type_of_process,
+            loader=infer_config.loader
         )
 
     def _register_reporter(self, table_name: str, report: str, fernet_key: Optional[str]) -> None:
@@ -450,7 +508,6 @@ class Syngen:
                 DataEncryptor.validate_fernet_key(fernet_key)
             self._validate_artifacts(
                 table_name=table_name,
-                fernet_key=fernet_key,
                 completed_processes={
                     "infer"
                     if report in self.report_types.infer_report_types

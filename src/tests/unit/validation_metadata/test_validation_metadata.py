@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from syngen.ml.config.validation import Validator
 from syngen.ml.utils import ValidationError
-from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME, get_dataframe
 
 FAKE_METADATA_PATH = "path/to/metadata.yaml"
 
@@ -13,11 +13,11 @@ FAKE_METADATA_PATH = "path/to/metadata.yaml"
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -48,14 +48,17 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
-    mock_gather_existed_columns.assert_called_once_with("test_table")
-    mock_check_existence_of_source.assert_called_once_with("test_table")
+    mock_get_columns_of_source.assert_called_once_with(
+        path_to_source="path/to/test_table.csv", table_name="test_table"
+    )
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("test_table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_validate_referential_integrity.assert_not_called()
@@ -67,11 +70,11 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process(
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
-def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_valid_of_source(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
+def test_validate_metadata_of_one_table_without_fk_key_in_train_process_with_loader(
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -80,49 +83,37 @@ def test_validate_metadata_of_one_table_without_fk_key_in_train_process_without_
 ):
     """
     Test the validation of the metadata of one table contained only the primary key
-    during the training process with 'validation_source' set to 'False'
+    during the training process with the provided 'loader'
     """
     rp_logger.info(
         "Test the validation of the metadata of one table "
         "contained only the primary key during the training process "
-        "with 'validation_source' set to 'False'"
+        "with the provided 'loader'"
     )
     test_metadata = {
-        "table_a": {
+        "test_table": {
             "keys": {
                 "pk_id": {
                     "type": "PK",
                     "columns": ["id"]
                 }
-            }
-        },
-        "table_b": {
-            "keys": {
-                "pk_id": {
-                    "type": "PK",
-                    "columns": ["id"]
-                },
-                "uq_id": {
-                    "type": "UQ",
-                    "columns": ["name"]
-                }
-            }
+            },
         }
     }
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH,
-        validation_source=False
+        loader=get_dataframe
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_existence_of_key_columns.assert_not_called()
-    mock_check_existence_of_referenced_columns.assert_not_called()
+    mock_get_columns_of_source.assert_not_called()
+    mock_get_columns_by_loader.assert_called_once_with("test_table")
+    mock_check_existence_of_key_columns.assert_called_once_with("test_table")
+    mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
     mock_validate_referential_integrity.assert_not_called()
     mock_check_completion_of_training.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -151,7 +142,8 @@ def test_check_key_column_in_pk(rp_logger):
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -200,7 +192,8 @@ def test_check_key_column_in_fk(rp_logger):
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -218,11 +211,11 @@ def test_check_key_column_in_fk(rp_logger):
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -273,7 +266,8 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -283,9 +277,8 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
             "parent_columns": ["id"]
         }
     }
-    assert validator.merged_metadata == test_metadata
-    assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
+    assert mock_get_columns_of_source.call_count == 2
+    mock_get_columns_by_loader.assert_not_called()
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     mock_validate_referential_integrity.assert_called_once_with(
@@ -318,11 +311,11 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process(
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
-def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_without_valid_source(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
+def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_with_loader(
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -332,12 +325,12 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
     """
     Test the validation of the metadata of related tables
     contained the primary key and the foreign key
-    during the training process with 'validation_source' set to 'False'
+    during the training process with the provided 'loader'
     """
     rp_logger.info(
         "Test the validation of the metadata of related tables "
         "contained the primary key and the foreign key "
-        "during the training process with 'validation_source' set to 'False'"
+        "during the training process with the provided 'loader'"
     )
     test_metadata = {
         "table_a": {
@@ -369,7 +362,7 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH,
-        validation_source=False
+        loader=get_dataframe
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -380,10 +373,10 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
         }
     }
     assert validator.merged_metadata == test_metadata
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_existence_of_key_columns.assert_not_called()
-    mock_check_existence_of_referenced_columns.assert_not_called()
+    mock_get_columns_of_source.assert_not_called()
+    assert mock_get_columns_by_loader.call_count == 2
+    assert mock_check_existence_of_key_columns.call_count == 2
+    assert mock_check_existence_of_referenced_columns.call_count == 2
     mock_validate_referential_integrity.assert_called_once_with(
         fk_name="fk_id",
         fk_config={
@@ -411,11 +404,11 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_train_process_withou
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -474,7 +467,8 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -489,8 +483,8 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
         }
     }
     assert validator.merged_metadata == test_metadata
-    assert mock_gather_existed_columns.call_count == 2
-    assert mock_check_existence_of_source.call_count == 2
+    assert mock_get_columns_of_source.call_count == 2
+    mock_get_columns_by_loader.assert_not_called()
     assert mock_check_existence_of_key_columns.call_count == 2
     assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_referential_integrity.call_count == 2
@@ -502,11 +496,11 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_proces
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
-def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_without_valid_source(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
+def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_with_loader(
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -515,13 +509,12 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
 ):
     """
     Test the validation of the metadata of related tables
-    contained several foreign keys
-    during the training process
-    with 'validation_source' set to 'False'
+    contained several foreign keys during the training process
+    with the provided 'loader'
     """
     rp_logger.info(
         "Test the validation of the metadata of related tables contained several foreign keys "
-        "during the training process with 'validation_source' set to 'False"
+        "during the training process with the provided 'loader'"
     )
     test_metadata = {
         "table_a": {
@@ -561,7 +554,7 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
         metadata=test_metadata,
         type_of_process="train",
         metadata_path=FAKE_METADATA_PATH,
-        validation_source=False
+        loader=get_dataframe
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -576,10 +569,10 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
         }
     }
     assert validator.merged_metadata == test_metadata
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
-    mock_check_existence_of_key_columns.assert_not_called()
-    mock_check_existence_of_referenced_columns.assert_not_called()
+    mock_get_columns_of_source.assert_not_called()
+    assert mock_get_columns_by_loader.call_count == 2
+    assert mock_check_existence_of_key_columns.call_count == 2
+    assert mock_check_existence_of_referenced_columns.call_count == 2
     assert mock_validate_referential_integrity.call_count == 2
     mock_check_completion_of_training.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -591,11 +584,11 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_train_withou
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -628,14 +621,15 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
+    mock_get_columns_of_source.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     mock_validate_referential_integrity.assert_not_called()
@@ -651,9 +645,11 @@ def test_validate_metadata_of_one_table_without_fk_key_in_infer_process(
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
-    mock_gather_existed_columns,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -705,13 +701,15 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
     assert validator.mapping == {}
     assert validator.merged_metadata == test_metadata
-    mock_gather_existed_columns.assert_not_called()
+    mock_get_columns_of_source.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_completion_of_training.call_count == 2
@@ -727,9 +725,11 @@ def test_validate_metadata_of_related_tables_without_fk_key_in_infer_process(
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
-    mock_gather_existed_columns,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -785,7 +785,8 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -796,7 +797,8 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
         }
     }
     assert validator.merged_metadata == test_metadata
-    mock_gather_existed_columns.assert_not_called()
+    mock_get_columns_of_source.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_completion_of_training.call_count == 2
@@ -836,9 +838,11 @@ def test_validate_metadata_of_related_tables_with_fk_key_in_infer_process(
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_process(
-    mock_gather_existed_columns,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -901,7 +905,8 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -916,7 +921,8 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
         }
     }
     assert validator.merged_metadata == test_metadata
-    mock_gather_existed_columns.assert_not_called()
+    mock_get_columns_of_source.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     assert mock_check_completion_of_training.call_count == 2
@@ -931,11 +937,11 @@ def test_validate_metadata_of_related_tables_with_several_fk_key_in_infer_proces
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_reports(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -975,7 +981,8 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
     validator = Validator(
         metadata=metadata,
         type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -1024,8 +1031,8 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
             }
         }
     }
-    assert mock_gather_existed_columns.call_count == 2
-    mock_check_existence_of_source.assert_called_once_with("table_b")
+    assert mock_get_columns_of_source.call_count == 2
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("table_b")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
     mock_validate_referential_integrity.assert_called_once_with(
@@ -1076,11 +1083,11 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_without_
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen_data_and_reports(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -1123,7 +1130,8 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
     validator = Validator(
         metadata=metadata,
         type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -1172,8 +1180,8 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
             }
         }
     }
-    assert mock_gather_existed_columns.call_count == 2
-    mock_check_existence_of_source.assert_called_once_with("table_b")
+    assert mock_get_columns_of_source.call_count == 2
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("table_b")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
     mock_validate_referential_integrity.assert_called_once_with(
@@ -1218,11 +1226,11 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen_sample_report(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -1264,7 +1272,8 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
     validator = Validator(
         metadata=metadata,
         type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -1313,8 +1322,8 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
             }
         }
     }
-    assert mock_gather_existed_columns.call_count == 2
-    mock_check_existence_of_source.assert_called_once_with("table_b")
+    assert mock_get_columns_of_source.call_count == 2
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("table_b")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
     mock_validate_referential_integrity.assert_called_once_with(
@@ -1360,11 +1369,11 @@ def test_validate_incomplete_metadata_contained_fk_key_in_train_process_with_gen
 @patch.object(Validator, "_check_existence_of_destination")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_incomplete_metadata_in_infer_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_existence_of_destination,
@@ -1404,7 +1413,8 @@ def test_validate_incomplete_metadata_in_infer_process(
     validator = Validator(
         metadata=metadata,
         type_of_process="infer",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -1452,8 +1462,8 @@ def test_validate_incomplete_metadata_in_infer_process(
             }
         }
     }
-    mock_gather_existed_columns.assert_not_called()
-    mock_check_existence_of_source.assert_not_called()
+    mock_get_columns_of_source.assert_not_called()
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_not_called()
     mock_check_existence_of_referenced_columns.assert_not_called()
     mock_check_existence_of_destination.assert_called_once_with("table_b")
@@ -1497,9 +1507,7 @@ def test_validate_incomplete_metadata_in_infer_process(
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_with_not_existent_source_in_train_process(
-    mock_gather_existed_columns,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -1532,14 +1540,14 @@ def test_validate_metadata_with_not_existent_source_in_train_process(
             validator = Validator(
                 metadata=test_metadata,
                 type_of_process="train",
-                metadata_path=FAKE_METADATA_PATH
+                metadata_path=FAKE_METADATA_PATH,
+                loader=None
             )
             validator.run()
             assert validator.mapping == {}
             assert validator.merged_metadata == test_metadata
-            mock_gather_existed_columns.assert_called_once_with("test_table")
-            mock_check_existence_of_key_columns.assert_called_once_with("test_table")
-            mock_check_existence_of_referenced_columns.assert_called_once_with("test_table")
+            mock_check_existence_of_key_columns.assert_not_called()
+            mock_check_existence_of_referenced_columns.assert_not_called()
             mock_validate_referential_integrity.assert_not_called()
             message = (
                 "The validation of the metadata has been failed. The error(s) found in - "
@@ -1588,7 +1596,8 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
             validator = Validator(
                 metadata=metadata,
                 type_of_process="train",
-                metadata_path=FAKE_METADATA_PATH
+                metadata_path=FAKE_METADATA_PATH,
+                loader=None
             )
             validator.errors = defaultdict(defaultdict)
             validator.run()
@@ -1612,11 +1621,11 @@ def test_validate_incomplete_metadata_with_absent_parent_metadata_in_metadata_st
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_incomplete_metadata_with_wrong_referential_integrity(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -1658,7 +1667,8 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
             validator = Validator(
                 metadata=metadata,
                 type_of_process="train",
-                metadata_path=FAKE_METADATA_PATH
+                metadata_path=FAKE_METADATA_PATH,
+                loader=None
             )
             validator.run()
             assert validator.mapping == {
@@ -1699,8 +1709,8 @@ def test_validate_incomplete_metadata_with_wrong_referential_integrity(
                     }
                 }
             }
-            assert mock_gather_existed_columns.call_count == 2
-            assert mock_check_existence_of_source.call_count == 2
+            assert mock_get_columns_of_source.call_count == 2
+            mock_get_columns_by_loader.assert_not_called()
             assert mock_check_existence_of_key_columns.call_count == 2
             assert mock_check_existence_of_referenced_columns.call_count == 2
             mock_check_completion_of_training.assert_called_once_with("table_d")
@@ -1750,7 +1760,8 @@ def test_validate_metadata_with_not_existent_destination(
             validator = Validator(
                 metadata=test_metadata,
                 type_of_process="infer",
-                metadata_path=FAKE_METADATA_PATH
+                metadata_path=FAKE_METADATA_PATH,
+                loader=None
             )
             validator.run()
             assert validator.mapping == {}
@@ -1772,11 +1783,11 @@ def test_validate_metadata_with_not_existent_destination(
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_in_train_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -1821,11 +1832,14 @@ def test_validate_incomplete_metadata_with_absent_success_file_of_parent_table_i
             validator = Validator(
                 metadata=metadata,
                 type_of_process="train",
-                metadata_path=FAKE_METADATA_PATH
+                metadata_path=FAKE_METADATA_PATH,
+                loader=None
             )
             validator.run()
-            assert mock_gather_existed_columns.call_count == 2
-            mock_check_existence_of_source.assert_called_once_with("table_b")
+            mock_get_columns_of_source.assert_called_once_with(
+                path_to_source="path/to/table_b.csv", table_name="table_b"
+            )
+            mock_get_columns_by_loader.assert_not_called()
             mock_check_existence_of_key_columns.assert_called_once_with("table_b")
             mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
             mock_validate_referential_integrity.assert_called_once_with(
@@ -1960,7 +1974,8 @@ def test_validate_incomplete_metadata_with_absent_gen_data_of_parent_table_in_in
             validator = Validator(
                 metadata=metadata,
                 type_of_process="infer",
-                metadata_path=FAKE_METADATA_PATH
+                metadata_path=FAKE_METADATA_PATH,
+                loader=None
             )
             validator.run()
             assert mock_check_existence_of_destination.call_count == 2
@@ -2045,7 +2060,7 @@ def test_validate_incomplete_metadata_with_absent_gen_data_of_parent_table_in_in
                 "The error(s) found in - \"check existence of the generated data\": {"
                 "\"table_a\": \"The generated data of the table - 'table_a' "
                 "hasn't been generated. "
-                "Please, generate the data related to the table 'table_a' first\"}"
+                "Please, generate the data related to the table - 'table_a' first\"}"
             )
             assert str(error.value) == message
             assert message in caplog.text
@@ -2064,11 +2079,11 @@ def test_validate_incomplete_metadata_with_absent_gen_data_of_parent_table_in_in
 @patch.object(Validator, "_validate_referential_integrity")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_with_reports(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_referential_integrity,
@@ -2116,7 +2131,8 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
             validator = Validator(
                 metadata=metadata,
                 type_of_process="train",
-                metadata_path=FAKE_METADATA_PATH
+                metadata_path=FAKE_METADATA_PATH,
+                loader=None
             )
             validator.run()
             assert validator.mapping == {
@@ -2162,8 +2178,10 @@ def test_validate_incomplete_metadata_without_gen_parent_table_in_train_process_
                     "format": {}
                 }
             }
-            assert mock_gather_existed_columns.call_count == 2
-            mock_check_existence_of_source.assert_called_once_with("table_b")
+            mock_get_columns_of_source.assert_called_once_with(
+                path_to_source="path/to/table_b.csv", table_name="table_b"
+            )
+            mock_get_columns_by_loader.assert_not_called()
             mock_check_existence_of_key_columns.assert_called_once_with("table_b")
             mock_check_existence_of_referenced_columns.assert_called_once_with("table_b")
             mock_validate_referential_integrity.assert_called_once_with("table_b")
@@ -2205,7 +2223,8 @@ def test_check_not_existent_key_column_in_pk(rp_logger):
         validator = Validator(
             metadata=test_metadata,
             type_of_process="train",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.run()
         assert validator.mapping == {}
@@ -2244,7 +2263,8 @@ def test_check_not_existent_key_column_in_uq(rp_logger):
         validator = Validator(
             metadata=test_metadata,
             type_of_process="train",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.run()
         assert validator.mapping == {}
@@ -2299,7 +2319,8 @@ def test_check_not_existent_key_column_in_fk(rp_logger):
         validator = Validator(
             metadata=test_metadata,
             type_of_process="train",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.run()
         assert validator.mapping == {}
@@ -2353,7 +2374,8 @@ def test_check_not_existent_referenced_table_in_fk(test_metadata_storage, rp_log
         validator = Validator(
             metadata=test_metadata,
             type_of_process="train",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.errors = defaultdict(defaultdict)
         validator.run()
@@ -2408,7 +2430,8 @@ def test_check_not_existent_referenced_columns_in_fk(rp_logger):
         validator = Validator(
             metadata=test_metadata,
             type_of_process="train",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.run()
         assert validator.mapping == {}
@@ -2425,11 +2448,11 @@ def test_check_not_existent_referenced_columns_in_fk(rp_logger):
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_of_related_tables_with_missed_pk_key_in_parent_table_in_train_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -2471,7 +2494,8 @@ def test_validate_metadata_of_related_tables_with_missed_pk_key_in_parent_table_
         validator = Validator(
             metadata=test_metadata,
             type_of_process="train",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.run()
         assert validator.mapping == {
@@ -2492,11 +2516,11 @@ def test_validate_metadata_of_related_tables_with_missed_pk_key_in_parent_table_
 @patch.object(Validator, "_check_completion_of_training")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_in_train_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
@@ -2544,7 +2568,8 @@ def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_i
         validator = Validator(
             metadata=test_metadata,
             type_of_process="train",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.run()
         assert validator.mapping == {
@@ -2565,15 +2590,7 @@ def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_i
 
 
 @patch.object(Validator, "_check_completion_of_training")
-@patch.object(Validator, "_check_existence_of_referenced_columns")
-@patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_missed_pk_key_in_parent_table_in_infer_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_existence_of_key_columns,
-    mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
     rp_logger
 ):
@@ -2613,7 +2630,8 @@ def test_validate_metadata_of_related_tables_with_missed_pk_key_in_parent_table_
         validator = Validator(
             metadata=test_metadata,
             type_of_process="infer",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.run()
         assert validator.mapping == {
@@ -2632,15 +2650,7 @@ def test_validate_metadata_of_related_tables_with_missed_pk_key_in_parent_table_
 
 
 @patch.object(Validator, "_check_completion_of_training")
-@patch.object(Validator, "_check_existence_of_referenced_columns")
-@patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
 def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_in_infer_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
-    mock_check_existence_of_key_columns,
-    mock_check_existence_of_referenced_columns,
     mock_check_completion_of_training,
     rp_logger
 ):
@@ -2686,7 +2696,8 @@ def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_i
         validator = Validator(
             metadata=test_metadata,
             type_of_process="infer",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.run()
         assert validator.mapping == {
@@ -2706,11 +2717,11 @@ def test_validate_metadata_of_related_tables_with_wrong_pk_key_in_parent_table_i
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_if_valid_fernet_key_in_train_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
@@ -2744,12 +2755,15 @@ def test_validate_metadata_if_valid_fernet_key_in_train_process(
     validator = Validator(
         metadata=test_metadata,
         type_of_process="train",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
-    mock_gather_existed_columns.assert_called_once_with("table")
-    mock_check_existence_of_source.assert_called_once_with("table")
+    mock_get_columns_of_source.assert_called_once_with(
+        path_to_source="path/to/table.csv", table_name="table"
+    )
+    mock_get_columns_by_loader.assert_not_called()
     mock_check_existence_of_key_columns.assert_called_once_with("table")
     mock_check_existence_of_referenced_columns.assert_called_once_with("table")
     mock_validate_metadata.assert_called_once_with("table")
@@ -2759,11 +2773,11 @@ def test_validate_metadata_if_valid_fernet_key_in_train_process(
 @patch.object(Validator, "_validate_metadata")
 @patch.object(Validator, "_check_existence_of_referenced_columns")
 @patch.object(Validator, "_check_existence_of_key_columns")
-@patch.object(Validator, "_check_existence_of_source")
-@patch.object(Validator, "_gather_existed_columns")
+@patch.object(Validator, "_get_columns_by_loader")
+@patch.object(Validator, "_get_columns_of_source")
 def test_validate_metadata_if_invalid_fernet_key_in_train_process(
-    mock_gather_existed_columns,
-    mock_check_existence_of_source,
+    mock_get_columns_of_source,
+    mock_get_columns_by_loader,
     mock_check_existence_of_key_columns,
     mock_check_existence_of_referenced_columns,
     mock_validate_metadata,
@@ -2798,12 +2812,15 @@ def test_validate_metadata_if_invalid_fernet_key_in_train_process(
         validator = Validator(
             metadata=test_metadata,
             type_of_process="train",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.errors = defaultdict(defaultdict)
         validator.run()
-        mock_gather_existed_columns.assert_called_once_with("table")
-        mock_check_existence_of_source.assert_called_once_with("table")
+        mock_get_columns_of_source.assert_called_once_with(
+            path_to_source="path/to/table.csv", table_name="table"
+        )
+        mock_get_columns_by_loader.assert_not_called()
         mock_check_existence_of_key_columns.assert_called_once_with("table")
         mock_check_existence_of_referenced_columns.assert_called_once_with("table")
         mock_validate_metadata.assert_called_once_with("table")
@@ -2853,7 +2870,8 @@ def test_validate_metadata_if_valid_fernet_key_with_generation_reports_in_infer_
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -2903,7 +2921,8 @@ def test_validate_metadata_if_valid_fernet_key_without_generation_reports_in_inf
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -2956,7 +2975,8 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process_with_reports_g
         validator = Validator(
             metadata=test_metadata,
             type_of_process="infer",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.errors = defaultdict(defaultdict)
         validator.run()
@@ -3010,7 +3030,8 @@ def test_validate_metadata_if_invalid_fernet_key_in_infer_process_without_report
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
@@ -3067,7 +3088,8 @@ def test_validate_metadata_if_valid_fernet_key_in_infer_with_reports_and_absent_
         validator = Validator(
             metadata=test_metadata,
             type_of_process="infer",
-            metadata_path=FAKE_METADATA_PATH
+            metadata_path=FAKE_METADATA_PATH,
+            loader=None
         )
         validator.errors = defaultdict(defaultdict)
         validator.run()
@@ -3126,7 +3148,8 @@ def test_validate_metadata_if_valid_fernet_key_in_infer_without_reports_and_abse
     validator = Validator(
         metadata=test_metadata,
         type_of_process="infer",
-        metadata_path=FAKE_METADATA_PATH
+        metadata_path=FAKE_METADATA_PATH,
+        loader=None
     )
     validator.errors = defaultdict(defaultdict)
     validator.run()
