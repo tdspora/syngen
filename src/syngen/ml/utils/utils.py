@@ -218,14 +218,23 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     return set(names)
 
 
-def convert_to_timestamp(data: pd.Series, date_format: str, na_values: List[str]):
-    """
-    Convert the string values to timestamp
-    """
-    return [
-        datetime_to_timestamp(d, date_format)
-        if d not in na_values else np.NaN for d in data
-    ]
+def convert_date_to_timestamp(
+    value,
+    date_format: str,
+    na_values: list
+) -> float | None:
+    """Helper to convert a single date value to a timestamp"""
+    if value is None:
+        return None
+    if value in na_values:
+        return None
+    result = datetime_to_timestamp(value, date_format)
+    try:
+        if np.isnan(result):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return result
 
 
 def fetch_timezone(date_string: str) -> Union[str, float]:
