@@ -532,21 +532,31 @@ def get_initial_table_name(table_name) -> str:
     return re.sub(r"_pk$|_fk$", "", table_name)
 
 
-def timing(func):
+def timing(func=None, log_message=None, log_level="TRACE"):
     """
     Decorator that logs the execution time of the function
     """
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        logger.trace(
-            f"Function '{func.__name__}' executed in "
-            f"{elapsed_time:.2f} seconds."
-        )
-        return result
-    return wrapper
+    def decorator(inner_func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            result = inner_func(*args, **kwargs)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            msg = log_message or (
+                f"Function '{inner_func.__name__}' executed in {elapsed_time:.2f} seconds."
+            )
+            log_method = getattr(logger, log_level.lower(), logger.trace)
+            log_method(msg)
+            return result
+
+        return wrapper
+
+    if func is not None and callable(func):
+        # Used as @timing
+        return decorator(func)
+    else:
+        # Used as @timing(...)
+        return decorator
 
 
 def get_reports(
