@@ -532,7 +532,7 @@ def get_initial_table_name(table_name) -> str:
     return re.sub(r"_pk$|_fk$", "", table_name)
 
 
-def timing(func=None, log_message=None, log_level="TRACE"):
+def timing(func=None, log_level="TRACE"):
     """
     Decorator that logs the execution time of the function
     """
@@ -542,11 +542,8 @@ def timing(func=None, log_message=None, log_level="TRACE"):
             result = inner_func(*args, **kwargs)
             end_time = time.time()
             elapsed_time = end_time - start_time
-            msg = log_message or (
-                f"Function '{inner_func.__name__}' executed in {elapsed_time:.2f} seconds."
-            )
             log_method = getattr(logger, log_level.lower(), logger.trace)
-            log_method(msg)
+            log_method(f"Function '{inner_func.__name__}' executed in {elapsed_time:.2f} seconds.")
             return result
 
         return wrapper
