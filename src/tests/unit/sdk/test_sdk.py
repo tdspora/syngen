@@ -1,8 +1,7 @@
-import shutil
 from unittest.mock import patch
-
 import pytest
 import os
+import shutil
 
 from marshmallow import ValidationError
 from cryptography.fernet import Fernet
@@ -300,11 +299,12 @@ def test_train_table_with_valid_epochs(
 
 
 @patch("syngen.train.setup_log_process")
-def test_train_table_with_invalid_epochs(rp_logger, caplog):
+def test_train_table_with_invalid_epochs(mock_setup_log, rp_logger, caplog):
     rp_logger.info("Launch the training process with the invalid 'epochs' parameter")
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(epochs=0)
+            mock_setup_log.assert_called_once()
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
@@ -352,13 +352,14 @@ def test_train_table_with_valid_drop_null(
 
 
 @patch("syngen.train.setup_log_process")
-def test_train_table_with_invalid_drop_null(rp_logger, caplog):
+def test_train_table_with_invalid_drop_null(mock_setup_log, rp_logger, caplog):
     rp_logger.info(
         "Launch the training process with the invalid 'drop_null' parameter equals 'test'"
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(drop_null="test")
+            mock_setup_log.assert_called_once()
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
@@ -399,13 +400,14 @@ def test_train_table_with_valid_row_limit(
 
 
 @patch("syngen.train.setup_log_process")
-def test_train_table_with_invalid_row_limit(rp_logger, caplog):
+def test_train_table_with_invalid_row_limit(mock_setup_log, rp_logger, caplog):
     rp_logger.info(
         "Launch the training process with the invalid 'row_limit' parameter equals 0"
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(row_limit=0)
+            mock_setup_log.assert_called_once()
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
@@ -494,6 +496,7 @@ def test_train_table_with_invalid_parameter_reports(mock_setup_log, invalid_valu
     )
     with pytest.raises(ValueError):
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(reports=invalid_value)
+        mock_setup_log.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -536,11 +539,12 @@ def test_train_table_with_valid_batch_size(
 
 
 @patch("syngen.train.setup_log_process")
-def test_train_table_with_invalid_batch_size(rp_logger, caplog):
+def test_train_table_with_invalid_batch_size(mock_setup_log, rp_logger, caplog):
     rp_logger.info("Launch the training process with the invalid 'batch_size' parameter equals 0")
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(batch_size=0)
+            mock_setup_log.assert_called_once()
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "train_settings": {\n'
@@ -582,7 +586,7 @@ def test_train_table_with_existing_fernet_key(
 
 
 @patch("syngen.train.setup_log_process")
-def test_train_table_with_nonexistent_fernet_key(rp_logger, caplog):
+def test_train_table_with_nonexistent_fernet_key(mock_setup_log, rp_logger, caplog):
     rp_logger.info(
         "Launch the training process with the 'fernet_key' parameter "
         "equals to the non-existent environment variable name"
@@ -593,6 +597,7 @@ def test_train_table_with_nonexistent_fernet_key(rp_logger, caplog):
                 table_name=TABLE_NAME,
                 source=PATH_TO_TABLE
             ).train(fernet_key="FERNET_KEY_NONEXISTENT")
+            mock_setup_log.assert_called_once()
             assert str(error.value) == (
                 "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
                 "Please, check whether it is set correctly."
@@ -635,6 +640,7 @@ def test_train_table_with_invalid_log_level(rp_logger):
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(log_level="test")
         assert str(error.value) == "ValueError: Level 'test' does not exist"
+    shutil.rmtree("model_artifacts/")
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -659,7 +665,7 @@ def test_infer_table_with_valid_size(
 
 
 @patch("syngen.infer.setup_log_process")
-def test_infer_table_with_invalid_size(rp_logger, caplog):
+def test_infer_table_with_invalid_size(mock_setup_log, rp_logger, caplog):
     rp_logger.info(
         "Launch the inference process with the invalid 'size' parameter equals 0"
     )
@@ -714,13 +720,14 @@ def test_infer_table_with_valid_run_parallel(
 
 
 @patch("syngen.infer.setup_log_process")
-def test_infer_table_with_invalid_run_parallel(rp_logger, caplog):
+def test_infer_table_with_invalid_run_parallel(mock_setup_log, rp_logger, caplog):
     rp_logger.info(
         "Launch infer process with the invalid 'run_parallel' parameter equals 'test'"
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(run_parallel="test")
+            mock_setup_log.assert_called_once()
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "infer_settings": {\n'
@@ -759,13 +766,14 @@ def test_infer_table_with_valid_batch_size(
 
 
 @patch("syngen.infer.setup_log_process")
-def test_infer_table_with_invalid_batch_size(rp_logger, caplog):
+def test_infer_table_with_invalid_batch_size(mock_setup_log, rp_logger, caplog):
     rp_logger.info(
         "Launch the inference process with the invalid 'batch_size' parameter equals 0"
     )
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR") as caplog:
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(batch_size=0)
+            mock_setup_log.assert_called_once()
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "infer_settings": {\n'
@@ -804,7 +812,7 @@ def test_infer_table_with_valid_random_seed(
 
 
 @patch("syngen.infer.setup_log_process")
-def test_infer_table_with_invalid_random_seed(rp_logger, caplog):
+def test_infer_table_with_invalid_random_seed(mock_setup_log, rp_logger, caplog):
     rp_logger.info(
         "Launch the inference process by using the function 'launch_infer' "
         "with the invalid 'random_seed' parameter equals -1"
@@ -812,6 +820,7 @@ def test_infer_table_with_invalid_random_seed(rp_logger, caplog):
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR") as caplog:
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(random_seed=-1)
+            mock_setup_log.assert_called_once()
             assert str(error.value) == (
                 'The error(s) found in - "test_table": {\n'
                 '    "infer_settings": {\n'
@@ -944,7 +953,7 @@ def test_infer_table_with_existing_fernet_key(
 
 
 @patch("syngen.infer.setup_log_process")
-def test_infer_table_with_non_existent_fernet_key(rp_logger):
+def test_infer_table_with_non_existent_fernet_key(mock_setup_log, rp_logger):
     rp_logger.info(
         "Launch the inference process with the 'fernet_key' parameter "
         "equals to the non-existent environment variable name"
@@ -953,6 +962,7 @@ def test_infer_table_with_non_existent_fernet_key(rp_logger):
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(
             fernet_key="FERNET_KEY_NONEXISTENT"
         )
+        mock_setup_log.assert_called_once()
         assert str(error.value) == (
             "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
             "Please, check whether it is set correctly."
@@ -964,7 +974,9 @@ def test_infer_table_with_non_existent_fernet_key(rp_logger):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.infer.setup_log_process")
 def test_infer_table_with_valid_log_level(
+    mock_setup_log,
     mock_post_init,
     mock_launch_infer,
     mock_set_execution_artifacts,
@@ -976,10 +988,10 @@ def test_infer_table_with_valid_log_level(
         f"with the valid 'log_level' parameter equals to '{valid_value}'"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(log_level=valid_value)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="infer")
-    shutil.rmtree("model_artifacts/")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -990,7 +1002,7 @@ def test_infer_table_with_invalid_log_level(rp_logger):
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(log_level="test")
         assert str(error.value) == "ValueError: Level 'test' does not exist"
-        shutil.rmtree("model_artifacts/")
+    shutil.rmtree("model_artifacts/")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
