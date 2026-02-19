@@ -224,9 +224,7 @@ def convert_date_to_timestamp(
     na_values: list
 ) -> float | None:
     """Helper to convert a single date value to a timestamp"""
-    if value is None:
-        return None
-    if value in na_values:
+    if value is None or value in na_values:
         return None
     result = datetime_to_timestamp(value, date_format)
     try:
