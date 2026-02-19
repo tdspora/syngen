@@ -218,14 +218,21 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     return set(names)
 
 
-def convert_to_timestamp(data: pd.Series, date_format: str, na_values: List[str]):
-    """
-    Convert the string values to timestamp
-    """
-    return [
-        datetime_to_timestamp(d, date_format)
-        if d not in na_values else np.NaN for d in data
-    ]
+def convert_date_to_timestamp(
+    value,
+    date_format: str,
+    na_values: list
+) -> float | None:
+    """Helper to convert a single date value to a timestamp"""
+    if value is None or value in na_values:
+        return None
+    result = datetime_to_timestamp(value, date_format)
+    try:
+        if np.isnan(result):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return result
 
 
 def fetch_timezone(date_string: str) -> Union[str, float]:
@@ -523,21 +530,28 @@ def get_initial_table_name(table_name) -> str:
     return re.sub(r"_pk$|_fk$", "", table_name)
 
 
-def timing(func):
+def timing(func=None, log_level="TRACE"):
     """
     Decorator that logs the execution time of the function
     """
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        logger.trace(
-            f"Function '{func.__name__}' executed in "
-            f"{elapsed_time:.2f} seconds."
-        )
-        return result
-    return wrapper
+    def decorator(inner_func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            result = inner_func(*args, **kwargs)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            log_method = getattr(logger, log_level.lower(), logger.trace)
+            log_method(f"Function '{inner_func.__name__}' executed in {elapsed_time:.2f} seconds.")
+            return result
+
+        return wrapper
+
+    if func is not None and callable(func):
+        # Used as @timing
+        return decorator(func)
+    else:
+        # Used as @timing(...)
+        return decorator
 
 
 def get_reports(

@@ -8,7 +8,7 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     get_nan_labels,
     trim_string,
     check_if_features_assigned,
-    convert_to_timestamp,
+    convert_date_to_timestamp,
     convert_to_date_string,
     fetch_config,
     save_config,
