@@ -112,9 +112,9 @@ class Reporter:
         return types
 
     @staticmethod
-    def convert_to_timestamp(data: pd.Series, date_format: str, na_values: List[str]):
+    def convert_dates_to_timestamps(data: pd.Series, date_format: str, na_values: List[str]):
         """
-        Convert the string values to timestamp
+        Convert the string values of dates to timestamps
         """
         return [
             convert_date_to_timestamp(d, date_format, na_values) for d in data
@@ -163,10 +163,10 @@ class Reporter:
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
         na_values = self.dataset.format.get("na_values", [])
         for date_col, date_format in self.dataset.date_mapping.items():
-            original[date_col] = self.convert_to_timestamp(
+            original[date_col] = self.convert_dates_to_timestamps(
                 original[date_col], date_format, na_values
             )
-            synthetic[date_col] = self.convert_to_timestamp(
+            synthetic[date_col] = self.convert_dates_to_timestamps(
                 synthetic[date_col], date_format, na_values
             )
 
