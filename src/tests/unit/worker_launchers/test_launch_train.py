@@ -1030,8 +1030,8 @@ def test_launch_train_table_with_invalid_log_level(rp_logger):
     with pytest.raises(ValueError) as error:
         launch_train(log_level="test", table_name=TABLE_NAME, source=PATH_TO_TABLE)
         assert str(error.value) == "ValueError: Level 'test' does not exist"
-        shutil.rmtree("model_artifacts/")
 
+    shutil.rmtree("model_artifacts/")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1054,9 +1054,10 @@ def test_launch_train_table_with_loader(
 
 
 @patch.object(Worker, "launch_train")
+@patch.object(Worker, "_clean_up")
 @patch("syngen.train.setup_log_process")
 def test_launch_train_table_with_not_callable_loader(
-    mock_setup_log, mock_launch_train, caplog, rp_logger
+    mock_setup_log, mock_clean_up, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch the training process by using the function 'launch_train' "
@@ -1067,13 +1068,8 @@ def test_launch_train_table_with_not_callable_loader(
         "Please, provide a valid callback function."
     )
     with pytest.raises(UtilsValidationError) as error:
-        with caplog.at_level("ERROR"):
-            launch_train(loader="not_callable", table_name="table")
-            mock_setup_log.assert_called_once()
-            assert error_message in str(error.value)
-            assert error_message in caplog.text
-
-        mock_launch_train.assert_not_called()
+        launch_train(loader="not_callable", table_name="table")
+        assert error_message in str(error.value)
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1091,30 +1087,28 @@ def test_launch_train_table_with_not_callable_loader(
     )
 ])
 @patch.object(Worker, "launch_train")
+@patch.object(Worker, "_clean_up")
 @patch("syngen.train.setup_log_process")
 def test_launch_train_table_with_loader_with_wrong_signature(
-    mock_setup_log, mock_launch_train, loader, error_message, caplog, rp_logger
+    mock_setup_log, mock_clean_up, mock_launch_train, loader, error_message, rp_logger
 ):
     rp_logger.info(
         "Launch the training process by using the function 'launch_train' "
         "with the provided 'loader' parameter containing a function with wrong signature"
     )
     with pytest.raises(UtilsValidationError) as error:
-        with caplog.at_level("ERROR"):
-            launch_train(loader=loader, table_name="table")
-            mock_setup_log.assert_called_once()
-        assert error_message in str(error.value)
-        assert error_message in caplog.text
-
+        launch_train(loader=loader, table_name="table")
         mock_launch_train.assert_not_called()
+        assert error_message in str(error.value)
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "launch_train")
+@patch.object(Worker, "_clean_up")
 @patch("syngen.train.setup_log_process")
 def test_launch_train_table_with_loader_with_wrong_return_value(
-    mock_setup_log, mock_launch_train, caplog, rp_logger
+    mock_setup_log, mock_clean_up, mock_launch_train, rp_logger
 ):
     rp_logger.info(
         "Launch the training process by using the function 'launch_train' "
@@ -1122,11 +1116,8 @@ def test_launch_train_table_with_loader_with_wrong_return_value(
     )
     error_message = "The provided loader raised an exception when called"
     with pytest.raises(UtilsValidationError) as error:
-        with caplog.at_level("ERROR"):
-            launch_train(loader=lambda table_name: Mock(), table_name="table")
-            mock_setup_log.assert_called_once()
-        assert error_message in str(error.value)
-        assert error_message in caplog.text
-
+        launch_train(loader=lambda table_name: Mock(), table_name="table")
         mock_launch_train.assert_not_called()
+        assert error_message in str(error.value)
+
     rp_logger.info(SUCCESSFUL_MESSAGE)
