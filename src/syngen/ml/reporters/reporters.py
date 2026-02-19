@@ -6,12 +6,11 @@ import os
 import json
 
 import pandas as pd
-import numpy as np
 from loguru import logger
 
 from syngen.ml.utils import (
     nan_labels_to_float,
-    datetime_to_timestamp,
+    convert_date_to_timestamp,
     fetch_config
 )
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
@@ -118,8 +117,7 @@ class Reporter:
         Convert the string values to timestamp
         """
         return [
-            datetime_to_timestamp(d, date_format)
-            if d not in na_values else np.NaN for d in data
+            convert_date_to_timestamp(d, date_format, na_values) for d in data
         ]
 
     def preprocess_data(self, original: pd.DataFrame, synthetic: pd.DataFrame):
