@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import json
 from collections import defaultdict
 import inspect
+from pathlib import Path
 
 import pandas as pd
 from cryptography.fernet import InvalidToken
@@ -51,6 +52,15 @@ class Validator:
                     "parent_table": key_data["references"]["table"],
                     "parent_columns": key_data["references"]["columns"],
                 }
+
+    def _get_source_path_extension(self, table_name: str) -> str:
+        """
+        Get the extension of the source by its path
+        """
+        source = (
+            self.merged_metadata[table_name].get("train_settings", {}).get("source")
+        )
+        return Path(source).suffix if source is not None else ".csv"
 
     def _check_conditions(self, metadata: Dict) -> bool:
         """
@@ -137,10 +147,11 @@ class Validator:
         destination = (
             self.merged_metadata[parent_table].get("infer_settings", {}).get("destination")
         )
+        source_extension = self._get_source_path_extension(parent_table)
         if destination is None:
             destination = (
                 f"model_artifacts/tmp_store/{slugify(parent_table)}/"
-                f"merged_infer_{slugify(parent_table)}.csv"
+                f"merged_infer_{slugify(parent_table)}{source_extension}"
             )
         if not DataLoader(path=destination).has_existed_path:
             message = (
@@ -223,12 +234,13 @@ class Validator:
         Check if the destination of the certain table exists
         """
         destination = self.merged_metadata[table_name].get("infer_settings", {}).get("destination")
+        source_extension = self._get_source_path_extension(table_name)
         if destination is None:
             logger.warning(
                 f"As the destination path wasn't specified for the table - "
                 f"'{table_name}', the synthetic data will be stored "
                 f"at the default path - './model_artifacts/tmp_store/{slugify(table_name)}/"
-                f"merged_infer_{slugify(table_name)}.csv'"
+                f"merged_infer_{slugify(table_name)}{source_extension}'"
             )
         if destination is not None and not DataLoader(path=destination).has_existed_destination:
             message = (

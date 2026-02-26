@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Any, Callable, Literal, Tuple
 import os
 import shutil
 from itertools import product
+from pathlib import Path
 
 import pandas as pd
 from attrs import define, field
@@ -61,31 +62,32 @@ class Worker:
             if table == "global":
                 continue
 
-            slugified_table = slugify(table)
-
             if self.type_of_process == "train":
-                self._clean_training_artifacts(slugified_table)
+                self._clean_training_artifacts(table)
             elif self.type_of_process == "infer":
-                self._clean_inference_artifacts(slugified_table)
+                self._clean_inference_artifacts(table)
 
-    def _clean_training_artifacts(self, table):
+    def _clean_training_artifacts(self, table: str):
         """
         Remove existing artifacts related to the previous training process
         and prepare directories
         """
-        resources_path = f"model_artifacts/resources/{table}/"
+        resources_path = f"model_artifacts/resources/{slugify(table)}/"
 
         self._remove_existed_artifact(resources_path)
-        self._prepare_dirs(table)
+        self._prepare_dirs(slugify(table))
 
-    def _clean_inference_artifacts(self, table):
+    def _clean_inference_artifacts(self, table: str):
         """
         Remove existing artifacts related to the previous inference process
         """
+        source = self.metadata[table].get("train_settings", {}).get("source")
+        source_extension = Path(source).suffix if source is not None else ".csv"
         default_path_to_merged_infer = (
-            f"model_artifacts/tmp_store/{table}/merged_infer_{table}.csv"
+            f"model_artifacts/tmp_store/{slugify(table)}/"
+            f"merged_infer_{slugify(table)}{source_extension}"
         )
-        success_file_path = f"model_artifacts/tmp_store/{table}/infer_message.success"
+        success_file_path = f"model_artifacts/tmp_store/{slugify(table)}/infer_message.success"
 
         self._remove_existed_artifact(default_path_to_merged_infer)
         self._remove_existed_artifact(success_file_path)

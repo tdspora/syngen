@@ -5,6 +5,7 @@ import math
 from ulid import ULID
 from uuid import UUID
 from copy import deepcopy
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -391,12 +392,14 @@ class VaeInferHandler(BaseHandler):
         destination_to_pk_table = None
         if self.type_of_process == "infer":
             infer_settings = self.metadata[pk_table].get("infer_settings", {})
+            source = self.metadata[pk_table].get("train_settings", {}).get("source")
+            source_extension = Path(source).suffix if source is not None else ".csv"
             destination_to_pk_table = infer_settings.get("destination")
 
             if destination_to_pk_table is None:
                 destination_to_pk_table = (
                     f"model_artifacts/tmp_store/{slugify(pk_table)}/"
-                    f"merged_infer_{slugify(pk_table)}.csv"
+                    f"merged_infer_{slugify(pk_table)}{source_extension}"
                 )
         initial_table_name = get_initial_table_name(table_name)
         if self.type_of_process == "train":

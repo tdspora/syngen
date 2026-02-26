@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Dict, List, Callable, Literal
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 from slugify import slugify
@@ -64,6 +65,7 @@ class TrainConfig:
         """
         timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
         fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
+        source_extension = Path(self.source).suffix if self.source is not None else ".csv"
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -92,7 +94,7 @@ class TrainConfig:
                 f"/initial_order_of_columns_{self.slugify_table_name}.pkl"
             ),
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                                    f"merged_infer_{self.slugify_table_name}.csv",
+                                    f"merged_infer_{self.slugify_table_name}{source_extension}",
             "no_ml_state_path":
                 f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
             "path_to_flatten_metadata":
@@ -185,6 +187,11 @@ class InferConfig:
             self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         )
         self.paths = {
+            "train_config_pickle_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl"
+        }
+        source_extension = Path(self.train_config.paths["path_to_merged_infer"]).suffix
+        self.paths.update({
             "reports_path": (
                 f"model_artifacts/"
                 f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
@@ -195,12 +202,12 @@ class InferConfig:
             "infer_config_pickle_path":
                 f"model_artifacts/tmp_store/{dynamic_name}/infer_config.pkl",
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
-                                            f"merged_infer_{dynamic_name}.csv",
+                                            f"merged_infer_{dynamic_name}{source_extension}",
             "path_to_merged_infer": (
                 self.destination
                 if self.destination is not None
                 else f"model_artifacts/tmp_store/{dynamic_name}/"
-                     f"merged_infer_{dynamic_name}.csv"
+                     f"merged_infer_{dynamic_name}{source_extension}"
             ),
             "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
@@ -212,6 +219,6 @@ class InferConfig:
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
             "path_to_no_ml":
                 f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl"
-        }
+        })
 
         self._set_paths()

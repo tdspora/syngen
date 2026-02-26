@@ -4,6 +4,7 @@ from datetime import datetime
 from queue import Queue
 import sys
 import traceback
+from pathlib import Path
 
 from loguru import logger
 from slugify import slugify
@@ -41,8 +42,9 @@ class StreamlitHandler:
         self.progress_handler = ProgressBarHandler()
         self.log_queue = Queue()
         self.log_error_queue = Queue()
+        extension = Path(self.file_name).suffix
         self.path_to_generated_data = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
-                                       f"merged_infer_{self.sl_table_name}.csv")
+                                       f"merged_infer_{self.sl_table_name}{extension}")
         self.path_to_report = (f"model_artifacts/tmp_store/{self.sl_table_name}/"
                                f"reports/accuracy_report.html")
         self.train_settings = {

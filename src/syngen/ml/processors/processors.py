@@ -4,6 +4,7 @@ from typing import List, Tuple, Dict, Any, Optional, Callable, Union, Literal
 import json
 from json import JSONDecodeError
 from slugify import slugify
+from pathlib import Path
 
 from loguru import logger
 import pandas as pd
@@ -474,9 +475,14 @@ class PostprocessHandler(Processor):
         and save the processed data to the predefined path
         """
         for table in self.metadata.keys():
+            extension = Path(
+                fetch_config(
+                    f"model_artifacts/resources/{slugify(table)}/vae/checkpoints/train_config.pkl"
+                ).paths["path_to_merged_infer"]
+            ).suffix
             default_path_to_generated_data = (
                 f"model_artifacts/tmp_store/{slugify(table)}/"
-                f"merged_infer_{slugify(table)}.csv"
+                f"merged_infer_{slugify(table)}{extension}"
             )
             path_to_generated_data = (
                 self.metadata[table].get("infer_settings", {}).get(
