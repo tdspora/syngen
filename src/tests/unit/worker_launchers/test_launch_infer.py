@@ -809,16 +809,16 @@ def test_cli_launch_infer_table_with_invalid_log_level(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-# def test_launch_infer_table_with_invalid_log_level(rp_logger):
-#     rp_logger.info(
-#         "Launch the inference process by using the function 'launch_infer' "
-#         "with the invalid 'log_level' parameter equals 'test'"
-#     )
-#     with pytest.raises(ValueError) as error:
-#         launch_infer(log_level="test", table_name=TABLE_NAME)
-#         assert str(error.value) == "ValueError: Level 'test' does not exist"
-#
-#     rp_logger.info(SUCCESSFUL_MESSAGE)
+def test_launch_infer_table_with_invalid_log_level(rp_logger):
+    rp_logger.info(
+        "Launch the inference process by using the function 'launch_infer' "
+        "with the invalid 'log_level' parameter equals 'test'"
+    )
+    with pytest.raises(ValueError) as error:
+        launch_infer(log_level="test", table_name=TABLE_NAME)
+        assert str(error.value) == "ValueError: Level 'test' does not exist"
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(Worker, "launch_infer")
