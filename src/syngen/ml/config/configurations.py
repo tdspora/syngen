@@ -1,12 +1,16 @@
 from dataclasses import dataclass, field
 from typing import Optional, Dict, List, Callable, Literal
 from datetime import datetime
-from pathlib import Path
 
 import pandas as pd
 from slugify import slugify
 
-from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
+from syngen.ml.utils import (
+    slugify_attribute,
+    fetch_unique_root,
+    fetch_config,
+    get_source_path_extension
+)
 
 
 @dataclass
@@ -65,7 +69,7 @@ class TrainConfig:
         """
         timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
         fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
-        source_extension = Path(self.source).suffix if self.source is not None else ".csv"
+        source_extension = get_source_path_extension(path=self.source)
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -190,7 +194,9 @@ class InferConfig:
             "train_config_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl"
         }
-        source_extension = Path(self.train_config.paths["path_to_merged_infer"]).suffix
+        source_extension = get_source_path_extension(
+            path=self.train_config.paths["path_to_merged_infer"]
+        )
         self.paths.update({
             "reports_path": (
                 f"model_artifacts/"

@@ -2,7 +2,6 @@ from typing import Dict, List, Optional, Any, Callable, Literal, Tuple
 import os
 import shutil
 from itertools import product
-from pathlib import Path
 
 import pandas as pd
 from attrs import define, field
@@ -16,7 +15,7 @@ from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
-from syngen.ml.utils import ProgressBarHandler
+from syngen.ml.utils import ProgressBarHandler, get_source_path_extension
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 from syngen.ml.validation_schema import ValidationSchema
@@ -81,8 +80,7 @@ class Worker:
         """
         Remove existing artifacts related to the previous inference process
         """
-        source = self.metadata[table].get("train_settings", {}).get("source")
-        source_extension = Path(source).suffix if source is not None else ".csv"
+        source_extension = get_source_path_extension(table_name=table, metadata=self.metadata)
         default_path_to_merged_infer = (
             f"model_artifacts/tmp_store/{slugify(table)}/"
             f"merged_infer_{slugify(table)}{source_extension}"

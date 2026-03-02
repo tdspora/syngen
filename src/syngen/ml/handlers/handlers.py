@@ -5,7 +5,6 @@ import math
 from ulid import ULID
 from uuid import UUID
 from copy import deepcopy
-from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -27,7 +26,8 @@ from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
     get_initial_table_name,
-    ProgressBarHandler
+    ProgressBarHandler,
+    get_source_path_extension
 )
 from syngen.ml.context import get_context
 
@@ -392,8 +392,10 @@ class VaeInferHandler(BaseHandler):
         destination_to_pk_table = None
         if self.type_of_process == "infer":
             infer_settings = self.metadata[pk_table].get("infer_settings", {})
-            source = self.metadata[pk_table].get("train_settings", {}).get("source")
-            source_extension = Path(source).suffix if source is not None else ".csv"
+            source_extension = get_source_path_extension(
+                table_name=pk_table,
+                metadata=self.metadata
+            )
             destination_to_pk_table = infer_settings.get("destination")
 
             if destination_to_pk_table is None:
