@@ -15,7 +15,7 @@ from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
-from syngen.ml.utils import ProgressBarHandler
+from syngen.ml.utils import ProgressBarHandler, get_source_path_extension
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 from syngen.ml.validation_schema import ValidationSchema
@@ -61,31 +61,31 @@ class Worker:
             if table == "global":
                 continue
 
-            slugified_table = slugify(table)
-
             if self.type_of_process == "train":
-                self._clean_training_artifacts(slugified_table)
+                self._clean_training_artifacts(table)
             elif self.type_of_process == "infer":
-                self._clean_inference_artifacts(slugified_table)
+                self._clean_inference_artifacts(table)
 
-    def _clean_training_artifacts(self, table):
+    def _clean_training_artifacts(self, table: str):
         """
         Remove existing artifacts related to the previous training process
         and prepare directories
         """
-        resources_path = f"model_artifacts/resources/{table}/"
+        resources_path = f"model_artifacts/resources/{slugify(table)}/"
 
         self._remove_existed_artifact(resources_path)
-        self._prepare_dirs(table)
+        self._prepare_dirs(slugify(table))
 
-    def _clean_inference_artifacts(self, table):
+    def _clean_inference_artifacts(self, table: str):
         """
         Remove existing artifacts related to the previous inference process
         """
+        source_extension = get_source_path_extension(table_name=table, metadata=self.metadata)
         default_path_to_merged_infer = (
-            f"model_artifacts/tmp_store/{table}/merged_infer_{table}.csv"
+            f"model_artifacts/tmp_store/{slugify(table)}/"
+            f"merged_infer_{slugify(table)}{source_extension}"
         )
-        success_file_path = f"model_artifacts/tmp_store/{table}/infer_message.success"
+        success_file_path = f"model_artifacts/tmp_store/{slugify(table)}/infer_message.success"
 
         self._remove_existed_artifact(default_path_to_merged_infer)
         self._remove_existed_artifact(success_file_path)

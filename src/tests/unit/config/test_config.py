@@ -61,7 +61,47 @@ def test_init_train_config(input_batch_size, expected_batch_size, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@patch.object(InferConfig, "_set_paths", return_value=None)
+@pytest.mark.parametrize("path_to_source, expected_extension", [
+    (f"{DIR_NAME}/unit/config/fixtures/data_types_detection_set.csv", ".csv"),
+    (f"{DIR_NAME}/unit/config/fixtures/table_with_diff_data_types.avro", ".avro")
+])
+def test_set_path_to_merged_infer_in_train_config(path_to_source, expected_extension, rp_logger):
+    rp_logger.info(
+        "Test the process of initialization of the instance of the class TrainConfig, "
+        "expecting the correct file extension in the path - 'path_to_merged_infer'"
+    )
+    table_name = "test_table"
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": path_to_source,
+            },
+            "infer_settings": {},
+            "encryption": {"fernet_key": None},
+            "keys": {},
+            "format": {}
+        }
+    }
+    df, _ = DataLoader(path=path_to_source).load_data()
+    train_config = TrainConfig(
+        data=df,
+        schema={"fields": {}, "format": "CSV"},
+        source=path_to_source,
+        epochs=10,
+        drop_null=False,
+        row_limit=None,
+        table_name=table_name,
+        metadata=metadata,
+        metadata_path=None,
+        reports=["accuracy", "sample"],
+        batch_size=32,
+        loader=None
+    )
+    assert train_config.paths["path_to_merged_infer"].endswith(expected_extension)
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_init_infer_config(rp_logger):
     rp_logger.info(
         "Test the process of initialization of the instance of the class InferConfig"
@@ -77,22 +117,29 @@ def test_init_infer_config(rp_logger):
             }
         }
     }
-
-    infer_config = InferConfig(
-        destination="path/to/destination.csv",
-        metadata=metadata,
-        metadata_path="path/to/metadata.yaml",
-        size=100,
-        table_name=table_name,
-        run_parallel=False,
-        batch_size=100,
-        random_seed=None,
-        reports=["accuracy"],
-        both_keys=True,
-        log_level="DEBUG",
-        type_of_process="train",
-        loader=None
-    )
+    with patch.object(
+        InferConfig,
+        "train_config",
+        return_value={
+            "path_to_merged_infer": "path/to/nonexistent/path_to_merged_infer.csv",
+            "input_data_path": "path/to/nonexistent/input_data.pkl"
+        }
+    ):
+        infer_config = InferConfig(
+            destination="path/to/destination.csv",
+            metadata=metadata,
+            metadata_path="path/to/metadata.yaml",
+            size=100,
+            table_name=table_name,
+            run_parallel=False,
+            batch_size=100,
+            random_seed=None,
+            reports=["accuracy"],
+            both_keys=False,
+            log_level="DEBUG",
+            type_of_process="train",
+            loader=None
+        )
 
     assert infer_config.reports == ["accuracy"]
 
@@ -101,7 +148,6 @@ def test_init_infer_config(rp_logger):
         "run_parallel", "batch_size", "random_seed", "reports", "both_keys",
         "log_level", "type_of_process", "slugify_table_name", "paths"
     }
-
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -109,9 +155,13 @@ def test_init_infer_config(rp_logger):
     (None, 100, 100),
     (100, 1000, 100)
 ])
-@patch(
-    "syngen.ml.config.configurations.fetch_config",
-    return_value=MagicMock(paths={"input_data_path": "path/to/nonexistent/input_data.pkl"})
+@patch.object(
+    InferConfig,
+    "train_config",
+    return_value=MagicMock(paths={
+        "input_data_path": "path/to/nonexistent/input_data.pkl",
+        "path_to_merged_infer": "path/to/nonexistent/path_to_merged_infer.csv"
+    })
 )
 def test_set_up_batch_size(mock_fetch_config, batch_size, size, expected_result, rp_logger):
     rp_logger.info(

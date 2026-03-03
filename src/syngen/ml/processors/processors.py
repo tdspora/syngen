@@ -11,7 +11,7 @@ import numpy as np
 from syngen.ml.flatten_json import unflatten_list, safe_flatten
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import fetch_unique_root, fetch_config
+from syngen.ml.utils import fetch_unique_root, fetch_config, get_source_path_extension
 from syngen.ml.context import get_context
 
 
@@ -474,9 +474,13 @@ class PostprocessHandler(Processor):
         and save the processed data to the predefined path
         """
         for table in self.metadata.keys():
+            path_to_merged_infer = fetch_config(
+                f"model_artifacts/resources/{slugify(table)}/vae/checkpoints/train_config.pkl"
+            ).paths["path_to_merged_infer"]
+            extension = get_source_path_extension(path=path_to_merged_infer)
             default_path_to_generated_data = (
                 f"model_artifacts/tmp_store/{slugify(table)}/"
-                f"merged_infer_{slugify(table)}.csv"
+                f"merged_infer_{slugify(table)}{extension}"
             )
             path_to_generated_data = (
                 self.metadata[table].get("infer_settings", {}).get(

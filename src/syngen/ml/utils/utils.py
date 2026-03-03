@@ -5,6 +5,7 @@ from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
 from datetime import datetime, timedelta
 import time
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -602,3 +603,20 @@ class ValidationError(Exception):
     ):
         super().__init__(message)
         self.message = message
+
+
+def get_source_path_extension(
+    table_name: Optional[str] = None,
+    metadata: Dict = dict(),
+    path: Optional[str] = None
+) -> str:
+    """
+    Get the extension of the source
+    """
+    if table_name:
+        source = (
+            metadata.get(table_name, {}).get("train_settings", {}).get("source")
+        )
+    else:
+        source = path
+    return Path(source).suffix if source is not None else ".csv"
