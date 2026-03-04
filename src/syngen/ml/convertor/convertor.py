@@ -29,24 +29,35 @@ class Convertor:
         """
         Update data types related to the fetched schema
         """
+        type_map = {
+            "binary": "string",
+            "date": "string",
+            "string": "string",
+            "double": "float64",
+            "float": "float64",
+            "decimal": "float64"
+        }
+
         for column, data_type in schema.get("fields", {}).items():
-            if data_type in ["binary", "date", "string"]:
-                df[column] = df[column].astype("string")
-            elif data_type in ["int", "bool"]:
-                if any(df[column].isnull()):
-                    df[column] = df[column].astype("float64")
-                else:
-                    df[column] = df[column].astype("int64")
-            elif data_type in ["double", "float", "decimal"]:
-                df[column] = df[column].astype("float64")
-            elif data_type == "null":
+            if column not in df.columns:
+                continue
+
+            if data_type == "null":
                 if df[column].isnull().all():
                     continue
                 else:
                     raise ValueError(
                         f"It seems that the data type - '{data_type}' "
-                        f"isn\'t correct for the column - '{column}' as it's not empty"
+                        f"isn't correct for the column - '{column}' as it's not empty"
                     )
+
+            if data_type in type_map:
+                df[column] = df[column].astype(type_map[data_type])
+            elif data_type in ["int", "bool"]:
+                if df[column].isnull().any():
+                    df[column] = df[column].astype("float64")
+                else:
+                    df[column] = df[column].astype("int64")
 
         if not schema.get("fields"):
             for column in df.columns:
