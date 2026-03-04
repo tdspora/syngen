@@ -11,7 +11,8 @@ from syngen.ml.utils import (
     fetch_timezone,
     convert_date_to_timestamp,
     convert_to_date_string,
-    fetch_env_variables
+    fetch_env_variables,
+    get_source_path_extension
 )
 
 from tests.conftest import SUCCESSFUL_MESSAGE
@@ -236,4 +237,70 @@ def test_fetch_env_variables_if_all_env_variables_dont_exist(rp_logger):
             "The value of the environment variable 'TEST_ENV_VAR2' wasn't fetched. "
             "Please, check whether it is set correctly."
         ) in str(error.value)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "path, expected",
+    [
+        ("path/to/file.csv", ".csv"),
+        ("path/to/file.avro", ".avro"),
+        ("path/to/file.xls", ".xls"),
+        ("path/to/file.xlsx", ".xlsx"),
+        ("no_extension", ""),
+    ],
+)
+def test_get_source_path_extension_with_various_path(path, expected, rp_logger):
+    """
+    The helper should return the appropriate file extension(s) from the given path,
+    or an empty string if no extension is present.
+    """
+    rp_logger.info(
+        "Test the function 'get_source_path_extension' with various path formats "
+        "to ensure it correctly identifies the file extension(s)."
+    )
+    assert get_source_path_extension(path=path) == expected
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "path, expected",
+    [
+        ("path/to/file.csv", ".csv"),
+        ("path/to/file.avro", ".avro"),
+        ("path/to/file.xls", ".xls"),
+        ("path/to/file.xlsx", ".xlsx"),
+        (None, ".csv")
+    ],
+)
+def test_get_source_path_extension_with_metadata(path, expected, rp_logger):
+    """
+    The helper should return the appropriate file extension(s)
+    from the 'source' field in the metadata of the certain table
+    """
+    rp_logger.info(
+        "Test the function 'get_source_path_extension' with the provided metadata "
+        "to ensure it correctly identifies the file extension(s) from the 'source' field."
+    )
+    test_metadata = {
+        "pk_test": {
+            "train_settings": {
+                "source": path,
+                "drop_null": False,
+                "epochs": 1,
+                "reports": [],
+                "row_limit": 800,
+            },
+            "infer_settings": {
+                "reports": ["accuracy"],
+                "random_seed": 1,
+                "run_parallel": False,
+                "size": 100,
+            },
+            "keys": {"pk_id": {"columns": ["Id"], "type": "PK"}},
+            "format": {},
+            "encryption": {}
+        },
+    }
+    assert get_source_path_extension(table_name="pk_test", metadata=test_metadata) == expected
     rp_logger.info(SUCCESSFUL_MESSAGE)

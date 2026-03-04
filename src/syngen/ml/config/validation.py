@@ -12,7 +12,7 @@ from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader, DataEncryptor, DataFrameFetcher
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
-from syngen.ml.utils import ValidationError, fetch_config
+from syngen.ml.utils import ValidationError, fetch_config, get_source_path_extension
 
 
 @dataclass
@@ -137,10 +137,14 @@ class Validator:
         destination = (
             self.merged_metadata[parent_table].get("infer_settings", {}).get("destination")
         )
+        source_extension = get_source_path_extension(
+            table_name=parent_table,
+            metadata=self.merged_metadata
+        )
         if destination is None:
             destination = (
                 f"model_artifacts/tmp_store/{slugify(parent_table)}/"
-                f"merged_infer_{slugify(parent_table)}.csv"
+                f"merged_infer_{slugify(parent_table)}{source_extension}"
             )
         if not DataLoader(path=destination).has_existed_path:
             message = (
@@ -223,12 +227,16 @@ class Validator:
         Check if the destination of the certain table exists
         """
         destination = self.merged_metadata[table_name].get("infer_settings", {}).get("destination")
+        source_extension = get_source_path_extension(
+            table_name=table_name,
+            metadata=self.merged_metadata
+        )
         if destination is None:
             logger.warning(
                 f"As the destination path wasn't specified for the table - "
                 f"'{table_name}', the synthetic data will be stored "
                 f"at the default path - './model_artifacts/tmp_store/{slugify(table_name)}/"
-                f"merged_infer_{slugify(table_name)}.csv'"
+                f"merged_infer_{slugify(table_name)}{source_extension}'"
             )
         if destination is not None and not DataLoader(path=destination).has_existed_destination:
             message = (

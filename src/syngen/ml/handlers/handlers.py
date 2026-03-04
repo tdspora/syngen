@@ -26,7 +26,8 @@ from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
     get_initial_table_name,
-    ProgressBarHandler
+    ProgressBarHandler,
+    get_source_path_extension
 )
 from syngen.ml.context import get_context
 
@@ -391,12 +392,16 @@ class VaeInferHandler(BaseHandler):
         destination_to_pk_table = None
         if self.type_of_process == "infer":
             infer_settings = self.metadata[pk_table].get("infer_settings", {})
+            source_extension = get_source_path_extension(
+                table_name=pk_table,
+                metadata=self.metadata
+            )
             destination_to_pk_table = infer_settings.get("destination")
 
             if destination_to_pk_table is None:
                 destination_to_pk_table = (
                     f"model_artifacts/tmp_store/{slugify(pk_table)}/"
-                    f"merged_infer_{slugify(pk_table)}.csv"
+                    f"merged_infer_{slugify(pk_table)}{source_extension}"
                 )
         initial_table_name = get_initial_table_name(table_name)
         if self.type_of_process == "train":

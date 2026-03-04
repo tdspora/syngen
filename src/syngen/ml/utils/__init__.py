@@ -30,5 +30,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     timing,
     ValidationError,
     TIMEZONE_REGEX,
-    fetch_env_variables
+    fetch_env_variables,
+    get_source_path_extension
 )
