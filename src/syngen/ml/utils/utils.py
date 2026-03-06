@@ -17,8 +17,8 @@ import random
 from loguru import logger
 
 
-MAX_ALLOWED_TIME_MS = 253402214400
-MIN_ALLOWED_TIME_MS = -62135596800
+MAX_ALLOWED_TIME_MS = 253402300799   # datetime(9999, 12, 31, 23, 59, 59, 999999).timestamp()
+MIN_ALLOWED_TIME_MS = -62135510400   # datetime(1, 1, 2, 0, 0, 0, 0).timestamp()
 
 # IANA timezone names - "2023-07-02T10:18:44.000000 America/New_York"
 # Zulu time (UTC) represented by 'Z' - "2023-07-02T10:18:44Z"
@@ -126,9 +126,9 @@ def datetime_to_timestamp(dt, date_format):
     except parser._parser.ParserError as e:
         year = re.match(r"\d+", e.args[0][5:]).group(0)
         if int(year) > 9999:
-            return MAX_ALLOWED_TIME_MS
+            return datetime.timestamp(datetime.max)
         elif int(year) < 1:
-            return MIN_ALLOWED_TIME_MS
+            return datetime.timestamp(datetime.min)
 
 
 def timestamp_to_datetime(timestamp: int, delta=False):
