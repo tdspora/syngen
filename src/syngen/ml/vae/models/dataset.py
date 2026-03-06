@@ -971,13 +971,13 @@ class Dataset:
 
         return date_format
 
-    def _set_date_format(self):
+    def _set_date_format(self, excluded_columns=set()):
         """
         Define the date format for each date column
         """
         self.date_mapping = {
             column: self.__define_date_format(column)
-            for column in self.date_columns
+            for column in self.date_columns if column not in excluded_columns
         }
 
     def _csv_data_pipeline(self):
@@ -1411,7 +1411,7 @@ class Dataset:
         """
         Assign date feature to date columns
         """
-        date_format = self.date_mapping.get(feature)
+        date_format = self.date_mapping.get(feature, str())
         if "%z" in date_format.lower():
             self._preprocess_dates_with_timezone(feature)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")

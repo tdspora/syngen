@@ -712,7 +712,7 @@ class DateFeature(BaseFeature):
         self.feature_type = "numeric"
 
     def fit(self, data, **kwargs):
-        self.date_format = kwargs["date_mapping"][self.original_name]
+        self.date_format = kwargs["date_mapping"].get(self.original_name)
         self.data = chain.from_iterable(data.values)
         self.data = pd.DataFrame(
             list(
