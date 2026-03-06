@@ -1,16 +1,15 @@
-import pandas as pd
 import pytest
 from unittest.mock import Mock
 from datetime import datetime, timedelta
-import numpy as np
 
+import numpy as np
 from syngen.ml.utils import (
     slugify_attribute,
     slugify_parameters,
     datetime_to_timestamp,
     timestamp_to_datetime,
     fetch_timezone,
-    convert_to_timestamp,
+    convert_date_to_timestamp,
     convert_to_date_string,
     fetch_env_variables,
     get_source_path_extension
@@ -68,7 +67,7 @@ def test_datetime_to_timestamp(rp_logger):
         ("2023-01-01 00:00:00.000000", 1672531200.0, "%Y-%m-%d"),
         ("2023-01-01 00:00:00.000000+00:00", 1672531200.0, "%Y-%m-%d"),
         ("9999-12-31", 253402214400.0, "%Y-%m-%d"),
-        ("10000-12-31", 253402214400.0, "%Y-%m-%d"),
+        ("10000-12-31", 253402300800, "%Y-%m-%d"),
         (np.nan, np.nan, "%Y-%m-%d"),
         ("31-11-28", 1953590400.0, "%Y-%m-%d")
     ]
@@ -87,7 +86,7 @@ def test_timestamp_to_datetime(rp_logger):
         (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0)),
         (0, datetime(1970, 1, 1, 0, 0)),
         (946684800, datetime(2000, 1, 1)),
-        (253402214400.0, datetime(9999, 12, 31, 23, 59, 59, 999999)),
+        (253402214400.0, datetime(9999, 12, 31, 0, 0)),
         (253402537600.0, datetime(9999, 12, 31, 23, 59, 59, 999999)),
         (np.nan, np.nan),
         (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0)),
@@ -121,24 +120,21 @@ def test_timestamp_to_datetime_with_delta(rp_logger):
 
 
 @pytest.mark.parametrize(
-    "date_column, date_format, na_values, expected_result", [
+    "value, date_format, na_values, expected_result", [
         (
-            pd.Series(["01-02-2023", "03-04-2023", "05-06-2023"]),
-            "%d-%m-%Y",
-            [],
-            [1675209600.0, 1680480000.0, 1685923200.0]
+            "01-02-2023", "%d-%m-%Y", [], 1675209600.0
         ),
         (
-            pd.Series(["01-02-2023", "03-04-2023", "05-06-2023", "label"]),
-            "%d-%m-%Y",
-            ["label"],
-            [1675209600.0, 1680480000.0, 1685923200.0, np.NaN]
+            "label", "%d-%m-%Y", ["label"], None
         ),
+        (
+            None, "%d-%m-%Y", [], None
+        )
     ]
 )
-def test_convert_to_timestamp(date_column, date_format, na_values, expected_result, rp_logger):
-    rp_logger.info("Test the function 'convert_to_timestamp'")
-    assert convert_to_timestamp(date_column, date_format, na_values) == expected_result
+def test_convert_date_to_timestamp(value, date_format, na_values, expected_result, rp_logger):
+    rp_logger.info("Test the function 'convert_date_to_timestamp'")
+    assert convert_date_to_timestamp(value, date_format, na_values) == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

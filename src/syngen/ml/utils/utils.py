@@ -17,8 +17,8 @@ import random
 from loguru import logger
 
 
-MAX_ALLOWED_TIME_MS = 253402214400
-MIN_ALLOWED_TIME_MS = -62135596800
+MAX_ALLOWED_TIME_MS = 253402300799   # datetime(9999, 12, 31, 23, 59, 59, 999999).timestamp()
+MIN_ALLOWED_TIME_MS = -62135510400   # datetime(1, 1, 2, 0, 0, 0, 0).timestamp()
 
 # IANA timezone names - "2023-07-02T10:18:44.000000 America/New_York"
 # Zulu time (UTC) represented by 'Z' - "2023-07-02T10:18:44Z"
@@ -126,9 +126,9 @@ def datetime_to_timestamp(dt, date_format):
     except parser._parser.ParserError as e:
         year = re.match(r"\d+", e.args[0][5:]).group(0)
         if int(year) > 9999:
-            return MAX_ALLOWED_TIME_MS
+            return datetime.timestamp(datetime.max)
         elif int(year) < 1:
-            return MIN_ALLOWED_TIME_MS
+            return datetime.timestamp(datetime.min)
 
 
 def timestamp_to_datetime(timestamp: int, delta=False):
@@ -219,14 +219,21 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     return set(names)
 
 
-def convert_to_timestamp(data: pd.Series, date_format: str, na_values: List[str]):
-    """
-    Convert the string values to timestamp
-    """
-    return [
-        datetime_to_timestamp(d, date_format)
-        if d not in na_values else np.NaN for d in data
-    ]
+def convert_date_to_timestamp(
+    value,
+    date_format: str,
+    na_values: list
+) -> float | None:
+    """Helper to convert a single date value to a timestamp"""
+    if value is None or value in na_values:
+        return None
+    result = datetime_to_timestamp(value, date_format)
+    try:
+        if np.isnan(result):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return result
 
 
 def fetch_timezone(date_string: str) -> Union[str, float]:
@@ -524,21 +531,28 @@ def get_initial_table_name(table_name) -> str:
     return re.sub(r"_pk$|_fk$", "", table_name)
 
 
-def timing(func):
+def timing(func=None, log_level="TRACE"):
     """
     Decorator that logs the execution time of the function
     """
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        logger.trace(
-            f"Function '{func.__name__}' executed in "
-            f"{elapsed_time:.2f} seconds."
-        )
-        return result
-    return wrapper
+    def decorator(inner_func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            result = inner_func(*args, **kwargs)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            log_method = getattr(logger, log_level.lower(), logger.trace)
+            log_method(f"Function '{inner_func.__name__}' executed in {elapsed_time:.2f} seconds.")
+            return result
+
+        return wrapper
+
+    if func is not None and callable(func):
+        # Used as @timing
+        return decorator(func)
+    else:
+        # Used as @timing(...)
+        return decorator
 
 
 def get_reports(
