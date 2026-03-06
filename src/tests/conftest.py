@@ -12,7 +12,7 @@ from cryptography.fernet import Fernet
 
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.data_loaders import DataEncryptor
-
+from syngen.sdk import DataIO
 
 SUCCESSFUL_MESSAGE = "The test passed successfully"
 os.environ["FERNET_KEY"] = "VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY="
@@ -235,5 +235,24 @@ def data_encryptor(tmp_path, valid_fernet_key):
 
 
 @pytest.fixture
+def dataio_data_encryptor(tmp_path):
+    return DataIO(path=str(tmp_path / "test.dat"), fernet_key="FERNET_KEY")
+
+
+@pytest.fixture
 def invalid_fernet_key():
     return "invalid_key"
+
+
+def get_dataframe(table_name: str) -> pd.DataFrame:
+    """
+    A mock function to simulate data loading.
+    Returns a simple DataFrame-like object based on the table name.
+    """
+    data = {
+        "table_a": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}],
+        "table_b": [{"id": 1, "department": "financial"}, {"id": 2, "department": "engineering"}],
+        "table": [{"id": 1, "value": 10}, {"id": 2, "value": 20}],
+        "test_table": [{"id": 1, "value": 30}, {"id": 2, "value": 40}]
+    }
+    return pd.DataFrame(data.get(table_name, []))

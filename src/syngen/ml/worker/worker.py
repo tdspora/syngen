@@ -15,7 +15,7 @@ from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
 from syngen.ml.context.context import global_context
-from syngen.ml.utils import ProgressBarHandler
+from syngen.ml.utils import ProgressBarHandler, get_source_path_extension
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 from syngen.ml.validation_schema import ValidationSchema
@@ -38,19 +38,15 @@ class Worker:
     divided: List = field(default=list())
     initial_table_names: List = field(default=list())
     merged_metadata: Dict = field(default=dict())
-    validation_source: bool = field(default=False)
+    row_subset_mapping: Dict[str, int] = field(default=dict())
     train_stages: List = ["PREPROCESS", "TRAIN", "POSTPROCESS"]
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
-        self.validation_source = (
-            False if self.loader and self.type_of_process == "train" else True
-        )
         os.makedirs("model_artifacts/metadata", exist_ok=True)
         self.metadata = self.__fetch_metadata()
-        # The validation of the initial metadata provided by the user
-        self.__validate_schema()
         self._update_metadata()
+        self.__validate_schema()
         self._clean_up()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
@@ -65,31 +61,31 @@ class Worker:
             if table == "global":
                 continue
 
-            slugified_table = slugify(table)
-
             if self.type_of_process == "train":
-                self._clean_training_artifacts(slugified_table)
+                self._clean_training_artifacts(table)
             elif self.type_of_process == "infer":
-                self._clean_inference_artifacts(slugified_table)
+                self._clean_inference_artifacts(table)
 
-    def _clean_training_artifacts(self, table):
+    def _clean_training_artifacts(self, table: str):
         """
         Remove existing artifacts related to the previous training process
         and prepare directories
         """
-        resources_path = f"model_artifacts/resources/{table}/"
+        resources_path = f"model_artifacts/resources/{slugify(table)}/"
 
         self._remove_existed_artifact(resources_path)
-        self._prepare_dirs(table)
+        self._prepare_dirs(slugify(table))
 
-    def _clean_inference_artifacts(self, table):
+    def _clean_inference_artifacts(self, table: str):
         """
         Remove existing artifacts related to the previous inference process
         """
+        source_extension = get_source_path_extension(table_name=table, metadata=self.metadata)
         default_path_to_merged_infer = (
-            f"model_artifacts/tmp_store/{table}/merged_infer_{table}.csv"
+            f"model_artifacts/tmp_store/{slugify(table)}/"
+            f"merged_infer_{slugify(table)}{source_extension}"
         )
-        success_file_path = f"model_artifacts/tmp_store/{table}/infer_message.success"
+        success_file_path = f"model_artifacts/tmp_store/{slugify(table)}/infer_message.success"
 
         self._remove_existed_artifact(default_path_to_merged_infer)
         self._remove_existed_artifact(success_file_path)
@@ -130,8 +126,7 @@ class Worker:
         """
         ValidationSchema(
             metadata=self.metadata,
-            metadata_path=self.metadata_path,
-            validation_source=self.validation_source,
+            validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
         ).validate_schema()
 
@@ -143,7 +138,7 @@ class Worker:
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             type_of_process=self.type_of_process,
-            validation_source=self.validation_source
+            loader=self.loader
         )
         validator.run()
         self.merged_metadata = validator.merged_metadata
@@ -152,12 +147,15 @@ class Worker:
         """
         Preprocess the data before a training process
         """
-        return PreprocessHandler(
+        handler = PreprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
             table_name=table_name,
             loader=self.loader
-        ).run()
+        )
+        data, schema = handler.run()
+        self.row_subset_mapping[table_name] = handler.row_subset
+        return data, schema
 
     def __postprocess_data(self):
         """
@@ -166,7 +164,8 @@ class Worker:
         PostprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
-            table_name=self.table_name
+            table_name=self.table_name,
+            type_of_process=self.type_of_process
         ).run()
 
     def _set_mlflow(self):
@@ -232,7 +231,7 @@ class Worker:
         if self.metadata_path:
             self._update_metadata_for_tables()
             self.metadata.pop("global", None)
-        if self.table_name:
+        elif self.table_name:
             self._update_metadata_for_table()
 
     def __fetch_metadata(self) -> Dict:
@@ -242,7 +241,7 @@ class Worker:
         if self.metadata_path:
             metadata = MetadataLoader(path=self.metadata_path).load_data()
             return metadata
-        if self.table_name:
+        elif self.table_name:
             source = self.settings.get("source")
             metadata = {
                 self.table_name: {
@@ -359,7 +358,7 @@ class Worker:
         return config
 
     @staticmethod
-    def _should_generate_data(
+    def _should_generate_synth_data(
         config_of_tables: Dict,
         type_of_process: str
     ):
@@ -394,7 +393,7 @@ class Worker:
         self,
         tables_for_training: List[str],
         tables_for_inference: List[str],
-        generation_of_reports: bool
+        generation_of_synth_data: bool
     ):
         """
         Collect the integral metrics for the training process
@@ -404,7 +403,7 @@ class Worker:
             tags={"process": "bottleneck"}
         )
         self._collect_integral_metrics(tables=tables_for_training, type_of_process="train")
-        if generation_of_reports:
+        if generation_of_synth_data:
             self._collect_integral_metrics(tables=tables_for_inference, type_of_process="infer")
         MlflowTracker().end_run()
 
@@ -454,7 +453,8 @@ class Worker:
             delta=delta,
             message=f"Training of the table - '{table}' was completed"
         )
-        self._save_input_data(data=data, table_name=table)
+        if self.loader is None:
+            self._save_input_data(data=data, table_name=table)
         self._write_success_file(table_name=table, type_of_process="train")
 
     def __train_tables(
@@ -463,7 +463,7 @@ class Worker:
         tables_for_inference: List,
         metadata_for_training: Dict,
         metadata_for_inference: Dict,
-        generation_of_reports: bool
+        generation_of_synth_data: bool
     ):
         """
         Run training process for the list of tables
@@ -478,13 +478,16 @@ class Worker:
             data, schema = self.__preprocess_data(table_name=table)
             self._train_table(data, schema, table, metadata_for_training, delta)
 
-        if generation_of_reports:
+        if generation_of_synth_data:
             self.__infer_tables(
                 tables_for_inference,
                 metadata_for_inference,
                 delta,
                 type_of_process="train"
             )
+        self._generate_reports()
+        if generation_of_synth_data:
+            self.__postprocess_data()
 
     def _get_surrogate_tables_mapping(self):
         """
@@ -531,7 +534,11 @@ class Worker:
             destination=settings.get("destination") if type_of_process == "infer" else None,
             metadata=metadata,
             metadata_path=self.metadata_path,
-            size=settings.get("size") if type_of_process == "infer" else None,
+            size=(
+                settings.get("size")
+                if type_of_process == "infer"
+                else self.row_subset_mapping[table]
+            ),
             table_name=table,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
             batch_size=settings.get("batch_size") if type_of_process == "infer" else 1000,
@@ -644,7 +651,7 @@ class Worker:
             metadata_for_inference,
         ) = metadata_for_inference
 
-        generation_of_reports = self._should_generate_data(
+        generation_of_synth_data = self._should_generate_synth_data(
             metadata_for_training,
             "train"
         )
@@ -654,20 +661,19 @@ class Worker:
             tables_for_inference,
             metadata_for_training,
             metadata_for_inference,
-            generation_of_reports
+            generation_of_synth_data
         )
-
-        self._generate_reports()
         self._collect_metrics_in_train(
             tables_for_training,
             tables_for_inference,
-            generation_of_reports
+            generation_of_synth_data
         )
 
-    def _collect_metrics_in_infer(self, tables):
+    def _collect_metrics_in_infer(self):
         """
         Collect the integral metrics for the inference process
         """
+        tables = list(self.metadata.keys())
         MlflowTracker().start_run(
             run_name="integral_metrics",
             tags={"process": "bottleneck"}
@@ -681,13 +687,13 @@ class Worker:
         """
         tables, config_of_tables = self._prepare_metadata_for_process(type_of_process="infer")
 
-        generation_of_reports = self._should_generate_data(
+        generation_of_synth_data = self._should_generate_synth_data(
             config_of_tables,
             "infer"
         )
-        delta = 0.25 / len(tables) if generation_of_reports else 0.5 / len(tables)
+        delta = 0.25 / len(tables) if generation_of_synth_data else 0.5 / len(tables)
 
         self.__infer_tables(tables, config_of_tables, delta, type_of_process="infer")
         self._generate_reports()
         self.__postprocess_data()
-        self._collect_metrics_in_infer(tables)
+        self._collect_metrics_in_infer()

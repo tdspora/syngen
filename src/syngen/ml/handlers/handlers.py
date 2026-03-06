@@ -30,6 +30,7 @@ from syngen.ml.utils import (
     check_if_features_assigned,
     get_initial_table_name,
     ProgressBarHandler,
+    get_source_path_extension,
     timing,
 )
 from syngen.ml.context import get_context
@@ -597,12 +598,16 @@ class VaeInferHandler(BaseHandler):
         destination_to_pk_table = None
         if self.type_of_process == "infer":
             infer_settings = self.metadata[pk_table].get("infer_settings", {})
+            source_extension = get_source_path_extension(
+                table_name=pk_table,
+                metadata=self.metadata
+            )
             destination_to_pk_table = infer_settings.get("destination")
 
             if destination_to_pk_table is None:
                 destination_to_pk_table = (
                     f"model_artifacts/tmp_store/{slugify(pk_table)}/"
-                    f"merged_infer_{slugify(pk_table)}.csv"
+                    f"merged_infer_{slugify(pk_table)}{source_extension}"
                 )
         initial_table_name = get_initial_table_name(table_name)
         if self.type_of_process == "train":
@@ -715,7 +720,6 @@ class VaeInferHandler(BaseHandler):
                 generated_data = self.generate_keys(
                     prepared_data, self.size, self.metadata, self.table_name
                 )
-                generated_data = generated_data[self.dataset.order_of_columns]
 
                 if generated_data is None:
                     self._save_data(prepared_data)
@@ -724,7 +728,6 @@ class VaeInferHandler(BaseHandler):
             else:
                 self._save_data(prepared_data)
         if self.metadata_path is None:
-            prepared_data = prepared_data[self.dataset.order_of_columns]
             self._save_data(prepared_data)
 
         self._cleanup_pool()

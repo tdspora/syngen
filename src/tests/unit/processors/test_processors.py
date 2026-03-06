@@ -284,7 +284,8 @@ def test_postprocess_generated_data_with_one_json_column(rp_logger):
     handler = PostprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name=None,
+        type_of_process="infer"
     )
     data = handler._load_generated_data(path_to_flattened_data)
     un_flattened_data = handler._postprocess_generated_data(
@@ -342,7 +343,8 @@ def test_postprocess_generated_data_with_two_json_columns(rp_logger):
     handler = PostprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name=None,
+        type_of_process="infer"
     )
     data = handler._load_generated_data(path_to_flattened_data)
     un_flattened_data = handler._postprocess_generated_data(
@@ -411,7 +413,8 @@ def test_postprocess_generated_data_with_mixed_data(rp_logger):
     handler = PostprocessHandler(
         metadata=metadata,
         metadata_path=path_to_metadata,
-        table_name=None
+        table_name=None,
+        type_of_process="infer"
     )
     data = handler._load_generated_data(path_to_flattened_data)
     un_flattened_data = handler._postprocess_generated_data(
@@ -453,9 +456,11 @@ def test_postprocess_generated_data_with_mixed_data(rp_logger):
     (True, 6, 5),
     (True, 2, 2)
 ])
+@patch.object(PreprocessHandler, "_save_initial_order_of_columns")
 @patch.object(PreprocessHandler, "_save_original_schema")
 def test_run(
     mock_save_original_schema,
+    mock_save_initial_order_of_columns,
     drop_null,
     row_limit,
     expected_result,
@@ -491,9 +496,11 @@ def test_run(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@patch.object(PreprocessHandler, "_save_initial_order_of_columns")
 @patch.object(PreprocessHandler, "_save_original_schema")
 def test_run_with_avro_file(
     mock_save_original_schema,
+    mock_save_initial_order_of_columns,
     rp_logger
 ):
     rp_logger.info(
@@ -545,9 +552,11 @@ def test_run_with_avro_file(
     (True, 2, 1),
 ])
 @patch.object(PreprocessHandler, "_save_flatten_metadata")
+@patch.object(PreprocessHandler, "_save_initial_order_of_columns")
 @patch.object(PreprocessHandler, "_save_original_schema")
 def test_run_with_table_containing_json_columns(
     mock_save_original_schema,
+    mock_save_initial_order_of_columns,
     mock_save_flatten_metadata,
     drop_null,
     row_limit,

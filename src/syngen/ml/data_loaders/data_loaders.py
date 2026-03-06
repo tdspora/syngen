@@ -549,7 +549,7 @@ class BinaryLoader(BaseDataLoader):
 
     def _save_data(self, data):
         with open(self.path, "wb") as f:
-            pkl.dump(data, f)
+            pkl.dump(data, f, protocol=pkl.HIGHEST_PROTOCOL)
 
     def save_data(self, data, **kwargs):
         """
@@ -665,7 +665,7 @@ class DataEncryptor(BaseDataLoader):
         with open(path, "wb") as encrypted_file:
             encrypted_file.write(data)
 
-    def save_data(self, df: pd.DataFrame):
+    def save_data(self, df: pd.DataFrame, **kwargs):
         """
         Save the encrypted dataframe to the disk
         """

@@ -1,6 +1,6 @@
 import os
 import argparse
-
+from syngen.sdk import Syngen  # noqa: F401
 
 base_dir = os.path.dirname(__file__)
 version_file = os.path.join(base_dir, "VERSION")

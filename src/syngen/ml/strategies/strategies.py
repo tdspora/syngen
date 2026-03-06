@@ -108,24 +108,17 @@ class TrainStrategy(Strategy, ABC):
         return self
 
     def add_reporters(self, **kwargs):
-        # TODO: now the reporter isn't added if the flatten metadata exists
-        # This should be refactored in the future
         table_name = self.config.table_name
-        flatten_metadata_exists = os.path.exists(self.config.paths["path_to_flatten_metadata"])
-        if flatten_metadata_exists:
-            logger.warning(
-                "The sample report isn't available for a table containing JSON column(s)"
-            )
         if (
                 not table_name.endswith("_fk")
                 and "sample" in self.config.reports
-                and not flatten_metadata_exists
         ):
             sample_reporter = SampleAccuracyReporter(
                 table_name=get_initial_table_name(table_name),
                 paths=self.config.paths,
                 config=self.config.to_dict(),
                 metadata=self.metadata,
+                loader=self.config.loader,
             )
             Report().register_reporter(table=table_name, reporter=sample_reporter)
 
@@ -172,7 +165,16 @@ class InferStrategy(Strategy):
         configuration = InferConfig(**kwargs)
         self.config = configuration
         self.metadata = deepcopy(self.config.metadata)
+        self._save_infer_config()
         return self
+
+    def _save_infer_config(self):
+        metadata = deepcopy(self.config.metadata)
+        self.config.metadata = clean_up_metadata(metadata=metadata)
+
+        BinaryLoader(
+            path=self.config.paths["infer_config_pickle_path"]
+        ).save_data(data=self.config)
 
     def add_handler(self, type_of_process: str):
         """
@@ -206,7 +208,8 @@ class InferStrategy(Strategy):
                 paths=self.config.paths,
                 config=self.config.to_dict(),
                 metadata=self.metadata,
-                loader=self.config.loader,
+                type_of_process=self.config.type_of_process,
+                loader=self.config.loader
             )
             Report().register_reporter(table=table_name, reporter=accuracy_reporter)
 

@@ -1,0 +1,23 @@
+table:
+  train_settings:
+    epochs: 100
+    drop_null: false
+    reports: none
+    row_limit: 800
+    batch_size: 2000
+
+  infer_settings:
+    size: 200
+    run_parallel: True
+    random_seed: 2
+    reports: all
+    batch_size: 200
+
+  encryption:
+    fernet_key: FERNET_KEY
+
+  keys:
+    pk_id:
+      type: "PK"
+      columns:
+        - Id

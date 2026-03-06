@@ -1,13 +1,4 @@
-from abc import abstractmethod
-from typing import (
-    Dict,
-    Tuple,
-    Optional,
-    Callable,
-    Union,
-    List,
-    Set
-)
+from typing import Dict, Tuple, Optional, Callable, Union, List, Set, Literal
 import itertools
 from collections import defaultdict
 from copy import deepcopy
@@ -30,17 +21,14 @@ from syngen.ml.utils import ProgressBarHandler
 
 
 class Reporter:
-    """
-    Abstract class for reporters
-    """
-
     def __init__(
         self,
         table_name: str,
         paths: Dict[str, str],
         config: Dict[str, str],
         metadata: Dict,
-        loader: Optional[Callable[[str], pd.DataFrame]] = None
+        loader: Optional[Callable[[str], pd.DataFrame]] = None,
+        type_of_process: Literal["train", "infer"] = "train"
     ):
         self.table_name = table_name
         self.paths = paths
@@ -51,6 +39,7 @@ class Reporter:
         self.columns_nan_labels = dict()
         self.na_values = dict()
         self.technical_columns = self._fetch_technical_columns()
+        self.type_of_process = type_of_process
 
     def _fetch_technical_columns(self) -> Set[str]:
         """
@@ -71,7 +60,7 @@ class Reporter:
         data, schema = DataFrameFetcher(
             loader=self.loader,
             table_name=self.table_name
-        ).fetch_data()
+        ).load_data()
         logger.warning(
             f"The original data of the table - '{self.table_name}' "
             "has been fetched using the callback function. "
@@ -194,13 +183,6 @@ class Reporter:
             date_columns,
         )
 
-    @abstractmethod
-    def report(self, **kwargs):
-        """
-        Generate the report for certain test
-        """
-        pass
-
 
 class Report:
     """
@@ -279,6 +261,24 @@ class Report:
 
     @classmethod
     def _launch_reporter(cls, reporter, delta: float):
+        if reporter.__class__.report_type == "sample":
+            # TODO: now the sample report isn't generated if the flatten metadata exists
+            # This should be refactored in the future
+            flatten_metadata_exists = os.path.exists(reporter.paths["path_to_flatten_metadata"])
+            table_name = reporter.table_name
+            if flatten_metadata_exists:
+                logger.warning(
+                    f"The sample report isn't available for a table - '{table_name}' "
+                    "as it contains JSON column(s)."
+                )
+                return
+            if reporter.loader is not None:
+                logger.warning(
+                    f"The sample report isn't available for a table - '{table_name}' "
+                    "when a custom 'loader' is provided."
+                )
+                return
+
         cls._log_and_update_progress(
             delta,
             f"The calculation of {reporter.__class__.report_type} metrics for the table - "
@@ -338,11 +338,12 @@ class AccuracyReporter(Reporter):
             date_columns,
         ) = self.preprocess_data(original, synthetic)
         accuracy_test = AccuracyTest(
-            original,
-            synthetic,
-            self.paths,
-            self.table_name,
-            self.config
+            original=original,
+            synthetic=synthetic,
+            paths=self.paths,
+            table_name=self.table_name,
+            type_of_process=self.type_of_process,
+            config=self.config
         )
         accuracy_test.report(
             cont_columns=list(float_columns | int_columns),

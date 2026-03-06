@@ -5,11 +5,12 @@ from datetime import datetime
 import pandas as pd
 from slugify import slugify
 
-from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
-from syngen.ml.utils import slugify_attribute, fetch_unique_root, fetch_config
-
-
-TIMESTAMP = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
+from syngen.ml.utils import (
+    slugify_attribute,
+    fetch_unique_root,
+    fetch_config,
+    get_source_path_extension
+)
 
 
 @dataclass
@@ -43,7 +44,7 @@ class TrainConfig:
         Return an updated config's instance
         """
         instance = self.__dict__.copy()
-        attribute_keys_to_remove = ["loader", "data"]
+        attribute_keys_to_remove = ["data"]
         for attr_key in attribute_keys_to_remove:
             if attr_key in instance:
                 del instance[attr_key]
@@ -66,7 +67,9 @@ class TrainConfig:
         """
         Create the paths which used in training process
         """
+        timestamp = slugify(datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f"))
         fernet_key = self.metadata[self.table_name].get("encryption", {}).get("fernet_key")
+        source_extension = get_source_path_extension(path=self.source)
         self.paths = {
             "model_artifacts_path": "model_artifacts/",
             "resources_path": f"model_artifacts/resources/{self.slugify_table_name}/",
@@ -74,10 +77,13 @@ class TrainConfig:
             "source_path": self.source,
             "reports_path": f"model_artifacts/resources/{self.slugify_table_name}/reports",
             "path_to_sample_report": f"model_artifacts/resources/{self.slugify_table_name}/"
-                                     f"reports/sample-report-{TIMESTAMP}.html",
-            "input_data_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                               f"input_data_{self.slugify_table_name}."
-                               f"{'dat' if fernet_key is not None else 'pkl'}",
+                                     f"reports/sample-report.html",
+            "input_data_path": (
+                f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                f"input_data_{self.slugify_table_name}."
+                f"{'dat' if fernet_key is not None else 'pkl'}"
+                if self.loader is None else None
+            ),
             "state_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/checkpoints",
             "train_config_pickle_path": f"model_artifacts/resources/{self.slugify_table_name}/vae/"
                                         f"checkpoints/train_config.pkl",
@@ -87,28 +93,33 @@ class TrainConfig:
                            f"checkpoints/stat_keys/",
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
+            "initial_order_of_columns_path": (
+                f"model_artifacts/tmp_store/{self.slugify_table_name}"
+                f"/initial_order_of_columns_{self.slugify_table_name}.pkl"
+            ),
             "path_to_merged_infer": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                                    f"merged_infer_{self.slugify_table_name}.csv",
+                                    f"merged_infer_{self.slugify_table_name}{source_extension}",
             "no_ml_state_path":
                 f"model_artifacts/resources/{self.slugify_table_name}/no_ml/checkpoints/",
             "path_to_flatten_metadata":
                 f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
             "losses_path": f"model_artifacts/system_store/losses/"
-                           f"losses-{self.slugify_table_name}-{TIMESTAMP}.csv"
+                           f"losses-{self.slugify_table_name}-{timestamp}.csv",
+            "generated_reports": {}
         }
 
 
 @dataclass
 class InferConfig:
     """
-    The configuration class to set up the work of infer process
+    The configuration class to set up the work of the inference process
     """
 
     destination: Optional[str]
     metadata: Dict
     metadata_path: Optional[str]
-    size: Optional[int]
+    size: int
     table_name: str
     run_parallel: bool
     batch_size: Optional[int]
@@ -123,10 +134,6 @@ class InferConfig:
 
     def __post_init__(self):
         self.__set_paths()
-        self._set_infer_parameters()
-
-    def _set_infer_parameters(self):
-        self._set_up_size()
         self._set_up_batch_size()
 
     def to_dict(self) -> Dict:
@@ -140,27 +147,6 @@ class InferConfig:
             "random_seed": self.random_seed,
             "reports": self.reports,
         }
-
-    def _set_up_size(self):
-        """
-        Set up "size" of generated data
-        """
-        if self.size is None:
-            data_loader = DataLoader(
-                path=self.paths["input_data_path"],
-                table_name=self.table_name,
-                metadata=self.metadata,
-                sensitive=True
-            )
-            data = pd.DataFrame()
-            if data_loader.has_existed_path:
-                data, schema = data_loader.load_data()
-            elif self.loader:
-                data, schema = DataFrameFetcher(
-                    loader=self.loader,
-                    table_name=self.table_name
-                ).fetch_data()
-            self.size = len(data)
 
     def _set_up_batch_size(self):
         """
@@ -191,8 +177,9 @@ class InferConfig:
             "path_to_accuracy_report": (
                 "model_artifacts/"
                 f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
-                f"/{self.slugify_table_name}/reports/accuracy-report-{TIMESTAMP}.html"
-            )
+                f"/{self.slugify_table_name}/reports/accuracy-report.html"
+            ),
+            "generated_reports": {}
         })
 
     @slugify_attribute(table_name="slugify_table_name")
@@ -204,6 +191,13 @@ class InferConfig:
             self.slugify_table_name[:-3] if self.both_keys else self.slugify_table_name
         )
         self.paths = {
+            "train_config_pickle_path":
+                f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl"
+        }
+        source_extension = get_source_path_extension(
+            path=self.train_config.paths["path_to_merged_infer"]
+        )
+        self.paths.update({
             "reports_path": (
                 f"model_artifacts/"
                 f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
@@ -211,13 +205,15 @@ class InferConfig:
             ),
             "train_config_pickle_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/train_config.pkl",
+            "infer_config_pickle_path":
+                f"model_artifacts/tmp_store/{dynamic_name}/infer_config.pkl",
             "default_path_to_merged_infer": f"model_artifacts/tmp_store/{dynamic_name}/"
-                                            f"merged_infer_{dynamic_name}.csv",
+                                            f"merged_infer_{dynamic_name}{source_extension}",
             "path_to_merged_infer": (
                 self.destination
                 if self.destination is not None
                 else f"model_artifacts/tmp_store/{dynamic_name}/"
-                     f"merged_infer_{dynamic_name}.csv"
+                     f"merged_infer_{dynamic_name}{source_extension}"
             ),
             "state_path": f"model_artifacts/resources/{dynamic_name}/vae/checkpoints",
             "tmp_store_path": f"model_artifacts/tmp_store/{dynamic_name}",
@@ -229,6 +225,6 @@ class InferConfig:
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
             "path_to_no_ml":
                 f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl"
-        }
+        })
 
         self._set_paths()

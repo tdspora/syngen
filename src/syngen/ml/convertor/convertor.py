@@ -29,22 +29,35 @@ class Convertor:
         """
         Update data types related to the fetched schema
         """
+        type_map = {
+            "binary": "string",
+            "date": "string",
+            "string": "string",
+            "double": "float64",
+            "float": "float64",
+            "decimal": "float64"
+        }
+
         for column, data_type in schema.get("fields", {}).items():
-            if data_type in ["binary", "date", "string"]:
-                df[column] = df[column].astype("string")
-            elif data_type == "int":
-                if any(df[column].isnull()):
-                    df[column] = df[column].astype("float64")
-                else:
-                    df[column] = df[column].astype("int64")
-            elif data_type == "null":
+            if column not in df.columns:
+                continue
+
+            if data_type == "null":
                 if df[column].isnull().all():
                     continue
                 else:
                     raise ValueError(
                         f"It seems that the data type - '{data_type}' "
-                        f"isn\'t correct for the column - '{column}' as it's not empty"
+                        f"isn't correct for the column - '{column}' as it's not empty"
                     )
+
+            if data_type in type_map:
+                df[column] = df[column].astype(type_map[data_type])
+            elif data_type in ["int", "bool"]:
+                if df[column].isnull().any():
+                    df[column] = df[column].astype("float64")
+                else:
+                    df[column] = df[column].astype("int64")
 
         if not schema.get("fields"):
             for column in df.columns:
@@ -54,6 +67,7 @@ class Convertor:
                     df[column] = df[column].astype(float)
                 elif df[column].apply(self._check_dtype_or_nan(dtypes=(str, bytes))).all():
                     df[column] = df[column].astype(pd.StringDtype())
+        return df
 
     @staticmethod
     def _set_none_values_to_nan(df: pd.DataFrame):
@@ -93,7 +107,7 @@ class Convertor:
             try:
                 df = self._set_none_values_to_nan(df)
                 df = self._cast_values_to_string(df)
-                self._update_data_types(schema, df)
+                df = self._update_data_types(schema, df)
                 return df
             except Exception as e:
                 logger.error(e)

@@ -6,6 +6,7 @@ import base32_crockford
 from collections import Counter
 import re
 from dataclasses import dataclass, field
+from copy import deepcopy
 
 import numpy as np
 import dill
@@ -28,6 +29,7 @@ from syngen.ml.utils import (
     nan_labels_to_float,
     get_date_columns,
     fetch_timezone,
+    fetch_config,
     TIMEZONE_REGEX
 )
 from syngen.ml.utils import slugify_parameters
@@ -105,7 +107,9 @@ class Dataset:
     def __post_init__(self):
         self.fields = self.schema.get("fields", {})
         self.schema_format = self.schema.get("format")
-        self.order_of_columns: List = list(self.df.columns)
+        self.order_of_columns: List = fetch_config(
+            config_pickle_path=self.paths["initial_order_of_columns_path"]
+        )
         self.dropped_columns: Set = {
             column for column in self.fields if self.fields[column] == "removed"
         }
@@ -178,7 +182,7 @@ class Dataset:
         """
         Return a dictionary of the dataset's state
         """
-        clean_up_metadata(self.metadata)
+        clean_up_metadata(deepcopy(self.metadata))
         dataset_instance = self.__dict__.copy()
         attribute_keys_to_remove = ["df", "non_existent_columns"]
 
@@ -640,18 +644,12 @@ class Dataset:
         except Exception:
             return
 
-    def _get_uuid_version(self, value):
-        """
-        Get the version of UUID value if the value is a UUID
-        """
-        for v in range(1, 6):
-            try:
-                uuid_obj = UUID(value, version=v)
-                if str(uuid_obj) == value or str(uuid_obj).replace("-", "") == value:
-                    return v
-            except (ValueError, AttributeError, TypeError):
-                continue
-        return None
+    def _get_uuid_version(self, value: str) -> int | None:
+        """Get UUID version if value is a valid UUID"""
+        try:
+            return UUID(value).version
+        except (ValueError, AttributeError, TypeError):
+            return None
 
     def _process_values(self, column: pd.DataFrame):
         """
