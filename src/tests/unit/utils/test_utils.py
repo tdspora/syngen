@@ -11,7 +11,7 @@ from syngen.ml.utils import (
     timestamp_to_datetime,
     fetch_timezone,
     convert_to_timestamp,
-    convert_to_date_string,
+    convert_to_date,
     fetch_env_variables,
     get_source_path_extension
 )
@@ -142,14 +142,17 @@ def test_convert_to_timestamp(date_column, date_format, na_values, expected_resu
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("value, date_format, expected_result", [
-    (1675209600.0, "%d-%m-%Y", "01-02-2023"),
-    (1680480000.0, "%d-%m-%Y", "03-04-2023"),
-    (1685923200.0, "%d-%m-%Y", "05-06-2023"),
+@pytest.mark.parametrize("value, date_format, to_datetime_conversion, expected_result", [
+    (1675209600.0, "%d-%m-%Y", False, "01-02-2023"),
+    (1680480000.0, "%d-%m-%Y", False, "03-04-2023"),
+    (1685923200.0, "%d-%m-%Y", False, "05-06-2023"),
+    (1675209600.0, "%Y-%m-%d", True, datetime(2023, 2, 1, 0, 0)),
+    (1680480000.0, "%Y-%m-%d", True, datetime(2023, 4, 3, 0, 0)),
+    (1685923200.0, "%Y-%m-%d", True, datetime(2023, 6, 5, 0, 0)),
 ])
-def test_convert_to_date_string(value, date_format, expected_result, rp_logger):
-    rp_logger.info("Test the function 'convert_to_date_string'")
-    assert convert_to_date_string(value, date_format) == expected_result
+def test_convert_to_date(value, date_format, expected_result, to_datetime_conversion, rp_logger):
+    rp_logger.info("Test the function 'convert_to_date'")
+    assert convert_to_date(value, date_format, to_datetime_conversion) == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

@@ -29,7 +29,7 @@ from syngen.ml.utils import (
     slugify_parameters,
     inverse_dict,
     datetime_to_timestamp,
-    convert_to_date_string
+    convert_to_date
 )
 
 KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
@@ -713,6 +713,7 @@ class DateFeature(BaseFeature):
 
     def fit(self, data, **kwargs):
         self.date_format = kwargs["date_mapping"].get(self.original_name)
+        self.to_datetime_conversion = kwargs["to_datetime_conversion"].get(self.original_name)
         self.data = chain.from_iterable(data.values)
         self.data = pd.DataFrame(
             list(
@@ -738,7 +739,11 @@ class DateFeature(BaseFeature):
         unscaled = chain.from_iterable(unscaled)
         return list(
             map(
-                lambda t: convert_to_date_string(t, self.date_format),
+                lambda t: convert_to_date(
+                    value=t,
+                    date_format=self.date_format,
+                    to_datetime_conversion=self.to_datetime_conversion
+                ),
                 unscaled,
             )
         )

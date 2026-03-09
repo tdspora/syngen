@@ -3,7 +3,7 @@ import sys
 import re
 from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import time
 from pathlib import Path
 
@@ -139,6 +139,9 @@ def datetime_to_timestamp(dt, date_format):
         return datetime_str_to_timestamp(dt, date_format)
     if isinstance(dt, datetime):
         return dt.timestamp()
+    if isinstance(dt, date):
+        # Convert date to datetime at midnight
+        return datetime.combine(dt, datetime.min.time()).timestamp()
 
 
 def timestamp_to_datetime(timestamp: int, delta=False):
@@ -170,12 +173,20 @@ def timestamp_to_datetime(timestamp: int, delta=False):
         return epoch_datetime + delta_of_time
 
 
-def convert_to_date_string(value: Union[int, float], date_format: str) -> str:
+def convert_to_date(
+    value: Union[int, float],
+    date_format: str,
+    to_datetime_conversion: bool = False
+) -> Union[str, Union[datetime, timedelta]]:
     """
-    Convert timestamp to string values represented dates in a column
+    Convert timestamp to date string values or values of date objects
+    represented dates in a column
     """
     date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
-    return timestamp_to_datetime(int(value)).strftime(date_format)
+    dt = timestamp_to_datetime(int(value))
+    if to_datetime_conversion:
+        return dt
+    return dt.strftime(date_format)
 
 
 def generate_uuids(version: Union[int, str], size: int):
