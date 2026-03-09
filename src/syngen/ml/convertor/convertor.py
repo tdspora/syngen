@@ -31,7 +31,6 @@ class Convertor:
         """
         type_map = {
             "binary": "string",
-            "date": "string",
             "string": "string",
             "double": "float64",
             "float": "float64",

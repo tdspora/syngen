@@ -971,13 +971,13 @@ class Dataset:
 
         return date_format
 
-    def _set_date_format(self, excluded_columns=set()):
+    def _set_date_format(self):
         """
         Define the date format for each date column
         """
         self.date_mapping = {
             column: self.__define_date_format(column)
-            for column in self.date_columns if column not in excluded_columns
+            for column in self.date_columns
         }
 
     def _csv_data_pipeline(self):
