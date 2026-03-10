@@ -92,7 +92,8 @@ class Convertor:
         for column in df_object_subset:
             df[column] = [
                 i
-                if not isinstance(i, self.excluded_dtypes) and np.isnan(i)
+                if (not isinstance(i, self.excluded_dtypes) and np.isnan(i))
+                or isinstance(i, self.excluded_dtypes)
                 else str(i)
                 for i in df[column]
             ]
