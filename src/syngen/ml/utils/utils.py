@@ -124,9 +124,9 @@ def datetime_str_to_timestamp(dt: str, date_format: str) -> float:
     except parser._parser.ParserError as e:
         year = re.match(r"\d+", e.args[0][5:]).group(0)
         if int(year) > 9999:
-            return datetime.timestamp(datetime.max)
+            return MAX_ALLOWED_TIME_MS
         elif int(year) < 1:
-            return datetime.timestamp(datetime.min)
+            return MIN_ALLOWED_TIME_MS
 
 
 def datetime_to_timestamp(dt, date_format):
