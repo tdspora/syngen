@@ -148,6 +148,7 @@ def test_save_dataset(mock_fetch_config, rp_logger):
         "int_columns",
         "date_columns",
         "tech_columns",
+        "to_datetime_conversion",
         "date_mapping",
         "binary_columns",
         "email_columns",

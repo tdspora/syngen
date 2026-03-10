@@ -86,6 +86,7 @@ class Dataset:
     cast_to_float: Set = field(default_factory=set)
     dropped_columns: Set = field(default_factory=set)
     format: Dict = field(default_factory=dict)
+    to_datetime_conversion: Dict = field(default_factory=dict)
 
     def _select_str_columns(self) -> List[str]:
         """
@@ -1098,7 +1099,11 @@ class Dataset:
 
     def fit(self):
         for name, feature in self.features.items():
-            feature.fit(self.df[self.columns[name]], date_mapping=self.date_mapping)
+            feature.fit(
+                self.df[self.columns[name]],
+                date_mapping=self.date_mapping,
+                to_datetime_conversion=self.to_datetime_conversion
+            )
 
         self.all_columns = [col for col in self.columns]
         self.is_fitted = True
@@ -1411,7 +1416,7 @@ class Dataset:
         """
         Assign date feature to date columns
         """
-        date_format = self.date_mapping.get(feature)
+        date_format = self.date_mapping.get(feature, str())
         if "%z" in date_format.lower():
             self._preprocess_dates_with_timezone(feature)
         features = self._preprocess_nan_cols(feature, fillna_strategy="mode")

@@ -3,7 +3,7 @@ import sys
 import re
 from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import time
 from pathlib import Path
 
@@ -17,8 +17,8 @@ import random
 from loguru import logger
 
 
-MAX_ALLOWED_TIME_MS = 253402214400
-MIN_ALLOWED_TIME_MS = -62135596800
+MAX_ALLOWED_TIME_MS = 253402300799   # datetime(9999, 12, 31, 23, 59, 59, 999999).timestamp()
+MIN_ALLOWED_TIME_MS = -62135510400   # datetime(1, 1, 2, 0, 0, 0, 0).timestamp()
 
 # IANA timezone names - "2023-07-02T10:18:44.000000 America/New_York"
 # Zulu time (UTC) represented by 'Z' - "2023-07-02T10:18:44Z"
@@ -109,12 +109,10 @@ def is_format_first(date_format: str, format_type: str) -> bool:
     return date_format.lower().startswith(f"%{format_type}")
 
 
-def datetime_to_timestamp(dt, date_format):
+def datetime_str_to_timestamp(dt: str, date_format: str) -> float:
     """
-    Convert datetime to timestamp
+    Convert the datetime string to the timestamp
     """
-    if pd.isnull(dt):
-        return np.nan
     try:
         dt = parser.parse(
             dt,
@@ -129,6 +127,21 @@ def datetime_to_timestamp(dt, date_format):
             return MAX_ALLOWED_TIME_MS
         elif int(year) < 1:
             return MIN_ALLOWED_TIME_MS
+
+
+def datetime_to_timestamp(dt, date_format):
+    """
+    Convert datetime to timestamp
+    """
+    if pd.isnull(dt):
+        return np.nan
+    if isinstance(dt, str):
+        return datetime_str_to_timestamp(dt, date_format)
+    if isinstance(dt, datetime):
+        return dt.timestamp()
+    if isinstance(dt, date):
+        # Convert date to datetime at midnight
+        return datetime.combine(dt, datetime.min.time()).timestamp()
 
 
 def timestamp_to_datetime(timestamp: int, delta=False):
@@ -160,11 +173,20 @@ def timestamp_to_datetime(timestamp: int, delta=False):
         return epoch_datetime + delta_of_time
 
 
-def convert_to_date_string(value: Union[int, float], date_format: str) -> str:
+def convert_to_date(
+    value: Union[int, float],
+    date_format: str,
+    to_datetime_conversion: bool = False
+) -> Union[str, Union[datetime, timedelta]]:
     """
-    Convert timestamp to string values represented dates in a column
+    Convert timestamp to date string values or values of date objects
+    represented dates in a column
     """
-    return timestamp_to_datetime(int(value)).strftime(date_format)
+    date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
+    dt = timestamp_to_datetime(int(value))
+    if to_datetime_conversion:
+        return dt
+    return dt.strftime(date_format)
 
 
 def generate_uuids(version: Union[int, str], size: int):

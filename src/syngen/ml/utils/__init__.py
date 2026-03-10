@@ -9,7 +9,7 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     trim_string,
     check_if_features_assigned,
     convert_to_timestamp,
-    convert_to_date_string,
+    convert_to_date,
     fetch_config,
     save_config,
     fetch_unique_root,
