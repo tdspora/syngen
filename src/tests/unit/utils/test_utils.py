@@ -1,7 +1,6 @@
-import pandas as pd
 import pytest
 from unittest.mock import Mock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import numpy as np
 
@@ -85,13 +84,12 @@ def test_datetime_to_timestamp(rp_logger):
 
 def test_timestamp_to_datetime(rp_logger):
     test_cases = [
-        (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0)),
+        (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)),
         (0, datetime(1970, 1, 1, 0, 0)),
         (946684800, datetime(2000, 1, 1)),
         (253402214400.0, datetime(9999, 12, 31, 0, 0)),
         (253402537600.0, datetime(9999, 12, 31, 23, 59, 59, 999999)),
-        (np.nan, np.nan),
-        (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0)),
+        (np.nan, np.nan)
     ]
     rp_logger.info("Test the function 'timestamp_to_datetime'")
     for timestamp, expected_datetime in test_cases:

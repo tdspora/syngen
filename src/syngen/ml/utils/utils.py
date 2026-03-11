@@ -3,7 +3,7 @@ import sys
 import re
 from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 import time
 from pathlib import Path
 
@@ -18,7 +18,7 @@ from loguru import logger
 
 
 MAX_ALLOWED_TIME_MS = 253402300800   # datetime(9999, 12, 31, 23, 59, 59, 999999).timestamp()
-MIN_ALLOWED_TIME_MS = -62135510400   # datetime(1, 1, 2, 0, 0, 0, 0).timestamp()
+MIN_ALLOWED_TIME_MS = -62135510400   # datetime(1, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)
 
 # IANA timezone names - "2023-07-02T10:18:44.000000 America/New_York"
 # Zulu time (UTC) represented by 'Z' - "2023-07-02T10:18:44Z"
@@ -155,7 +155,7 @@ def timestamp_to_datetime(timestamp: int, delta=False):
     if timestamp >= MAX_ALLOWED_TIME_MS:
         return datetime(9999, 12, 31, 23, 59, 59, 999999)
     elif timestamp <= MIN_ALLOWED_TIME_MS:
-        return datetime(1, 1, 1, 0, 0, 0, 0)
+        return datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc)
 
     seconds_since_epoch = int(timestamp)
     remaining_seconds = timestamp - seconds_since_epoch
