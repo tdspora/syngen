@@ -3,7 +3,7 @@ import sys
 import re
 from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, timezone
 import time
 from pathlib import Path
 
@@ -17,8 +17,8 @@ import random
 from loguru import logger
 
 
-MAX_ALLOWED_TIME_MS = 253402214400
-MIN_ALLOWED_TIME_MS = -62135596800
+MAX_ALLOWED_TIME_MS = 253402300800   # datetime(9999, 12, 31, 23, 59, 59, 999999).timestamp()
+MIN_ALLOWED_TIME_MS = -62135510400   # datetime(1, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)
 
 # IANA timezone names - "2023-07-02T10:18:44.000000 America/New_York"
 # Zulu time (UTC) represented by 'Z' - "2023-07-02T10:18:44Z"
@@ -109,12 +109,10 @@ def is_format_first(date_format: str, format_type: str) -> bool:
     return date_format.lower().startswith(f"%{format_type}")
 
 
-def datetime_to_timestamp(dt, date_format):
+def datetime_str_to_timestamp(dt: str, date_format: str) -> float:
     """
-    Convert datetime to timestamp
+    Convert the datetime string to the timestamp
     """
-    if pd.isnull(dt):
-        return np.nan
     try:
         dt = parser.parse(
             dt,
@@ -131,6 +129,21 @@ def datetime_to_timestamp(dt, date_format):
             return MIN_ALLOWED_TIME_MS
 
 
+def datetime_to_timestamp(dt, date_format):
+    """
+    Convert datetime to timestamp
+    """
+    if pd.isnull(dt):
+        return np.nan
+    if isinstance(dt, str):
+        return datetime_str_to_timestamp(dt, date_format)
+    if isinstance(dt, datetime):
+        return dt.timestamp()
+    if isinstance(dt, date):
+        # Convert date to datetime at midnight
+        return datetime.combine(dt, datetime.min.time()).timestamp()
+
+
 def timestamp_to_datetime(timestamp: int, delta=False):
     """
     Convert the timestamp to the datetime object or timedelta object
@@ -142,7 +155,7 @@ def timestamp_to_datetime(timestamp: int, delta=False):
     if timestamp >= MAX_ALLOWED_TIME_MS:
         return datetime(9999, 12, 31, 23, 59, 59, 999999)
     elif timestamp <= MIN_ALLOWED_TIME_MS:
-        return datetime(1, 1, 1, 0, 0, 0, 0)
+        return datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc)
 
     seconds_since_epoch = int(timestamp)
     remaining_seconds = timestamp - seconds_since_epoch
@@ -160,11 +173,20 @@ def timestamp_to_datetime(timestamp: int, delta=False):
         return epoch_datetime + delta_of_time
 
 
-def convert_to_date_string(value: Union[int, float], date_format: str) -> str:
+def convert_to_date(
+    value: Union[int, float],
+    date_format: str,
+    to_datetime_conversion: bool = False
+) -> Union[str, Union[datetime, timedelta]]:
     """
-    Convert timestamp to string values represented dates in a column
+    Convert timestamp to date string values or values of date objects
+    represented dates in a column
     """
-    return timestamp_to_datetime(int(value)).strftime(date_format)
+    date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
+    dt = timestamp_to_datetime(int(value))
+    if to_datetime_conversion:
+        return dt
+    return dt.strftime(date_format)
 
 
 def generate_uuids(version: Union[int, str], size: int):
@@ -219,14 +241,21 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
     return set(names)
 
 
-def convert_to_timestamp(data: pd.Series, date_format: str, na_values: List[str]):
-    """
-    Convert the string values to timestamp
-    """
-    return [
-        datetime_to_timestamp(d, date_format)
-        if d not in na_values else np.NaN for d in data
-    ]
+def convert_date_to_timestamp(
+    value,
+    date_format: str,
+    na_values: list
+) -> float | None:
+    """Helper to convert a single date value to a timestamp"""
+    if value is None or value in na_values:
+        return None
+    result = datetime_to_timestamp(value, date_format)
+    try:
+        if np.isnan(result):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return result
 
 
 def fetch_timezone(date_string: str) -> Union[str, float]:
@@ -524,21 +553,28 @@ def get_initial_table_name(table_name) -> str:
     return re.sub(r"_pk$|_fk$", "", table_name)
 
 
-def timing(func):
+def timing(func=None, log_level="TRACE"):
     """
     Decorator that logs the execution time of the function
     """
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        logger.trace(
-            f"Function '{func.__name__}' executed in "
-            f"{elapsed_time:.2f} seconds."
-        )
-        return result
-    return wrapper
+    def decorator(inner_func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            result = inner_func(*args, **kwargs)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            log_method = getattr(logger, log_level.lower(), logger.trace)
+            log_method(f"Function '{inner_func.__name__}' executed in {elapsed_time:.2f} seconds.")
+            return result
+
+        return wrapper
+
+    if func is not None and callable(func):
+        # Used as @timing
+        return decorator(func)
+    else:
+        # Used as @timing(...)
+        return decorator
 
 
 def get_reports(

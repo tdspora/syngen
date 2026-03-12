@@ -1,7 +1,7 @@
 from unittest.mock import patch
-
 import pytest
 import os
+import shutil
 
 from marshmallow import ValidationError
 from cryptography.fernet import Fernet
@@ -285,11 +285,13 @@ def test_initialization_without_parameters(rp_logger):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_valid_epochs(
-    mock_post_init, mock_launch_train, mock_set_execution_artifacts, rp_logger
+    mock_setup_log, mock_post_init, mock_launch_train, mock_set_execution_artifacts, rp_logger
 ):
     rp_logger.info("Launch the training process with the valid 'epochs' parameter")
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(epochs=20)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="train")
@@ -327,14 +329,21 @@ def test_train_table_with_invalid_epochs(rp_logger, caplog):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_valid_drop_null(
-    mock_post_init, mock_launch_train, mock_set_execution_artifacts, valid_value, rp_logger
+    mock_setup_log,
+    mock_post_init,
+    mock_launch_train,
+    mock_set_execution_artifacts,
+    valid_value,
+    rp_logger
 ):
     rp_logger.info(
         "Launch the training process with the valid 'drop_null' parameter "
         f"equals to '{valid_value}'"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(drop_null=valid_value)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="train")
@@ -373,13 +382,15 @@ def test_train_table_with_invalid_drop_null(rp_logger, caplog):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_valid_row_limit(
-    mock_post_init, mock_launch_train, mock_set_execution_artifacts, rp_logger
+    mock_setup_log, mock_post_init, mock_launch_train, mock_set_execution_artifacts, rp_logger
 ):
     rp_logger.info(
         "Launch the training process with the valid 'row_limit' parameter equals 100"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(row_limit=100)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="train")
@@ -419,14 +430,21 @@ def test_train_table_with_invalid_row_limit(rp_logger, caplog):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_valid_parameter_reports(
-    mock_post_init, mock_launch_train, mock_set_execution_artifacts, valid_value, rp_logger
+    mock_setup_log,
+    mock_post_init,
+    mock_launch_train,
+    mock_set_execution_artifacts,
+    valid_value,
+    rp_logger
 ):
     rp_logger.info(
         "Launch the training process "
         f"with the valid 'reports' the parameter equals '{valid_value}'"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(reports=valid_value)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="train")
@@ -443,14 +461,21 @@ def test_train_table_with_valid_parameter_reports(
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_several_valid_values_in_reports(
-    mock_post_init, mock_launch_train, mock_set_execution_artifacts, value, rp_logger
+    mock_setup_log,
+    mock_post_init,
+    mock_launch_train,
+    mock_set_execution_artifacts,
+    value,
+    rp_logger
 ):
     rp_logger.info(
         "Launch the training process with several valid values "
         f"in the 'reports' parameter equals '{value}'"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(reports=value)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="train")
@@ -460,13 +485,15 @@ def test_train_table_with_several_valid_values_in_reports(
 @pytest.mark.parametrize(
     "invalid_value", ["test", ("none", "all"), ("none", "test"), ("all", "test")]
 )
-def test_train_table_with_invalid_parameter_reports(invalid_value, rp_logger):
+@patch("syngen.train.setup_log_process")
+def test_train_table_with_invalid_parameter_reports(mock_setup_log, invalid_value, rp_logger):
     rp_logger.info(
         "Launch the training process "
         f"with the invalid 'reports' parameter equals '{invalid_value}'"
     )
     with pytest.raises(ValueError):
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(reports=invalid_value)
+        mock_setup_log.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -474,12 +501,14 @@ def test_train_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     "value",
     [[pv, i] for pv in ["all", "none"] for i in TRAIN_REPORT_TYPES]
 )
-def test_train_table_with_redundant_parameter_reports(value, rp_logger):
+@patch("syngen.train.setup_log_process")
+def test_train_table_with_redundant_parameter_reports(mock_setup_log, value, rp_logger):
     rp_logger.info(
         f"Launch the training process with the redundant 'reports' parameter: '{value}'"
     )
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(reports=value)
+        mock_setup_log.assert_called_once()
         assert str(error.value) == (
             "Invalid input: When 'reports' parameter is set to 'none' or 'all', "
             "no other values should be provided."
@@ -490,14 +519,16 @@ def test_train_table_with_redundant_parameter_reports(value, rp_logger):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_valid_batch_size(
-    mock_post_init, mock_launch_train, mock_set_execution_artifacts, rp_logger
+    mock_setup_log, mock_post_init, mock_launch_train, mock_set_execution_artifacts, rp_logger
 ):
     rp_logger.info(
         "Launch the training process "
         "with the valid 'batch_size' parameter equals 100"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(batch_size=100)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="train")
@@ -534,14 +565,16 @@ def test_train_table_with_invalid_batch_size(rp_logger, caplog):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.train.setup_log_process")
 def test_train_table_with_existing_fernet_key(
-    mock_post_init, mock_launch_train, mock_set_execution_artifacts, rp_logger
+    mock_setup_log, mock_post_init, mock_launch_train, mock_set_execution_artifacts, rp_logger
 ):
     rp_logger.info(
         "Launch the training process with the 'fernet_key' parameter "
         "equals to the value of the existing environment variable 'FERNET_KEY'"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(fernet_key="FERNET_KEY")
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_train.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="train")
@@ -549,7 +582,7 @@ def test_train_table_with_existing_fernet_key(
 
 
 @patch("syngen.train.setup_log_process")
-def test_train_table_with_nonexistent_fernet_key(rp_logger, caplog):
+def test_train_table_with_nonexistent_fernet_key(mock_setup_log, rp_logger, caplog):
     rp_logger.info(
         "Launch the training process with the 'fernet_key' parameter "
         "equals to the non-existent environment variable name"
@@ -560,6 +593,7 @@ def test_train_table_with_nonexistent_fernet_key(rp_logger, caplog):
                 table_name=TABLE_NAME,
                 source=PATH_TO_TABLE
             ).train(fernet_key="FERNET_KEY_NONEXISTENT")
+            mock_setup_log.assert_called_once()
             assert str(error.value) == (
                 "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
                 "Please, check whether it is set correctly."
@@ -576,7 +610,11 @@ def test_train_table_with_nonexistent_fernet_key(rp_logger, caplog):
 @patch.object(Worker, "launch_train")
 @patch.object(Worker, "__attrs_post_init__")
 def test_train_table_with_valid_log_level(
-    mock_post_init, mock_launch_train, mock_set_execution_artifacts, valid_value, rp_logger
+    mock_post_init,
+    mock_launch_train,
+    mock_set_execution_artifacts,
+    valid_value,
+    rp_logger
 ):
     rp_logger.info(
         f"Launch the training process with the valid 'log_level' parameter equals to {valid_value}"
@@ -595,6 +633,7 @@ def test_train_table_with_invalid_log_level(rp_logger):
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(log_level="test")
         assert str(error.value) == "ValueError: Level 'test' does not exist"
+    shutil.rmtree("model_artifacts/")
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -602,13 +641,15 @@ def test_train_table_with_invalid_log_level(rp_logger):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.infer.setup_log_process")
 def test_infer_table_with_valid_size(
-    mock_post_init, mock_launch_infer, mock_set_execution_artifacts, rp_logger
+    mock_setup_log, mock_post_init, mock_launch_infer, mock_set_execution_artifacts, rp_logger
 ):
     rp_logger.info(
         "Launch the inference process with the valid 'size' parameter equals 10"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(size=10)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="infer")
@@ -649,14 +690,21 @@ def test_infer_table_with_invalid_size(rp_logger, caplog):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.infer.setup_log_process")
 def test_infer_table_with_valid_run_parallel(
-    mock_post_init, mock_launch_infer, mock_set_execution_artifacts, valid_value, rp_logger
+    mock_setup_log,
+    mock_post_init,
+    mock_launch_infer,
+    mock_set_execution_artifacts,
+    valid_value,
+    rp_logger
 ):
     rp_logger.info(
         "Launch the inference process with the valid 'run_parallel' parameter "
         f"equals to '{valid_value}"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(run_parallel=True)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="infer")
@@ -695,11 +743,13 @@ def test_infer_table_with_invalid_run_parallel(rp_logger, caplog):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.infer.setup_log_process")
 def test_infer_table_with_valid_batch_size(
-    mock_post_init, mock_launch_infer, mock_set_execution_artifacts, rp_logger
+    mock_setup_log, mock_post_init, mock_launch_infer, mock_set_execution_artifacts, rp_logger
 ):
     rp_logger.info("Launch infer process with the valid 'batch_size' parameter equals 100")
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(batch_size=100)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="infer")
@@ -738,11 +788,13 @@ def test_infer_table_with_invalid_batch_size(rp_logger, caplog):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.infer.setup_log_process")
 def test_infer_table_with_valid_random_seed(
-    mock_post_init, mock_launch_infer, mock_set_execution_artifacts, rp_logger
+    mock_setup_log, mock_post_init, mock_launch_infer, mock_set_execution_artifacts, rp_logger
 ):
     rp_logger.info("Launch the inference process with the valid 'random_seed' parameter equals 1")
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(random_seed=1)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="infer")
@@ -783,13 +835,20 @@ def test_infer_table_with_invalid_random_seed(rp_logger, caplog):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.infer.setup_log_process")
 def test_infer_table_with_valid_parameter_reports(
-    mock_post_init, mock_launch_infer, mock_set_execution_artifacts, valid_value, rp_logger
+    mock_setup_log,
+    mock_post_init,
+    mock_launch_infer,
+    mock_set_execution_artifacts,
+    valid_value,
+    rp_logger
 ):
     rp_logger.info(
         f"Launch the inference process with the valid 'reports' parameter equals '{valid_value}'"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(reports=valid_value)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="infer")
@@ -806,14 +865,21 @@ def test_infer_table_with_valid_parameter_reports(
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.infer.setup_log_process")
 def test_infer_table_with_several_valid_parameter_reports(
-    mock_post_init, mock_launch_infer, mock_set_execution_artifacts, value, rp_logger
+    mock_setup_log,
+    mock_post_init,
+    mock_launch_infer,
+    mock_set_execution_artifacts,
+    value,
+    rp_logger
 ):
     rp_logger.info(
         f"Launch the inference process with several values "
         f"in the 'reports' parameter equals '{value}'"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(reports=value)
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="infer")
@@ -823,13 +889,15 @@ def test_infer_table_with_several_valid_parameter_reports(
 @pytest.mark.parametrize("invalid_value", [
     "sample", "test", ("none", "all"), ("none", "test"), ("all", "test")
 ])
-def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
+@patch("syngen.infer.setup_log_process")
+def test_infer_table_with_invalid_parameter_reports(mock_setup_log, invalid_value, rp_logger):
     rp_logger.info(
         "Launch the inference process "
         f"with the invalid 'reports' parameter equals '{invalid_value}'"
     )
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(reports=invalid_value)
+        mock_setup_log.assert_called_once()
         assert str(error.value) == (
             "Invalid input: Acceptable values for the parameter 'reports' "
             "are none, all, accuracy, metrics_only."
@@ -841,10 +909,12 @@ def test_infer_table_with_invalid_parameter_reports(invalid_value, rp_logger):
     "value",
     [[pv, i] for pv in ["all", "none"] for i in INFER_REPORT_TYPES]
 )
-def test_infer_table_with_redundant_parameter_reports(value, rp_logger):
+@patch("syngen.infer.setup_log_process")
+def test_infer_table_with_redundant_parameter_reports(mock_setup_log, value, rp_logger):
     rp_logger.info(f"Launch the inference process with redundant 'reports' parameter: '{value}'")
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(reports=value)
+        mock_setup_log.assert_called_once()
         assert str(error.value) == (
             "Invalid input: When 'reports' option is set to 'none' or 'all', "
             "no other values should be provided."
@@ -855,14 +925,16 @@ def test_infer_table_with_redundant_parameter_reports(value, rp_logger):
 @patch.object(Syngen, "_set_execution_artifacts")
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
+@patch("syngen.infer.setup_log_process")
 def test_infer_table_with_existing_fernet_key(
-    mock_post_init, mock_launch_infer, mock_set_execution_artifacts, rp_logger
+    mock_setup_log, mock_post_init, mock_launch_infer, mock_set_execution_artifacts, rp_logger
 ):
     rp_logger.info(
         "Launch the inference process with the 'fernet_key' parameter "
         "equals to the value of the existing environment variable 'FERNET_KEY'"
     )
     Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(fernet_key="FERNET_KEY")
+    mock_setup_log.assert_called_once()
     mock_post_init.assert_called_once()
     mock_launch_infer.assert_called_once()
     mock_set_execution_artifacts.assert_called_once_with(type_of_process="infer")
@@ -890,7 +962,11 @@ def test_infer_table_with_non_existent_fernet_key(rp_logger):
 @patch.object(Worker, "launch_infer")
 @patch.object(Worker, "__attrs_post_init__")
 def test_infer_table_with_valid_log_level(
-    mock_post_init, mock_launch_infer, mock_set_execution_artifacts, valid_value, rp_logger
+    mock_post_init,
+    mock_launch_infer,
+    mock_set_execution_artifacts,
+    valid_value,
+    rp_logger
 ):
     rp_logger.info(
         "Launch the inference process "
@@ -910,6 +986,7 @@ def test_infer_table_with_invalid_log_level(rp_logger):
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(log_level="test")
         assert str(error.value) == "ValueError: Level 'test' does not exist"
+    shutil.rmtree("model_artifacts/")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -923,7 +1000,7 @@ def test_infer_table_with_invalid_log_level(rp_logger):
 @patch.object(Syngen, "_validate_artifacts")
 @patch("syngen.sdk.setup_log_process")
 def test_generate_sample_report(
-    mock_setup_log_process,
+    mock_setup_log,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -940,6 +1017,7 @@ def test_generate_sample_report(
         reports=report,
         log_level="DEBUG"
     )
+    mock_setup_log.assert_called_once()
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", completed_processes={"train"}
     )
@@ -964,7 +1042,7 @@ def test_generate_sample_report(
 @patch.object(Syngen, "_validate_artifacts")
 @patch("syngen.sdk.setup_log_process")
 def test_generate_accuracy_report(
-    mock_setup_log_process,
+    mock_setup_log,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -981,6 +1059,7 @@ def test_generate_accuracy_report(
         reports=report,
         log_level="DEBUG"
     )
+    mock_setup_log.assert_called_once()
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", completed_processes={"infer"}
     )
@@ -1005,7 +1084,7 @@ def test_generate_accuracy_report(
 @patch.object(Syngen, "_validate_artifacts")
 @patch("syngen.sdk.setup_log_process")
 def test_generate_metrics_only_report(
-    mock_setup_log_process,
+    mock_setup_log,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -1022,6 +1101,7 @@ def test_generate_metrics_only_report(
         reports=report,
         log_level="DEBUG"
     )
+    mock_setup_log.assert_called_once()
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", completed_processes={"infer"}
     )
@@ -1046,7 +1126,7 @@ def test_generate_metrics_only_report(
 @patch.object(Syngen, "_validate_artifacts")
 @patch("syngen.sdk.setup_log_process")
 def test_generate_all_reports(
-    mock_setup_log_process,
+    mock_setup_log,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -1063,6 +1143,7 @@ def test_generate_all_reports(
         reports=report,
         log_level="DEBUG"
     )
+    mock_setup_log.assert_called_once()
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", completed_processes={"train", "infer"}
     )
@@ -1086,7 +1167,7 @@ def test_generate_all_reports(
 @patch.object(Syngen, "_validate_artifacts")
 @patch("syngen.sdk.setup_log_process")
 def test_generate_none_reports(
-    mock_setup_log_process,
+    mock_setup_log,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -1105,6 +1186,7 @@ def test_generate_none_reports(
             reports=report,
             log_level="DEBUG"
         )
+        mock_setup_log.assert_called_once()
         mock_validate_artifacts.assert_not_called()
         mock_get_accuracy_reporter.assert_not_called()
         mock_get_sample_reporter.assert_not_called()
@@ -1130,7 +1212,7 @@ def test_generate_none_reports(
 @patch.object(Syngen, "_validate_artifacts")
 @patch("syngen.sdk.setup_log_process")
 def test_generate_full_set_of_reports(
-    mock_setup_log_process,
+    mock_setup_log,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
     mock_get_sample_reporter,
@@ -1149,6 +1231,7 @@ def test_generate_full_set_of_reports(
         reports=["accuracy", "metrics_only", "sample"],
         log_level="DEBUG"
     )
+    mock_setup_log.assert_called_once()
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", completed_processes={"train", "infer"}
     )
@@ -1162,7 +1245,7 @@ def test_generate_full_set_of_reports(
 
 
 @patch("syngen.sdk.setup_log_process")
-def test_generate_report_with_wrong_report_type(mock_setup_log_process, rp_logger, caplog):
+def test_generate_report_with_wrong_report_type(rp_logger, caplog):
     rp_logger.info("Launch the generation of the report with the wrong report type")
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
@@ -1191,7 +1274,7 @@ def test_generate_report_with_wrong_report_type(mock_setup_log_process, rp_logge
 @patch.object(DataEncryptor, "validate_fernet_key")
 @patch("syngen.sdk.setup_log_process")
 def test_generate_report_for_encrypted_data(
-    mock_setup_log_process,
+    mock_setup_log,
     mock_validate_fernet_key,
     mock_validate_artifacts,
     mock_get_accuracy_reporter,
@@ -1213,6 +1296,7 @@ def test_generate_report_for_encrypted_data(
         fernet_key="FERNET_KEY",
         log_level="DEBUG"
     )
+    mock_setup_log.assert_called_once()
     mock_validate_fernet_key.assert_called_once_with(fernet_key)
     mock_validate_artifacts.assert_called_once_with(
         table_name="test_table", completed_processes={"train"}
