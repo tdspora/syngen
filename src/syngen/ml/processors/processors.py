@@ -40,15 +40,32 @@ class Processor:
             "model_artifacts/system_store/flatten_configs/"
             f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json"
         )
-        self.initial_data_shape: Tuple = ()
-        self.row_subset: int = int()
 
 
 class PreprocessHandler(Processor):
     """
     The class for the preprocessing of the data before the training process
     """
-    def _save_original_schema(self, original_schema: Dict):
+    def __init__(
+        self,
+        metadata: Dict,
+        metadata_path: Optional[str],
+        table_name: str,
+        loader: Optional[Callable[[str], pd.DataFrame]] = None
+    ):
+        super().__init__(
+            metadata=metadata,
+            metadata_path=metadata_path,
+            table_name=table_name,
+            loader=loader
+        )
+        self.initial_data_shape: Tuple = ()
+        self.row_subset: int = int()
+        self.original_df: Optional[pd.DataFrame] = None
+        self.schema = dict()
+        self.original_schema = None
+
+    def _save_original_schema(self):
         """
         Save the schema of the original data
         """
@@ -56,64 +73,62 @@ class PreprocessHandler(Processor):
             f"model_artifacts/tmp_store/{slugify(self.table_name)}"
             f"/original_schema_{slugify(self.table_name)}.pkl"
         )
-        DataLoader(path).save_data(data=original_schema)
+        DataLoader(path).save_data(data=self.original_schema)
 
-    def _save_initial_order_of_columns(self, order_of_columns: List[str]):
+    def _save_initial_order_of_columns(self):
         """
         Save the initial order of columns of the original data
         """
+        order_of_columns = self.original_df.columns.to_list()
         path = (
             f"model_artifacts/tmp_store/{slugify(self.table_name)}"
             f"/initial_order_of_columns_{slugify(self.table_name)}.pkl"
         )
         DataLoader(path).save_data(data=order_of_columns)
 
-    def _check_if_data_is_empty(self, data: pd.DataFrame):
+    def _check_if_data_is_empty(self):
         """
         Check if the provided data is empty or not
         """
-        if data.shape[0] < 1:
+        if self.original_df.shape[0] < 1:
             raise ValueError(
                 f"The empty table was provided. Unable to train the table - '{self.table_name}'"
             )
 
-    @staticmethod
-    def _remove_empty_columns(data: pd.DataFrame, schema: Dict) -> Tuple[pd.DataFrame, Dict]:
+    def _remove_empty_columns(self) -> pd.DataFrame:
         """
         Remove completely empty columns from dataframe and mark them as 'removed' in the schema
         """
-        initial_data_columns = set(data.columns)
-        data = data.dropna(how="all", axis=1)
+        initial_data_columns = set(self.original_df.columns)
+        data = self.original_df.dropna(how="all", axis=1)
 
         dropped_columns = initial_data_columns - set(data.columns)
         list_of_dropped_columns = [f"'{column}'" for column in dropped_columns]
         if list_of_dropped_columns:
             logger.info(f"Empty columns - {', '.join(list_of_dropped_columns)} were removed")
-            schema["fields"].update({column: "removed" for column in dropped_columns})
-        return data, schema
+            self.schema["fields"].update({column: "removed" for column in dropped_columns})
+        return data
 
-    def prepare_data(self) -> Tuple[pd.DataFrame, Dict]:
+    def prepare_data(self) -> pd.DataFrame:
         """
         Prepare the subset of the data for the training process,
-        and get the preprocessed data and schema
+        and get the preprocessed data
         """
-        data, schema, original_schema = self._load_source()
-        self._check_if_data_is_empty(data)
-        self._save_original_schema(original_schema)
-        self._save_initial_order_of_columns(order_of_columns=data.columns.to_list())
-        preprocessed_data, preprocessed_schema = self._preprocess_data(data, schema)
-        return preprocessed_data, preprocessed_schema
+        self._load_source()
+        self._check_if_data_is_empty()
+        self._save_original_schema()
+        self._save_initial_order_of_columns()
+        preprocessed_data = self._preprocess_data()
+        return preprocessed_data
 
-    def _preprocess_data(self, data: pd.DataFrame, schema: Dict) -> Tuple[pd.DataFrame, Dict]:
+    def _preprocess_data(self) -> pd.DataFrame:
         """
         Apply the parameters 'drop_null' and 'row_limit' to the data,
-        and get the subset for the training process, and modified schema
+        and get the subset for the training process
         """
         drop_null = self.metadata[self.table_name]["train_settings"]["drop_null"]
         row_limit = self.metadata[self.table_name]["train_settings"]["row_limit"]
-        self.initial_data_shape = data.shape
-        self.row_subset = len(data)
-        data, schema = self._remove_empty_columns(data, schema)
+        data = self._remove_empty_columns()
         if self.loader:
             warning_message = (
                 "parameter will be ignored because the retrieval of the data "
@@ -158,7 +173,7 @@ class PreprocessHandler(Processor):
                 f"2) disable drop_null argument"
             )
         logger.info(f"The subset of rows was set to {self.row_subset}")
-        return data, schema
+        return data
 
     @staticmethod
     def _run_script():
@@ -249,7 +264,7 @@ class PreprocessHandler(Processor):
         with open(f"{self.path_to_flatten_metadata}", "w") as f:
             json.dump(metadata, f)
 
-    def _load_source(self) -> Tuple[pd.DataFrame, Dict, Dict]:
+    def _load_source(self):
         """
         Load the data from the predefined source
         """
@@ -261,9 +276,10 @@ class PreprocessHandler(Processor):
         else:
             path_to_source = self.metadata[self.table_name]["train_settings"]["source"]
             data_loader = DataLoader(path=path_to_source)
-        data, schema = data_loader.load_data()
-        original_schema = data_loader.original_schema
-        return data, schema, original_schema
+        self.original_df, self.schema = data_loader.load_data()
+        self.original_schema = data_loader.original_schema
+        self.initial_data_shape = self.original_df.shape
+        self.row_subset = len(self.original_df)
 
     def _handle_json_columns(self, data: pd.DataFrame):
         """
@@ -298,9 +314,9 @@ class PreprocessHandler(Processor):
         Launch the preprocessing process:
         """
         self._run_script()
-        preprocessed_data, schema = self.prepare_data()
+        preprocessed_data = self.prepare_data()
         data = self._handle_json_columns(preprocessed_data)
-        return data, schema
+        return data, self.schema
 
 
 class PostprocessHandler(Processor):
