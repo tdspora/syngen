@@ -319,13 +319,14 @@ class PostprocessHandler(Processor):
         self.type_of_process = type_of_process
         self.flatten_metadata = self._fetch_flatten_config()
 
-    def _fetch_flatten_config(self) -> Optional[Dict]:
+    def _fetch_flatten_config(self) -> Dict:
         """
         Fetch the metadata of the flattening process
         """
         if os.path.exists(self.path_to_flatten_metadata):
             with open(self.path_to_flatten_metadata, "r") as f:
                 return json.load(f)
+        return dict()
 
     @staticmethod
     def _check_none_values(x: Any) -> bool:
