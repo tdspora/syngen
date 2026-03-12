@@ -317,14 +317,16 @@ class PostprocessHandler(Processor):
     ):
         super().__init__(metadata, metadata_path, table_name)
         self.type_of_process = type_of_process
+        self.flatten_metadata = self._fetch_flatten_config()
 
-    def _fetch_flatten_config(self, table_name: str) -> Dict:
+    def _fetch_flatten_config(self) -> Dict:
         """
         Fetch the metadata of the flattening process
         """
-        with open(self.path_to_flatten_metadata, "r") as f:
-            flatten_metadata = json.load(f).get(table_name)
-            return flatten_metadata
+        if os.path.exists(self.path_to_flatten_metadata):
+            with open(self.path_to_flatten_metadata, "r") as f:
+                return json.load(f)
+        return dict()
 
     @staticmethod
     def _check_none_values(x: Any) -> bool:
@@ -488,11 +490,11 @@ class PostprocessHandler(Processor):
                 ) if self.type_of_process == "infer" else default_path_to_generated_data
             )
             data = self._load_generated_data(path_to_generated_data, table)
-            if os.path.exists(self.path_to_flatten_metadata):
+            flatten_metadata_of_table = self.flatten_metadata.get(table)
+            if flatten_metadata_of_table is not None:
                 logger.info("Start postprocessing of the generated data")
-                flatten_metadata = self._fetch_flatten_config(table)
-                flattening_mapping = flatten_metadata.get("flattening_mapping")
-                duplicated_columns = flatten_metadata.get("duplicated_columns")
+                flattening_mapping = flatten_metadata_of_table.get("flattening_mapping")
+                duplicated_columns = flatten_metadata_of_table.get("duplicated_columns")
                 data = self._postprocess_generated_data(
                     data,
                     flattening_mapping,
