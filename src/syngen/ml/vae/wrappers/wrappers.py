@@ -65,6 +65,7 @@ class VAEWrapper(BaseWrapper):
     log_level: str
     losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
+    preloaded_dataset: Optional[Dataset] = field(default=None, kw_only=True)
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
     num_batches: int = field(init=False)
@@ -84,7 +85,11 @@ class VAEWrapper(BaseWrapper):
             self.df = self.dataset.pipeline()
             self._save_dataset()
         elif self.process == "infer":
-            self.dataset = fetch_config(self.paths["dataset_pickle_path"])
+            # for multiprocessing
+            if self.preloaded_dataset is not None:
+                self.dataset = self.preloaded_dataset
+            else:
+                self.dataset = fetch_config(self.paths["dataset_pickle_path"])
             self._update_dataset()
             self._save_dataset()
 
@@ -574,7 +579,9 @@ class VanillaVAEWrapper(VAEWrapper):
             main_process: str,
             batch_size: int,
             latent_dim: int = 10,
-            latent_components: int = 30):
+            latent_components: int = 30,
+            **kwargs
+    ):
 
         log_level = os.getenv("LOGURU_LEVEL")
 
@@ -587,7 +594,8 @@ class VanillaVAEWrapper(VAEWrapper):
             process,
             main_process,
             batch_size,
-            log_level
+            log_level,
+            **kwargs
         )
         self.latent_dim = min(latent_dim, int(len(self.dataset.columns) / 2))
         self.vae = CVAE(
