@@ -62,6 +62,7 @@ class PreprocessHandler(Processor):
         self.initial_data_shape: Tuple = ()
         self.row_subset: int = int()
         self.original_df: Optional[pd.DataFrame] = None
+        self.initial_order_of_columns = list()
         self.schema = dict()
         self.original_schema = None
 
@@ -79,12 +80,11 @@ class PreprocessHandler(Processor):
         """
         Save the initial order of columns of the original data
         """
-        order_of_columns = self.original_df.columns.to_list()
         path = (
             f"model_artifacts/tmp_store/{slugify(self.table_name)}"
             f"/initial_order_of_columns_{slugify(self.table_name)}.pkl"
         )
-        DataLoader(path).save_data(data=order_of_columns)
+        DataLoader(path).save_data(data=self.initial_order_of_columns)
 
     def _check_if_data_is_empty(self):
         """
@@ -99,10 +99,9 @@ class PreprocessHandler(Processor):
         """
         Remove completely empty columns from dataframe and mark them as 'removed' in the schema
         """
-        initial_data_columns = set(self.original_df.columns)
         data = self.original_df.dropna(how="all", axis=1)
 
-        dropped_columns = initial_data_columns - set(data.columns)
+        dropped_columns = set(self.initial_order_of_columns) - set(data.columns)
         list_of_dropped_columns = [f"'{column}'" for column in dropped_columns]
         if list_of_dropped_columns:
             logger.info(f"Empty columns - {', '.join(list_of_dropped_columns)} were removed")
@@ -279,6 +278,7 @@ class PreprocessHandler(Processor):
         self.original_df, self.schema = data_loader.load_data()
         self.original_schema = data_loader.original_schema
         self.initial_data_shape = self.original_df.shape
+        self.initial_order_of_columns = self.original_df.columns.to_list()
         self.row_subset = len(self.original_df)
 
     def _handle_json_columns(self, data: pd.DataFrame):
