@@ -48,7 +48,9 @@ class Reporter:
         path_to_flatten_metadata = self.paths.get("path_to_flatten_metadata")
         if os.path.exists(path_to_flatten_metadata):
             with open(path_to_flatten_metadata, "r") as f:
-                flattening_mapping = json.load(f).get(self.table_name).get("flattening_mapping")
+                flatten_metadata = json.load(f)
+            if (flatten_metadata_of_table := flatten_metadata.get(self.table_name)) is not None:
+                flattening_mapping = flatten_metadata_of_table.get("flattening_mapping")
                 technical_columns = set(f"{col}_" for col in flattening_mapping.keys())
                 return technical_columns
         return set()
