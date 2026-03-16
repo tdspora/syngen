@@ -560,7 +560,8 @@ class PostprocessHandler(Processor):
             generated_data,
             format=get_context().get_config(),
         )
-        self.__save_preview_data(
-            path_to_destination=path_to_destination,
-            preview_df=generated_data.head(self.preview_rows)
-        )
+        if self.type_of_process == "infer":
+            self.__save_preview_data(
+                path_to_destination=path_to_destination,
+                preview_df=generated_data.head(self.preview_rows)
+            )
