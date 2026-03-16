@@ -334,6 +334,7 @@ class PostprocessHandler(Processor):
         super().__init__(metadata, metadata_path, table_name)
         self.type_of_process = type_of_process
         self.flatten_metadata = self._fetch_flatten_config()
+        self.preview_rows = 10
 
     def _fetch_flatten_config(self) -> Dict:
         """
@@ -520,7 +521,7 @@ class PostprocessHandler(Processor):
             order_of_columns = fetch_config(
                 config_pickle_path=f"model_artifacts/tmp_store/{slugify(table)}"
                                    f"/initial_order_of_columns_{slugify(table)}.pkl")
-            self._save_generated_data(
+            self.__save_generated_data(
                 data,
                 path_to_generated_data,
                 order_of_columns,
@@ -528,7 +529,24 @@ class PostprocessHandler(Processor):
             )
 
     @staticmethod
-    def _save_generated_data(
+    def __save_preview_data(
+        path_to_destination,
+        preview_df
+    ):
+        """
+        Save the preview data in '.csv' format for the fast review of the generated data
+        """
+        preview_path = f"{os.path.splitext(path_to_destination)[0]}_preview.csv"
+        DataLoader(path=preview_path).save_data(
+            preview_df,
+            format=get_context().get_config(),
+        )
+        logger.info(
+            f"Preview saved in '{preview_path}' (first {len(preview_df)} rows)"
+        )
+
+    def __save_generated_data(
+        self,
         generated_data: pd.DataFrame,
         path_to_destination: str,
         order_of_columns: List[str],
@@ -541,4 +559,8 @@ class PostprocessHandler(Processor):
         DataLoader(path=path_to_destination).save_data(
             generated_data,
             format=get_context().get_config(),
+        )
+        self.__save_preview_data(
+            path_to_destination=path_to_destination,
+            preview_df=generated_data.head(self.preview_rows)
         )
