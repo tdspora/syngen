@@ -16,12 +16,12 @@ class Convertor:
     df: pd.DataFrame
     excluded_dtypes: Tuple = (str, bytes, datetime, date, bool)
 
-    def _check_dtype_or_nan(self, dtypes: Tuple):
+    def _check_dtype_or_nan(self, included_dtypes: Tuple, excluded_dtypes: Tuple = ()):
         """
         Check if the value is of the specified data types or 'np.NaN'
         """
         return (
-            lambda x: isinstance(x, dtypes)
+            lambda x: (isinstance(x, included_dtypes) and not isinstance(x, excluded_dtypes))
             or (not isinstance(x, self.excluded_dtypes) and np.isnan(x))
         )
 
@@ -68,16 +68,16 @@ class Convertor:
         if not schema.get("fields"):
             for column in df.columns:
                 # Check for boolean first (bool is subclass of int in Python)
-                if df[column].apply(lambda x: isinstance(x, bool)).all():
+                if df[column].map(self._check_dtype_or_nan(included_dtypes=(bool,))).all():
                     # Keep boolean columns as-is, don't convert to int
                     continue
-                elif df[column].apply(
-                    lambda x: isinstance(x, int) and not isinstance(x, bool)
+                elif df[column].map(
+                    self._check_dtype_or_nan(included_dtypes=(int,), excluded_dtypes=(bool,))
                 ).all():
                     df[column] = df[column].astype(int)
-                elif df[column].apply(self._check_dtype_or_nan(dtypes=(int, float))).all():
+                elif df[column].map(self._check_dtype_or_nan(included_dtypes=(int, float))).all():
                     df[column] = df[column].astype(float)
-                elif df[column].apply(self._check_dtype_or_nan(dtypes=(str, bytes))).all():
+                elif df[column].map(self._check_dtype_or_nan(included_dtypes=(str, bytes))).all():
                     df[column] = df[column].astype(pd.StringDtype())
         return df
 
