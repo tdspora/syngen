@@ -62,6 +62,7 @@ class Worker:
 
             if self.type_of_process == "train":
                 self._clean_training_artifacts(table)
+                self._clean_inference_artifacts(table)
             elif self.type_of_process == "infer":
                 self._clean_inference_artifacts(table)
 
@@ -84,15 +85,19 @@ class Worker:
             f"model_artifacts/tmp_store/{slugify(table)}/"
             f"merged_infer_{slugify(table)}{source_extension}"
         )
+        default_path_to_preview_data = (
+            f"{os.path.splitext(default_path_to_merged_infer)[0]}_preview.csv"
+        )
         success_file_path = f"model_artifacts/tmp_store/{slugify(table)}/infer_message.success"
 
         self._remove_existed_artifact(default_path_to_merged_infer)
+        self._remove_existed_artifact(default_path_to_preview_data)
         self._remove_existed_artifact(success_file_path)
 
     @staticmethod
     def _remove_existed_artifact(path_to_artifact: str):
         """
-        Remove the existed artifact from the previous training process
+        Remove the existed artifact from the previous training or the inference process
         """
         if os.path.exists(path_to_artifact):
             if os.path.isfile(path_to_artifact):
