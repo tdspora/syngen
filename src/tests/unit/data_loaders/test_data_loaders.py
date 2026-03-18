@@ -336,7 +336,7 @@ def test_load_data_from_table_in_avro_with_nullable_column(rp_logger):
             "first_name": "string",
             "last_name": "string",
             "created_date": "string",
-            "Active": "int"
+            "Active": "boolean"
         },
         "format": "Avro"
     }

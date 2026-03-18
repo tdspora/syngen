@@ -530,7 +530,7 @@ def test_run_with_avro_file(
             "first_name": "string",
             "last_name": "string",
             "created_date": "string",
-            "active": "int",
+            "active": "boolean",
             "id": "string",
             "region": "string",
             "email": "string",

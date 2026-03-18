@@ -3,7 +3,6 @@ import pytest
 import numpy as np
 from numpy import dtype
 import pandas as pd
-import pandavro as pdx
 
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.data_loaders import DataLoader
@@ -28,7 +27,7 @@ SCHEMA = {
     "maritalstatus": ["string", "null"],
     "emergencycontactname": ["string", "null"],
     "emergencycontactphone": ["string", "null"],
-    "salariedflag": ['boolean', "null"],
+    "salariedflag": ["boolean", "null"],
     "gender": ["string", "null"],
     "payfrequency": ["int", "null"],
     "baserate": ["double", "null"],
@@ -71,7 +70,7 @@ def test_initiate_avro_convertor(rp_logger):
         "firstname": pd.StringDtype(),
         "lastname": pd.StringDtype(),
         "middlename": pd.StringDtype(),
-        "namestyle": dtype("int64"),
+        "namestyle": dtype("bool"),
         "title": pd.StringDtype(),
         "hiredate": pd.StringDtype(),
         "birthdate": pd.StringDtype(),
@@ -81,14 +80,14 @@ def test_initiate_avro_convertor(rp_logger):
         "maritalstatus": pd.StringDtype(),
         "emergencycontactname": pd.StringDtype(),
         "emergencycontactphone": pd.StringDtype(),
-        "salariedflag": dtype("int64"),
+        "salariedflag": dtype("bool"),
         "gender": pd.StringDtype(),
         "payfrequency": dtype("int64"),
         "baserate": dtype("float64"),
         "vacationhours": dtype("int64"),
         "sickleavehours": dtype("int64"),
-        "currentflag": dtype("int64"),
-        "salespersonflag": dtype("int64"),
+        "currentflag": dtype("bool"),
+        "salespersonflag": dtype("bool"),
         "departmentname": pd.StringDtype(),
         "startdate": pd.StringDtype(),
         "enddate": pd.StringDtype(),
@@ -105,7 +104,7 @@ def test_initiate_avro_convertor(rp_logger):
             "firstname": "string",
             "lastname": "string",
             "middlename": "string",
-            "namestyle": "int",
+            "namestyle": "boolean",
             "title": "string",
             "hiredate": "string",
             "birthdate": "string",
@@ -115,14 +114,14 @@ def test_initiate_avro_convertor(rp_logger):
             "maritalstatus": "string",
             "emergencycontactname": "string",
             "emergencycontactphone": "string",
-            "salariedflag": "int",
+            "salariedflag": "boolean",
             "gender": "string",
             "payfrequency": "int",
             "baserate": "float",
             "vacationhours": "int",
             "sickleavehours": "int",
-            "currentflag": "int",
-            "salespersonflag": "int",
+            "currentflag": "boolean",
+            "salespersonflag": "boolean",
             "departmentname": "string",
             "startdate": "string",
             "enddate": "string",
@@ -139,7 +138,7 @@ def test_initiate_avro_convertor(rp_logger):
         "firstname": pd.StringDtype(),
         "lastname": pd.StringDtype(),
         "middlename": pd.StringDtype(),
-        "namestyle": dtype("int64"),
+        "namestyle": dtype("bool"),
         "title": pd.StringDtype(),
         "hiredate": pd.StringDtype(),
         "birthdate": pd.StringDtype(),
@@ -149,14 +148,14 @@ def test_initiate_avro_convertor(rp_logger):
         "maritalstatus": pd.StringDtype(),
         "emergencycontactname": pd.StringDtype(),
         "emergencycontactphone": pd.StringDtype(),
-        "salariedflag": dtype("int64"),
+        "salariedflag": dtype("bool"),
         "gender": pd.StringDtype(),
         "payfrequency": dtype("int64"),
         "baserate": dtype("float64"),
         "vacationhours": dtype("int64"),
         "sickleavehours": dtype("int64"),
-        "currentflag": dtype("int64"),
-        "salespersonflag": dtype("int64"),
+        "currentflag": dtype("bool"),
+        "salespersonflag": dtype("bool"),
         "departmentname": pd.StringDtype(),
         "startdate": pd.StringDtype(),
         "enddate": pd.StringDtype(),
@@ -184,7 +183,7 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "firstname": pd.StringDtype(),
         "lastname": pd.StringDtype(),
         "middlename": pd.StringDtype(),
-        "namestyle": dtype("int64"),
+        "namestyle": dtype("bool"),
         "title": pd.StringDtype(),
         "hiredate": pd.StringDtype(),
         "birthdate": pd.StringDtype(),
@@ -194,14 +193,14 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "maritalstatus": pd.StringDtype(),
         "emergencycontactname": pd.StringDtype(),
         "emergencycontactphone": pd.StringDtype(),
-        "salariedflag": dtype("int64"),
+        "salariedflag": dtype("bool"),
         "gender": pd.StringDtype(),
         "payfrequency": dtype("int64"),
         "baserate": dtype("float64"),
         "vacationhours": dtype("int64"),
         "sickleavehours": dtype("int64"),
-        "currentflag": dtype("int64"),
-        "salespersonflag": dtype("int64"),
+        "currentflag": dtype("bool"),
+        "salespersonflag": dtype("bool"),
         "departmentname": pd.StringDtype(),
         "startdate": pd.StringDtype(),
         "enddate": pd.StringDtype(),
@@ -222,7 +221,7 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "firstname": pd.StringDtype(),
         "lastname": pd.StringDtype(),
         "middlename": pd.StringDtype(),
-        "namestyle": dtype("int64"),
+        "namestyle": dtype("bool"),
         "title": pd.StringDtype(),
         "hiredate": pd.StringDtype(),
         "birthdate": pd.StringDtype(),
@@ -232,14 +231,14 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "maritalstatus": pd.StringDtype(),
         "emergencycontactname": pd.StringDtype(),
         "emergencycontactphone": pd.StringDtype(),
-        "salariedflag": dtype("int64"),
+        "salariedflag": dtype("bool"),
         "gender": pd.StringDtype(),
         "payfrequency": dtype("int64"),
         "baserate": dtype("float64"),
         "vacationhours": dtype("int64"),
         "sickleavehours": dtype("int64"),
-        "currentflag": dtype("int64"),
-        "salespersonflag": dtype("int64"),
+        "currentflag": dtype("bool"),
+        "salespersonflag": dtype("bool"),
         "departmentname": pd.StringDtype(),
         "startdate": pd.StringDtype(),
         "enddate": pd.StringDtype(),
@@ -247,32 +246,6 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "employeephoto": pd.StringDtype(),
     }
     pd.testing.assert_series_equal(convertor.preprocessed_df.dtypes, df.dtypes)
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog, rp_logger):
-    rp_logger.info(
-        "Initiating the instance of the class AvroConvertor "
-        "with the schema containing unsupported data type"
-    )
-    with pytest.raises(ValueError) as error:
-        with caplog.at_level("ERROR"):
-            df = pdx.from_avro(
-                f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
-            )
-
-            schema = {"Test": "test"}
-
-            AvroConvertor(schema, df)
-
-            assert (
-                str(error.value)
-                == "It seems that the column - 'Test' has unsupported data type - 'test'"
-            )
-            assert (
-                "It seems that the column - 'Test' has unsupported data type - 'test'"
-                in caplog.text
-            )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -336,15 +309,20 @@ def test_preprocess_df_if_column_is_string(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_preprocess_df_if_column_is_boolean(rp_logger):
+@pytest.mark.parametrize("dataframe, expected_dtype", [
+    (pd.DataFrame({"Test": [True, False, True]}), "bool"),
+    (
+        pd.DataFrame({"Test": [True, False, True, np.NaN, None]}),
+        "boolean"
+    )
+])
+def test_preprocess_df_if_column_is_bool(dataframe, expected_dtype, rp_logger):
     rp_logger.info(
         "Initiating the instance of the class AvroConvertor "
         "with the schema containing one column with data type - 'boolean'"
     )
-    df = pd.DataFrame({"Test": [True, False, True]})
-
-    convertor = AvroConvertor({"Test": ["boolean"]}, df)
-    assert convertor.preprocessed_df.dtypes.to_dict() == {"Test": "int64"}
+    convertor = AvroConvertor({"Test": ["boolean"]}, dataframe)
+    assert convertor.preprocessed_df.dtypes.to_dict() == {"Test": expected_dtype}
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -408,17 +386,25 @@ def test_preprocess_df_if_column_is_invalid_null(rp_logger, caplog):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_preprocess_df_if_column_has_unsupported_data_type(rp_logger):
+def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog, rp_logger):
     rp_logger.info(
         "Initiating the instance of the class AvroConvertor "
         "with the schema containing unsupported data type"
     )
-    df = pd.DataFrame({"Test": [1, 2, 3]})
-
     with pytest.raises(ValueError) as error:
-        AvroConvertor({"Test": ["test"]}, df)
-        assert (
-            str(error.value)
-            == "It seems that the column - 'Test' has unsupported data type - 'test'"
-        )
+        with caplog.at_level("ERROR"):
+            df = pd.DataFrame({"Test": [1, 2, 3]})
+
+            schema = {"Test": "test"}
+
+            AvroConvertor(schema, df)
+
+            assert (
+                str(error.value)
+                == "It seems that the column - 'Test' has unsupported data type - 'test'"
+            )
+            assert (
+                "It seems that the column - 'Test' has unsupported data type - 'test'"
+                in caplog.text
+            )
     rp_logger.info(SUCCESSFUL_MESSAGE)
