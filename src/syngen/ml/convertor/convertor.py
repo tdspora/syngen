@@ -154,9 +154,8 @@ class AvroConvertor(Convertor):
     @staticmethod
     def _convert_schema(schema) -> Dict:
         """
-        Convert the schema of Avro file to unified format, preprocess dataframe
+        Convert the schema of Avro file to unified format
         """
-
         def _extract_type_names(avro_type) -> set[str]:
             if isinstance(avro_type, list):
                 names: set[str] = set()

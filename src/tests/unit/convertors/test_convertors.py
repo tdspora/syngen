@@ -11,7 +11,7 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 SCHEMA = {
     "employeekey": ["int", "null"],
-    "parentemployeekey": ["int", "null"],
+    "parentemployeekey": ["float", "null"],
     "employeenationalidalternatekey": ["string", "null"],
     "salesterritorykey": ["int", "null"],
     "firstname": ["string", "null"],
@@ -30,7 +30,7 @@ SCHEMA = {
     "salariedflag": ["boolean", "null"],
     "gender": ["string", "null"],
     "payfrequency": ["int", "null"],
-    "baserate": ["double", "null"],
+    "baserate": ["float", "null"],
     "vacationhours": ["int", "null"],
     "sickleavehours": ["int", "null"],
     "currentflag": ["boolean", "null"],
@@ -39,7 +39,7 @@ SCHEMA = {
     "startdate": ["string", "null"],
     "enddate": ["string", "null"],
     "status": ["string", "null"],
-    "employeephoto": ["bytes", "null"]
+    "employeephoto": ["string", "null"]
 }
 
 
@@ -64,7 +64,7 @@ def test_initiate_avro_convertor(rp_logger):
 
     assert df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
-        "parentemployeekey": dtype("int64"),
+        "parentemployeekey": dtype("float64"),
         "employeenationalidalternatekey": pd.StringDtype(),
         "salesterritorykey": dtype("int64"),
         "firstname": pd.StringDtype(),
@@ -98,7 +98,7 @@ def test_initiate_avro_convertor(rp_logger):
     assert convertor.converted_schema == {
         "fields": {
             "employeekey": "int",
-            "parentemployeekey": "int",
+            "parentemployeekey": "float",
             "employeenationalidalternatekey": "string",
             "salesterritorykey": "int",
             "firstname": "string",
@@ -132,7 +132,7 @@ def test_initiate_avro_convertor(rp_logger):
     }
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
-        "parentemployeekey": dtype("int64"),
+        "parentemployeekey": dtype("float64"),
         "employeenationalidalternatekey": pd.StringDtype(),
         "salesterritorykey": dtype("int64"),
         "firstname": pd.StringDtype(),
@@ -169,7 +169,7 @@ def test_initiate_avro_convertor(rp_logger):
 def test_initiate_avro_convertor_without_provided_schema(rp_logger):
     rp_logger.info("Initiating the instance of the class AvroConvertor without a provided schema")
     df, schema = DataLoader(
-        f"{DIR_NAME}/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv"
+        f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
     ).load_data()
 
     convertor = AvroConvertor(schema=None, df=df)
@@ -177,7 +177,6 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
     assert df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
         "parentemployeekey": dtype("float64"),
-        "parentemployeenationalidalternatekey": dtype("float64"),
         "employeenationalidalternatekey": pd.StringDtype(),
         "salesterritorykey": dtype("int64"),
         "firstname": pd.StringDtype(),
@@ -215,7 +214,6 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
         "parentemployeekey": dtype("float64"),
-        "parentemployeenationalidalternatekey": dtype("float64"),
         "employeenationalidalternatekey": pd.StringDtype(),
         "salesterritorykey": dtype("int64"),
         "firstname": pd.StringDtype(),
@@ -266,7 +264,7 @@ def test_preprocess_df_if_column_is_int_in_column_with_null_values(rp_logger):
         "Initiating the instance of the class AvroConvertor with the schema "
         "containing one nullable column with data type - 'int'"
     )
-    df = pd.DataFrame({"Test": [1, 2, np.NAN]})
+    df = pd.DataFrame({"Test": [1, 2, np.NaN]})
 
     convertor = AvroConvertor({"Test": ["int"]}, df)
     assert convertor.preprocessed_df.dtypes.to_dict() == {"Test": "float64"}
