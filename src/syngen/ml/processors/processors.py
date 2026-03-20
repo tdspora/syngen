@@ -455,14 +455,14 @@ class PostprocessHandler(Processor):
         result = clean(d)
         return result if pd.notnull(result) and result not in [{}, []] else None
 
-    def _postprocess_generated_data(
+    def _unflatten_generated_data(
         self,
         data: pd.DataFrame,
         flattening_mapping: Dict,
         duplicated_columns: List
     ) -> pd.DataFrame:
         """
-        Postprocess the generated data
+        Unflatten the generated data to restore the original structure of the JSON columns
         """
         for old_column, new_columns in flattening_mapping.items():
             data[new_columns] = self._restore_empty_values(data[new_columns])
@@ -509,15 +509,21 @@ class PostprocessHandler(Processor):
             data = self._load_generated_data(path_to_generated_data, table)
             flatten_metadata_of_table = self.flatten_metadata.get(table)
             if flatten_metadata_of_table is not None:
-                logger.info("Start postprocessing of the generated data")
+                logger.info(
+                    f"Start of restoring of the JSON columns "
+                    f"of the generated data of the table - '{table}'"
+                )
                 flattening_mapping = flatten_metadata_of_table.get("flattening_mapping")
                 duplicated_columns = flatten_metadata_of_table.get("duplicated_columns")
-                data = self._postprocess_generated_data(
+                data = self._unflatten_generated_data(
                     data,
                     flattening_mapping,
                     duplicated_columns
                 )
-                logger.info("Finish postprocessing of the generated data")
+                logger.info(
+                    f"Finish of restoring of the JSON columns "
+                    f"of the generated data of the table - '{table}'"
+                )
             order_of_columns = fetch_config(
                 config_pickle_path=f"model_artifacts/tmp_store/{slugify(table)}"
                                    f"/initial_order_of_columns_{slugify(table)}.pkl")
@@ -560,7 +566,6 @@ class PostprocessHandler(Processor):
         """
         Save generated data to the path
         """
-        print(original_schema)
         generated_data = generated_data[order_of_columns]
         DataLoader(path=path_to_destination).save_data(
             generated_data,

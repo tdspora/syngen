@@ -321,6 +321,7 @@ class AvroLoader(BaseDataLoader):
         try:
             df = self._load_data()
             schema = self.load_schema()
+            print(schema)
             return self._get_schema_and_df(schema, df)
         except FileNotFoundError as error:
             message = (
@@ -377,7 +378,7 @@ class AvroLoader(BaseDataLoader):
 
         return df
 
-    def save_data(self, df: pd.DataFrame, schema: Optional[Dict] = None, **kwargs):
+    def save_data(self, df: pd.DataFrame, schema: Optional[Dict], **kwargs):
         if schema is not None:
             logger.trace(f"The data will be saved with the schema: {schema}")
 
