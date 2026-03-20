@@ -455,7 +455,7 @@ class VaeInferHandler(BaseHandler):
 
         return df
 
-    def restore_original_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _restore_original_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Set the dtypes to the columns of the generated data
         corresponding to the dtypes mentioned in the schema related to the original data
@@ -475,6 +475,8 @@ class VaeInferHandler(BaseHandler):
         schema = fetch_config(
             config_pickle_path=self.paths["dataset_pickle_path"]
         ).schema
+        if schema is None:
+            return df
         for column in df.columns.to_list():
             if "boolean" in schema["fields"].get(column):
                 df[column] = df[column].map(lambda x: restore_bool_values(x))
@@ -544,7 +546,7 @@ class VaeInferHandler(BaseHandler):
         )
 
         prepared_data = self._restore_empty_columns(prepared_data)
-        prepared_data = self.restore_original_dtypes(prepared_data)
+        prepared_data = self._restore_original_dtypes(prepared_data)
         prepared_data = self._drop_technical_columns(prepared_data)
 
         is_pk = self._is_pk()

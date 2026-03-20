@@ -492,26 +492,26 @@ class PostprocessHandler(Processor):
         Launch the postprocessing of the generated data,
         and save the processed data to the predefined path
         """
-        for table in self.metadata.keys():
+        for table_name in self.metadata.keys():
             path_to_merged_infer = fetch_config(
-                f"model_artifacts/resources/{slugify(table)}/vae/checkpoints/train_config.pkl"
+                f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints/train_config.pkl"
             ).paths["path_to_merged_infer"]
             extension = get_source_path_extension(path=path_to_merged_infer)
             default_path_to_generated_data = (
-                f"model_artifacts/tmp_store/{slugify(table)}/"
-                f"merged_infer_{slugify(table)}{extension}"
+                f"model_artifacts/tmp_store/{slugify(table_name)}/"
+                f"merged_infer_{slugify(table_name)}{extension}"
             )
             path_to_generated_data = (
-                self.metadata[table].get("infer_settings", {}).get(
+                self.metadata[table_name].get("infer_settings", {}).get(
                     "destination", default_path_to_generated_data
                 ) if self.type_of_process == "infer" else default_path_to_generated_data
             )
-            data = self._load_generated_data(path_to_generated_data, table)
-            flatten_metadata_of_table = self.flatten_metadata.get(table)
+            data = self._load_generated_data(path_to_generated_data, table_name)
+            flatten_metadata_of_table = self.flatten_metadata.get(table_name)
             if flatten_metadata_of_table is not None:
                 logger.info(
                     f"Start of restoring of the JSON columns "
-                    f"of the generated data of the table - '{table}'"
+                    f"of the generated data of the table - '{table_name}'"
                 )
                 flattening_mapping = flatten_metadata_of_table.get("flattening_mapping")
                 duplicated_columns = flatten_metadata_of_table.get("duplicated_columns")
@@ -522,20 +522,12 @@ class PostprocessHandler(Processor):
                 )
                 logger.info(
                     f"Finish of restoring of the JSON columns "
-                    f"of the generated data of the table - '{table}'"
+                    f"of the generated data of the table - '{table_name}'"
                 )
-            order_of_columns = fetch_config(
-                config_pickle_path=f"model_artifacts/tmp_store/{slugify(table)}"
-                                   f"/initial_order_of_columns_{slugify(table)}.pkl")
-            original_schema = fetch_config(
-                config_pickle_path=f"model_artifacts/tmp_store/{slugify(table)}"
-                                   f"/original_schema_{slugify(table)}.pkl"
-            )
             self.__save_generated_data(
                 data,
                 path_to_generated_data,
-                order_of_columns,
-                original_schema
+                table_name
             )
 
     @staticmethod
@@ -559,13 +551,19 @@ class PostprocessHandler(Processor):
         self,
         generated_data: pd.DataFrame,
         path_to_destination: str,
-        order_of_columns: List[str],
-        original_schema: Optional[Dict],
-        *args
+        table_name: str
     ):
         """
         Save generated data to the path
         """
+        original_schema = fetch_config(
+            config_pickle_path=f"model_artifacts/tmp_store/{slugify(table_name)}"
+                               f"/original_schema_{slugify(table_name)}.pkl"
+        )
+        order_of_columns = fetch_config(
+            config_pickle_path=f"model_artifacts/tmp_store/{slugify(table_name)}"
+                               f"/initial_order_of_columns_{slugify(table_name)}.pkl"
+        )
         generated_data = generated_data[order_of_columns]
         DataLoader(path=path_to_destination).save_data(
             generated_data,
