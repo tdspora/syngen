@@ -9,39 +9,6 @@ from syngen.ml.data_loaders import DataLoader
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
-SCHEMA = {
-    "employeekey": ["int", "null"],
-    "parentemployeekey": ["float", "null"],
-    "employeenationalidalternatekey": ["string", "null"],
-    "salesterritorykey": ["int", "null"],
-    "firstname": ["string", "null"],
-    "lastname": ["string", "null"],
-    "middlename": ["string", "null"],
-    "namestyle": ["boolean", "null"],
-    "title": ["string", "null"],
-    "hiredate": ["string", "null"],
-    "birthdate": ["string", "null"],
-    "loginid": ["string", "null"],
-    "emailaddress": ["string", "null"],
-    "phone": ["string", "null"],
-    "maritalstatus": ["string", "null"],
-    "emergencycontactname": ["string", "null"],
-    "emergencycontactphone": ["string", "null"],
-    "salariedflag": ["boolean", "null"],
-    "gender": ["string", "null"],
-    "payfrequency": ["int", "null"],
-    "baserate": ["float", "null"],
-    "vacationhours": ["int", "null"],
-    "sickleavehours": ["int", "null"],
-    "currentflag": ["boolean", "null"],
-    "salespersonflag": ["boolean", "null"],
-    "departmentname": ["string", "null"],
-    "startdate": ["string", "null"],
-    "enddate": ["string", "null"],
-    "status": ["string", "null"],
-    "employeephoto": ["string", "null"]
-}
-
 
 def test_initiate_csv_convertor(rp_logger):
     rp_logger.info("Initiating the instance of the class CSVConvertor")
@@ -60,7 +27,7 @@ def test_initiate_avro_convertor(rp_logger):
         f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
     ).load_data()
 
-    convertor = AvroConvertor(SCHEMA, df)
+    convertor = AvroConvertor(schema["fields"], df)
 
     assert df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),

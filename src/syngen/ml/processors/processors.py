@@ -200,7 +200,7 @@ class PreprocessHandler(Processor):
                     return False
                 try:
                     return isinstance(json.loads(x), dict)
-                except JSONDecodeError:
+                except (JSONDecodeError, ValueError):
                     return False
 
             return series.dropna().apply(is_json_value).any()
@@ -521,11 +521,15 @@ class PostprocessHandler(Processor):
             order_of_columns = fetch_config(
                 config_pickle_path=f"model_artifacts/tmp_store/{slugify(table)}"
                                    f"/initial_order_of_columns_{slugify(table)}.pkl")
+            original_schema = fetch_config(
+                config_pickle_path=f"model_artifacts/tmp_store/{slugify(self.table_name)}"
+                                   f"/original_schema_{slugify(self.table_name)}.pkl"
+            )
             self.__save_generated_data(
                 data,
                 path_to_generated_data,
                 order_of_columns,
-                table
+                original_schema
             )
 
     @staticmethod
@@ -550,15 +554,18 @@ class PostprocessHandler(Processor):
         generated_data: pd.DataFrame,
         path_to_destination: str,
         order_of_columns: List[str],
+        original_schema: Optional[Dict],
         *args
     ):
         """
         Save generated data to the path
         """
+        print(original_schema)
         generated_data = generated_data[order_of_columns]
         DataLoader(path=path_to_destination).save_data(
             generated_data,
             format=get_context().get_config(),
+            schema=original_schema
         )
         if self.type_of_process == "infer":
             self.__save_preview_data(
