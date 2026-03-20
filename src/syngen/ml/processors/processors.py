@@ -528,8 +528,8 @@ class PostprocessHandler(Processor):
                 config_pickle_path=f"model_artifacts/tmp_store/{slugify(table)}"
                                    f"/initial_order_of_columns_{slugify(table)}.pkl")
             original_schema = fetch_config(
-                config_pickle_path=f"model_artifacts/tmp_store/{slugify(self.table_name)}"
-                                   f"/original_schema_{slugify(self.table_name)}.pkl"
+                config_pickle_path=f"model_artifacts/tmp_store/{slugify(table)}"
+                                   f"/original_schema_{slugify(table)}.pkl"
             )
             self.__save_generated_data(
                 data,
