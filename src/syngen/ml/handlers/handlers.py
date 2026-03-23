@@ -478,7 +478,10 @@ class VaeInferHandler(BaseHandler):
         if schema is None:
             return df
         for column in df.columns.to_list():
-            if "boolean" in schema["fields"].get(column):
+            if (
+                schema["format"] != "CSV"
+                and "boolean" in schema["fields"].get(column)
+            ):
                 df[column] = df[column].map(lambda x: restore_bool_values(x))
         return df
 
