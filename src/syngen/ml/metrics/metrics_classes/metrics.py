@@ -38,6 +38,14 @@ from syngen.ml.metrics.utils import (
 from syngen.ml.vae.models.features import KURTOSIS_THRESHOLD
 
 matplotlib.use("Agg")
+matplotlib.rcdefaults()  # undo sns.set(font_scale=2) from earlier plots
+
+def _to_numeric(s):
+    try:
+        return pd.to_numeric(s, errors='raise')
+    except (ValueError, TypeError):
+        return s
+
 
 # minimal number of rows in original dataset to perform clustering
 MIN_NUMBER_OF_ROWS_FOR_CLUSTERING = 3
@@ -274,12 +282,12 @@ class Correlations(BaseMetric):
 
         self.original_heatmap = self.__calculate_correlations(
             self.original[categorical_columns + cont_columns].apply(
-                pd.to_numeric, axis=0, errors="ignore"
+                _to_numeric
             )
         )
         self.synthetic_heatmap = self.__calculate_correlations(
             self.synthetic[categorical_columns + cont_columns].apply(
-                pd.to_numeric, axis=0, errors="ignore"
+                _to_numeric
             )
         )
         self.corr_score = self.original_heatmap - self.synthetic_heatmap
@@ -1240,7 +1248,7 @@ class Clustering(BaseMetric):
 
     def __preprocess_data(self, dataset):
         transformed_dataset = dataset.apply(
-            pd.to_numeric, axis=0, errors="ignore"
+            _to_numeric
         ).select_dtypes(include="number")
         scaler = MinMaxScaler()
         transformed_dataset = scaler.fit_transform(transformed_dataset)
@@ -1298,10 +1306,10 @@ class Utility(BaseMetric):
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
         self.original = self.original[cont_columns + categorical_columns].apply(
-            pd.to_numeric, axis=0, errors="ignore"
+            _to_numeric
         )
         self.synthetic = self.synthetic[cont_columns + categorical_columns].apply(
-            pd.to_numeric, axis=0, errors="ignore"
+            _to_numeric
         )
         self.original = self.original.select_dtypes(include="number").dropna()
         self.synthetic = self.synthetic.select_dtypes(include="number").dropna()

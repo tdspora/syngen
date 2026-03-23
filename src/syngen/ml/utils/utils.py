@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import warnings
 from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
 from datetime import datetime, timedelta, date, timezone
@@ -527,6 +528,22 @@ def setup_logger():
     logger.add(file_sink, level=os.getenv("LOGURU_LEVEL"))
 
 
+def enable_warnings_logging(log_level: str) -> None:
+    """
+    Redirect Python warnings to loguru when log level is DEBUG or TRACE.
+    Has no effect for INFO and higher levels.
+    """
+    if log_level not in ("TRACE", "DEBUG"):
+        return
+
+    warnings.simplefilter("always")
+
+    def _showwarning(message, category, filename, lineno, file=None, line=None):
+        logger.warning("{}:{}: {}: {}", filename, lineno, category.__name__, message)
+
+    warnings.showwarning = _showwarning
+
+
 def setup_log_process(
     type_of_process: str,
     log_level: str,
@@ -544,6 +561,7 @@ def setup_log_process(
         type_of_process=type_of_process
     )
     setup_logger()
+    enable_warnings_logging(log_level)
 
 
 def get_initial_table_name(table_name) -> str:
