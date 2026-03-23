@@ -68,6 +68,13 @@ class BaseMetric(ABC):
     def get_value(self) -> Union[float, List[float]]:
         return self.value
 
+    @staticmethod
+    def _get_reusable_figure(figure_name: str, figsize: tuple[float, float]):
+        figure = plt.figure(num=figure_name, figsize=figsize)
+        figure.clf()
+        figure.set_size_inches(figsize)
+        return figure
+
 
 class JensenShannonDistance(BaseMetric):
     def __init__(
@@ -420,10 +427,8 @@ class BivariateMetric(BaseMetric):
             desc="Generating bivariate distributions...",
             total=len(column_pairs),
         ):
-            plt.clf()
-            fig, self._axes = plt.subplots(
-                1, 2, figsize=(30, 15), gridspec_kw={"width_ratios": [7, 8.7]}
-            )
+            fig = self._get_reusable_figure("syngen_bivariate_metric", (30, 15))
+            self._axes = fig.subplots(1, 2, gridspec_kw={"width_ratios": [7, 8.7]})
             if first_col in cont_columns:
                 if second_col in cont_columns:
                     (
@@ -494,7 +499,7 @@ class BivariateMetric(BaseMetric):
                 f"{self.reports_path}/bivariate_{slugify(first_col)}_{slugify(second_col)}.svg"
             )
             bi_imgs[title] = path_to_image
-            plt.savefig(path_to_image, format="svg")
+            fig.savefig(path_to_image, format="svg")
         return bi_imgs
 
     @staticmethod
@@ -797,25 +802,25 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot:
-            fig = plt.figure(figsize=(9.5, 6.5))
+            fig = self._get_reusable_figure("syngen_univariate_categorical", (9.5, 6.5))
+            ax = fig.gca()
 
             width = 0.35
             x = np.arange(len(original_labels))
-            plt.bar(
+            ax.bar(
                 x - width / 2,
                 original_ratio,
                 width=width,
                 label="Original",
                 color="#3F93E1",
             )
-            plt.bar(
+            ax.bar(
                 x + width / 2,
                 synthetic_ratio,
                 width=width,
                 label="Synthetic",
                 color="#FF9C54",
             )
-            ax = plt.gca()
             ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
             ax.yaxis.grid(color="#E5E9EB", linestyle="-", linewidth=0.5)
             ax.set_axisbelow(True)
@@ -833,7 +838,7 @@ class UnivariateMetric(BaseMetric):
             fig.autofmt_xdate()
             ax.set_xlabel("category", fontsize=9)
             ax.set_ylabel("percents", fontsize=9)
-            plt.legend(
+            ax.legend(
                 ["original", "synthetic"],
                 loc="upper left",
                 fontsize=9,
@@ -843,7 +848,7 @@ class UnivariateMetric(BaseMetric):
             )
             if self.reports_path:
                 path_to_image = f"{self.reports_path}/univariate_{slugify(column)}.svg"
-                plt.savefig(path_to_image, bbox_inches="tight", format="svg")
+                fig.savefig(path_to_image, bbox_inches="tight", format="svg")
                 uni_images[column] = path_to_image
         return uni_images
 
@@ -862,7 +867,8 @@ class UnivariateMetric(BaseMetric):
         uni_images = {}
 
         if self.plot and original_unique_count > 1 and synthetic_unique_count > 1:
-            fig, ax = plt.subplots(figsize=(8, 6.5))
+            fig = self._get_reusable_figure("syngen_univariate_continuous", (8, 6.5))
+            ax = fig.subplots()
 
             # Kernel Density Estimation plot using Seaborn
             sns.kdeplot(data=self.original, x=column, color="#3F93E1", linewidth=2, ax=ax)
@@ -877,12 +883,13 @@ class UnivariateMetric(BaseMetric):
             ax.yaxis.offsetText.set_visible(False)
             ax.yaxis.set_label_text(f"density {fmt.get_offset()}")
             ax.yaxis.get_offset_text().set_fontsize(9)
-            plt.xticks(rotation=45)
+            for tick_label in ax.get_xticklabels():
+                tick_label.set_rotation(45)
             ax.spines[["top", "right", "left", "bottom"]].set_color("#E5E9EB")
             ax.grid(color="#E5E9EB", linestyle="-", linewidth=0.5)
             ax.set_axisbelow(True)
             ax.set_facecolor("#FFFFFF")
-            plt.legend(
+            ax.legend(
                 ["original", "synthetic"],
                 loc="upper left",
                 fontsize=9,
@@ -899,7 +906,7 @@ class UnivariateMetric(BaseMetric):
                 ax.set_xticklabels(x_ticks, rotation=45, ha="right")
             if self.reports_path:
                 path_to_image = f"{self.reports_path}/univariate_{slugify(column)}.svg"
-                plt.savefig(path_to_image, bbox_inches="tight", format="svg")
+                fig.savefig(path_to_image, bbox_inches="tight", format="svg")
                 uni_images[column] = path_to_image
         if print_nan:
             logger.info(f"Number of original NaN values in {column}: {original_nan_count}")
