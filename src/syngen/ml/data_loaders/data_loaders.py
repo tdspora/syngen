@@ -362,15 +362,12 @@ class AvroLoader(BaseDataLoader):
 
             # Identify unions (e.g. ["null", "string"]) that allow null.
             union_types = field_type if isinstance(field_type, list) else None
-            allows_null = bool(union_types) and any(
-                (t == "null") or (isinstance(t, dict) and t.get("type") == "null")
-                for t in union_types
-            )
+            allows_null = bool(union_types) and any(t == "null" for t in union_types)
             if not allows_null:
                 continue
 
             series = df[name]
-            # Convert pandas missing markers to None so the Avro union selects the null branch.
+            # Convert pandas missing markers to None, so the Avro union selects the null branch.
             series = series.where(~series.isna(), None)
 
             df[name] = series
