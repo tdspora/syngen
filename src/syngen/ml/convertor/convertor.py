@@ -10,7 +10,7 @@ from loguru import logger
 @dataclass
 class Convertor:
     """
-    Abstract class for converting fetched schema in Avro, Parquet or Delta formats
+    Abstract class for converting the fetched schema in Avro, Parquet or Delta formats
     """
     schema: Dict
     df: pd.DataFrame
@@ -114,7 +114,7 @@ class Convertor:
 
     def _preprocess_df(self, schema: Dict, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Preprocess data frame, update data types of columns
+        Preprocess the data frame, update data types of columns
         """
         if not df.empty:
             try:
@@ -131,7 +131,7 @@ class Convertor:
 
 class CSVConvertor(Convertor):
     """
-    Class for supporting custom schema for csv files
+    Class for supporting the custom schema for csv files
     """
     schema: Dict = {"fields": {}, "format": "CSV"}
 
@@ -143,7 +143,7 @@ class CSVConvertor(Convertor):
 
 class AvroConvertor(Convertor):
     """
-    Class for converting fetched avro schema
+    Class for converting the fetched avro schema
     """
 
     def __init__(self, schema, df):
@@ -154,7 +154,7 @@ class AvroConvertor(Convertor):
     @staticmethod
     def _convert_schema(schema) -> Dict:
         """
-        Convert the schema of Avro file to unified format
+        Convert the schema of Avro file to the unified format
         """
         def _extract_type_names(avro_type) -> set[str]:
             if isinstance(avro_type, list):
