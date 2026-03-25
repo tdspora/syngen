@@ -524,14 +524,14 @@ class PostprocessHandler(Processor):
                     f"Finish of restoring of the JSON columns "
                     f"of the generated data of the table - '{table_name}'"
                 )
-            self.__save_generated_data(
+            self._save_generated_data(
                 data,
                 path_to_generated_data,
                 table_name
             )
 
     @staticmethod
-    def __save_preview_data(
+    def _save_preview_data(
         path_to_destination,
         preview_df
     ):
@@ -547,7 +547,15 @@ class PostprocessHandler(Processor):
             f"Preview saved in '{preview_path}' (first {len(preview_df)} rows)"
         )
 
-    def __save_generated_data(
+    @staticmethod
+    def __load_original_schema(path_to_generated_data: str, *args, **kwargs) -> Optional[Dict]:
+        """
+        Load the original schema if it has been provided with an original data
+        (e.g, with the '.avro' files)
+        """
+        return DataLoader(path=path_to_generated_data).original_schema
+
+    def _save_generated_data(
         self,
         generated_data: pd.DataFrame,
         path_to_destination: str,
@@ -556,9 +564,9 @@ class PostprocessHandler(Processor):
         """
         Save generated data to the path
         """
-        original_schema = fetch_config(
-            config_pickle_path=f"model_artifacts/tmp_store/{slugify(table_name)}"
-                               f"/original_schema_{slugify(table_name)}.pkl"
+        original_schema = self.__load_original_schema(
+            path_to_generated_data=path_to_destination,
+            table_name=table_name
         )
         order_of_columns = fetch_config(
             config_pickle_path=f"model_artifacts/tmp_store/{slugify(table_name)}"
@@ -571,7 +579,7 @@ class PostprocessHandler(Processor):
             schema=original_schema
         )
         if self.type_of_process == "infer":
-            self.__save_preview_data(
+            self._save_preview_data(
                 path_to_destination=path_to_destination,
                 preview_df=generated_data.head(self.preview_rows)
             )
