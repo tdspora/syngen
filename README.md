@@ -112,7 +112,7 @@ Parameters that you can set up for training process:
 - <i>batch_size</i> – if specified, the training is split into batches. This can save the RAM
 - <i>reports</i> - controls the generation of quality reports, might require significant time for big tables (>10000 rows)
 - <i>metadata_path</i> – a path to the metadata file containing the metadata
-- <i>column_types</i> - might include the section <i>categorical</i> which contains the listed columns defined as categorical by a user
+- <i>column_types</i> - might include the section <i>categorical</i> which contains columns explicitly defined as categorical by the user
 - <i>log_level</i> - logging level for the process
 - <i>fernet_key</i> - the name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly.
 
@@ -230,7 +230,7 @@ CUSTOMER:                                   # Table name. Required parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
     reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously, e.g. ["metrics_only", "sample"]. Might require significant time for big tables (>10000 rows).       
     column_types:
-      categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
+      categorical:                          # The list of columns explicitly defined as categorical by the user. Optional parameter
         - gender
         - marital_status
 
@@ -299,7 +299,7 @@ ORDER:                                      # Table name. Required parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
     reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report, e.g. ["metrics_only", "sample"]. Might require significant time for big tables (>10000 rows).
     column_types:
-      categorical:                          # Force listed columns to have categorical type (use dictionary of values). Optional parameter
+      categorical:                          # The list of columns explicitly defined as categorical by the user. Optional parameter
         - gender
         - marital_status
 
