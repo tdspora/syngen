@@ -542,9 +542,7 @@ class Dataset:
         self.binary_columns = set(
             [
                 col for col in self.df.columns
-                if self.df[col].map(
-                    lambda x: "?" if isinstance(x, float) and np.isnan(x) else str(x)
-                ).nunique() == 2
+                if self.df[col].map(lambda x: "?" if pd.isna(x) else str(x)).nunique() == 2
             ]
         )
 
@@ -556,9 +554,7 @@ class Dataset:
             [
                 col
                 for col in self.df.columns
-                if self.df[col].map(
-                    lambda x: "?" if isinstance(x, float) and np.isnan(x) else str(x)
-                ).nunique() <= 50
+                if self.df[col].map(lambda x: "?" if pd.isna(x) else str(x)).nunique() <= 50
                 and col not in self.binary_columns
             ]
         )
