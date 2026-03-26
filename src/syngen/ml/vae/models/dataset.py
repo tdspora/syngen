@@ -1239,11 +1239,10 @@ class Dataset:
         Preprocess categorical columns by filling NaN values with a strategy
         """
         if self.df[feature].isnull().any():
-            self.df[feature] = self.df[feature].map(
-                lambda x: "?" if isinstance(x, float) and np.isnan(x) else str(x)
-            )
             if strategy == "?":
-                self.df[feature] = self.df[feature].fillna("?")
+                self.df[feature] = self.df[feature].map(
+                    lambda x: "?" if isinstance(x, float) and np.isnan(x) else str(x)
+                )
             if strategy == "fill":
                 self.df[feature] = self.df[feature].fillna(method="bfill").fillna(method="ffill")
                 logger.info(
