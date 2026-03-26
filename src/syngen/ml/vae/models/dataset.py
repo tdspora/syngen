@@ -1236,9 +1236,7 @@ class Dataset:
         """
         if self.df[feature].isnull().any():
             if strategy == "?":
-                self.df[feature] = self.df[feature].map(
-                    lambda x: "?" if isinstance(x, float) and np.isnan(x) else str(x)
-                )
+                self.df[feature] = self.df[feature].map(lambda x: "?" if pd.isna(x) else str(x))
             if strategy == "fill":
                 self.df[feature] = self.df[feature].fillna(method="bfill").fillna(method="ffill")
                 logger.info(
