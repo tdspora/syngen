@@ -187,8 +187,8 @@ class Reporter:
         categorical_columns = categorical_columns | binary_columns
 
         for col in categorical_columns:
-            original[col] = original[col].astype(str).fillna("nan")
-            synthetic[col] = synthetic[col].astype(str).fillna("nan")
+            original[col] = original[col].astype(str)
+            synthetic[col] = synthetic[col].astype(str)
         return (
             original,
             synthetic,
