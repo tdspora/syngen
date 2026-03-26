@@ -468,7 +468,7 @@ class VaeInferHandler(BaseHandler):
             mapping = {
                 "False": False,
                 "True": True,
-                "<NA>": np.NaN
+                "?": np.NaN
             }
             if value in mapping.keys():
                 return mapping[value]
