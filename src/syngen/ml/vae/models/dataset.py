@@ -542,7 +542,9 @@ class Dataset:
         self.binary_columns = set(
             [
                 col for col in self.df.columns
-                if self.df[col].astype(str).fillna("?").nunique() == 2
+                if self.df[col].map(
+                    lambda x: "?" if isinstance(x, float) and np.isnan(x) else str(x)
+                ).nunique() == 2
             ]
         )
 
@@ -554,7 +556,9 @@ class Dataset:
             [
                 col
                 for col in self.df.columns
-                if self.df[col].astype(str).fillna("?").nunique() <= 50
+                if self.df[col].map(
+                    lambda x: "?" if isinstance(x, float) and np.isnan(x) else str(x)
+                ).fillna("?").nunique() <= 50
                 and col not in self.binary_columns
             ]
         )
@@ -1235,8 +1239,11 @@ class Dataset:
         Preprocess categorical columns by filling NaN values with a strategy
         """
         if self.df[feature].isnull().any():
+            self.df[feature] = self.df[feature].map(
+                lambda x: "?" if isinstance(x, float) and np.isnan(x) else str(x)
+            )
             if strategy == "?":
-                self.df[feature] = self.df[feature].astype(str).fillna("?")
+                self.df[feature] = self.df[feature].fillna("?")
             if strategy == "fill":
                 self.df[feature] = self.df[feature].fillna(method="bfill").fillna(method="ffill")
                 logger.info(
