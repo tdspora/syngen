@@ -558,7 +558,7 @@ class Dataset:
                 for col in self.df.columns
                 if self.df[col].map(
                     lambda x: "?" if isinstance(x, float) and np.isnan(x) else str(x)
-                ).fillna("?").nunique() <= 50
+                ).nunique() <= 50
                 and col not in self.binary_columns
             ]
         )
