@@ -455,6 +455,37 @@ class VaeInferHandler(BaseHandler):
 
         return df
 
+    def _restore_original_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Set the dtypes to the columns of the generated data
+        corresponding to the dtypes mentioned in the schema related to the original data
+        """
+
+        def restore_bool_values(value: Optional[bool]):
+            """
+            Revert the boolean value coerced to the string back to the appropriate boolean value
+            """
+            mapping = {
+                "False": False,
+                "True": True,
+                "?": np.NaN
+            }
+            if value in mapping.keys():
+                return mapping[value]
+            return value
+        schema = fetch_config(
+            config_pickle_path=self.paths["dataset_pickle_path"]
+        ).schema
+        if schema is None:
+            return df
+        for column in df.columns.to_list():
+            if (
+                schema["format"] != "CSV"
+                and "boolean" in schema["fields"].get(column)
+            ):
+                df[column] = df[column].map(lambda x: restore_bool_values(x))
+        return df
+
     def _drop_technical_columns(self, prepared_data: pd.DataFrame) -> pd.DataFrame:
         """
         Workaround for the case when all columns are dropped with technical column
@@ -476,9 +507,13 @@ class VaeInferHandler(BaseHandler):
         """
         Save generated data to the path
         """
+        original_schema = fetch_config(
+            config_pickle_path=self.paths["original_schema_path"]
+        )
         DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
             data=generated_data,
             format=get_context().get_config(),
+            schema=original_schema
         )
 
     def handle(self, **kwargs):
@@ -513,8 +548,9 @@ class VaeInferHandler(BaseHandler):
             if len(prepared_batches) > 0
             else pd.DataFrame()
         )
-        prepared_data = self._restore_empty_columns(prepared_data)
 
+        prepared_data = self._restore_empty_columns(prepared_data)
+        prepared_data = self._restore_original_dtypes(prepared_data)
         prepared_data = self._drop_technical_columns(prepared_data)
 
         is_pk = self._is_pk()

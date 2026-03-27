@@ -200,7 +200,7 @@ class PreprocessHandler(Processor):
                     return False
                 try:
                     return isinstance(json.loads(x), dict)
-                except JSONDecodeError:
+                except (JSONDecodeError, ValueError):
                     return False
 
             return series.dropna().apply(is_json_value).any()
@@ -455,14 +455,14 @@ class PostprocessHandler(Processor):
         result = clean(d)
         return result if pd.notnull(result) and result not in [{}, []] else None
 
-    def _postprocess_generated_data(
+    def _unflatten_generated_data(
         self,
         data: pd.DataFrame,
         flattening_mapping: Dict,
         duplicated_columns: List
     ) -> pd.DataFrame:
         """
-        Postprocess the generated data
+        Unflatten the generated data to restore the original structure of the JSON columns
         """
         for old_column, new_columns in flattening_mapping.items():
             data[new_columns] = self._restore_empty_values(data[new_columns])
@@ -492,44 +492,46 @@ class PostprocessHandler(Processor):
         Launch the postprocessing of the generated data,
         and save the processed data to the predefined path
         """
-        for table in self.metadata.keys():
+        for table_name in self.metadata.keys():
             path_to_merged_infer = fetch_config(
-                f"model_artifacts/resources/{slugify(table)}/vae/checkpoints/train_config.pkl"
+                f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints/train_config.pkl"
             ).paths["path_to_merged_infer"]
             extension = get_source_path_extension(path=path_to_merged_infer)
             default_path_to_generated_data = (
-                f"model_artifacts/tmp_store/{slugify(table)}/"
-                f"merged_infer_{slugify(table)}{extension}"
+                f"model_artifacts/tmp_store/{slugify(table_name)}/"
+                f"merged_infer_{slugify(table_name)}{extension}"
             )
             path_to_generated_data = (
-                self.metadata[table].get("infer_settings", {}).get(
+                self.metadata[table_name].get("infer_settings", {}).get(
                     "destination", default_path_to_generated_data
                 ) if self.type_of_process == "infer" else default_path_to_generated_data
             )
-            data = self._load_generated_data(path_to_generated_data, table)
-            flatten_metadata_of_table = self.flatten_metadata.get(table)
+            data = self._load_generated_data(path_to_generated_data, table_name)
+            flatten_metadata_of_table = self.flatten_metadata.get(table_name)
             if flatten_metadata_of_table is not None:
-                logger.info("Start postprocessing of the generated data")
+                logger.info(
+                    f"Start of restoring of the JSON columns "
+                    f"of the generated data of the table - '{table_name}'"
+                )
                 flattening_mapping = flatten_metadata_of_table.get("flattening_mapping")
                 duplicated_columns = flatten_metadata_of_table.get("duplicated_columns")
-                data = self._postprocess_generated_data(
+                data = self._unflatten_generated_data(
                     data,
                     flattening_mapping,
                     duplicated_columns
                 )
-                logger.info("Finish postprocessing of the generated data")
-            order_of_columns = fetch_config(
-                config_pickle_path=f"model_artifacts/tmp_store/{slugify(table)}"
-                                   f"/initial_order_of_columns_{slugify(table)}.pkl")
-            self.__save_generated_data(
+                logger.info(
+                    f"Finish of restoring of the JSON columns "
+                    f"of the generated data of the table - '{table_name}'"
+                )
+            self._save_generated_data(
                 data,
                 path_to_generated_data,
-                order_of_columns,
-                table
+                table_name
             )
 
     @staticmethod
-    def __save_preview_data(
+    def _save_preview_data(
         path_to_destination,
         preview_df
     ):
@@ -545,23 +547,39 @@ class PostprocessHandler(Processor):
             f"Preview saved in '{preview_path}' (first {len(preview_df)} rows)"
         )
 
-    def __save_generated_data(
+    @staticmethod
+    def __load_original_schema(path_to_generated_data: str, *args, **kwargs) -> Optional[Dict]:
+        """
+        Load the original schema if it has been provided with an original data
+        (e.g, with the '.avro' files)
+        """
+        return DataLoader(path=path_to_generated_data).original_schema
+
+    def _save_generated_data(
         self,
         generated_data: pd.DataFrame,
         path_to_destination: str,
-        order_of_columns: List[str],
-        *args
+        table_name: str
     ):
         """
         Save generated data to the path
         """
+        original_schema = self.__load_original_schema(
+            path_to_generated_data=path_to_destination,
+            table_name=table_name
+        )
+        order_of_columns = fetch_config(
+            config_pickle_path=f"model_artifacts/tmp_store/{slugify(table_name)}"
+                               f"/initial_order_of_columns_{slugify(table_name)}.pkl"
+        )
         generated_data = generated_data[order_of_columns]
         DataLoader(path=path_to_destination).save_data(
             generated_data,
             format=get_context().get_config(),
+            schema=original_schema
         )
         if self.type_of_process == "infer":
-            self.__save_preview_data(
+            self._save_preview_data(
                 path_to_destination=path_to_destination,
                 preview_df=generated_data.head(self.preview_rows)
             )

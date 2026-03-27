@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Optional, Callable, Union, List, Set, Literal
+from typing import Dict, Tuple, Optional, Callable, Union, List, Set, Literal, Any
 import itertools
 from collections import defaultdict
 from copy import deepcopy
@@ -187,8 +187,9 @@ class Reporter:
         categorical_columns = categorical_columns | binary_columns
 
         for col in categorical_columns:
-            original[col] = original[col].fillna("nan").astype(str)
-            synthetic[col] = synthetic[col].fillna("nan").astype(str)
+            cast_to_str: Callable[[Any], str] = lambda x: "nan" if pd.isna(x) else str(x)
+            original[col] = original[col].map(cast_to_str)
+            synthetic[col] = synthetic[col].map(cast_to_str)
         return (
             original,
             synthetic,

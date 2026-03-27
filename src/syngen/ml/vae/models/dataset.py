@@ -540,7 +540,10 @@ class Dataset:
         Set up the list of binary columns based on the count of unique values in the column
         """
         self.binary_columns = set(
-            [col for col in self.df.columns if self.df[col].fillna("?").nunique() == 2]
+            [
+                col for col in self.df.columns
+                if self.df[col].map(lambda x: "?" if pd.isna(x) else str(x)).nunique() == 2
+            ]
         )
 
     def _define_categorical_columns(self):
@@ -551,7 +554,7 @@ class Dataset:
             [
                 col
                 for col in self.df.columns
-                if self.df[col].fillna("?").nunique() <= 50
+                if self.df[col].map(lambda x: "?" if pd.isna(x) else str(x)).nunique() <= 50
                 and col not in self.binary_columns
             ]
         )
@@ -1233,7 +1236,7 @@ class Dataset:
         """
         if self.df[feature].isnull().any():
             if strategy == "?":
-                self.df[feature] = self.df[feature].fillna("?").astype(str)
+                self.df[feature] = self.df[feature].map(lambda x: "?" if pd.isna(x) else str(x))
             if strategy == "fill":
                 self.df[feature] = self.df[feature].fillna(method="bfill").fillna(method="ffill")
                 logger.info(

@@ -262,12 +262,12 @@ def test_get_artifacts_contained_column_with_mixed_data(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_postprocess_generated_data_with_one_json_column(rp_logger):
+def test_unflatten_generated_data_with_one_json_column(rp_logger):
     """
-    Test the postprocessing of the flattened generated data contained one json column
+    Test the unflattening of the flattened generated data contained one json column
     """
     rp_logger.info(
-        "Test the method '_postprocess_generated_data' of the class PostprocessHandler "
+        "Test the method '_unflatten_generated_data' of the class PostprocessHandler "
         "for the flattened generated data with one json column"
     )
     path_to_metadata = (
@@ -288,7 +288,7 @@ def test_postprocess_generated_data_with_one_json_column(rp_logger):
         type_of_process="infer"
     )
     data = handler._load_generated_data(path_to_flattened_data)
-    un_flattened_data = handler._postprocess_generated_data(
+    un_flattened_data = handler._unflatten_generated_data(
         data=data,
         flattening_mapping={
             "_details": [
@@ -321,12 +321,12 @@ def test_postprocess_generated_data_with_one_json_column(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_postprocess_generated_data_with_two_json_columns(rp_logger):
+def test_unflatten_generated_data_with_two_json_columns(rp_logger):
     """
-    Test the postprocessing of the flattened generated data contained two json columns
+    Test the unflattening of the flattened generated data contained two json columns
     """
     rp_logger.info(
-        "Test the method '_postprocess_generated_data' of the class PostprocessHandler "
+        "Test the method '_unflatten_generated_data' of the class PostprocessHandler "
         "for the flattened generated data with two json columns"
     )
     path_to_metadata = (
@@ -347,7 +347,7 @@ def test_postprocess_generated_data_with_two_json_columns(rp_logger):
         type_of_process="infer"
     )
     data = handler._load_generated_data(path_to_flattened_data)
-    un_flattened_data = handler._postprocess_generated_data(
+    un_flattened_data = handler._unflatten_generated_data(
         data=data,
         flattening_mapping={
             "progress": [
@@ -390,13 +390,13 @@ def test_postprocess_generated_data_with_two_json_columns(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_postprocess_generated_data_with_mixed_data(rp_logger):
+def test_unflatten_generated_data_with_mixed_data(rp_logger):
     """
-    Test the postprocessing of the flattened generated data with the column
+    Test the unflattening of the flattened generated data with the column
     contained mixed data
     """
     rp_logger.info(
-        "Test the method '_postprocess_generated_data' of the class PostprocessHandler "
+        "Test the method '_unflatten_generated_data' of the class PostprocessHandler "
         "for the flattened generated data with the column contained mixed data"
     )
     path_to_metadata = (
@@ -417,7 +417,7 @@ def test_postprocess_generated_data_with_mixed_data(rp_logger):
         type_of_process="infer"
     )
     data = handler._load_generated_data(path_to_flattened_data)
-    un_flattened_data = handler._postprocess_generated_data(
+    un_flattened_data = handler._unflatten_generated_data(
         data=data,
         flattening_mapping={
             "_details": [
@@ -530,7 +530,7 @@ def test_run_with_avro_file(
             "first_name": "string",
             "last_name": "string",
             "created_date": "string",
-            "active": "int",
+            "active": "boolean",
             "id": "string",
             "region": "string",
             "email": "string",

@@ -11,7 +11,7 @@ lazy==1.4
 loguru
 MarkupSafe==2.1.1
 marshmallow==3.19.*
-matplotlib==3.9.*
+matplotlib==3.10.*
 mlflow==3.8.*
 numpy==1.26.*
 openpyxl

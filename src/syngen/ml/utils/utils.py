@@ -430,8 +430,9 @@ def fetch_config(config_pickle_path: str):
     """
     Fetch the configuration from the disk
     """
-    with open(config_pickle_path, "rb") as f:
-        return pkl.load(f)
+    if os.path.exists(config_pickle_path):
+        with open(config_pickle_path, "rb") as f:
+            return pkl.load(f)
 
 
 def save_config(config_pickle_path: str, config):
