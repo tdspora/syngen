@@ -22,13 +22,13 @@ from syngen.ml.utils import ProgressBarHandler
 
 class Reporter:
     def __init__(
-            self,
-            table_name: str,
-            paths: Dict[str, str],
-            config: Dict[str, str],
-            metadata: Dict,
-            loader: Optional[Callable[[str], pd.DataFrame]] = None,
-            type_of_process: Literal["train", "infer"] = "train"
+        self,
+        table_name: str,
+        paths: Dict[str, str],
+        config: Dict[str, str],
+        metadata: Dict,
+        loader: Optional[Callable[[str], pd.DataFrame]] = None,
+        type_of_process: Literal["train", "infer"] = "train"
     ):
         self.table_name = table_name
         self.paths = paths
@@ -105,9 +105,9 @@ class Reporter:
 
         # eliminate keys columns from the report
         keys_columns = (
-                set(self.dataset.pk_columns) |
-                set(self.dataset.fk_columns) |
-                set(self.dataset.uq_columns)
+            set(self.dataset.pk_columns) |
+            set(self.dataset.fk_columns) |
+            set(self.dataset.uq_columns)
         )
         types = tuple(columns - keys_columns - self.technical_columns for columns in types)
 
