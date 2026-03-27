@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Optional, Callable, Union, List, Set, Literal
+from typing import Dict, Tuple, Optional, Callable, Union, List, Set, Literal, Any
 import itertools
 from collections import defaultdict
 from copy import deepcopy
@@ -22,13 +22,13 @@ from syngen.ml.utils import ProgressBarHandler
 
 class Reporter:
     def __init__(
-        self,
-        table_name: str,
-        paths: Dict[str, str],
-        config: Dict[str, str],
-        metadata: Dict,
-        loader: Optional[Callable[[str], pd.DataFrame]] = None,
-        type_of_process: Literal["train", "infer"] = "train"
+            self,
+            table_name: str,
+            paths: Dict[str, str],
+            config: Dict[str, str],
+            metadata: Dict,
+            loader: Optional[Callable[[str], pd.DataFrame]] = None,
+            type_of_process: Literal["train", "infer"] = "train"
     ):
         self.table_name = table_name
         self.paths = paths
@@ -105,9 +105,9 @@ class Reporter:
 
         # eliminate keys columns from the report
         keys_columns = (
-            set(self.dataset.pk_columns) |
-            set(self.dataset.fk_columns) |
-            set(self.dataset.uq_columns)
+                set(self.dataset.pk_columns) |
+                set(self.dataset.fk_columns) |
+                set(self.dataset.uq_columns)
         )
         types = tuple(columns - keys_columns - self.technical_columns for columns in types)
 
@@ -187,8 +187,9 @@ class Reporter:
         categorical_columns = categorical_columns | binary_columns
 
         for col in categorical_columns:
-            original[col] = original[col].astype(str)
-            synthetic[col] = synthetic[col].astype(str)
+            cast_to_str: Callable[[Any], str] = lambda x: "nan" if pd.isna(x) else str(x)
+            original[col] = original[col].map(cast_to_str)
+            synthetic[col] = synthetic[col].map(cast_to_str)
         return (
             original,
             synthetic,
