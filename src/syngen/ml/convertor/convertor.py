@@ -10,18 +10,18 @@ from loguru import logger
 @dataclass
 class Convertor:
     """
-    Abstract class for converting fetched schema in Avro, Parquet or Delta formats
+    Abstract class for converting the fetched schema in Avro, Parquet or Delta formats
     """
     schema: Dict
     df: pd.DataFrame
-    excluded_dtypes: Tuple = (str, bytes, datetime, date)
+    excluded_dtypes: Tuple = (str, bytes, datetime, date, bool)
 
-    def _check_dtype_or_nan(self, dtypes: Tuple):
+    def _check_dtype_or_nan(self, included_dtypes: Tuple, excluded_dtypes: Tuple = ()):
         """
         Check if the value is of the specified data types or 'np.NaN'
         """
         return (
-            lambda x: isinstance(x, dtypes)
+            lambda x: (isinstance(x, included_dtypes) and not isinstance(x, excluded_dtypes))
             or (not isinstance(x, self.excluded_dtypes) and np.isnan(x))
         )
 
@@ -52,7 +52,14 @@ class Convertor:
 
             if data_type in type_map:
                 df[column] = df[column].astype(type_map[data_type])
-            elif data_type in ["int", "bool"]:
+            elif data_type == "boolean":
+                # Preserve booleans as booleans (Avro schema boolean should not be coerced to int).
+                # If there are missing values, use pandas nullable boolean dtype.
+                if any(df[column].isnull()):
+                    df[column] = df[column].astype("boolean")
+                else:
+                    df[column] = df[column].astype(bool)
+            elif data_type == "int":
                 if df[column].isnull().any():
                     df[column] = df[column].astype("float64")
                 else:
@@ -60,11 +67,17 @@ class Convertor:
 
         if not schema.get("fields"):
             for column in df.columns:
-                if df[column].apply(lambda x: isinstance(x, int)).all():
+                # Check for boolean first (bool is subclass of int in Python)
+                if df[column].map(self._check_dtype_or_nan(included_dtypes=(bool,))).all():
+                    # Keep boolean columns as-is, don't convert to int
+                    continue
+                elif df[column].map(
+                    self._check_dtype_or_nan(included_dtypes=(int,), excluded_dtypes=(bool,))
+                ).all():
                     df[column] = df[column].astype(int)
-                elif df[column].apply(self._check_dtype_or_nan(dtypes=(int, float))).all():
+                elif df[column].map(self._check_dtype_or_nan(included_dtypes=(int, float))).all():
                     df[column] = df[column].astype(float)
-                elif df[column].apply(self._check_dtype_or_nan(dtypes=(str, bytes))).all():
+                elif df[column].map(self._check_dtype_or_nan(included_dtypes=(str, bytes))).all():
                     df[column] = df[column].astype(pd.StringDtype())
         return df
 
@@ -101,7 +114,7 @@ class Convertor:
 
     def _preprocess_df(self, schema: Dict, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Preprocess data frame, update data types of columns
+        Preprocess the data frame, update data types of columns
         """
         if not df.empty:
             try:
@@ -118,7 +131,7 @@ class Convertor:
 
 class CSVConvertor(Convertor):
     """
-    Class for supporting custom schema for csv files
+    Class for supporting the custom schema for csv files
     """
     schema: Dict = {"fields": {}, "format": "CSV"}
 
@@ -130,7 +143,7 @@ class CSVConvertor(Convertor):
 
 class AvroConvertor(Convertor):
     """
-    Class for converting fetched avro schema
+    Class for converting the fetched avro schema
     """
 
     def __init__(self, schema, df):
@@ -141,22 +154,36 @@ class AvroConvertor(Convertor):
     @staticmethod
     def _convert_schema(schema) -> Dict:
         """
-        Convert the schema of Avro file to unified format, preprocess dataframe
+        Convert the schema of Avro file to the unified format
         """
+        def _extract_type_names(avro_type) -> set[str]:
+            if isinstance(avro_type, list):
+                names: set[str] = set()
+                for t in avro_type:
+                    names |= _extract_type_names(t)
+                return names
+            if isinstance(avro_type, dict):
+                return _extract_type_names(avro_type.get("type"))
+            if avro_type is None:
+                return {"null"}
+            return {avro_type}
+
         converted_schema = dict()
         converted_schema["fields"] = dict()
         schema = schema if schema else dict()
         for column, data_type in schema.items():
             fields = converted_schema["fields"]
-            if "int" in data_type or "long" in data_type or "boolean" in data_type:
+            type_names = _extract_type_names(data_type)
+
+            if "boolean" in type_names:
+                fields[column] = "boolean"
+            elif type_names & {"int", "long"}:
                 fields[column] = "int"
-            elif "float" in data_type or "double" in data_type:
+            elif type_names & {"float", "double"}:
                 fields[column] = "float"
-            elif "string" in data_type:
+            elif type_names & {"string", "bytes"}:
                 fields[column] = "string"
-            elif "bytes" in data_type:
-                fields[column] = "string"
-            elif "null" in data_type:
+            elif type_names == {"null"}:
                 fields[column] = "null"
             else:
                 message = (
