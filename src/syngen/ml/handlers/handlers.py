@@ -1,6 +1,6 @@
 from typing import Tuple, Optional, Dict, List, Callable, Any
 from abc import ABC, abstractmethod
-import os
+import os, sys
 import math
 from ulid import ULID
 from uuid import UUID
@@ -12,7 +12,7 @@ from copy import deepcopy
 
 import pandas as pd
 import numpy as np
-from numpy.random import seed, choice
+from numpy.random import seed
 import dill
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
@@ -275,9 +275,18 @@ class VaeInferHandler(BaseHandler):
 
     @timing
     def _setup_parallel_processing(self):
-        mp.set_start_method('fork', force=True)
 
         logger.info("Running in parallel mode")
+        # windows does not support fork,
+        # we use spawn method to start new processes.
+        # Significantly slower than fork,
+        # but it is the only way to run in parallel on windows
+        if sys.platform == "win32":
+            mp.set_start_method('spawn', force=True)
+        else:
+            # POSIX systems allows child processes
+            # to share memory with the parent process
+            mp.set_start_method('fork', force=True)
 
         logger.warning(
             "Note: Running in parallel mode causes "
