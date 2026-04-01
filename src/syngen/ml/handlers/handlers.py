@@ -258,6 +258,9 @@ class VaeInferHandler(BaseHandler):
         if self.has_vae and self.run_parallel:
             self._setup_parallel_processing()
 
+        if self.batch_num > 1:
+            self._set_random_seeds()
+
     def _cleanup_pool(self):
         if self._pool is not None:
             self._pool.close()
@@ -466,9 +469,6 @@ class VaeInferHandler(BaseHandler):
 
         if self.has_vae:
             logger.info(f'VAE generation for {self.table_name} started')
-
-        if self.batch_num > 1:
-            self._set_random_seeds()
 
         if run_parallel:
             generated_data = self._run_parallel(batches)
@@ -798,10 +798,24 @@ class VaeInferHandler(BaseHandler):
         return current_batch_size
 
     def _set_random_seeds(self):
+        """
+        Generate deterministic per-batch seeds when user provides random_seed,
+        or truly random seeds when random_seed is None.
+
+        Returns:
+            list: Per-batch random seeds
+        """
         seed_range = self.batch_num * 100
-        self.random_seeds_list = choice(
-                    seed_range,
-                    size=self.batch_num,
-                    replace=False
-            ).tolist()
+
+        # Create isolated RNG (not affected by global state)
+        rng = np.random.default_rng(self.random_seed)
+
+        # Generate per-batch seeds deterministically
+        # if random_seed is provided, otherwise truly random seeds
+        self.random_seeds_list = rng.choice(
+            seed_range,
+            size=self.batch_num,
+            replace=False
+        ).tolist()
+
         return self.random_seeds_list
