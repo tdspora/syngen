@@ -8,7 +8,8 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     get_reports,
-    fetch_env_variables
+    fetch_env_variables,
+    timing
 )
 from syngen.ml.validation_schema import ReportTypes
 
@@ -147,6 +148,7 @@ def launch_infer(
     help="The name of the environment variable that kept the value of the Fernet key "
          "to decrypt the sensitive data stored on the disk",
 )
+@timing
 def cli_launch_infer(
     metadata_path: Optional[str],
     size: Optional[int],
