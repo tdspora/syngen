@@ -123,7 +123,7 @@ class MlflowTracker:
             run_info = self.get_run(run_id).info
             duration = (run_info.end_time - run_info.start_time) / 1000
             self.log_metric(key=f'{table}-{stage}-duration', value=duration)
-        except AttributeError:
+        except (AttributeError, TypeError):
             pass
 
     def log_hardware_metrics(self, run_id, table, stage):
