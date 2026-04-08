@@ -183,7 +183,8 @@ class CSVLoader(BaseDataLoader):
         return params
 
     def _fetch_data(self, **params):
-        return pd.read_csv(self.path, **params).apply(trim_string, axis=0)
+        df = pd.read_csv(self.path, **params).apply(trim_string, axis=0)
+        return df.apply(lambda col: col.astype('int64') if col.dtype == 'int32' else col)
 
     def _load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         params = CSVLoader._get_csv_params(**kwargs)
@@ -299,7 +300,8 @@ class AvroLoader(BaseDataLoader):
         Load data in '.avro' format
         """
         with open(self.path, "rb") as f:
-            return pdx.from_avro(f)
+            df = pdx.from_avro(f)
+        return df.apply(lambda col: col.astype('int64') if col.dtype == 'int32' else col)
 
     @staticmethod
     def _get_preprocessed_schema(schema: Optional[Dict]) -> Optional[Dict]:
@@ -622,6 +624,7 @@ class ExcelLoader(BaseDataLoader):
             if isinstance(self.sheet_name, list) or self.sheet_name is None:
                 dfs = [df for sheet_name, df in df.items()]
                 df = pd.concat(dfs, ignore_index=True)
+            df = df.apply(lambda col: col.astype('int64') if col.dtype == 'int32' else col)
             global_context({})
             return df, CSVConvertor(df).schema
         except FileNotFoundError as error:
