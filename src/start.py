@@ -2,6 +2,7 @@ import argparse
 import subprocess
 import sys
 from loguru import logger
+import signal
 
 
 PROCESS_TO_RUN = {
@@ -40,7 +41,17 @@ def launch_and_monitor_subprocess(process_name, args):
         ["python", f"syngen/{process_name}.py"] + args, start_new_session=True, shell=False
     )
     processes[process_name] = process
-    process.wait()
+    try:
+        process.wait()
+    except KeyboardInterrupt:
+        logger.info(f"\nKeyboard interrupt received, terminating {process_name}...")
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+        return
     return_code = process.returncode
     if return_code == -9:
         logger.warning(
