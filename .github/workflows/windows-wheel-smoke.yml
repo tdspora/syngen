@@ -1,7 +1,6 @@
 name: Windows Wheel Smoke Test
 
-on:
-  workflow_dispatch:
+on: [push]
 
 jobs:
   build-windows-wheel:
