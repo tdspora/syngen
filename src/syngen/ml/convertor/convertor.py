@@ -74,7 +74,7 @@ class Convertor:
                 elif df[column].map(
                     self._check_dtype_or_nan(included_dtypes=(int,), excluded_dtypes=(bool,))
                 ).all():
-                    df[column] = df[column].astype(int)
+                    df[column] = df[column].astype('int64')
                 elif df[column].map(self._check_dtype_or_nan(included_dtypes=(int, float))).all():
                     df[column] = df[column].astype(float)
                 elif df[column].map(self._check_dtype_or_nan(included_dtypes=(str, bytes))).all():
