@@ -106,49 +106,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install twine
 
-      - name: Download Linux wheel
+      - name: Download publish wheel
         uses: actions/download-artifact@v4
         with:
           name: linux-wheel-py3.11
-          path: release-artifacts/linux
+          path: release-dist
 
-      - name: Download Windows wheel
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-wheel-py3.11
-          path: release-artifacts/windows
-
-      - name: Prepare unique wheels for publish
-        run: |
-          set -euo pipefail
-          mkdir -p release-dist
-          for source_dir in release-artifacts/linux release-artifacts/windows; do
-            for artifact in "$source_dir"/*.whl; do
-              if [ ! -e "$artifact" ]; then
-                continue
-              fi
-
-              filename="$(basename "$artifact")"
-              target="release-dist/$filename"
-
-              if [ -e "$target" ]; then
-                source_hash="$(sha256sum "$artifact" | cut -d' ' -f1)"
-                target_hash="$(sha256sum "$target" | cut -d' ' -f1)"
-
-                if [ "$source_hash" = "$target_hash" ]; then
-                  echo "Skipping duplicate wheel $filename"
-                  continue
-                fi
-
-                echo "Conflicting wheel contents for duplicate filename $filename" >&2
-                exit 1
-              fi
-
-              cp "$artifact" "$target"
-            done
-          done
-
-          ls -1 release-dist
+      - name: Show publish wheel set
+        run: ls -1 release-dist
 
       - name: Validate publish set
         run: >-
