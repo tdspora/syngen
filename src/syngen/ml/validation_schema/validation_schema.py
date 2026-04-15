@@ -101,12 +101,13 @@ class KeysSchema(Schema):
     type = fields.String(validate=validate.OneOf(type_of_keys), required=True)
     columns = fields.List(fields.String(), required=True, allow_none=False)
     regex_patterns = fields.Dict(
-        RegexPatternField(),
+        keys=fields.Str(),
+        values=RegexPatternField(),
         required=False,
         allow_none=True,
         metadata={
             "description": (
-                "List of regex patterns for generating key column values. "
+                "Dictionary of regex patterns for generating key column values. "
                 "Optional parameter. Applicable for PK and UQ key types only. "
                 "Each entry must be a dictionary with a single key-value pair "
                 "where the key is the column name and the value is the regex pattern. "
