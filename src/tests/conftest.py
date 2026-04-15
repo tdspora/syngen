@@ -89,14 +89,14 @@ def test_xlsx_path():
 def test_df():
     return pd.DataFrame(
         {
-            "gender": [0, 1, 0, 1],
+            "gender": pd.array([0, 1, 0, 1], dtype="int64"),
             "height": [
                 157.18518021548246,
                 166.7731072622863,
                 162.91821942384928,
                 173.51448996432848,
             ],
-            "id": [925, 84, 821, 383],
+            "id": pd.array([925, 84, 821, 383], dtype="int64"),
         }
     )
 
