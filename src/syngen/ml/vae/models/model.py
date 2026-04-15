@@ -272,8 +272,6 @@ class CVAE:
             key_columns = [
                 column for column in config.get("columns") if column not in empty_columns
             ]
-            self.dataset.primary_keys_mapping.update(self.dataset.unique_keys_mapping)
-            pk_uq_keys_mapping = self.dataset.primary_keys_mapping
             for column in key_columns:
                 key_type = self.dataset.pk_uq_keys_types[column]
                 is_number_key_type = (
