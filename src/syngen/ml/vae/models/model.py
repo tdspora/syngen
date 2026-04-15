@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 import tensorflow as tf
 import pickle
@@ -17,9 +18,14 @@ from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
 from loguru import logger
+import exrex
 
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
-from syngen.ml.utils import slugify_parameters, ProgressBarHandler
+from syngen.ml.utils import (
+    slugify_parameters,
+    ProgressBarHandler,
+    generate_unique_values_by_regex
+)
 
 
 class CVAE:
@@ -234,16 +240,68 @@ class CVAE:
         else:
             return False
 
+    @staticmethod
+    def is_number_regex_pattern(regex_pattern, sample_size=100):
+        """
+        Check if a regex pattern is used to generate numbers by sampling generated strings
+        """
+        generated = [exrex.getone(regex_pattern) for i in range(sample_size)]
+
+        if not generated:
+            return False
+
+        # Check if all generated samples are numeric
+        NUMERIC_PATTERN = re.compile(r"^[+-]?\d+(\.\d+)?$")
+        numeric_count = sum(1 for s in generated if NUMERIC_PATTERN.match(s))
+
+        return numeric_count == len(generated)
+
+    def _apply_sequential_keys(self, column):
+        self.inverse_transformed_df[column] = (
+            np.arange(len(self.inverse_transformed_df[column])) + 1
+        )
+
+    def _apply_regex_keys(self, column, regex_pattern):
+        self.inverse_transformed_df[column] = generate_unique_values_by_regex(
+            regex_pattern=regex_pattern,
+            size=self.inverse_transformed_df.shape[0]
+        )
+
     def __make_pk_uq_unique(self, pk_uq_keys_mapping, empty_columns):
         for key_name, config in pk_uq_keys_mapping.items():
             key_columns = [
                 column for column in config.get("columns") if column not in empty_columns
             ]
+            self.dataset.primary_keys_mapping.update(self.dataset.unique_keys_mapping)
+            pk_uq_keys_mapping = self.dataset.primary_keys_mapping
             for column in key_columns:
                 key_type = self.dataset.pk_uq_keys_types[column]
-                if key_type is float or self.__check_pk_numeric_convertability(column, key_type):
-                    mapped_keys = np.arange(len(self.inverse_transformed_df[column])) + 1
-                    self.inverse_transformed_df[column] = mapped_keys
+                is_number_key_type = (
+                    key_type is float or self.__check_pk_numeric_convertability(column, key_type)
+                )
+                regex_pattern = pk_uq_keys_mapping[key_name].get(
+                    "regex_patterns", {}
+                ).get(f"{column}")
+                if is_number_key_type and regex_pattern is None:
+                    self._apply_sequential_keys(column)
+                if (
+                    is_number_key_type
+                    and regex_pattern is not None
+                    and not self.is_number_regex_pattern(regex_pattern)
+                ):
+                    logger.warning(
+                        f"The provided regex for generating key column `{column}` "
+                        f"(key `{key_name}`) may produce non-numeric string values "
+                        "while the column is expected to be numeric. "
+                        "The regular expression will be ignored."
+                    )
+                    self._apply_sequential_keys(column)
+
+                if regex_pattern is not None:
+                    if key_type is str or self.is_number_regex_pattern(regex_pattern):
+                        self.inverse_transformed_df[column] = generate_unique_values_by_regex(
+                            regex_pattern=regex_pattern, size=self.inverse_transformed_df.shape[0]
+                        )
 
     def save_state(self, path: str):
         pth = Path(path)

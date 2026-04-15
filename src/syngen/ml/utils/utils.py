@@ -15,6 +15,7 @@ import uuid
 from ulid import ULID
 import random
 from loguru import logger
+import exrex
 
 
 MAX_ALLOWED_TIME_MS = 253402300800   # datetime(9999, 12, 31, 23, 59, 59, 999999).timestamp()
@@ -657,3 +658,44 @@ def get_source_path_extension(
     else:
         source = path
     return Path(source).suffix if source is not None else ".csv"
+
+
+def generate_unique_values_by_regex(
+    regex_pattern: str,
+    size: int,
+    max_attempts_per_value: int = 100,
+) -> list:
+    """
+    1. Check whether it's possible to generate the full list of unique text values.
+    2. Build a set incrementally — only generating new values until we have enough unique ones.
+    """
+    pattern_space = exrex.count(regex_pattern)
+
+    if pattern_space < size:
+        raise ValueError(
+            f"The regex pattern {regex_pattern!r} can only generate {pattern_space} "
+            f"unique values, which is less than the required {size}. "
+            f"Consider revising the regex pattern to allow more possible values."
+        )
+
+    # If the pattern space allows, build the unique set incrementally
+    unique_values: dict[str, None] = {}
+    consecutive_failures = 0
+
+    while len(unique_values) < size:
+        value = exrex.getone(regex_pattern)
+
+        if value not in unique_values:
+            unique_values[value] = None
+            consecutive_failures = 0
+        else:
+            consecutive_failures += 1
+
+        if consecutive_failures >= max_attempts_per_value:
+            raise ValueError(
+                f"Could not generate {size} unique values for pattern {regex_pattern!r}. "
+                f"Stopped after {max_attempts_per_value} consecutive duplicate attempts. "
+                f"Only {len(unique_values)} unique values were generated."
+            )
+
+    return list(unique_values)

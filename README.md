@@ -263,12 +263,15 @@ CUSTOMER:                                   # Table name. Required parameter
       type: "PK"                            # The key type. Supported: PK - primary key, FK - foreign key, TKN - token key
       columns:                              # Array of column names
         - customer_id
+      regex:                                # Regex pattern for generating key values. Optional parameter. Applicable for PK and UQ key types only
+        customer_id: "CUST-[0-9]{6}"      # Pattern to generate values for the specified column. E.g., "CUST-123456"
 
     UQ1:                                    # Name of a key
       type: "UQ"                            # One or many unique keys
       columns:
         - e_mail
-
+      regex:
+        e_mail: "[a-z]{5,10}\\.[a-z]{3,7}@(gmail|yahoo|outlook)\\.com"  # E.g., "johnd.smith@gmail.com"
     FK1:                                    # One or many foreign keys
       type: "FK"
       columns:                              # Array of columns in the current table
