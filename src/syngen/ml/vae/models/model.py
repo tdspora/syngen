@@ -24,7 +24,8 @@ from syngen.ml.vae.models.custom_layers import FeatureLossLayer
 from syngen.ml.utils import (
     slugify_parameters,
     ProgressBarHandler,
-    generate_unique_values_by_regex
+    generate_unique_values_by_regex,
+    is_number_regex_pattern
 )
 
 
@@ -240,22 +241,6 @@ class CVAE:
         else:
             return False
 
-    @staticmethod
-    def is_number_regex_pattern(regex_pattern, sample_size=100):
-        """
-        Check if a regex pattern is used to generate numbers by sampling generated strings
-        """
-        generated = [exrex.getone(regex_pattern) for i in range(sample_size)]
-
-        if not generated:
-            return False
-
-        # Check if all generated samples are numeric
-        NUMERIC_PATTERN = re.compile(r"^[+-]?\d+(\.\d+)?$")
-        numeric_count = sum(1 for s in generated if NUMERIC_PATTERN.match(s))
-
-        return numeric_count == len(generated)
-
     def _apply_sequential_keys(self, column):
         self.inverse_transformed_df[column] = (
             np.arange(len(self.inverse_transformed_df[column])) + 1
@@ -285,7 +270,7 @@ class CVAE:
                 if (
                     is_number_key_type
                     and regex_pattern is not None
-                    and not self.is_number_regex_pattern(regex_pattern)
+                    and not is_number_regex_pattern(regex_pattern)
                 ):
                     logger.warning(
                         f"The provided regex for generating key column `{column}` "
@@ -296,7 +281,7 @@ class CVAE:
                     self._apply_sequential_keys(column)
 
                 if regex_pattern is not None:
-                    if key_type is str or self.is_number_regex_pattern(regex_pattern):
+                    if key_type is str or is_number_regex_pattern(regex_pattern):
                         self.inverse_transformed_df[column] = generate_unique_values_by_regex(
                             regex_pattern=regex_pattern, size=self.inverse_transformed_df.shape[0]
                         )

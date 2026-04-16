@@ -699,3 +699,18 @@ def generate_unique_values_by_regex(
             )
 
     return list(unique_values)
+
+
+def is_number_regex_pattern(regex_pattern, sample_size=100):
+    """
+    Check if a regex pattern is used to generate numbers by sampling generated strings
+    """
+    generated = [exrex.getone(regex_pattern) for i in range(sample_size)]
+
+    if not generated:
+        return False
+
+    numeric_pattern = re.compile(r"^[+-]?\d+(\.\d+)?$")
+    numeric_count = sum(1 for s in generated if numeric_pattern.match(s))
+
+    return numeric_count == len(generated)
