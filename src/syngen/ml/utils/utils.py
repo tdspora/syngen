@@ -6,6 +6,7 @@ from dateutil import parser
 from datetime import datetime, timedelta, date, timezone
 import time
 from pathlib import Path
+import math
 
 import pandas as pd
 import numpy as np
@@ -20,6 +21,7 @@ import exrex
 
 MAX_ALLOWED_TIME_MS = 253402300800   # datetime(9999, 12, 31, 23, 59, 59, 999999).timestamp()
 MIN_ALLOWED_TIME_MS = -62135510400   # datetime(1, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)
+PATTERN_SPACE_THRESHOLD = 1000000
 
 # IANA timezone names - "2023-07-02T10:18:44.000000 America/New_York"
 # Zulu time (UTC) represented by 'Z' - "2023-07-02T10:18:44Z"
@@ -663,42 +665,50 @@ def get_source_path_extension(
 def generate_unique_values_by_regex(
     regex_pattern: str,
     size: int,
-    max_attempts_per_value: int = 100,
+    max_attempts_per_batch: int = 100,
 ) -> list:
     """
     1. Check whether it's possible to generate the full list of unique text values.
-    2. Build a set incrementally — only generating new values until we have enough unique ones.
+    2. Generate the list of unique text values in one shot
+    if the pattern space is less that 'THRESHOLD'.
+    3. Build a set incrementally — only generating new values until we have enough unique ones.
     """
     pattern_space = exrex.count(regex_pattern)
 
     if pattern_space < size:
         raise ValueError(
             f"The regex pattern {regex_pattern!r} can only generate {pattern_space} "
-            f"unique values, which is less than the required {size}. "
-            f"Consider revising the regex pattern to allow more possible values."
+            f"unique values, which is less than the required {size}."
         )
 
-    # If the pattern space allows, build the unique set incrementally
-    unique_values: dict[str, None] = {}
+    # Pattern space is less than 'THRESHOLD' — enumerate and sample
+    if pattern_space <= PATTERN_SPACE_THRESHOLD:
+        all_values = list(exrex.generate(regex_pattern))
+        return random.sample(all_values, size)
+
+    # Large pattern space — random generation with dedup
+    unique_values: set[str] = set()
     consecutive_failures = 0
+    batch_size = 1000
 
     while len(unique_values) < size:
-        value = exrex.getone(regex_pattern)
+        batch = {exrex.getone(regex_pattern) for _ in range(batch_size)}
+        new_values = batch - unique_values
 
-        if value not in unique_values:
-            unique_values[value] = None
-            consecutive_failures = 0
-        else:
+        if not new_values:
             consecutive_failures += 1
+        else:
+            consecutive_failures = 0
+            unique_values.update(new_values)
 
-        if consecutive_failures >= max_attempts_per_value:
+        if consecutive_failures >= max_attempts_per_batch:
             raise ValueError(
                 f"Could not generate {size} unique values for pattern {regex_pattern!r}. "
-                f"Stopped after {max_attempts_per_value} consecutive duplicate attempts. "
+                f"Stopped after {max_attempts_per_batch} consecutive duplicate attempts. "
                 f"Only {len(unique_values)} unique values were generated."
             )
 
-    return list(unique_values)
+    return list(unique_values)[:size]
 
 
 def is_number_regex_pattern(regex_pattern, sample_size=100):
@@ -710,7 +720,16 @@ def is_number_regex_pattern(regex_pattern, sample_size=100):
     if not generated:
         return False
 
-    numeric_pattern = re.compile(r"^[+-]?\d+(\.\d+)?$")
-    numeric_count = sum(1 for s in generated if numeric_pattern.match(s))
+    def _is_numeric(value: str) -> bool:
+        """
+        Check whether it's possible to cast the value to the float
+        """
+        try:
+            result = float(value)
+            return math.isfinite(result) and value.strip() == value
+        except (ValueError, TypeError):
+            return False
+
+    numeric_count = sum(1 for s in generated if _is_numeric(s))
 
     return numeric_count == len(generated)
