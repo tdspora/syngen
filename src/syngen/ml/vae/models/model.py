@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 
 import tensorflow as tf
 import pickle
@@ -18,7 +17,6 @@ from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
 from loguru import logger
-import exrex
 
 from syngen.ml.vae.models.custom_layers import FeatureLossLayer
 from syngen.ml.utils import (
@@ -241,12 +239,16 @@ class CVAE:
         else:
             return False
 
-    def _apply_sequential_keys(self, column):
+    def __apply_sequential_keys(self, column):
         self.inverse_transformed_df[column] = (
             np.arange(len(self.inverse_transformed_df[column])) + 1
         )
 
-    def _apply_regex_keys(self, column, regex_pattern):
+    def __apply_regex_keys(self, column, key_name, regex_pattern):
+        logger.info(
+            f"The key column `{column}` (key `{key_name}`) "
+            "has been generated using the provided regular expression."
+        )
         self.inverse_transformed_df[column] = generate_unique_values_by_regex(
             regex_pattern=regex_pattern,
             size=self.inverse_transformed_df.shape[0]
@@ -266,7 +268,7 @@ class CVAE:
                     "regex_patterns", {}
                 ).get(f"{column}")
                 if is_number_key_type and regex_pattern is None:
-                    self._apply_sequential_keys(column)
+                    self.__apply_sequential_keys(column)
                 if (
                     is_number_key_type
                     and regex_pattern is not None
@@ -278,13 +280,14 @@ class CVAE:
                         "while the column is expected to be numeric. "
                         "The regular expression will be ignored."
                     )
-                    self._apply_sequential_keys(column)
+                    self.__apply_sequential_keys(column)
 
                 if regex_pattern is not None:
-                    if key_type is str or is_number_regex_pattern(regex_pattern):
-                        self.inverse_transformed_df[column] = generate_unique_values_by_regex(
-                            regex_pattern=regex_pattern, size=self.inverse_transformed_df.shape[0]
-                        )
+                    if (
+                        key_type is str
+                        or (is_number_key_type and is_number_regex_pattern(regex_pattern))
+                    ):
+                        self.__apply_regex_keys(column, key_name, regex_pattern)
 
     def save_state(self, path: str):
         pth = Path(path)
