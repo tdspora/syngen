@@ -126,7 +126,6 @@ class KeysSchema(Schema):
         3. Each column must appear only once across all regex pattern entries
         """
         regex_patterns = data.get("regex_patterns")
-
         # Skip validation if regex is not provided or empty
         if not regex_patterns:
             return
@@ -140,7 +139,6 @@ class KeysSchema(Schema):
             )
 
         defined_columns = set(data.get("columns", []))
-        regex_columns_seen = set()
 
         for column_name in regex_patterns:
             # Rule 2: Validate that the column exists in the 'columns' field
@@ -150,14 +148,6 @@ class KeysSchema(Schema):
                     f"does not exist in the 'columns' field. "
                     f"Available columns: {sorted(defined_columns)}."
                 )
-
-            # Rule 3: Validate that each column appears only once in the 'regex' field
-            if column_name in regex_columns_seen:
-                raise ValidationError(
-                    f"The column {column_name!r} appears more than once in the 'regex' field. "
-                    f"Each column must have only one regex pattern."
-                )
-            regex_columns_seen.add(column_name)
 
     @validates_schema
     def validate_references(self, data, **kwargs):
