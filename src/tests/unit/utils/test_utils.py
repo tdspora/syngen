@@ -304,7 +304,8 @@ class TestGenerateUniqueValuesByRegex:
         with pytest.raises(ValueError) as error:
             generate_unique_values_by_regex(pattern, 5)
         assert str(error.value) == (
-            "The regex pattern '[AB]' can only generate 2 unique values, which is less than the required 5."
+            "The regex pattern '[AB]' can only generate 2 unique values, "
+            "which is less than the required 5."
         )
         rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -429,7 +430,8 @@ class TestIsNumberRegexPattern:
 
     def test_scientific_notation_pattern_returns_true(self, rp_logger):
         rp_logger.info(
-            "Test that a pattern generating numbers in scientific notation is recognized as numeric"
+            "Test that a pattern generating numbers in scientific notation "
+            "is recognized as numeric"
         )
         assert is_number_regex_pattern(r"[1-9]\.[0-9]{2}e[1-9]") is True
         rp_logger.info(SUCCESSFUL_MESSAGE)

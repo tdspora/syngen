@@ -1089,8 +1089,11 @@ def test_validation_of_metadata_file_with_invalid_regex_expression(rp_logger):
         ).validate_schema()
     assert str(error.value) == (
         "Validation error(s) found in the schema of the metadata. "
-        "The details are - {'pk_test': {'keys': defaultdict(<class 'dict'>, {'pk_test_pk_id': {'value': {'regex_patterns': defaultdict(<class 'dict'>, {'Id': {'value': [\"The regex pattern '[invalid' for the column None is not a valid regular expression. Details: unterminated character set at position 0.\"]}})}}})}}"
-    )   
+        "The details are - {'pk_test': {'keys': defaultdict(<class 'dict'>, {'pk_test_pk_id': "
+        "{'value': {'regex_patterns': defaultdict(<class 'dict'>, {'Id': {'value': "
+        "[\"The regex pattern '[invalid' for the column None is not a valid regular expression. "
+        "Details: unterminated character set at position 0.\"]}})}}})}}"
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1112,7 +1115,9 @@ def test_validation_of_metadata_file_with_empty_string_regex_pattern(rp_logger):
         ).validate_schema()
     assert str(error.value) == (
          "Validation error(s) found in the schema of the metadata. "
-         "The details are - {'pk_test': {'keys': defaultdict(<class 'dict'>, {'pk_test_pk_id': {'value': {'regex_patterns': defaultdict(<class 'dict'>, "
-         "{'Id': {'value': [\"The regex pattern for the column None must be a non-empty string. Got: ''.\"]}})}}})}}"
+         "The details are - {'pk_test': {'keys': defaultdict(<class 'dict'>, {'pk_test_pk_id': "
+         "{'value': {'regex_patterns': defaultdict(<class 'dict'>, "
+         "{'Id': {'value': [\"The regex pattern for the column None must be a non-empty string. "
+         "Got: ''.\"]}})}}})}}"
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
