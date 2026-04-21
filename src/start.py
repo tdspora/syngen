@@ -2,7 +2,6 @@ import argparse
 import subprocess
 import sys
 from loguru import logger
-import signal
 
 
 PROCESS_TO_RUN = {

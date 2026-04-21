@@ -5,6 +5,7 @@ base32-crockford
 boto3
 click
 cryptography
+exrex
 Jinja2
 keras==2.15.*
 lazy==1.4

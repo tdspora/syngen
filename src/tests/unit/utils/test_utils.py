@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -13,10 +13,12 @@ from syngen.ml.utils import (
     convert_date_to_timestamp,
     convert_to_date,
     fetch_env_variables,
-    get_source_path_extension
+    get_source_path_extension,
+    generate_unique_values_by_regex,
+    is_number_regex_pattern,
 )
 
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, rp_logger
 
 
 def test_slugify_attribute(rp_logger):
@@ -263,7 +265,177 @@ def test_get_source_path_extension_with_various_path(path, expected, rp_logger):
         "to ensure it correctly identifies the file extension(s)."
     )
     assert get_source_path_extension(path=path) == expected
-    rp_logger.info(SUCCESSFUL_MESSAGE)
+    rp_logger.info(SUCCESSFUL_MESSAGE)    
+
+
+class TestGenerateUniqueValuesByRegex:
+    def test_generates_correct_number_of_values(self, rp_logger):
+        rp_logger.info(
+            "Test that 'generate_unique_values_by_regex' returns the correct number of values"
+        )
+        result = generate_unique_values_by_regex(r"[A-Z]{3}", 10)
+        assert len(result) == 10
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_all_values_are_unique(self, rp_logger):
+        rp_logger.info(
+            "Test that 'generate_unique_values_by_regex' returns only unique values"
+        )
+        result = generate_unique_values_by_regex(r"[A-Z]{3}", 50)
+        assert len(result) == len(set(result))
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_values_match_regex_pattern(self, rp_logger):
+        rp_logger.info(
+            "Test that all generated values match the provided regex pattern"
+        )
+        pattern = r"CUST-[0-9]{4}"
+        result = generate_unique_values_by_regex(pattern, 20)
+        import re
+        compiled = re.compile(f"^{pattern}$")
+        for value in result:
+            assert compiled.match(value), f"Value {value!r} does not match pattern {pattern!r}"
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_raises_when_size_exceeds_pattern_space(self, rp_logger):
+        rp_logger.info(
+            "Test that ValueError is raised when size exceeds the pattern space"
+        )
+        pattern = r"[AB]"  # pattern space = 2
+        with pytest.raises(ValueError) as error:
+            generate_unique_values_by_regex(pattern, 5)
+        assert str(error.value) == (
+            "The regex pattern '[AB]' can only generate 2 unique values, "
+            "which is less than the required 5."
+        )
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_exact_pattern_space_equals_size(self, rp_logger):
+        rp_logger.info(
+            "Test generation when the size equals the entire pattern space"
+        )
+        pattern = r"[0-9]{2}"  # pattern space = 100
+        result = generate_unique_values_by_regex(pattern, 100)
+        assert len(result) == 100
+        assert len(set(result)) == 100
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_large_pattern_space_random_generation_path(self, rp_logger):
+        rp_logger.info(
+            "Test the random generation path when pattern space exceeds the threshold"
+        )
+        pattern = r"[A-Za-z0-9]{10}"  # pattern space >> PATTERN_SPACE_THRESHOLD
+        result = generate_unique_values_by_regex(pattern, 500)
+        assert len(result) == 500
+        assert len(set(result)) == 500
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_raises_when_max_attempts_exceeded(self, rp_logger):
+        rp_logger.info(
+            "Test that ValueError is raised when consecutive duplicate attempts exceed the limit"
+        )
+        pattern = r"[AB]"
+        max_attempts = 3
+        with patch("syngen.ml.utils.utils.exrex") as mock_exrex:
+            mock_exrex.count.return_value = 2_000_000  # Force large pattern space path
+            mock_exrex.getone.return_value = "A"  # Always returns the same value
+            with pytest.raises(ValueError, match="Could not generate"):
+                generate_unique_values_by_regex(pattern, 5, max_attempts_per_batch=max_attempts)
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+class TestIsNumberRegexPattern:
+    def test_integer_pattern_returns_true(self, rp_logger):
+        rp_logger.info(
+            "Test that a pattern generating only integers is recognized as numeric"
+        )
+        assert is_number_regex_pattern(r"[0-9]{3}") is True
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_float_pattern_returns_true(self, rp_logger):
+        rp_logger.info(
+            "Test that a pattern generating float numbers is recognized as numeric"
+        )
+        assert is_number_regex_pattern(r"[0-9]{1,3}\.[0-9]{2}") is True
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_negative_number_pattern_returns_true(self, rp_logger):
+        rp_logger.info(
+            "Test that a pattern generating negative numbers is recognized as numeric"
+        )
+        assert is_number_regex_pattern(r"-[1-9][0-9]{2}") is True
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_alpha_pattern_returns_false(self, rp_logger):
+        rp_logger.info(
+            "Test that a pattern generating alphabetic strings is not numeric"
+        )
+        assert is_number_regex_pattern(r"[A-Z]{5}") is False
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_mixed_alpha_numeric_pattern_returns_false(self, rp_logger):
+        rp_logger.info(
+            "Test that a pattern generating mixed alpha-numeric strings is not numeric"
+        )
+        assert is_number_regex_pattern(r"CUST-[0-9]{4}") is False
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_single_digit_pattern_returns_true(self, rp_logger):
+        rp_logger.info(
+            "Test that a single digit pattern is recognized as numeric"
+        )
+        assert is_number_regex_pattern(r"[0-9]") is True
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_pattern_with_leading_whitespace_returns_false(self, rp_logger):
+        rp_logger.info(
+            "Test that a pattern producing values with leading whitespace is not numeric"
+        )
+        assert is_number_regex_pattern(r" [0-9]{3}") is False
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_pattern_with_trailing_whitespace_returns_false(self, rp_logger):
+        rp_logger.info(
+            "Test that a pattern producing values with trailing whitespace is not numeric"
+        )
+        assert is_number_regex_pattern(r"[0-9]{3} ") is False
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_custom_sample_size(self, rp_logger):
+        rp_logger.info(
+            "Test that the function works correctly with a custom sample size"
+        )
+        assert is_number_regex_pattern(r"[0-9]{4}", sample_size=50) is True
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_fixed_numeric_string_returns_true(self, rp_logger):
+        rp_logger.info(
+            "Test that a fixed numeric string pattern is recognized as numeric"
+        )
+        assert is_number_regex_pattern(r"42") is True
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_fixed_non_numeric_string_returns_false(self, rp_logger):
+        rp_logger.info(
+            "Test that a fixed non-numeric string pattern is not numeric"
+        )
+        assert is_number_regex_pattern(r"abc") is False
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_positive_number_pattern_returns_true(self, rp_logger):
+        rp_logger.info(
+            "Test that a pattern generating positive numbers is recognized as numeric"
+        )
+        assert is_number_regex_pattern(r"\+[1-9][0-9]{2}") is True
+        rp_logger.info(SUCCESSFUL_MESSAGE)
+
+    def test_scientific_notation_pattern_returns_true(self, rp_logger):
+        rp_logger.info(
+            "Test that a pattern generating numbers in scientific notation "
+            "is recognized as numeric"
+        )
+        assert is_number_regex_pattern(r"[1-9]\.[0-9]{2}e[1-9]") is True
+        rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @pytest.mark.parametrize(

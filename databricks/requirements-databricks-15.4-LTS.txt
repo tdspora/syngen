@@ -5,6 +5,7 @@ base32-crockford
 boto3
 click
 cryptography
+exrex
 Jinja2
 flatten_json
 keras==2.15.*
