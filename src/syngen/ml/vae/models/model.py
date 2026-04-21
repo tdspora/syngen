@@ -269,7 +269,7 @@ class CVAE:
                 ).get(f"{column}")
                 if is_number_key_type and regex_pattern is None:
                     self.__apply_sequential_keys(column)
-                if (
+                elif (
                     is_number_key_type
                     and regex_pattern is not None
                     and not is_number_regex_pattern(regex_pattern)
@@ -282,9 +282,9 @@ class CVAE:
                     )
                     self.__apply_sequential_keys(column)
 
-                if regex_pattern is not None:
+                elif regex_pattern is not None:
                     if (
-                        key_type is str
+                        not is_number_key_type
                         or (is_number_key_type and is_number_regex_pattern(regex_pattern))
                     ):
                         self.__apply_regex_keys(column, key_name, regex_pattern)

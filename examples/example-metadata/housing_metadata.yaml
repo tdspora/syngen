@@ -31,7 +31,7 @@ housing_properties:                       # Use table name here
       columns:                            # Columns related to key
         - households
       regex_patterns:                     # Regex patterns for generating key values that follow naming rules. Optional parameter. Applicable for PK and UQ key types only. Each pattern must be a valid regular expression. The column specified in 'regex_patterns' must also be listed in the 'columns' section above
-        households: "^[0-9]{2}\\.[0-9]{2}$" # Pattern to generate values for the 'households' column. E.g., "HH-123456"
+        households: "^[0-9]{2}\\.[0-9]{2}$" # Pattern to generate values for the 'households' column. E.g., "99.99"
 
 housing_conditions:
   train_settings:

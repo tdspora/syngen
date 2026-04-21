@@ -18,7 +18,7 @@ from syngen.ml.utils import (
     is_number_regex_pattern,
 )
 
-from tests.conftest import SUCCESSFUL_MESSAGE
+from tests.conftest import SUCCESSFUL_MESSAGE, rp_logger
 
 
 def test_slugify_attribute(rp_logger):
@@ -265,6 +265,7 @@ def test_get_source_path_extension_with_various_path(path, expected, rp_logger):
         "to ensure it correctly identifies the file extension(s)."
     )
     assert get_source_path_extension(path=path) == expected
+    rp_logger.info(SUCCESSFUL_MESSAGE)    
 
 
 class TestGenerateUniqueValuesByRegex:
