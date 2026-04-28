@@ -43,10 +43,9 @@ class Worker:
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
-        self.metadata = self.__fetch_metadata()
-        self._update_metadata()
-        self.__validate_schema()
+        self.__fetch_metadata()
         self._clean_up()
+        self._update_metadata()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
@@ -234,20 +233,21 @@ class Worker:
     def _update_metadata(self) -> None:
         if self.metadata_path:
             self._update_metadata_for_tables()
+            self.__validate_schema()
             self.metadata.pop("global", None)
         elif self.table_name:
             self._update_metadata_for_table()
+            self.__validate_schema()
 
-    def __fetch_metadata(self) -> Dict:
+    def __fetch_metadata(self):
         """
         Fetch the metadata for training or infer process
         """
         if self.metadata_path:
-            metadata = MetadataLoader(path=self.metadata_path).load_data()
-            return metadata
+            self.metadata = MetadataLoader(path=self.metadata_path).load_data()
         elif self.table_name:
             source = self.settings.get("source")
-            metadata = {
+            self.metadata = {
                 self.table_name: {
                     "train_settings": {
                         "source": source,
@@ -258,7 +258,6 @@ class Worker:
                     "format": {}
                 }
             }
-            return metadata
 
     @staticmethod
     def _get_tables_without_keys(config_of_tables: Dict) -> List[str]:
