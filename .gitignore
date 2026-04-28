@@ -55,3 +55,7 @@ build/
 dist/
 *.egg-info/
 *.egg
+
+
+# Configuration file for CLAUDE agents
+AGENTS.md

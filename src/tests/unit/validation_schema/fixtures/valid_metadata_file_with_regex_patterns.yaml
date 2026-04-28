@@ -1,0 +1,99 @@
+global:
+  train_settings:                         # Settings for training process
+    epochs: 10
+    drop_null: False
+    row_limit: 500
+    reports: none
+    batch_size: 100
+
+  infer_settings:                         # Settings for infer process
+    size: 300
+    run_parallel: False
+    batch_size: 100
+    random_seed: 5
+    reports: all
+
+  encryption:
+    fernet_key: FERNET_KEY
+
+pk_test:
+  train_settings:
+    source: ./data/pk_test.csv
+    column_types:
+      categorical:
+        - gender
+        - marital_status
+  keys:
+    pk_test_pk_id:
+      type: "PK"
+      columns:
+        - Id
+      regex_patterns:
+        Id: "^[A-Z]{3}-[0-9]{6}$"
+
+  format:
+    sep: ','
+    quotechar: '"'
+    quoting: minimal
+    escapechar: '"'
+    encoding: null
+    header: infer
+    skiprows: null
+    on_bad_lines: error
+    engine: null
+    na_values: null
+
+fk_test:
+  train_settings:
+    source: ./data/fk_test.csv
+    epochs: 10
+    drop_null: False
+    reports:
+      - accuracy
+      - sample
+      - metrics_only
+    batch_size: 200
+
+  format:
+    sep: ','
+    quotechar: '"'
+    quoting: minimal
+    escapechar: '"'
+    encoding: null
+    header: infer
+    skiprows: null
+    on_bad_lines: error
+    engine: null
+    na_values: null
+
+  infer_settings:
+    size: 90
+    run_parallel: False
+    batch_size: 200
+    random_seed: 1
+    reports:
+      - accuracy
+      - metrics_only
+
+  encryption:
+    fernet_key: FERNET_KEY
+
+  keys:
+    fk_test_pk_id:
+      type: "PK"
+      columns:
+        - Id
+    fk_test_uq_name:
+      type: "UQ"
+      columns:
+        - Name
+      regex_patterns:
+        Name: "^[A-Z][a-z]+ [A-Z][a-z]+$"
+    fk_test_fk_id:
+      type: "FK"
+      columns:
+        - Id
+      references:
+        table: pk_test
+        columns:
+          - Id

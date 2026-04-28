@@ -930,3 +930,194 @@ def test_validation_schema_of_keys(path_to_metadata, expected_error, rp_logger):
     assert str(error.value) == (
         f"Validation error(s) found in the schema of the metadata. {expected_error}"
     )
+
+
+def test_validation_of_metadata_file_with_regex_patterns(rp_logger, caplog):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file "
+        "with 'regex_patterns' in PK and UQ keys"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/"
+        "valid_metadata_file_with_regex_patterns.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=True,
+            process="train"
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_validation_of_metadata_file_with_regex_patterns_in_pk_key(rp_logger, caplog):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file "
+        "with 'regex_patterns' added to the PK key"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["pk_test"]["keys"]["pk_test_pk_id"]["regex_patterns"] = {
+        "Id": "^[A-Z]{3}-[0-9]{6}$"
+    }
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=True,
+            process="train"
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_validation_of_metadata_file_with_regex_patterns_in_uq_key(rp_logger, caplog):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file "
+        "with 'regex_patterns' added to the UQ key"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["fk_test"]["keys"]["fk_test_uq_name"]["regex_patterns"] = {
+        "Name": "[A-Z][a-z]+"
+    }
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=True,
+            process="train"
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_validation_of_metadata_file_with_regex_patterns_set_to_none(rp_logger, caplog):
+    rp_logger.info(
+        "Test the validation of the schema of the valid metadata file "
+        "with 'regex_patterns' explicitly set to 'None'"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["pk_test"]["keys"]["pk_test_pk_id"]["regex_patterns"] = None
+    with caplog.at_level(level="DEBUG"):
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=True,
+            process="train"
+        ).validate_schema()
+        assert "The schema of the metadata is valid" in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_validation_of_metadata_file_with_regex_patterns_in_fk_key(rp_logger):
+    rp_logger.info(
+        "Test the validation of the schema of the metadata file "
+        "with 'regex_patterns' in FK key which is not allowed"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["fk_test"]["keys"]["fk_test_fk_id"]["regex_patterns"] = {"Id": "[0-9]+"}
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=True,
+            process="train"
+        ).validate_schema()
+    assert str(error.value) == (
+        "Validation error(s) found in the schema of the metadata. "
+        "The details are - {'fk_test': {'keys': defaultdict(<class 'dict'>, {"
+        "'fk_test_fk_id': {'value': {'_schema': ["
+        "\"The 'regex' field is only allowed when 'type' is 'PK' or 'UQ'. "
+        "Got: 'FK'.\"]}}})}}"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_validation_of_metadata_file_with_regex_patterns_for_nonexistent_column(rp_logger):
+    rp_logger.info(
+        "Test the validation of the schema of the metadata file "
+        "with 'regex_patterns' referencing a column not in 'columns'"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["pk_test"]["keys"]["pk_test_pk_id"]["regex_patterns"] = {
+        "nonexistent_col": "[0-9]+"
+    }
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=True,
+            process="train"
+        ).validate_schema()
+    assert str(error.value) == (
+        "Validation error(s) found in the schema of the metadata. "
+        "The details are - {'pk_test': {'keys': defaultdict(<class 'dict'>, {"
+        "'pk_test_pk_id': {'value': {'_schema': ["
+        "\"The column 'nonexistent_col' specified in the 'regex' field "
+        "does not exist in the 'columns' field. "
+        "Available columns: ['Id'].\"]}}})}}"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_validation_of_metadata_file_with_invalid_regex_expression(rp_logger):
+    rp_logger.info(
+        "Test the validation of the schema of the metadata file "
+        "with an invalid regular expression in 'regex_patterns'"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["pk_test"]["keys"]["pk_test_pk_id"]["regex_patterns"] = {"Id": "[invalid"}
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=True,
+            process="train"
+        ).validate_schema()
+    assert str(error.value) == (
+        "Validation error(s) found in the schema of the metadata. "
+        "The details are - {'pk_test': {'keys': defaultdict(<class 'dict'>, {'pk_test_pk_id': "
+        "{'value': {'regex_patterns': defaultdict(<class 'dict'>, {'Id': {'value': "
+        "[\"The regex pattern '[invalid' for the column None is not a valid regular expression. "
+        "Details: unterminated character set at position 0.\"]}})}}})}}"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_validation_of_metadata_file_with_empty_string_regex_pattern(rp_logger):
+    rp_logger.info(
+        "Test the validation of the schema of the metadata file "
+        "with an empty string as a regex pattern value"
+    )
+    path_to_metadata = (
+        f"{DIR_NAME}/unit/validation_schema/fixtures/valid_metadata_file.yaml"
+    )
+    metadata = MetadataLoader(path_to_metadata).load_data()
+    metadata["pk_test"]["keys"]["pk_test_pk_id"]["regex_patterns"] = {"Id": ""}
+    with pytest.raises(ValidationError) as error:
+        ValidationSchema(
+            metadata=metadata,
+            validation_of_source=True,
+            process="train"
+        ).validate_schema()
+    assert str(error.value) == (
+         "Validation error(s) found in the schema of the metadata. "
+         "The details are - {'pk_test': {'keys': defaultdict(<class 'dict'>, {'pk_test_pk_id': "
+         "{'value': {'regex_patterns': defaultdict(<class 'dict'>, "
+         "{'Id': {'value': [\"The regex pattern for the column None must be a non-empty string. "
+         "Got: ''.\"]}})}}})}}"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)

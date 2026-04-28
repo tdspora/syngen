@@ -5,6 +5,7 @@ base32-crockford
 boto3
 click
 cryptography
+exrex
 Jinja2
 keras==2.15.*
 lazy==1.4
@@ -12,7 +13,7 @@ loguru
 MarkupSafe==2.1.1
 marshmallow==3.19.*
 matplotlib==3.10.*
-mlflow==3.8.*
+mlflow==3.11.*
 numpy==1.26.*
 openpyxl
 pandas==2.2.*

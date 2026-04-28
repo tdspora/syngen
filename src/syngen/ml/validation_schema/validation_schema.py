@@ -2,6 +2,7 @@ from typing import Dict, Literal, List
 import json
 from pathlib import Path
 from dataclasses import dataclass, field
+import re
 
 from marshmallow import (
     Schema,
@@ -58,13 +59,95 @@ class CaseInsensitiveString(fields.String):
         return value.lower()
 
 
+class RegexPatternField(fields.Field):
+    """
+    Custom field for validating a single regex pattern entry.
+    Expects a dictionary with a single key-value pair where:
+    - key: column name (string)
+    - value: valid regex pattern (string)
+
+    Example:
+        {"customer_id": "CUST-[0-9]{6}"}
+    """
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        """
+        Validate that the regex pattern is a non-empty string
+        and a valid regex expression.
+        """
+        # Validate that the regex pattern is a non-empty string
+        if not isinstance(value, str) or not value.strip():
+            raise ValidationError(
+                f"The regex pattern for the column {attr!r} must be a non-empty string. "
+                f"Got: {value!r}."
+            )
+
+        # Validate that the regex pattern is a valid regex expression
+        try:
+            re.compile(value)
+        except re.error as e:
+            raise ValidationError(
+                f"The regex pattern {value!r} for the column {attr!r} "
+                f"is not a valid regular expression. Details: {e}."
+            )
+
+        return value
+
+
 class KeysSchema(Schema):
     pk_types = ["PK", "UQ"]
     fk_types = ["FK"]
     type_of_keys = [*pk_types, *fk_types]
     type = fields.String(validate=validate.OneOf(type_of_keys), required=True)
     columns = fields.List(fields.String(), required=True, allow_none=False)
+    regex_patterns = fields.Dict(
+        keys=fields.Str(),
+        values=RegexPatternField(),
+        required=False,
+        allow_none=True,
+        metadata={
+            "description": (
+                "Dictionary of regex patterns for generating key column values. "
+                "Optional parameter. Applicable for PK and UQ key types only. "
+                "Each entry must be a dictionary with a single key-value pair "
+                "where the key is the column name and the value is the regex pattern. "
+                "Example: [{customer_id: 'CUST-[0-9]{6}'}]"
+            )
+        }
+    )
     references = fields.Nested(ReferenceSchema, required=False, allow_none=False)
+
+    @validates_schema
+    def validate_regex(self, data, **kwargs):
+        """
+        Validates the 'regex' field against the following rules:
+        1. The 'regex' field is only allowed for PK and UQ key types
+        2. Each column specified in the 'regex' field must exist in the 'columns' field
+        3. Each column must appear only once across all regex pattern entries
+        """
+        regex_patterns = data.get("regex_patterns")
+        # Skip validation if regex is not provided or empty
+        if not regex_patterns:
+            return
+
+        # Rule 1: Validate that 'regex' is only used with PK and UQ key types
+        if data["type"] not in self.pk_types:
+            raise ValidationError(
+                f"The 'regex' field is only allowed when 'type' is "
+                f"{' or '.join([f'{pk_type!r}' for pk_type in self.pk_types])}. "
+                f"Got: {data['type']!r}."
+            )
+
+        defined_columns = set(data.get("columns", []))
+
+        for column_name in regex_patterns:
+            # Rule 2: Validate that the column exists in the 'columns' field
+            if column_name not in defined_columns:
+                raise ValidationError(
+                    f"The column {column_name!r} specified in the 'regex' field "
+                    f"does not exist in the 'columns' field. "
+                    f"Available columns: {sorted(defined_columns)}."
+                )
 
     @validates_schema
     def validate_references(self, data, **kwargs):
