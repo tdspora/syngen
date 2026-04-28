@@ -776,36 +776,6 @@ class VaeInferHandler(BaseHandler):
 
         self._cleanup_pool()
 
-    # unused for now
-    def check_memory_usage_and_adjust_batch_size(
-        self,
-        current_usage,
-        target_usage=80,
-        current_batch_size=None
-    ) -> Optional[int]:
-        """
-        Check the current memory usage and adjust the batch size if necessary.
-        If the current memory usage exceeds the target usage,
-        it reduces the batch size proportionally to the target usage.
-        :param current_usage: Current memory usage in percentage.
-        :param target_usage: Target memory usage in percentage (default is 80%).
-        :param current_batch_size: Current batch size to be adjusted.
-        :return: New batch size if reduced, otherwise the current batch size.
-        """
-        if current_usage > target_usage and (current_batch_size is not None):
-            reduction_factor = target_usage / current_usage
-            new_batch_size = (
-                max(1, math.floor(current_batch_size * reduction_factor))
-            )
-            logger.info(
-                f"Memory usage is {current_usage}%. "
-                f"Reducing batch size from {current_batch_size} "
-                f"to {new_batch_size}"
-            )
-            return new_batch_size
-
-        return current_batch_size
-
     def _set_random_seeds(self):
         """
         Generate deterministic per-batch seeds when user provides random_seed,
