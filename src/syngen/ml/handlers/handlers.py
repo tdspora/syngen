@@ -319,7 +319,8 @@ class VaeInferHandler(BaseHandler):
         Returns:
             Tuple[int, int, int]: (batch_size, batch_num, n_jobs)
         """
-        cpu_count = mp.cpu_count()
+        # use all available CPUs minus one to avoid overloading the system
+        cpu_count = max(1, mp.cpu_count() - 1)
 
         if self.batch_num > 1:
             n_jobs = min(self.batch_num, cpu_count)
@@ -563,7 +564,10 @@ class VaeInferHandler(BaseHandler):
         Raises:
             MemoryError: Always raises to stop processing
         """
-        recommended_batch_size = self.batch_size // BATCH_SIZE_REDUCTION_FACTOR
+        recommended_batch_size = max(
+            1000,
+            round(self.batch_size // BATCH_SIZE_REDUCTION_FACTOR, -3)
+        )
 
         error_message = (
             f"High memory usage detected: {memory_usage}%. "
