@@ -83,12 +83,11 @@ def test_get_pk_path(
         (50, 20, 3, True, [20, 20, 10]),
         (50, 20, 4, True, [20, 20, 10]),
         (50, 20, 5, True, [20, 20, 10]),
-        # if batch_size is not provided split by the number of nodes
-        (100, 100, 6, True, [17, 17, 17, 17, 17, 15]),
-        (1000, 1000, 16, True, [63] * 15 + [55]),
-        # # if not enough points for the last batch, decrease the batch_size
-        (10, 10, 8, True, [1, 1, 1, 1, 1, 1, 1, 3]),
-        (100, 100, 16, True, [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 10])
+        # if batch_size is not provided split by (nodes - 1)
+        (100, 100, 6, True, [20, 20, 20, 20, 20]),
+        (1000, 1000, 16, True, [67] * 14 + [62]),
+        (10, 10, 8, True, [1, 1, 1, 1, 1, 1, 4]),
+        (100, 100, 16, True, [7] * 14 + [2]),
     ],
 )
 @patch("os.path.exists", return_value=True)
@@ -129,7 +128,7 @@ def test_split_by_batches(
         log_level="INFO",
         type_of_process="infer",
         loader=None
-        )
+    )
 
     # attributes from the __attrs_post_init__ method
     handler.batch_num = math.ceil(handler.size / handler.batch_size)
@@ -166,13 +165,13 @@ def test_split_by_batches(
     "size, batch_size, cpu_count, "
     "expected_batch_num, expected_batch_size, expected_n_jobs",
     [
-        (100, 20, 8, 5, 20, 5),   # batch_num > 1, batch_num < cpu_count
-        (100, 24, 4, 5, 24, 4),  # batch_num > 1, batch_num > cpu_count
-        (16, 4, 32, 4, 4, 4),  # batch_num > 1, size < cpu_count, even division
-        (16, 5, 32, 4, 5, 4),  # batch_num > 1, size < cpu_count, uneven division
-        (100, 100, 8, 8, 13, 8),  # batch_num == 1 (size == batch_size),
-        (10, 10, 8, 8, 1, 8),  # batch_num == 1, case when batch_size is decreased because no points are left for the last batch
-        (1, 1, 8, 1, 1, 1),  # size == 1
+        (100, 20, 8, 5, 20, 5),      # batch_num > 1, batch_num < cpu_count
+        (100, 24, 4, 5, 24, 3),      # batch_num > 1, batch_num > cpu_count
+        (16, 4, 32, 4, 4, 4),        # batch_num > 1, size < cpu_count, even division
+        (16, 5, 32, 4, 5, 4),        # batch_num > 1, size < cpu_count, uneven division
+        (100, 100, 8, 7, 15, 7),     # batch_num == 1 (size == batch_size),
+        (10, 10, 8, 7, 1, 7),        # batch_num == 1, case when batch_size is decreased because no points are left for the last batch
+        (1, 1, 8, 1, 1, 1),          # size == 1
     ],
 )
 @patch('multiprocessing.cpu_count')
