@@ -2,7 +2,7 @@ import pytest
 
 from marshmallow import ValidationError
 
-from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.validation_schema import ValidationMetadataSchema
 from syngen.ml.data_loaders import MetadataLoader
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -15,12 +15,12 @@ def test_validation_of_metadata_file(rp_logger, caplog):
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -53,12 +53,12 @@ def test_validation_of_metadata_file_with_diff_types_of_reports(
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["global"]["train_settings"]["reports"] = reports
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -75,12 +75,12 @@ def test_validation_of_metadata_file_with_source_contained_path_to_excel_table(
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -95,12 +95,12 @@ def test_validation_of_metadata_file_without_global_settings(rp_logger, caplog):
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -116,12 +116,12 @@ def test_validation_of_metadata_file_only_with_required_fields(rp_logger, caplog
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -193,7 +193,7 @@ def test_validation_of_metadata_file_with_invalid_training_settings(
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["fk_test"]["train_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -263,7 +263,7 @@ def test_validation_of_metadata_file_with_invalid_global_training_settings(
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["global"]["train_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -325,7 +325,7 @@ def test_validation_of_metadata_file_with_invalid_infer_settings(
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["fk_test"]["infer_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="infer"
@@ -384,7 +384,7 @@ def test_validation_of_metadata_file_with_invalid_global_infer_settings(
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["global"]["infer_settings"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="infer"
@@ -418,7 +418,7 @@ def test_validation_of_metadata_file_with_invalid_global_encryption_settings(
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["global"]["encryption"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -452,7 +452,7 @@ def test_validation_of_metadata_file_with_invalid_encryption_settings(
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["fk_test"]["encryption"] = wrong_setting
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -541,7 +541,7 @@ def test_validation_of_metadata_file_with_invalid_format_settings_for_csv_table(
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["fk_test"]["format"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -605,7 +605,7 @@ def test_validation_of_metadata_file_with_invalid_format_settings_for_excel_tabl
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["pk_test"]["format"].update(wrong_setting)
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -626,7 +626,7 @@ def test_validation_of_metadata_file_without_source_fields_in_train_without_load
                         "metadata_file_without_required_fields.yaml")
     metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -652,12 +652,12 @@ def test_validation_of_metadata_file_without_source_fields_in_train_with_loader(
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=False,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -671,7 +671,7 @@ def test_validation_of_metadata_file_with_source_and_loader_in_train(rp_logger):
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=False,
             process="train"
@@ -699,12 +699,12 @@ def test_validation_of_metadata_file_without_source_fields_in_infer(
                         "metadata_file_without_required_fields.yaml")
     metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=validation_of_source,
             process="infer"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -721,12 +721,12 @@ def test_validation_of_metadata_file_without_training_settings_during_train_proc
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=False,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -743,16 +743,17 @@ def test_validation_of_metadata_file_without_training_settings_during_train_proc
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as e:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert str(e.value) == (
-            "Validation error(s) found in the schema of the metadata. "
-            "The details are - {'pk_test': {'train_settings': ['Field may not be null.']}, "
-            "'fk_test': {'train_settings': ['Field may not be null.']}}"
-        )
+    assert str(e.value) == (
+        "Validation error(s) found in the schema of the metadata. "
+        "The details are - {'pk_test': {'train_settings': {'source': ["
+        "'Missing data for required field.']}}, 'fk_test': {'train_settings': {"
+        "'source': ['Missing data for required field.']}}}"
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -771,12 +772,12 @@ def test_validation_of_metadata_file_without_training_settings_during_infer_proc
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=validation_of_source,
             process="infer"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -790,7 +791,7 @@ def test_validation_of_metadata_file_with_invalid_PK_key(rp_logger):
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -814,7 +815,7 @@ def test_validation_of_metadata_file_with_invalid_UQ_key(rp_logger):
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -838,7 +839,7 @@ def test_validation_of_metadata_file_with_invalid_FK_key(rp_logger):
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -922,7 +923,7 @@ def test_validation_schema_of_keys(path_to_metadata, expected_error, rp_logger):
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -943,12 +944,12 @@ def test_validation_of_metadata_file_with_regex_patterns(rp_logger, caplog):
     )
     metadata = MetadataLoader(path_to_metadata).load_data()
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -965,12 +966,12 @@ def test_validation_of_metadata_file_with_regex_patterns_in_pk_key(rp_logger, ca
         "Id": "^[A-Z]{3}-[0-9]{6}$"
     }
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -987,12 +988,12 @@ def test_validation_of_metadata_file_with_regex_patterns_in_uq_key(rp_logger, ca
         "Name": "[A-Z][a-z]+"
     }
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1007,12 +1008,12 @@ def test_validation_of_metadata_file_with_regex_patterns_set_to_none(rp_logger, 
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["pk_test"]["keys"]["pk_test_pk_id"]["regex_patterns"] = None
     with caplog.at_level(level="DEBUG"):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
         ).validate_schema()
-        assert "The schema of the metadata is valid" in caplog.text
+    assert "The schema of the metadata is valid" in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1027,7 +1028,7 @@ def test_validation_of_metadata_file_with_regex_patterns_in_fk_key(rp_logger):
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["fk_test"]["keys"]["fk_test_fk_id"]["regex_patterns"] = {"Id": "[0-9]+"}
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -1055,7 +1056,7 @@ def test_validation_of_metadata_file_with_regex_patterns_for_nonexistent_column(
         "nonexistent_col": "[0-9]+"
     }
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -1082,7 +1083,7 @@ def test_validation_of_metadata_file_with_invalid_regex_expression(rp_logger):
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["pk_test"]["keys"]["pk_test_pk_id"]["regex_patterns"] = {"Id": "[invalid"}
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"
@@ -1108,7 +1109,7 @@ def test_validation_of_metadata_file_with_empty_string_regex_pattern(rp_logger):
     metadata = MetadataLoader(path_to_metadata).load_data()
     metadata["pk_test"]["keys"]["pk_test_pk_id"]["regex_patterns"] = {"Id": ""}
     with pytest.raises(ValidationError) as error:
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=metadata,
             validation_of_source=True,
             process="train"

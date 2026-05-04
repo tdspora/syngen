@@ -18,7 +18,7 @@ from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler, get_source_path_extension
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
-from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.validation_schema import ValidationMetadataSchema
 
 
 @define
@@ -127,7 +127,7 @@ class Worker:
         """
         Validate the schema of the metadata file
         """
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=self.metadata,
             validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
@@ -233,11 +233,9 @@ class Worker:
     def _update_metadata(self) -> None:
         if self.metadata_path:
             self._update_metadata_for_tables()
-            self.__validate_schema()
             self.metadata.pop("global", None)
         elif self.table_name:
             self._update_metadata_for_table()
-            self.__validate_schema()
 
     def __fetch_metadata(self):
         """
@@ -258,6 +256,7 @@ class Worker:
                     "format": {}
                 }
             }
+        self.__validate_schema()
 
     @staticmethod
     def _get_tables_without_keys(config_of_tables: Dict) -> List[str]:
