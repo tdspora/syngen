@@ -14,7 +14,9 @@ from marshmallow import (
 )
 from loguru import logger
 
+
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
+LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 @dataclass
@@ -214,6 +216,28 @@ class TrainingSettingsSchema(Schema):
     )
 
 
+class CLITrainingSettingsSchema(TrainingSettingsSchema):
+    source = fields.String(required=False, allow_none=True)
+    log_level = fields.String(required=True, allow_none=False, validate=validate.OneOf(LOG_LEVELS))
+    fernet_key = fields.String(required=False, allow_none=True)
+
+    @staticmethod
+    def get_format_schema(source):
+        if Path(source).suffix == ".csv":
+            return CSVFormatSettingsSchema
+        if Path(source).suffix in SUPPORTED_EXCEL_EXTENSIONS:
+            return ExcelFormatSettingsSchema
+
+    @post_load
+    def process_format_field(self, data, **kwargs):
+        path_to_source = data.get("source")
+        if path_to_source:
+            format_schema = self.get_format_schema(path_to_source)
+            if format_schema is not None and data.get("format") is not None:
+                data["format"] = format_schema().load(data["format"])
+        return data
+
+
 class ExtendedTrainingSettingsSchemaWithSource(TrainingSettingsSchema):
     source = fields.String(required=True, allow_none=False)
     column_types = fields.Dict(
@@ -274,6 +298,11 @@ class InferSettingsSchema(Schema):
         required=False,
         validate=validate_reports
     )
+
+
+class CLIInferSettingsSchema(InferSettingsSchema):
+    log_level = fields.String(required=True, allow_none=False, validate=validate.OneOf(LOG_LEVELS))
+    fernet_key = fields.String(required=False, allow_none=True)
 
 
 class CSVFormatSettingsSchema(Schema):
@@ -386,7 +415,7 @@ class ConfigurationSchemaWithoutSource(BaseConfigurationSchema):
     )
 
 
-class ValidationSchema:
+class ValidationMetadataSchema:
     def __init__(
         self,
         metadata: Dict,
@@ -429,3 +458,40 @@ class ValidationSchema:
             raise ValidationError(f"{message}. The details are - {errors}")
         if not errors:
             logger.debug("The schema of the metadata is valid")
+
+
+class ValidationSettingsSchema:
+    def __init__(
+        self,
+        settings: Dict,
+        process: Literal["train", "infer"]
+    ):
+        self.settings = settings
+        self.process = process
+        self.configuration_schema = self.get_configuration_schema()
+
+    def get_configuration_schema(self):
+        if self.process == "train":
+            return CLITrainingSettingsSchema()
+        elif self.process == "infer":
+            return CLIInferSettingsSchema()
+
+    def validate_schema(self):
+        """
+        Validate the metadata file
+        """
+        errors = {}
+        try:
+            self.configuration_schema.load(self.settings)
+        except ValidationError as err:
+            errors[self.process] = err.messages
+        if errors:
+            message = f"Validation error(s) found in the {self.process} settings"
+            logger.error(message)
+            for section, errors_details in errors.items():
+                logger.error(
+                    f'The error(s) found in - "{section}": {json.dumps(errors_details, indent=4)}'
+                )
+            raise ValidationError(f"{message}. The details are - {errors}")
+        if not errors:
+            logger.debug(f"The schema of the {self.process} settings is valid")

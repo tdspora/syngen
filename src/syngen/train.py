@@ -1,5 +1,5 @@
 import os
-from typing import Optional, List, Union, Tuple, Callable
+from typing import Literal, Optional, List, Union, Callable
 
 import click
 from loguru import logger
@@ -13,6 +13,7 @@ from syngen.ml.utils import (
     fetch_env_variables
 )
 from syngen.ml.validation_schema import ReportTypes
+from syngen.ml.validation_schema import ValidationSettingsSchema
 
 
 def validate_required_parameters(
@@ -65,8 +66,12 @@ def launch_train(
     epochs: int = 10,
     drop_null: bool = False,
     row_limit: Optional[int] = None,
-    reports: Union[List[str], Tuple[str], str] = "none",
-    log_level: str = "INFO",
+    reports: Union[
+        Literal["accuracy", "sample", "privacy", "metrics_only", "all", "none"],
+        List[Literal["accuracy", "sample", "privacy", "metrics_only", "all", "none"]]
+    ] = "none",
+    log_level: Literal[
+        "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
     batch_size: int = 32,
     fernet_key: Optional[str] = None,
     loader: Optional[Callable[[str], pd.DataFrame]] = None,
@@ -77,6 +82,25 @@ def launch_train(
         table_name=table_name,
         metadata_path=metadata_path
     )
+    reports = get_reports(
+        value=reports,
+        report_types=ReportTypes(),
+        type_of_process="train"
+    )
+
+    ValidationSettingsSchema(
+        settings={
+            "source": source,
+            "epochs": epochs,
+            "drop_null": drop_null,
+            "row_limit": row_limit,
+            "batch_size": batch_size,
+            "reports": reports,
+            "log_level": log_level,
+            "fernet_key": fernet_key
+        },
+        process="train"
+    ).validate_schema()
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
 
@@ -89,11 +113,7 @@ def launch_train(
             "drop_null": drop_null,
             "row_limit": row_limit,
             "batch_size": batch_size,
-            "reports": get_reports(
-                value=reports,
-                report_types=ReportTypes(),
-                type_of_process="train"
-            ),
+            "reports": reports,
         },
         log_level=log_level,
         type_of_process="train",
