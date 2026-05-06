@@ -706,7 +706,7 @@ def test_cli_launch_train_table_with_invalid_parameter_reports(
 
 
 @pytest.mark.parametrize(
-    "invalid_value", ["test", ("none", "all"), ("none", "test"), ("all", "test")]
+    "invalid_value", ["test", ["none", "all"], ["none", "test"], ["all", "test"]]
 )
 @patch("syngen.train.setup_log_process")
 def test_launch_train_table_with_invalid_parameter_reports(

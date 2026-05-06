@@ -544,7 +544,7 @@ def test_launch_infer_table_with_several_valid_parameter_reports(
 ])
 @patch("syngen.infer.setup_log_process")
 def test_cli_launch_infer_table_with_invalid_parameter_reports(
-    mock_setup_log, invalid_value, rp_logger, caplog
+    mock_setup_log, invalid_value, rp_logger
 ):
     rp_logger.info(
         "Launch the inference process through CLI "
@@ -565,7 +565,7 @@ def test_cli_launch_infer_table_with_invalid_parameter_reports(
 
 
 @pytest.mark.parametrize("invalid_value", [
-    "sample", "test", ("none", "test"), ("all", "test")
+    "sample", "test", ["none", "test"], ["all", "test"]
 ])
 @patch("syngen.infer.setup_log_process")
 def test_launch_infer_table_with_invalid_parameter_reports(
