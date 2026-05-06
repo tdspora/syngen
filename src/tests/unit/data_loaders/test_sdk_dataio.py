@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from pandas.testing import assert_frame_equal
 from cryptography.fernet import Fernet
+from marshmallow import ValidationError
 
 from syngen.ml.data_loaders import (
     CSVLoader,
@@ -81,9 +82,14 @@ def test_initialize_dataio_for_local_table_in_unsupported_format(rp_logger):
         "Initializing the instance of the class DataIO "
         "for the local table in the unsupported format"
     )
-    with pytest.raises(NotImplementedError) as error:
+    with pytest.raises(ValidationError) as error:
         DataIO("path/to/table.test")
-        assert str(error.value) == "File format not supported for extension '.test'"
+    assert str(error.value) == (
+        "Validation error(s) found in the schema of the metadata. "
+        "The error(s) found in - \"table\": {\n    \"_schema\": [\n        "
+        "\"The supported file extensions are: .csv, .psv, .txt, .tsv, .xls, .xlsx, "
+        ".avro, .dat, .pkl. Got: '.test'.\"\n    ]\n}"
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

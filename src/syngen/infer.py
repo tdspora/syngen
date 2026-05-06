@@ -66,7 +66,6 @@ def launch_infer(
             "batch_size": batch_size,
             "reports": reports,
             "random_seed": random_seed,
-            "log_level": log_level,
             "fernet_key": fernet_key
         },
         process="infer"

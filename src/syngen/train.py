@@ -67,8 +67,8 @@ def launch_train(
     drop_null: bool = False,
     row_limit: Optional[int] = None,
     reports: Union[
-        Literal["accuracy", "sample", "privacy", "metrics_only", "all", "none"],
-        List[Literal["accuracy", "sample", "privacy", "metrics_only", "all", "none"]]
+        Literal["accuracy", "metrics_only", "all", "none"],
+        List[Literal["accuracy", "metrics_only", "all", "none"]]
     ] = "none",
     log_level: Literal[
         "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
@@ -96,7 +96,6 @@ def launch_train(
             "row_limit": row_limit,
             "batch_size": batch_size,
             "reports": reports,
-            "log_level": log_level,
             "fernet_key": fernet_key
         },
         process="train"

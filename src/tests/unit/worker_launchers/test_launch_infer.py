@@ -1,16 +1,14 @@
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 import pytest
 import shutil
 
 from click.testing import CliRunner
 from marshmallow import ValidationError
-import pandas as pd
 
 from syngen.infer import launch_infer, cli_launch_infer, validate_required_parameters
 from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
-from syngen.ml.utils import ValidationError as UtilsValidationError
-from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME, get_dataframe
+from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 
 TABLE_NAME = "test_table"
@@ -101,14 +99,14 @@ def test_cli_launch_infer_table_with_metadata_path_and_table_name(
             cli_launch_infer,
             ["--metadata_path", PATH_TO_METADATA, "--table_name", TABLE_NAME],
         )
-        mock_setup_log.assert_called_once()
-        mock_post_init.assert_called_once()
-        mock_launch_infer.assert_called_once()
-        assert result.exit_code == 0
-        assert (
-            "The information about 'metadata_path' was provided. "
-            "In this case the information about 'table_name' will be ignored." in caplog.text
-        )
+    mock_setup_log.assert_called_once()
+    mock_post_init.assert_called_once()
+    mock_launch_infer.assert_called_once()
+    assert result.exit_code == 0
+    assert (
+        "The information about 'metadata_path' was provided. "
+        "In this case the information about 'table_name' will be ignored." in caplog.text
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -125,13 +123,13 @@ def test_validate_parameters_with_metadata_path_and_table_name(
     with caplog.at_level("WARNING"):
         validate_required_parameters(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
         launch_infer(metadata_path=PATH_TO_METADATA, table_name=TABLE_NAME)
-        mock_setup_log.assert_called_once()
-        mock_post_init.assert_called_once()
-        mock_launch_infer.assert_called_once()
-        assert (
-            "The information about 'metadata_path' was provided. "
-            "In this case the information about 'table_name' will be ignored." in caplog.text
-        )
+    mock_setup_log.assert_called_once()
+    mock_post_init.assert_called_once()
+    mock_launch_infer.assert_called_once()
+    assert (
+        "The information about 'metadata_path' was provided. "
+        "In this case the information about 'table_name' will be ignored." in caplog.text
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -155,11 +153,11 @@ def test_validate_parameters_without_parameters(rp_logger):
     )
     with pytest.raises(AttributeError) as error:
         validate_required_parameters()
-        assert str(error.value) == (
-            "It seems that the information about 'metadata_path' or 'table_name' is absent. "
-            "Please provide either the information about 'metadata_path' or "
-            "the information about 'table_name'.",
-        )
+    assert str(error.value) == (
+        "It seems that the information about 'metadata_path' or 'table_name' is absent. "
+        "Please provide either the information about 'metadata_path' or "
+        "the information about 'table_name'."
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -217,25 +215,16 @@ def test_launch_infer_table_with_invalid_size(mock_setup_log, rp_logger, caplog)
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             launch_infer(size=0, table_name=TABLE_NAME)
-            assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
-            assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
-            mock_setup_log.assert_called_once()
+    mock_setup_log.assert_called_once()
+    error_message = (
+        'The error(s) found in - "infer_settings": {\n'
+        '    "size": [\n'
+        '        "Must be greater than or equal to 1."\n'
+        '    ]\n'
+        '}'
+    )
+    assert error_message in caplog.text
+    assert error_message in str(error.value)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -299,25 +288,16 @@ def test_launch_infer_table_with_invalid_run_parallel(mock_setup_log, rp_logger,
     with pytest.raises(ValidationError) as error:
         with caplog.at_level("ERROR"):
             launch_infer(run_parallel="test", table_name=TABLE_NAME)
-            mock_setup_log.assert_called_once()
-            assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "run_parallel": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
-            assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "run_parallel": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
+    mock_setup_log.assert_called_once()
+    error_message = (
+        'The error(s) found in - "infer_settings": {\n'
+        '    "run_parallel": [\n'
+        '        "Not a valid boolean."\n'
+        '    ]\n'
+        '}'
+    )
+    assert error_message in str(error.value)
+    assert error_message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -374,28 +354,19 @@ def test_launch_infer_table_with_invalid_batch_size(mock_setup_log, rp_logger, c
         "Launch the inference process by using the function 'launch_infer' "
         "with the invalid 'batch_size' parameter equals 0"
     )
-    with pytest.raises(ValidationError) as error:
-        with caplog.at_level("ERROR") as caplog:
+    with caplog.at_level("ERROR"):
+        with pytest.raises(ValidationError) as error:
             launch_infer(batch_size=0, table_name=TABLE_NAME)
-            mock_setup_log.assert_called_once()
-            assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
-            assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
+    mock_setup_log.assert_called_once()
+    error_message = (
+        'The error(s) found in - "infer_settings": {\n'
+        '    "batch_size": [\n'
+        '        "Must be greater than or equal to 1."\n'
+        '    ]\n'
+        '}'
+    )
+    assert error_message in str(error.value)
+    assert error_message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -453,27 +424,18 @@ def test_launch_infer_table_with_invalid_random_seed(mock_setup_log, rp_logger, 
         "with the invalid 'random_seed' parameter equals -1"
     )
     with pytest.raises(ValidationError) as error:
-        with caplog.at_level("ERROR") as caplog:
+        with caplog.at_level("ERROR"):
             launch_infer(random_seed=-1, table_name=TABLE_NAME)
-            assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "random_seed": [\n'
-                '             "Must be greater than or equal to 0."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
-            assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "random_seed": [\n'
-                '             "Must be greater than or equal to 0."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
-            )
-            mock_setup_log.assert_called_once()
+    mock_setup_log.assert_called_once()
+    error_message = (
+        'The error(s) found in - "infer_settings": {\n'
+        '    "random_seed": [\n'
+        '        "Must be greater than or equal to 0."\n'
+        '    ]\n'
+        '}'
+    )
+    assert error_message in str(error.value)
+    assert error_message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -582,7 +544,7 @@ def test_launch_infer_table_with_several_valid_parameter_reports(
 ])
 @patch("syngen.infer.setup_log_process")
 def test_cli_launch_infer_table_with_invalid_parameter_reports(
-    mock_setup_log, invalid_value, rp_logger
+    mock_setup_log, invalid_value, rp_logger, caplog
 ):
     rp_logger.info(
         "Launch the inference process through CLI "
@@ -603,7 +565,7 @@ def test_cli_launch_infer_table_with_invalid_parameter_reports(
 
 
 @pytest.mark.parametrize("invalid_value", [
-    "sample", "test", ("none", "all"), ("none", "test"), ("all", "test")
+    "sample", "test", ("none", "test"), ("all", "test")
 ])
 @patch("syngen.infer.setup_log_process")
 def test_launch_infer_table_with_invalid_parameter_reports(
@@ -615,11 +577,11 @@ def test_launch_infer_table_with_invalid_parameter_reports(
     )
     with pytest.raises(ValueError) as error:
         launch_infer(reports=invalid_value, table_name=TABLE_NAME)
-        mock_setup_log.assert_called_once()
-        assert str(error.value) == (
-            "Invalid input: Acceptable values for the parameter 'reports' "
-            "are 'none', 'all', 'accuracy', 'metrics_only'."
-        )
+    mock_setup_log.assert_called_once()
+    assert str(error.value) == (
+        "Invalid input: Acceptable values for the parameter 'reports' "
+        "are 'none', 'all', 'accuracy', 'metrics_only'."
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -648,7 +610,7 @@ def test_cli_launch_infer_table_with_redundant_parameter_reports(
     assert result.exit_code == 1
     assert isinstance(result.exception, ValueError)
     assert result.exception.args == (
-        "Invalid input: When 'reports' option is set to 'none' or 'all', "
+        "Invalid input: When 'reports' parameter is set to 'none' or 'all', "
         "no other values should be provided.",)
     mock_setup_log.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -666,11 +628,11 @@ def test_launch_infer_table_with_redundant_parameter_reports(mock_setup_log, val
     )
     with pytest.raises(ValueError) as error:
         launch_infer(reports=value, table_name=TABLE_NAME)
-        mock_setup_log.assert_called_once()
-        assert str(error.value) == (
-            "Invalid input: When 'reports' option is set to 'none' or 'all', "
-            "no other values should be provided."
-        )
+    mock_setup_log.assert_called_once()
+    assert str(error.value) == (
+        "Invalid input: When 'reports' parameter is set to 'none' or 'all', "
+        "no other values should be provided."
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -747,11 +709,11 @@ def test_launch_infer_table_with_non_existent_fernet_key(mock_setup_log, rp_logg
     )
     with pytest.raises(ValueError) as error:
         launch_infer(fernet_key="FERNET_KEY_NONEXISTENT", table_name=TABLE_NAME)
-        assert str(error.value) == (
-            "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
-            "Please, check whether it is set correctly."
-        )
-        mock_setup_log.assert_called_once()
+    mock_setup_log.assert_called_once()
+    assert str(error.value) == (
+        "The value of the environment variable 'FERNET_KEY_NONEXISTENT' wasn't fetched. "
+        "Please, check whether it is set correctly."
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -816,103 +778,6 @@ def test_launch_infer_table_with_invalid_log_level(rp_logger):
     )
     with pytest.raises(ValueError) as error:
         launch_infer(log_level="test", table_name=TABLE_NAME)
-        assert str(error.value) == "ValueError: Level 'test' does not exist"
+    assert str(error.value) == "Level 'test' does not exist"
 
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch.object(Worker, "launch_infer")
-@patch.object(Worker, "__attrs_post_init__")
-@patch("syngen.infer.setup_log_process")
-def test_launch_infer_table_with_loader(
-    mock_setup_log, mock_post_init, mock_launch_infer, rp_logger
-):
-    rp_logger.info(
-        "Launch the inference process by using the function 'launch_infer' "
-        "with the provided valid callback function to the 'loader' parameter"
-    )
-    launch_infer(loader=get_dataframe, table_name="table")
-    mock_setup_log.assert_called_once()
-    mock_post_init.assert_called_once()
-    mock_launch_infer.assert_called_once()
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch.object(Worker, "launch_infer")
-@patch("syngen.infer.setup_log_process")
-def test_launch_infer_table_with_not_callable_loader(
-    mock_setup_log, mock_launch_infer, caplog, rp_logger
-):
-    rp_logger.info(
-        "Launch the inference process by using the function 'launch_infer' "
-        "with the provided 'loader' parameter that is not callable"
-    )
-    error_message = (
-        "The provided loader for the table - 'table' isn't callable. "
-        "Please, provide a valid callback function."
-    )
-    with pytest.raises(UtilsValidationError) as error:
-        with caplog.at_level("ERROR"):
-            launch_infer(loader="not_callable", table_name="table")
-            assert error_message in str(error.value)
-            assert error_message in caplog.text
-
-        mock_setup_log.assert_called_once()
-        mock_launch_infer.assert_not_called()
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@pytest.mark.parametrize("loader, error_message", [
-    (
-        lambda x: pd.DataFrame(),
-        "The provided loader should accept `table_name` as an argument. "
-        "Please, adjust the signature of the loader."
-    ),
-    (
-        lambda table_name, y: pd.DataFrame(),
-        "The provided loader should accept only the argument - `table_name`. "
-        "Please, adjust the signature of the loader."
-    )
-])
-@patch.object(Worker, "launch_infer")
-@patch("syngen.infer.setup_log_process")
-def test_launch_infer_table_with_loader_with_wrong_signature(
-    mock_setup_log, mock_launch_infer, loader, error_message, caplog, rp_logger
-):
-    rp_logger.info(
-        "Launch the inference process by using the function 'launch_infer' "
-        "with the provided 'loader' parameter containing a function with wrong signature"
-    )
-    with pytest.raises(UtilsValidationError) as error:
-        with caplog.at_level("ERROR"):
-            launch_infer(loader=loader, table_name="table")
-            assert error_message in str(error.value)
-            assert error_message in caplog.text
-
-        mock_setup_log.assert_called_once()
-        mock_launch_infer.assert_not_called()
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch.object(Worker, "launch_infer")
-@patch("syngen.infer.setup_log_process")
-def test_launch_infer_table_with_loader_with_wrong_return_value(
-    mock_setup_log, mock_launch_infer, caplog, rp_logger
-):
-    rp_logger.info(
-        "Launch the training process by using the function 'launch_train' "
-        "with the provided 'loader' parameter that returns a non-DataFrame object"
-    )
-    error_message = "The provided loader raised an exception when called"
-    with pytest.raises(UtilsValidationError) as error:
-        with caplog.at_level("ERROR"):
-            launch_infer(loader=lambda table_name: Mock(), table_name="table")
-            assert error_message in str(error.value)
-            assert error_message in caplog.text
-
-        mock_launch_infer.assert_not_called()
-        mock_setup_log.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)

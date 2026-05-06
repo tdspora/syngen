@@ -619,7 +619,7 @@ def get_reports(
     if "none" in input_values or "all" in input_values:
         if len(input_values) > 1:
             raise ValueError(
-                "Invalid input: When 'reports' option is set to 'none' or 'all', "
+                "Invalid input: When 'reports' parameter is set to 'none' or 'all', "
                 "no other values should be provided."
             )
         if list(input_values)[0] == "all":

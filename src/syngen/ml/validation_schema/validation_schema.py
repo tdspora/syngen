@@ -16,7 +16,22 @@ from loguru import logger
 
 
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
+SUPPORTED_CSV_EXTENSIONS = [".csv", '.psv', '.txt', '.tsv']
+SUPPORTED_EXTENSIONS = (
+    SUPPORTED_CSV_EXTENSIONS + SUPPORTED_EXCEL_EXTENSIONS + [".avro", '.dat', '.pkl']
+)
 LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+
+def validate_source_field(source):
+    """Validate the 'source' parameter whether it has a supported file extension"""
+    source_extension = Path(source).suffix if source else None
+    if source_extension is not None and source_extension not in SUPPORTED_EXTENSIONS:
+        raise ValidationError(
+            "The supported file extensions are: "
+            f"{', '.join(SUPPORTED_EXTENSIONS)}. "
+            f"Got: {source_extension!r}."
+        )
 
 
 @dataclass
@@ -218,24 +233,11 @@ class TrainingSettingsSchema(Schema):
 
 class CLITrainingSettingsSchema(TrainingSettingsSchema):
     source = fields.String(required=False, allow_none=True)
-    log_level = fields.String(required=True, allow_none=False, validate=validate.OneOf(LOG_LEVELS))
     fernet_key = fields.String(required=False, allow_none=True)
 
-    @staticmethod
-    def get_format_schema(source):
-        if Path(source).suffix == ".csv":
-            return CSVFormatSettingsSchema
-        if Path(source).suffix in SUPPORTED_EXCEL_EXTENSIONS:
-            return ExcelFormatSettingsSchema
-
-    @post_load
-    def process_format_field(self, data, **kwargs):
-        path_to_source = data.get("source")
-        if path_to_source:
-            format_schema = self.get_format_schema(path_to_source)
-            if format_schema is not None and data.get("format") is not None:
-                data["format"] = format_schema().load(data["format"])
-        return data
+    def validate_source_field(self, data, **kwargs):
+        source = data.get("source") if data else None
+        return validate_source_field(source)
 
 
 class ExtendedTrainingSettingsSchemaWithSource(TrainingSettingsSchema):
@@ -301,7 +303,6 @@ class InferSettingsSchema(Schema):
 
 
 class CLIInferSettingsSchema(InferSettingsSchema):
-    log_level = fields.String(required=True, allow_none=False, validate=validate.OneOf(LOG_LEVELS))
     fernet_key = fields.String(required=False, allow_none=True)
 
 
@@ -366,15 +367,17 @@ class BaseConfigurationSchema(Schema):
 
     @staticmethod
     def get_format_schema(source):
-        if Path(source).suffix == ".csv":
+        extension = Path(source).suffix
+        if extension in SUPPORTED_CSV_EXTENSIONS:
             return CSVFormatSettingsSchema
-        if Path(source).suffix in SUPPORTED_EXCEL_EXTENSIONS:
+        if extension in SUPPORTED_EXCEL_EXTENSIONS:
             return ExcelFormatSettingsSchema
 
     @post_load
-    def process_format_field(self, data, **kwargs):
+    def validate_format_field(self, data, **kwargs):
         train_settings = data.get("train_settings", {})
         path_to_source = train_settings.get("source") if train_settings else None
+        validate_source_field(path_to_source)
         if train_settings and path_to_source:
             format_schema = self.get_format_schema(path_to_source)
             if format_schema is not None and data.get("format") is not None:
@@ -426,9 +429,9 @@ class ValidationMetadataSchema:
         self.global_schema = GlobalSettingsSchema()
         self.process = process
         self.validation_of_source = validation_of_source
-        self.configuration_schema = self.get_configuration_schema()
 
-    def get_configuration_schema(self):
+    @property
+    def configuration_schema(self):
         if self.validation_of_source and self.process == "train":
             return ConfigurationSchemaWithSource()
         elif self.process == "infer":
@@ -449,15 +452,15 @@ class ValidationMetadataSchema:
             except ValidationError as err:
                 errors[table_name] = err.messages
         if errors:
-            message = "Validation error(s) found in the schema of the metadata"
-            logger.error(message)
+            message = "Validation error(s) found in the schema of the metadata. "
             for section, errors_details in errors.items():
-                logger.error(
+                message += (
                     f'The error(s) found in - "{section}": {json.dumps(errors_details, indent=4)}'
                 )
-            raise ValidationError(f"{message}. The details are - {errors}")
+            logger.error(message)
+            raise ValidationError(f"{message}")
         if not errors:
-            logger.debug("The schema of the metadata is valid")
+            logger.debug("The schema of the metadata is valid.")
 
 
 class ValidationSettingsSchema:
@@ -468,9 +471,9 @@ class ValidationSettingsSchema:
     ):
         self.settings = settings
         self.process = process
-        self.configuration_schema = self.get_configuration_schema()
 
-    def get_configuration_schema(self):
+    @property
+    def configuration_schema(self):
         if self.process == "train":
             return CLITrainingSettingsSchema()
         elif self.process == "infer":
@@ -484,14 +487,14 @@ class ValidationSettingsSchema:
         try:
             self.configuration_schema.load(self.settings)
         except ValidationError as err:
-            errors[self.process] = err.messages
+            errors[f"{self.process}_settings"] = err.messages
         if errors:
-            message = f"Validation error(s) found in the {self.process} settings"
-            logger.error(message)
+            message = f"Validation error(s) found in the {self.process} settings. "
             for section, errors_details in errors.items():
-                logger.error(
+                message += (
                     f'The error(s) found in - "{section}": {json.dumps(errors_details, indent=4)}'
                 )
-            raise ValidationError(f"{message}. The details are - {errors}")
+            logger.error(message)
+            raise ValidationError(message)
         if not errors:
             logger.debug(f"The schema of the {self.process} settings is valid")
