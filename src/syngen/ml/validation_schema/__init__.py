@@ -12,6 +12,7 @@ from syngen.ml.validation_schema.validation_schema import (  # noqa: F401;
     ValidationMetadataSchema,
     ValidationSettingsSchema,
     CLITrainingSettingsSchema,
+    CLIInferSettingsSchema,
     SUPPORTED_EXCEL_EXTENSIONS,
     LOG_LEVELS,
     ReportTypes
