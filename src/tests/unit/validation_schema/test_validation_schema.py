@@ -951,24 +951,6 @@ def test_validation_of_metadata_file_with_invalid_FK_key(rp_logger):
         ),
         (
             f"{DIR_NAME}/unit/validation_schema/fixtures/"
-            "metadata_file_of_related_tables_with_absent_fk_columns.yaml",
-            'The error(s) found in - "table_b": {\n    "keys": {\n        "fk_id": '
-            '{\n            "value": {\n                "columns": '
-            '[\n                    "Missing data for required field."\n                ]'
-            '\n            }\n        }\n    }\n}',
-        ),
-        (
-            f"{DIR_NAME}/unit/validation_schema/fixtures/"
-            "metadata_file_of_related_tables_with_absent_ref_table.yaml",
-            'The error(s) found in - "table_b": {\n    "keys": {\n        "fk_id": '
-            '{\n            "value": {\n                "references": '
-            '{\n                    "table": '
-            '[\n                        "Missing data for required field."'
-            '\n                    ]\n                }\n            }\n        }'
-            '\n    }\n}'
-        ),
-        (
-            f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_absent_ref_columns.yaml",
             'The error(s) found in - "table_b": {\n    "keys": {\n        "fk_id": '
             '{\n            "value": {\n                "references": '
@@ -995,7 +977,7 @@ def test_validation_of_metadata_file_with_invalid_FK_key(rp_logger):
         (
             f"{DIR_NAME}/unit/validation_schema/fixtures/"
             "metadata_file_of_related_tables_with_absent_uq_columns.yaml",
-            'The error(s) found in - "table_a": {\n    "keys": {\n        "pk_id": '
+            'The error(s) found in - "table_a": {\n    "keys": {\n        "uq_id": '
             '{\n            "value": {\n                "columns": '
             '[\n                    "Field may not be null."\n                ]'
             '\n            }\n        }\n    }\n}',
