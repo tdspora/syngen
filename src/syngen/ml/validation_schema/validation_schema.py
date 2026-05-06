@@ -24,9 +24,13 @@ LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 def validate_source_field(source):
-    """Validate the 'source' parameter whether it has a supported file extension"""
-    source_extension = Path(source).suffix if source else None
-    if source_extension is not None and source_extension not in SUPPORTED_EXTENSIONS:
+    """
+    Validate the 'source' parameter whether it has a supported file extension
+    """
+    if source.strip() == "":
+        raise ValidationError("The 'source' parameter must not be empty string.")
+    source_extension = Path(source).suffix
+    if source_extension not in SUPPORTED_EXTENSIONS:
         raise ValidationError(
             "The supported file extensions are: "
             f"{', '.join(SUPPORTED_EXTENSIONS)}. "
@@ -232,12 +236,12 @@ class TrainingSettingsSchema(Schema):
 
 
 class CLITrainingSettingsSchema(TrainingSettingsSchema):
-    source = fields.String(required=False, allow_none=True)
+    source = fields.String(required=False, allow_none=True, validate=validate_source_field)
     fernet_key = fields.String(required=False, allow_none=True)
 
-    def validate_source_field(self, data, **kwargs):
-        source = data.get("source") if data else None
-        return validate_source_field(source)
+    @staticmethod
+    def validate_source_field(source):
+        return validate_source_field(source) if source is not None else source
 
 
 class ExtendedTrainingSettingsSchemaWithSource(TrainingSettingsSchema):
@@ -375,10 +379,10 @@ class BaseConfigurationSchema(Schema):
 
     @post_load
     def validate_format_field(self, data, **kwargs):
-        train_settings = data.get("train_settings", {})
-        path_to_source = train_settings.get("source") if train_settings else None
-        validate_source_field(path_to_source)
-        if train_settings and path_to_source:
+        train_settings = data.get("train_settings")
+        path_to_source = train_settings.get("source") if train_settings is not None else None
+        if path_to_source:
+            validate_source_field(path_to_source)
             format_schema = self.get_format_schema(path_to_source)
             if format_schema is not None and data.get("format") is not None:
                 data["format"] = format_schema().load(data["format"])
