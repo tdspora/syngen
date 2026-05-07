@@ -17,7 +17,7 @@ from loguru import logger
 
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
 SUPPORTED_CSV_EXTENSIONS = [".csv", '.psv', '.txt', '.tsv']
-SUPPORTED_EXTENSIONS = (
+SUPPORTED_OS_EXTENSIONS = (
     SUPPORTED_CSV_EXTENSIONS + SUPPORTED_EXCEL_EXTENSIONS + [".avro", '.dat', '.pkl']
 )
 LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -30,10 +30,10 @@ def validate_source_field(source):
     if source.strip() == "":
         raise ValidationError("The 'source' parameter must not be empty string.")
     source_extension = Path(source).suffix
-    if source_extension not in SUPPORTED_EXTENSIONS:
+    if source_extension not in SUPPORTED_OS_EXTENSIONS:
         raise ValidationError(
             "The supported file extensions are: "
-            f"{', '.join(SUPPORTED_EXTENSIONS)}. "
+            f"{', '.join(SUPPORTED_OS_EXTENSIONS)}. "
             f"Got: {source_extension!r}."
         )
 
