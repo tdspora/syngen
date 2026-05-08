@@ -3,6 +3,7 @@ import pytest
 import datetime
 import random
 import string
+import pickle
 from unittest.mock import patch
 
 import pandas as pd
@@ -1017,4 +1018,85 @@ def test_cast_to_numeric_in_avro_file(mock_fetch_config, rp_logger):
     mock_dataset.launch_detection()
     assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     assert mock_dataset.float_columns == {"column6"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "pk_name, expected_slug",
+    [
+        # underscore in column name is converted to hyphen
+        ("brand_id", "brand-id"),
+        # column name without special characters stays the same
+        ("brandid", "brandid"),
+        # mixed case is lowered and underscores become hyphens
+        ("Brand_ID", "brand-id"),
+    ],
+)
+def test_map_text_pk_saves_mapper_with_slugified_filename(
+    pk_name, expected_slug, tmp_path, rp_logger
+):
+    """
+    Test that _map_text_pk saves mapper .pkl files using slugified pk name
+    so that _fetch_mapper (decorated with @slugify_parameters) can find them.
+    """
+    rp_logger.info(
+        "Test that _map_text_pk saves mapper with slugified filename"
+    )
+    fk_kde_path = str(tmp_path) + "/"
+    df = pd.DataFrame({pk_name: ["alpha", "beta", "gamma"]})
+    dataset = Dataset(
+        df=df,
+        schema={"fields": {}, "format": "CSV"},
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={
+            "fk_kde_path": fk_kde_path,
+            "initial_order_of_columns_path": "mock_path.pkl",
+        },
+        main_process="train",
+    )
+    dataset.pk_uq_keys_types = {pk_name: str}
+
+    # invoke the private method under test
+    dataset._map_text_pk()
+
+    expected_file = tmp_path / f"{expected_slug}_mapper.pkl"
+    assert expected_file.exists(), (
+        f"Expected mapper file '{expected_file.name}' not found. "
+        f"Files present: {[f.name for f in tmp_path.iterdir()]}"
+    )
+
+    with open(expected_file, "rb") as f:
+        mapper = pickle.load(f)
+    assert mapper == {"alpha": 0, "beta": 1, "gamma": 2}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_map_text_pk_skips_numeric_pk(tmp_path, rp_logger):
+    """
+    Test that _map_text_pk does not create mapper files for numeric PKs.
+    """
+    rp_logger.info(
+        "Test that _map_text_pk skips numeric PK columns"
+    )
+    fk_kde_path = str(tmp_path) + "/"
+    df = pd.DataFrame({"id": [1, 2, 3]})
+    dataset = Dataset(
+        df=df,
+        schema={"fields": {}, "format": "CSV"},
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={
+            "fk_kde_path": fk_kde_path,
+            "initial_order_of_columns_path": "mock_path.pkl",
+        },
+        main_process="train",
+    )
+    dataset.pk_uq_keys_types = {"id": float}
+
+    dataset._map_text_pk()
+
+    assert list(tmp_path.iterdir()) == [], (
+        "No mapper file should be created for numeric PK"
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)
