@@ -34,6 +34,7 @@ from syngen.ml.utils import (
 )
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import clean_up_metadata
+from slugify import slugify
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
@@ -371,7 +372,7 @@ class Dataset:
         for pk, pk_type in self.pk_uq_keys_types.items():
             if pk_type is str:
                 mapper = {k: n for n, k in enumerate(self.df[pk])}
-                with open(f"{self.paths['fk_kde_path']}{pk}_mapper.pkl", "wb") as file:
+                with open(f"{self.paths['fk_kde_path']}{slugify(pk)}_mapper.pkl", "wb") as file:
                     pickle.dump(mapper, file)
 
     def _set_metadata(self):
