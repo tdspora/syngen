@@ -1036,11 +1036,11 @@ def test_map_text_pk_saves_mapper_with_slugified_filename(
     pk_name, expected_slug, tmp_path, rp_logger
 ):
     """
-    Test that __map_text_pk saves mapper .pkl files using slugified pk name
+    Test that _map_text_pk saves mapper .pkl files using slugified pk name
     so that _fetch_mapper (decorated with @slugify_parameters) can find them.
     """
     rp_logger.info(
-        "Test that __map_text_pk saves mapper with slugified filename"
+        "Test that _map_text_pk saves mapper with slugified filename"
     )
     fk_kde_path = str(tmp_path) + "/"
     df = pd.DataFrame({pk_name: ["alpha", "beta", "gamma"]})
@@ -1058,7 +1058,7 @@ def test_map_text_pk_saves_mapper_with_slugified_filename(
     dataset.pk_uq_keys_types = {pk_name: str}
 
     # invoke the private method under test
-    dataset._Dataset__map_text_pk()
+    dataset._map_text_pk()
 
     expected_file = tmp_path / f"{expected_slug}_mapper.pkl"
     assert expected_file.exists(), (
@@ -1074,10 +1074,10 @@ def test_map_text_pk_saves_mapper_with_slugified_filename(
 
 def test_map_text_pk_skips_numeric_pk(tmp_path, rp_logger):
     """
-    Test that __map_text_pk does not create mapper files for numeric PKs.
+    Test that _map_text_pk does not create mapper files for numeric PKs.
     """
     rp_logger.info(
-        "Test that __map_text_pk skips numeric PK columns"
+        "Test that _map_text_pk skips numeric PK columns"
     )
     fk_kde_path = str(tmp_path) + "/"
     df = pd.DataFrame({"id": [1, 2, 3]})
@@ -1094,7 +1094,7 @@ def test_map_text_pk_skips_numeric_pk(tmp_path, rp_logger):
     )
     dataset.pk_uq_keys_types = {"id": float}
 
-    dataset._Dataset__map_text_pk()
+    dataset._map_text_pk()
 
     assert list(tmp_path.iterdir()) == [], (
         "No mapper file should be created for numeric PK"

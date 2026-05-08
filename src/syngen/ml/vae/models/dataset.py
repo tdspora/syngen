@@ -368,7 +368,7 @@ class Dataset:
                 )
                 self.pk_uq_keys_types[column] = column_type
 
-    def __map_text_pk(self):
+    def _map_text_pk(self):
         for pk, pk_type in self.pk_uq_keys_types.items():
             if pk_type is str:
                 mapper = {k: n for n, k in enumerate(self.df[pk])}
@@ -1466,7 +1466,7 @@ class Dataset:
         pk_uq_keys_mapping = self.primary_keys_mapping
         if pk_uq_keys_mapping:
             self.__set_types(pk_uq_keys_mapping)
-            self.__map_text_pk()
+            self._map_text_pk()
 
     def _assign_feature(self, column: str):
         """
