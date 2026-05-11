@@ -21,7 +21,7 @@ from syngen.ml.reporters import (
     AccuracyReporter,
     SampleAccuracyReporter,
 )
-from syngen.ml.validation_schema import ValidationSchema, ReportTypes
+from syngen.ml.validation_schema import ValidationMetadataSchema, ReportTypes
 from syngen.ml.context import global_context, get_context
 
 
@@ -84,7 +84,7 @@ class DataIO(BaseDataIO):
         }
 
     def _validate_metadata(self):
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=self.metadata,
             validation_of_source=True,
             process="train"

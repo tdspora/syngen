@@ -18,7 +18,7 @@ from syngen.ml.context.context import global_context
 from syngen.ml.utils import ProgressBarHandler, get_source_path_extension
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
-from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.validation_schema import ValidationMetadataSchema
 
 
 @define
@@ -43,10 +43,9 @@ class Worker:
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
-        self.metadata = self.__fetch_metadata()
-        self._update_metadata()
-        self.__validate_schema()
+        self.__fetch_metadata()
         self._clean_up()
+        self._update_metadata()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
@@ -128,7 +127,7 @@ class Worker:
         """
         Validate the schema of the metadata file
         """
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=self.metadata,
             validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
@@ -238,16 +237,15 @@ class Worker:
         elif self.table_name:
             self._update_metadata_for_table()
 
-    def __fetch_metadata(self) -> Dict:
+    def __fetch_metadata(self):
         """
         Fetch the metadata for training or infer process
         """
         if self.metadata_path:
-            metadata = MetadataLoader(path=self.metadata_path).load_data()
-            return metadata
+            self.metadata = MetadataLoader(path=self.metadata_path).load_data()
         elif self.table_name:
             source = self.settings.get("source")
-            metadata = {
+            self.metadata = {
                 self.table_name: {
                     "train_settings": {
                         "source": source,
@@ -258,7 +256,7 @@ class Worker:
                     "format": {}
                 }
             }
-            return metadata
+        self.__validate_schema()
 
     @staticmethod
     def _get_tables_without_keys(config_of_tables: Dict) -> List[str]:

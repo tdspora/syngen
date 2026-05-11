@@ -11,7 +11,7 @@ from cryptography.fernet import InvalidToken
 from slugify import slugify
 from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader, DataEncryptor, DataFrameFetcher
-from syngen.ml.validation_schema import ValidationSchema, ReportTypes
+from syngen.ml.validation_schema import ValidationMetadataSchema, ReportTypes
 from syngen.ml.utils import ValidationError, fetch_config, get_source_path_extension
 
 
@@ -93,7 +93,7 @@ class Validator:
         """
         Validate the schema of the metadata
         """
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=self.metadata,
             validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
@@ -290,7 +290,7 @@ class Validator:
         and merge it with the metadata of the child table
         """
         self.merged_metadata = self.metadata.copy()
-        for key_name, config in self.mapping.items():
+        for config in self.mapping.values():
             parent_table = config.get("parent_table")
             if parent_table in self.metadata:
                 continue
