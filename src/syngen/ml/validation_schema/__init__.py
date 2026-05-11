@@ -17,5 +17,6 @@ from syngen.ml.validation_schema.validation_schema import (  # noqa: F401;
     SUPPORTED_CSV_EXTENSIONS,
     SUPPORTED_OS_EXTENSIONS,
     LOG_LEVELS,
-    ReportTypes
+    ReportTypes,
+    validate_source_field
 )
