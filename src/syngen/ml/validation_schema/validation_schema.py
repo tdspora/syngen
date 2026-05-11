@@ -23,17 +23,17 @@ SUPPORTED_OS_EXTENSIONS = (
 LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
-def validate_source_field(source):
+def validate_source_field(source, supported_extensions=SUPPORTED_OS_EXTENSIONS):
     """
     Validate the 'source' parameter whether it has a supported file extension
     """
     if source.strip() == "":
         raise ValidationError("The 'source' parameter must not be empty string.")
     source_extension = Path(source).suffix
-    if source_extension not in SUPPORTED_OS_EXTENSIONS:
+    if source_extension not in supported_extensions:
         raise ValidationError(
             "The supported file extensions are: "
-            f"{', '.join(SUPPORTED_OS_EXTENSIONS)}. "
+            f"{', '.join(supported_extensions)}. "
             f"Got: {source_extension!r}."
         )
 
