@@ -143,7 +143,7 @@ class Dataset:
         self._update_metadata(table_config)
         self._set_metadata()
         self._detect_categorical_columns()
-        self.excluded_columns = set().union(
+        self.excluded_columns = self.excluded_columns.union(
             self.categorical_columns,
             self.binary_columns
         )
