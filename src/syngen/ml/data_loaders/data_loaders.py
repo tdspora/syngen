@@ -216,7 +216,7 @@ class CSVLoader(BaseDataLoader):
         return self._load_data(format=self.format, **kwargs)
 
     def __get_columns(self, **kwargs):
-        head_df = pd.read_csv(self.path, **kwargs, nrows=0)
+        head_df, _ = self._load_data(format=self.format, nrows=0, **kwargs)
         return list(head_df.columns)
 
     def get_columns(self, **kwargs) -> List[str]:
