@@ -189,6 +189,20 @@ def test_load_data_from_empty_table_in_csv_format(caplog, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_save_data_in_csv_format(test_csv_path, test_df, rp_logger):
+    rp_logger.info("Saving data in csv format locally")
+    data_loader = DataLoader(test_csv_path)
+    data_loader.save_data(test_df)
+
+    assert isinstance(data_loader.file_loader, CSVLoader)
+    assert os.path.exists(test_csv_path) is True
+
+    loaded_df, schema = data_loader.load_data()
+    pd.testing.assert_frame_equal(loaded_df, test_df)
+    assert schema == CSV_SCHEMA
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_get_columns_from_table_in_csv_format(rp_logger):
     rp_logger.info("Get the list of the columns from the table in CSV format")
     data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
@@ -203,9 +217,10 @@ def test_get_columns_from_table_in_csv_format_with_formatting_settings(rp_logger
     rp_logger.info(
         "Get the list of the columns from the table in CSV format where the separator is '|'"
     )
+    global_context({"sep": "|"})
     data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
                              "csv_tables/pipe_delimited_text.csv")
-    columns = data_loader.get_columns(sep="|")
+    columns = data_loader.get_columns()
     assert isinstance(data_loader.file_loader, CSVLoader)
     assert columns == ["id", "first_name", "last_name", "email", "gender", "ip_address"]
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -220,20 +235,6 @@ def test_get_columns_from_empty_table_in_csv_format(caplog, rp_logger):
         with caplog.at_level("ERROR"):
             data_loader.get_columns()
             assert "The empty file was provided. Unable to train this table" in caplog.text
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_save_data_in_csv_format(test_csv_path, test_df, rp_logger):
-    rp_logger.info("Saving data in csv format locally")
-    data_loader = DataLoader(test_csv_path)
-    data_loader.save_data(test_df)
-
-    assert isinstance(data_loader.file_loader, CSVLoader)
-    assert os.path.exists(test_csv_path) is True
-
-    loaded_df, schema = data_loader.load_data()
-    pd.testing.assert_frame_equal(loaded_df, test_df)
-    assert schema == CSV_SCHEMA
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -1496,11 +1497,12 @@ def test_get_column_from_table_in_xls_format_with_formatting_settings(rp_logger)
     rp_logger.info(
         "Get the list of the columns from the table in '.xls' format from the certain sheet"
     )
+    global_context({"sheet_name": "TestName"})
     data_loader = DataLoader(
         f"{DIR_NAME}/unit/data_loaders/fixtures/"
         "excel_tables/table_with_data_and_2_sheets.xls"
     )
-    columns = data_loader.get_columns(sheet_name="TestName")
+    columns = data_loader.get_columns()
     assert isinstance(data_loader.file_loader, ExcelLoader)
     assert columns == ["gender", "height", "id"]
     rp_logger.info(SUCCESSFUL_MESSAGE)
