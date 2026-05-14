@@ -632,12 +632,11 @@ class Worker:
             success_file.write("SUCCESS")
 
     def _save_metadata_file(self):
-        if self.metadata_path:
-            os.makedirs("model_artifacts/metadata", exist_ok=True)
-            metadata_file_name = os.path.basename(self.metadata_path)
-            MetadataLoader(
-                path=f"model_artifacts/metadata/{metadata_file_name}"
-            ).save_data(metadata=self.metadata)
+        os.makedirs("model_artifacts/metadata", exist_ok=True)
+        metadata_file_name = os.path.basename(self.metadata_path) if self.metadata_path else f"{self.table_name}_metadata.yaml"
+        MetadataLoader(
+            path=f"model_artifacts/metadata/{metadata_file_name}"
+        ).save_data(metadata=self.metadata)
 
     def launch_train(self):
         """
