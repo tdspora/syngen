@@ -129,7 +129,7 @@ class Reporter:
         without keys columns
         """
         types = self.fetch_data_types()
-        exclude_columns = self.dataset.uuid_columns
+        excluded_columns = self.dataset.uuid_columns
         for column in self.dataset.cast_to_integer:
             original[column] = pd.to_numeric(
                 original[column], errors="coerce", downcast="integer"
@@ -145,10 +145,10 @@ class Reporter:
                 synthetic[column], errors="coerce", downcast="float"
             )
         original = nan_labels_to_float(
-            original, self.columns_nan_labels, exclude_columns, process="report"
+            original, self.columns_nan_labels, excluded_columns, process="report"
         )
         synthetic = nan_labels_to_float(
-            synthetic, self.columns_nan_labels, exclude_columns, process="report"
+            synthetic, self.columns_nan_labels, excluded_columns, process="report"
         )
         (
             str_columns,
