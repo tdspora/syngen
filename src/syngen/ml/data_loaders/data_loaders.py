@@ -610,17 +610,17 @@ class ExcelLoader(BaseDataLoader):
             if k in ExcelFormatSettingsSchema._declared_fields.keys()
         }
 
-    def _fetch_data(self) -> pd.DataFrame:
-        return pd.read_excel(self.path, sheet_name=self.sheet_name)
+    def _fetch_data(self, **kwargs) -> pd.DataFrame:
+        return pd.read_excel(self.path, sheet_name=self.sheet_name, **kwargs)
 
-    def _load_data(self) -> Tuple[pd.DataFrame, Dict]:
+    def _load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         """
         Load data in Excel format
         """
         try:
-            df = self._fetch_data()
+            df = self._fetch_data(**kwargs)
             if isinstance(self.sheet_name, list) or self.sheet_name is None:
-                dfs = [df for sheet_name, df in df.items()]
+                dfs = [df for _, df in df.items()]
                 df = pd.concat(dfs, ignore_index=True)
             global_context({})
             return df, CSVConvertor(df).schema
@@ -650,7 +650,7 @@ class ExcelLoader(BaseDataLoader):
         """
         Get the column names of the table located in the path
         """
-        head_df = pd.read_excel(self.path, **kwargs, nrows=0)
+        head_df, _ = self._load_data(**kwargs, nrows=0)
         return list(head_df.columns)
 
     def get_columns(self, **kwargs) -> List[str]:
