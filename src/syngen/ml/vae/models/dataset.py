@@ -87,6 +87,7 @@ class Dataset:
     dropped_columns: Set = field(default_factory=set)
     format: Dict = field(default_factory=dict)
     to_datetime_conversion: Dict = field(default_factory=dict)
+    excluded_columns: Set = field(default_factory=set)
 
     def _select_str_columns(self) -> List[str]:
         """
@@ -124,13 +125,13 @@ class Dataset:
         self._set_categorical_columns()
         self.binary_columns -= self.categorical_columns
 
-    def _preprocess_df(self, excluded_columns: Set[str]):
+    def _preprocess_df(self):
         """
         Preprocess the dataframe
         """
-        self.nan_labels_dict = get_nan_labels(self.df, excluded_columns)
-        self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
-        self._cast_to_numeric(excluded_columns)
+        self.nan_labels_dict = get_nan_labels(self.df, excluded_columns=self.excluded_columns)
+        self.df = nan_labels_to_float(self.df, self.nan_labels_dict, excluded_columns=self.excluded_columns)
+        self._cast_to_numeric()
 
     def _preparation_step(self):
         """
@@ -142,20 +143,20 @@ class Dataset:
         self._update_metadata(table_config)
         self._set_metadata()
         self._detect_categorical_columns()
-        excluded_columns = set().union(
+        self.excluded_columns = set().union(
             self.categorical_columns,
             self.binary_columns
         )
-        self._preprocess_df(excluded_columns)
+        self._preprocess_df()
         self._update_schema()
 
-    def _cast_to_numeric(self, excluded_columns: Set[str]):
+    def _cast_to_numeric(self):
         """
         Cast the values in the column to 'integer' or 'float' data type
         in case all of them might be cast to this data type
         """
         text_columns = self._select_str_columns()
-        list_of_columns = set(text_columns) - excluded_columns
+        list_of_columns = set(text_columns) - self.excluded_columns
         for column in list_of_columns:
             try:
                 if self.df[column].dropna().apply(lambda x: float(x).is_integer()).all():
