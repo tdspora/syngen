@@ -102,7 +102,7 @@ class Dataset:
             text_columns = [
                 col
                 for col, data_type in self.fields.items()
-                if data_type == "string"
+                if data_type == "string" and col in self.df.columns
             ]
         return text_columns
 
