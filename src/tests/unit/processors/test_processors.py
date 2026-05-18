@@ -1078,7 +1078,7 @@ def test_remove_empty_columns_no_empty(
 ):
     rp_logger.info(
         "Test that the method '_remove_empty_columns' does not remove "
-        "columns when none are completely empty"
+        "columns aren't completely empty"
     )
     df = pd.DataFrame({
         "col_a": [1, 2, 3],
