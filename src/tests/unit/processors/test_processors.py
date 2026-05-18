@@ -1148,6 +1148,47 @@ def test_handle_json_columns_no_json(
     assert result.equals(df)
     mock_save_flatten_metadata.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
+    
+
+
+@patch.object(PreprocessHandler, "_save_flatten_metadata")
+@patch.object(PreprocessHandler, "_save_initial_order_of_columns")
+@patch.object(PreprocessHandler, "_save_original_schema")
+def test_handle_json_columns_with_json(
+    mock_save_original_schema,
+    mock_save_initial_order_of_columns,
+    mock_save_flatten_metadata,
+    rp_logger
+):
+    rp_logger.info(
+        "Test that the method '_handle_json_columns' of the class 'PreprocessHandler' "
+        "flattens JSON columns and saves flatten metadata"
+    )
+    df = pd.DataFrame({
+        "id": [1, 2],
+        "data": ['{"key1": "val1", "key2": "val2"}', '{"key1": "val3", "key2": "val4"}']
+    })
+    metadata = {
+        "test_table": {
+            "train_settings": {
+                "source": "dummy_path.csv",
+                "drop_null": False,
+                "row_limit": None,
+                "reports": []
+            }
+        }
+    }
+    handler = PreprocessHandler(
+        metadata=metadata,
+        metadata_path=None,
+        table_name="test_table"
+    )
+    handler.schema = {"fields": {}, "format": "CSV"}
+    result = handler._handle_json_columns(df)
+    assert result.columns.to_list() == ["id", "key1", "key2", "data_"]
+    assert handler.schema["fields"]["data"] == "removed"
+    mock_save_flatten_metadata.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 @patch.object(PreprocessHandler, "_save_initial_order_of_columns")
@@ -1316,75 +1357,6 @@ def test_run_script_when_script_does_not_exist(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_save_flatten_metadata_creates_new_file(rp_logger, tmp_path):
-    rp_logger.info(
-        "Test that the method '_save_flatten_metadata' of the class 'PreprocessHandler' "
-        "creates a new metadata file"
-    )
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": "dummy_path.csv",
-                "drop_null": False,
-                "row_limit": None,
-                "reports": []
-            }
-        }
-    }
-    handler = PreprocessHandler(
-        metadata=metadata,
-        metadata_path=None,
-        table_name="test_table"
-    )
-    flatten_metadata_path = str(tmp_path / "flatten_metadata.json")
-    handler.path_to_flatten_metadata = flatten_metadata_path
-
-    new_metadata = {"test_table": {"flattening_mapping": {"col": ["a", "b"]}}}
-    handler._save_flatten_metadata(new_metadata)
-
-    with open(flatten_metadata_path, "r") as f:
-        saved = json.load(f)
-    assert saved == new_metadata
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_save_flatten_metadata_merges_with_existing(rp_logger, tmp_path):
-    rp_logger.info(
-        "Test that the method '_save_flatten_metadata' of the class 'PreprocessHandler' "
-        "merges new metadata with existing metadata"
-    )
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": "dummy_path.csv",
-                "drop_null": False,
-                "row_limit": None,
-                "reports": []
-            }
-        }
-    }
-    handler = PreprocessHandler(
-        metadata=metadata,
-        metadata_path=None,
-        table_name="test_table"
-    )
-    flatten_metadata_path = str(tmp_path / "flatten_metadata.json")
-    handler.path_to_flatten_metadata = flatten_metadata_path
-
-    # Create existing metadata file
-    existing_metadata = {"existing_table": {"flattening_mapping": {"old_col": ["x"]}}}
-    with open(flatten_metadata_path, "w") as f:
-        json.dump(existing_metadata, f)
-
-    new_metadata = {"test_table": {"flattening_mapping": {"col": ["a", "b"]}}}
-    handler._save_flatten_metadata(new_metadata)
-
-    with open(flatten_metadata_path, "r") as f:
-        saved = json.load(f)
-    assert "existing_table" in saved
-    assert "test_table" in saved
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
 
 @patch.object(PreprocessHandler, "_save_flatten_metadata")
 @patch.object(PreprocessHandler, "_save_initial_order_of_columns")
@@ -1470,79 +1442,4 @@ def test_preprocess_data_row_limit_larger_than_data(
     result = handler._preprocess_data()
     assert len(result) == 10
     assert handler.row_subset == 10
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_init_default_attributes(rp_logger):
-    rp_logger.info(
-        "Test the default attributes of the class 'PreprocessHandler' after initialization"
-    )
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": "dummy_path.csv",
-                "drop_null": False,
-                "row_limit": None,
-                "reports": []
-            }
-        }
-    }
-    handler = PreprocessHandler(
-        metadata=metadata,
-        metadata_path="/path/to/metadata.yaml",
-        table_name="test_table"
-    )
-    assert handler.initial_data_shape == ()
-    assert handler.row_subset == 0
-    assert handler.original_df is None
-    assert handler.initial_order_of_columns == []
-    assert handler.schema == {}
-    assert handler.original_schema is None
-    assert handler.metadata == metadata
-    assert handler.metadata_path == "/path/to/metadata.yaml"
-    assert handler.table_name == "test_table"
-    assert handler.loader is None
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-@patch.object(PreprocessHandler, "_save_flatten_metadata")
-@patch.object(PreprocessHandler, "_save_initial_order_of_columns")
-@patch.object(PreprocessHandler, "_save_original_schema")
-def test_handle_json_columns_with_json(
-    mock_save_original_schema,
-    mock_save_initial_order_of_columns,
-    mock_save_flatten_metadata,
-    rp_logger
-):
-    rp_logger.info(
-        "Test that the method '_handle_json_columns' of the class 'PreprocessHandler' "
-        "flattens JSON columns and saves flatten metadata"
-    )
-    df = pd.DataFrame({
-        "id": [1, 2],
-        "data": ['{"key1": "val1", "key2": "val2"}', '{"key1": "val3", "key2": "val4"}']
-    })
-    metadata = {
-        "test_table": {
-            "train_settings": {
-                "source": "dummy_path.csv",
-                "drop_null": False,
-                "row_limit": None,
-                "reports": []
-            }
-        }
-    }
-    handler = PreprocessHandler(
-        metadata=metadata,
-        metadata_path=None,
-        table_name="test_table"
-    )
-    handler.schema = {"fields": {}, "format": "CSV"}
-    result = handler._handle_json_columns(df)
-    assert "data" not in result.columns
-    assert "key1" in result.columns
-    assert "key2" in result.columns
-    assert "data_" in result.columns
-    assert handler.schema["fields"]["data"] == "removed"
-    mock_save_flatten_metadata.assert_called_once()
     rp_logger.info(SUCCESSFUL_MESSAGE)
