@@ -160,12 +160,23 @@ def test_get_artifacts_contained_one_json_columns_in_avro(rp_logger):
             "name": "string",
             "description": "string",
             "_details": "removed",
+            "_details_": "string",
+            "authentication_type": "string",
+            "cluster_type": "string",
+            "env_variables": "string",
+            "key_passphrase": "string",
+            "log_level": "string",
+            "master": "string",
+            "username": "string",
+            "private_key": "string",
+            "ssh_config": "string",
+            "username": "string",
             "owner_id": "string",
             "is_default": "boolean",
             "is_encrypted": "boolean",
             "status": "string"
         },
-        'format': 'Avro'
+        "format": "Avro"
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -395,19 +406,40 @@ def test_get_artifacts_with_df_contained_more_than_one_json_column_in_avro(rp_lo
     assert duplicated_columns == []
     assert handler.schema == {
         "fields": {
-            "created_at": "string",
-            "details": "removed",
-            "finish_time": "string",
-            "id": "string",
-            "pipeline_id": "string",
-            "progress": "removed",
-            "start_time": "string",
-            "status": "string",
-            "updated_at": "string",
-            "user_id": "string",
-        },
-        "format": "Avro",
+            "id": "string", 
+            "created_at": "string", 
+            "updated_at": "string", 
+            "start_time": "string", 
+            "finish_time": "string", 
+            "status": "string", 
+            "pipeline_id": "string", 
+            "user_id": "string", 
+            "progress": "removed", 
+            "details": "removed", 
+            "info.finished": "string", 
+            "info.total": "string", 
+            "step": "string", 
+            "progress_": "string", 
+            "description": "string", 
+            "source.id": "string", 
+            "source.name": "string", 
+            "source.connection_string": "string", 
+            "target.id": "string", 
+            "target.name": "string",
+            "target.connection_string": "string", 
+            "cluster.id": "string", 
+            "cluster.name": "string", 
+            "cluster.master_webui": "string", 
+            "cluster.history_server": "string", 
+            "integrity_type": "string", 
+            "total_tables": "string", 
+            "included_tables": "string", 
+            "base_table": "string", 
+            "details_": "string"
+        }, 
+        "format": "Avro"
     }
+    
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -554,15 +586,25 @@ def test_get_artifacts_contained_column_with_mixed_data_in_avro(rp_logger):
     assert handler.schema == {
         "fields": {
             "_details": "removed",
-           "created_at": "string",
-           "description": "string",
-           "id": "string",
-           "is_default": "boolean",
-           "is_encrypted": "boolean",
-           "name": "string",
-           "owner_id": "string",
-           "status": "string",
-           "updated_at": "string",
+            "_details_": "string",
+            "authentication_type": "string",
+            "cluster_type": "string",
+            "created_at": "string",
+            "description": "string",
+            "env_variables": "string",
+            "id": "string",
+            "is_default": "boolean",
+            "is_encrypted": "boolean",
+            "key_passphrase": "string",
+            "log_level": "string",
+            "master": "string",
+            "name": "string",
+            "owner_id": "string",
+            "private_key": "string",
+            "ssh_config": "string",
+            "status": "string",
+            "updated_at": "string",
+            "username": "string"
         },
         "format": "Avro",
     }

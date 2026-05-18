@@ -249,6 +249,12 @@ class PreprocessHandler(Processor):
         ]
         flattened_data.drop(columns=flattening_mapping.keys(), inplace=True)
         self.schema["fields"].update({column: "removed" for column in json_columns})
+        self.schema["fields"].update(
+            {
+                col: "string" for col in flattened_data.columns 
+                if col not in data.columns and self.schema["format"] != "CSV"
+            }
+        )
         flattened_df = flattened_data.T.loc[~flattened_data.T.index.duplicated(), :].T
         flattened_df = flattened_df.applymap(lambda x: np.NaN if x in [list(), dict()] else x)
         return flattened_df, flattening_mapping, duplicated_columns
