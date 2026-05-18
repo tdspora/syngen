@@ -508,7 +508,7 @@ def test_get_artifacts_contained_column_with_mixed_data_in_csv(rp_logger):
 def test_get_artifacts_contained_column_with_mixed_data_in_avro(rp_logger):
     rp_logger.info(
         "Test that the method '_get_artifacts' method of the class 'PreprocessHandler' "
-        "for the dataframe contained the column with mixed data. The data is provided in the '.csv' format."
+        "for the dataframe contained the column with mixed data. The data is provided in the '.avro' format."
     )
     path_to_data = (
         f"{DIR_NAME}/unit/processors/fixtures/data_with_column_contained_mixed_data.avro"
