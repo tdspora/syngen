@@ -251,7 +251,7 @@ class PreprocessHandler(Processor):
         self.schema["fields"].update({column: "removed" for column in json_columns})
         self.schema["fields"].update(
             {
-                col: "string" for col in flattened_data.columns 
+                col: "string" for col in flattened_data.columns
                 if col not in data.columns and self.schema["format"] != "CSV"
             }
         )
@@ -554,14 +554,6 @@ class PostprocessHandler(Processor):
             f"Preview saved in '{preview_path}' (first {len(preview_df)} rows)"
         )
 
-    @staticmethod
-    def __load_original_schema(path_to_generated_data: str, *args, **kwargs) -> Optional[Dict]:
-        """
-        Load the original schema if it has been provided with an original data
-        (e.g, with the '.avro' files)
-        """
-        return DataLoader(path=path_to_generated_data).original_schema
-
     def _save_generated_data(
         self,
         generated_data: pd.DataFrame,
@@ -571,9 +563,9 @@ class PostprocessHandler(Processor):
         """
         Save generated data to the path
         """
-        original_schema = self.__load_original_schema(
-            path_to_generated_data=path_to_destination,
-            table_name=table_name
+        original_schema = fetch_config(
+            config_pickle_path=f"model_artifacts/tmp_store/{slugify(table_name)}"
+                               f"/original_schema_{slugify(table_name)}.pkl"
         )
         order_of_columns = fetch_config(
             config_pickle_path=f"model_artifacts/tmp_store/{slugify(table_name)}"

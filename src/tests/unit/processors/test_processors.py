@@ -1,6 +1,5 @@
 from unittest.mock import patch
 import pytest
-import json
 
 import pandas as pd
 import numpy as np
@@ -29,8 +28,8 @@ def test_get_json_columns_contained_one_json_column_in_csv(rp_logger):
     data, handler.schema = DataLoader(path_to_data).load_data()
     assert handler._get_json_columns(data) == ["_details"]
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
-    
+
+
 def test_get_json_columns_contained_one_json_column_in_avro(rp_logger):
     rp_logger.info(
         "Test that the method '_get_json_columns' of the class 'PreprocessHandler' "
@@ -102,8 +101,8 @@ def test_get_artifacts_contained_one_json_column_in_csv(rp_logger):
     assert duplicated_columns == []
     assert handler.schema == {"fields": {"_details": "removed"}, "format": "CSV"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
-    
+
+
 def test_get_artifacts_contained_one_json_columns_in_avro(rp_logger):
     rp_logger.info(
         "Test that the method '_get_artifacts' method "
@@ -184,7 +183,8 @@ def test_get_artifacts_contained_one_json_columns_in_avro(rp_logger):
 def test_get_json_columns_contained_more_than_one_json_column_in_csv(rp_logger):
     rp_logger.info(
         "Test that the method '_get_json_columns' method of the class 'PreprocessHandler' "
-        "for the dataframe contained more than one json column. The data is provided in the '.csv' format."
+        "for the dataframe contained more than one json column. "
+        "The data is provided in the '.csv' format."
     )
     path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_two_json_columns.csv"
     path_to_metadata = (
@@ -200,12 +200,13 @@ def test_get_json_columns_contained_more_than_one_json_column_in_csv(rp_logger):
     data, handler.schema = DataLoader(path_to_data).load_data()
     assert handler._get_json_columns(data) == ["progress", "details"]
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
-    
+
+
 def test_get_json_columns_contained_more_than_one_json_column_in_avro(rp_logger):
     rp_logger.info(
         "Test that the method '_get_json_columns' method of the class 'PreprocessHandler' "
-        "for the dataframe contained more than one json column. The data is provided in the '.avro' format."
+        "for the dataframe contained more than one json column. "
+        "The data is provided in the '.avro' format."
     )
     path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_two_json_columns.avro"
     path_to_metadata = (
@@ -226,7 +227,8 @@ def test_get_json_columns_contained_more_than_one_json_column_in_avro(rp_logger)
 def test_get_artifacts_with_df_contained_more_than_one_json_column_in_csv(rp_logger):
     rp_logger.info(
         "Test that the method '_get_artifacts' method of the class 'PreprocessHandler' "
-        "for the dataframe contained more than one json column. The data is provided in the '.csv' format."
+        "for the dataframe contained more than one json column. "
+        "The data is provided in the '.csv' format."
     )
     path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_two_json_columns.csv"
     path_to_metadata = (
@@ -311,15 +313,19 @@ def test_get_artifacts_with_df_contained_more_than_one_json_column_in_csv(rp_log
         check_names=False
     )
     assert duplicated_columns == []
-    assert handler.schema == {"fields": {"progress": "removed", "details": "removed"}, "format": "CSV"}
+    assert handler.schema == {
+        "fields": {"progress": "removed", "details": "removed"},
+        "format": "CSV"
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
-    
+
+
 def test_get_artifacts_with_df_contained_more_than_one_json_column_in_avro(rp_logger):
     rp_logger.info(
         "Test that the method '_get_artifacts' method "
         "of the class 'PreprocessHandler' "
-        "for the dataframe contained more than one json column. The data is provided in the '.avro' format."
+        "for the dataframe contained more than one json column. "
+        "The data is provided in the '.avro' format."
     )
     path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_two_json_columns.avro"
     path_to_metadata = (
@@ -406,40 +412,40 @@ def test_get_artifacts_with_df_contained_more_than_one_json_column_in_avro(rp_lo
     assert duplicated_columns == []
     assert handler.schema == {
         "fields": {
-            "id": "string", 
-            "created_at": "string", 
-            "updated_at": "string", 
-            "start_time": "string", 
-            "finish_time": "string", 
-            "status": "string", 
-            "pipeline_id": "string", 
-            "user_id": "string", 
-            "progress": "removed", 
-            "details": "removed", 
-            "info.finished": "string", 
-            "info.total": "string", 
-            "step": "string", 
-            "progress_": "string", 
-            "description": "string", 
-            "source.id": "string", 
-            "source.name": "string", 
-            "source.connection_string": "string", 
-            "target.id": "string", 
+            "id": "string",
+            "created_at": "string",
+            "updated_at": "string",
+            "start_time": "string",
+            "finish_time": "string",
+            "status": "string",
+            "pipeline_id": "string",
+            "user_id": "string",
+            "progress": "removed",
+            "details": "removed",
+            "info.finished": "string",
+            "info.total": "string",
+            "step": "string",
+            "progress_": "string",
+            "description": "string",
+            "source.id": "string",
+            "source.name": "string",
+            "source.connection_string": "string",
+            "target.id": "string",
             "target.name": "string",
-            "target.connection_string": "string", 
-            "cluster.id": "string", 
-            "cluster.name": "string", 
-            "cluster.master_webui": "string", 
-            "cluster.history_server": "string", 
-            "integrity_type": "string", 
-            "total_tables": "string", 
-            "included_tables": "string", 
-            "base_table": "string", 
+            "target.connection_string": "string",
+            "cluster.id": "string",
+            "cluster.name": "string",
+            "cluster.master_webui": "string",
+            "cluster.history_server": "string",
+            "integrity_type": "string",
+            "total_tables": "string",
+            "included_tables": "string",
+            "base_table": "string",
             "details_": "string"
-        }, 
+        },
         "format": "Avro"
     }
-    
+
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -463,7 +469,7 @@ def test_get_json_column_contained_mixed_data_in_csv(rp_logger):
     data, handler.schema = DataLoader(path_to_data).load_data()
     assert handler._get_json_columns(data) == ["_details"]
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
+
 
 def test_get_json_column_contained_mixed_data_in_avro(rp_logger):
     rp_logger.info(
@@ -471,7 +477,10 @@ def test_get_json_column_contained_mixed_data_in_avro(rp_logger):
         "for the dataframe contained the column with mixed data types. "
         "The data is provided in the '.avro' format."
     )
-    path_to_data = f"{DIR_NAME}/unit/processors/fixtures/data_with_column_contained_mixed_data.avro"
+    path_to_data = (
+        f"{DIR_NAME}/unit/processors/fixtures/"
+        "data_with_column_contained_mixed_data.avro"
+    )
     path_to_metadata = (
         f"{DIR_NAME}/unit/processors/fixtures/"
         "metadata_for_table_with_column_contained_mixed_data_in_avro.yaml"
@@ -485,12 +494,13 @@ def test_get_json_column_contained_mixed_data_in_avro(rp_logger):
     data, handler.schema = DataLoader(path_to_data).load_data()
     assert handler._get_json_columns(data) == ["_details"]
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
+
 
 def test_get_artifacts_contained_column_with_mixed_data_in_csv(rp_logger):
     rp_logger.info(
         "Test that the method '_get_artifacts' method of the class 'PreprocessHandler' "
-        "for the dataframe contained the column with mixed data. The data is provided in the '.csv' format."
+        "for the dataframe contained the column with mixed data. "
+        "The data is provided in the '.csv' format."
     )
     path_to_data = (
         f"{DIR_NAME}/unit/processors/fixtures/data_with_column_contained_mixed_data.csv"
@@ -535,12 +545,13 @@ def test_get_artifacts_contained_column_with_mixed_data_in_csv(rp_logger):
     assert duplicated_columns == []
     assert handler.schema == {"fields": {"_details": "removed"}, "format": "CSV"}
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
+
 
 def test_get_artifacts_contained_column_with_mixed_data_in_avro(rp_logger):
     rp_logger.info(
         "Test that the method '_get_artifacts' method of the class 'PreprocessHandler' "
-        "for the dataframe contained the column with mixed data. The data is provided in the '.avro' format."
+        "for the dataframe contained the column with mixed data. "
+        "The data is provided in the '.avro' format."
     )
     path_to_data = (
         f"{DIR_NAME}/unit/processors/fixtures/data_with_column_contained_mixed_data.avro"
@@ -609,7 +620,7 @@ def test_get_artifacts_contained_column_with_mixed_data_in_avro(rp_logger):
         "format": "Avro",
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
+
 
 def test_get_json_columns_no_json(rp_logger):
     rp_logger.info(
@@ -667,7 +678,7 @@ def test_get_json_columns_all_null_column(rp_logger):
     handler.schema = {"fields": {}, "format": "CSV"}
     assert handler._get_json_columns(df) == []
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
+
 
 def test_get_json_columns_with_json_list_not_dict(rp_logger):
     rp_logger.info(
@@ -695,7 +706,6 @@ def test_get_json_columns_with_json_list_not_dict(rp_logger):
     handler.schema = {"fields": {}, "format": "CSV"}
     assert handler._get_json_columns(df) == []
     rp_logger.info(SUCCESSFUL_MESSAGE)
-
 
 
 def test_unflatten_generated_data_with_one_json_column(rp_logger):
@@ -1190,7 +1200,6 @@ def test_handle_json_columns_no_json(
     assert result.equals(df)
     mock_save_flatten_metadata.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
-    
 
 
 @patch.object(PreprocessHandler, "_save_flatten_metadata")
@@ -1397,7 +1406,6 @@ def test_run_script_when_script_does_not_exist(
     PreprocessHandler._run_script()
     mock_system.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
-
 
 
 @patch.object(PreprocessHandler, "_save_flatten_metadata")
