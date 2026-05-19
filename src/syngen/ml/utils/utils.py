@@ -317,7 +317,7 @@ def get_nan_labels(df: pd.DataFrame, excluded_columns: Set[str]) -> Dict:
 def nan_labels_to_float(
     df: pd.DataFrame,
     columns_nan_labels: dict,
-    exclude_columns: set = set(),
+    excluded_columns: set = set(),
     process="training"
 ) -> pd.DataFrame:
     """
@@ -326,7 +326,7 @@ def nan_labels_to_float(
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
-        if column not in exclude_columns:
+        if column not in excluded_columns:
             df_with_nan[column].replace(label, np.NaN, inplace=True)
             df_with_nan[column] = df_with_nan[column].astype(float)
             if process == "training":
