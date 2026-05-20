@@ -102,7 +102,7 @@ class Dataset:
             text_columns = [
                 col
                 for col, data_type in self.fields.items()
-                if data_type == "string"
+                if data_type == "string" and col in self.df.columns
             ]
         return text_columns
 
@@ -130,7 +130,9 @@ class Dataset:
         Preprocess the dataframe
         """
         self.nan_labels_dict = get_nan_labels(self.df, excluded_columns=self.excluded_columns)
-        self.df = nan_labels_to_float(self.df, self.nan_labels_dict, excluded_columns=self.excluded_columns)
+        self.df = nan_labels_to_float(
+            self.df, self.nan_labels_dict, excluded_columns=self.excluded_columns
+        )
         self._cast_to_numeric()
 
     def _preparation_step(self):

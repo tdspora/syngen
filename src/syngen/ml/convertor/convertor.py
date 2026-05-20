@@ -105,7 +105,7 @@ class Convertor:
         for column in df_object_subset:
             df[column] = [
                 i
-                if (not isinstance(i, self.excluded_dtypes) and np.isnan(i))
+                if (not isinstance(i, self.excluded_dtypes) and pd.isna(i))
                 or isinstance(i, self.excluded_dtypes)
                 else str(i)
                 for i in df[column]
@@ -148,11 +148,11 @@ class AvroConvertor(Convertor):
 
     def __init__(self, schema, df):
         super().__init__(schema, df)
+        self.complex_types = {"array", "map", "record", "enum", "fixed"}
         self.converted_schema = self._convert_schema(schema)
         self.preprocessed_df = self._preprocess_df(self.converted_schema, df)
 
-    @staticmethod
-    def _convert_schema(schema) -> Dict:
+    def _convert_schema(self, schema) -> Dict:
         """
         Convert the schema of Avro file to the unified format
         """
@@ -181,7 +181,7 @@ class AvroConvertor(Convertor):
                 fields[column] = "int"
             elif type_names & {"float", "double"}:
                 fields[column] = "float"
-            elif type_names & {"string", "bytes"}:
+            elif type_names & {"string", "bytes"}.union(self.complex_types):
                 fields[column] = "string"
             elif type_names == {"null"}:
                 fields[column] = "null"
