@@ -28,6 +28,7 @@ python-slugify[unidecode]>=7.0.0
 PyYAML==6.*
 reportportal-client
 scikit_learn==1.5.*
+sdmetrics
 scipy==1.14.*
 seaborn==0.13.*
 setuptools==78.1.*
