@@ -34,6 +34,7 @@ from syngen.ml.utils import (
 )
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import clean_up_metadata
+from slugify import slugify
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
@@ -102,7 +103,7 @@ class Dataset:
             text_columns = [
                 col
                 for col, data_type in self.fields.items()
-                if data_type == "string"
+                if data_type == "string" and col in self.df.columns
             ]
         return text_columns
 
@@ -130,7 +131,9 @@ class Dataset:
         Preprocess the dataframe
         """
         self.nan_labels_dict = get_nan_labels(self.df, excluded_columns=self.excluded_columns)
-        self.df = nan_labels_to_float(self.df, self.nan_labels_dict, excluded_columns=self.excluded_columns)
+        self.df = nan_labels_to_float(
+            self.df, self.nan_labels_dict, excluded_columns=self.excluded_columns
+        )
         self._cast_to_numeric()
 
     def _preparation_step(self):
@@ -368,11 +371,11 @@ class Dataset:
                 )
                 self.pk_uq_keys_types[column] = column_type
 
-    def __map_text_pk(self):
+    def _map_text_pk(self):
         for pk, pk_type in self.pk_uq_keys_types.items():
             if pk_type is str:
                 mapper = {k: n for n, k in enumerate(self.df[pk])}
-                with open(f"{self.paths['fk_kde_path']}{pk}_mapper.pkl", "wb") as file:
+                with open(f"{self.paths['fk_kde_path']}{slugify(pk)}_mapper.pkl", "wb") as file:
                     pickle.dump(mapper, file)
 
     def _set_metadata(self):
@@ -1466,7 +1469,7 @@ class Dataset:
         pk_uq_keys_mapping = self.primary_keys_mapping
         if pk_uq_keys_mapping:
             self.__set_types(pk_uq_keys_mapping)
-            self.__map_text_pk()
+            self._map_text_pk()
 
     def _assign_feature(self, column: str):
         """
