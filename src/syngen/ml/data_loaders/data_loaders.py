@@ -368,8 +368,7 @@ class AvroLoader(BaseDataLoader):
 
             series = df[name]
             # Convert pandas missing markers to None, so the Avro union selects the null branch.
-            series = series.where(~series.isna(), None)
-
+            series = series.astype(object).where(~series.isna(), None)
             df[name] = series
 
         return df

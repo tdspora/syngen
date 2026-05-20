@@ -512,13 +512,10 @@ class VaeInferHandler(BaseHandler):
         """
         Save generated data to the path
         """
-        original_schema = fetch_config(
-            config_pickle_path=self.paths["original_schema_path"]
-        )
         DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
             data=generated_data,
             format=get_context().get_config(),
-            schema=original_schema
+            schema=None
         )
 
     def handle(self, **kwargs):

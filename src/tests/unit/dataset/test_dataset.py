@@ -135,6 +135,7 @@ def test_save_dataset(mock_fetch_config, rp_logger):
         "is_fitted",
         "all_columns",
         "null_num_column_names",
+        "excluded_columns",
         "zero_num_column_names",
         "nan_labels_dict",
         "uuid_columns",
