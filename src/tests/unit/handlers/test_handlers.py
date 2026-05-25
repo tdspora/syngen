@@ -2,7 +2,6 @@ from unittest.mock import patch
 import pytest
 import math
 
-import numpy as np
 import pandas as pd
 import dill
 from scipy.stats import gaussian_kde

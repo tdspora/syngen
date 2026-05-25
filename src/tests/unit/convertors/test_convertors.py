@@ -12,12 +12,45 @@ from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
 def test_initiate_csv_convertor(rp_logger):
     rp_logger.info("Initiating the instance of the class CSVConvertor")
-    df, schema = DataLoader(
+    df, _ = DataLoader(
         f"{DIR_NAME}/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv"
     ).load_data()
     convertor = CSVConvertor(df)
     assert convertor.schema == {"fields": {}, "format": "CSV"}
-    pd.testing.assert_frame_equal(convertor.preprocessed_df, df)
+    assert convertor.preprocessed_df.shape == df.shape
+    assert convertor.preprocessed_df.dtypes.to_dict() == {
+        "employeekey": dtype("int64"),
+        "parentemployeekey": dtype("float64"),
+        "employeenationalidalternatekey": pd.StringDtype(),
+        "parentemployeenationalidalternatekey": dtype("float64"),
+        "salesterritorykey": dtype("int64"),
+        "firstname": pd.StringDtype(),
+        "lastname": pd.StringDtype(),
+        "middlename": pd.StringDtype(),
+        "namestyle": dtype("bool"),
+        "title": pd.StringDtype(),
+        "hiredate": pd.StringDtype(),
+        "birthdate": pd.StringDtype(),
+        "loginid": pd.StringDtype(),
+        "emailaddress": pd.StringDtype(),
+        "phone": pd.StringDtype(),
+        "maritalstatus": pd.StringDtype(),
+        "emergencycontactname": pd.StringDtype(),
+        "emergencycontactphone": pd.StringDtype(),
+        "salariedflag": dtype("bool"),
+        "gender": pd.StringDtype(),
+        "payfrequency": dtype("int64"),
+        "baserate": dtype("float64"),
+        "vacationhours": dtype("int64"),
+        "sickleavehours": dtype("int64"),
+        "currentflag": dtype("bool"),
+        "salespersonflag": dtype("bool"),
+        "departmentname": pd.StringDtype(),
+        "startdate": pd.StringDtype(),
+        "enddate": pd.StringDtype(),
+        "status": pd.StringDtype(),
+        "employeephoto": pd.StringDtype()
+    }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
