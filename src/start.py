@@ -12,21 +12,16 @@ PROCESS_TO_RUN = {
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run training, inference tasks, or a Streamlit web UI.",
+        description="Run training or inference tasks.",
         add_help=False,
     )
     parser.add_argument(
         "--task", choices=["train", "infer"], help="Task to run: 'train' or 'infer'."
     )
-    parser.add_argument(
-        "--webui", action="store_true", help="Launch the Streamlit web UI."
-    )
 
-    # Forward unknown arguments to train.py, infer.py,
-    # or Streamlit without explicit parsing in start.py
+    # Forward unknown arguments to train.py or infer.py without explicit parsing here
     known_args, remaining_argv = parser.parse_known_args()
 
-    # Remaining unknown args will be passed to train/infer script or Streamlit
     return known_args, remaining_argv
 
 
@@ -69,21 +64,13 @@ def launch_and_monitor_subprocess(process_name, args):
 def main():
     known_args, remaining_argv = parse_args()
 
-    # Check if the Streamlit web UI should be launched
-    if known_args.webui:
-        # Adjust the path to your Streamlit application script if necessary
-        command = ["streamlit", "run", "syngen/streamlit_app/run.py"] + remaining_argv
-        subprocess.run(command, check=True)
-        return
-    elif known_args.task == "train":
-        # Construct the command to run the training script
+    if known_args.task == "train":
         launch_and_monitor_subprocess("train_process", remaining_argv)
     elif known_args.task == "infer":
-        # Construct the command to run the inference script
         launch_and_monitor_subprocess("infer_process", remaining_argv)
     else:
         print(
-            "Unknown command. Use --task=train, --task=infer, or --webui.",
+            "Unknown command. Use --task=train or --task=infer.",
             file=sys.stderr,
         )
         sys.exit(1)

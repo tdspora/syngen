@@ -5,7 +5,6 @@ FROM python:3.11-bookworm
 WORKDIR /src
 
 COPY requirements.txt .
-COPY requirements-streamlit.txt .
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git build-essential python3.11-dev && \
@@ -13,12 +12,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir -r requirements-streamlit.txt && \
     pip uninstall -y pip
 
 COPY src/ .
-COPY src/syngen/streamlit_app/.streamlit syngen/.streamlit
-COPY src/syngen/streamlit_app/.streamlit/config.toml /root/.streamlit/config.toml
 ENV HOME=/tmp
 ENV MPLCONFIGDIR=/tmp
 ENV PYTHONPATH="${PYTHONPATH}:/src/syngen"
