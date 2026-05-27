@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git grep*)",
+      "Bash(grep*)",
+      "Bash(find*)",
+      "Bash(ls*)",
+      "Bash(cat*)",
+      "Bash(python -m pytest src/tests/unit*)",
+      "Bash(pytest src/tests/unit*)",
+      "Bash(python -m flake8*)",
+      "Bash(flake8*)",
+      "Bash(python -m build*)",
+      "Bash(python -m twine check dist/*)",
+      "Bash(python -m compileall*)"
+    ],
+    "ask": [
+      "Write(./.claude/**)",
+      "Bash(pip install*)",
+      "Bash(pip uninstall*)",
+      "Bash(python -m pip install*)",
+      "Bash(python -m pytest src/tests/integration*)",
+      "Bash(pytest src/tests/integration*)",
+      "Bash(git checkout*)",
+      "Bash(git switch*)",
+      "Bash(python -c *launch_train*)",
+      "Bash(python -c *launch_infer*)",
+      "Bash(train*)",
+      "Bash(infer*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(./.cursor/mcp.json)",
+      "Read(./.claude/settings.local.json)",
+      "Bash(git push*)",
+      "Bash(rm -rf*)",
+      "Bash(sudo*)",
+      "Bash(git clean*)"
+    ]
+  }
+}
