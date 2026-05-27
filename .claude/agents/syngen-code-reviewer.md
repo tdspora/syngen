@@ -1,6 +1,7 @@
 ---
 name: syngen-code-reviewer
 description: Production-quality code reviewer for Syngen base library changes.
+model: opus
 tools: Read, Grep, Glob
 ---
 

@@ -6,7 +6,8 @@
 - Package root: `src/syngen`.
 - Supported Python versions: 3.10 and 3.11
 - Primary workflows: `train`, `infer`, and YAML metadata-driven execution.
-- Entry points: `launch_train`, `launch_infer`, `Syngen` SDK (`src/syngen/sdk.py`).
+- Console-script entry points (per `setup.cfg [options.entry_points]`): `train` (→ `syngen.train:launch_train`), `infer` (→ `syngen.infer:launch_infer`), `syngen` (→ `syngen:main`). The `launch_train` / `launch_infer` names refer to the *function* objects, not the CLI binaries.
+- Python SDK: `Syngen` class in `src/syngen/sdk.py`.
 - Metadata validation is schema-driven (marshmallow, `syngen/ml/validation_schema/`); must remain backward compatible.
 - **Downstream dependency**: `tdm_syngen` (enterprise edition) depends on this library as a versioned pip package. Any breaking change in public API, CLI flags, SDK methods, or metadata schema propagates to `tdm_syngen`.
 - Runtime outputs (`model_artifacts/`, `tmp_store/`, reports, generated inference files) are not source assets.
@@ -37,6 +38,26 @@
 6. Run the smallest relevant validation command first.
 7. Escalate to broader CI-style checks before final handoff.
 8. Report changed files, tests run, results, and residual risks.
+
+## Canonical vocabulary
+
+- Business / product terms (for PRDs, user stories, acceptance criteria): `docs/agent-harness/glossary.md`.
+- Technical metadata-YAML terms are described in code under `src/syngen/ml/validation_schema/` and in `examples/`. There is no separate technical dictionary file in this repo.
+- When a new term appears anywhere in this repository, add it to `docs/agent-harness/glossary.md` in the same change. Cross-link with `[[term]]`; do not re-define.
+
+## Approval contract
+
+Anything an agent is told to "request human approval for" must follow this contract:
+
+1. The agent prints a single line: `APPROVAL REQUIRED: <one-sentence summary of the action>`.
+2. The agent stops and yields the turn to the human.
+3. The human authorizes by typing exactly one of:
+   - `approved` — proceed exactly as proposed.
+   - `approved: <free-text constraint>` — proceed, but apply the constraint.
+   - `deny` — abort and explain the reason in a brief follow-up.
+4. Any other response (silence, `ok`, thumbs-up, emoji, paraphrase) is **not** approval. The agent must re-ask.
+
+This contract applies to every escalation trigger below, every `ask` permission in `.claude/settings.json`, and every harness-update action.
 
 ## Escalation triggers (require human approval)
 

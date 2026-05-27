@@ -1,6 +1,7 @@
 ---
 name: syngen-security-reviewer
 description: Security reviewer for secrets, data exposure, encryption, credentials, and generated artifacts in Syngen.
+model: opus
 tools: Read, Grep, Glob
 ---
 

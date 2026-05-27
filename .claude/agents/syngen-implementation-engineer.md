@@ -1,6 +1,7 @@
 ---
 name: syngen-implementation-engineer
 description: Production-code implementation agent for approved Syngen base library changes.
+model: sonnet
 tools: Read, Edit, MultiEdit, Grep, Glob, Bash
 ---
 

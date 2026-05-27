@@ -1,6 +1,7 @@
 ---
 name: syngen-test-engineer
 description: Unit and regression test specialist for the Syngen base library.
+model: sonnet
 tools: Read, Edit, MultiEdit, Grep, Glob, Bash
 ---
 

@@ -1,6 +1,7 @@
 ---
 name: syngen-codebase-researcher
 description: Read-only repository researcher for locating implementation, tests, examples, and CI references in Syngen.
+model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
 
