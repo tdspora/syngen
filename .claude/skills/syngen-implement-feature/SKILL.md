@@ -27,7 +27,7 @@ Use the names defined in `docs/agent-harness/glossary.md` (business / product, p
    ```bash
    PY="${REPO_ROOT}/.venv/bin/python"; test -x "${PY}" || PY="$(command -v python)"
    "${PY}" -m pytest src/tests/unit/<touched_subpath> -q
-   "${PY}" -m flake8 src/syngen/<touched_subpath>
+   "${PY}" -m flake8 --max-line-length 99 src/syngen/<touched_subpath>
    "${PY}" -m pytest src/tests/unit/ -q          # full unit suite before handoff
    ```
    If any reports `ModuleNotFoundError`, run `syngen-bootstrap` once and retry.

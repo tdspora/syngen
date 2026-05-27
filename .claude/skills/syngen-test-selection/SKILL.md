@@ -17,7 +17,7 @@ All commands assume you are at the repo root (`cd "$(git rev-parse --show-toplev
 |---|---|
 | Documentation only | No runtime tests required |
 | [[validation schema]] only | `${PY} -m pytest src/tests/unit/validation_schema/ -q` |
-| Python utility change | `${PY} -m pytest src/tests/unit/<path> -q` + `${PY} -m flake8 src/syngen/<path>` |
+| Python utility change | `${PY} -m pytest src/tests/unit/<path> -q` + `${PY} -m flake8 --max-line-length 99 src/syngen/<path>` |
 | [[CLI entry points]] / [[SDK]] change | Targeted unit tests + **downstream impact check on [[tdm_syngen]]** before merge |
 | File I/O change | Fixture-based unit tests; integration tests if connector behavior changes |
 | Packaging change | `${PY} -m build --no-isolation --wheel .` + `${PY} -m twine check dist/*.whl` (both gated by `syngen-bootstrap` confirming `build` and `twine` are installed) |
@@ -28,10 +28,10 @@ All commands assume you are at the repo root (`cd "$(git rev-parse --show-toplev
 
 ```bash
 # Fatal errors only (fast)
-${PY} -m flake8 src/syngen --count --select=E9,F63,F7,F82 --show-source --statistics
+${PY} -m flake8 --max-line-length 99 src/syngen --count --select=E9,F63,F7,F82 --show-source --statistics
 
 # Project-config style check (uses .flake8 in repo root)
-${PY} -m flake8 src/syngen --count --statistics
+${PY} -m flake8 --max-line-length 99 src/syngen --count --statistics
 ```
 
 Notes:
