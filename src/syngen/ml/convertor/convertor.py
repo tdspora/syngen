@@ -1,5 +1,4 @@
 from typing import Dict, List, Tuple, Optional
-from collections import Counter
 from datetime import datetime, date
 import json
 
@@ -19,7 +18,6 @@ class Convertor:
     _NON_DECODABLE_MIME_PREFIXES = (
         "image/", "audio/", "video/", "application/", "font/"
     )
-
 
     def __init__(self, original_schema: Optional[Dict] = None, df: pd.DataFrame = None):
         self.original_schema = original_schema
@@ -276,7 +274,6 @@ class Convertor:
                 self.preprocessed_df[column] = (
                     self.preprocessed_df[column].map(self._serialize_complex_value)
                 )
-
 
     def _preprocess_df(self):
         """
