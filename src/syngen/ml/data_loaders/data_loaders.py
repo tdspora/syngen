@@ -210,7 +210,7 @@ class CSVLoader(BaseDataLoader):
             logger.error(message)
             raise FileNotFoundError(message)
 
-        return df, CSVConvertor(df).schema
+        return df, CSVConvertor(df).custom_schema
 
     def load_data(self, **kwargs):
         return self._load_data(format=self.format, **kwargs)
@@ -413,7 +413,7 @@ class AvroLoader(BaseDataLoader):
         Preprocess schema and dataframe
         """
         convertor = AvroConvertor(schema, df)
-        schema, preprocessed_df = convertor.converted_schema, convertor.preprocessed_df
+        schema, preprocessed_df = convertor.custom_schema, convertor.preprocessed_df
         return preprocessed_df, schema
 
     def _get_columns(self) -> List[str]:
@@ -622,7 +622,7 @@ class ExcelLoader(BaseDataLoader):
                 dfs = [df for sheet_name, df in df.items()]
                 df = pd.concat(dfs, ignore_index=True)
             global_context({})
-            return df, CSVConvertor(df).schema
+            return df, CSVConvertor(df).custom_schema
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"

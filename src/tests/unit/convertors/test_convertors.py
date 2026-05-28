@@ -16,7 +16,7 @@ def test_initiate_csv_convertor(rp_logger):
         f"{DIR_NAME}/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv"
     ).load_data()
     convertor = CSVConvertor(df)
-    assert convertor.schema == {"fields": {}, "format": "CSV"}
+    assert convertor.custom_schema == {"fields": {}, "format": "CSV"}
     assert convertor.preprocessed_df.shape == df.shape
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
@@ -95,7 +95,7 @@ def test_initiate_avro_convertor(rp_logger):
         "employeephoto": pd.StringDtype(),
     }
 
-    assert convertor.converted_schema == {
+    assert convertor.custom_schema == {
         "fields": {
             "employeekey": "int",
             "parentemployeekey": "float",
@@ -168,11 +168,11 @@ def test_initiate_avro_convertor(rp_logger):
 
 def test_initiate_avro_convertor_without_provided_schema(rp_logger):
     rp_logger.info("Initiating the instance of the class AvroConvertor without a provided schema")
-    df, schema = DataLoader(
+    df, _ = DataLoader(
         f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
     ).load_data()
 
-    convertor = AvroConvertor(schema=None, df=df)
+    convertor = AvroConvertor(original_schema=None, df=df)
 
     assert df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
@@ -207,7 +207,7 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
         "employeephoto": pd.StringDtype(),
     }
 
-    assert convertor.converted_schema == {
+    assert convertor.custom_schema == {
         "fields": {},
         "format": "Avro"
     }
@@ -359,7 +359,7 @@ def test_preprocess_df_if_column_is_null(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "Test": dtype("float64")
     }
-    assert convertor.converted_schema == {
+    assert convertor.custom_schema == {
         "fields": {"Test": "null"},
         "format": "Avro"
     }
@@ -377,7 +377,7 @@ def test_preprocess_df_if_column_is_invalid_null(rp_logger, caplog):
                      "for the column - 'Test' as it's not empty")
     with pytest.raises(ValueError) as error:
         with caplog.at_level("ERROR"):
-            AvroConvertor({"Test": ["null"]}, df)
+            AvroConvertor(original_schema={"Test": ["null"]}, df=df)
             assert str(error.value) == error_message
             assert caplog.text == error_message
 
@@ -395,7 +395,7 @@ def test_initiate_avro_convertor_if_schema_contains_unsupported_data_type(caplog
 
             schema = {"Test": "test"}
 
-            AvroConvertor(schema, df)
+            AvroConvertor(original_schema=schema, df=df)
 
             assert (
                 str(error.value)
