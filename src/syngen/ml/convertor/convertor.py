@@ -233,20 +233,6 @@ class Convertor:
             raise ValueError(message)
         self.custom_schema.setdefault("encoding", {})[column] = plain_text_encodings[0]
 
-    def _pick_encoding(
-        self, encoding_infos: List[dict]
-    ) -> Optional[str]:
-        """
-        Return the single character encoding detected among the decodable
-        values, or None if no encoding was detected.
-        """
-        encodings = [
-            info["encoding"] for info in encoding_infos if info["encoding"]
-        ]
-        if not encodings:
-            return None
-        return encodings[0]
-
     def _cast_binary_column(self, column: str) -> None:
         """
         Decode every binary value in `column` to a string using the most
