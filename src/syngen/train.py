@@ -1,10 +1,8 @@
-import os
 from typing import Optional, List, Union, Tuple, Callable
 
 import click
 from loguru import logger
 import pandas as pd
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.worker import Worker
 from syngen.ml.utils import (

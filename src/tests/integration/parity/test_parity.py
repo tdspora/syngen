@@ -107,8 +107,13 @@ def test_determinism(fixture_name):
     for table, kinds in spec.column_kinds.items():
         p1 = profile_table(r1.generated[table], kinds, spec.email_domains)
         p2 = profile_table(r2.generated[table], kinds, spec.email_domains)
+        # parse_min=0.0: determinism cares about r1 == r2 reproducibility (checked
+        # relatively for numeric/categorical/text at det=0.02), not absolute datetime
+        # parse quality — day-first %d/%m/%Y parses inconsistently by the generic
+        # profiler (~37%) the *same* way in both runs, so an absolute floor here is a
+        # false positive. Absolute parse quality is the parity test's concern.
         det_tol = Tolerances(range_min=0.0, num_rel=tol.det, cat_coverage=0.0,
-                             cat_js=tol.det, ratio_abs=tol.det)
+                             cat_js=tol.det, ratio_abs=tol.det, parse_min=0.0)
         discrepancies = compare_profiles(p1, p2, det_tol)
         assert not discrepancies, (
             f"{table}: non-deterministic under fixed seed:\n  - "
