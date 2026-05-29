@@ -1,0 +1,99 @@
+{
+  "fixture": "datetime",
+  "tolerances": {
+    "range_min": 0.8,
+    "bound_frac": 0.2,
+    "num_rel": 0.25,
+    "ratio_abs": 0.1,
+    "cat_coverage": 0.9,
+    "cat_js": 0.15,
+    "alien_freq": 0.05,
+    "parse_min": 0.99,
+    "uniqueness_min": 0.999,
+    "fk_valid_min": 0.999,
+    "det": 0.02,
+    "column_overrides": {}
+  },
+  "tables": {
+    "datetime": {
+      "original": {
+        "row_count": 600,
+        "column_order": [
+          "id",
+          "signup_date",
+          "event_ts",
+          "tz_ts"
+        ],
+        "dtypes": {
+          "id": "int64",
+          "signup_date": "object",
+          "event_ts": "object",
+          "tz_ts": "object"
+        },
+        "columns": {
+          "signup_date": {
+            "kind": "datetime",
+            "parse_success": 1.0,
+            "min": "2018-01-01T00:00:00+00:00",
+            "max": "2023-06-22T00:00:00+00:00"
+          },
+          "event_ts": {
+            "kind": "datetime",
+            "parse_success": 1.0,
+            "min": "2018-01-02T16:45:29+00:00",
+            "max": "2023-06-23T08:16:19+00:00"
+          },
+          "tz_ts": {
+            "kind": "datetime",
+            "parse_success": 1.0,
+            "min": "2018-01-01T05:07:13+00:00",
+            "max": "2018-03-25T06:26:22+00:00"
+          }
+        }
+      },
+      "generated": {
+        "row_count": 600,
+        "column_order": [
+          "id",
+          "signup_date",
+          "event_ts",
+          "tz_ts"
+        ],
+        "dtypes": {
+          "id": "int64",
+          "signup_date": "object",
+          "event_ts": "object",
+          "tz_ts": "object"
+        },
+        "columns": {
+          "signup_date": {
+            "kind": "datetime",
+            "parse_success": 1.0,
+            "min": "2018-09-26T00:00:00+00:00",
+            "max": "2019-10-05T00:00:00+00:00"
+          },
+          "event_ts": {
+            "kind": "datetime",
+            "parse_success": 1.0,
+            "min": "2018-10-31T08:59:44+00:00",
+            "max": "2019-06-13T01:29:36+00:00"
+          },
+          "tz_ts": {
+            "kind": "datetime",
+            "parse_success": 1.0,
+            "min": "2018-01-12T19:16:16+00:00",
+            "max": "2018-02-01T22:21:52+00:00"
+          }
+        }
+      },
+      "keys": {
+        "id": {
+          "n": 600,
+          "n_unique": 600,
+          "uniqueness": 1.0
+        }
+      }
+    }
+  },
+  "fk_validity": {}
+}

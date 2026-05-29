@@ -1,0 +1,191 @@
+{
+  "fixture": "text_email",
+  "tolerances": {
+    "range_min": 0.8,
+    "bound_frac": 0.2,
+    "num_rel": 0.25,
+    "ratio_abs": 0.1,
+    "cat_coverage": 0.9,
+    "cat_js": 0.15,
+    "alien_freq": 0.05,
+    "parse_min": 0.99,
+    "uniqueness_min": 0.999,
+    "fk_valid_min": 0.999,
+    "det": 0.02,
+    "column_overrides": {}
+  },
+  "tables": {
+    "text_email": {
+      "original": {
+        "row_count": 600,
+        "column_order": [
+          "id",
+          "email",
+          "short_code",
+          "bio"
+        ],
+        "dtypes": {
+          "id": "object",
+          "email": "object",
+          "short_code": "object",
+          "bio": "object"
+        },
+        "columns": {
+          "email": {
+            "kind": "text",
+            "null_ratio": 0.0,
+            "length": {
+              "mean": 20.391666666666666,
+              "std": 1.3057298937971649,
+              "quantiles": {
+                "0.01": 18.0,
+                "0.05": 19.0,
+                "0.25": 19.0,
+                "0.5": 20.0,
+                "0.75": 22.0,
+                "0.95": 22.0,
+                "0.99": 22.0
+              }
+            },
+            "word_count": {
+              "mean": 1.0,
+              "std": 0.0
+            },
+            "email_domain_valid": 1.0
+          },
+          "short_code": {
+            "kind": "text",
+            "null_ratio": 0.0,
+            "length": {
+              "mean": 4.0,
+              "std": 0.0,
+              "quantiles": {
+                "0.01": 4.0,
+                "0.05": 4.0,
+                "0.25": 4.0,
+                "0.5": 4.0,
+                "0.75": 4.0,
+                "0.95": 4.0,
+                "0.99": 4.0
+              }
+            },
+            "word_count": {
+              "mean": 1.0,
+              "std": 0.0
+            }
+          },
+          "bio": {
+            "kind": "text",
+            "null_ratio": 0.0,
+            "length": {
+              "mean": 43.01833333333333,
+              "std": 19.07803266994675,
+              "quantiles": {
+                "0.01": 10.0,
+                "0.05": 10.0,
+                "0.25": 24.0,
+                "0.5": 44.0,
+                "0.75": 58.0,
+                "0.95": 74.0,
+                "0.99": 77.0
+              }
+            },
+            "word_count": {
+              "mean": 6.398333333333333,
+              "std": 2.7067195191884132
+            }
+          }
+        }
+      },
+      "generated": {
+        "row_count": 600,
+        "column_order": [
+          "id",
+          "email",
+          "short_code",
+          "bio"
+        ],
+        "dtypes": {
+          "id": "object",
+          "email": "object",
+          "short_code": "object",
+          "bio": "object"
+        },
+        "columns": {
+          "email": {
+            "kind": "text",
+            "null_ratio": 0.0,
+            "length": {
+              "mean": 25.225,
+              "std": 0.8292818177997956,
+              "quantiles": {
+                "0.01": 23.0,
+                "0.05": 24.0,
+                "0.25": 25.0,
+                "0.5": 25.0,
+                "0.75": 26.0,
+                "0.95": 26.0,
+                "0.99": 26.0
+              }
+            },
+            "word_count": {
+              "mean": 1.0,
+              "std": 0.0
+            },
+            "email_domain_valid": 0.0
+          },
+          "short_code": {
+            "kind": "text",
+            "null_ratio": 0.0,
+            "length": {
+              "mean": 4.0,
+              "std": 0.0,
+              "quantiles": {
+                "0.01": 4.0,
+                "0.05": 4.0,
+                "0.25": 4.0,
+                "0.5": 4.0,
+                "0.75": 4.0,
+                "0.95": 4.0,
+                "0.99": 4.0
+              }
+            },
+            "word_count": {
+              "mean": 1.0,
+              "std": 0.0
+            }
+          },
+          "bio": {
+            "kind": "text",
+            "null_ratio": 0.0,
+            "length": {
+              "mean": 34.93666666666667,
+              "std": 7.8451251671907,
+              "quantiles": {
+                "0.01": 21.0,
+                "0.05": 24.0,
+                "0.25": 29.0,
+                "0.5": 33.0,
+                "0.75": 41.0,
+                "0.95": 49.0,
+                "0.99": 53.0
+              }
+            },
+            "word_count": {
+              "mean": 5.318333333333333,
+              "std": 1.9027166251324854
+            }
+          }
+        }
+      },
+      "keys": {
+        "id": {
+          "n": 600,
+          "n_unique": 600,
+          "uniqueness": 1.0
+        }
+      }
+    }
+  },
+  "fk_validity": {}
+}

@@ -1,0 +1,421 @@
+{
+  "fixture": "relations_chain",
+  "tolerances": {
+    "range_min": 0.8,
+    "bound_frac": 0.2,
+    "num_rel": 0.25,
+    "ratio_abs": 0.1,
+    "cat_coverage": 0.9,
+    "cat_js": 0.15,
+    "alien_freq": 0.05,
+    "parse_min": 0.99,
+    "uniqueness_min": 0.999,
+    "fk_valid_min": 0.999,
+    "det": 0.02,
+    "column_overrides": {}
+  },
+  "tables": {
+    "products": {
+      "original": {
+        "row_count": 30,
+        "column_order": [
+          "product_id",
+          "category",
+          "unit_price"
+        ],
+        "dtypes": {
+          "product_id": "int64",
+          "category": "object",
+          "unit_price": "float64"
+        },
+        "columns": {
+          "category": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 4,
+            "frequencies": {
+              "apparel": 0.4,
+              "food": 0.23333333333333334,
+              "media": 0.2,
+              "tools": 0.16666666666666666
+            }
+          },
+          "unit_price": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 27.02,
+            "max": 69.82,
+            "range": 42.8,
+            "mean": 43.343,
+            "std": 10.087582184712714,
+            "quantiles": {
+              "0.01": 27.5304,
+              "0.05": 28.892500000000002,
+              "0.25": 37.065,
+              "0.5": 40.945,
+              "0.75": 52.089999999999996,
+              "0.95": 58.448499999999996,
+              "0.99": 66.6358
+            }
+          }
+        }
+      },
+      "generated": {
+        "row_count": 30,
+        "column_order": [
+          "product_id",
+          "category",
+          "unit_price"
+        ],
+        "dtypes": {
+          "product_id": "int64",
+          "category": "object",
+          "unit_price": "float64"
+        },
+        "columns": {
+          "category": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 2,
+            "frequencies": {
+              "apparel": 0.9,
+              "food": 0.1
+            }
+          },
+          "unit_price": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 37.28,
+            "max": 44.57,
+            "range": 7.289999999999999,
+            "mean": 40.675333333333334,
+            "std": 2.38322013717202,
+            "quantiles": {
+              "0.01": 37.28,
+              "0.05": 37.28,
+              "0.25": 37.52,
+              "0.5": 41.5,
+              "0.75": 41.5,
+              "0.95": 44.57,
+              "0.99": 44.57
+            }
+          }
+        }
+      },
+      "keys": {
+        "product_id": {
+          "n": 30,
+          "n_unique": 30,
+          "uniqueness": 1.0
+        }
+      }
+    },
+    "regions": {
+      "original": {
+        "row_count": 8,
+        "column_order": [
+          "region_id",
+          "region_name"
+        ],
+        "dtypes": {
+          "region_id": "int64",
+          "region_name": "object"
+        },
+        "columns": {
+          "region_name": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 8,
+            "frequencies": {
+              "region_1": 0.125,
+              "region_2": 0.125,
+              "region_3": 0.125,
+              "region_4": 0.125,
+              "region_5": 0.125,
+              "region_6": 0.125,
+              "region_7": 0.125,
+              "region_8": 0.125
+            }
+          }
+        }
+      },
+      "generated": {
+        "row_count": 8,
+        "column_order": [
+          "region_id",
+          "region_name"
+        ],
+        "dtypes": {
+          "region_id": "int64",
+          "region_name": "object"
+        },
+        "columns": {
+          "region_name": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 4,
+            "frequencies": {
+              "region_6": 0.25,
+              "region_4": 0.25,
+              "region_7": 0.25,
+              "region_1": 0.25
+            }
+          }
+        }
+      },
+      "keys": {
+        "region_id": {
+          "n": 8,
+          "n_unique": 8,
+          "uniqueness": 1.0
+        }
+      }
+    },
+    "stores": {
+      "original": {
+        "row_count": 40,
+        "column_order": [
+          "store_id",
+          "region_id",
+          "store_type",
+          "sqft"
+        ],
+        "dtypes": {
+          "store_id": "int64",
+          "region_id": "int64",
+          "store_type": "object",
+          "sqft": "float64"
+        },
+        "columns": {
+          "store_type": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 3,
+            "frequencies": {
+              "flagship": 0.45,
+              "outlet": 0.325,
+              "kiosk": 0.225
+            }
+          },
+          "sqft": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 2673.8,
+            "max": 8796.1,
+            "range": 6122.3,
+            "mean": 5086.280000000001,
+            "std": 1499.1038518394912,
+            "quantiles": {
+              "0.01": 2836.8590000000004,
+              "0.05": 3229.84,
+              "0.25": 3937.55,
+              "0.5": 4735.799999999999,
+              "0.75": 6007.65,
+              "0.95": 7695.644999999998,
+              "0.99": 8623.642
+            }
+          }
+        }
+      },
+      "generated": {
+        "row_count": 40,
+        "column_order": [
+          "store_id",
+          "region_id",
+          "store_type",
+          "sqft"
+        ],
+        "dtypes": {
+          "store_id": "int64",
+          "region_id": "int64",
+          "store_type": "object",
+          "sqft": "float64"
+        },
+        "columns": {
+          "store_type": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 2,
+            "frequencies": {
+              "kiosk": 0.6,
+              "flagship": 0.4
+            }
+          },
+          "sqft": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 3350.3,
+            "max": 5147.9,
+            "range": 1797.5999999999995,
+            "mean": 4905.38,
+            "std": 346.8460892096088,
+            "quantiles": {
+              "0.01": 3852.386,
+              "0.05": 4637.7,
+              "0.25": 4637.7,
+              "0.5": 5147.9,
+              "0.75": 5147.9,
+              "0.95": 5147.9,
+              "0.99": 5147.9
+            }
+          }
+        }
+      },
+      "keys": {
+        "store_id": {
+          "n": 40,
+          "n_unique": 40,
+          "uniqueness": 1.0
+        }
+      }
+    },
+    "sales": {
+      "original": {
+        "row_count": 600,
+        "column_order": [
+          "sale_id",
+          "store_id",
+          "product_id",
+          "amount",
+          "qty",
+          "sale_date"
+        ],
+        "dtypes": {
+          "sale_id": "int64",
+          "store_id": "int64",
+          "product_id": "int64",
+          "amount": "float64",
+          "qty": "int64",
+          "sale_date": "object"
+        },
+        "columns": {
+          "amount": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 1.71,
+            "max": 286.48,
+            "range": 284.77000000000004,
+            "mean": 27.307666666666663,
+            "std": 24.750419731569988,
+            "quantiles": {
+              "0.01": 2.6192,
+              "0.05": 5.2975,
+              "0.25": 11.274999999999999,
+              "0.5": 20.045,
+              "0.75": 36.185,
+              "0.95": 71.425,
+              "0.99": 112.9151
+            }
+          },
+          "qty": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 1.0,
+            "max": 8.0,
+            "range": 7.0,
+            "mean": 2.9433333333333334,
+            "std": 1.3675241212579112,
+            "quantiles": {
+              "0.01": 1.0,
+              "0.05": 1.0,
+              "0.25": 2.0,
+              "0.5": 3.0,
+              "0.75": 4.0,
+              "0.95": 5.0,
+              "0.99": 7.0
+            }
+          },
+          "sale_date": {
+            "kind": "datetime",
+            "parse_success": 1.0,
+            "min": "2021-01-01T00:00:00+00:00",
+            "max": "2023-03-11T00:00:00+00:00"
+          }
+        }
+      },
+      "generated": {
+        "row_count": 600,
+        "column_order": [
+          "sale_id",
+          "store_id",
+          "product_id",
+          "amount",
+          "qty",
+          "sale_date"
+        ],
+        "dtypes": {
+          "sale_id": "int64",
+          "store_id": "int64",
+          "product_id": "int64",
+          "amount": "float64",
+          "qty": "int64",
+          "sale_date": "object"
+        },
+        "columns": {
+          "amount": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 0.5927696228027344,
+            "max": 24.83752822875977,
+            "range": 24.244758605957035,
+            "mean": 10.947301874359448,
+            "std": 5.346234068748542,
+            "quantiles": {
+              "0.01": 1.8904365956783298,
+              "0.05": 2.7645084738731387,
+              "0.25": 6.58939802646637,
+              "0.5": 10.30513858795166,
+              "0.75": 15.537782192230225,
+              "0.95": 19.75655813217163,
+              "0.99": 22.05568500518799
+            }
+          },
+          "qty": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 2.0,
+            "max": 3.0,
+            "range": 1.0,
+            "mean": 2.0533333333333332,
+            "std": 0.22469732728470287,
+            "quantiles": {
+              "0.01": 2.0,
+              "0.05": 2.0,
+              "0.25": 2.0,
+              "0.5": 2.0,
+              "0.75": 2.0,
+              "0.95": 3.0,
+              "0.99": 3.0
+            }
+          },
+          "sale_date": {
+            "kind": "datetime",
+            "parse_success": 1.0,
+            "min": "2021-03-30T00:00:00+00:00",
+            "max": "2021-09-05T00:00:00+00:00"
+          }
+        }
+      },
+      "keys": {
+        "sale_id": {
+          "n": 600,
+          "n_unique": 600,
+          "uniqueness": 1.0
+        }
+      }
+    }
+  },
+  "fk_validity": {
+    "stores.region_id->regions.region_id": 1.0,
+    "sales.store_id->stores.store_id": 1.0,
+    "sales.product_id->products.product_id": 1.0
+  }
+}

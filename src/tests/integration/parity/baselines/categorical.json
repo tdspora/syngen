@@ -1,0 +1,186 @@
+{
+  "fixture": "categorical",
+  "tolerances": {
+    "range_min": 0.8,
+    "bound_frac": 0.2,
+    "num_rel": 0.25,
+    "ratio_abs": 0.1,
+    "cat_coverage": 0.9,
+    "cat_js": 0.15,
+    "alien_freq": 0.05,
+    "parse_min": 0.99,
+    "uniqueness_min": 0.999,
+    "fk_valid_min": 0.999,
+    "det": 0.02,
+    "column_overrides": {}
+  },
+  "tables": {
+    "categorical": {
+      "original": {
+        "row_count": 600,
+        "column_order": [
+          "id",
+          "gender",
+          "country",
+          "city",
+          "plan"
+        ],
+        "dtypes": {
+          "id": "int64",
+          "gender": "object",
+          "country": "object",
+          "city": "object",
+          "plan": "object"
+        },
+        "columns": {
+          "gender": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 2,
+            "frequencies": {
+              "M": 0.5566666666666666,
+              "F": 0.44333333333333336
+            }
+          },
+          "country": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 6,
+            "frequencies": {
+              "US": 0.42,
+              "UK": 0.19833333333333333,
+              "DE": 0.13333333333333333,
+              "IN": 0.105,
+              "FR": 0.09,
+              "BR": 0.05333333333333334
+            }
+          },
+          "city": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 40,
+            "frequencies": {
+              "city_26": 0.05,
+              "city_02": 0.045,
+              "city_32": 0.041666666666666664,
+              "city_27": 0.035,
+              "city_39": 0.035,
+              "city_19": 0.03333333333333333,
+              "city_18": 0.03166666666666667,
+              "city_24": 0.03166666666666667,
+              "city_37": 0.03,
+              "city_17": 0.03,
+              "city_14": 0.03,
+              "city_09": 0.03,
+              "city_12": 0.028333333333333332,
+              "city_13": 0.02666666666666667,
+              "city_16": 0.02666666666666667,
+              "city_07": 0.025,
+              "city_36": 0.025,
+              "city_00": 0.025,
+              "city_30": 0.023333333333333334,
+              "city_04": 0.023333333333333334,
+              "city_11": 0.023333333333333334,
+              "city_20": 0.023333333333333334,
+              "city_38": 0.023333333333333334,
+              "city_08": 0.021666666666666667,
+              "city_29": 0.021666666666666667,
+              "city_01": 0.021666666666666667,
+              "city_21": 0.021666666666666667,
+              "city_25": 0.02,
+              "city_33": 0.018333333333333333,
+              "city_06": 0.018333333333333333,
+              "city_22": 0.018333333333333333,
+              "city_28": 0.018333333333333333,
+              "city_23": 0.018333333333333333,
+              "city_03": 0.018333333333333333,
+              "city_34": 0.016666666666666666,
+              "city_05": 0.016666666666666666,
+              "city_15": 0.015,
+              "city_31": 0.015,
+              "city_35": 0.013333333333333334,
+              "city_10": 0.01
+            }
+          },
+          "plan": {
+            "kind": "categorical",
+            "null_ratio": 0.20166666666666666,
+            "n_categories": 3,
+            "frequencies": {
+              "free": 0.6263048016701461,
+              "pro": 0.29018789144050106,
+              "enterprise": 0.08350730688935282
+            }
+          }
+        }
+      },
+      "generated": {
+        "row_count": 600,
+        "column_order": [
+          "id",
+          "gender",
+          "country",
+          "city",
+          "plan"
+        ],
+        "dtypes": {
+          "id": "int64",
+          "gender": "object",
+          "country": "object",
+          "city": "object",
+          "plan": "object"
+        },
+        "columns": {
+          "gender": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 2,
+            "frequencies": {
+              "M": 0.995,
+              "F": 0.005
+            }
+          },
+          "country": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 1,
+            "frequencies": {
+              "US": 1.0
+            }
+          },
+          "city": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 8,
+            "frequencies": {
+              "city_26": 0.415,
+              "city_13": 0.23666666666666666,
+              "city_30": 0.15833333333333333,
+              "city_07": 0.09,
+              "city_16": 0.06166666666666667,
+              "city_24": 0.021666666666666667,
+              "city_18": 0.011666666666666667,
+              "city_27": 0.005
+            }
+          },
+          "plan": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 1,
+            "frequencies": {
+              "free": 1.0
+            }
+          }
+        }
+      },
+      "keys": {
+        "id": {
+          "n": 600,
+          "n_unique": 600,
+          "uniqueness": 1.0
+        }
+      }
+    }
+  },
+  "fk_validity": {}
+}

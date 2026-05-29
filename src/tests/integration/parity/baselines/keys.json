@@ -1,0 +1,207 @@
+{
+  "fixture": "keys",
+  "tolerances": {
+    "range_min": 0.8,
+    "bound_frac": 0.2,
+    "num_rel": 0.25,
+    "ratio_abs": 0.1,
+    "cat_coverage": 0.9,
+    "cat_js": 0.15,
+    "alien_freq": 0.05,
+    "parse_min": 0.99,
+    "uniqueness_min": 0.999,
+    "fk_valid_min": 0.999,
+    "det": 0.02,
+    "column_overrides": {}
+  },
+  "tables": {
+    "keys_parent": {
+      "original": {
+        "row_count": 200,
+        "column_order": [
+          "household_id",
+          "region",
+          "median_income"
+        ],
+        "dtypes": {
+          "household_id": "int64",
+          "region": "object",
+          "median_income": "float64"
+        },
+        "columns": {
+          "region": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 4,
+            "frequencies": {
+              "north": 0.27,
+              "south": 0.27,
+              "east": 0.27,
+              "west": 0.19
+            }
+          },
+          "median_income": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 15374.77,
+            "max": 100454.83,
+            "range": 85080.06,
+            "mean": 61289.810099999995,
+            "std": 15390.153374280939,
+            "quantiles": {
+              "0.01": 31590.7098,
+              "0.05": 35040.599,
+              "0.25": 51440.6475,
+              "0.5": 61907.14,
+              "0.75": 70491.2425,
+              "0.95": 87267.32599999999,
+              "0.99": 98282.42809999999
+            }
+          }
+        }
+      },
+      "generated": {
+        "row_count": 200,
+        "column_order": [
+          "household_id",
+          "region",
+          "median_income"
+        ],
+        "dtypes": {
+          "household_id": "int64",
+          "region": "object",
+          "median_income": "float64"
+        },
+        "columns": {
+          "region": {
+            "kind": "categorical",
+            "null_ratio": 0.0,
+            "n_categories": 4,
+            "frequencies": {
+              "south": 0.485,
+              "north": 0.405,
+              "west": 0.1,
+              "east": 0.01
+            }
+          },
+          "median_income": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 61038.7109375,
+            "max": 61680.51953125,
+            "range": 641.80859375,
+            "mean": 61393.1619921875,
+            "std": 143.8392579852337,
+            "quantiles": {
+              "0.01": 61074.8251171875,
+              "0.05": 61133.58671875,
+              "0.25": 61294.8203125,
+              "0.5": 61405.3125,
+              "0.75": 61490.06640625,
+              "0.95": 61617.203515625,
+              "0.99": 61677.4189453125
+            }
+          }
+        }
+      },
+      "keys": {
+        "household_id": {
+          "n": 200,
+          "n_unique": 200,
+          "uniqueness": 1.0
+        }
+      }
+    },
+    "keys_child": {
+      "original": {
+        "row_count": 600,
+        "column_order": [
+          "member_id",
+          "household_id",
+          "ssn",
+          "age"
+        ],
+        "dtypes": {
+          "member_id": "int64",
+          "household_id": "int64",
+          "ssn": "object",
+          "age": "int64"
+        },
+        "columns": {
+          "age": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.008333333333333333,
+            "min": 0.0,
+            "max": 99.0,
+            "range": 99.0,
+            "mean": 52.455,
+            "std": 28.458237969581557,
+            "quantiles": {
+              "0.01": 1.0,
+              "0.05": 4.950000000000003,
+              "0.25": 28.0,
+              "0.5": 54.0,
+              "0.75": 77.0,
+              "0.95": 95.0,
+              "0.99": 99.0
+            }
+          }
+        }
+      },
+      "generated": {
+        "row_count": 600,
+        "column_order": [
+          "member_id",
+          "household_id",
+          "ssn",
+          "age"
+        ],
+        "dtypes": {
+          "member_id": "int64",
+          "household_id": "int64",
+          "ssn": "object",
+          "age": "int64"
+        },
+        "columns": {
+          "age": {
+            "kind": "numeric",
+            "null_ratio": 0.0,
+            "zero_ratio": 0.0,
+            "min": 20.0,
+            "max": 31.0,
+            "range": 11.0,
+            "mean": 25.963333333333335,
+            "std": 2.2140435607478204,
+            "quantiles": {
+              "0.01": 21.0,
+              "0.05": 22.0,
+              "0.25": 24.0,
+              "0.5": 26.0,
+              "0.75": 28.0,
+              "0.95": 30.0,
+              "0.99": 31.0
+            }
+          }
+        }
+      },
+      "keys": {
+        "member_id": {
+          "n": 600,
+          "n_unique": 600,
+          "uniqueness": 1.0
+        },
+        "ssn": {
+          "n": 600,
+          "n_unique": 600,
+          "uniqueness": 1.0
+        }
+      }
+    }
+  },
+  "fk_validity": {
+    "keys_child.household_id->keys_parent.household_id": 1.0
+  }
+}
