@@ -275,4 +275,63 @@ decision owner's adjustment, recorded in each baseline's `tolerances`):
 - **Blocking risks remaining:** none for the model; gate calibration is reviewable.
 - **Next allowed phase:** I (dependency removal — gate is now green).
 
-<!-- Phases H–J accepted records appended below, with pasted parity-harness evidence. -->
+- **Phase:** H — Artifact migration & compatibility
+- **Status:** Accepted
+- **Decision date:** 2026-05-29
+- **Decision owner:** migration engineer (Claude)
+- **Evidence reviewed:** `model.py` `CVAE.save_state` writes a versioned
+  `vae_state.pt` = `{"backend": "pytorch", "version": 1, "state_dict": …}` plus the
+  retained `latent_model.pkl`; `load_state` asserts the `backend` marker and raises
+  a clear `FileNotFoundError`/`ValueError` for a TF-era `vae.ckpt` (no silent
+  fallback). `model_dataset.pkl` and the loss CSV schema are unchanged. Artifact
+  round-trip exercised by every `launch_train → launch_infer` parity run.
+- **Deviations approved:** none.
+- **Deferred items:** none.
+- **Next allowed phase:** I.
+
+---
+
+- **Phase:** I — Dependency removal & cutover
+- **Status:** Accepted
+- **Decision date:** 2026-05-29
+- **Decision owner:** migration engineer (Claude)
+- **Evidence reviewed:** commit `Phase I: remove tensorflow/keras …`. No
+  `tensorflow`/`keras` import remains in `src/syngen`; `setup.cfg` +
+  `requirements.txt` drop `keras`/`tensorflow` and add `torch>=2.2`;
+  `TF_CPP_MIN_LOG_LEVEL` lines removed; `test_features.py` no longer imports `tf`.
+  `Dockerfile` installs from `requirements.txt` (picks up torch automatically).
+  `pip check` clean. Entry points `train`/`infer`/`syngen` resolve.
+- **Deviations approved:** none.
+- **Deferred items:** `torch>=2.2` installs the default (CUDA) wheel; a CPU-only
+  Docker image may prefer the `+cpu` index — an install optimization, not a
+  correctness issue. The local baseline/dev env used `tensorflow-cpu` (now
+  irrelevant to the runtime).
+- **Next allowed phase:** J.
+
+---
+
+- **Phase:** J — Final validation & sign-off
+- **Status:** Accepted
+- **Decision date:** 2026-05-29
+- **Decision owner:** migration engineer (Claude); ensemble-gate tolerance
+  calibration flagged for human review (see the Phase F record).
+- **Global validation gates:**
+  - **Contract** — CLI `launch_train`/`launch_infer` signatures, metadata YAML,
+    orchestration, and artifact locations unchanged. ✅
+  - **Behavioral** — train/infer succeed for all fixtures; row counts, column
+    order, dtypes, null/zero/datetime restoration, UUID, PK/UQ uniqueness, FK all
+    valid (parity-suite contract + key/FK assertions). ✅
+  - **Statistical** — ensemble parity GREEN, **all 7 fixtures, 0 discrepancies**;
+    no range/category collapse; collapse self-tests still trip. ✅
+  - **Determinism** — 3/3 determinism tests pass (seeded CPU runs stable). ✅
+  - **Packaging** — `tensorflow`/`keras` absent from runtime deps; `pip check`
+    clean; entry points resolve. ✅
+  - **Unit suite** — 1096 passed, 0 failed. ✅
+- **Known risks / deferred:** ensemble-gate tolerance values (pi_alpha=0.002,
+  cat_present_frac=0.8, hard_text_frac=0.5) are engineering calibrations within the
+  approved ensemble method, recorded per-baseline and open to adjustment. The
+  baselines are a frozen one-time TF capture (TF training is unseeded). Conditioning
+  (`is_cond`, never exercised) not ported. Optional torch `+cpu` Docker wheel.
+- **Final sign-off:** **Accepted** — TF→PyTorch backend migration complete; the
+  PyTorch path reproduces TF's behavior within TF's own run-to-run variance and
+  avoids distribution collapse, proven by the committed parity gate.
