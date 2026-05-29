@@ -212,7 +212,7 @@ class VaeInferHandler(BaseHandler):
     wrapper_name: str = field(kw_only=True)
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
-    random_seed_list: List = field(init=False)
+    random_seeds_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)  # noqa: F405
     dataset: Dataset = field(init=False)
     original_schema: Dict = field(init=False)
@@ -531,20 +531,29 @@ class VaeInferHandler(BaseHandler):
             log_message += f", reports - {list_of_reports}"
         logger.debug(log_message)
         logger.info(f"Total of {self.batch_num} batch(es)")
-        batches = self.split_by_batches()
-        delta = ProgressBarHandler().delta / self.batch_num
         prepared_batches = []
-        for i, batch in enumerate(batches):
-            log_message = (f"Data synthesis for the table - '{self.table_name}'. "
-                           f"Generating the batch {i + 1} of {self.batch_num}")
+        if self.run_parallel:
+            # run() distributes all batches across worker processes in a single
+            # call (it splits self.size itself). Looping here as well would
+            # regenerate every batch self.batch_num times (size * batch_num rows).
             ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress + delta,
-                delta=delta,
-                message=log_message,
+                progress=ProgressBarHandler().progress + ProgressBarHandler().delta,
+                message=(f"Data synthesis for the table - '{self.table_name}' "
+                         f"in parallel over {self.batch_num} batch(es)"),
             )
-            logger.info(log_message)
-            prepared_batch = self.run(batch, self.run_parallel)
-            prepared_batches.append(prepared_batch)
+            prepared_batches.append(self.run(self.size, run_parallel=True))
+        else:
+            delta = ProgressBarHandler().delta / self.batch_num
+            for i, batch in enumerate(self.split_by_batches()):
+                log_message = (f"Data synthesis for the table - '{self.table_name}'. "
+                               f"Generating the batch {i + 1} of {self.batch_num}")
+                ProgressBarHandler().set_progress(
+                    progress=ProgressBarHandler().progress + delta,
+                    delta=delta,
+                    message=log_message,
+                )
+                logger.info(log_message)
+                prepared_batches.append(self.run(batch, run_parallel=False))
         prepared_data = (
             self._concat_slices_with_unique_pk(prepared_batches)
             if len(prepared_batches) > 0
