@@ -325,7 +325,10 @@ decision owner's adjustment, recorded in each baseline's `tolerances`):
     no range/category collapse; collapse self-tests still trip. ✅
   - **Determinism** — 3/3 determinism tests pass (seeded CPU runs stable). ✅
   - **Packaging** — `tensorflow`/`keras` absent from runtime deps; `pip check`
-    clean; entry points resolve. ✅
+    clean; entry points resolve. **Clean-room verified**: wheel builds; a fresh
+    Python 3.11 venv `pip install .` installs torch with TF/keras absent
+    (`importlib.util.find_spec` → None), `train`/`infer`/`syngen` resolve to the
+    click commands, and a fresh-venv `train`→`infer` runs end-to-end. ✅
   - **Unit suite** — 1096 passed, 0 failed. ✅
 - **Known risks / deferred:** ensemble-gate tolerance values (pi_alpha=0.002,
   cat_present_frac=0.8, hard_text_frac=0.5) are engineering calibrations within the

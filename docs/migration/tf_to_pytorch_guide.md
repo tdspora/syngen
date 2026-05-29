@@ -539,6 +539,7 @@ migration (they exist on `main`) but were exposed by finally running these paths
 | CLI: `train`, `infer`, `syngen` | click arg parsing, both `--source/--table_name` and `--metadata_path` modes | ✅ (after fix A) |
 | Data formats: CSV / **Avro** / **Excel** | `DataLoader` read (source) and write (destination) | ✅ all three, source and destination |
 | `run_parallel: true` | `pathos` multiprocessing inference | ✅ (after fixes B & C) |
+| Clean-room install (`pip install .` in a fresh Python 3.11 venv) | packaging metadata, dep resolution, entry points, full stack | ✅ torch installed, **tensorflow/keras absent**; `train`/`infer`/`syngen` resolve; fresh-venv train→infer runs |
 
 Example — the 4-table chain FK check on generated data:
 
