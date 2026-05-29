@@ -38,8 +38,9 @@ syngen's generative backend from **TensorFlow/Keras** to **PyTorch**. It explain
 12. [The parity safety net (how we proved it works)](#12-the-parity-safety-net-how-we-proved-it-works)
 13. [How to run things](#13-how-to-run-things)
 14. [Results](#14-results)
-15. [Known limitations & future ideas](#15-known-limitations--future-ideas)
-16. [FAQ](#16-faq)
+15. [Post-migration verification & pre-existing fixes](#15-post-migration-verification--pre-existing-fixes)
+16. [Known limitations & future ideas](#16-known-limitations--future-ideas)
+17. [FAQ](#17-faq)
 
 ---
 
@@ -516,7 +517,145 @@ collapse the distribution.
 
 ---
 
-## 15. Known limitations & future ideas
+## 15. Post-migration verification & pre-existing fixes
+
+After the backend swap was green, the **CLI** and the **orchestration layer**
+(worker → strategy → handler → dataset → reporters) were exercised end-to-end on
+real data. The migration itself touched almost none of this layer — `worker.py`,
+`dataset.py`, `configurations.py`, and `validation_schema.py` are **unchanged**;
+only `strategies.py` (a removed dead env line) and `handlers.py` (the Keras-free
+tokenizer, plus the two fixes below) changed. The verification confirmed the layer
+works, and surfaced **three pre-existing bugs** that were *not* caused by the
+migration (they exist on `main`) but were exposed by finally running these paths.
+
+### 15.1 What was verified end-to-end
+
+| Scenario | What it exercises | Result |
+| --- | --- | --- |
+| Single table (`housing.csv`, 20 640 rows) | numeric + categorical, scalers, null drop | ✅ distributions match (see §below) |
+| 2-table FK (`housing_properties` → `housing_conditions`) | PK uniqueness, FK generation, multi-table order | ✅ PK 100% unique, FK 100% valid |
+| 4-table chain (`relations_chain`) | a chain `regions ← stores ← sales` **and** `sales → products` (two FKs on one table) | ✅ all PKs unique; all 3 FKs **100%** valid |
+| `reports: all` | `SampleAccuracyReporter` + `AccuracyReporter` + metrics | ✅ accuracy & sample HTML reports generated per table |
+| CLI: `train`, `infer`, `syngen` | click arg parsing, both `--source/--table_name` and `--metadata_path` modes | ✅ (after fix A) |
+| Data formats: CSV / **Avro** / **Excel** | `DataLoader` read (source) and write (destination) | ✅ all three, source and destination |
+| `run_parallel: true` | `pathos` multiprocessing inference | ✅ (after fixes B & C) |
+
+Example — the 4-table chain FK check on generated data:
+
+```text
+regions:   8 rows | PK unique: True
+products: 30 rows | PK unique: True
+stores:   40 rows | PK unique: True
+sales:   600 rows | PK unique: True
+FK stores.region_id -> regions.region_id  : 100.0%
+FK sales.store_id   -> stores.store_id     : 100.0%
+FK sales.product_id -> products.product_id : 100.0%   (2nd FK on sales)
+```
+
+Example — Avro/Excel as both source and destination:
+
+```yaml
+housing_avro:
+  train_settings: {source: /path/housing.avro}      # read Avro
+  infer_settings: {destination: /path/out.avro}      # write Avro
+housing_xlsx:
+  train_settings: {source: /path/housing.xlsx}      # read Excel
+  infer_settings: {destination: /path/out.xlsx}      # write Excel
+```
+→ both train and generate correctly (verified output shape 100 × 10).
+
+### 15.2 Three pre-existing bugs found and fixed
+
+> ⚠️ All three are **pre-existing on `main`** and independent of the TF→PyTorch
+> swap. They surfaced only because the CLI/`run_parallel` paths were finally run
+> end-to-end. Good candidates to cherry-pick to `main` on their own.
+
+#### Fix A — CLI `train`/`infer` ignored all arguments
+
+**Symptom**
+```text
+$ train --source examples/example-data/housing.csv --table_name housing_test
+AttributeError: 'NoneType' object has no attribute 'keys'
+```
+
+**Root cause.** `train.py` has two functions: `launch_train(...)` (the
+**programmatic API** — plain Python kwargs, used by tests/SDK) and
+`cli_launch_train(...)` (the **click command** that parses `--source` etc.). The
+`setup.cfg` console script pointed at the *plain* one:
+
+```ini
+train = syngen.train:launch_train      # ← parses nothing; argv ignored
+```
+
+So setuptools' wrapper called `launch_train()` with **no arguments**; everything
+defaulted to `None` and it crashed in schema validation.
+
+**Fix.** Point the entry points at the click commands:
+
+```ini
+train = syngen.train:cli_launch_train
+infer = syngen.infer:cli_launch_infer
+```
+
+> 🔁 Requires a reinstall (`pip install -e .` / `pip install .`) to regenerate the
+> `bin/` console scripts.
+
+#### Fix B — `run_parallel=True` crashed
+
+**Symptom**
+```text
+AttributeError: 'VaeInferHandler' object has no attribute 'random_seed_list'.
+Did you mean: 'random_seeds_list'?
+```
+
+**Root cause.** A typo: the attrs field was declared `random_seed_list` (singular)
+but every use is `random_seeds_list` (plural), so the declared field was never
+assigned. With `run_parallel=True`, `pool.map` pickles the handler (via `dill`) to
+send it to worker processes, which touches the unset field → `AttributeError`. The
+sequential path never pickles the handler, so it never hit this.
+
+**Fix.** Rename the declaration to `random_seeds_list` (matching all uses).
+
+#### Fix C — `run_parallel=True` generated too many rows
+
+**Symptom.** With an explicit `batch_size < size`, `run_parallel` produced
+`size × batch_num` rows:
+
+```text
+size=400, batch_size=100  →  1600 rows   (expected 400)
+```
+
+**Root cause — double batching.** `handle()` loops over `batch_num` batches and
+calls `run(batch, run_parallel)` for each. But `run()`'s parallel branch
+**re-splits the full `self.size`** itself (`pool.map` over `split_by_batches()`),
+so each of the `batch_num` outer iterations regenerated *all* batches. (With the
+default `batch_size`, `batch_num == 1`, so this stayed hidden.)
+
+**Fix.** On the parallel path, let `run()` do the batching **once**; the sequential
+path is unchanged:
+
+```python
+if self.run_parallel:
+    prepared_batches.append(self.run(self.size, run_parallel=True))   # parallel: one call
+else:
+    for i, batch in enumerate(self.split_by_batches()):               # sequential: loop (unchanged)
+        prepared_batches.append(self.run(batch, run_parallel=False))
+```
+
+**After fixes B & C:**
+
+| Scenario | Rows |
+| --- | --- |
+| `run_parallel` + default `batch_size` | 400 ✅ |
+| `run_parallel` + `batch_size=100, size=400` | 400 ✅ (was 1600) |
+| sequential + `batch_size=100, size=400` | 400 ✅ (unchanged) |
+
+All handler/worker/launcher unit tests still pass (252), and the full unit suite
+stays at 1096 passed.
+
+---
+
+## 16. Known limitations & future ideas
 
 - **Ensemble-gate tolerances are calibration choices.** Values like the prediction
   interval level (`pi_alpha=0.002`) and the text "factor of 2" rule are recorded in
@@ -535,7 +674,7 @@ collapse the distribution.
 
 ---
 
-## 16. FAQ
+## 17. FAQ
 
 **Q: Did the old TensorFlow implementation "work," or was it set up wrong?**
 Both, depending on the lens. It *worked* — it shipped and generated usable data — and
