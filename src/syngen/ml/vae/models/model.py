@@ -1,36 +1,143 @@
 from pathlib import Path
-
-import tensorflow as tf
 import pickle
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (
-    Input,
-    Dense,
-    Dropout,
-    LeakyReLU,
-    concatenate,
-    Lambda,
-    BatchNormalization,
-    Activation,
-)
+
+import torch
+import torch.nn as nn
 from sklearn.mixture import BayesianGaussianMixture
 import numpy as np
 import pandas as pd
 from loguru import logger
 
-from syngen.ml.vae.models.custom_layers import FeatureLossLayer
+from syngen.ml.vae.models.custom_layers import reparameterize
 from syngen.ml.utils import (
-    slugify_parameters,
     ProgressBarHandler,
     generate_unique_values_by_regex,
     is_number_regex_pattern
 )
 
+# Activation slopes chosen to match the TF graph exactly:
+#   encoder used tf.nn.leaky_relu (alpha=0.2);
+#   decoder used Keras LeakyReLU() (default alpha=0.3).
+ENCODER_LEAKY_SLOPE = 0.2
+DECODER_LEAKY_SLOPE = 0.3
+# Keras BatchNormalization defaults: momentum=0.99, epsilon=1e-3. PyTorch's
+# momentum is the complement, so 0.99 -> 0.01.
+BN_MOMENTUM = 0.01
+BN_EPS = 1e-3
+DROPOUT = 0.2
+
+
+def _to_tensors(transformed):
+    """List of per-feature numpy arrays (in feature order) -> list of float32
+    tensors, preserving order (collapse hypothesis #4)."""
+    return [torch.as_tensor(np.asarray(arr), dtype=torch.float32) for arr in transformed]
+
+
+class CVAEModule(nn.Module):
+    """The PyTorch CVAE graph (encoder + reparameterization + **shared** decoder).
+
+    The same decoder + per-feature heads serve both the reconstruction path
+    (``forward``, fed ``z``) and the generation path (``decode``, fed a BGM
+    latent sample). There is exactly one decoder module, so the generator cannot
+    diverge from the trained decoder — collapse hypothesis #2 handled by
+    construction (replaces the TF layer-reuse at ``model.py:158-176`` and the
+    separate ``generator_model``).
+    """
+
+    def __init__(self, features: dict, latent_dim: int, intermediate_dim: int):
+        super().__init__()
+        self.latent_dim = latent_dim
+        self.intermediate_dim = intermediate_dim
+        feats = list(features.values())
+
+        # Per-feature encoder pieces, in self.features order (identity for tabular
+        # features; BiLSTM for text). encoded_dim is the concat contribution.
+        self.feature_encoders = nn.ModuleList([f.build_encoder() for f in feats])
+        total_encoded = sum(f.encoded_dim for f in feats)
+
+        # Shared encoder: 3 x [Linear -> BatchNorm -> LeakyReLU(0.2) -> Dropout].
+        self.enc_block0 = self._encoder_block(total_encoded, intermediate_dim)
+        self.enc_block1 = self._encoder_block(intermediate_dim, intermediate_dim)
+        self.enc_block2 = self._encoder_block(intermediate_dim, intermediate_dim)
+        self.mu_layer = nn.Linear(intermediate_dim, latent_dim)
+        self.log_sigma_layer = nn.Linear(intermediate_dim, latent_dim)
+
+        # Shared decoder: 3 x [Linear -> LeakyReLU(0.3) -> Dropout].
+        self.dec_block0 = self._decoder_block(latent_dim, intermediate_dim)
+        self.dec_block1 = self._decoder_block(intermediate_dim, intermediate_dim)
+        self.dec_block2 = self._decoder_block(intermediate_dim, intermediate_dim)
+
+        # Per-feature decoder heads, in self.features order.
+        self.feature_heads = nn.ModuleList(
+            [f.build_decoder_head(intermediate_dim) for f in feats]
+        )
+
+        # Match Keras Dense defaults (glorot_uniform kernel, zero bias). With only
+        # a handful of epochs the result is init-dominated, so matching TF's init
+        # keeps the generated spread aligned with the baseline.
+        self.apply(self._init_linear)
+
+    @staticmethod
+    def _init_linear(module):
+        if isinstance(module, nn.Linear):
+            nn.init.xavier_uniform_(module.weight)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+
+    @staticmethod
+    def _encoder_block(in_features: int, out_features: int) -> nn.Module:
+        return nn.Sequential(
+            nn.Linear(in_features, out_features),
+            nn.BatchNorm1d(out_features, eps=BN_EPS, momentum=BN_MOMENTUM),
+            nn.LeakyReLU(ENCODER_LEAKY_SLOPE),
+            nn.Dropout(DROPOUT),
+        )
+
+    @staticmethod
+    def _decoder_block(in_features: int, out_features: int) -> nn.Module:
+        return nn.Sequential(
+            nn.Linear(in_features, out_features),
+            nn.LeakyReLU(DECODER_LEAKY_SLOPE),
+            nn.Dropout(DROPOUT),
+        )
+
+    def _encode_features(self, inputs):
+        encoded = [enc(x) for enc, x in zip(self.feature_encoders, inputs)]
+        return torch.cat(encoded, dim=-1) if len(encoded) > 1 else encoded[0]
+
+    def encode(self, inputs):
+        h = self._encode_features(inputs)
+        h = self.enc_block2(self.enc_block1(self.enc_block0(h)))
+        return self.mu_layer(h), self.log_sigma_layer(h)
+
+    def decode(self, latent):
+        d = self.dec_block2(self.dec_block1(self.dec_block0(latent)))
+        return [head(d) for head in self.feature_heads]
+
+    def forward(self, inputs):
+        mu, log_sigma = self.encode(inputs)
+        z = reparameterize(mu, log_sigma)
+        return self.decode(z), mu, log_sigma
+
+
+def kl_divergence(mu: torch.Tensor, log_sigma: torch.Tensor) -> torch.Tensor:
+    """0.5 * sum(exp(log_sigma) + mu^2 - 1 - log_sigma), mean over the batch.
+
+    Same form as ``model.py:103-107``. Reported under ``kl_loss`` but added to the
+    total with **weight 0** in the training loop (collapse hypothesis #1)."""
+    per_sample = 0.5 * torch.sum(
+        torch.exp(log_sigma) + mu ** 2 - 1.0 - log_sigma, dim=1
+    )
+    return per_sample.mean()
+
 
 class CVAE:
     """
-    A class implementing the model architecture.
+    A class implementing the model architecture (PyTorch backend).
     """
+
+    BACKEND = "pytorch"
+    ARTIFACT_VERSION = 1
 
     def __init__(self, dataset, batch_size, latent_dim, intermediate_dim, latent_components):
         self.dataset = dataset
@@ -38,146 +145,17 @@ class CVAE:
         self.batch_size = batch_size
         self.latent_dim = latent_dim
         self.latent_components = min(latent_components, len(self.dataset.order_of_columns))
-        self.model = None
-        self.latent_model = None
-        self.metrics = {}
-        self.cond_features = {}
-        self.is_cond = False
-        self.inputs = list()
-        self.encoders = list()
-        self.feature_decoders = list()
-        self.feature_losses = dict()
+        self.model = None              # CVAEModule (nn.Module)
+        self.latent_model = None       # BayesianGaussianMixture
         self.feature_types = dict()
-        self.loss_models = dict()
-        self.cond_inputs = list()
-        self.global_decoder = None
-        self.generator = None
-
-    def sample_z(self, args):
-        mu, log_sigma = args
-        eps = tf.random.normal(shape=(self.latent_dim,), mean=0.0, stddev=1.0)
-        return mu + tf.exp(log_sigma / 2) * eps
-
-    @staticmethod
-    @slugify_parameters(exclude_params=("feature",))
-    def _create_feature_loss_layer(feature, name):
-        FeatureLossLayer(feature, name=name)
+        self.feature_order = list()
 
     def build_model(self):
-        for name, feature in self.dataset.features.items():
-            if name in self.cond_features and self.is_cond:
-                self.cond_inputs.append(feature.input)
-
-            self.inputs.append(feature.input)
-            self.encoders.append(feature.encoder)
-
-        if len(self.encoders) > 1:
-            features_encoders = concatenate(self.encoders)
-        else:
-            features_encoders = self.encoders[0]
-
-        self.mu, self.log_sigma = self.__build_encoder(features_encoders)
-        # embed_layer = SampleLayer(gamma=2,
-        #                          capacity=30,
-        #                          name='sampling_layer')([self.mu, self.log_sigma])
-        z = Lambda(self.sample_z)([self.mu, self.log_sigma])
-
-        if self.is_cond:
-            if len(self.cond_inputs) > 1:
-                self.cond_input = concatenate(self.cond_inputs)
-                logger.info(f"Conditioning on {set(self.cond_features)}")
-            else:
-                self.cond_input = self.cond_inputs[0]
-            z_cond = concatenate([z, self.cond_input])
-
-            gen_inp_shape = self.latent_dim + self.cond_input.shape[1]
-            decoder_input = z_cond
-            encoder_output = z_cond
-        else:
-            gen_inp_shape = self.latent_dim
-            # decoder_input = Lambda(lambda x: x, name='decoder_inp')(embed_layer)
-            # encoder_output = embed_layer
-            decoder_input = z
-            encoder_output = self.mu
-
-        kl_loss = (
-            1
-            * 0.5
-            * tf.reduce_sum(tf.exp(self.log_sigma) + self.mu**2 - 1.0 - self.log_sigma, 1)
-        )
-
-        generator_input = Input(shape=(gen_inp_shape,))
-
-        self.__build_decoder(decoder_input, generator_input)
-
-        generator_outputs = list()
-        for i, (name, feature) in enumerate(self.dataset.features.items()):
-            feature_decoder = feature.create_decoder(self.global_decoder)
-
-            self._create_feature_loss_layer(feature=feature, name=name)
-            feature_tensor = feature_decoder
-            self.feature_losses[name] = feature.loss
-            self.feature_types[name] = feature.feature_type
-
-            self.feature_decoders.append(feature_tensor)
-
-            generator_outputs.append(feature.create_decoder(self.generator))
-
-        self.model = Model(self.inputs, self.feature_decoders)
-        losses = list(self.feature_losses.values())
-        self.model.add_loss(losses)
-        self.model.add_loss(kl_loss * 0)
-
-        self.encoder_model = Model(self.inputs, encoder_output)
-
-        # generator
-        self.generator_model = Model(generator_input, generator_outputs)
-
+        features = self.dataset.features
+        self.feature_order = list(features.keys())
+        self.feature_types = {name: feature.feature_type for name, feature in features.items()}
+        self.model = CVAEModule(features, self.latent_dim, self.intermediate_dim)
         return self.model
-
-    def __build_encoder(self, input):
-        h0 = Dense(self.intermediate_dim, name="Encoder_0")(input)
-        h0 = BatchNormalization(name="First_encoder_BN")(h0)
-        h0 = Activation(tf.nn.leaky_relu)(h0)
-        h0 = Dropout(0.2)(h0)
-
-        h1 = Dense(self.intermediate_dim, name="Encoder_1")(h0)
-        h1 = BatchNormalization(name="Second_encoder_BN")(h1)
-        h1 = Activation(tf.nn.leaky_relu)(h1)
-        h1 = Dropout(0.2)(h1)
-
-        h2 = Dense(self.intermediate_dim, name="Encoder_2")(h1)
-        h2 = BatchNormalization(name="Third_encoder_BN")(h2)
-        h2 = Activation(tf.nn.leaky_relu)(h2)
-        h2 = Dropout(0.2)(h2)
-
-        mu = Dense(self.latent_dim, name="mu")(h2)
-        log_sigma = Dense(self.latent_dim, name="log_sigma")(h2)
-        return mu, log_sigma
-
-    def __build_decoder(self, input_z, generator_input):
-        if self.is_cond:
-            decoder_h0 = Dense(
-                self.intermediate_dim + self.cond_input.shape[1],
-                activation=LeakyReLU(),
-                name="Decoder_0",
-            )
-        else:
-            decoder_h0 = Dense(self.intermediate_dim, activation=LeakyReLU(), name="Decoder_0")
-        decoder_h1 = Dense(self.intermediate_dim, activation=LeakyReLU(), name="Decoder_1")
-        decoder_h2 = Dense(self.intermediate_dim, activation=LeakyReLU(), name="Decoder_2")
-
-        h_decoded0 = Dropout(0.2)(decoder_h0(input_z))
-        h_decoded1 = Dropout(0.2)(decoder_h1(h_decoded0))
-        self.global_decoder = Dropout(0.2)(decoder_h2(h_decoded1))
-
-        generator0 = decoder_h0(generator_input)
-        generator1 = decoder_h1(generator0)
-        self.generator = decoder_h2(generator1)
-
-    def fit(self, data: pd.DataFrame, **kwargs) -> dict:
-        transformed_data = self.dataset.transform(data)
-        return self.model.fit(transformed_data, batch_size=self.batch_size, **kwargs)
 
     def fit_sampler(self, data: pd.DataFrame):
         log_message = "Fit sampler"
@@ -187,7 +165,13 @@ class CVAE:
         log_message = "Start encoding"
         logger.info(log_message)
         ProgressBarHandler().set_progress(message=log_message)
-        latent_points = self.encoder_model.predict(transformed_data)
+        # eval() so BatchNorm uses running stats and Dropout is off during the
+        # deterministic encode (collapse hypothesis #3); mu only, like the TF
+        # encoder_model that outputs `mu` (model.py:101,190).
+        self.model.eval()
+        with torch.no_grad():
+            mu, _ = self.model.encode(_to_tensors(transformed_data))
+        latent_points = mu.cpu().numpy()
 
         logger.info("Creating BayesianGaussianMixture")
         self.latent_model = BayesianGaussianMixture(n_components=self.latent_components, n_init=10)
@@ -196,15 +180,23 @@ class CVAE:
         logger.info("Finished fitting BayesianGaussianMixture")
 
     def predict(self, data: pd.DataFrame) -> pd.DataFrame:
-        transformed_data = self.dataset.transform(data)
-        prediction = self.model.predict(transformed_data, batch_size=self.batch_size)
+        self.model.eval()
+        with torch.no_grad():
+            recons, _, _ = self.model(_to_tensors(self.dataset.transform(data)))
+        prediction = [r.cpu().numpy() for r in recons]
         return self.dataset.inverse_transform(prediction)
 
     def sample(self, nb_samples: int) -> pd.DataFrame:
         latent_sample = self.latent_model.sample(nb_samples)[0]
         np.random.shuffle(latent_sample)
 
-        synthetic_prediction = self.generator_model.predict(latent_sample)
+        # eval() + no_grad so the shared decoder runs with Dropout off
+        # (collapse hypothesis #3); decode the BGM draw, not N(0,1) (hypothesis #6).
+        self.model.eval()
+        with torch.no_grad():
+            latent = torch.as_tensor(latent_sample, dtype=torch.float32)
+            outputs = self.model.decode(latent)
+        synthetic_prediction = [o.cpu().numpy() for o in outputs]
         self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
         pk_uq_keys_mapping = self.dataset.primary_keys_mapping
         if pk_uq_keys_mapping:
@@ -227,7 +219,11 @@ class CVAE:
             log_likelihoods = self.latent_model.score_samples(latent_sample)
             sliced_latent_sample.append(pop_npoints(latent_sample, log_likelihoods))
 
-        synthetic_prediction = self.generator_model.predict(sliced_latent_sample)
+        latent = torch.as_tensor(np.concatenate(sliced_latent_sample), dtype=torch.float32)
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model.decode(latent)
+        synthetic_prediction = [o.cpu().numpy() for o in outputs]
         return self.dataset.inverse_transform(synthetic_prediction)
 
     def __check_pk_numeric_convertability(self, column, key_type):
@@ -291,12 +287,17 @@ class CVAE:
 
     def save_state(self, path: str):
         pth = Path(path)
+        pth.mkdir(parents=True, exist_ok=True)
 
         if self.model is not None:
-            self.model.save_weights(str(pth / "vae.ckpt"))
-
-        if self.generator_model is not None:
-            self.generator_model.save_weights(str(pth / "vae_generator.ckpt"))
+            torch.save(
+                {
+                    "backend": self.BACKEND,
+                    "version": self.ARTIFACT_VERSION,
+                    "state_dict": self.model.state_dict(),
+                },
+                str(pth / "vae_state.pt"),
+            )
 
         if self.latent_model is not None:
             with open(str(pth / "latent_model.pkl"), "wb") as f:
@@ -304,8 +305,24 @@ class CVAE:
 
     def load_state(self, path: str):
         pth = Path(path)
-        self.model.load_weights(str(pth / "vae.ckpt"))
-        self.generator_model.load_weights(str(pth / "vae_generator.ckpt"))
+        state_file = pth / "vae_state.pt"
+        if not state_file.exists():
+            legacy = any((pth / name).exists() for name in
+                         ("vae.ckpt", "vae.ckpt.index", "vae_generator.ckpt.index"))
+            hint = (
+                " A TensorFlow-era checkpoint (vae.ckpt) is present; the PyTorch "
+                "backend cannot load it. Retrain with the PyTorch backend."
+            ) if legacy else ""
+            raise FileNotFoundError(f"Missing PyTorch VAE state at '{state_file}'.{hint}")
+
+        checkpoint = torch.load(str(state_file), map_location="cpu", weights_only=False)
+        backend = checkpoint.get("backend")
+        if backend != self.BACKEND:
+            raise ValueError(
+                f"Incompatible model artifact: backend {backend!r}, "
+                f"expected {self.BACKEND!r}. Retrain with the current backend."
+            )
+        self.model.load_state_dict(checkpoint["state_dict"])
 
         with open(str(pth / "latent_model.pkl"), "rb") as f:
             self.latent_model = pickle.loads(f.read())

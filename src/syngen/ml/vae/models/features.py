@@ -1,12 +1,13 @@
+from collections import OrderedDict
 from itertools import chain
 from typing import Union, List
-from lazy import lazy
 from loguru import logger
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-import tensorflow.keras.backend as K
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from scipy.stats import shapiro, kurtosis
 from sklearn.preprocessing import (
     StandardScaler,
@@ -14,17 +15,8 @@ from sklearn.preprocessing import (
     QuantileTransformer,
     OneHotEncoder
 )
-from tensorflow.keras import losses
-from tensorflow.keras.layers import (
-    Bidirectional,
-    Dense,
-    Input,
-    LSTM,
-    Layer,
-    RepeatVector,
-    TimeDistributed,
-)
 
+from syngen.ml.vae.models.custom_layers import TextEncoder, TextDecoder
 from syngen.ml.utils import (
     slugify_parameters,
     inverse_dict,
@@ -33,14 +25,86 @@ from syngen.ml.utils import (
 )
 
 KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
+_CE_EPS = 1e-7  # clip for categorical cross-entropy, mirrors keras epsilon
+
+
+class CharTokenizer:
+    """Keras-free char-level tokenizer.
+
+    Replaces ``keras.preprocessing.text.Tokenizer(lower=False, char_level=True)``
+    used in ``features.py`` and ``handlers.LongTextsHandler``. For ``char_level``
+    Keras ignores ``filters`` and treats every character (spaces and punctuation
+    included) as a token; ``word_index`` is assigned by **descending frequency**
+    with ties keeping first-appearance order, starting at index 1;
+    ``texts_to_sequences`` drops characters absent from ``word_index``.
+    """
+
+    def __init__(self, lower: bool = False, char_level: bool = True):
+        self.lower = lower
+        self.char_level = char_level
+        self.word_counts: "OrderedDict[str, int]" = OrderedDict()
+        self.word_index: dict = {}
+        self.index_word: dict = {}
+
+    def _split(self, text) -> List[str]:
+        text = "" if text is None else str(text)
+        if self.lower:
+            text = text.lower()
+        return list(text) if self.char_level else text.split()
+
+    def fit_on_texts(self, texts):
+        for text in texts:
+            for token in self._split(text):
+                self.word_counts[token] = self.word_counts.get(token, 0) + 1
+        # Stable sort by count desc; OrderedDict preserves first-appearance order
+        # so ties break exactly like Keras.
+        ordered = sorted(self.word_counts.items(), key=lambda kv: kv[1], reverse=True)
+        self.word_index = {token: idx + 1 for idx, (token, _) in enumerate(ordered)}
+        self.index_word = {idx: token for token, idx in self.word_index.items()}
+
+    def texts_to_sequences(self, texts) -> List[List[int]]:
+        return [
+            [self.word_index[token] for token in self._split(text) if token in self.word_index]
+            for text in texts
+        ]
+
+
+def pad_sequences(sequences, maxlen: int, value: float = 0.0) -> np.ndarray:
+    """Post-pad/truncate to ``maxlen`` with ``value`` (matches keras
+    ``pad_sequences(padding='post', truncating='post')``)."""
+    out = np.full((len(sequences), maxlen), value, dtype="int64")
+    for i, seq in enumerate(sequences):
+        if len(seq) == 0:
+            continue
+        trunc = seq[:maxlen]
+        out[i, : len(trunc)] = trunc
+    return out
+
+
+def _one_hot(indices: np.ndarray, depth: int) -> np.ndarray:
+    """Match ``tf.one_hot``: out-of-range indices map to an all-zero vector.
+
+    With ``word_index`` running 1..vocab_size and ``depth == vocab_size``, the
+    pad index 0 maps to position 0 and the least-frequent char (index
+    ``vocab_size``) is out of range → all zeros. This preserves the exact (quirky)
+    TF encoding so generated-text statistics match the baseline.
+    """
+    indices = np.asarray(indices)
+    out = np.zeros((indices.size, depth), dtype="float32")
+    flat = indices.reshape(-1)
+    valid = (flat >= 0) & (flat < depth)
+    rows = np.nonzero(valid)[0]
+    out[rows, flat[valid]] = 1.0
+    return out.reshape(indices.shape + (depth,))
 
 
 class BaseFeature:
     """
     Base class for feature classes.
     Each feature class implements feature preprocessing, transformation and inverse transformation.
-    What is more, each feature class contains modules for the neural network (NN), including
-    corresponding input, encoder, decoder, and loss
+    What is more, each feature class contributes a PyTorch sub-network to the CVAE
+    via ``encoded_dim``/``build_encoder``/``build_decoder_head`` and a loss via
+    ``compute_loss``.
     """
 
     def __init__(self, name):
@@ -74,35 +138,45 @@ class BaseFeature:
         """
         pass
 
-    def input(self) -> tf.Tensor:
-        """
-        Define a feature-specific input for the NN
-        """
-        pass
+    # --- PyTorch sub-network contract (was Keras input/encoder/decoder/loss) ---
 
-    def encoder(self) -> tf.Tensor:
-        """
-        Define a feature-specific encoder for the NN
-        """
-        pass
+    @property
+    def encoded_dim(self) -> int:
+        """Width this feature contributes to the concatenated encoder input."""
+        return self.input_dimension
 
-    def __decoder_layer(self) -> tf.Tensor:
-        """
-        Define an elementary layer for decoder to use in create_decoder() method
-        """
-        pass
+    def build_encoder(self) -> nn.Module:
+        """Per-feature encoder piece. Identity for tabular features; the shared
+        encoder (``model.py``) does the heavy lifting."""
+        return nn.Identity()
 
-    def create_decoder(self, encoder_output: tf.Tensor):
-        """
-        Create a feature-specific decoder combining given decoder layers and encoder outputs
-        """
-        pass
+    def build_decoder_head(self, in_features: int) -> nn.Module:
+        """Map the shared decoder output to this feature's reconstruction."""
+        raise NotImplementedError
 
-    def loss(self) -> tf.Tensor:
-        """
-        Define a feature-specific loss taking into account the data types
-        """
-        pass
+    def compute_loss(self, target: torch.Tensor, output: torch.Tensor) -> torch.Tensor:
+        """Per-feature reconstruction loss (scalar)."""
+        raise NotImplementedError
+
+
+def _numeric_decoder_head(decoder_layers, in_features, output_dim, final_activation=None):
+    """Build ``[Linear→ReLU]* → Linear(output_dim)[→activation]``.
+
+    Mirrors the Keras ``__decoder_layer`` builders (``features.py`` Continuous/
+    Categorical/Date): integer entries become ``Dense(item, relu)``; a trailing
+    ``Dense(output_dim, …)`` finishes. Non-int entries are ignored (the TF code's
+    ``Layer`` branch was dead — it appended the class, not an instance).
+    """
+    layers: List[nn.Module] = []
+    prev = in_features
+    for item in decoder_layers:
+        if isinstance(item, int):
+            layers += [nn.Linear(prev, item), nn.ReLU()]
+            prev = item
+    layers.append(nn.Linear(prev, output_dim))
+    if final_activation is not None:
+        layers.append(final_activation)
+    return nn.Sequential(*layers)
 
 
 class BinaryFeature(BaseFeature):
@@ -130,28 +204,13 @@ class BinaryFeature(BaseFeature):
         inversed = self.inverse_vectorizer(data)
         return np.where(inversed == "?", None, inversed)
 
-    @lazy
-    def input(self) -> tf.Tensor:
-        return Input(shape=(self.input_dimension,), name="input_%s" % self.name)
+    def build_decoder_head(self, in_features: int) -> nn.Module:
+        # Keras: single Dense(input_dimension, sigmoid), no hidden layer
+        # (features.py:142).
+        return nn.Sequential(nn.Linear(in_features, self.input_dimension), nn.Sigmoid())
 
-    @lazy
-    def encoder(self) -> tf.Tensor:
-        return self.input
-
-    @lazy
-    def __decoder_layer(self) -> tf.Tensor:
-        return Dense(self.input_dimension, activation="sigmoid")
-
-    def create_decoder(self, encoder_output: tf.Tensor) -> tf.Tensor:
-        self.decoder = self.__decoder_layer(encoder_output)
-        return self.decoder
-
-    @lazy
-    def loss(self) -> tf.Tensor:
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        return self.weight * losses.binary_crossentropy(self.input, self.decoder)
+    def compute_loss(self, target: torch.Tensor, output: torch.Tensor) -> torch.Tensor:
+        return self.weight * F.binary_cross_entropy(output, target)
 
 
 class ContinuousFeature(BaseFeature):
@@ -184,6 +243,7 @@ class ContinuousFeature(BaseFeature):
 
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
+        self.loss_weight = _sample_loss_weight(weight_randomizer)
         self.column_type = column_type
         self.feature_type = "numeric"
 
@@ -278,55 +338,11 @@ class ContinuousFeature(BaseFeature):
             'output_distribution': 'normal'
         }
 
-    @lazy
-    def input(self) -> tf.Tensor:
-        return Input(shape=(self.input_dimension,), name="input_%s" % self.name)
+    def build_decoder_head(self, in_features: int) -> nn.Module:
+        return _numeric_decoder_head(self.decoder_layers, in_features, self.input_dimension)
 
-    @lazy
-    def encoder(self) -> tf.Tensor:
-        return self.input
-
-    @lazy
-    def __decoder_layer(self) -> List[tf.Tensor]:
-        decoder_layers = list()
-        for idx, item in enumerate(self.decoder_layers):
-            name = "%s_decoder_%d" % (self.name, idx)
-            if isinstance(item, int):
-                decoder_layers.append(Dense(item, activation="relu", name=name))
-
-            if isinstance(item, Layer):
-                item.name = name
-                decoder_layers.append(Layer)
-
-        decoder_layers.append(
-            Dense(self.input_dimension, activation="linear", name="%s_linear" % self.name)
-        )
-
-        return decoder_layers
-
-    def create_decoder(self, encoder_output: tf.Tensor) -> tf.Tensor:
-        if not isinstance(self.__decoder_layer, list):
-            decoder_layers = [self.__decoder_layer]
-        else:
-            decoder_layers = self.__decoder_layer
-
-        x = encoder_output
-        for layer in decoder_layers:
-            x = layer(x)
-
-        self.decoder = x
-        return self.decoder
-
-    @lazy
-    def loss(self) -> tf.Tensor:
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        low = self.weight_randomizer[0]
-        high = self.weight_randomizer[1]
-        random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
-
-        return random_weight * tf.keras.losses.MSE(self.input, self.decoder)
+    def compute_loss(self, target: torch.Tensor, output: torch.Tensor) -> torch.Tensor:
+        return self.loss_weight * F.mse_loss(output, target)
 
 
 class CategoricalFeature(BaseFeature):
@@ -360,9 +376,9 @@ class CategoricalFeature(BaseFeature):
             sparse_output=False,
             handle_unknown='ignore',
             dtype=np.float32)
-        self.decoder = None
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
+        self.loss_weight = _sample_loss_weight(weight_randomizer)
         self.feature_type = "categorical"
 
     def fit(self, data: pd.DataFrame, **kwargs):
@@ -397,61 +413,17 @@ class CategoricalFeature(BaseFeature):
 
         return np.where(inversed == "?", None, inversed)
 
-    @lazy
-    def input(self) -> tf.Tensor:
-        self.idx_input = Input(shape=(self.input_dimension,), name="input_%s" % self.name)
-
-        return self.idx_input
-
-    @lazy
-    def encoder(self) -> tf.Tensor:
-        return self.idx_input
-
-    @lazy
-    def __decoder_layer(self) -> List[tf.Tensor]:
-        decoder_layers = list()
-        for idx, item in enumerate(self.decoder_layers):
-            name = "%s_decoder_%d" % (self.name, idx)
-            if isinstance(item, int):
-                decoder_layers.append(Dense(item, activation="relu", name=name))
-
-            if isinstance(item, Layer):
-                item.name = name
-                decoder_layers.append(Layer)
-
-        decoder_layers.append(
-            Dense(
-                self.input_dimension,
-                activation="softmax",
-                name="%s_softmax" % self.name,
-            )
+    def build_decoder_head(self, in_features: int) -> nn.Module:
+        # Keras: Dense(60, relu) -> Dense(n_cat, softmax) (features.py:411-428).
+        return _numeric_decoder_head(
+            self.decoder_layers, in_features, self.input_dimension,
+            final_activation=nn.Softmax(dim=-1),
         )
 
-        return decoder_layers
-
-    def create_decoder(self, encoder_output: tf.Tensor) -> tf.Tensor:
-        if not isinstance(self.__decoder_layer, list):
-            decoder_layers = [self.__decoder_layer]
-        else:
-            decoder_layers = self.__decoder_layer
-
-        x = encoder_output
-        for layer in decoder_layers:
-            x = layer(x)
-
-        self.decoder = x
-        return self.decoder
-
-    @lazy
-    def loss(self) -> tf.Tensor:
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        low = self.weight_randomizer[0]
-        high = self.weight_randomizer[1]
-        random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
-
-        return random_weight * tf.keras.losses.categorical_crossentropy(self.input, self.decoder)
+    def compute_loss(self, target: torch.Tensor, output: torch.Tensor) -> torch.Tensor:
+        # categorical_crossentropy on softmax probabilities (output already softmaxed)
+        output = output.clamp(_CE_EPS, 1.0 - _CE_EPS)
+        return self.loss_weight * -(target * torch.log(output)).sum(dim=-1).mean()
 
 
 class CharBasedTextFeature(BaseFeature):
@@ -467,22 +439,18 @@ class CharBasedTextFeature(BaseFeature):
         dropout: int = 0,
     ):
         super().__init__(name=name)
-        self.decoder = None
         self.text_max_len = text_max_len
         self.rnn_units = rnn_units
-        self.rnn_unit = LSTM
         self.dropout = dropout
         self.feature_type = "text"
 
     def fit(self, data: pd.DataFrame, **kwargs):
-        from tensorflow.keras.preprocessing.text import Tokenizer
-
         if len(data.columns) > 1:
             raise Exception("CharBasedTextFeature can work only with one text column")
 
         data = data[data.columns[0]]
 
-        tokenizer = Tokenizer(lower=False, char_level=True)
+        tokenizer = CharTokenizer(lower=False, char_level=True)
         tokenizer.fit_on_texts(data)
         tokenizer.inverse_dict = inverse_dict(tokenizer.word_index)
 
@@ -495,80 +463,45 @@ class CharBasedTextFeature(BaseFeature):
 
         data = data[data.columns[0]]
 
-        from tensorflow.keras.preprocessing.sequence import pad_sequences
-
         data_gen = self.tokenizer.texts_to_sequences(data)
-        data_gen = pad_sequences(
-            data_gen,
-            maxlen=self.text_max_len,
-            padding="post",
-            truncating="post",
-            value=0.0,
-        )
-        # return data_gen
-        return K.one_hot(K.cast(data_gen, "int32"), self.vocab_size)
+        data_gen = pad_sequences(data_gen, maxlen=self.text_max_len, value=0.0)
+        return _one_hot(data_gen, self.vocab_size)
 
     @staticmethod
-    def _top_p_filtering(
-            logits: np.ndarray,
-            top_p: float = 0.9
-    ):
-        # Convert logits to TensorFlow tensor
-        logits = tf.convert_to_tensor(logits, dtype=tf.float32)
+    def _top_p_filtering(probs: np.ndarray, top_p: float = 0.9) -> np.ndarray:
+        """Nucleus filter on a probability tensor ``(…, vocab)``.
 
-        # Sort logits and get sorted indices
-        sorted_logits = tf.sort(logits, direction="DESCENDING", axis=-1)
-        sorted_indices = tf.argsort(logits, direction="DESCENDING", axis=-1)
-
-        # Calculate cumulative probabilities
-        cumulative_probs = tf.cumsum(sorted_logits, axis=-1)
-
-        # Remove tokens with cumulative probability above the threshold
-        sorted_indices_to_remove = cumulative_probs >= top_p
-
-        # Shift the indices to the right to keep also the first token above the threshold
-        zeros_for_shift = tf.zeros_like(sorted_indices_to_remove[:, :, :1], dtype=tf.bool)
-        sorted_indices_to_remove = tf.concat(
-            [zeros_for_shift, sorted_indices_to_remove[:, :, :-1]],
-            axis=-1
-        )
-
-        # Create a mask for indices to remove
-        batch_size, seq_length, vocab_size = logits.shape
-
-        batch_indices = tf.repeat(tf.range(batch_size), seq_length * vocab_size)
-        feature_length_indices = tf.tile(
-            tf.repeat(tf.range(seq_length), vocab_size),
-            [batch_size]
-        )
-        vocab_selection_indices = tf.reshape(sorted_indices, [-1])
-        update_indices = tf.stack(
-            [batch_indices, feature_length_indices, vocab_selection_indices],
-            axis=1
-        )
-        flattened_update_values = tf.reshape(sorted_indices_to_remove, [-1])
-        indices_to_remove = tf.tensor_scatter_nd_update(
-            tf.zeros_like(logits, dtype=sorted_indices_to_remove.dtype),
-            update_indices,
-            flattened_update_values,
-        )
-
-        # Apply the filter value to the logits
-        logits_removed = tf.where(indices_to_remove, tf.fill(indices_to_remove.shape, 0.0), logits)
-
-        return logits_removed.numpy().astype(np.float64)
+        Keeps the smallest set of highest-probability tokens whose cumulative
+        mass crosses ``top_p`` (first crossing token retained); the rest are
+        zeroed. Faithful numpy port of the former TF implementation.
+        """
+        probs = np.asarray(probs, dtype=np.float64)
+        sorted_idx = np.argsort(-probs, axis=-1)
+        sorted_probs = np.take_along_axis(probs, sorted_idx, axis=-1)
+        cumulative = np.cumsum(sorted_probs, axis=-1)
+        remove_sorted = cumulative >= top_p
+        # shift right so the first token that crosses the threshold is kept
+        remove_sorted[..., 1:] = remove_sorted[..., :-1]
+        remove_sorted[..., 0] = False
+        remove = np.empty_like(remove_sorted)
+        np.put_along_axis(remove, sorted_idx, remove_sorted, axis=-1)
+        return np.where(remove, 0.0, probs)
 
     @staticmethod
-    def _top_k_filtering(
-            logits: np.ndarray,
-            top_k: int = 0
-    ):
-        indices_to_remove = logits < tf.math.top_k(logits, top_k)[0][..., -1, None]
-        logits[indices_to_remove] = 0.0
-        return logits
+    def _top_k_filtering(logits: np.ndarray, top_k: int = 0) -> np.ndarray:
+        logits = np.asarray(logits, dtype=np.float64)
+        if top_k <= 0:
+            return logits
+        kth = np.sort(logits, axis=-1)[..., -top_k][..., None]
+        return np.where(logits < kth, 0.0, logits)
 
     def _process_batch(self, batch: np.ndarray) -> List[str]:
-        probs = tf.nn.softmax(batch, axis=-1).numpy().astype(float)
+        # softmax over the vocab axis
+        batch = np.asarray(batch, dtype=np.float64)
+        shifted = batch - batch.max(axis=-1, keepdims=True)
+        exp = np.exp(shifted)
+        probs = exp / exp.sum(axis=-1, keepdims=True)
+
         probs = self._top_p_filtering(probs, top_p=0.9)
         # probs = self._top_k_filtering(probs, top_k=6)
         # TODO: select top_k based on inverse_dict length
@@ -599,54 +532,20 @@ class CharBasedTextFeature(BaseFeature):
 
         return feature_values
 
-    @lazy
-    def input(self) -> tf.Tensor:
-        self.index_input = Input(
-            shape=(self.text_max_len, self.vocab_size), name="input_%s" % self.name
-        )
+    @property
+    def encoded_dim(self) -> int:
+        return 2 * self.rnn_units  # BiLSTM concatenates both directions
 
-        return self.index_input
+    def build_encoder(self) -> nn.Module:
+        return TextEncoder(self.vocab_size, self.rnn_units)
 
-    @lazy
-    def encoder(self) -> tf.Tensor:
-        rnn_encoder_layer = Bidirectional(self.rnn_unit(self.rnn_units, return_sequences=False))
+    def build_decoder_head(self, in_features: int) -> nn.Module:
+        return TextDecoder(in_features, self.text_max_len, self.rnn_units, self.vocab_size)
 
-        rnn_econder = rnn_encoder_layer(self.input)
-        return rnn_econder
-
-    @lazy
-    def __decoder_layer(self) -> List[tf.Tensor]:
-        decoder_layers = list()
-
-        decoder_layers.append(RepeatVector(self.text_max_len))
-        decoder_layers.append(self.rnn_unit(self.rnn_units, return_sequences=True))
-        decoder_layers.append(TimeDistributed(Dense(self.vocab_size, activation="linear")))
-
-        return decoder_layers
-
-    def create_decoder(self, encoder_output: tf.Tensor) -> tf.Tensor:
-        if not isinstance(self.__decoder_layer, list):
-            decoder_layers = [self.__decoder_layer]
-        else:
-            decoder_layers = self.__decoder_layer
-
-        x = encoder_output
-        for layer in decoder_layers:
-            x = layer(x)
-
-        self.decoder = x
-        return self.decoder
-
-    @lazy
-    def loss(self) -> tf.Tensor:
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        return self.weight * K.mean(
-            tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
-                labels=self.input, logits=self.decoder
-            )
-        )
+    def compute_loss(self, target: torch.Tensor, output: torch.Tensor) -> torch.Tensor:
+        # softmax cross-entropy with logits, mean over batch and sequence positions
+        log_probs = F.log_softmax(output, dim=-1)
+        return self.weight * -(target * log_probs).sum(dim=-1).mean()
 
 
 class EmailFeature(CharBasedTextFeature):
@@ -709,6 +608,7 @@ class DateFeature(BaseFeature):
         super().__init__(name=name)
         self.decoder_layers = decoder_layers
         self.weight_randomizer = weight_randomizer
+        self.loss_weight = _sample_loss_weight(weight_randomizer)
         self.feature_type = "numeric"
 
     def fit(self, data, **kwargs):
@@ -732,7 +632,7 @@ class DateFeature(BaseFeature):
         self.input_dimension = self.data.shape[1]
 
     def transform(self, data):
-        return self.scaler.transform(self.data)
+        return self.scaler.transform(self.data).astype("float32")
 
     def inverse_transform(self, data):
         unscaled = self.scaler.inverse_transform(data)
@@ -748,57 +648,18 @@ class DateFeature(BaseFeature):
             )
         )
 
-    @lazy
-    def input(self):
-        return Input(shape=(self.input_dimension,), name="input_%s" % self.name, dtype="float64")
+    def build_decoder_head(self, in_features: int) -> nn.Module:
+        return _numeric_decoder_head(self.decoder_layers, in_features, self.input_dimension)
 
-    @lazy
-    def encoder(self):
-        return self.input
+    def compute_loss(self, target: torch.Tensor, output: torch.Tensor) -> torch.Tensor:
+        return self.loss_weight * F.mse_loss(output, target)
 
-    @lazy
-    def __decoder_layer(self):
-        decoder_layers = list()
-        for idx, item in enumerate(self.decoder_layers):
-            name = "%s_decoder_%d" % (self.name, idx)
-            if isinstance(item, int):
-                decoder_layers.append(Dense(item, activation="relu", name=name))
 
-            if isinstance(item, Layer):
-                item.name = name
-                decoder_layers.append(Layer)
-
-        decoder_layers.append(
-            Dense(
-                self.input_dimension,
-                dtype="float32",
-                activation="linear",
-                name="%s_linear" % self.name,
-            )
-        )
-
-        return decoder_layers
-
-    def create_decoder(self, encoder_output):
-        if not isinstance(self.__decoder_layer, list):
-            decoder_layers = [self.__decoder_layer]
-        else:
-            decoder_layers = self.__decoder_layer
-
-        x = encoder_output
-        for layer in decoder_layers:
-            x = layer(x)
-
-        self.decoder = x
-        return self.decoder
-
-    @lazy
-    def loss(self):
-        if not hasattr(self, "decoder"):
-            Exception("Decoder isn't created")
-
-        low = self.weight_randomizer[0]
-        high = self.weight_randomizer[1]
-        random_weight = K.random_uniform_variable(shape=(1,), low=low, high=high)
-
-        return random_weight * tf.keras.losses.MSE(self.input, self.decoder)
+def _sample_loss_weight(weight_randomizer) -> float:
+    """Per-feature loss weight. Default ``(1, 1)`` → constant ``1.0``; matches the
+    Keras ``K.random_uniform_variable(low, high)`` that was sampled once at build
+    (``features.py:327``). Sampled here at construction time."""
+    low, high = weight_randomizer
+    if low == high:
+        return float(low)
+    return float(np.random.uniform(low, high))

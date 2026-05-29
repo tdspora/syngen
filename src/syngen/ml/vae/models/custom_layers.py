@@ -1,64 +1,80 @@
-from typing import Dict
+"""PyTorch building blocks for the CVAE.
 
-from tensorflow.keras.layers import Layer
-import tensorflow.keras.backend as K
+These replace the former Keras helper layers. Note that in the TF graph
+``FeatureLossLayer`` was instantiated but never connected to any tensor
+(``model.py:64`` built it and discarded the result; ``model.py:117`` did the
+same), and ``SampleLayer`` was commented out (``model.py:80-82,98-99``). The
+active loss path was ``model.add_loss(list(feature_losses))`` plus ``kl*0``.
+So the only behavior worth porting is the per-feature reconstruction loss and
+the reparameterization, which now live on the features and the model module.
+
+The text encoder/decoder mirror the Keras
+``Bidirectional(LSTM(return_sequences=False))`` encoder and the
+``RepeatVector → LSTM(return_sequences=True) → TimeDistributed(Dense)`` decoder
+in ``features.py:610-625``.
+"""
+from __future__ import annotations
+
+import torch
+import torch.nn as nn
 
 
-class FeatureLossLayer(Layer):
-    def __init__(self, feature, **kwargs):
-        self.feature = feature
-        super().__init__(**kwargs)
+def reparameterize(mu: torch.Tensor, log_sigma: torch.Tensor) -> torch.Tensor:
+    """z = mu + exp(log_sigma/2) * eps, eps ~ N(0,1).
 
-    def call(self, inputs, **kwargs):
-        feature_input, feature_decoder = inputs
-        self.add_loss(self.feature.loss, inputs=inputs)
-        return feature_decoder
+    Mirrors ``CVAE.sample_z`` (``model.py:56-59``). TF draws a single
+    ``(latent_dim,)`` eps and broadcasts it across the batch; we draw a
+    per-row ``(batch, latent_dim)`` eps (standard reparameterization). With KL
+    weight 0 the posterior is unregularized (``log_sigma`` drifts very negative,
+    so ``z ≈ mu``) and generation samples the fitted BGM on ``mu`` rather than
+    ``z``, so the difference is immaterial — documented in
+    ``docs/migration/pytorch_backend_design.md``.
+    """
+    eps = torch.randn_like(mu)
+    return mu + torch.exp(log_sigma / 2.0) * eps
 
 
-class SampleLayer(Layer):
-    def __init__(self, gamma, capacity, **kwargs):
-        super().__init__(**kwargs)
-        self.gamma = gamma
-        self.max_capacity = capacity
+class TextEncoder(nn.Module):
+    """BiLSTM over a one-hot char sequence → concatenated final hidden state.
 
-    def build(self, input_shape):
-        super(SampleLayer, self).build(input_shape)
-        self.built = True
+    Equivalent to Keras ``Bidirectional(LSTM(rnn_units, return_sequences=False))``
+    (``features.py:612``): forward and backward final hidden states concatenated
+    → ``(batch, 2*rnn_units)``.
+    """
 
-    def call(self, layer_inputs, **kwargs):
-        if len(layer_inputs) != 2:
-            raise Exception("input layers must be a list: mean and stddev")
-        if len(K.int_shape(layer_inputs[0])) != 2 or len(K.int_shape(layer_inputs[1])) != 2:
-            raise Exception("input shape is not a vector [batchSize, latentSize]")
+    def __init__(self, vocab_size: int, rnn_units: int):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_size=vocab_size,
+            hidden_size=rnn_units,
+            batch_first=True,
+            bidirectional=True,
+        )
 
-        mean = layer_inputs[0]
-        log_var = layer_inputs[1]
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # x: (B, T, vocab)
+        _, (h_n, _) = self.lstm(x)
+        # h_n: (2, B, rnn_units) for a 1-layer bidirectional LSTM.
+        return torch.cat([h_n[-2], h_n[-1]], dim=-1)
 
-        batch = K.shape(mean)[0]
-        dim = K.int_shape(mean)[1]
 
-        latent_loss = -0.5 * (1 + log_var - K.square(mean) - K.exp(log_var))
-        latent_loss = K.sum(latent_loss, axis=1, keepdims=True)
-        latent_loss = K.mean(latent_loss)
-        latent_loss = self.gamma * K.abs(latent_loss - self.max_capacity)
+class TextDecoder(nn.Module):
+    """RepeatVector → LSTM(return_sequences=True) → TimeDistributed(Linear).
 
-        latent_loss = K.reshape(latent_loss, [1, 1])
+    Mirrors ``features.py:618-623``. Takes the shared-decoder output vector and
+    expands it to a length-``text_max_len`` sequence of vocab logits.
+    """
 
-        epsilon = K.random_normal(shape=(batch, dim), mean=0.0, stddev=1.0)
-        layer_output = mean + K.exp(0.5 * log_var) * epsilon
+    def __init__(self, in_features: int, text_max_len: int, rnn_units: int, vocab_size: int):
+        super().__init__()
+        self.text_max_len = text_max_len
+        self.lstm = nn.LSTM(
+            input_size=in_features,
+            hidden_size=rnn_units,
+            batch_first=True,
+        )
+        self.linear = nn.Linear(rnn_units, vocab_size)
 
-        self.add_loss(losses=[latent_loss], inputs=[layer_inputs])
-
-        return layer_output
-
-    def compute_output_shape(self, input_shape):
-        return input_shape[0]
-
-    @property
-    def get_config(self):
-        config = {
-            "gamma": self.gamma,
-            "capacity": self.max_capacity,
-        }
-        base_config: Dict = super(SampleLayer, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # x: (B, in_features)
+        x = x.unsqueeze(1).expand(-1, self.text_max_len, -1)  # RepeatVector
+        seq, _ = self.lstm(x)  # (B, T, rnn_units)
+        return self.linear(seq)  # (B, T, vocab) — linear logits

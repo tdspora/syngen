@@ -13,7 +13,6 @@ from pathos.multiprocessing import ProcessingPool
 import dill
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
-from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
 from attrs import define, field
@@ -22,6 +21,7 @@ from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.reporters import Report
 from syngen.ml.vae.models.dataset import Dataset
+from syngen.ml.vae.models.features import CharTokenizer
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
@@ -108,7 +108,7 @@ class LongTextsHandler(BaseHandler):
         if len(long_text_columns) > 0:
             features = {}
             for col in long_text_columns:
-                tokenizer = Tokenizer(lower=False, char_level=True)
+                tokenizer = CharTokenizer(lower=False, char_level=True)
                 if type(data[col].dropna().values[0]) is bytes:
                     text_col = data[col].str.decode("utf-8", errors="ignore")
                 else:

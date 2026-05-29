@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 
 import warnings
 import pickle
-import tensorflow as tf
-from tensorflow.python.data.experimental import AutoShardPolicy
-from tensorflow.keras.models import Model
+import random
+import torch
+from torch.utils.data import DataLoader as TorchDataLoader, Dataset as TorchDataset
 import matplotlib.pyplot as plt
 import time
 import tqdm
@@ -18,7 +18,7 @@ import numpy as np
 from loguru import logger
 from slugify import slugify
 
-from syngen.ml.vae.models.model import CVAE
+from syngen.ml.vae.models.model import CVAE, kl_divergence, _to_tensors
 from syngen.ml.vae.models import Dataset
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import (
@@ -32,6 +32,17 @@ from syngen.ml.data_loaders import DataLoader
 warnings.filterwarnings("ignore")
 
 BATCH_SIZE_DEFAULT = 32
+# Fixed training seed for reproducible CPU runs (Phase E). Applied only on the
+# train path so it never overrides the infer-time numpy seed that
+# VaeInferHandler sets from `random_seed` (handlers.py:224).
+_TRAIN_SEED = 42
+
+
+def _seed_everything(seed: int):
+    """Seed Python / numpy / torch for deterministic CPU training."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 
 class BaseWrapper(ABC):
@@ -66,7 +77,7 @@ class VAEWrapper(BaseWrapper):
     losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
     vae: CVAE = field(init=False, default=None)
-    model: Model = field(init=False, default=None)
+    model: Optional[torch.nn.Module] = field(init=False, default=None)
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
@@ -365,9 +376,19 @@ class VAEWrapper(BaseWrapper):
         es_min_delta = 0.005
         es_patience = 10
         pth = Path(self.paths["state_path"])
+        pth.mkdir(parents=True, exist_ok=True)
+        best_weights_path = str(pth / "vae_best_weights_tmp.pt")
         # loss that corresponds to the best saved weights
         saved_weights_loss = float("inf")
 
+        # The TF training loop called ``model(batch)`` inside GradientTape WITHOUT
+        # ``training=True``, so the forward ran in *inference* mode: Dropout off and
+        # BatchNorm as a fixed affine (moving stats frozen at init 0/1 — verified
+        # empirically against the TF code). We replicate that by training in
+        # ``eval()`` mode, which also keeps the train / fit_sampler / generation
+        # encodings identical (the real defense against latent drift, collapse
+        # hypothesis #3). Gradients still flow through the BN affine and all weights.
+        self.model.eval()
         delta = ProgressBarHandler().delta / (epochs * 2)
         for epoch in range(epochs):
             log_message = (
@@ -399,7 +420,7 @@ class VAEWrapper(BaseWrapper):
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
             else:
-                self.model.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                torch.save(self.model.state_dict(), best_weights_path)
                 loss_grows_num_epochs = 0
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
@@ -424,7 +445,7 @@ class VAEWrapper(BaseWrapper):
             prev_total_loss = mean_loss
 
             if loss_grows_num_epochs == es_patience:
-                self.model.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                self.model.load_state_dict(torch.load(best_weights_path, weights_only=True))
                 logger.info(
                     f"The loss does not become lower for "
                     f"{loss_grows_num_epochs} epochs in a row. "
@@ -436,59 +457,69 @@ class VAEWrapper(BaseWrapper):
         self._log_losses_info_to_mlflow()
 
     @staticmethod
-    def _create_optimizer(learning_rate):
-        import platform
-        if platform.processor() == 'arm':
-            logger.info('Mac ARM processor is detected. Legacy Adam optimizer has been created.')
-            return tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-        else:
-            return tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    def _create_optimizer(model, learning_rate):
+        return torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     def __create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
-        return self._create_optimizer(learning_rate)
+        return self._create_optimizer(self.model, learning_rate)
 
     @staticmethod
     def _create_loss():
-        return tf.keras.metrics.Mean()
+        # Kept for API parity; the PyTorch loop tracks the running loss directly.
+        return None
 
     def _create_batched_dataset(self, df: pd.DataFrame):
         """
-        Define batched dataset for training vae
+        Define a batched dataset for training the VAE.
+
+        Mirrors the TF ``tf.data … .batch(drop_remainder=True)`` (which did *not*
+        shuffle, wrappers.py:455-469): per-feature tensors are kept in
+        ``Dataset.transform`` order so the default collate preserves the feature
+        tuple order (collapse hypothesis #4), and the final partial batch is
+        dropped (``drop_last=True``).
         """
-        transformed_data = self.dataset.transform(df)
+        transformed_data = _to_tensors(self.dataset.transform(df))
 
-        feature_datasets = []
-        options = tf.data.Options()
-        options.experimental_distribute.auto_shard_policy = AutoShardPolicy.DATA
-        for inp in transformed_data:
-            dataset = tf.data.Dataset.from_tensor_slices(inp).with_options(options)
-            feature_datasets.append(dataset)
+        class _FeatureTuples(TorchDataset):
+            def __init__(self, tensors):
+                self.tensors = tensors
+                self.n = tensors[0].shape[0]
 
-        dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
-        return dataset.batch(self.batch_size, drop_remainder=True)
+            def __len__(self):
+                return self.n
 
-    def _train_step(self, batch: Tuple[tf.Tensor]):
-        with tf.GradientTape() as tape:
-            self.model(batch)
+            def __getitem__(self, idx):
+                return tuple(tensor[idx] for tensor in self.tensors)
 
-            # Compute reconstruction loss
-            loss = sum(self.model.losses)
-            order_of_features = list(self.vae.feature_losses.keys())
-            kl_loss = self.model.losses[-1].numpy()
-            feature_losses = {
-                name: loss.numpy()
-                for name, loss in
-                zip(order_of_features, self.model.losses[:-1])
-            }
-
-        self.optimizer.minimize(
-            loss=loss,
-            var_list=self.model.trainable_weights,
-            tape=tape
+        return TorchDataLoader(
+            _FeatureTuples(transformed_data),
+            batch_size=self.batch_size,
+            shuffle=False,
+            drop_last=True,
         )
-        self.loss_metric(loss)
-        return loss, kl_loss, feature_losses
+
+    def _train_step(self, batch):
+        self.optimizer.zero_grad()
+        recons, mu, log_sigma = self.model(batch)
+
+        feature_losses = {}
+        recon_total = torch.zeros((), dtype=recons[0].dtype)
+        for name, recon, target in zip(self.vae.feature_order, recons, batch):
+            feature_loss = self.dataset.features[name].compute_loss(target, recon)
+            feature_losses[name] = feature_loss
+            recon_total = recon_total + feature_loss
+
+        kl_loss = kl_divergence(mu, log_sigma)
+        # KL weight 0: reported under `kl_loss` but excluded from the optimized
+        # total — re-enabling it is the prime collapse suspect (hypothesis #1).
+        loss = recon_total + 0.0 * kl_loss
+
+        loss.backward()
+        self.optimizer.step()
+
+        feature_losses = {name: float(value.detach()) for name, value in feature_losses.items()}
+        return float(loss.detach()), float(kl_loss.detach()), feature_losses
 
     @staticmethod
     def display_losses(feature_losses: Dict):
@@ -577,6 +608,11 @@ class VanillaVAEWrapper(VAEWrapper):
             latent_components: int = 30):
 
         log_level = os.getenv("LOGURU_LEVEL")
+
+        # Seed before dataset fitting + model init so training is reproducible
+        # (Phase E). Train path only — see _seed_everything.
+        if process == "train":
+            _seed_everything(_TRAIN_SEED)
 
         super().__init__(
             df,
