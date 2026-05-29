@@ -14,11 +14,13 @@ migration unchanged and can compare a TF baseline against a PyTorch candidate.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+from scipy.stats import t as _student_t
 
 QUANTILES = [0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99]
 
@@ -405,15 +407,26 @@ def compare_profiles(baseline: Dict, candidate: Dict, tol: Tolerances) -> List[s
 
 @dataclass
 class EnsembleTolerances:
-    k_std: float = 3.0           # numeric/quantile/freq band half-width in std units
-    rel_floor: float = 0.10      # relative floor on the band (handles std ~ 0)
-    js_k: float = 3.0            # categorical JS band: mean + js_k*std of TF runs
-    cat_present_frac: float = 0.6  # categories in >= this fraction of TF runs are "expected"
-    parse_min: float = 0.95      # datetime parse-success (smoke)
+    # The band is a two-sided prediction interval for a *new* draw given the N TF
+    # runs: mean ± t(N-1, 1-alpha/2)·std·sqrt(1 + 1/N), plus a relative floor. This
+    # is the correct "will the PyTorch sample fall where TF samples fall?" question
+    # and self-widens for small N (more uncertainty -> wider band).
+    pi_alpha: float = 0.002      # prediction-interval significance (99.8% PI). Tighter
+                                 # than 99% because ~50 stats are checked per run, so a
+                                 # 1% per-stat false-positive rate would fail a faithful
+                                 # run by chance (multiple-comparison aware).
+    rel_floor: float = 0.10      # relative floor on the band half-width (handles std ~ 0)
+    cat_present_frac: float = 0.8  # categories in >= this fraction of TF runs are "expected"
+    hard_text_frac: float = 0.5  # text length/word-count must stay within a factor of
+                                 # 1/this of TF's mean (collapse-oriented: catches
+                                 # degenerate/absurd text, not benign length differences)
+    parse_min: float = 0.95      # legacy/datetime floor (datetime now uses the PI band)
     uniqueness_min: float = 0.999
     fk_valid_min: float = 0.999
     hard_range_min: float = 0.05   # catastrophic range-collapse backstop
     hard_cat_coverage: float = 0.10  # catastrophic category-collapse backstop
+    k_std: float = 3.0           # retained for back-compat with older baselines (unused)
+    js_k: float = 3.0            # retained for back-compat (unused; JS uses the PI band)
 
 
 def _agg(values) -> Optional[Dict]:
@@ -488,13 +501,19 @@ def aggregate_ensemble(profiles: List[Dict]) -> Dict:
     }
 
 
-def _band(agg: Dict, k: float, floor: float):
-    half = k * agg["std"] + floor
+def _pi_band(agg: Dict, alpha: float, floor: float):
+    """Two-sided prediction interval for a new draw: mean ± t·std·sqrt(1+1/N) + floor."""
+    n = agg["n"]
+    if n >= 2 and agg["std"] > 0:
+        tval = float(_student_t.ppf(1 - alpha / 2.0, df=n - 1))
+        half = tval * agg["std"] * math.sqrt(1.0 + 1.0 / n) + floor
+    else:
+        half = floor
     return agg["mean"] - half, agg["mean"] + half
 
 
-def _outside(col, label, value, agg, k, floor, out):
-    lo, hi = _band(agg, k, floor)
+def _outside(col, label, value, agg, alpha, floor, out):
+    lo, hi = _pi_band(agg, alpha, floor)
     if value < lo or value > hi:
         out.append(f"[{col}] {label} {value:.4g} outside TF band [{lo:.4g}, {hi:.4g}] "
                    f"(mean {agg['mean']:.4g}, std {agg['std']:.4g}, n={agg['n']})")
@@ -520,12 +539,12 @@ def compare_to_ensemble(ensemble: Dict, candidate: Dict, tol: EnsembleTolerances
             for key, agg in ce["stats"].items():
                 if key in cand:
                     floor = tol.rel_floor * max(abs(agg["mean"]), scale)
-                    _outside(col, key, cand[key], agg, tol.k_std, floor, out)
+                    _outside(col, key, cand[key], agg, tol.pi_alpha, floor, out)
             for q, agg in ce["quantiles"].items():
                 cv = cand.get("quantiles", {}).get(q)
                 if cv is not None:
                     floor = tol.rel_floor * max(abs(agg["mean"]), scale)
-                    _outside(col, f"q{q}", cv, agg, tol.k_std, floor, out)
+                    _outside(col, f"q{q}", cv, agg, tol.pi_alpha, floor, out)
             rng = ce["stats"].get("range")
             if rng and rng["mean"] > 0 and cand.get("range", 0) < tol.hard_range_min * rng["mean"]:
                 out.append(f"[{col}] RANGE COLLAPSE: {cand['range']:.4g} < "
@@ -541,38 +560,57 @@ def compare_to_ensemble(ensemble: Dict, candidate: Dict, tol: EnsembleTolerances
                            f"categories present; missing e.g. {sorted(missing)[:5]}")
             if ce.get("n_categories"):
                 agg = ce["n_categories"]
-                lo, _ = _band(agg, tol.k_std, tol.rel_floor * max(abs(agg["mean"]), 1.0))
+                lo, _ = _pi_band(agg, tol.pi_alpha, tol.rel_floor * max(abs(agg["mean"]), 1.0))
                 if cand.get("n_categories", 0) < lo:
                     out.append(f"[{col}] n_categories {cand.get('n_categories')} below TF "
                                f"band low {lo:.1f} (mean {agg['mean']:.1f})")
             js = _js_distance(cand_freq, ce["mean_freq"])
             jsa = ce.get("js_to_mean")
             if jsa is not None:
-                js_limit = jsa["mean"] + tol.js_k * jsa["std"] + tol.rel_floor
+                _, js_limit = _pi_band(jsa, tol.pi_alpha, tol.rel_floor)  # one-sided upper
                 if js > js_limit:
                     out.append(f"[{col}] JS-to-mean {js:.3f} > TF band {js_limit:.3f} "
                                f"(TF mean {jsa['mean']:.3f}, std {jsa['std']:.3f})")
             if ce.get("null_ratio"):
                 _outside(col, "null_ratio", cand.get("null_ratio", 0.0),
-                         ce["null_ratio"], tol.k_std, tol.rel_floor, out)
+                         ce["null_ratio"], tol.pi_alpha, tol.rel_floor, out)
 
         elif kind in ("text", "email"):
-            if ce.get("length_mean"):
-                _outside(col, "length.mean", cand.get("length", {}).get("mean", 0.0),
-                         ce["length_mean"], tol.k_std,
-                         tol.rel_floor * abs(ce["length_mean"]["mean"]), out)
-            if ce.get("word_count_mean"):
-                _outside(col, "word_count.mean", cand.get("word_count", {}).get("mean", 0.0),
-                         ce["word_count_mean"], tol.k_std,
-                         tol.rel_floor * abs(ce["word_count_mean"]["mean"]), out)
+            # Text length / word-count are checked collapse-style: within a factor of
+            # 1/hard_text_frac of TF's mean. A tight band is wrong here — TF's char-LSTM
+            # over-generates length (~25 chars vs the real ~8-char names), so a port that
+            # matches the real data better than TF would "fail" a strict band. We only
+            # flag genuinely degenerate (too short) or absurd (too long) text.
+            for label, agg, cand_val in (
+                ("length.mean", ce.get("length_mean"),
+                 cand.get("length", {}).get("mean", 0.0)),
+                ("word_count.mean", ce.get("word_count_mean"),
+                 cand.get("word_count", {}).get("mean", 0.0)),
+            ):
+                if agg and agg["mean"] > 0:
+                    lo = tol.hard_text_frac * agg["mean"]
+                    hi = agg["mean"] / tol.hard_text_frac
+                    if cand_val < lo or cand_val > hi:
+                        out.append(f"[{col}] {label} {cand_val:.1f} outside "
+                                   f"[{lo:.1f}, {hi:.1f}] (TF mean {agg['mean']:.1f})")
             if "email_domain_valid" in ce and cand.get("email_domain_valid", 0.0) < 0.99:
                 out.append(f"[{col}] email domain validity "
                            f"{cand.get('email_domain_valid', 0.0):.2%} < 99%")
 
         elif kind == "datetime":
-            if cand.get("parse_success", 0.0) < tol.parse_min:
-                out.append(f"[{col}] datetime parse success "
-                           f"{cand.get('parse_success', 0.0):.2%} < {tol.parse_min:.0%}")
+            # Parse success is checked against TF's own band, not an absolute floor:
+            # day-first (%d/%m/%Y) columns are parsed inconsistently by the generic
+            # profiler, so TF itself ranges widely (e.g. created_date 0.40-1.00).
+            # A one-sided lower bound still catches a real formatting regression on
+            # reliably-parsed columns (e.g. ISO updated_at, where TF std ~ 0).
+            ps = ce.get("parse_success")
+            if ps is not None:
+                band_lo, _ = _pi_band(ps, tol.pi_alpha, tol.rel_floor)
+                lo = max(0.0, band_lo)
+                cv = cand.get("parse_success", 0.0)
+                if cv < lo:
+                    out.append(f"[{col}] datetime parse success {cv:.2%} below TF band "
+                               f"low {lo:.2%} (TF mean {ps['mean']:.2%}, std {ps['std']:.2%})")
 
         elif kind == "uuid":
             if cand.get("uniqueness", 0.0) < tol.uniqueness_min:

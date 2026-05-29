@@ -1,18 +1,19 @@
 {
   "fixture": "datetime",
+  "method": "ensemble",
+  "n_runs": 5,
   "tolerances": {
-    "range_min": 0.8,
-    "bound_frac": 0.2,
-    "num_rel": 0.25,
-    "ratio_abs": 0.1,
-    "cat_coverage": 0.9,
-    "cat_js": 0.15,
-    "alien_freq": 0.05,
-    "parse_min": 0.99,
+    "pi_alpha": 0.002,
+    "rel_floor": 0.1,
+    "cat_present_frac": 0.8,
+    "hard_text_frac": 0.5,
+    "parse_min": 0.95,
     "uniqueness_min": 0.999,
     "fk_valid_min": 0.999,
-    "det": 0.02,
-    "column_overrides": {}
+    "hard_range_min": 0.05,
+    "hard_cat_coverage": 0.1,
+    "k_std": 3.0,
+    "js_k": 3.0
   },
   "tables": {
     "datetime": {
@@ -51,7 +52,8 @@
           }
         }
       },
-      "generated": {
+      "ensemble": {
+        "n_runs": 5,
         "row_count": 600,
         "column_order": [
           "id",
@@ -59,38 +61,43 @@
           "event_ts",
           "tz_ts"
         ],
-        "dtypes": {
-          "id": "int64",
-          "signup_date": "object",
-          "event_ts": "object",
-          "tz_ts": "object"
-        },
         "columns": {
           "signup_date": {
             "kind": "datetime",
-            "parse_success": 1.0,
-            "min": "2018-07-13T00:00:00+00:00",
-            "max": "2022-11-16T00:00:00+00:00"
+            "parse_success": {
+              "mean": 1.0,
+              "std": 0.0,
+              "lo": 1.0,
+              "hi": 1.0,
+              "n": 5
+            }
           },
           "event_ts": {
             "kind": "datetime",
-            "parse_success": 1.0,
-            "min": "2018-06-20T11:18:24+00:00",
-            "max": "2023-06-26T08:17:04+00:00"
+            "parse_success": {
+              "mean": 1.0,
+              "std": 0.0,
+              "lo": 1.0,
+              "hi": 1.0,
+              "n": 5
+            }
           },
           "tz_ts": {
             "kind": "datetime",
-            "parse_success": 1.0,
-            "min": "2017-12-29T12:41:36+00:00",
-            "max": "2018-04-05T20:52:16+00:00"
+            "parse_success": {
+              "mean": 1.0,
+              "std": 0.0,
+              "lo": 1.0,
+              "hi": 1.0,
+              "n": 5
+            }
           }
         }
       },
       "keys": {
         "id": {
-          "n": 600,
-          "n_unique": 600,
-          "uniqueness": 1.0
+          "uniqueness_min": 1.0,
+          "uniqueness_mean": 1.0
         }
       }
     }

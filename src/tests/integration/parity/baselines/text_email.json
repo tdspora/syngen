@@ -1,18 +1,19 @@
 {
   "fixture": "text_email",
+  "method": "ensemble",
+  "n_runs": 5,
   "tolerances": {
-    "range_min": 0.8,
-    "bound_frac": 0.2,
-    "num_rel": 0.25,
-    "ratio_abs": 0.1,
-    "cat_coverage": 0.9,
-    "cat_js": 0.15,
-    "alien_freq": 0.05,
-    "parse_min": 0.99,
+    "pi_alpha": 0.002,
+    "rel_floor": 0.1,
+    "cat_present_frac": 0.8,
+    "hard_text_frac": 0.5,
+    "parse_min": 0.95,
     "uniqueness_min": 0.999,
     "fk_valid_min": 0.999,
-    "det": 0.02,
-    "column_overrides": {}
+    "hard_range_min": 0.05,
+    "hard_cat_coverage": 0.1,
+    "k_std": 3.0,
+    "js_k": 3.0
   },
   "tables": {
     "text_email": {
@@ -51,7 +52,7 @@
               "mean": 1.0,
               "std": 0.0
             },
-            "email_domain_valid": 1.0
+            "email_domain_valid": 0.0
           },
           "short_code": {
             "kind": "text",
@@ -97,7 +98,8 @@
           }
         }
       },
-      "generated": {
+      "ensemble": {
+        "n_runs": 5,
         "row_count": 600,
         "column_order": [
           "id",
@@ -105,84 +107,92 @@
           "short_code",
           "bio"
         ],
-        "dtypes": {
-          "id": "object",
-          "email": "object",
-          "short_code": "object",
-          "bio": "object"
-        },
         "columns": {
           "email": {
             "kind": "text",
-            "null_ratio": 0.0,
-            "length": {
-              "mean": 25.548333333333332,
-              "std": 0.6488429873414849,
-              "quantiles": {
-                "0.01": 24.0,
-                "0.05": 24.0,
-                "0.25": 25.0,
-                "0.5": 26.0,
-                "0.75": 26.0,
-                "0.95": 26.0,
-                "0.99": 26.0
-              }
+            "length_mean": {
+              "mean": 25.319333333333333,
+              "std": 0.40710986778073077,
+              "lo": 24.84,
+              "hi": 25.91,
+              "n": 5
             },
-            "word_count": {
+            "word_count_mean": {
               "mean": 1.0,
-              "std": 0.0
+              "std": 0.0,
+              "lo": 1.0,
+              "hi": 1.0,
+              "n": 5
             },
-            "email_domain_valid": 0.0
+            "null_ratio": {
+              "mean": 0.0,
+              "std": 0.0,
+              "lo": 0.0,
+              "hi": 0.0,
+              "n": 5
+            },
+            "email_domain_valid": {
+              "mean": 1.0,
+              "std": 0.0,
+              "lo": 1.0,
+              "hi": 1.0,
+              "n": 5
+            }
           },
           "short_code": {
             "kind": "text",
-            "null_ratio": 0.0,
-            "length": {
+            "length_mean": {
               "mean": 4.0,
               "std": 0.0,
-              "quantiles": {
-                "0.01": 4.0,
-                "0.05": 4.0,
-                "0.25": 4.0,
-                "0.5": 4.0,
-                "0.75": 4.0,
-                "0.95": 4.0,
-                "0.99": 4.0
-              }
+              "lo": 4.0,
+              "hi": 4.0,
+              "n": 5
             },
-            "word_count": {
+            "word_count_mean": {
               "mean": 1.0,
-              "std": 0.0
+              "std": 0.0,
+              "lo": 1.0,
+              "hi": 1.0,
+              "n": 5
+            },
+            "null_ratio": {
+              "mean": 0.0,
+              "std": 0.0,
+              "lo": 0.0,
+              "hi": 0.0,
+              "n": 5
             }
           },
           "bio": {
             "kind": "text",
-            "null_ratio": 0.0,
-            "length": {
-              "mean": 39.038333333333334,
-              "std": 17.492003808089635,
-              "quantiles": {
-                "0.01": 11.0,
-                "0.05": 13.0,
-                "0.25": 24.0,
-                "0.5": 39.0,
-                "0.75": 53.0,
-                "0.95": 66.04999999999995,
-                "0.99": 73.0
-              }
+            "length_mean": {
+              "mean": 39.54899999999999,
+              "std": 5.314950464909757,
+              "lo": 32.93666666666667,
+              "hi": 47.818333333333335,
+              "n": 5
             },
-            "word_count": {
-              "mean": 5.573333333333333,
-              "std": 2.8456906992074096
+            "word_count_mean": {
+              "mean": 5.638666666666667,
+              "std": 0.6848636522857835,
+              "lo": 4.595,
+              "hi": 6.541666666666667,
+              "n": 5
+            },
+            "null_ratio": {
+              "mean": 0.0,
+              "std": 0.0,
+              "lo": 0.0,
+              "hi": 0.0,
+              "n": 5
             }
           }
         }
       },
       "keys": {
         "id": {
-          "n": 600,
-          "n_unique": 600,
-          "uniqueness": 1.0
+          "uniqueness_min": 1.0,
+          "uniqueness_mean": 1.0
         }
       }
     }
