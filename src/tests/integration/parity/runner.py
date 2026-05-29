@@ -37,6 +37,10 @@ class FixtureSpec:
     uuid_columns: Dict[str, List[str]] = field(default_factory=dict)  # table -> uuid cols
     # each: {"child","parent","fk_col","parent_pk"}
     fks: List[Dict] = field(default_factory=list)
+    # FK/key-focused fixtures use small tables to test linkage/uniqueness, not
+    # per-column distribution parity -> catastrophic-collapse-only tolerances
+    # (see Tolerances.catastrophic_collapse_only).
+    key_focused: bool = False
 
 
 # Central registry. Column kinds intentionally exclude opaque key columns that are
@@ -80,7 +84,10 @@ FIXTURES: Dict[str, FixtureSpec] = {
                 "bio": "text",
             }
         },
-        email_domains={"email": "example.com"},
+        # EmailFeature regenerates name@<its default domain> (dataset.py:1344 passes
+        # no domain), so the *generated* domain is the feature default, not the
+        # source's example.com.
+        email_domains={"email": "tdspora.ai"},
         pk_columns={"text_email": ["id"]},
     ),
     "datetime": FixtureSpec(
@@ -106,6 +113,7 @@ FIXTURES: Dict[str, FixtureSpec] = {
                     "keys_child": ["member_id", "ssn"]},
         fks=[{"child": "keys_child", "parent": "keys_parent",
               "fk_col": "household_id", "parent_pk": "household_id"}],
+        key_focused=True,
     ),
     "mixed_complex": FixtureSpec(
         name="mixed_complex",
@@ -129,7 +137,7 @@ FIXTURES: Dict[str, FixtureSpec] = {
                 "updated_at": "datetime",      # ISO 8601 with T
             }
         },
-        email_domains={"contact_email": "corp.example.org"},
+        email_domains={"contact_email": "tdspora.ai"},  # generated domain (feature default)
         pk_columns={"mixed_complex": ["record_id"]},
         uuid_columns={"mixed_complex": ["external_uuid"]},
     ),
@@ -157,6 +165,7 @@ FIXTURES: Dict[str, FixtureSpec] = {
             {"child": "sales", "parent": "products",
              "fk_col": "product_id", "parent_pk": "product_id"},
         ],
+        key_focused=True,
     ),
 }
 

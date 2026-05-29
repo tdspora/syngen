@@ -95,10 +95,15 @@ hypothesis #4). The torch data path preserves it:
   BGM manifold → range collapse. We log the true KL value under `kl_loss` (more
   informative than TF's logged `0`; the name/contract is preserved) but it
   contributes 0 to the optimized total.
-- **eval() discipline** (#3): `fit_sampler` encoding (`model.py:182-196`) and
-  `sample` decoding (`model.py:203-208`) run under `module.eval()` +
-  `torch.no_grad()` so BatchNorm uses running stats and Dropout is off; the
-  training loop is the only `module.train()` region.
+- **eval() discipline** (#3 — refined by an empirical finding): the TF training
+  loop called `self.model(batch)` *without* `training=True` (`wrappers.py:473`
+  original), so the forward ran in **inference mode** — Dropout off and BatchNorm
+  frozen as a fixed affine (verified: two `model(x)` calls identical; BN
+  `moving_mean` never moves). The port therefore trains in `module.eval()` to
+  match the baseline, and `fit_sampler`/`sample` also run under `eval()` +
+  `torch.no_grad()`. The decisive property is that the train, sampler-encode, and
+  generation encodings are *identical*, so the BGM is fit on the same `mu` the
+  decoder was trained against — no latent drift. See `sign_off_records.md`.
 - **Latent sampling** (#6): keep `BayesianGaussianMixture(n_components, n_init=10)`
   fit on encoder `mu` (`model.py:193`); `sample(n)` → `np.random.shuffle` →
   `decode` → `inverse_transform` → `__make_pk_uq_unique` (`model.py:203-212,257`).

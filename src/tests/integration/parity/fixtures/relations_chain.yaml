@@ -1,7 +1,7 @@
 regions:
   train_settings:
     source: fixtures/regions.csv
-    epochs: 5
+    epochs: 50
     drop_null: false
   infer_settings:
     size: 8
@@ -15,7 +15,7 @@ regions:
 products:
   train_settings:
     source: fixtures/products.csv
-    epochs: 5
+    epochs: 50
     drop_null: false
   infer_settings:
     size: 30
@@ -29,7 +29,7 @@ products:
 stores:
   train_settings:
     source: fixtures/stores.csv
-    epochs: 5
+    epochs: 50
     drop_null: false
   infer_settings:
     size: 40
@@ -51,7 +51,7 @@ stores:
 sales:
   train_settings:
     source: fixtures/sales.csv
-    epochs: 5
+    epochs: 50
     drop_null: false
   infer_settings:
     size: 600

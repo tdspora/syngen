@@ -1,7 +1,7 @@
 text_email:
   train_settings:
     source: fixtures/text_email.csv
-    epochs: 5
+    epochs: 20
     drop_null: false
   infer_settings:
     size: 600

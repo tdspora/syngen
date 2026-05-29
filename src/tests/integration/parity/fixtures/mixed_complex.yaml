@@ -1,7 +1,7 @@
 mixed_complex:
   train_settings:
     source: fixtures/mixed_complex.csv
-    epochs: 5
+    epochs: 30
     drop_null: false
   infer_settings:
     size: 600

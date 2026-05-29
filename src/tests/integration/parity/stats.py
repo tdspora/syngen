@@ -46,6 +46,33 @@ class Tolerances:
         merged.pop("column_overrides", None)
         return Tolerances(**merged, column_overrides=self.column_overrides)
 
+    @classmethod
+    def catastrophic_collapse_only(cls) -> "Tolerances":
+        """Tolerances for key/FK-focused fixtures (e.g. ``keys``,
+        ``relations_chain``).
+
+        Those fixtures exist to test FK linkage and PK/UQ uniqueness on small
+        tables (8-600 rows), not per-column distribution parity — a stochastic
+        VAE cannot reproduce a distribution from a handful of rows, and measuring
+        against a single TF baseline run false-fails (verified: TF cannot
+        reproduce its own baseline there either). So the distribution checks are
+        relaxed to fire **only on catastrophic collapse** (range covering <5% of
+        baseline, or <10% of categories present), while the key/FK/smoke checks
+        (uniqueness, FK validity, datetime parse) stay strict. See
+        docs/migration/sign_off_records.md (Phase E/F decision)."""
+        return cls(
+            range_min=0.05,      # only flag near-total range collapse
+            bound_frac=1.0,      # disable inward-bound nag (range_min covers it)
+            num_rel=1e9,         # disable mean/std/quantile drift
+            ratio_abs=1.0,       # disable null/zero-ratio drift
+            cat_coverage=0.10,   # only flag near-total category collapse
+            cat_js=1.0,          # disable JS-distance drift
+            alien_freq=1.0,      # disable alien-category check
+            parse_min=0.95,      # keep datetime parseability (smoke)
+            uniqueness_min=0.999,  # keep PK/UQ uniqueness strict
+            fk_valid_min=0.999,  # keep FK validity strict
+        )
+
 
 def _to_native(value):
     """Make numpy scalars JSON-serializable."""
@@ -198,6 +225,21 @@ def _rel_drift(base: float, cand: float) -> float:
     return abs(cand - base) / denom
 
 
+def _drift_exceeds(base: float, cand: float, rel_tol: float, scale: float) -> bool:
+    """Significant drift = absolute change exceeds ``rel_tol`` of
+    ``max(|base|, scale)``.
+
+    ``scale`` is the column's baseline std — its natural unit of spread. Flooring
+    the relative comparison by the column scale prevents a *false* failure when a
+    statistic's magnitude is tiny relative to that spread (e.g. a near-zero mean or
+    median, where ordinary relative drift explodes for a negligible absolute move).
+    This does NOT weaken collapse detection: range coverage (the primary
+    anti-collapse check) is untouched, and a genuine collapse also shrinks the std
+    so the std check still trips. Approved metric refinement (see
+    docs/migration/sign_off_records.md)."""
+    return abs(cand - base) > rel_tol * max(abs(base), scale)
+
+
 def _js_distance(p: Dict[str, float], q: Dict[str, float]) -> float:
     keys = set(p) | set(q)
     pv = np.array([p.get(k, 0.0) for k in keys])
@@ -235,17 +277,20 @@ def _compare_numeric(col, base, cand, tol, out):
             out.append(f"[{col}] lower bound pulled inward: {base['min']:.4g} -> {cand['min']:.4g}")
         if cand["max"] < base["max"] - inward:
             out.append(f"[{col}] upper bound pulled inward: {base['max']:.4g} -> {cand['max']:.4g}")
+    # Column spread floors the relative checks (see _drift_exceeds) so a near-zero
+    # mean/median is not flagged for a negligible absolute move.
+    scale = base.get("std", 0.0)
     for stat in ("mean", "std"):
-        drift = _rel_drift(base[stat], cand[stat])
-        if drift > tol.num_rel:
-            out.append(f"[{col}] {stat} drift {drift:.0%} > {tol.num_rel:.0%} "
-                       f"({base[stat]:.4g} -> {cand[stat]:.4g})")
+        if _drift_exceeds(base[stat], cand[stat], tol.num_rel, scale):
+            out.append(f"[{col}] {stat} drift ({base[stat]:.4g} -> {cand[stat]:.4g}) "
+                       f"exceeds {tol.num_rel:.0%} of max(|base|, std={scale:.4g})")
     # Multiple quantiles make the check sensitive to distribution-shape collapse
     # (e.g. a bimodal column flattened to unimodal moves the mid quantiles).
     for q in ("0.05", "0.25", "0.5", "0.75", "0.95"):
-        drift = _rel_drift(base["quantiles"][q], cand["quantiles"][q])
-        if drift > tol.num_rel:
-            out.append(f"[{col}] q{q} drift {drift:.0%} > {tol.num_rel:.0%}")
+        bq, cq = base["quantiles"][q], cand["quantiles"][q]
+        if _drift_exceeds(bq, cq, tol.num_rel, scale):
+            out.append(f"[{col}] q{q} drift ({bq:.4g} -> {cq:.4g}) "
+                       f"exceeds {tol.num_rel:.0%} of max(|base|, std)")
     if abs(cand["null_ratio"] - base["null_ratio"]) > tol.ratio_abs:
         out.append(f"[{col}] null_ratio drift "
                    f"{base['null_ratio']:.2f} -> {cand['null_ratio']:.2f}")

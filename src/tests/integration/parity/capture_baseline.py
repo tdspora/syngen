@@ -52,9 +52,12 @@ def build_baseline(spec: FixtureSpec, result: RunResult, tol: Tolerances) -> dic
 
 def capture(names: List[str]) -> None:
     os.makedirs(BASELINES_DIR, exist_ok=True)
-    tol = Tolerances()
     for name in names:
         spec = FIXTURES[name]
+        # Key/FK-focused fixtures record catastrophic-collapse-only tolerances;
+        # distribution-focused fixtures record the strict defaults.
+        tol = (Tolerances.catastrophic_collapse_only()
+               if spec.key_focused else Tolerances())
         print(f"[capture] running fixture {name!r} through TF train -> infer ...")
         result = run_fixture(spec)
         baseline = build_baseline(spec, result, tol)

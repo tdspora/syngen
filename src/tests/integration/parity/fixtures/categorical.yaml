@@ -1,7 +1,7 @@
 categorical:
   train_settings:
     source: fixtures/categorical.csv
-    epochs: 5
+    epochs: 50
     drop_null: false
   infer_settings:
     size: 600

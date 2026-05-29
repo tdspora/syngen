@@ -1,7 +1,7 @@
 keys_parent:
   train_settings:
     source: fixtures/keys_parent.csv
-    epochs: 5
+    epochs: 50
     drop_null: false
   infer_settings:
     size: 200
@@ -15,7 +15,7 @@ keys_parent:
 keys_child:
   train_settings:
     source: fixtures/keys_child.csv
-    epochs: 5
+    epochs: 50
     drop_null: false
   infer_settings:
     size: 600
@@ -30,6 +30,8 @@ keys_child:
       type: UQ
       columns:
       - ssn
+      regex_patterns:
+        ssn: ^UQ-[0-9]{6}$
     household_fk:
       type: FK
       columns:
