@@ -1,0 +1,16 @@
+text_email:
+  train_settings:
+    source: fixtures/text_email.csv
+    epochs: 5
+    drop_null: false
+  infer_settings:
+    size: 600
+    random_seed: 10
+    run_parallel: false
+  keys:
+    text_email_pk:
+      type: PK
+      columns:
+      - id
+      regex_patterns:
+        id: ^USR-[0-9]{5}$

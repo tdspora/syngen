@@ -1,0 +1,80 @@
+regions:
+  train_settings:
+    source: fixtures/regions.csv
+    epochs: 5
+    drop_null: false
+  infer_settings:
+    size: 8
+    random_seed: 10
+    run_parallel: false
+  keys:
+    region_pk:
+      type: PK
+      columns:
+      - region_id
+products:
+  train_settings:
+    source: fixtures/products.csv
+    epochs: 5
+    drop_null: false
+  infer_settings:
+    size: 30
+    random_seed: 10
+    run_parallel: false
+  keys:
+    product_pk:
+      type: PK
+      columns:
+      - product_id
+stores:
+  train_settings:
+    source: fixtures/stores.csv
+    epochs: 5
+    drop_null: false
+  infer_settings:
+    size: 40
+    random_seed: 10
+    run_parallel: false
+  keys:
+    store_pk:
+      type: PK
+      columns:
+      - store_id
+    store_region_fk:
+      type: FK
+      columns:
+      - region_id
+      references:
+        table: regions
+        columns:
+        - region_id
+sales:
+  train_settings:
+    source: fixtures/sales.csv
+    epochs: 5
+    drop_null: false
+  infer_settings:
+    size: 600
+    random_seed: 10
+    run_parallel: false
+  keys:
+    sale_pk:
+      type: PK
+      columns:
+      - sale_id
+    sale_store_fk:
+      type: FK
+      columns:
+      - store_id
+      references:
+        table: stores
+        columns:
+        - store_id
+    sale_product_fk:
+      type: FK
+      columns:
+      - product_id
+      references:
+        table: products
+        columns:
+        - product_id

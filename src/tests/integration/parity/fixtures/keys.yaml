@@ -1,0 +1,40 @@
+keys_parent:
+  train_settings:
+    source: fixtures/keys_parent.csv
+    epochs: 5
+    drop_null: false
+  infer_settings:
+    size: 200
+    random_seed: 10
+    run_parallel: false
+  keys:
+    household_pk:
+      type: PK
+      columns:
+      - household_id
+keys_child:
+  train_settings:
+    source: fixtures/keys_child.csv
+    epochs: 5
+    drop_null: false
+  infer_settings:
+    size: 600
+    random_seed: 10
+    run_parallel: false
+  keys:
+    member_pk:
+      type: PK
+      columns:
+      - member_id
+    ssn_uq:
+      type: UQ
+      columns:
+      - ssn
+    household_fk:
+      type: FK
+      columns:
+      - household_id
+      references:
+        table: keys_parent
+        columns:
+        - household_id
