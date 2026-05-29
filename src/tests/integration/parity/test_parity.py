@@ -20,7 +20,10 @@ import os
 import pandas as pd
 import pytest
 
-from stats import Tolerances, profile_table, key_profile, fk_validity, compare_profiles
+from stats import (
+    Tolerances, EnsembleTolerances, profile_table, key_profile, fk_validity,
+    compare_profiles, compare_to_ensemble,
+)
 from runner import FIXTURES, BASELINES_DIR, run_fixture
 
 pytestmark = [pytest.mark.parity, pytest.mark.slow]
@@ -48,27 +51,26 @@ def test_parity_against_baseline(fixture_name):
     spec = FIXTURES[fixture_name]
     baseline = _load_baseline(fixture_name)
     _require_backend()
-    tol = Tolerances(**{k: v for k, v in baseline["tolerances"].items()})
+    tol = EnsembleTolerances(**{k: v for k, v in baseline["tolerances"].items()})
 
     result = run_fixture(spec)
 
     all_discrepancies = []
     for table, kinds in spec.column_kinds.items():
-        domains = spec.email_domains
-        gen_profile = profile_table(result.generated[table], kinds, domains)
-        base_table = baseline["tables"][table]
+        gen_profile = profile_table(result.generated[table], kinds, spec.email_domains)
+        ensemble = baseline["tables"][table]["ensemble"]
 
-        # Contract: row count matches request, column order/dtypes preserved.
-        assert gen_profile["row_count"] == base_table["generated"]["row_count"], (
-            f"{table}: row count {gen_profile['row_count']} != "
-            f"{base_table['generated']['row_count']}"
+        # Contract: row count matches request.
+        assert gen_profile["row_count"] == ensemble["row_count"], (
+            f"{table}: row count {gen_profile['row_count']} != {ensemble['row_count']}"
         )
 
-        # Anti-collapse / statistical parity vs the baseline's *generated* profile.
-        discrepancies = compare_profiles(base_table["generated"], gen_profile, tol)
+        # Anti-collapse / parity: candidate must lie within the band of N TF runs
+        # (plus hard catastrophic backstops).
+        discrepancies = compare_to_ensemble(ensemble, gen_profile, tol)
         all_discrepancies += [f"{table}: {d}" for d in discrepancies]
 
-        # Key and UUID uniqueness must hold.
+        # Key and UUID uniqueness must hold (strict, independent of the band).
         unique_cols = (spec.pk_columns.get(table, [])
                        + spec.uuid_columns.get(table, []))
         for key_col in unique_cols:
@@ -89,7 +91,7 @@ def test_parity_against_baseline(fixture_name):
         )
 
     assert not all_discrepancies, (
-        "Distribution parity failures vs TF baseline:\n  - "
+        "Distribution parity failures vs TF ensemble band:\n  - "
         + "\n  - ".join(all_discrepancies)
     )
 
@@ -144,4 +146,29 @@ def test_category_collapse_is_detected():
     discrepancies = compare_profiles(healthy, collapsed, Tolerances())
     assert any("CATEGORY COLLAPSE" in d for d in discrepancies), (
         f"category collapse not detected; got {discrepancies}"
+    )
+
+
+def test_ensemble_band_accepts_variance_rejects_collapse():
+    """Self-test (no backend) for the ensemble gate: a candidate inside TF's
+    observed band passes; a collapsed one fails."""
+    from stats import aggregate_ensemble, compare_to_ensemble
+
+    kinds = {"age": "numeric"}
+    # Five "TF runs" with age spanning ~18-90 but varying run-to-run.
+    rng = __import__("numpy").random.default_rng(0)
+    runs = [profile_table(pd.DataFrame({"age": rng.integers(18, 91, 400)}), kinds)
+            for _ in range(5)]
+    ensemble = aggregate_ensemble(runs)
+    tol = EnsembleTolerances()
+
+    healthy = profile_table(pd.DataFrame({"age": rng.integers(18, 91, 400)}), kinds)
+    assert compare_to_ensemble(ensemble, healthy, tol) == [], (
+        "a fresh in-band run must pass the ensemble gate"
+    )
+
+    collapsed = profile_table(pd.DataFrame({"age": rng.integers(18, 41, 400)}), kinds)
+    discrepancies = compare_to_ensemble(ensemble, collapsed, tol)
+    assert any("age" in d for d in discrepancies), (
+        f"ensemble gate failed to flag the 18-90 -> 18-40 collapse; got {discrepancies}"
     )

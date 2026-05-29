@@ -386,3 +386,196 @@ def compare_profiles(baseline: Dict, candidate: Dict, tol: Tolerances) -> List[s
         elif kind == "uuid":
             _compare_uuid(col, base, cand, col_tol, out)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Ensemble tolerances: calibrate the gate against TF's own run-to-run variance.
+#
+# A single TF run cannot reproduce itself within tight tolerances (proven), so
+# instead of one baseline we capture N TF runs per fixture and compare the
+# candidate against the *band* TF itself occupies. A statistic passes when it is
+# within mean +/- k*std of the N TF runs (plus a relative floor so a near-constant
+# stat is not flagged for a negligible move). Real collapse — narrower / fewer
+# categories than TF ever produced — still fails, and hard catastrophic backstops
+# (range <5%, categories <10%) guard the egregious case even when TF's own band is
+# wide. Categorical *shape* is checked via the Jensen-Shannon distance to the
+# ensemble-mean distribution, bounded by TF's own run-to-run JS spread.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class EnsembleTolerances:
+    k_std: float = 3.0           # numeric/quantile/freq band half-width in std units
+    rel_floor: float = 0.10      # relative floor on the band (handles std ~ 0)
+    js_k: float = 3.0            # categorical JS band: mean + js_k*std of TF runs
+    cat_present_frac: float = 0.6  # categories in >= this fraction of TF runs are "expected"
+    parse_min: float = 0.95      # datetime parse-success (smoke)
+    uniqueness_min: float = 0.999
+    fk_valid_min: float = 0.999
+    hard_range_min: float = 0.05   # catastrophic range-collapse backstop
+    hard_cat_coverage: float = 0.10  # catastrophic category-collapse backstop
+
+
+def _agg(values) -> Optional[Dict]:
+    """mean/std/min/max/n over the non-null values."""
+    arr = np.array([v for v in values if v is not None], dtype=float)
+    if not len(arr):
+        return None
+    return {"mean": float(arr.mean()), "std": float(arr.std(ddof=0)),
+            "lo": float(arr.min()), "hi": float(arr.max()), "n": int(len(arr))}
+
+
+def aggregate_ensemble(profiles: List[Dict]) -> Dict:
+    """Aggregate N ``profile_table`` outputs (same table, N TF runs) into a
+    per-column statistical band."""
+    ref = profiles[0]
+    columns: Dict[str, Dict] = {}
+    for col, ref_col in ref["columns"].items():
+        kind = ref_col.get("kind")
+        per_run = [p["columns"].get(col, {}) for p in profiles]
+        if kind == "numeric":
+            stats = {}
+            for key in ("min", "max", "range", "mean", "std", "null_ratio", "zero_ratio"):
+                agg = _agg([r.get(key) for r in per_run])
+                if agg:
+                    stats[key] = agg
+            quantiles = {}
+            for q in [str(x) for x in QUANTILES]:
+                agg = _agg([r.get("quantiles", {}).get(q) for r in per_run])
+                if agg:
+                    quantiles[q] = agg
+            columns[col] = {"kind": "numeric", "stats": stats, "quantiles": quantiles}
+        elif kind in ("categorical", "binary"):
+            all_cats = set()
+            for r in per_run:
+                all_cats |= set(r.get("frequencies", {}).keys())
+            mean_freq = {c: float(np.mean([r.get("frequencies", {}).get(c, 0.0) for r in per_run]))
+                         for c in all_cats}
+            present_frac = {c: float(np.mean([1.0 if c in r.get("frequencies", {}) else 0.0
+                                              for r in per_run])) for c in all_cats}
+            run_js = [_js_distance(r.get("frequencies", {}), mean_freq) for r in per_run]
+            columns[col] = {
+                "kind": "categorical",
+                "mean_freq": mean_freq,
+                "present_frac": present_frac,
+                "js_to_mean": _agg(run_js),
+                "n_categories": _agg([r.get("n_categories") for r in per_run]),
+                "null_ratio": _agg([r.get("null_ratio") for r in per_run]),
+            }
+        elif kind in ("text", "email"):
+            entry = {
+                "kind": "text",
+                "length_mean": _agg([r.get("length", {}).get("mean") for r in per_run]),
+                "word_count_mean": _agg([r.get("word_count", {}).get("mean") for r in per_run]),
+                "null_ratio": _agg([r.get("null_ratio") for r in per_run]),
+            }
+            if any("email_domain_valid" in r for r in per_run):
+                entry["email_domain_valid"] = _agg(
+                    [r.get("email_domain_valid") for r in per_run])
+            columns[col] = entry
+        elif kind == "datetime":
+            columns[col] = {"kind": "datetime",
+                            "parse_success": _agg([r.get("parse_success") for r in per_run])}
+        elif kind == "uuid":
+            columns[col] = {"kind": "uuid",
+                            "uniqueness": _agg([r.get("uniqueness") for r in per_run]),
+                            "null_ratio": _agg([r.get("null_ratio") for r in per_run])}
+    return {
+        "n_runs": len(profiles),
+        "row_count": ref["row_count"],
+        "column_order": ref["column_order"],
+        "columns": _to_native(columns),
+    }
+
+
+def _band(agg: Dict, k: float, floor: float):
+    half = k * agg["std"] + floor
+    return agg["mean"] - half, agg["mean"] + half
+
+
+def _outside(col, label, value, agg, k, floor, out):
+    lo, hi = _band(agg, k, floor)
+    if value < lo or value > hi:
+        out.append(f"[{col}] {label} {value:.4g} outside TF band [{lo:.4g}, {hi:.4g}] "
+                   f"(mean {agg['mean']:.4g}, std {agg['std']:.4g}, n={agg['n']})")
+
+
+def compare_to_ensemble(ensemble: Dict, candidate: Dict, tol: EnsembleTolerances) -> List[str]:
+    """Discrepancies where ``candidate`` falls outside the band of N TF runs."""
+    out: List[str] = []
+    if candidate["row_count"] != ensemble["row_count"]:
+        out.append(f"row_count {ensemble['row_count']} -> {candidate['row_count']}")
+    if candidate["column_order"] != ensemble["column_order"]:
+        out.append("column order changed")
+
+    for col, ce in ensemble["columns"].items():
+        cand = candidate["columns"].get(col, {"missing": True})
+        kind = ce.get("kind")
+        if cand.get("missing"):
+            out.append(f"[{col}] missing in candidate")
+            continue
+
+        if kind == "numeric":
+            scale = ce["stats"].get("std", {}).get("mean", 0.0) or 0.0
+            for key, agg in ce["stats"].items():
+                if key in cand:
+                    floor = tol.rel_floor * max(abs(agg["mean"]), scale)
+                    _outside(col, key, cand[key], agg, tol.k_std, floor, out)
+            for q, agg in ce["quantiles"].items():
+                cv = cand.get("quantiles", {}).get(q)
+                if cv is not None:
+                    floor = tol.rel_floor * max(abs(agg["mean"]), scale)
+                    _outside(col, f"q{q}", cv, agg, tol.k_std, floor, out)
+            rng = ce["stats"].get("range")
+            if rng and rng["mean"] > 0 and cand.get("range", 0) < tol.hard_range_min * rng["mean"]:
+                out.append(f"[{col}] RANGE COLLAPSE: {cand['range']:.4g} < "
+                           f"{tol.hard_range_min:.0%} of TF mean range {rng['mean']:.4g}")
+
+        elif kind in ("categorical", "binary"):
+            cand_freq = cand.get("frequencies", {})
+            expected = [c for c, f in ce["present_frac"].items() if f >= tol.cat_present_frac]
+            missing = [c for c in expected if c not in cand_freq]
+            coverage = 1 - len(missing) / max(len(expected), 1)
+            if coverage < tol.hard_cat_coverage:
+                out.append(f"[{col}] CATEGORY COLLAPSE: {coverage:.0%} of TF-consistent "
+                           f"categories present; missing e.g. {sorted(missing)[:5]}")
+            if ce.get("n_categories"):
+                agg = ce["n_categories"]
+                lo, _ = _band(agg, tol.k_std, tol.rel_floor * max(abs(agg["mean"]), 1.0))
+                if cand.get("n_categories", 0) < lo:
+                    out.append(f"[{col}] n_categories {cand.get('n_categories')} below TF "
+                               f"band low {lo:.1f} (mean {agg['mean']:.1f})")
+            js = _js_distance(cand_freq, ce["mean_freq"])
+            jsa = ce.get("js_to_mean")
+            if jsa is not None:
+                js_limit = jsa["mean"] + tol.js_k * jsa["std"] + tol.rel_floor
+                if js > js_limit:
+                    out.append(f"[{col}] JS-to-mean {js:.3f} > TF band {js_limit:.3f} "
+                               f"(TF mean {jsa['mean']:.3f}, std {jsa['std']:.3f})")
+            if ce.get("null_ratio"):
+                _outside(col, "null_ratio", cand.get("null_ratio", 0.0),
+                         ce["null_ratio"], tol.k_std, tol.rel_floor, out)
+
+        elif kind in ("text", "email"):
+            if ce.get("length_mean"):
+                _outside(col, "length.mean", cand.get("length", {}).get("mean", 0.0),
+                         ce["length_mean"], tol.k_std,
+                         tol.rel_floor * abs(ce["length_mean"]["mean"]), out)
+            if ce.get("word_count_mean"):
+                _outside(col, "word_count.mean", cand.get("word_count", {}).get("mean", 0.0),
+                         ce["word_count_mean"], tol.k_std,
+                         tol.rel_floor * abs(ce["word_count_mean"]["mean"]), out)
+            if "email_domain_valid" in ce and cand.get("email_domain_valid", 0.0) < 0.99:
+                out.append(f"[{col}] email domain validity "
+                           f"{cand.get('email_domain_valid', 0.0):.2%} < 99%")
+
+        elif kind == "datetime":
+            if cand.get("parse_success", 0.0) < tol.parse_min:
+                out.append(f"[{col}] datetime parse success "
+                           f"{cand.get('parse_success', 0.0):.2%} < {tol.parse_min:.0%}")
+
+        elif kind == "uuid":
+            if cand.get("uniqueness", 0.0) < tol.uniqueness_min:
+                out.append(f"[{col}] uuid uniqueness {cand.get('uniqueness'):.4f} "
+                           f"< {tol.uniqueness_min}")
+    return out

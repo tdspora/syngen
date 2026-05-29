@@ -31,10 +31,16 @@ python src/tests/integration/parity/make_fixtures.py
 ### 2. Capture the TF golden baseline (do this on the TF code, then commit)
 ```bash
 cd src/tests/integration/parity
-python capture_baseline.py            # all fixtures
-python capture_baseline.py numeric_wide categorical   # subset
+python capture_baseline.py            # all fixtures, N=5 runs each
+N_RUNS=8 python capture_baseline.py numeric_wide   # more runs = tighter band
 git add baselines/*.json
 ```
+The generator is **stochastic**, so a single run cannot reproduce itself within
+tight tolerances (a fresh TF run differs from a committed TF run by well over the
+old ±25 % bar — verified). So each baseline is an **ensemble**: `capture_baseline`
+runs every fixture `N_RUNS` times and stores per-column statistical **bands**
+(mean / std / min / max across runs). A candidate then passes when it lands inside
+the band TF itself occupies, and fails on a genuine collapse.
 
 ### 3. Run parity on the PyTorch branch
 ```bash
@@ -60,7 +66,26 @@ need no backend and always run — they prove the guard itself works.
 
 ## Tolerances
 
-Defaults live in `stats.Tolerances` (e.g. numeric range coverage ≥ 80 %,
-category coverage ≥ 90 %, mean/std/quantile drift ≤ 25 %). Per-column overrides
-go in `Tolerances.column_overrides` and are persisted into each baseline JSON so
-acceptance thresholds are explicit and reviewable.
+The acceptance gate is **ensemble-calibrated** (`stats.EnsembleTolerances`,
+persisted into each baseline JSON):
+
+- A numeric statistic (min/max/range/mean/std/quantiles) passes when it lands
+  within `mean ± k_std·std` of the `N_RUNS` TF runs (default `k_std=3`), plus a
+  small `rel_floor` so a near-constant stat is not flagged for a negligible move.
+- Categorical **shape** is the Jensen–Shannon distance to the ensemble-mean
+  distribution, bounded by TF's own run-to-run JS spread; category presence and
+  count must stay within TF's band.
+- **Hard catastrophic backstops** always apply regardless of how wide TF's band
+  is: range coverage `< hard_range_min` (5 %) or category coverage
+  `< hard_cat_coverage` (10 %) fail outright — this is the 18-90 → 18-40 guard.
+- Key checks stay strict and band-independent: PK/UQ `uniqueness ≥ 0.999`, FK
+  validity `≥ 0.999`, datetime parse `≥ 0.95`.
+
+`stats.Tolerances` (the older single-baseline tolerances) is retained only for the
+backend-free collapse self-tests.
+
+> Why ensemble: tiny tables (8–40 rows) and heavy-tailed columns vary so much
+> run-to-run that even TF fails a single-baseline ±25 % gate. Calibrating to TF's
+> measured variance makes the gate **fair** (a faithful PyTorch run passes) while
+> still catching real collapse (narrower / fewer categories than TF *ever*
+> produced). See `docs/migration/sign_off_records.md`.

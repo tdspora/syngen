@@ -198,4 +198,37 @@ coverage 0.19 and `regions` 25%). Closing the gate to green requires one of:
 This is a tolerance change reserved for the decision owner; not applied
 unilaterally. The faithful port and all approved improvements are committed.
 
+### Decision: ensemble tolerances (chosen by decision owner, 2026-05-29)
+The gate is recalibrated against TF's own run-to-run variance instead of a single
+baseline: `capture_baseline.py` runs each fixture `N_RUNS` (=5) times on TF and
+stores per-column statistical **bands** (`stats.aggregate_ensemble`);
+`stats.compare_to_ensemble` passes a candidate that lands within `mean ± k·std`
+(k=3) of the TF runs, with categorical shape bounded by TF's own JS spread, plus
+hard catastrophic backstops (range <5 %, categories <10 %) and strict key/FK/parse
+checks. This makes the gate **fair** (a faithful PyTorch run passes) while still
+failing a genuine collapse (narrower / fewer categories than TF ever produced).
+The `key_focused`/`catastrophic_collapse_only` machinery is now redundant (the
+band auto-widens for high-variance tiny tables) but left in place; `Tolerances`
+remains for the backend-free self-tests. A new self-test
+(`test_ensemble_band_accepts_variance_rejects_collapse`) proves the ensemble gate
+accepts an in-band run and rejects the 18-90 → 18-40 collapse.
+
+### Fix: per-batch reparameterization eps (real over-dispersion bug)
+While validating the ensemble gate, the N=2 round-trip exposed a **genuine port
+defect** (not inherent variance): the PyTorch `reparameterize` drew **per-row**
+eps, whereas TF `sample_z` draws one `(latent_dim,)` eps **broadcast across the
+batch** (`model.py:56`). The extra latent noise made the decoder learn a wider
+output spread, over-dispersing generation beyond the data range (`age` came out
+`[2, 117]` vs the real 18-90 and TF's ~`[33, 79]`). Matching TF exactly fixed it:
+
+```
+age      [2,117] std 18.9  ->  [32,81] std 7.7   (TF ~[33,79] std ~6-9)
+nullable                   ->  [83,114] std 5.6  (TF [79,110] std 5.2)
+```
+
+Committed in `fix(model): match TF per-batch eps ...`; unit suite still green. This
+is exactly the kind of subtle, distribution-narrowing/widening bug the harness
+exists to catch — and the ensemble gate now measures whether the port stays inside
+TF's behavior.
+
 <!-- Phases H–J accepted records appended below, with pasted parity-harness evidence. -->
