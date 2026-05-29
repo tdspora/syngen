@@ -1129,7 +1129,7 @@ def test_validate_pk_key_valid_data_logs_info(mock_fetch_config, mock_logger, rp
 @patch("syngen.ml.vae.models.dataset.fetch_config")
 def test_validate_pk_key_with_nulls_emits_warning(mock_fetch_config, mock_logger, rp_logger):
     rp_logger.info("Test that '_validate_pk_key' emits a warning when PK contains nulls")
-    df = pd.DataFrame({"id": [1, None, 3], "name": ["a", "b", "c"]})
+    df = pd.DataFrame({"id": [1, np.NaN, 3], "name": ["a", "b", "c"]})
     dataset = Dataset(
         df=df,
         schema=CSV_SCHEMA,
@@ -1182,7 +1182,7 @@ def test_validate_pk_key_with_nulls_and_duplicates_emits_warning(
         "Test that '_validate_pk_key' emits a combined warning "
         "when PK contains both nulls and duplicates"
     )
-    df = pd.DataFrame({"id": [1, 1, None], "name": ["a", "b", "c"]})
+    df = pd.DataFrame({"id": [1, 1, np.NaN], "name": ["a", "b", "c"]})
     dataset = Dataset(
         df=df,
         schema=CSV_SCHEMA,
@@ -1259,7 +1259,7 @@ def test_validate_uq_keys_with_multiple_all_null_rows_emits_warning(
     rp_logger.info(
         "Test that '_validate_uq_keys' emits a warning when UQ key has > 1 fully-null rows"
     )
-    df = pd.DataFrame({"col1": [None, None, 3], "col2": [None, None, "c"]})
+    df = pd.DataFrame({"col1": [np.NaN, np.NaN, 3], "col2": [np.NaN, np.NaN, "c"]})
     dataset = Dataset(
         df=df,
         schema=CSV_SCHEMA,
@@ -1287,7 +1287,7 @@ def test_validate_uq_keys_with_single_null_row_does_not_warn(
     rp_logger.info(
         "Test that '_validate_uq_keys' does not warn when UQ key has exactly one fully-null row"
     )
-    df = pd.DataFrame({"col1": [None, 2, 3], "col2": [None, "b", "c"]})
+    df = pd.DataFrame({"col1": [np.NaN, 2, 3], "col2": [np.NaN, "b", "c"]})
     dataset = Dataset(
         df=df,
         schema=CSV_SCHEMA,
