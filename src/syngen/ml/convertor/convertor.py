@@ -164,7 +164,7 @@ class Convertor:
     def _collect_encoding_infos(self, column: str) -> List[dict]:
         """
         Run `chardet` on every non-null binary value in `column` and return the
-        list of mime/encoding records.
+        list of `mime/encoding` records.
         """
         return [
             self._get_encoding_info(value)
@@ -174,13 +174,16 @@ class Convertor:
 
     def _validate_binary_encoding_infos(
         self, column: str, encoding_infos: List[dict]
-    ) -> None:
+    ) -> bool:
         """
         Validate that every value in a binary column is a decodable plain-text
-        payload. Raise ValueError if any value is detected as a file format
-        (image / audio / video / archive / font / executable / structured text
-        such as HTML / XML / Python source) or as plain text whose character
-        encoding could not be determined.
+        payload. Returns True when decoding can proceed (single encoding detected
+        and stored in custom_schema). Returns False and emits a warning when
+        decoding should be skipped:
+          - non-decodable MIME type (`image/*`, `audio/*`, `video/*`, `application/*`,
+            `font/*`, `text/html`, `text/xml`, `text/x-python`);
+          - encoding could not be determined (`chardet` returns `None`);
+          - multiple different encodings found across values.
         """
         non_decodable_mime_types = sorted({
             info["mime_type"]
@@ -192,66 +195,69 @@ class Convertor:
             )
         })
         if non_decodable_mime_types:
-            non_decodable_mime_types = "', '".join(non_decodable_mime_types)
-            message = (
-                f"The binary column '{column}' contains values whose content "
-                f"cannot be processed as plain text. Detected MIME type(s): "
-                f"'{non_decodable_mime_types}'. Only binary columns whose values "
-                f"are plain-text payloads ('text/plain') are supported."
+            mime_str = "', '".join(non_decodable_mime_types)
+            logger.warning(
+                f"The binary column '{column}' contains values with non-decodable "
+                f"MIME type(s): '{mime_str}'. "
+                f"Decoding will be skipped; binary values will be placed as-is."
             )
-            logger.error(message)
-            raise ValueError(message)
+            return False
 
         if any(
-            info["mime_type"] == "text/plain" and info["encoding"] is None
+            info["mime_type"] in self._DECODABLE_MIME_TYPES and info["encoding"] is None
             for info in encoding_infos
         ):
-            message = (
-                f"The binary column '{column}' contains plain-text values "
-                f"whose character encoding could not be determined. Please "
-                f"ensure every value uses a standard encoding before running training."
+            logger.warning(
+                f"The binary column '{column}' contains values "
+                f"whose character encoding could not be determined. "
+                f"Decoding will be skipped; binary values will be placed as-is."
             )
-            logger.error(message)
-            raise ValueError(message)
+            return False
 
         plain_text_encodings = sorted({
             info["encoding"]
             for info in encoding_infos
-            if info["mime_type"] == "text/plain" and info["encoding"] is not None
+            if info["mime_type"] in self._DECODABLE_MIME_TYPES and info["encoding"] is not None
         })
         if len(plain_text_encodings) > 1:
             encodings_str = "', '".join(plain_text_encodings)
-            message = (
+            logger.warning(
                 f"The binary column '{column}' contains plain-text values with "
                 f"multiple different character encodings: '{encodings_str}'. "
-                f"All values in a binary column must use the same character encoding. "
-                f"Please ensure every value is encoded consistently before running training."
+                f"Decoding will be skipped; binary values will be placed as-is."
             )
-            logger.error(message)
-            raise ValueError(message)
+            return False
+
+        if not plain_text_encodings:
+            return False
+
         self.custom_schema.setdefault("encoding", {})[column] = plain_text_encodings[0]
+        return True
 
     def _cast_binary_column(self, column: str) -> None:
         """
-        Decode every binary value in `column` to a string using the most
-        popular detected character encoding, and record that encoding under
+        Decode every binary value in `column` to a string using the detected
+        character encoding, and record that encoding under
         `custom_schema["encoding"][column]` so downstream consumers
         can re-encode the synthetic output to bytes.
+
+        When validation cannot determine a safe single encoding (non-decodable
+        MIME, unknown encoding, or mixed encodings), decoding is skipped and
+        the raw bytes are left as-is in the column.
         """
         encoding_infos = self._collect_encoding_infos(column)
-        self._validate_binary_encoding_infos(column, encoding_infos)
+        can_decode = self._validate_binary_encoding_infos(column, encoding_infos)
+        if not can_decode:
+            return
         encoding = self.custom_schema["encoding"][column]
 
         def _decode(value):
-            if not isinstance(value, (bytes, bytearray)) or encoding is None:
-                return value
             try:
                 return value.decode(encoding)
             except (UnicodeDecodeError, TypeError) as exc:
                 message = (
                     f"Failed to decode a value in the binary column '{column}' "
-                    f"using the most popular detected encoding '{encoding}'. "
-                    f"Underlying error: {exc}."
+                    f"using the encoding '{encoding}'. Underlying error: {exc}."
                 )
                 logger.error(message)
                 raise ValueError(message) from exc
@@ -261,7 +267,7 @@ class Convertor:
     def _cast_values_to_json(self):
         """
         Cast the values contained in columns with complex data types
-        (dict, list, tuple, 'numpy.ndarray') to JSON strings. Binary columns
+        (`dict`, `list`, `tuple`, `numpy.ndarray`) to JSON strings. Binary columns
         are decoded to strings using the most popular detected encoding.
         """
         for column in self._get_serializable_columns():
@@ -282,13 +288,14 @@ class Convertor:
         if not self.preprocessed_df.empty:
             try:
                 self._set_none_values_to_nan()
-                if getattr(self, "complex_types", None) is not None:
-                    self._cast_values_to_json()
-                self._cast_values_to_string()
                 if self.custom_schema.get("format") == "CSV":
+                    self._cast_values_to_string()
                     self._cast_columns_if_schema_is_not_provided()
                 else:
                     self._cast_columns_to_schema_types()
+                    if getattr(self, "complex_types", None) is not None:
+                        self._cast_values_to_json()
+                    self._cast_values_to_string()
             except Exception as e:
                 logger.error(e)
                 raise e
