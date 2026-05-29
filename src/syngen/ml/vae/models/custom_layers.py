@@ -22,15 +22,15 @@ import torch.nn as nn
 def reparameterize(mu: torch.Tensor, log_sigma: torch.Tensor) -> torch.Tensor:
     """z = mu + exp(log_sigma/2) * eps, eps ~ N(0,1).
 
-    Mirrors ``CVAE.sample_z`` (``model.py:56-59``). TF draws a single
-    ``(latent_dim,)`` eps and broadcasts it across the batch; we draw a
-    per-row ``(batch, latent_dim)`` eps (standard reparameterization). With KL
-    weight 0 the posterior is unregularized (``log_sigma`` drifts very negative,
-    so ``z ≈ mu``) and generation samples the fitted BGM on ``mu`` rather than
-    ``z``, so the difference is immaterial — documented in
-    ``docs/migration/pytorch_backend_design.md``.
+    Mirrors ``CVAE.sample_z`` (``model.py:56-59``) **exactly**: a single
+    ``(latent_dim,)`` eps broadcast across the whole batch (not per-row). Per-row
+    eps injects more latent noise during training, so the decoder learns a wider
+    output spread and over-disperses at generation (observed: age 2-117 vs TF's
+    ~33-79). Broadcasting one eps per batch keeps the decoder's learned spread
+    aligned with the TF baseline. Generation uses the fitted BGM on ``mu``, not
+    ``z``. Documented in ``docs/migration/pytorch_backend_design.md``.
     """
-    eps = torch.randn_like(mu)
+    eps = torch.randn(mu.shape[-1], dtype=mu.dtype, device=mu.device)
     return mu + torch.exp(log_sigma / 2.0) * eps
 
 
