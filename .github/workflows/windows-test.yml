@@ -31,9 +31,5 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with pytest
-        env:
-          # Put src/ on the path so tests can import the `tests` namespace
-          # package (tests/conftest.py) and the syngen source tree.
-          PYTHONPATH: ${{ github.workspace }}/src
         run: |
           pytest src/tests
