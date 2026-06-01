@@ -22,4 +22,5 @@
     COPY src ./src
     RUN /databricks/python3/bin/${PIP_INSTALL_CMD}
     ENV MPLCONFIGDIR=/tmp
-    ENV PYTHONPATH="${PYTHONPATH}:/src/src"
+    # Base image does not define PYTHONPATH; point it at the copied src layout.
+    ENV PYTHONPATH="/src/src"

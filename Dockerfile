@@ -23,7 +23,10 @@ RUN apt-get update && \
 
 ENV HOME=/tmp
 ENV MPLCONFIGDIR=/tmp
-ENV PYTHONPATH="${PYTHONPATH}:/src/syngen"
+# /src lets `python -m start` and the `python syngen/train.py` subprocess it
+# spawns resolve `import syngen`; /src/syngen lets that subprocess import the
+# package's own top-level modules. (Base image does not define PYTHONPATH.)
+ENV PYTHONPATH="/src:/src/syngen"
 RUN mkdir model_artifacts uploaded_files mlruns && \
     groupadd syngen && \
     useradd -mg syngen syngen && \
