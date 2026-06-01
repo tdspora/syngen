@@ -33,7 +33,7 @@ jobs:
 
       - name: Test with pytest
         run: |
-          pip install -e ".[test]" && pytest src/tests
+          pytest src/tests
 
   build-wheel:
     needs: test
