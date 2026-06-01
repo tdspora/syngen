@@ -67,8 +67,8 @@ test = [
 ]
 
 [project.scripts]
-train = "syngen.train:launch_train"
-infer = "syngen.infer:launch_infer"
+train = "syngen.train:cli_launch_train"
+infer = "syngen.infer:cli_launch_infer"
 syngen = "syngen:main"
 
 [project.urls]
