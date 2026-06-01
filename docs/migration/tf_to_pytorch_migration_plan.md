@@ -148,8 +148,9 @@ Runtime imports of `tensorflow`/`keras` exist in **exactly five** modules:
 Non-runtime: `train.py` and `strategies.py` only set
 `os.environ["TF_CPP_MIN_LOG_LEVEL"]`. Tests: only
 `src/tests/unit/features/test_features.py` references TF/Keras directly.
-Packaging: `setup.cfg` and `requirements.txt` pin `tensorflow==2.15.*` and
-`keras==2.15.*`.
+Packaging: the runtime dependency set is declared in `pyproject.toml` (`[project]`
+`dependencies`); the migration replaces `tensorflow==2.15.*`/`keras==2.15.*` with
+`torch>=2.2`.
 
 ### Artifact inventory (current, per table)
 
@@ -291,8 +292,9 @@ Parametrized over fixtures. Each test:
    yields no discrepancies above tolerance (the table above).
 5. **Determinism**: two seeded runs profile-equal within `tol.det` (default 0.02).
 
-Markers: `@pytest.mark.parity` and `@pytest.mark.slow` (registered in
-`setup.cfg`), so the default unit-test run is unaffected; the suite is opt-in via
+Markers: `@pytest.mark.parity` and `@pytest.mark.slow` (registered in the test
+suite's pytest config — `conftest.py` / the parity `pytest.ini`, not `setup.cfg`),
+so the default unit-test run is unaffected; the suite is opt-in via
 `pytest -m parity`.
 
 ### Self-test (prove the guard works)
@@ -579,13 +581,13 @@ Entry: Phase H Accepted / Conditionally Accepted.
 Acceptance:
 - [ ] All runtime TF/Keras imports accounted for and scheduled for removal (the
       5-file table).
-- [ ] `setup.cfg` + `requirements.txt` have a planned PyTorch dependency set;
+- [ ] `pyproject.toml` carries the PyTorch dependency set;
       `tensorflow`/`keras` removed.
 - [ ] TF-dependent tests accounted for (`tests/unit/features/test_features.py`).
 - [ ] Docs / install guidance updates accounted for (`README.md`, `Dockerfile`).
 - [ ] `egg-info` regeneration treated as a packaging byproduct.
 - [ ] Console entry points `train`, `infer`, `syngen` remain
-      (`setup.cfg [options.entry_points]`).
+      (`pyproject.toml [project.scripts]`).
 
 Evidence: dependency-removal inventory · packaging note · docs note.
 
@@ -682,7 +684,7 @@ Exit: the migration decision is defensible with explicit evidence and scope.
 - `src/tests/unit/worker_launchers/test_launch_train.py`
 - `src/tests/unit/worker_launchers/test_launch_infer.py`
 - `src/tests/integration/parity/` (new — anti-collapse harness)
-- `setup.cfg`, `requirements.txt`
+- `pyproject.toml` (and `databricks/pyproject.toml`)
 
 ---
 

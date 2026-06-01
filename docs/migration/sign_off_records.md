@@ -338,3 +338,36 @@ decision owner's adjustment, recorded in each baseline's `tolerances`):
 - **Final sign-off:** **Accepted** — TF→PyTorch backend migration complete; the
   PyTorch path reproduces TF's behavior within TF's own run-to-run variance and
   avoids distribution collapse, proven by the committed parity gate.
+
+---
+
+- **Phase:** Post-migration — Build consolidation (single `pyproject.toml`)
+- **Status:** Accepted
+- **Decision date:** 2026-06-01
+- **Decision owner:** migration engineer (Claude)
+- **Evidence reviewed:** the per-artifact build configuration was consolidated
+  into a single `pyproject.toml` (root) plus `databricks/pyproject.toml`. Removed:
+  `setup.cfg`, `requirements.txt`, `MANIFEST.in`, `src/setup.py`, `DESCRIPTION`,
+  and the databricks `setup.cfg` + `requirements-databricks-15.4-LTS.txt`. The
+  root `pyproject.toml` carries the PyTorch runtime set (`torch>=2.2`, no
+  `tensorflow`/`keras`), the `cli_launch_train`/`cli_launch_infer`/`main` entry
+  points (`[project.scripts]`), `pytest`/`pytest-reportportal`/`reportportal-client`
+  in a `[test]` extra, and `package-data` globs replacing the former
+  `MANIFEST graft src/syngen`; the version stays dynamic from `src/syngen/VERSION`.
+  `Dockerfile` and `databricks/databricks.dockerfile` install from `pyproject.toml`
+  (`pip install .`); the CI workflows drop the requirements-compare steps and
+  install via `.[test]`; `src/tests/pytest.ini` sets `pythonpath = ..` so the
+  `tests` namespace package imports without an editable install. Wheel payloads
+  verified **byte-identical** to the pre-change builds for both `syngen` and
+  `syngen-databricks`; `twine check` clean for both.
+- **Supersedes:** the packaging specifics in the Phase I and J records above
+  (which referenced `setup.cfg`/`requirements.txt` and a `requirements.txt`-based
+  `Dockerfile` — accurate as of 2026-05-29, before this consolidation).
+- **Deviations approved:** none.
+- **Deferred items:** the `databricks/` variant was **not** migrated to PyTorch —
+  it intentionally keeps `tensorflow==2.15.*`/`keras==2.15.*` + `mlflow-skinny`
+  and the `launch_*` entry points; the consolidation preserved that dependency set
+  and entry points exactly (pure refactor). Migrating databricks to torch is a
+  separate decision.
+- **Final sign-off:** **Accepted** — build/install requirements now live in a
+  single `pyproject.toml` per artifact.

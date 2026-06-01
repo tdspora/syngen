@@ -92,7 +92,7 @@ Only the **backend** changed — five files — plus the dependency list and one
 | `ml/vae/models/custom_layers.py` | Keras `Layer` subclasses (mostly unused) | PyTorch `TextEncoder` / `TextDecoder` + `reparameterize` |
 | `ml/vae/wrappers/wrappers.py` | `tf.data` + `GradientTape` loop | `DataLoader` + standard PyTorch training loop |
 | `ml/handlers/handlers.py` | Keras `Tokenizer` in `LongTextsHandler` | The new Keras-free `CharTokenizer` |
-| `setup.cfg` / `requirements.txt` | `tensorflow==2.15.*`, `keras==2.15.*` | `torch>=2.2` |
+| `pyproject.toml` (`[project]` `dependencies`) | `tensorflow==2.15.*`, `keras==2.15.*` | `torch>=2.2` |
 | `tests/unit/features/test_features.py` | `import tensorflow` for one test input | numpy softmax instead |
 
 Everything else in `dataset.py` (detection, the pipeline, scalers wiring, key
@@ -407,8 +407,9 @@ silently loading the wrong thing.
 
 Also removed: the now-pointless `os.environ["TF_CPP_MIN_LOG_LEVEL"]` lines, and the
 `import tensorflow` in `test_features.py` (its one use of `tf.nn.softmax` became a
-numpy softmax). The `Dockerfile` installs from `requirements.txt`, so it picks up
-`torch` automatically.
+numpy softmax). These dependencies are declared in `pyproject.toml` (`[project]`
+`dependencies`); the `Dockerfile` installs the package with `pip install .`, so it
+picks up `torch` automatically.
 
 > **Note:** `torch>=2.2` installs the default wheel (which on Linux includes CUDA). A
 > CPU-only image can install the `+cpu` build via PyTorch's CPU index — that's an
@@ -582,10 +583,11 @@ AttributeError: 'NoneType' object has no attribute 'keys'
 **Root cause.** `train.py` has two functions: `launch_train(...)` (the
 **programmatic API** — plain Python kwargs, used by tests/SDK) and
 `cli_launch_train(...)` (the **click command** that parses `--source` etc.). The
-`setup.cfg` console script pointed at the *plain* one:
+console-script entry point (`pyproject.toml` `[project.scripts]`) pointed at the
+*plain* one:
 
-```ini
-train = syngen.train:launch_train      # ← parses nothing; argv ignored
+```toml
+train = "syngen.train:launch_train"    # ← parses nothing; argv ignored
 ```
 
 So setuptools' wrapper called `launch_train()` with **no arguments**; everything
@@ -593,9 +595,9 @@ defaulted to `None` and it crashed in schema validation.
 
 **Fix.** Point the entry points at the click commands:
 
-```ini
-train = syngen.train:cli_launch_train
-infer = syngen.infer:cli_launch_infer
+```toml
+train = "syngen.train:cli_launch_train"
+infer = "syngen.infer:cli_launch_infer"
 ```
 
 > 🔁 Requires a reinstall (`pip install -e .` / `pip install .`) to regenerate the
