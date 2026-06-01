@@ -1246,7 +1246,7 @@ def test_validate_uq_keys_with_duplicates_emits_warning(mock_fetch_config, mock_
     dataset._validate_uq_keys()
     mock_logger.warning.assert_called_once()
     warning_msg = mock_logger.warning.call_args[0][0]
-    assert "are not unique" in warning_msg
+    assert "contains duplicates" in warning_msg
     assert "Please check the original data." in warning_msg
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

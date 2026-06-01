@@ -292,7 +292,7 @@ class Dataset:
             not_all_na_mask = ~all_na_mask
             if self.df[not_all_na_mask][key_columns].duplicated().any():
                 warning_msg = (
-                    f"Values in the unique key '{key_name}' are not unique. "
+                    f"The unique key '{key_name}' contains duplicates."
                 )
                 warnings.append(warning_msg)
 
