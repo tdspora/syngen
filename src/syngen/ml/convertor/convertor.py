@@ -270,7 +270,8 @@ class Convertor:
         (`dict`, `list`, `tuple`, `numpy.ndarray`) to JSON strings. Binary columns
         are decoded to strings using the most popular detected encoding.
         """
-        for column in self._get_serializable_columns():
+        serializable_columns = self._get_serializable_columns()
+        for column in serializable_columns:
             if column not in self.preprocessed_df.columns:
                 continue
             data_type = self.custom_schema["fields"].get(column)
