@@ -17,13 +17,7 @@ def _make_binary_convertor(df: pd.DataFrame, column: str) -> Convertor:
     AvroConvertor maps bytes → string (no binary path), so we use the base
     class directly and configure it to treat `column` as binary.
     """
-    convertor = Convertor.__new__(Convertor)
-    convertor.original_schema = {column: "binary"}
-    convertor.df = df
-    convertor.preprocessed_df = df.copy()
-    convertor.excluded_dtypes = (str, bytes, object, bool, list, dict)
-    convertor.custom_schema = {"fields": {column: "binary"}, "format": "PyArrow"}
-    convertor.complex_types = ["list", "map", "struct", "dictionary"]
+    convertor = Convertor(original_schema={column: "binary"}, df=df)
     return convertor
 
 
