@@ -50,7 +50,6 @@ dependencies = [
     "scikit_learn==1.5.*",
     "scipy==1.14.*",
     "seaborn==0.13.*",
-    "setuptools==78.1.*",
     "tensorflow==2.15.*",
     "tornado==6.5.*",
     "tqdm==4.66.3",
