@@ -3,6 +3,7 @@ attrs
 avro
 base32-crockford
 boto3
+chardet
 click
 cryptography
 exrex
