@@ -93,6 +93,8 @@ class TrainConfig:
                            f"checkpoints/stat_keys/",
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
+            "custom_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                                  f"custom_schema_{self.slugify_table_name}.pkl",
             "initial_order_of_columns_path": (
                 f"model_artifacts/tmp_store/{self.slugify_table_name}"
                 f"/initial_order_of_columns_{self.slugify_table_name}.pkl"
@@ -170,6 +172,8 @@ class InferConfig:
         self.paths.update({
             "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
                                     f"original_schema_{self.slugify_table_name}.pkl",
+            "custom_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
+                                  f"custom_schema_{self.slugify_table_name}.pkl",
             "path_to_flatten_metadata":
                 f"model_artifacts/system_store/flatten_configs/"
                 f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",

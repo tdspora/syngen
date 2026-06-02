@@ -19,12 +19,18 @@ class Convertor:
         "image/", "audio/", "video/", "application/", "font/"
     )
 
-    def __init__(self, original_schema: Optional[Dict] = None, df: pd.DataFrame = None):
+    def __init__(
+        self,
+        original_schema: Optional[Dict] = None,
+        df: pd.DataFrame = None,
+        serialize_complex_types: bool = True
+    ):
         self.original_schema = original_schema
         self.df = df
         self.excluded_dtypes: Tuple = (str, bytes, datetime, date, bool, list, dict)
         self.custom_schema = {}
         self.preprocessed_df = self.df.copy()
+        self.serialize_complex_types = serialize_complex_types
 
     def _check_dtype_or_nan(self, included_dtypes: Tuple, excluded_dtypes: Tuple = ()):
         """
@@ -294,7 +300,10 @@ class Convertor:
                     self._cast_columns_if_schema_is_not_provided()
                 else:
                     self._cast_columns_to_schema_types()
-                    if getattr(self, "complex_types", None) is not None:
+                    if (
+                        getattr(self, "complex_types", None) is not None
+                        and self.serialize_complex_types is True
+                    ):
                         self._cast_values_to_json()
                     self._cast_values_to_string()
             except Exception as e:
@@ -318,8 +327,13 @@ class AvroConvertor(Convertor):
     Class for converting the fetched avro schema
     """
 
-    def __init__(self, original_schema: Optional[Dict] = None, df: pd.DataFrame = None):
-        super().__init__(original_schema, df)
+    def __init__(
+        self,
+        original_schema: Optional[Dict] = None,
+        df: pd.DataFrame = None,
+        serialize_complex_types: bool = True
+    ):
+        super().__init__(original_schema, df, serialize_complex_types)
         self.original_schema = original_schema or {}
         self.complex_types = {"array", "map", "record", "enum", "fixed"}
         self.custom_schema = self._get_custom_schema()
