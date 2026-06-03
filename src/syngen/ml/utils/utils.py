@@ -186,6 +186,8 @@ def convert_to_date(
     represented dates in a column
     """
     date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
+    if pd.isnull(value):
+        return np.nan
     dt = timestamp_to_datetime(int(value))
     if to_datetime_conversion:
         return dt

@@ -147,10 +147,16 @@ def test_convert_date_to_timestamp(value, date_format, na_values, expected_resul
     (1675209600.0, "%Y-%m-%d", True, datetime(2023, 2, 1, 0, 0)),
     (1680480000.0, "%Y-%m-%d", True, datetime(2023, 4, 3, 0, 0)),
     (1685923200.0, "%Y-%m-%d", True, datetime(2023, 6, 5, 0, 0)),
+    # NaN value — must not raise, returns np.nan
+    (float("nan"), "%d-%m-%Y", False, float("nan")),
 ])
 def test_convert_to_date(value, date_format, expected_result, to_datetime_conversion, rp_logger):
     rp_logger.info("Test the function 'convert_to_date'")
-    assert convert_to_date(value, date_format, to_datetime_conversion) == expected_result
+    result = convert_to_date(value, date_format, to_datetime_conversion)
+    if isinstance(expected_result, float) and np.isnan(expected_result):
+        assert isinstance(result, float) and np.isnan(result)
+    else:
+        assert result == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
