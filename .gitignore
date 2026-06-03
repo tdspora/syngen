@@ -59,3 +59,4 @@ dist/
 
 # Configuration file for CLAUDE agents
 AGENTS.md
+tmp/
