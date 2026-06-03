@@ -1259,7 +1259,7 @@ class Dataset:
             return mapper
         except FileNotFoundError:
             logger.warning(
-                f"The mapper for the {fk_column} text key is not found. "
+                f"The mapper for the '{fk_column}' text key is not found. "
                 f"Simple sampling will be used."
             )
 
