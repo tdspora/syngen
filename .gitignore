@@ -60,3 +60,4 @@ dist/
 # Configuration file for CLAUDE agents
 AGENTS.md
 tmp/
+.claude/CLAUDE.local.md
