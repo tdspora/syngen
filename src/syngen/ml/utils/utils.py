@@ -138,10 +138,15 @@ def datetime_to_timestamp(dt, date_format):
     """
     if pd.isnull(dt):
         return np.nan
+    if isinstance(dt, np.datetime64):
+        # Convert numpy.datetime64 to a Python datetime via pandas Timestamp
+        dt = pd.Timestamp(dt).to_pydatetime()
     if isinstance(dt, str):
         return datetime_str_to_timestamp(dt, date_format)
     if isinstance(dt, datetime):
-        return dt.timestamp()
+        # Strip timezone to stay consistent with datetime_str_to_timestamp,
+        # which always strips tz via .replace(tzinfo=None) before computing delta
+        return (dt.replace(tzinfo=None) - datetime(1970, 1, 1)).total_seconds()
     if isinstance(dt, date):
         # Convert date to datetime at midnight
         return datetime.combine(dt, datetime.min.time()).timestamp()

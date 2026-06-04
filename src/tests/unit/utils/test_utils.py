@@ -72,7 +72,8 @@ def test_datetime_to_timestamp(rp_logger):
         ("9999-12-31", 253402214400, "%Y-%m-%d"),
         ("10000-12-31", 253402300800, "%Y-%m-%d"),
         (np.nan, np.nan, "%Y-%m-%d"),
-        ("31-11-28", 1953590400.0, "%Y-%m-%d")
+        ("31-11-28", 1953590400.0, "%Y-%m-%d"),
+        (np.datetime64("2023-01-01"), 1672531200.0, "%Y-%m-%d")
     ]
     rp_logger.info("Test the method 'datetime_to_timestamp'")
     for date_time, expected_timestamp, date_format in test_cases:
