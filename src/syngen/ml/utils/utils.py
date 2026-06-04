@@ -148,19 +148,23 @@ def datetime_to_timestamp(dt, date_format):
     if isinstance(dt, str):
         return datetime_str_to_timestamp(dt, date_format)
     if isinstance(dt, datetime):
-        return dt.timestamp()
+        # Strip timezone to stay consistent with datetime_str_to_timestamp,
+        # which always strips tz via .replace(tzinfo=None) before computing delta
+        return (dt.replace(tzinfo=None) - datetime(1970, 1, 1)).total_seconds()
     if isinstance(dt, date):
         # Convert date to datetime at midnight
         return datetime.combine(dt, datetime.min.time()).timestamp()
 
 
-def timestamp_to_datetime(timestamp: int, delta=False):
+def timestamp_to_datetime(timestamp: float, delta=False):
     """
     Convert the timestamp to the datetime object or timedelta object
     """
     # Calculate the number of seconds in the UNIX epoch and the number of seconds left
     if pd.isnull(timestamp):
         return np.nan
+    
+    timestamp = int(timestamp)
 
     if timestamp >= MAX_ALLOWED_TIME_MS:
         return datetime(9999, 12, 31, 23, 59, 59, 999999)
@@ -198,7 +202,7 @@ def convert_to_date(
         # NaN to integer". Mirror ``timestamp_to_datetime``'s null handling so a
         # non-finite generated value degrades to NaN instead of crashing.
         return np.nan
-    dt = timestamp_to_datetime(int(value))
+    dt = timestamp_to_datetime(value)
     if to_datetime_conversion:
         return dt
     return dt.strftime(date_format)
