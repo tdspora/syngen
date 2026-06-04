@@ -138,6 +138,13 @@ def datetime_to_timestamp(dt, date_format):
     """
     if pd.isnull(dt):
         return np.nan
+    if isinstance(dt, np.datetime64):
+        # numpy.datetime64 (e.g. date columns loaded from Parquet/Delta) is not
+        # an instance of datetime/date, so without this branch it would fall
+        # through and return None - silently turning the date feature into NaN
+        # and poisoning model training. Normalise it to a pandas Timestamp
+        # (a datetime subclass) so it is handled by the datetime branch below.
+        dt = pd.Timestamp(dt)
     if isinstance(dt, str):
         return datetime_str_to_timestamp(dt, date_format)
     if isinstance(dt, datetime):
@@ -186,6 +193,11 @@ def convert_to_date(
     represented dates in a column
     """
     date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
+    if pd.isnull(value):
+        # Guard against NaN/None: ``int(value)`` raises "cannot convert float
+        # NaN to integer". Mirror ``timestamp_to_datetime``'s null handling so a
+        # non-finite generated value degrades to NaN instead of crashing.
+        return np.nan
     dt = timestamp_to_datetime(int(value))
     if to_datetime_conversion:
         return dt
