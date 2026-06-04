@@ -148,8 +148,9 @@ def datetime_to_timestamp(dt, date_format):
         # which always strips tz via .replace(tzinfo=None) before computing delta
         return (dt.replace(tzinfo=None) - datetime(1970, 1, 1)).total_seconds()
     if isinstance(dt, date):
-        # Convert date to datetime at midnight
-        return datetime.combine(dt, datetime.min.time()).timestamp()
+        # Convert date to datetime at midnight, compute delta from epoch
+        # (avoid .timestamp() which applies the local OS timezone offset)
+        return (datetime.combine(dt, datetime.min.time()) - datetime(1970, 1, 1)).total_seconds()
 
 
 def timestamp_to_datetime(timestamp: int, delta=False):
@@ -192,6 +193,8 @@ def convert_to_date(
     Convert timestamp to date string values or values of date objects
     represented dates in a column
     """
+    if pd.isnull(value):
+        return np.nan
     date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
     dt = timestamp_to_datetime(value)
     if pd.isnull(dt):

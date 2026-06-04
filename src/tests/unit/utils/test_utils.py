@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
 import numpy as np
 
@@ -73,7 +73,12 @@ def test_datetime_to_timestamp(rp_logger):
         ("10000-12-31", 253402300800, "%Y-%m-%d"),
         (np.nan, np.nan, "%Y-%m-%d"),
         ("31-11-28", 1953590400.0, "%Y-%m-%d"),
-        (np.datetime64("2023-01-01"), 1672531200.0, "%Y-%m-%d")
+        # numpy.datetime64 — converted via pd.Timestamp, treated as naive
+        (np.datetime64("2023-01-01"), 1672531200.0, "%Y-%m-%d"),
+        # tz-aware datetime — tz is stripped, wall-clock time used as-is
+        (datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=5))), 1672531200.0, "%Y-%m-%d"),
+        # datetime.date object — combined with midnight, delta from epoch
+        (date(2023, 1, 1), 1672531200.0, "%Y-%m-%d"),
     ]
     rp_logger.info("Test the method 'datetime_to_timestamp'")
     for date_time, expected_timestamp, date_format in test_cases:
@@ -142,6 +147,8 @@ def test_convert_date_to_timestamp(value, date_format, na_values, expected_resul
 
 
 @pytest.mark.parametrize("value, date_format, to_datetime_conversion, expected_result", [
+    # NaN input — must return np.nan without crashing on int(nan)
+    (np.nan, "%d-%m-%Y", False, np.nan),
     (1675209600.0, "%d-%m-%Y", False, "01-02-2023"),
     (1680480000.0, "%d-%m-%Y", False, "03-04-2023"),
     (1685923200.0, "%d-%m-%Y", False, "05-06-2023"),
