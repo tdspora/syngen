@@ -457,6 +457,7 @@ class VAEWrapper(BaseWrapper):
         Define batched dataset for training vae
         """
         transformed_data = self.dataset.transform(df)
+        self._validate_transformed_data(transformed_data)
 
         feature_datasets = []
         options = tf.data.Options()
@@ -467,6 +468,43 @@ class VAEWrapper(BaseWrapper):
 
         dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
         return dataset.batch(self.batch_size, drop_remainder=True)
+
+    @staticmethod
+    def _find_non_finite_features(
+        feature_names: List[str], transformed_data: List
+    ) -> List[str]:
+        """
+        Return the names of features whose transformed (model-input) arrays
+        contain NaN or inf values.
+        """
+        invalid_features = []
+        for name, array in zip(feature_names, transformed_data):
+            array = np.asarray(array)
+            if np.issubdtype(array.dtype, np.number) and not np.isfinite(array).all():
+                invalid_features.append(name)
+        return invalid_features
+
+    def _validate_transformed_data(self, transformed_data: List):
+        """
+        Guardrail: refuse to start training on data that contains NaN/inf.
+
+        Non-finite values in the transformed feature arrays (for example a date
+        column that failed to convert from numpy.datetime64) would silently
+        poison the VAE and produce a NaN model whose generated output later
+        crashes during inference. Fail fast with a clear, data-free message
+        naming the offending feature(s) instead.
+        """
+        invalid_features = self._find_non_finite_features(
+            list(self.dataset.features.keys()), transformed_data
+        )
+        if invalid_features:
+            raise ValueError(
+                "Non-finite values (NaN/inf) were found in the transformed "
+                f"training data for feature(s): {invalid_features}. Training "
+                "has been aborted to avoid producing a NaN model. This usually "
+                "indicates source values that could not be encoded (for example "
+                "numpy.datetime64 date columns from Parquet/Delta sources)."
+            )
 
     def _train_step(self, batch: Tuple[tf.Tensor]):
         with tf.GradientTape() as tape:
