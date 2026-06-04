@@ -148,12 +148,13 @@ def datetime_to_timestamp(dt, date_format):
     if isinstance(dt, str):
         return datetime_str_to_timestamp(dt, date_format)
     if isinstance(dt, datetime):
-        # Strip timezone to stay consistent with datetime_str_to_timestamp,
+        # Strip timezone to stay consistent with 'datetime_str_to_timestamp',
         # which always strips tz via .replace(tzinfo=None) before computing delta
         return (dt.replace(tzinfo=None) - datetime(1970, 1, 1)).total_seconds()
     if isinstance(dt, date):
-        # Convert date to datetime at midnight
-        return datetime.combine(dt, datetime.min.time()).timestamp()
+        # Convert date to datetime at midnight, compute delta from epoch
+        # (avoid .timestamp() which applies the local OS timezone offset)
+        return (datetime.combine(dt, datetime.min.time()) - datetime(1970, 1, 1)).total_seconds()
 
 
 def timestamp_to_datetime(timestamp: float, delta=False):
@@ -163,7 +164,7 @@ def timestamp_to_datetime(timestamp: float, delta=False):
     # Calculate the number of seconds in the UNIX epoch and the number of seconds left
     if pd.isnull(timestamp):
         return np.nan
-    
+
     timestamp = int(timestamp)
 
     if timestamp >= MAX_ALLOWED_TIME_MS:
