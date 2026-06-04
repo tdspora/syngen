@@ -197,8 +197,6 @@ def convert_to_date(
         return np.nan
     date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
     dt = timestamp_to_datetime(value)
-    if pd.isnull(dt):
-        return np.nan
     if to_datetime_conversion:
         return dt
     return dt.strftime(date_format)
