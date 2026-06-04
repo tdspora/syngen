@@ -1165,7 +1165,12 @@ class Clustering(BaseMetric):
             )
             return None
         self.merged_transformed = self.__preprocess_data(self.merged)
-
+        if len(self.merged_transformed) < optimal_clust_num:
+            logger.warning(
+                "No clustering metric will be formed: not enough samples "
+                "in merged dataset after dropping null values"
+            )
+            return None
         statistics = self.__calculate_clusters(optimal_clust_num)
         statistics.columns = ["cluster", "dataset", "count"]
 
