@@ -155,6 +155,8 @@ def timestamp_to_datetime(timestamp: int, delta=False):
     if pd.isnull(timestamp):
         return np.nan
 
+    timestamp = int(timestamp)
+
     if timestamp >= MAX_ALLOWED_TIME_MS:
         return datetime(9999, 12, 31, 23, 59, 59, 999999)
     elif timestamp <= MIN_ALLOWED_TIME_MS:
@@ -186,9 +188,9 @@ def convert_to_date(
     represented dates in a column
     """
     date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
-    if pd.isnull(value):
+    dt = timestamp_to_datetime(value)
+    if pd.isnull(dt):
         return np.nan
-    dt = timestamp_to_datetime(int(value))
     if to_datetime_conversion:
         return dt
     return dt.strftime(date_format)
