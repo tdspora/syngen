@@ -904,9 +904,7 @@ def test_unflatten_generated_data_with_mixed_data(rp_logger):
 ])
 @patch.object(PreprocessHandler, "_save_initial_order_of_columns")
 @patch.object(PreprocessHandler, "_save_original_schema")
-@patch.object(PreprocessHandler, "_save_custom_schema")
 def test_run(
-    mock_save_custom_schema,
     mock_save_original_schema,
     mock_save_initial_order_of_columns,
     drop_null,
@@ -946,9 +944,7 @@ def test_run(
 
 @patch.object(PreprocessHandler, "_save_initial_order_of_columns")
 @patch.object(PreprocessHandler, "_save_original_schema")
-@patch.object(PreprocessHandler, "_save_custom_schema")
 def test_run_with_avro_file(
-    mock_save_custom_schema,
     mock_save_original_schema,
     mock_save_initial_order_of_columns,
     rp_logger
@@ -1004,9 +1000,7 @@ def test_run_with_avro_file(
 @patch.object(PreprocessHandler, "_save_flatten_metadata")
 @patch.object(PreprocessHandler, "_save_initial_order_of_columns")
 @patch.object(PreprocessHandler, "_save_original_schema")
-@patch.object(PreprocessHandler, "_save_custom_schema")
 def test_run_with_table_containing_json_columns(
-    mock_save_custom_schema,
     mock_save_original_schema,
     mock_save_initial_order_of_columns,
     mock_save_flatten_metadata,
@@ -1417,9 +1411,7 @@ def test_run_script_when_script_does_not_exist(
 @patch.object(PreprocessHandler, "_save_flatten_metadata")
 @patch.object(PreprocessHandler, "_save_initial_order_of_columns")
 @patch.object(PreprocessHandler, "_save_original_schema")
-@patch.object(PreprocessHandler, "_save_custom_schema")
 def test_run_with_custom_loader(
-    mock_save_custom_schema,
     mock_save_original_schema,
     mock_save_initial_order_of_columns,
     mock_save_flatten_metadata,

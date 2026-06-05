@@ -76,16 +76,6 @@ class PreprocessHandler(Processor):
         )
         DataLoader(path).save_data(data=self.original_schema)
 
-    def _save_custom_schema(self):
-        """
-        Save the custom schema of the original data
-        """
-        path = (
-            f"model_artifacts/tmp_store/{slugify(self.table_name)}"
-            f"/custom_schema_{slugify(self.table_name)}.pkl"
-        )
-        DataLoader(path).save_data(data=self.schema)
-
     def _save_initial_order_of_columns(self):
         """
         Save the initial order of columns of the original data
@@ -126,7 +116,6 @@ class PreprocessHandler(Processor):
         self._load_source()
         self._check_if_data_is_empty()
         self._save_original_schema()
-        self._save_custom_schema()
         self._save_initial_order_of_columns()
         preprocessed_data = self._preprocess_data()
         return preprocessed_data

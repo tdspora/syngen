@@ -340,7 +340,8 @@ class Convertor:
                     f"Restoring the potentially nested structure of the column - '{column}' "
                     f"with the `map` data type. "
                     "The process of restoring the original structure of the column "
-                    "is based on the assumption that the column contains lists of primitive values. "
+                    "is based on the assumption that the column contains lists "
+                    "of primitive values. "
                     "If this is not the case, there might be issues with the "
                     "consistency between the data and the provided schema."
                 )
