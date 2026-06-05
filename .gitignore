@@ -33,7 +33,7 @@ env/
 venv/
 venv*/
 .venv*/
-testenv_3.9/
+testenv_3.*/
 ENV/
 env.bak/
 venv.bak/
@@ -59,5 +59,8 @@ dist/
 
 # Configuration file for CLAUDE agents
 AGENTS.md
-tmp/
-.claude/CLAUDE.local.md
+
+# Claude Code local overrides (never commit)
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/.mcp.local.json
