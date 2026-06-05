@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 
 import numpy as np
 from numpy import dtype
@@ -300,6 +301,57 @@ def test_preprocess_df_if_column_is_datetime(rp_logger):
 
     convertor = AvroConvertor({"Test": ["string"]}, df)
     assert convertor.preprocessed_df.dtypes.to_dict() == {"Test": "string[python]"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("avro_type, column", [
+    # Avro 'date' logical type -> pandavro yields object dtype of datetime.date
+    (
+        {"type": "int", "logicalType": "date"},
+        pd.Series([date(2023, 1, 1), date(2023, 1, 2), date(2023, 1, 3)], dtype="object"),
+    ),
+    # nullable 'date' (union with null)
+    (
+        ["null", {"type": "int", "logicalType": "date"}],
+        pd.Series([date(2023, 1, 1), None, date(2023, 1, 3)], dtype="object"),
+    ),
+    # Avro 'timestamp-micros' -> pandavro yields tz-aware datetime64[ns, UTC]
+    (
+        {"type": "long", "logicalType": "timestamp-micros"},
+        pd.to_datetime(
+            pd.Series(["2023-01-01", "2023-01-02", "2023-01-03"])
+        ).dt.tz_localize("UTC"),
+    ),
+    # Avro 'timestamp-millis' (tz-naive datetime64)
+    (
+        {"type": "long", "logicalType": "timestamp-millis"},
+        pd.to_datetime(pd.Series(["2023-01-01", "2023-01-02", "2023-01-03"])),
+    ),
+    # Avro 'time-millis' logical type
+    (
+        {"type": "int", "logicalType": "time-millis"},
+        pd.Series([date(2023, 1, 1), date(2023, 1, 2), date(2023, 1, 3)], dtype="object"),
+    ),
+])
+def test_preprocess_df_maps_avro_logical_date_types_to_date(avro_type, column, rp_logger):
+    """EPMCTDM-7581 (Avro counterpart): Avro date/time/timestamp logical types must
+    be mapped to the unified 'date' type (like Parquet/Delta via
+    PyArrowSchemaConvertor) instead of 'int'. Previously they were mapped to 'int',
+    and 'Convertor._update_data_types' crashed with a TypeError when calling
+    '.astype' on the loaded datetime.date / datetime64 column."""
+    rp_logger.info(
+        "Initiating the instance of the class AvroConvertor with the schema "
+        "containing one column with an Avro date/time/timestamp logical type"
+    )
+    df = pd.DataFrame({"Test": column})
+    expected_dtype = df["Test"].dtype
+
+    convertor = AvroConvertor({"Test": avro_type}, df)
+
+    assert convertor.converted_schema["fields"] == {"Test": "date"}
+    # The date column must be preserved as-is - no numeric coercion, no crash.
+    assert convertor.preprocessed_df["Test"].dtype == expected_dtype
+    assert not pd.api.types.is_numeric_dtype(convertor.preprocessed_df["Test"])
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

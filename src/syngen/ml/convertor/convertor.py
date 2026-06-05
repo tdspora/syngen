@@ -146,6 +146,21 @@ class AvroConvertor(Convertor):
     Class for converting the fetched avro schema
     """
 
+    # Avro logical types that represent a date/time and must be modelled as a
+    # date feature. They are mapped to the unified "date" type (mirroring how
+    # PyArrowSchemaConvertor maps Parquet/Delta date & timestamp types). Without
+    # this they would be mapped to "int" and crash in 'Convertor._update_data_types'
+    # when the loaded column holds 'datetime.date' / 'datetime64' objects.
+    DATE_LOGICAL_TYPES = frozenset({
+        "date",
+        "time-millis",
+        "time-micros",
+        "timestamp-millis",
+        "timestamp-micros",
+        "local-timestamp-millis",
+        "local-timestamp-micros",
+    })
+
     def __init__(self, schema, df):
         super().__init__(schema, df)
         self.complex_types = {"array", "map", "record", "enum", "fixed"}
@@ -168,15 +183,31 @@ class AvroConvertor(Convertor):
                 return {"null"}
             return {avro_type}
 
+        def _extract_logical_types(avro_type) -> set[str]:
+            if isinstance(avro_type, list):
+                logical: set[str] = set()
+                for t in avro_type:
+                    logical |= _extract_logical_types(t)
+                return logical
+            if isinstance(avro_type, dict):
+                logical = _extract_logical_types(avro_type.get("type"))
+                if avro_type.get("logicalType"):
+                    logical.add(avro_type["logicalType"])
+                return logical
+            return set()
+
         converted_schema = dict()
         converted_schema["fields"] = dict()
         schema = schema if schema else dict()
         for column, data_type in schema.items():
             fields = converted_schema["fields"]
             type_names = _extract_type_names(data_type)
+            logical_types = _extract_logical_types(data_type)
 
             if "boolean" in type_names:
                 fields[column] = "boolean"
+            elif logical_types & self.DATE_LOGICAL_TYPES:
+                fields[column] = "date"
             elif type_names & {"int", "long"}:
                 fields[column] = "int"
             elif type_names & {"float", "double"}:

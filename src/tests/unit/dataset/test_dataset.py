@@ -977,6 +977,58 @@ def test_handle_missing_values_in_numeric_columns_in_avro_file(mock_fetch_config
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_avro_logical_date_columns_assigned_as_date_columns(mock_fetch_config, rp_logger):
+    """EPMCTDM-7581 (Avro counterpart): columns typed as 'date' in an Avro schema
+    (from date/timestamp logical types) must be classified as date columns - with
+    'to_datetime_conversion' enabled - exactly like Parquet/Delta date columns,
+    instead of being treated as integers (which crashed at load time)."""
+    rp_logger.info(
+        "Test that Avro 'date' schema columns are classified as date columns "
+        "with datetime conversion enabled"
+    )
+    metadata = {"mock_table": {"keys": {}}}
+
+    dates = pd.date_range("2015-01-01", periods=100, freq="D")
+    data = {
+        # Avro 'date' logical type -> object dtype of datetime.date
+        "date_logical": [d.date() for d in dates],
+        # Avro 'timestamp' logical type -> tz-aware datetime64[ns, UTC]
+        "ts_logical": dates.tz_localize("UTC"),
+        "str_col": [f"value_{i}" for i in range(100)],
+        "int_col": range(1, 101),
+    }
+    df = pd.DataFrame(data)
+
+    schema = {
+        "format": "Avro",
+        "fields": {
+            "date_logical": "date",
+            "ts_logical": "date",
+            "str_col": "string",
+            "int_col": "int",
+        },
+    }
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+
+    assert {"date_logical", "ts_logical"} <= mock_dataset.date_columns
+    assert mock_dataset.to_datetime_conversion["date_logical"] is True
+    assert mock_dataset.to_datetime_conversion["ts_logical"] is True
+    assert "int_col" in mock_dataset.int_columns
+    assert "str_col" in mock_dataset.str_columns
+    assert mock_dataset.date_columns.isdisjoint(mock_dataset.int_columns)
+    assert mock_dataset.date_columns.isdisjoint(mock_dataset.str_columns)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
 def test_cast_to_numeric_in_avro_file(mock_fetch_config, rp_logger):
     rp_logger.info(
         "Test the process of casting the string values to numeric provided in a '.avro' file"
