@@ -714,6 +714,12 @@ Then install it in editable mode.
     pip install -e .
 ```
 
+To also install the test dependencies (`pytest` and friends), use the `test` extra:
+
+```sh
+    pip install -e ".[test]"
+```
+
 ### Additional Information
 
 - **Homebrew**: If you do not have Homebrew installed, you can install it by running:
