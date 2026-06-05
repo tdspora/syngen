@@ -83,7 +83,6 @@ class Convertor:
         Cast DataFrame column types if the schema is not provided
         just based on the values contained in columns
         """
-
         for column in self.preprocessed_df.columns:
             # Check for boolean first (bool is subclass of int in Python)
             if self.preprocessed_df[column].map(
@@ -111,11 +110,10 @@ class Convertor:
 
     def _get_serializable_columns_mapping(self):
         """
-        Get the mapping of columns and their data types with complex data types 
+        Get the mapping of columns and their data types with complex data types
         (dict, list, tuple, 'numpy.ndarray') or binary)
         that require serialization to JSON strings
         """
-
         return {
             column: data_type
             for column, data_type in self.custom_schema.get("fields", {}).items()
@@ -150,8 +148,9 @@ class Convertor:
 
     def _serialize_complex_value(self, x, column_name):
         """
-        Serialize complex value (dict, list, tuple, 'numpy.ndarray') to JSON string. 
-        Put the column name as a key for list, tuple and 'numpy.ndarray' types to be able to flatten it later. 
+        Serialize complex value (dict, list, tuple, 'numpy.ndarray') to JSON string.
+        Put the column name as a key for list, tuple and 'numpy.ndarray' types
+        to be able to flatten it later.
         """
         if isinstance(x, np.ndarray):
             return json.dumps(dict({f"{column_name}": x.tolist()}))
@@ -187,8 +186,8 @@ class Convertor:
     ) -> bool:
         """
         Validate that every value in a binary column is a decodable plain-text
-        payload. Returns True when decoding can proceed (single encoding detected
-        and stored in custom_schema). Returns False and emits a warning when
+        payload. Returns `True` when decoding can proceed (single encoding detected
+        and stored in custom_schema). Returns `False` and emits a warning when
         decoding should be skipped:
           - non-decodable MIME type (`image/*`, `audio/*`, `video/*`, `application/*`,
             `font/*`, `text/html`, `text/xml`, `text/x-python`);
@@ -274,21 +273,20 @@ class Convertor:
 
         self.preprocessed_df[column] = self.preprocessed_df[column].map(_decode)
 
-    def to_tuples_recursive(self, x):
+    def _to_tuples_recursive(self, x):
         """
-        Recursively convert nested lists into tuples (for PyArrow map type).
+        Recursively convert nested lists into tuples (for PyArrow `map` data type).
         """
         # Handle null/NaN safely (scalars only)
         if self._is_null(x):
             return x
 
         # If it's a list-like collection, recurse into each element
-        if isinstance(x, (list, np.ndarray)):
-            return tuple(self.to_tuples_recursive(i) for i in x)
+        if isinstance(x, (list, np.ndarray)) and all(not isinstance(item, list) for item in x):
+            return tuple(self._to_tuples_recursive(i) for i in x)
 
         # Base case: primitive value (str, int, float, None, ...)
         return x
-
 
     @staticmethod
     def _is_null(x):
@@ -315,10 +313,11 @@ class Convertor:
                 self._cast_binary_column(column)
             else:
                 self.preprocessed_df[column] = (
-                    self.preprocessed_df[column].map(lambda x: self._serialize_complex_value(x, column))
+                    self.preprocessed_df[column].map(
+                        lambda x: self._serialize_complex_value(x, column)
+                    )
                 )
-                
-                
+
     def _deserialize_values_from_json(self):
         """
         Deserialize JSON values to convert them to the original format
@@ -333,19 +332,26 @@ class Convertor:
                 )
             if "map" in data_type:
                 self.preprocessed_df[column] = (
-                    self.preprocessed_df[column].map(lambda x: json.loads(x).get(f"{column}") if not pd.isna(x) else x)
+                    self.preprocessed_df[column].map(
+                        lambda x: json.loads(x).get(f"{column}") if not pd.isna(x) else x
+                    )
                 )
-                self.preprocessed_df[column] = self.preprocessed_df[column].map(lambda x: [
-    [("a", 1), ("b", 2)],   # populated map
-    [],                      # empty map {}
-    None,                    # null map
-    [("x", None)],           # key with null value
-])
-                self.preprocessed_df[column] = (self.preprocessed_df[column].map(self.to_tuples_recursive))
-                print(self.preprocessed_df[column].values)
+                logger.warning(
+                    f"Restoring the potentially nested structure of the column - '{column}' "
+                    f"with the `map` data type. "
+                    "The process of restoring the original structure of the column "
+                    "is based on the assumption that the column contains lists of primitive values. "
+                    "If this is not the case, there might be issues with the "
+                    "consistency between the data and the provided schema."
+                )
+                self.preprocessed_df[column] = self.preprocessed_df[column].map(
+                    lambda x: self._to_tuples_recursive(x) if not pd.isna(x) else x
+                )
             if "list" in data_type:
                 self.preprocessed_df[column] = (
-                    self.preprocessed_df[column].map(lambda x: json.loads(x).get(f"{column}") if not pd.isna(x) else x)
+                    self.preprocessed_df[column].map(
+                        lambda x: json.loads(x).get(f"{column}") if not pd.isna(x) else x
+                    )
                 )
 
     def _postprocess_encoded_columns(self):
@@ -354,7 +360,9 @@ class Convertor:
         """
         if self.custom_schema.get("encoding"):
             for column, encoding in self.custom_schema["encoding"].items():
-                self.preprocessed_df[column] = self.preprocessed_df[column].map(lambda x: x.encode(encoding) if not pd.isna(x) else x)
+                self.preprocessed_df[column] = self.preprocessed_df[column].map(
+                    lambda x: x.encode(encoding) if not pd.isna(x) else x
+                )
 
     def _preprocess_df(self):
         """
@@ -370,12 +378,18 @@ class Convertor:
                     self._cast_columns_to_schema_types()
                     self._cast_values_to_string()
                     if (
-                        any("complex" in data_type for data_type in self.custom_schema.get("fields", {}).values())
+                        any(
+                            "complex" in data_type
+                            for data_type in self.custom_schema.get("fields", {}).values()
+                        )
                         and self.serialize_complex_types is True
                     ):
                         self._cast_values_to_json()
                     if (
-                        any("complex" in data_type for data_type in self.custom_schema.get("fields", {}).values())
+                        any(
+                            "complex" in data_type
+                            for data_type in self.custom_schema.get("fields", {}).values()
+                        )
                         and self.serialize_complex_types is False
                     ):
                         self._postprocess_encoded_columns()
