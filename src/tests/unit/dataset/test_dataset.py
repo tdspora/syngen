@@ -994,6 +994,7 @@ def test_avro_logical_date_columns_assigned_as_date_columns(mock_fetch_config, r
         "date_logical": [d.date() for d in dates],
         # Avro 'timestamp' logical type -> tz-aware datetime64[ns, UTC]
         "ts_logical": dates.tz_localize("UTC"),
+        "date_string": [d.strftime("%Y-%m-%d") for d in dates],
         "str_col": [f"value_{i}" for i in range(100)],
         "int_col": range(1, 101),
     }
@@ -1003,6 +1004,7 @@ def test_avro_logical_date_columns_assigned_as_date_columns(mock_fetch_config, r
         "format": "Avro",
         "fields": {
             "date_logical": "date",
+            "date_string": "string",
             "ts_logical": "date",
             "str_col": "string",
             "int_col": "int",
@@ -1018,9 +1020,10 @@ def test_avro_logical_date_columns_assigned_as_date_columns(mock_fetch_config, r
     )
     mock_dataset.launch_detection()
 
-    assert {"date_logical", "ts_logical"} <= mock_dataset.date_columns
+    assert {"date_logical", "ts_logical", "date_string"} == mock_dataset.date_columns
     assert mock_dataset.to_datetime_conversion["date_logical"] is True
     assert mock_dataset.to_datetime_conversion["ts_logical"] is True
+    assert mock_dataset.to_datetime_conversion["date_string"] is False
     assert "int_col" in mock_dataset.int_columns
     assert "str_col" in mock_dataset.str_columns
     assert mock_dataset.date_columns.isdisjoint(mock_dataset.int_columns)
