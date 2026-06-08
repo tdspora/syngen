@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone, date, time
 
 import numpy as np
 
@@ -111,6 +111,52 @@ def test_datetime_to_timestamp_numpy_datetime64(rp_logger):
         assert int(calculated_timestamp) == int(expected_timestamp)
     # numpy NaT must degrade to NaN, never None or a crash
     assert np.isnan(datetime_to_timestamp(np.datetime64("NaT"), "%Y-%m-%d"))
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("time_value, expected_seconds", [
+    # midnight → 0
+    (time(0, 0, 0), 0.0),
+    # whole hours
+    (time(1, 0, 0), 3600.0),
+    (time(12, 0, 0), 43200.0),
+    (time(23, 0, 0), 82800.0),
+    # hours + minutes + seconds
+    (time(2, 30, 0), 9000.0),
+    (time(14, 30, 0), 52200.0),
+    (time(23, 59, 59), 86399.0),
+    # sub-second precision (microseconds)
+    (time(0, 0, 0, 500000), 0.5),
+    (time(10, 30, 45, 500000), 37845.5),
+    (time(0, 0, 0, 1), 0.000001),
+])
+def test_datetime_to_timestamp_datetime_time(time_value, expected_seconds, rp_logger):
+    """EPMCTDM-7585: 'datetime_to_timestamp' must handle datetime.time values
+    produced by fastavro for Avro 'time-millis' and 'time-micros' logical types.
+    Previously such inputs fell through all branches and returned None, turning
+    the time feature into NaN and aborting model training."""
+    rp_logger.info(
+        f"Test 'datetime_to_timestamp' with datetime.time input: {time_value}"
+    )
+    result = datetime_to_timestamp(time_value, "%H:%M:%S")
+
+    assert result is not None, "datetime.time must not return None (becomes NaN in training)"
+    assert not np.isnan(result), "datetime.time must not produce NaN"
+    assert np.isfinite(result), "datetime.time must produce a finite numeric value"
+    assert result == pytest.approx(expected_seconds), (
+        f"time({time_value}) should encode as {expected_seconds}s since midnight"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_datetime_to_timestamp_datetime_time_null_degrades_to_nan(rp_logger):
+    """Null sentinels passed alongside datetime.time values must still return NaN,
+    not crash or silently skip the null-guard branch."""
+    rp_logger.info(
+        "Test 'datetime_to_timestamp' null-guard is preserved for time-column nulls"
+    )
+    assert np.isnan(datetime_to_timestamp(np.nan, "%H:%M:%S"))
+    assert np.isnan(datetime_to_timestamp(None, "%H:%M:%S"))
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

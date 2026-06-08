@@ -515,7 +515,7 @@ class VaeInferHandler(BaseHandler):
         DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
             data=generated_data,
             format=get_context().get_config(),
-            schema=None
+            schema=self.original_schema
         )
 
     def handle(self, **kwargs):

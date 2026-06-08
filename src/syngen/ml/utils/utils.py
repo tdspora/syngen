@@ -3,7 +3,7 @@ import sys
 import re
 from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta, date, timezone, time as datetime_time
 import time
 from pathlib import Path
 import math
@@ -151,19 +151,42 @@ def datetime_to_timestamp(dt, date_format):
         # Strip timezone to stay consistent with 'datetime_str_to_timestamp',
         # which always strips tz via .replace(tzinfo=None) before computing delta
         return (dt.replace(tzinfo=None) - datetime(1970, 1, 1)).total_seconds()
+    if isinstance(dt, datetime_time):
+        # time-millis / time-micros Avro logical types decode as datetime.time objects.
+        # Encode as seconds since midnight so the date feature pipeline receives a
+        # finite numeric value instead of returning None (which becomes NaN).
+        return dt.hour * 3600 + dt.minute * 60 + dt.second + dt.microsecond / 1_000_000
     if isinstance(dt, date):
         # Convert date to datetime at midnight, compute delta from epoch
         # (avoid .timestamp() which applies the local OS timezone offset)
         return (datetime.combine(dt, datetime.min.time()) - datetime(1970, 1, 1)).total_seconds()
 
 
-def timestamp_to_datetime(timestamp: float, delta=False):
+def timestamp_to_datetime(
+    timestamp: float,
+    delta: bool = False,
+    restore_type: Optional[str] = None,
+):
     """
-    Convert the timestamp to the datetime object or timedelta object
+    Convert the timestamp to the datetime object or timedelta object.
+
+    ``restore_type`` controls the Python type returned for Avro date columns:
+      - ``"date"``     → ``datetime.date`` (Avro ``date`` logical type)
+      - ``"time"``     → ``datetime.time`` (Avro ``time-millis`` / ``time-micros``)
+      - ``"datetime"`` or ``None`` → ``datetime.datetime`` (existing behaviour)
     """
-    # Calculate the number of seconds in the UNIX epoch and the number of seconds left
     if pd.isnull(timestamp):
         return np.nan
+
+    # time-of-day columns are encoded as seconds since midnight (not since epoch).
+    # Reconstruct datetime.time before any epoch-based arithmetic.
+    if restore_type == "time":
+        seconds = float(timestamp)
+        h = int(seconds // 3600) % 24
+        m = int((seconds % 3600) // 60)
+        s = int(seconds % 60)
+        us = round((seconds - int(seconds)) * 1_000_000)
+        return datetime_time(h, m, s, us)
 
     timestamp = int(timestamp)
 
@@ -184,18 +207,30 @@ def timestamp_to_datetime(timestamp: float, delta=False):
     if delta:
         return delta_of_time
 
-    else:
-        return epoch_datetime + delta_of_time
+    dt = epoch_datetime + delta_of_time
+
+    if restore_type == "date":
+        return dt.date()
+
+    return dt
 
 
 def convert_to_date(
     value: Union[int, float],
     date_format: str,
-    to_datetime_conversion: bool = False
-) -> Union[str, Union[datetime, timedelta]]:
+    to_datetime_conversion: bool = False,
+    date_restore_type: Optional[str] = None,
+) -> Union[str, datetime, date, datetime_time, float]:
     """
     Convert timestamp to date string values or values of date objects
-    represented dates in a column
+    represented dates in a column.
+
+    ``date_restore_type`` carries the Avro logical-type hint from the convertor:
+      - ``"date"``     → return ``datetime.date``
+      - ``"time"``     → return ``datetime.time``
+      - ``"datetime"`` or ``None`` → return ``datetime.datetime``
+    When ``to_datetime_conversion`` is ``False`` the result is always a
+    formatted string regardless of ``date_restore_type``.
     """
     date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
     if pd.isnull(value):
@@ -203,9 +238,11 @@ def convert_to_date(
         # NaN to integer". Mirror ``timestamp_to_datetime``'s null handling so a
         # non-finite generated value degrades to NaN instead of crashing.
         return np.nan
-    dt = timestamp_to_datetime(value)
+    dt = timestamp_to_datetime(value, restore_type=date_restore_type)
     if to_datetime_conversion:
         return dt
+    if isinstance(dt, datetime_time):
+        return dt.strftime("%H:%M:%S.%f") if dt.microsecond else dt.strftime("%H:%M:%S")
     return dt.strftime(date_format)
 
 

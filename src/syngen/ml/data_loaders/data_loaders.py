@@ -336,7 +336,7 @@ class AvroLoader(BaseDataLoader):
         Save data in Avro Format
         """
         if df is not None:
-            pdx.to_avro(self.path, df, schema)
+           pdx.to_avro(self.path, df, schema)
 
     @staticmethod
     def _normalize_nullable_values_for_avro(

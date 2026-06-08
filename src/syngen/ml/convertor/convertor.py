@@ -1,6 +1,6 @@
 from typing import Dict, Tuple
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime, date, time
 
 import pandas as pd
 import numpy as np
@@ -14,7 +14,7 @@ class Convertor:
     """
     schema: Dict
     df: pd.DataFrame
-    excluded_dtypes: Tuple = (str, bytes, datetime, date, bool)
+    excluded_dtypes: Tuple = (str, bytes, datetime, date, time, bool)
 
     def _check_dtype_or_nan(self, included_dtypes: Tuple, excluded_dtypes: Tuple = ()):
         """
@@ -161,6 +161,18 @@ class AvroConvertor(Convertor):
         "local-timestamp-micros",
     })
 
+    # Maps each Avro date logical type to the Python type string used during
+    # inference to restore the original object type from a numeric timestamp.
+    LOGICAL_TYPE_TO_RESTORE: Dict = {
+        "date": "date",
+        "time-millis": "time",
+        "time-micros": "time",
+        "timestamp-millis": "datetime",
+        "timestamp-micros": "datetime",
+        "local-timestamp-millis": "datetime",
+        "local-timestamp-micros": "datetime",
+    }
+
     def __init__(self, schema, df):
         super().__init__(schema, df)
         self.complex_types = {"array", "map", "record", "enum", "fixed"}
@@ -191,6 +203,7 @@ class AvroConvertor(Convertor):
 
         converted_schema = dict()
         converted_schema["fields"] = dict()
+        converted_schema["date_logical_types"] = dict()
         schema = schema if schema else dict()
         for column, data_type in schema.items():
             fields = converted_schema["fields"]
@@ -198,8 +211,12 @@ class AvroConvertor(Convertor):
 
             if "boolean" in type_names:
                 fields[column] = "boolean"
-            elif logical_types & self.DATE_LOGICAL_TYPES:
+            elif matched_logical := logical_types & self.DATE_LOGICAL_TYPES:
                 fields[column] = "date"
+                avro_logical = next(iter(matched_logical))
+                converted_schema["date_logical_types"][column] = (
+                    self.LOGICAL_TYPE_TO_RESTORE[avro_logical]
+                )
             elif type_names & {"int", "long"}:
                 fields[column] = "int"
             elif type_names & {"float", "double"}:
