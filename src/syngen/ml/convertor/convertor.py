@@ -171,38 +171,30 @@ class AvroConvertor(Convertor):
         """
         Convert the schema of Avro file to the unified format
         """
-        def _extract_type_names(avro_type) -> set[str]:
+        def _extract_types(avro_type) -> tuple[set[str], set[str]]:
             if isinstance(avro_type, list):
                 names: set[str] = set()
-                for t in avro_type:
-                    names |= _extract_type_names(t)
-                return names
-            if isinstance(avro_type, dict):
-                return _extract_type_names(avro_type.get("type"))
-            if avro_type is None:
-                return {"null"}
-            return {avro_type}
-
-        def _extract_logical_types(avro_type) -> set[str]:
-            if isinstance(avro_type, list):
                 logical: set[str] = set()
                 for t in avro_type:
-                    logical |= _extract_logical_types(t)
-                return logical
+                    n, l = _extract_types(t)
+                    names |= n
+                    logical |= l
+                return names, logical
             if isinstance(avro_type, dict):
-                logical = _extract_logical_types(avro_type.get("type"))
-                if avro_type.get("logicalType"):
-                    logical.add(avro_type["logicalType"])
-                return logical
-            return set()
+                names, logical = _extract_types(avro_type.get("type"))
+                if logical_type := avro_type.get("logicalType") is not None:
+                    logical.add(logical_type)
+                return names, logical
+            if avro_type is None:
+                return {"null"}, set()
+            return {avro_type}, set()
 
         converted_schema = dict()
         converted_schema["fields"] = dict()
         schema = schema if schema else dict()
         for column, data_type in schema.items():
             fields = converted_schema["fields"]
-            type_names = _extract_type_names(data_type)
-            logical_types = _extract_logical_types(data_type)
+            type_names, logical_types = _extract_types(data_type)
 
             if "boolean" in type_names:
                 fields[column] = "boolean"
