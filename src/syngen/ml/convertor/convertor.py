@@ -176,13 +176,13 @@ class AvroConvertor(Convertor):
                 names: set[str] = set()
                 logical: set[str] = set()
                 for t in avro_type:
-                    n, l = _extract_types(t)
+                    n, lg = _extract_types(t)
                     names |= n
-                    logical |= l
+                    logical |= lg
                 return names, logical
             if isinstance(avro_type, dict):
                 names, logical = _extract_types(avro_type.get("type"))
-                if logical_type := avro_type.get("logicalType") is not None:
+                if (logical_type := avro_type.get("logicalType")) is not None:
                     logical.add(logical_type)
                 return names, logical
             if avro_type is None:

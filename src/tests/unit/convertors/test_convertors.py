@@ -1,5 +1,5 @@
 import pytest
-from datetime import date
+from datetime import date, time
 
 import numpy as np
 from numpy import dtype
@@ -322,16 +322,63 @@ def test_preprocess_df_if_column_is_datetime(rp_logger):
             pd.Series(["2023-01-01", "2023-01-02", "2023-01-03"])
         ).dt.tz_localize("UTC"),
     ),
+    # nullable 'timestamp-micros' (union with null) -> tz-aware datetime64[ns, UTC]
+    (
+        ["null", {"type": "long", "logicalType": "timestamp-micros"}],
+        pd.to_datetime(
+            pd.Series(["2023-01-01", None, "2023-01-03"])
+        ).dt.tz_localize("UTC"),
+    ),
     # Avro 'timestamp-millis' (tz-naive datetime64)
     (
         {"type": "long", "logicalType": "timestamp-millis"},
         pd.to_datetime(pd.Series(["2023-01-01", "2023-01-02", "2023-01-03"])),
     ),
-    # Avro 'time-millis' logical type
+    # nullable 'timestamp-millis' (union with null)
+    (
+        ["null", {"type": "long", "logicalType": "timestamp-millis"}],
+        pd.to_datetime(pd.Series(["2023-01-01", None, "2023-01-03"])),
+    ),
+    # Avro 'time-millis' logical type -> pandavro yields object dtype of datetime.time
     (
         {"type": "int", "logicalType": "time-millis"},
-        pd.Series([date(2023, 1, 1), date(2023, 1, 2), date(2023, 1, 3)], dtype="object"),
+        pd.Series([time(10, 0, 0), time(14, 30, 0), time(23, 59, 59)], dtype="object"),
     ),
+    # nullable 'time-millis' (union with null)
+    (
+        ["null", {"type": "int", "logicalType": "time-millis"}],
+        pd.Series([time(10, 0, 0), None, time(23, 59, 59)], dtype="object"),
+    ),
+    # Avro 'time-micros' logical type -> pandavro yields object dtype of datetime.time
+    (
+        {"type": "long", "logicalType": "time-micros"},
+        pd.Series([time(1, 0, 0), time(2, 30, 0), time(23, 59, 59)], dtype="object"),
+    ),
+    # nullable 'time-micros' (union with null)
+    (
+        ["null", {"type": "long", "logicalType": "time-micros"}],
+        pd.Series([time(1, 0, 0), None, time(23, 59, 59)], dtype="object"),
+    ),
+    # Avro 'local-timestamp-millis' -> tz-naive datetime64 (no UTC localization)
+    (
+        {"type": "long", "logicalType": "local-timestamp-millis"},
+        pd.to_datetime(pd.Series(["2023-01-01", "2023-01-02", "2023-01-03"])),
+    ),
+    # nullable 'local-timestamp-millis' (union with null)
+    (
+        ["null", {"type": "long", "logicalType": "local-timestamp-millis"}],
+        pd.to_datetime(pd.Series(["2023-01-01", None, "2023-01-03"])),
+    ),
+    # Avro 'local-timestamp-micros' -> tz-naive datetime64 (no UTC localization)
+    (
+        {"type": "long", "logicalType": "local-timestamp-micros"},
+        pd.to_datetime(pd.Series(["2023-01-01", "2023-01-02", "2023-01-03"])),
+    ),
+    # nullable 'local-timestamp-micros' (union with null)
+    (
+        ["null", {"type": "long", "logicalType": "local-timestamp-micros"}],
+        pd.to_datetime(pd.Series(["2023-01-01", None, "2023-01-03"])),
+    )
 ])
 def test_preprocess_df_maps_avro_logical_date_types_to_date(avro_type, column, rp_logger):
     """EPMCTDM-7581 (Avro counterpart): Avro date/time/timestamp logical types must
@@ -352,6 +399,7 @@ def test_preprocess_df_maps_avro_logical_date_types_to_date(avro_type, column, r
     # The date column must be preserved as-is - no numeric coercion, no crash.
     assert convertor.preprocessed_df["Test"].dtype == expected_dtype
     assert not pd.api.types.is_numeric_dtype(convertor.preprocessed_df["Test"])
+    assert convertor.preprocessed_df["Test"].dtype == expected_dtype
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
