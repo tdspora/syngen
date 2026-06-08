@@ -277,15 +277,14 @@ class Convertor:
         """
         Recursively convert nested lists into tuples (for PyArrow `map` data type).
         """
-        # Handle null/NaN safely (scalars only)
         if self._is_null(x):
             return x
-
-        # If it's a list-like collection, recurse into each element
-        if isinstance(x, (list, np.ndarray)) and all(not isinstance(item, list) for item in x):
-            return tuple(self._to_tuples_recursive(i) for i in x)
-
-        # Base case: primitive value (str, int, float, None, ...)
+        if isinstance(x, (list, np.ndarray)):
+            converted = [self._to_tuples_recursive(i) for i in x]
+            # Leaf list (items are primitives) → tuple; container list → keep as list
+            if all(not isinstance(i, (list, np.ndarray)) for i in x):
+                return tuple(converted)
+            return converted
         return x
 
     @staticmethod
@@ -345,9 +344,7 @@ class Convertor:
                     "If this is not the case, there might be issues with the "
                     "consistency between the data and the provided schema."
                 )
-                self.preprocessed_df[column] = self.preprocessed_df[column].map(
-                    lambda x: self._to_tuples_recursive(x) if not pd.isna(x) else x
-                )
+                self.preprocessed_df[column] = self.preprocessed_df[column].map(self._to_tuples_recursive)
             if "list" in data_type:
                 self.preprocessed_df[column] = (
                     self.preprocessed_df[column].map(
