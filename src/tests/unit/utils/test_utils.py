@@ -76,7 +76,11 @@ def test_datetime_to_timestamp(rp_logger):
         # numpy.datetime64 — converted via pd.Timestamp, treated as naive
         (np.datetime64("2023-01-01"), 1672531200.0, "%Y-%m-%d"),
         # tz-aware datetime — tz is stripped, wall-clock time used as-is
-        (datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=5))), 1672531200.0, "%Y-%m-%d"),
+        (
+            datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=5))),
+            1672531200.0,
+            "%Y-%m-%d"
+        ),
         # datetime.date object — combined with midnight, delta from epoch
         (date(2023, 1, 1), 1672531200.0, "%Y-%m-%d"),
     ]

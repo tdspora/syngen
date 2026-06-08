@@ -857,9 +857,20 @@ class UnivariateMetric(BaseMetric):
             fig, ax = plt.subplots(figsize=(8, 6.5))
 
             # Kernel Density Estimation plot using Seaborn
-            sns.kdeplot(data=self.original.reset_index(drop=True), x=column, color="#3F93E1", linewidth=2, ax=ax)
-            sns.kdeplot(data=self.synthetic.reset_index(drop=True), x=column, color="#FF9C54", linewidth=2, ax=ax)
-
+            sns.kdeplot(
+                data=self.original.reset_index(drop=True),
+                x=column,
+                color="#3F93E1",
+                linewidth=2,
+                ax=ax
+            )
+            sns.kdeplot(
+                data=self.synthetic.reset_index(drop=True),
+                x=column,
+                color="#FF9C54",
+                linewidth=2,
+                ax=ax
+            )
             ax.set_xlabel("value", fontsize=9)
             ax.set_ylabel("density", fontsize=9)
             ax.tick_params(axis="both", which="major", labelsize=9)
