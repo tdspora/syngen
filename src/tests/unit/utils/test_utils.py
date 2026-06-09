@@ -223,10 +223,47 @@ def test_convert_date_to_timestamp(value, date_format, na_values, expected_resul
     (1675209600.0, "%Y-%m-%d", True, datetime(2023, 2, 1, 0, 0)),
     (1680480000.0, "%Y-%m-%d", True, datetime(2023, 4, 3, 0, 0)),
     (1685923200.0, "%Y-%m-%d", True, datetime(2023, 6, 5, 0, 0)),
+    # date_format=None falls back to "%Y-%m-%d %H:%M:%S"
+    (1675209600.0, None, False, "2023-02-01 00:00:00"),
+    # MAX boundary is clamped to datetime(9999, 12, 31, 23, 59, 59, 999999)
+    (253402300800, "%d-%m-%Y", False, "31-12-9999"),
+    (253402300800, "%d-%m-%Y", True, datetime(9999, 12, 31, 23, 59, 59, 999999)),
+    # MIN boundary is clamped to datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc)
+    (-62135510400, "%d-%m-%Y", False, "01-01-1"),
+    (-62135510400, "%d-%m-%Y", True, datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc)),
 ])
 def test_convert_to_date(value, date_format, expected_result, to_datetime_conversion, rp_logger):
     rp_logger.info("Test the function 'convert_to_date'")
     assert convert_to_date(value, date_format, to_datetime_conversion) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "value, date_format, to_datetime_conversion, date_restore_type, expected_result",
+    [
+        # restore_type="date" → returns datetime.date when to_datetime_conversion=True
+        (1675209600.0, "%d-%m-%Y", True, "date", date(2023, 2, 1)),
+        # restore_type="date" → returns formatted string when to_datetime_conversion=False
+        (1675209600.0, "%d-%m-%Y", False, "date", "01-02-2023"),
+        # restore_type="datetime" behaves the same as the default (None)
+        (1675209600.0, "%Y-%m-%d", True, "datetime", datetime(2023, 2, 1, 0, 0)),
+        # restore_type="time" with to_datetime_conversion=True → datetime.time object
+        (3723.0, "%H:%M:%S", True, "time", time(1, 2, 3)),
+        # restore_type="time" with to_datetime_conversion=False → "HH:MM:SS" string
+        (3723.0, "%H:%M:%S", False, "time", "01:02:03"),
+        # restore_type="time" with sub-second precision → "HH:MM:SS.ffffff" string
+        (3723.5, "%H:%M:%S", False, "time", "01:02:03.500000"),
+        # restore_type="time" with sub-second precision,
+        # to_datetime_conversion=True → time with microseconds
+        (3723.5, "%H:%M:%S", True, "time", time(1, 2, 3, 500000)),
+    ])
+def test_convert_to_date_with_restore_type(
+    value, date_format, to_datetime_conversion, date_restore_type, expected_result, rp_logger
+):
+    rp_logger.info("Test 'convert_to_date' with the 'date_restore_type' parameter")
+    assert convert_to_date(
+        value, date_format, to_datetime_conversion, date_restore_type
+    ) == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
