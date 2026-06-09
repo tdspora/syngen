@@ -1125,7 +1125,7 @@ class Dataset:
                 self.df[self.columns[name]],
                 date_mapping=self.date_mapping,
                 to_datetime_conversion=self.to_datetime_conversion,
-                date_restore_types=self.date_restore_types
+                date_restore_types=self.date_types_to_restore
             )
 
         self.all_columns = [col for col in self.columns]
