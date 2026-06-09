@@ -1,0 +1,110 @@
+{
+  "PyTorch": {
+    "n_components_config": 10,
+    "effective_components": 10,
+    "latent_dim": 10,
+    "covariance_type": "full",
+    "top8_weights": [
+      0.1541,
+      0.1532,
+      0.1221,
+      0.1126,
+      0.1052,
+      0.1006,
+      0.0972,
+      0.0968
+    ],
+    "weight_entropy_ratio": 0.957,
+    "within_comp_std_per_dim": [
+      0.326,
+      0.7349,
+      0.2619,
+      0.6649,
+      0.281,
+      0.5469,
+      1.0099,
+      0.4187,
+      0.4856,
+      0.8262
+    ],
+    "between_comp_std_per_dim": [
+      0.6936,
+      1.602,
+      0.7138,
+      2.0419,
+      1.3565,
+      0.8685,
+      1.3527,
+      1.2824,
+      1.6717,
+      1.4533
+    ],
+    "sampled_latent_std_per_dim": [
+      0.8236,
+      1.7818,
+      0.78,
+      2.2668,
+      1.4892,
+      1.1223,
+      1.7883,
+      1.4406,
+      1.7435,
+      1.7219
+    ],
+    "sampled_latent_std_mean": 1.4958
+  },
+  "TensorFlow": {
+    "n_components_config": 10,
+    "effective_components": 10,
+    "latent_dim": 10,
+    "covariance_type": "full",
+    "top8_weights": [
+      0.1716,
+      0.1703,
+      0.164,
+      0.1349,
+      0.0975,
+      0.0926,
+      0.0664,
+      0.0585
+    ],
+    "weight_entropy_ratio": 0.926,
+    "within_comp_std_per_dim": [
+      0.4761,
+      0.2585,
+      0.8567,
+      0.7199,
+      0.471,
+      0.5534,
+      0.6239,
+      0.3475,
+      1.0689,
+      0.7441
+    ],
+    "between_comp_std_per_dim": [
+      1.702,
+      0.6076,
+      1.2325,
+      1.1285,
+      0.6057,
+      1.8361,
+      0.8586,
+      0.6709,
+      1.8557,
+      1.6296
+    ],
+    "sampled_latent_std_per_dim": [
+      1.7639,
+      0.6887,
+      1.6237,
+      1.1893,
+      0.7169,
+      2.3104,
+      1.1071,
+      0.7134,
+      1.9354,
+      1.9145
+    ],
+    "sampled_latent_std_mean": 1.3963
+  }
+}
