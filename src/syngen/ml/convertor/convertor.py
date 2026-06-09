@@ -163,7 +163,7 @@ class AvroConvertor(Convertor):
 
     # Maps each Avro date logical type to the Python type string used during
     # inference to restore the original object type from a numeric timestamp.
-    LOGICAL_TYPE_TO_RESTORE: Dict = {
+    DATE_TYPE_TO_RESTORE: Dict = {
         "date": "date",
         "time-millis": "time",
         "time-micros": "time",
@@ -203,7 +203,7 @@ class AvroConvertor(Convertor):
 
         converted_schema = dict()
         converted_schema["fields"] = dict()
-        converted_schema["date_logical_types"] = dict()
+        converted_schema["date_types_to_restore"] = dict()
         schema = schema if schema else dict()
         for column, data_type in schema.items():
             fields = converted_schema["fields"]
@@ -214,8 +214,8 @@ class AvroConvertor(Convertor):
             elif matched_logical := logical_types & self.DATE_LOGICAL_TYPES:
                 fields[column] = "date"
                 avro_logical = next(iter(matched_logical))
-                converted_schema["date_logical_types"][column] = (
-                    self.LOGICAL_TYPE_TO_RESTORE[avro_logical]
+                converted_schema["date_types_to_restore"][column] = (
+                    self.DATE_TYPE_TO_RESTORE[avro_logical]
                 )
             elif type_names & {"int", "long"}:
                 fields[column] = "int"

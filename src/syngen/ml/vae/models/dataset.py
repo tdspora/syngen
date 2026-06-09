@@ -1069,9 +1069,9 @@ class Dataset:
             column: column in schema_date_columns
             for column in self.date_columns
         }
-        date_logical_types = self.schema.get("date_logical_types", {})
+        date_types_to_restore = self.schema.get("date_types_to_restore", {})
         self.date_restore_types = {
-            column: date_logical_types.get(column, "datetime")
+            column: date_types_to_restore.get(column, "datetime")
             for column in schema_date_columns
         }
         self.str_columns -= self.date_columns
