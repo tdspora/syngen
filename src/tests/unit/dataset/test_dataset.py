@@ -171,6 +171,7 @@ def test_save_dataset(mock_fetch_config, rp_logger):
         "format",
         "cast_to_float",
         "cast_to_integer",
+        "date_types_to_restore",
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

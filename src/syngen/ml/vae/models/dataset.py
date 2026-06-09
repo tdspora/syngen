@@ -88,7 +88,7 @@ class Dataset:
     dropped_columns: Set = field(default_factory=set)
     format: Dict = field(default_factory=dict)
     to_datetime_conversion: Dict = field(default_factory=dict)
-    date_restore_types: Dict = field(default_factory=dict)
+    date_types_to_restore: Dict = field(default_factory=dict)
     excluded_columns: Set = field(default_factory=set)
 
     def _select_str_columns(self) -> List[str]:
@@ -1070,7 +1070,7 @@ class Dataset:
             for column in self.date_columns
         }
         date_types_to_restore = self.schema.get("date_types_to_restore", {})
-        self.date_restore_types = {
+        self.date_types_to_restore = {
             column: date_types_to_restore.get(column, "datetime")
             for column in schema_date_columns
         }

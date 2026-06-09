@@ -175,7 +175,8 @@ def test_get_artifacts_contained_one_json_columns_in_avro(rp_logger):
             "is_encrypted": "boolean",
             "status": "string"
         },
-        "format": "Avro"
+        "format": "Avro",
+        "date_types_to_restore": {}
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -443,7 +444,8 @@ def test_get_artifacts_with_df_contained_more_than_one_json_column_in_avro(rp_lo
             "base_table": "string",
             "details_": "string"
         },
-        "format": "Avro"
+        "format": "Avro",
+        "date_types_to_restore": {}
     }
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -618,6 +620,7 @@ def test_get_artifacts_contained_column_with_mixed_data_in_avro(rp_logger):
             "username": "string"
         },
         "format": "Avro",
+        "date_types_to_restore": {}
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -986,7 +989,8 @@ def test_run_with_avro_file(
             "registration": "removed",
             "description": "string"
         },
-        "format": "Avro"
+        "format": "Avro",
+        "date_types_to_restore": {}
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

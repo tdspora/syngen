@@ -96,7 +96,8 @@ def test_initiate_avro_convertor(rp_logger):
             "status": "string",
             "employeephoto": "string"
         },
-        "format": "Avro"
+        "format": "Avro",
+        "date_types_to_restore": {}
     }
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
@@ -136,7 +137,7 @@ def test_initiate_avro_convertor(rp_logger):
 
 def test_initiate_avro_convertor_without_provided_schema(rp_logger):
     rp_logger.info("Initiating the instance of the class AvroConvertor without a provided schema")
-    df, schema = DataLoader(
+    df, _ = DataLoader(
         f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
     ).load_data()
 
@@ -177,7 +178,8 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
 
     assert convertor.converted_schema == {
         "fields": {},
-        "format": "Avro"
+        "format": "Avro",
+        "date_types_to_restore": {}
     }
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
@@ -428,7 +430,8 @@ def test_preprocess_df_if_column_is_null(rp_logger):
     }
     assert convertor.converted_schema == {
         "fields": {"Test": "null"},
-        "format": "Avro"
+        "format": "Avro",
+        "date_types_to_restore": {}
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

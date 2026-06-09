@@ -268,6 +268,7 @@ def test_load_data_from_table_in_avro_format(rp_logger):
     assert schema == {
         "fields": {"gender": "int", "height": "float", "id": "int"},
         "format": "Avro",
+        "date_types_to_restore": {}
     }
     assert data_loader.original_schema == {
         "fields": [
@@ -301,7 +302,8 @@ def test_load_data_from_table_in_avro_with_null_column(rp_logger):
             "age": "null",
             "email": "string"
         },
-        "format": "Avro"
+        "format": "Avro",
+        "date_types_to_restore": {}
     }
     assert data_loader.original_schema == {
         "type": "record",
@@ -338,7 +340,8 @@ def test_load_data_from_table_in_avro_with_nullable_column(rp_logger):
             "created_date": "string",
             "Active": "boolean"
         },
-        "format": "Avro"
+        "format": "Avro",
+        "date_types_to_restore": {}
     }
     assert data_loader.original_schema == {
         "type": "record",
@@ -417,6 +420,7 @@ def test_save_data_in_avro_format(test_avro_path, test_df, test_avro_schema, rp_
     assert schema == {
         "fields": {"gender": "int", "height": "float", "id": "int"},
         "format": "Avro",
+        "date_types_to_restore": {}
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -436,6 +440,7 @@ def test_save_data_in_avro_format_without_provided_schema(
     assert schema == {
         "fields": {"gender": "int", "height": "float", "id": "int"},
         "format": "Avro",
+        "date_types_to_restore": {}
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
