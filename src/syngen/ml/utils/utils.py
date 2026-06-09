@@ -173,13 +173,16 @@ def timestamp_to_datetime(
     ``restore_type`` controls the Python type returned for Avro date columns:
       - ``"date"``     → ``datetime.date`` (Avro ``date`` logical type)
       - ``"time"``     → ``datetime.time`` (Avro ``time-millis`` / ``time-micros``)
-      - ``"datetime"`` or ``None`` → ``datetime.datetime`` (existing behaviour)
+      - ``"datetime"`` → ``datetime.datetime`` (
+          Avro ``timestamp-millis`` / ``timestamp-micros`` /
+          ``local-timestamp-millis`` / ``local-timestamp-micros``
+    )
     """
     if pd.isnull(timestamp):
         return np.nan
 
     # time-of-day columns are encoded as seconds since midnight (not since epoch).
-    # Reconstruct datetime.time before any epoch-based arithmetic.
+    # Reconstruct `datetime.time` before any epoch-based arithmetic.
     if restore_type == "time":
         seconds = float(timestamp)
         h = int(seconds // 3600) % 24

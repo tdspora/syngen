@@ -1063,7 +1063,6 @@ class Dataset:
             self.date_columns
             - self.categorical_columns
             - self.binary_columns
-            - self.long_text_columns
         )
         self.to_datetime_conversion = {
             column: column in schema_date_columns
