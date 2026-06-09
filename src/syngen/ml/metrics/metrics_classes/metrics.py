@@ -372,15 +372,23 @@ class BivariateMetric(BaseMetric):
         )
 
     @staticmethod
-    def _format_date_labels(heatmap_orig_data, heatmap_synthetic_data, axis):
+    def _format_date_labels(heatmap_orig_data, heatmap_synthetic_data, axis, restore_type=None):
         heatmap_orig, x_tick_labels_orig, y_tick_labels_orig = heatmap_orig_data
         heatmap_synth, x_tick_labels_synth, y_tick_labels_synth = heatmap_synthetic_data
         if axis == "y":
-            y_tick_labels_orig = [timestamp_to_datetime(i) for i in y_tick_labels_orig]
-            y_tick_labels_synth = [timestamp_to_datetime(i) for i in y_tick_labels_synth]
+            y_tick_labels_orig = [
+                timestamp_to_datetime(i, restore_type=restore_type) for i in y_tick_labels_orig
+            ]
+            y_tick_labels_synth = [
+                timestamp_to_datetime(i, restore_type=restore_type) for i in y_tick_labels_synth
+            ]
         else:
-            x_tick_labels_orig = [timestamp_to_datetime(i) for i in x_tick_labels_orig]
-            x_tick_labels_synth = [timestamp_to_datetime(i) for i in x_tick_labels_synth]
+            x_tick_labels_orig = [
+                timestamp_to_datetime(i, restore_type=restore_type) for i in x_tick_labels_orig
+            ]
+            x_tick_labels_synth = [
+                timestamp_to_datetime(i, restore_type=restore_type) for i in x_tick_labels_synth
+            ]
         return (heatmap_orig, x_tick_labels_orig, y_tick_labels_orig), (
             heatmap_synth,
             x_tick_labels_synth,
@@ -394,8 +402,10 @@ class BivariateMetric(BaseMetric):
         date_columns: Optional[List[str]],
         num_not_na_cont_ticks: int = 10,
         max_num_combinations: int = 100,
+        date_restore_types: Optional[Dict[str, str]] = None,
     ):
         self.date_columns = date_columns if date_columns else []
+        self.date_restore_types = date_restore_types or {}
         self.num_not_na_ticks = num_not_na_cont_ticks
         fetched_columns = set(cont_columns) | set(categorical_columns)
         excluded_cols = {
@@ -464,11 +474,13 @@ class BivariateMetric(BaseMetric):
 
             if first_col in self.date_columns:
                 heatmap_orig_data, heatmap_synthetic_data = self._format_date_labels(
-                    heatmap_orig_data, heatmap_synthetic_data, "x"
+                    heatmap_orig_data, heatmap_synthetic_data, "x",
+                    restore_type=self.date_restore_types.get(first_col),
                 )
             if second_col in self.date_columns:
                 heatmap_orig_data, heatmap_synthetic_data = self._format_date_labels(
-                    heatmap_orig_data, heatmap_synthetic_data, "y"
+                    heatmap_orig_data, heatmap_synthetic_data, "y",
+                    restore_type=self.date_restore_types.get(second_col),
                 )
 
             self._plot_heatmap(heatmap_orig_data, plt_index=0,
@@ -745,7 +757,9 @@ class UnivariateMetric(BaseMetric):
         categorical_columns: List[str],
         date_columns: Optional[List[str]],
         print_nan: bool = False,
+        date_restore_types: Optional[Dict[str, str]] = None,
     ):
+        date_restore_types = date_restore_types or {}
         cont_columns = list(cont_columns)
         excluded_cols = {
             col for col in cont_columns if "word_count" if col.endswith("_word_count")
@@ -759,7 +773,12 @@ class UnivariateMetric(BaseMetric):
         uni_categ_images = {}
         for col in cont_columns:
             images.update(
-                self.__calc_continuous(column=col, print_nan=print_nan, isdate=col in date_columns)
+                self.__calc_continuous(
+                    column=col,
+                    print_nan=print_nan,
+                    isdate=col in date_columns,
+                    restore_type=date_restore_types.get(col),
+                )
             )
         for col in categorical_columns:
             uni_categ_images.update(self.__calc_categ(col))
@@ -844,7 +863,8 @@ class UnivariateMetric(BaseMetric):
             column: str,
             isdate: bool,
             print_nan: bool = False,
-            kurtosis_threshold: float = KURTOSIS_THRESHOLD
+            kurtosis_threshold: float = KURTOSIS_THRESHOLD,
+            restore_type: Optional[str] = None,
             ):
         original_nan_count = self.original[column].isna().sum()
         synthetic_nan_count = self.synthetic[column].isna().sum()
@@ -898,7 +918,7 @@ class UnivariateMetric(BaseMetric):
                 len_x_labels = len(ax.get_xticklabels())
 
                 x_ticks = np.linspace(lower_x, upper_x, len_x_labels)
-                x_ticks = [timestamp_to_datetime(i) for i in x_ticks]
+                x_ticks = [timestamp_to_datetime(i, restore_type=restore_type) for i in x_ticks]
                 ax.set_xticklabels(x_ticks, rotation=45, ha="right")
             if self.reports_path:
                 path_to_image = f"{self.reports_path}/univariate_{slugify(column)}.svg"

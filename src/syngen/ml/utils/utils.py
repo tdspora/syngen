@@ -184,11 +184,16 @@ def timestamp_to_datetime(
     # time-of-day columns are encoded as seconds since midnight (not since epoch).
     # Reconstruct `datetime.time` before any epoch-based arithmetic.
     if restore_type == "time":
-        seconds = float(timestamp)
-        h = int(seconds // 3600) % 24
+        # Normalise to [0, 86400) so that model-generated values outside the valid
+        # range (negative or > 86400) are wrapped rather than crashing.
+        seconds = float(timestamp) % 86400
+        h = int(seconds // 3600)
         m = int((seconds % 3600) // 60)
         s = int(seconds % 60)
-        us = round((seconds - int(seconds)) * 1_000_000)
+        # Use `seconds % 1` (always in [0, 1)) instead of `seconds - int(seconds)`
+        # which can be negative for negative inputs before the modulo above.
+        # Clamp to 999_999 to guard against floating-point round() returning 1_000_000.
+        us = min(round((seconds % 1) * 1_000_000), 999_999)
         return datetime_time(h, m, s, us)
 
     timestamp = int(timestamp)

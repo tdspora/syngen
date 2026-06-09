@@ -267,6 +267,25 @@ def test_convert_to_date_with_restore_type(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("value", [
+    3723.9999995,   # round(fractional * 1e6) == 1_000_000 without upper clamp
+    -1.5,           # seconds - int(seconds) == -0.5 → negative microsecond without % 1
+    -37845.0,       # negative seconds from model output
+    86401.5,        # seconds > 86400, normalised to [0, 86400)
+])
+def test_timestamp_to_datetime_time_edge_cases(value, rp_logger):
+    """EPMCTDM-7585: timestamp_to_datetime with restore_type='time' must not raise
+    ValueError for out-of-range or floating-point-rounded microseconds."""
+    rp_logger.info(
+        "Test that 'timestamp_to_datetime' with restore_type='time' handles "
+        "edge cases without raising ValueError"
+    )
+    result = timestamp_to_datetime(value, restore_type="time")
+    assert isinstance(result, time)
+    assert 0 <= result.microsecond <= 999_999
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @pytest.mark.parametrize("value", [np.nan, float("nan"), None])
 def test_convert_to_date_is_nan_safe(value, rp_logger):
     """EPMCTDM-7581: a NaN/None timestamp must degrade to NaN instead of raising
