@@ -498,7 +498,7 @@ class BivariateMetric(BaseMetric):
                 f"{self.reports_path}/bivariate_{slugify(first_col)}_{slugify(second_col)}.svg"
             )
             bi_imgs[title] = path_to_image
-            plt.savefig(path_to_image, format="svg")
+            plt.savefig(path_to_image, bbox_inches="tight", format="svg")
         return bi_imgs
 
     @staticmethod
@@ -551,6 +551,8 @@ class BivariateMetric(BaseMetric):
             cmap=self.cmap,
             cbar=cbar,
         )
+        ax.tick_params(axis="x", rotation=45)
+        ax.set_xticklabels(ax.get_xticklabels(), ha="right")
         if cbar:
             cbar = ax.collections[0].colorbar
             cbar.ax.tick_params(axis="y", labelsize=20)
