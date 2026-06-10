@@ -216,6 +216,11 @@ def test_convert_date_to_timestamp(value, date_format, na_values, expected_resul
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+# strftime formatting of year 1 is platform-dependent:
+# Linux renders it as "1", Windows renders it as "0001".
+_MIN_DATE_STR = datetime(1, 1, 1).strftime("%d-%m-%Y")
+
+
 @pytest.mark.parametrize("value, date_format, to_datetime_conversion, expected_result", [
     (1675209600.0, "%d-%m-%Y", False, "01-02-2023"),
     (1680480000.0, "%d-%m-%Y", False, "03-04-2023"),
@@ -228,8 +233,9 @@ def test_convert_date_to_timestamp(value, date_format, na_values, expected_resul
     # MAX boundary is clamped to datetime(9999, 12, 31, 23, 59, 59, 999999)
     (253402300800, "%d-%m-%Y", False, "31-12-9999"),
     (253402300800, "%d-%m-%Y", True, datetime(9999, 12, 31, 23, 59, 59, 999999)),
-    # MIN boundary is clamped to datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc)
-    (-62135510400, "%d-%m-%Y", False, "01-01-1"),
+    # MIN boundary is clamped to datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc);
+    # year-1 formatting differs by OS (Linux: "1", Windows: "0001")
+    (-62135510400, "%d-%m-%Y", False, _MIN_DATE_STR),
     (-62135510400, "%d-%m-%Y", True, datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc)),
 ])
 def test_convert_to_date(value, date_format, expected_result, to_datetime_conversion, rp_logger):
