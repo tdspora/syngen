@@ -203,6 +203,9 @@ def test_timestamp_to_datetime_with_delta(rp_logger):
             "01-02-2023", "%d-%m-%Y", [], 1675209600.0
         ),
         (
+            "01-02-2023", "%d-%m-%Y", None, 1675209600.0
+        ),
+        (
             "label", "%d-%m-%Y", ["label"], None
         ),
         (
