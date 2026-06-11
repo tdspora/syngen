@@ -1229,6 +1229,26 @@ def test_save_pcv_file(test_csv_path, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_load_psv_with_metadata_separator_overrides_default(tmp_path, rp_logger):
+    rp_logger.info(
+        "Loading '.psv' where metadata separator should override extension default separator"
+    )
+    path_to_source = tmp_path / "semicolon_delimited_text.psv"
+    path_to_source.write_text("id;name\n1;Alice\n2;Bob\n", encoding="utf-8")
+
+    global_context({})
+    data_without_metadata_sep, _ = DataLoader(str(path_to_source)).load_data()
+    assert data_without_metadata_sep.shape == (2, 1)
+
+    global_context({"sep": ";"})
+    data_with_metadata_sep, _ = DataLoader(str(path_to_source)).load_data()
+    assert data_with_metadata_sep.shape == (2, 2)
+    assert data_with_metadata_sep.columns.to_list() == ["id", "name"]
+
+    global_context({})
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_load_tcv_file(rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/tab_delimited_text.tsv")

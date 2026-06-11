@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, Mock, call
 import pytest
 import os
 
@@ -3894,3 +3894,55 @@ def test_infer_table_uses_parent_subset_for_surrogate_table(
     infer_kwargs = mock_infer_strategy_run.call_args.kwargs
     assert infer_kwargs["size"] == 120
     assert infer_kwargs["both_keys"] is True
+
+
+@patch("syngen.ml.worker.worker.global_context")
+@patch("syngen.ml.worker.worker.PreprocessHandler")
+@patch.object(Worker, "__attrs_post_init__")
+def test_preprocess_data_sets_context_before_handler_init(
+    mock_post_init,
+    mock_preprocess_handler,
+    mock_global_context,
+):
+    worker = Worker(
+        table_name="table",
+        metadata_path=None,
+        settings={},
+        log_level="INFO",
+        type_of_process="train",
+        loader=None,
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+    )
+    worker.metadata = {
+        "table": {
+            "format": {
+                "sep": ";",
+                "encoding": "utf-8",
+            }
+        }
+    }
+    worker.row_subset_mapping = {}
+
+    mock_handler_instance = mock_preprocess_handler.return_value
+    mock_handler_instance.run.return_value = (
+        pd.DataFrame({"id": [1]}),
+        {"fields": {}, "format": "CSV"},
+    )
+    mock_handler_instance.row_subset = 1
+
+    manager = Mock()
+    manager.attach_mock(mock_global_context, "global_context")
+    manager.attach_mock(mock_preprocess_handler, "preprocess_handler")
+
+    data, schema = worker._Worker__preprocess_data(table_name="table")
+
+    assert manager.mock_calls[0] == call.global_context({"sep": ";", "encoding": "utf-8"})
+    assert manager.mock_calls[1] == call.preprocess_handler(
+        metadata=worker.metadata,
+        metadata_path=worker.metadata_path,
+        table_name="table",
+        loader=worker.loader,
+    )
+    assert data.shape == (1, 1)
+    assert schema == {"fields": {}, "format": "CSV"}
+    assert worker.row_subset_mapping["table"] == 1

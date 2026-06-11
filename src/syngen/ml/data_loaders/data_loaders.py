@@ -145,8 +145,8 @@ class CSVLoader(BaseDataLoader):
 
     def __init__(self, path: str, **kwargs):
         super().__init__(path)
-        self.format = get_context().get_config()
-        self.format.update(kwargs)
+        self.format = dict(kwargs)
+        self.format.update(get_context().get_config())
         self.format = {
             k: v
             for k, v in self.format.items()

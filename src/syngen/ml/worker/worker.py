@@ -151,6 +151,7 @@ class Worker:
         """
         Preprocess the data before a training process
         """
+        global_context(self.metadata.get(table_name, {}).get("format", {}))
         handler = PreprocessHandler(
             metadata=self.metadata,
             metadata_path=self.metadata_path,
