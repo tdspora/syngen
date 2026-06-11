@@ -1787,12 +1787,44 @@ def test_save_data_in_avro_format_extends_schema_with_extra_columns(
             "new_str_col": ["foo", "bar"],
         }
     )
-    loader = AvroLoader(test_avro_path)
+    loader = DataLoader(test_avro_path)
     loader.save_data(df, schema=test_avro_schema)
 
     assert os.path.exists(test_avro_path)
-    loaded_df, _ = loader.load_data()
+    loaded_df, schema = loader.load_data()
     assert set(loaded_df.columns) == {"gender", "height", "id", "new_str_col"}
+    assert loader.original_schema == {
+        "name": "Root",
+        "type": "record",
+        "fields": [
+            {
+                "name": "gender",
+                "type": ["null", "long"]
+            },
+            {
+                "name": "height",
+                "type": ["null", "double"]
+            },
+            {
+                "name": "id",
+                "type": ["null", "long"]
+            },
+            {
+                "name": "new_str_col",
+                "type": ["null", "string"]
+            },
+        ]
+    }
+    assert schema == {
+        "date_types_to_restore": {},
+        "fields": {
+            "gender": "int",
+            "height": "float",
+            "id": "int",
+            "new_str_col": "string",
+        },
+        "format": "Avro",
+    }
     assert loaded_df.shape == (2, 4)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1804,10 +1836,37 @@ def test_save_data_in_avro_format_does_not_extend_schema_when_none(
         "Test that 'AvroLoader.save_data' skips schema extension entirely "
         "when schema=None and still produces a valid Avro file"
     )
-    loader = AvroLoader(test_avro_path)
+    loader = DataLoader(test_avro_path)
     loader.save_data(test_df, schema=None)
 
     assert os.path.exists(test_avro_path)
-    loaded_df, _ = loader.load_data()
+    loaded_df, schema = loader.load_data()
+    assert loader.original_schema == {
+        "name": "Root",
+        "type": "record",
+        "fields": [
+            {
+                "name": "gender",
+                "type": ["null", "long"]
+            },
+            {
+                "name": "height",
+                "type": ["null", "double"]
+            },
+            {
+                "name": "id",
+                "type": ["null", "long"]
+            },
+        ]
+    }
+    assert schema == {
+        "date_types_to_restore": {},
+        "fields": {
+            "gender": "int",
+            "height": "float",
+            "id": "int",
+        },
+        "format": "Avro",
+    }
     assert list(loaded_df.columns) == ["gender", "height", "id"]
     rp_logger.info(SUCCESSFUL_MESSAGE)
