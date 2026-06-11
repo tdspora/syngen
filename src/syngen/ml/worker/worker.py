@@ -517,6 +517,22 @@ class Worker:
             ), None
         )
 
+    def _get_row_subset_for_table(self, table: str) -> int:
+        """
+        Resolve row subset for a table, including surrogate tables
+        produced by PK/FK split.
+        """
+        if table in self.row_subset_mapping:
+            return self.row_subset_mapping[table]
+
+        parent_table = self._find_parent_table(table)
+        if parent_table and parent_table in self.row_subset_mapping:
+            return self.row_subset_mapping[parent_table]
+
+        raise KeyError(
+            f"Row subset for table '{table}' is missing in row_subset_mapping"
+        )
+
     def _infer_table(self, table, metadata, type_of_process, delta, is_nested=False):
         """
         Infer process for a single table
@@ -541,7 +557,7 @@ class Worker:
             size=(
                 settings.get("size")
                 if type_of_process == "infer"
-                else self.row_subset_mapping[table]
+                else self._get_row_subset_for_table(table)
             ),
             table_name=table,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,
