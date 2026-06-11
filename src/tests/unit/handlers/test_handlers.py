@@ -1,7 +1,6 @@
 from unittest.mock import patch, MagicMock
 import pytest
 import math
-import functools
 
 import pandas as pd
 import dill
@@ -169,13 +168,21 @@ def test_split_by_batches(
     "size, batch_size, cpu_count, "
     "expected_batch_num, expected_batch_size, expected_n_jobs",
     [
-        (100, 20, 8, 5, 20, 5),      # batch_num > 1, batch_num < cpu_count
-        (100, 24, 4, 5, 24, 3),      # batch_num > 1, batch_num > cpu_count
-        (16, 4, 32, 4, 4, 4),        # batch_num > 1, size < cpu_count, even division
-        (16, 5, 32, 4, 5, 4),        # batch_num > 1, size < cpu_count, uneven division
-        (100, 100, 8, 7, 15, 7),     # batch_num == 1 (size == batch_size),
-        (10, 10, 8, 7, 1, 7),        # batch_num == 1, case when batch_size is decreased because no points are left for the last batch
-        (1, 1, 8, 1, 1, 1),          # size == 1
+        # batch_num > 1, batch_num < cpu_count
+        (100, 20, 8, 5, 20, 5),
+        # batch_num > 1, batch_num > cpu_count
+        (100, 24, 4, 5, 24, 3),
+        # batch_num > 1, size < cpu_count, even division
+        (16, 4, 32, 4, 4, 4),
+        # batch_num > 1, size < cpu_count, uneven division
+        (16, 5, 32, 4, 5, 4),
+        # batch_num == 1 (size == batch_size)
+        (100, 100, 8, 7, 15, 7),
+        # batch_num == 1, case when batch_size is decreased
+        # because no points are left for the last batch
+        (10, 10, 8, 7, 1, 7),
+        # size == 1
+        (1, 1, 8, 1, 1, 1),
     ],
 )
 @patch('multiprocessing.cpu_count')
@@ -255,6 +262,7 @@ def test_setup_parallel_processing(
     assert handler._pool is not None, "Expected _pool to be initialized"
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
 
 # ---------------------------------------------------------------------------
 # kde_gen: slugified filename lookup

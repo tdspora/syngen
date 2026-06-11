@@ -1,6 +1,7 @@
+import sys
 from typing import Tuple, Optional, Dict, List, Callable, Any
 from abc import ABC, abstractmethod
-import os, sys
+import os
 import math
 from ulid import ULID
 from uuid import UUID
@@ -37,7 +38,8 @@ from syngen.ml.context import get_context
 
 
 MEMORY_THRESHOLD = 90  # Memory usage threshold in percent
-BATCH_SIZE_REDUCTION_FACTOR = 4  # Recommended factor to reduce batch size in case of memory overflow
+# Recommended factor to reduce batch size in case of memory overflow
+BATCH_SIZE_REDUCTION_FACTOR = 4
 
 
 class AbstractHandler(ABC):
