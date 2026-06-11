@@ -1748,7 +1748,7 @@ def test_extend_schema_appends_only_missing_columns(rp_logger):
         "name": "Root",
         "fields": [
             {"name": "gender", "type": ["null", "long"]},
-            {"name": "height", "type": ["null", "double"]}, 
+            {"name": "height", "type": ["null", "double"]},
             {"name": "extra_col", "type": ["null", "long"]},
         ],
     }
@@ -1769,7 +1769,6 @@ def test_extend_schema_does_not_mutate_original_schema(rp_logger):
     assert schema["fields"] == original_fields
     assert len(schema["fields"]) == 1
     rp_logger.info(SUCCESSFUL_MESSAGE)
-
 
 
 def test_save_data_in_avro_format_extends_schema_with_extra_columns(
