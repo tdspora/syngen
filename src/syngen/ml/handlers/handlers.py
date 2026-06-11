@@ -729,7 +729,7 @@ class VaeInferHandler(BaseHandler):
             )
         return prepared_data
 
-    def _save_data(self, generated_data):
+    def _save_data(self, generated_data: pd.DataFrame):
         """
         Save generated data to the path
         """

@@ -1672,3 +1672,143 @@ def test_decrypt_data_with_invalid_key(data_encryptor, valid_simple_dataframe, r
             f"'{data_encryptor.path}' failed"
         ) in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_extend_schema_returns_original_when_no_new_columns(rp_logger):
+    rp_logger.info(
+        "Test that the method '_extend_schema' returns the original schema object unchanged "
+        "when all DataFrame columns are already present in the schema"
+    )
+    schema = {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]},
+            {"name": "id", "type": ["null", "long"]},
+        ],
+    }
+    df = pd.DataFrame({"gender": [0], "height": [1.5], "id": [1]})
+    result = AvroLoader._extend_schema(schema, df)
+    assert result is schema
+    assert result["fields"] == schema["fields"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_extend_schema_appends_fields_for_all_new_columns(rp_logger):
+    rp_logger.info(
+        "Test that the method '_extend_schema' appends inferred fields "
+        "for every DataFrame column when none of them are present in the original schema"
+    )
+    schema = {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "id", "type": ["null", "long"]},
+        ],
+    }
+    df = pd.DataFrame({"id": [1], "new_int_col": [42], "new_str_col": ["hello"]})
+    result = AvroLoader._extend_schema(schema, df)
+    result_names = [f["name"] for f in result["fields"]]
+    assert "id" in result_names
+    assert "new_int_col" in result_names
+    assert "new_str_col" in result_names
+    assert len(result["fields"]) == 3
+    assert result == {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "id", "type": ["null", "long"]},
+            {"name": "new_int_col", "type": ["null", "long"]},
+            {"name": "new_str_col", "type": ["null", "string"]},
+        ],
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_extend_schema_appends_only_missing_columns(rp_logger):
+    rp_logger.info(
+        "Test that the method '_extend_schema' appends inferred fields only for columns that are "
+        "absent from the original schema, leaving existing fields untouched"
+    )
+    schema = {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]},
+        ],
+    }
+    df = pd.DataFrame(
+        {"gender": [0, 1], "height": [1.5, 2.0], "extra_col": [10, 20]}
+    )
+    result = AvroLoader._extend_schema(schema, df)
+    assert result == {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]}, 
+            {"name": "extra_col", "type": ["null", "long"]},
+        ],
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_extend_schema_does_not_mutate_original_schema(rp_logger):
+    rp_logger.info(
+        "Test that the method '_extend_schema' does not modify the original schema dict "
+        "when new columns are present"
+    )
+    original_fields = [
+        {"name": "id", "type": ["null", "long"]},
+    ]
+    schema = {"type": "record", "name": "Root", "fields": original_fields}
+    df = pd.DataFrame({"id": [1], "extra": [99]})
+    AvroLoader._extend_schema(schema, df)
+    assert schema["fields"] == original_fields
+    assert len(schema["fields"]) == 1
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+
+def test_save_data_in_avro_format_extends_schema_with_extra_columns(
+    test_avro_path, test_avro_schema, rp_logger
+):
+    rp_logger.info(
+        "Test that 'AvroLoader.save_data' transparently extends the provided schema "
+        "with inferred fields for columns absent from the original schema, "
+        "and writes a valid Avro file that can be read back"
+    )
+    df = pd.DataFrame(
+        {
+            "gender": pd.array([0, 1], dtype="int64"),
+            "height": [157.2, 166.8],
+            "id": pd.array([1, 2], dtype="int64"),
+            "new_str_col": ["foo", "bar"],
+        }
+    )
+    loader = AvroLoader(test_avro_path)
+    loader.save_data(df, schema=test_avro_schema)
+
+    assert os.path.exists(test_avro_path)
+    loaded_df, _ = loader.load_data()
+    assert set(loaded_df.columns) == {"gender", "height", "id", "new_str_col"}
+    assert loaded_df.shape == (2, 4)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_data_in_avro_format_does_not_extend_schema_when_none(
+    test_avro_path, test_df, rp_logger
+):
+    rp_logger.info(
+        "Test that 'AvroLoader.save_data' skips schema extension entirely "
+        "when schema=None and still produces a valid Avro file"
+    )
+    loader = AvroLoader(test_avro_path)
+    loader.save_data(test_df, schema=None)
+
+    assert os.path.exists(test_avro_path)
+    loaded_df, _ = loader.load_data()
+    assert list(loaded_df.columns) == ["gender", "height", "id"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)

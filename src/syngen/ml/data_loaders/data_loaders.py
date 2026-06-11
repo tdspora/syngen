@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Tuple, List, Literal
@@ -373,9 +374,25 @@ class AvroLoader(BaseDataLoader):
 
         return df
 
+    @staticmethod
+    def _extend_schema(schema: Dict, df: pd.DataFrame) -> Dict:
+        """
+        Return schema extended with inferred Avro fields for any columns in df
+        that are absent from schema's field list.
+        """
+        existing_names = {f["name"] for f in schema.get("fields", [])}
+        new_cols = [col for col in df.columns if col not in existing_names]
+        if not new_cols:
+            return schema
+        inferred = pdx.schema_infer(df[new_cols])
+        extended = deepcopy(schema)
+        extended["fields"] = schema["fields"] + inferred["fields"]
+        return extended
+
     def save_data(self, df: pd.DataFrame, schema: Optional[Dict], **kwargs):
         if schema is not None:
             logger.trace(f"The data will be saved with the schema: {schema}")
+            schema = self._extend_schema(schema, df)
 
         preprocessed_schema = self._get_preprocessed_schema(schema)
         df = AvroConvertor(preprocessed_schema, df).preprocessed_df
