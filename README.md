@@ -16,19 +16,11 @@ You can download Python from [the official website](https://www.python.org/downl
 
 Before the installation of the library, you have to [set up the virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/).
 
-You can install the library with CLI only:
+You can install the library with:
 
 ```bash
 pip install syngen
 ```
-
-Otherwise, if you want to install the UI version with streamlit, run:
-
-```bash
-pip install syngen[ui]
-```
-
-*Note:* see details of the UI usage in the [corresponding section](#ui-web-interface)
 
 
 The training and inference processes are separated with two CLI entry points. The training one receives paths to the original table, metadata json file or table name and used hyperparameters.<br>
@@ -76,11 +68,11 @@ train --source PATH_TO_ORIGINAL_CSV \
     --drop_null BOOL \
     --reports STR \
     --batch_size INT \
-    --log_level STR \ 
+    --log_level STR \
     --fernet_key STR
 ```
 
-*Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
+*Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times.
 For example:
 ```bash
 train --source PATH_TO_ORIGINAL_CSV \
@@ -144,7 +136,7 @@ infer --size INT \
     --fernet_key STR
 ```
 
-*Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times. 
+*Note:* To specify multiple options for the *--reports* parameter, you need to provide the *--reports* parameter multiple times.
 For example:
 ```bash
 infer --table_name TABLE_NAME \
@@ -214,10 +206,10 @@ global:                                     # Global settings. Optional paramete
   infer_settings:                           # Settings for infer process. Optional parameter
     size: 100                               # Size for generated data. Optional parameter
     run_parallel: False                     # Turn on or turn off parallel training process. Optional parameter
-    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously. Might require significant time for big generated tables (>10000 rows). 
+    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously. Might require significant time for big generated tables (>10000 rows).
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
-  
+
   encryption:
     fernet_key: null                       # The name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
 
@@ -228,7 +220,7 @@ CUSTOMER:                                   # Table name. Required parameter
     drop_null: False                        # Drop rows with NULL values. Optional parameter
     row_limit: null                         # Number of rows to train over. A number less than the original table length will randomly subset the specified rows number. Optional parameter
     batch_size: 32                          # If specified, the training is split into batches. This can save the RAM. Optional parameter
-    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously, e.g. ["metrics_only", "sample"]. Might require significant time for big tables (>10000 rows).       
+    reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates both accuracy and sample reports, "accuracy" - generates an accuracy report, "sample" - generates a sample report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously, e.g. ["metrics_only", "sample"]. Might require significant time for big tables (>10000 rows).
     column_types:
       categorical:                          # The list of columns explicitly defined as categorical by the user. Optional parameter
         - gender
@@ -254,7 +246,7 @@ CUSTOMER:                                   # Table name. Required parameter
     reports: none                           # Controls the generation of quality reports. Optional parameter. Accepted values: "none" (default) - no reports will be generated, "all" - generates an accuracy report, "accuracy" - generates an accuracy report, "metrics_only" - outputs the metrics information only to standard output without generation of a report. Multiple values can be specified as a list to generate multiple types of reports simultaneously. Might require significant time for big generated tables (>10000 rows).
     batch_size: null                        # If specified, the generation is split into batches. This can save the RAM. Optional parameter
     random_seed: null                       # If specified, generates a reproducible result. Optional parameter
-  
+
   encryption:
     fernet_key: null                        # The name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
 
@@ -325,10 +317,10 @@ ORDER:                                      # Table name. Required parameter
     on_bad_lines: error                     # Specifies what to do upon encountering a bad line (a line with too many fields) - ["error", "warn", "skip"]. Optional parameter
     engine: null                            # Parser engine to use - ["c", "python"]. Optional parameter
     sheet_name: 0                           # Name of the sheet in the Excel file. Optional parameter
-  
+
   encryption:
     fernet_key: null                        # The name of the environment variable that kept the value of the fernet key used to encrypt the sample data of the original data. If the fernet key is not set, the original data will be stored in '.pkl' format. If the fernet key is set, the original data will be encrypted and stored securely in '.dat' format. The same fernet key should be used for both training and inference processes to ensure that the original data can be decrypted correctly. Optional parameter
-         
+
   keys:                                     # Keys of the table. Optional parameter
     pk_order_id:
       type: "PK"
@@ -341,7 +333,7 @@ ORDER:                                      # Table name. Required parameter
         - customer_id
       references:
         table: "CUSTOMER"
-        columns:          
+        columns:
           - customer_id
 ```
 
@@ -468,49 +460,19 @@ docker run --rm \
 You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call, however, they will be
 overwritten by corresponding arguments in the metadata file.
 
-#### UI web interface
-You can access the streamlit UI web interface by running the following command after installing the library with the UI option:
-
-```bash
-pip install syngen[ui]
-```
-then create a python file and insert the code provided below into it:
-
-```python
-from syngen import streamlit_app
-
-
-streamlit_app.start()
-```
-
-run the python file:
-
-```bash
-python your_file.py
-```
-
-You also can access the streamlit UI web interface by launching the container with the following command:
-
-```bash
-docker pull tdspora/syngen
-docker run -p 8501:8501 tdspora/syngen --webui
-```
-
-The UI will be available at <http://localhost:8501>.
-
 #### MLflow monitoring
 
 Set the `MLFLOW_TRACKING_URI` environment variable to the desired MLflow tracking server, for instance:
-http://localhost:5000/. You can also set the `MLFLOW_ARTIFACTS_DESTINATION` environment variable to your preferred path 
-(including the cloud path), where the artifacts should be stored. Additionally, set the `MLFLOW_EXPERIMENT_NAME` 
-environment variable to the name you prefer for the experiment. 
+http://localhost:5000/. You can also set the `MLFLOW_ARTIFACTS_DESTINATION` environment variable to your preferred path
+(including the cloud path), where the artifacts should be stored. Additionally, set the `MLFLOW_EXPERIMENT_NAME`
+environment variable to the name you prefer for the experiment.
 To get the system metrics, please set the `MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING` environment variable to `true`.
-By default, the metrics are logged every 10 seconds, but the interval may be changed by setting the environment variable 
+By default, the metrics are logged every 10 seconds, but the interval may be changed by setting the environment variable
 `MLFLOW_SYSTEM_METRICS_SAMPLING_INTERVAL` (for more detailed description look [here](https://mlflow.org/docs/latest/system-metrics/index.html))
 
 When using Docker, ensure the environmental variables are set before running the container.
 
-The provided environmental variables allow to track the training process, and the inference process, and store 
+The provided environmental variables allow to track the training process, and the inference process, and store
 the artifacts in the desired location.
 You can access the MLflow UI by navigating to the provided URL in your browser. If you store artifacts in remote storage,
 ensure that all necessary credentials are provided before using Mlflow.
@@ -542,17 +504,17 @@ docker run --rm -it \
 
 ### How to keep the original data secure
 
-In the current implementation, a sample of the original data is securely stored on disk. 
-To ensure data security, it is recommended to provide the name of the environment variable that kept the value of the fernet key value via the `fernet_key` parameter, 
-either through the command-line interface (CLI) or a metadata file. 
+In the current implementation, a sample of the original data is securely stored on disk.
+To ensure data security, it is recommended to provide the name of the environment variable that kept the value of the fernet key value via the `fernet_key` parameter,
+either through the command-line interface (CLI) or a metadata file.
 The Fernet key enables encryption of the stored data, ensuring its protection.
 
 *Fernet key usage during inference*:
 During inference, previously encrypted data may need to be decrypted to enable comparisons with synthetic data for report generation.
-If the data was encrypted during the training process, the same Fernet key used for encryption must be provided during inference to successfully 
+If the data was encrypted during the training process, the same Fernet key used for encryption must be provided during inference to successfully
 decrypt the data and generate reports.
 
-*Please, pay attention:* 
+*Please, pay attention:*
 Please, store the Fernet key securely. If the key is lost, encrypted data cannot be recovered.
 
 *Note:* To generate a Fernet key, you can use the following code:
@@ -638,9 +600,9 @@ data_io.save_data(df)
 
 ### Custom data loader function
 
-SDK allows you to provide a custom data loader function instead of `source` during the initialization of the `Syngen` class. 
-This is useful when you need to load the original data with specific parameters, or from formats that require 
-custom handling, and at the same time keep the original data secure by skipping the process 
+SDK allows you to provide a custom data loader function instead of `source` during the initialization of the `Syngen` class.
+This is useful when you need to load the original data with specific parameters, or from formats that require
+custom handling, and at the same time keep the original data secure by skipping the process
 of saving the sample of the original data on the disk.
 
 #### How it works
@@ -679,7 +641,7 @@ def my_custom_loader(table_name: str) -> pd.DataFrame:
     else:
         raise ValueError(f"Unknown table name: {table_name}")
 
-    
+
 launcher = Syngen(loader=my_custom_loader, table_name="my_table")
 
 launcher.train(
@@ -750,6 +712,12 @@ Then install it in editable mode.
 
 ```sh
     pip install -e .
+```
+
+To also install the test dependencies (`pytest` and friends), use the `test` extra:
+
+```sh
+    pip install -e ".[test]"
 ```
 
 ### Additional Information

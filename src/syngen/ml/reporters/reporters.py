@@ -163,7 +163,7 @@ class Reporter:
 
         original = original[[col for col in original.columns if col in set().union(*types)]]
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
-        na_values = self.dataset.format.get("na_values", [])
+        na_values = self.dataset.format.get("na_values")
         for date_col, date_format in self.dataset.date_mapping.items():
             original[date_col] = self.convert_dates_to_timestamps(
                 original[date_col], date_format, na_values

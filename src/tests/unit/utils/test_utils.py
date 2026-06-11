@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
 import numpy as np
 
@@ -72,7 +72,13 @@ def test_datetime_to_timestamp(rp_logger):
         ("9999-12-31", 253402214400, "%Y-%m-%d"),
         ("10000-12-31", 253402300800, "%Y-%m-%d"),
         (np.nan, np.nan, "%Y-%m-%d"),
-        ("31-11-28", 1953590400.0, "%Y-%m-%d")
+        ("31-11-28", 1953590400.0, "%Y-%m-%d"),
+        # numpy.datetime64 — converted via pd.Timestamp, treated as naive
+        (np.datetime64("2023-01-01"), 1672531200.0, "%Y-%m-%d"),
+        # tz-aware datetime — tz is stripped, wall-clock time used as-is
+        (datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=5))), 1672531200.0, "%Y-%m-%d"),
+        # datetime.date object — combined with midnight, delta from epoch
+        (date(2023, 1, 1), 1672531200.0, "%Y-%m-%d"),
     ]
     rp_logger.info("Test the method 'datetime_to_timestamp'")
     for date_time, expected_timestamp, date_format in test_cases:
@@ -81,6 +87,26 @@ def test_datetime_to_timestamp(rp_logger):
             assert np.isnan(calculated_timestamp)
         else:
             assert int(calculated_timestamp) == int(expected_timestamp)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_datetime_to_timestamp_numpy_datetime64(rp_logger):
+    """EPMCTDM-7581: 'datetime_to_timestamp' must handle numpy.datetime64 values
+    (as produced by Parquet/Delta date columns). Previously such inputs fell
+    through all branches and returned None, turning the date feature into NaN."""
+    rp_logger.info("Test 'datetime_to_timestamp' with numpy.datetime64 input")
+    test_cases = [
+        (np.datetime64("1970-01-01"), 0.0),
+        (np.datetime64("2000-01-01"), 946684800.0),
+        (np.datetime64("2023-01-01"), 1672531200.0),
+        (np.datetime64("2023-01-01T00:00:00"), 1672531200.0),
+    ]
+    for date_time, expected_timestamp in test_cases:
+        calculated_timestamp = datetime_to_timestamp(date_time, "%Y-%m-%d")
+        assert calculated_timestamp is not None
+        assert int(calculated_timestamp) == int(expected_timestamp)
+    # numpy NaT must degrade to NaN, never None or a crash
+    assert np.isnan(datetime_to_timestamp(np.datetime64("NaT"), "%Y-%m-%d"))
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -127,6 +153,9 @@ def test_timestamp_to_datetime_with_delta(rp_logger):
             "01-02-2023", "%d-%m-%Y", [], 1675209600.0
         ),
         (
+            "01-02-2023", "%d-%m-%Y", None, 1675209600.0
+        ),
+        (
             "label", "%d-%m-%Y", ["label"], None
         ),
         (
@@ -151,6 +180,18 @@ def test_convert_date_to_timestamp(value, date_format, na_values, expected_resul
 def test_convert_to_date(value, date_format, expected_result, to_datetime_conversion, rp_logger):
     rp_logger.info("Test the function 'convert_to_date'")
     assert convert_to_date(value, date_format, to_datetime_conversion) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("value", [np.nan, float("nan"), None])
+def test_convert_to_date_is_nan_safe(value, rp_logger):
+    """EPMCTDM-7581: a NaN/None timestamp must degrade to NaN instead of raising
+    'cannot convert float NaN to integer'."""
+    rp_logger.info("Test that 'convert_to_date' is NaN-safe")
+    result = convert_to_date(value, "%Y-%m-%d")
+    assert isinstance(result, float) and np.isnan(result)
+    result_as_datetime = convert_to_date(value, "%Y-%m-%d", to_datetime_conversion=True)
+    assert isinstance(result_as_datetime, float) and np.isnan(result_as_datetime)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

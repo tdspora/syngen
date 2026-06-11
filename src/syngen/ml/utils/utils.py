@@ -138,22 +138,34 @@ def datetime_to_timestamp(dt, date_format):
     """
     if pd.isnull(dt):
         return np.nan
+    if isinstance(dt, np.datetime64):
+        # numpy.datetime64 (e.g. date columns loaded from Parquet/Delta) is not
+        # an instance of datetime/date, so without this branch it would fall
+        # through and return None - silently turning the date feature into NaN
+        # and poisoning model training. Normalise it to a pandas Timestamp
+        # (a datetime subclass) so it is handled by the datetime branch below.
+        dt = pd.Timestamp(dt)
     if isinstance(dt, str):
         return datetime_str_to_timestamp(dt, date_format)
     if isinstance(dt, datetime):
-        return dt.timestamp()
+        # Strip timezone to stay consistent with 'datetime_str_to_timestamp',
+        # which always strips tz via .replace(tzinfo=None) before computing delta
+        return (dt.replace(tzinfo=None) - datetime(1970, 1, 1)).total_seconds()
     if isinstance(dt, date):
-        # Convert date to datetime at midnight
-        return datetime.combine(dt, datetime.min.time()).timestamp()
+        # Convert date to datetime at midnight, compute delta from epoch
+        # (avoid .timestamp() which applies the local OS timezone offset)
+        return (datetime.combine(dt, datetime.min.time()) - datetime(1970, 1, 1)).total_seconds()
 
 
-def timestamp_to_datetime(timestamp: int, delta=False):
+def timestamp_to_datetime(timestamp: float, delta=False):
     """
     Convert the timestamp to the datetime object or timedelta object
     """
     # Calculate the number of seconds in the UNIX epoch and the number of seconds left
     if pd.isnull(timestamp):
         return np.nan
+
+    timestamp = int(timestamp)
 
     if timestamp >= MAX_ALLOWED_TIME_MS:
         return datetime(9999, 12, 31, 23, 59, 59, 999999)
@@ -186,7 +198,12 @@ def convert_to_date(
     represented dates in a column
     """
     date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
-    dt = timestamp_to_datetime(int(value))
+    if pd.isnull(value):
+        # Guard against NaN/None: ``int(value)`` raises "cannot convert float
+        # NaN to integer". Mirror ``timestamp_to_datetime``'s null handling so a
+        # non-finite generated value degrades to NaN instead of crashing.
+        return np.nan
+    dt = timestamp_to_datetime(value)
     if to_datetime_conversion:
         return dt
     return dt.strftime(date_format)
@@ -247,10 +264,10 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
 def convert_date_to_timestamp(
     value,
     date_format: str,
-    na_values: list
+    na_values: Optional[list]
 ) -> float | None:
     """Helper to convert a single date value to a timestamp"""
-    if value is None or value in na_values:
+    if value is None or (na_values is not None and value in na_values):
         return None
     result = datetime_to_timestamp(value, date_format)
     try:
