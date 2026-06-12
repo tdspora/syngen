@@ -1,6 +1,7 @@
+import sys
 from typing import Tuple, Optional, Dict, List, Callable, Any
 from abc import ABC, abstractmethod
-import os, sys
+import os
 import math
 from ulid import ULID
 from uuid import UUID
@@ -37,7 +38,8 @@ from syngen.ml.context import get_context
 
 
 MEMORY_THRESHOLD = 90  # Memory usage threshold in percent
-BATCH_SIZE_REDUCTION_FACTOR = 4  # Recommended factor to reduce batch size in case of memory overflow
+# Recommended factor to reduce batch size in case of memory overflow
+BATCH_SIZE_REDUCTION_FACTOR = 4
 
 
 class AbstractHandler(ABC):
@@ -727,14 +729,14 @@ class VaeInferHandler(BaseHandler):
             )
         return prepared_data
 
-    def _save_data(self, generated_data):
+    def _save_data(self, generated_data: pd.DataFrame):
         """
         Save generated data to the path
         """
         DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
             data=generated_data,
             format=get_context().get_config(),
-            schema=None
+            schema=self.original_schema
         )
 
     @timing

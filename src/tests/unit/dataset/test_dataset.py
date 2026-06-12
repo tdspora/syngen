@@ -171,6 +171,7 @@ def test_save_dataset(mock_fetch_config, rp_logger):
         "format",
         "cast_to_float",
         "cast_to_integer",
+        "date_types_to_restore",
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -973,6 +974,61 @@ def test_handle_missing_values_in_numeric_columns_in_avro_file(mock_fetch_config
     mock_dataset.launch_detection()
     assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     assert mock_dataset.nan_labels_dict == {"column5": "Not available"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_avro_logical_date_columns_assigned_as_date_columns(mock_fetch_config, rp_logger):
+    """EPMCTDM-7581 (Avro counterpart): columns typed as 'date' in an Avro schema
+    (from date/timestamp logical types) must be classified as date columns - with
+    'to_datetime_conversion' enabled - exactly like Parquet/Delta date columns,
+    instead of being treated as integers (which crashed at load time)."""
+    rp_logger.info(
+        "Test that Avro 'date' schema columns are classified as date columns "
+        "with datetime conversion enabled"
+    )
+    metadata = {"mock_table": {"keys": {}}}
+
+    dates = pd.date_range("2015-01-01", periods=100, freq="D")
+    data = {
+        # Avro 'date' logical type -> object dtype of datetime.date
+        "date_logical": [d.date() for d in dates],
+        # Avro 'timestamp' logical type -> tz-aware datetime64[ns, UTC]
+        "ts_logical": dates.tz_localize("UTC"),
+        "date_string": [d.strftime("%Y-%m-%d") for d in dates],
+        "str_col": [f"value_{i}" for i in range(100)],
+        "int_col": range(1, 101),
+    }
+    df = pd.DataFrame(data)
+
+    schema = {
+        "format": "Avro",
+        "fields": {
+            "date_logical": "date",
+            "date_string": "string",
+            "ts_logical": "date",
+            "str_col": "string",
+            "int_col": "int",
+        },
+    }
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+
+    assert {"date_logical", "ts_logical", "date_string"} == mock_dataset.date_columns
+    assert mock_dataset.to_datetime_conversion["date_logical"] is True
+    assert mock_dataset.to_datetime_conversion["ts_logical"] is True
+    assert mock_dataset.to_datetime_conversion["date_string"] is False
+    assert "int_col" in mock_dataset.int_columns
+    assert "str_col" in mock_dataset.str_columns
+    assert mock_dataset.date_columns.isdisjoint(mock_dataset.int_columns)
+    assert mock_dataset.date_columns.isdisjoint(mock_dataset.str_columns)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

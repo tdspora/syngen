@@ -1,6 +1,6 @@
 from typing import Dict, Tuple
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime, date, time
 
 import pandas as pd
 import numpy as np
@@ -14,7 +14,7 @@ class Convertor:
     """
     schema: Dict
     df: pd.DataFrame
-    excluded_dtypes: Tuple = (str, bytes, datetime, date, bool)
+    excluded_dtypes: Tuple = (str, bytes, datetime, date, time, bool)
 
     def _check_dtype_or_nan(self, included_dtypes: Tuple, excluded_dtypes: Tuple = ()):
         """
@@ -146,6 +146,33 @@ class AvroConvertor(Convertor):
     Class for converting the fetched avro schema
     """
 
+    # Avro logical types that represent a date/time and must be modelled as a
+    # date feature. They are mapped to the unified "date" type (mirroring how
+    # PyArrowSchemaConvertor maps Parquet/Delta date & timestamp types). Without
+    # this they would be mapped to "int" and crash in 'Convertor._update_data_types'
+    # when the loaded column holds 'datetime.date' / 'datetime64' objects.
+    DATE_LOGICAL_TYPES = frozenset({
+        "date",
+        "time-millis",
+        "time-micros",
+        "timestamp-millis",
+        "timestamp-micros",
+        "local-timestamp-millis",
+        "local-timestamp-micros",
+    })
+
+    # Maps each Avro date logical type to the Python type string used during
+    # inference to restore the original object type from a numeric timestamp.
+    DATE_TYPE_TO_RESTORE: Dict = {
+        "date": "date",
+        "time-millis": "time",
+        "time-micros": "time",
+        "timestamp-millis": "datetime",
+        "timestamp-micros": "datetime",
+        "local-timestamp-millis": "datetime",
+        "local-timestamp-micros": "datetime",
+    }
+
     def __init__(self, schema, df):
         super().__init__(schema, df)
         self.complex_types = {"array", "map", "record", "enum", "fixed"}
@@ -156,27 +183,40 @@ class AvroConvertor(Convertor):
         """
         Convert the schema of Avro file to the unified format
         """
-        def _extract_type_names(avro_type) -> set[str]:
+        def _extract_types(avro_type) -> tuple[set[str], set[str]]:
             if isinstance(avro_type, list):
                 names: set[str] = set()
+                logical: set[str] = set()
                 for t in avro_type:
-                    names |= _extract_type_names(t)
-                return names
+                    n, lg = _extract_types(t)
+                    names |= n
+                    logical |= lg
+                return names, logical
             if isinstance(avro_type, dict):
-                return _extract_type_names(avro_type.get("type"))
+                names, logical = _extract_types(avro_type.get("type"))
+                if (logical_type := avro_type.get("logicalType")) is not None:
+                    logical.add(logical_type)
+                return names, logical
             if avro_type is None:
-                return {"null"}
-            return {avro_type}
+                return {"null"}, set()
+            return {avro_type}, set()
 
         converted_schema = dict()
         converted_schema["fields"] = dict()
+        converted_schema["date_types_to_restore"] = dict()
         schema = schema if schema else dict()
         for column, data_type in schema.items():
             fields = converted_schema["fields"]
-            type_names = _extract_type_names(data_type)
+            type_names, logical_types = _extract_types(data_type)
 
             if "boolean" in type_names:
                 fields[column] = "boolean"
+            elif matched_logical := logical_types & self.DATE_LOGICAL_TYPES:
+                fields[column] = "date"
+                avro_logical = next(iter(matched_logical))
+                converted_schema["date_types_to_restore"][column] = (
+                    self.DATE_TYPE_TO_RESTORE[avro_logical]
+                )
             elif type_names & {"int", "long"}:
                 fields[column] = "int"
             elif type_names & {"float", "double"}:
