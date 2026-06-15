@@ -12,7 +12,7 @@ from syngen.ml.flatten_json import unflatten_list, safe_flatten
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import fetch_unique_root, fetch_config, get_source_path_extension
-from syngen.ml.context import get_context
+from syngen.ml.context import get_context, global_context
 
 
 class Processor:
@@ -274,12 +274,14 @@ class PreprocessHandler(Processor):
         """
         Load the data from the predefined source
         """
+        
         if self.loader is not None:
             data_loader = DataFrameFetcher(
                 loader=self.loader,
                 table_name=self.table_name
             )
         else:
+            global_context(self.metadata[self.table_name].get("format", {}))
             path_to_source = self.metadata[self.table_name]["train_settings"]["source"]
             data_loader = DataLoader(path=path_to_source)
         self.original_df, self.schema = data_loader.load_data()

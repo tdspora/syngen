@@ -1177,11 +1177,10 @@ def test_save_csv_with_triple_colons(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV contained the fields with triple colons")
     format_settings = {"sep": ":::"}
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, _ = CSVLoader(path_to_source).load_data()
     assert get_context().get_config() == {"sep": ",", "quoting": 0, "skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    global_context(format_settings)
-    data, schema = CSVLoader(test_csv_path, sep=",").load_data()
+    CSVLoader(test_csv_path).save_data(data)
+    data, _ = CSVLoader(test_csv_path).load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1303,11 +1302,10 @@ def test_save_csv_with_double_pipe_delimited_text(test_csv_path, rp_logger):
     rp_logger.info("Saving CSV contained the fields with double pipe delimited text")
     format_settings = {"sep": r"\|\|"}
     global_context(format_settings)
-    data, schema = CSVLoader(path_to_source).load_data()
+    data, _ = CSVLoader(path_to_source).load_data()
     assert get_context().get_config() == {"sep": ",", "quoting": 0, "skiprows": None}
-    CSVLoader(test_csv_path).save_data(data, format=get_context().get_config())
-    global_context(format_settings)
-    data, schema = CSVLoader(test_csv_path, sep=",").load_data()
+    CSVLoader(test_csv_path).save_data(data)
+    data, _ = CSVLoader(test_csv_path).load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
