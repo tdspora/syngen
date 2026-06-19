@@ -1137,13 +1137,6 @@ class Clustering(BaseMetric):
         original_for_clustering = self.original[
             cont_columns + categorical_columns
             ].dropna()
-        original_transformed = self.__preprocess_data(original_for_clustering)
-
-        if len(original_transformed) == 0:
-            logger.warning(
-                "No clustering metric will be formed due to empty DataFrame"
-            )
-            return None
 
         warning_message = (
             "It is not sufficient to perform clustering. "
@@ -1151,12 +1144,15 @@ class Clustering(BaseMetric):
             "Clustering metric will not be calculated."
         )
 
-        if len(original_transformed) < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
+        if len(original_for_clustering) < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
             logger.warning(
-                f"There are {len(original_transformed)} rows "
-                f"in the original dataset after dropping null values. {warning_message}"
+                f"There are {len(original_for_clustering)} rows "
+                "in the original dataset after dropping null values. "
+                f"{warning_message}"
             )
             return None
+
+        original_transformed = self.__preprocess_data(original_for_clustering)
 
         optimal_clust_num = self.__get_optimal_number_of_clusters(
             original_transformed
