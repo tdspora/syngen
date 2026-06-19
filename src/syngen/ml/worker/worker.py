@@ -14,7 +14,7 @@ from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
-from syngen.ml.context.context import global_context
+from syngen.ml.format_settings import set_format_settings
 from syngen.ml.utils import ProgressBarHandler, get_source_path_extension
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
@@ -432,7 +432,7 @@ class Worker:
         Train process for a single table
         """
         config_of_table = metadata[table]
-        global_context(config_of_table.get("format", {}))
+        set_format_settings(config_of_table.get("format", {}))
         train_settings = config_of_table["train_settings"]
         log_message = f"Training process of the table - '{table}' has started"
         logger.info(log_message)
@@ -538,7 +538,7 @@ class Worker:
         Infer process for a single table
         """
         config_of_table = metadata[table]
-        global_context(config_of_table.get("format", {}))
+        set_format_settings(config_of_table.get("format", {}))
         log_message = f"Infer process of the table - '{table}' has started"
         logger.info(log_message)
         ProgressBarHandler().set_progress(delta=delta, message=log_message)

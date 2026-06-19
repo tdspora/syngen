@@ -12,7 +12,6 @@ from syngen.ml.flatten_json import unflatten_list, safe_flatten
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.utils import fetch_unique_root, fetch_config, get_source_path_extension
-from syngen.ml.context import get_context, global_context
 
 
 class Processor:
@@ -274,14 +273,12 @@ class PreprocessHandler(Processor):
         """
         Load the data from the predefined source
         """
-        
         if self.loader is not None:
             data_loader = DataFrameFetcher(
                 loader=self.loader,
                 table_name=self.table_name
             )
         else:
-            global_context(self.metadata[self.table_name].get("format", {}))
             path_to_source = self.metadata[self.table_name]["train_settings"]["source"]
             data_loader = DataLoader(path=path_to_source)
         self.original_df, self.schema = data_loader.load_data()
@@ -548,10 +545,7 @@ class PostprocessHandler(Processor):
         Save the preview data in '.csv' format for the fast review of the generated data
         """
         preview_path = f"{os.path.splitext(path_to_destination)[0]}_preview.csv"
-        DataLoader(path=preview_path).save_data(
-            preview_df,
-            format=get_context().get_config(),
-        )
+        DataLoader(path=preview_path).save_data(preview_df)
         logger.info(
             f"Preview saved in '{preview_path}' (first {len(preview_df)} rows)"
         )
@@ -576,7 +570,6 @@ class PostprocessHandler(Processor):
         generated_data = generated_data[order_of_columns]
         DataLoader(path=path_to_destination).save_data(
             generated_data,
-            format=get_context().get_config(),
             schema=original_schema
         )
         if self.type_of_process == "infer":

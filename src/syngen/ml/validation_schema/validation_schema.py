@@ -302,7 +302,7 @@ class CSVFormatSettingsSchema(Schema):
         required=False, validate=validate.OneOf(["error", "warn", "skip"])
     )
     engine = fields.String(
-        required=False, allow_none=True, validate=validate.OneOf(["c", "python"])
+        required=False, allow_none=True, validate=validate.OneOf(["c", "python", "pyarrow"])
     )
     na_values = fields.List(fields.String(), required=False, allow_none=True)
 
