@@ -13,7 +13,7 @@ from cryptography.fernet import Fernet
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.data_loaders import DataEncryptor
 from syngen.sdk import DataIO
-from syngen.ml.format_settings import set_format_settings
+
 
 SUCCESSFUL_MESSAGE = "The test passed successfully"
 # Fernet test keys are generated per pytest session.
@@ -264,16 +264,3 @@ def get_dataframe(table_name: str) -> pd.DataFrame:
         "test_table": [{"id": 1, "value": 30}, {"id": 2, "value": 40}]
     }
     return pd.DataFrame(data.get(table_name, []))
-
-
-@pytest.fixture(autouse=True)
-def reset_context():
-    """Reset the global context singleton to an empty config before each test.
-
-    Prevents context state set in one test from leaking into the next,
-    which is especially important now that CSVLoader.__init__ writes to
-    context and _load_data no longer resets it.
-    """
-    set_format_settings({})
-    yield
-    set_format_settings({})
