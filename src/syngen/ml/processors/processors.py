@@ -11,6 +11,7 @@ import numpy as np
 from syngen.ml.flatten_json import unflatten_list, safe_flatten
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
+from syngen.ml.format_settings.format_settings import load_saved_artifact
 from syngen.ml.utils import fetch_unique_root, fetch_config, get_source_path_extension
 
 
@@ -432,7 +433,7 @@ class PostprocessHandler(Processor):
         """
         Load generated data from the predefined path
         """
-        data, schema = DataLoader(path=path_to_generated_data).load_data()
+        data, _ = DataLoader(path=path_to_generated_data).load_data()
         return data
 
     @staticmethod
@@ -512,7 +513,8 @@ class PostprocessHandler(Processor):
                     "destination", default_path_to_generated_data
                 ) if self.type_of_process == "infer" else default_path_to_generated_data
             )
-            data = self._load_generated_data(path_to_generated_data, table_name)
+            with load_saved_artifact():
+                data = self._load_generated_data(path_to_generated_data, table_name)
             flatten_metadata_of_table = self.flatten_metadata.get(table_name)
             if flatten_metadata_of_table is not None:
                 logger.info(

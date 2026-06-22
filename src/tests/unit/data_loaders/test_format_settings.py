@@ -11,6 +11,7 @@ Unit tests for 'syngen.ml.format_settings':
   - 'set_format_settings' as single write point
   - CSVLoader does not mutate format settings during load_data
   - ExcelLoader does not mutate format settings during load_data
+  - 'load_saved_artifact' context manager
 """
 import csv
 import pytest
@@ -20,6 +21,7 @@ from syngen.ml.format_settings import (
     CSVFormatSettings,
     ExcelFormatSettings,
     set_format_settings,
+    load_saved_artifact,
 )
 from tests.conftest import SUCCESSFUL_MESSAGE
 
@@ -556,4 +558,90 @@ def test_save_format_settings_does_not_mutate_stored_settings(rp_logger):
     assert stored["na_values"] == ["-"]
     assert stored["header"] is None
     assert stored["quoting"] == "all"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+# ---------------------------------------------------------------------------
+# 'load_saved_artifact' — the context manager
+# ---------------------------------------------------------------------------
+
+def test_load_saved_artifact_normalizes_multi_char_sep_inside_context(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' sets the separator to ',' inside context "
+        "when the original separator is longer than one character"
+    )
+    set_format_settings({"sep": "|||"})
+    with load_saved_artifact():
+        assert FormatSettings().format_settings["sep"] == ","
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_restores_original_format_after_context(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' restores original format settings after context exits"
+    )
+    set_format_settings({"sep": "|||"})
+    with load_saved_artifact():
+        pass
+    assert FormatSettings().format_settings["sep"] == "|||"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_does_not_change_single_char_sep(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' does not alter the separator "
+        "when it is already a single character"
+    )
+    set_format_settings({"sep": ";"})
+    with load_saved_artifact():
+        assert FormatSettings().format_settings["sep"] == ";"
+    assert FormatSettings().format_settings["sep"] == ";"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_preserves_other_format_fields_inside_context(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' preserves the non-sep format fields inside the context"
+    )
+    set_format_settings({"sep": "|||", "encoding": "utf-8", "quoting": "all"})
+    with load_saved_artifact():
+        fmt = FormatSettings().format_settings
+        assert fmt["encoding"] == "utf-8"
+        assert fmt["quoting"] == "all"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_restores_format_after_exception(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' restores original format settings "
+        "even when an exception is raised inside the context"
+    )
+    set_format_settings({"sep": "|||"})
+    with pytest.raises(RuntimeError):
+        with load_saved_artifact():
+            raise RuntimeError("simulated error")
+    assert FormatSettings().format_settings["sep"] == "|||"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_no_op_when_format_is_empty(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' is a no-op when format settings are empty"
+    )
+    with load_saved_artifact():
+        assert FormatSettings().format_settings == {}
+    assert FormatSettings().format_settings == {}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("sep", ["|||", ":::", "\\|\\|"])
+def test_load_saved_artifact_normalizes_various_multi_char_seps(sep, rp_logger):
+    rp_logger.info(
+        f"Testing 'load_saved_artifact' normalizes multi-char sep {sep!r} to ',' "
+        "inside context and restores it after"
+    )
+    set_format_settings({"sep": sep})
+    with load_saved_artifact():
+        assert FormatSettings().format_settings["sep"] == ","
+    assert FormatSettings().format_settings["sep"] == sep
     rp_logger.info(SUCCESSFUL_MESSAGE)

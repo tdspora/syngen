@@ -1,6 +1,7 @@
 import csv
 import copy
 import inspect
+from contextlib import contextmanager
 from typing import Dict, Optional
 
 import pandas as pd
@@ -177,3 +178,22 @@ class ExcelFormatSettings(FormatSettings):
 
 def set_format_settings(format_dict: Dict):
     FormatSettings().format_settings = format_dict
+
+
+@contextmanager
+def load_saved_artifact():
+    """
+    The context manager for loading a file that was saved with 'save_format_settings'.
+
+    'save_format_settings' normalises separators longer than one character to ",",
+    so loading such a file must use that same effective separator, not the original
+    multi-char one. Restores the previous format settings on exit.
+    """
+    saved_format = FormatSettings().format_settings
+    effective_sep = CSVFormatSettings().save_format_settings.get("sep")
+    if effective_sep is not None and effective_sep != saved_format.get("sep"):
+        set_format_settings({**saved_format, "sep": effective_sep})
+    try:
+        yield
+    finally:
+        set_format_settings(saved_format)
