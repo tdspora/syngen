@@ -142,12 +142,15 @@ class CSVLoader(BaseDataLoader):
         format_settings.update(CSVFormatSettings().format_settings)
         set_format_settings(format_settings)
 
-    def _fetch_data(self, **params):
-        return pd.read_csv(self.path, **params).apply(trim_string, axis=0)
+    def _fetch_data(self):
+        return (
+            pd.read_csv(self.path, **CSVFormatSettings().load_format_settings)
+            .apply(trim_string, axis=0)
+        )
 
     def _load_data(self) -> Tuple[pd.DataFrame, Dict]:
         try:
-            df = self._fetch_data(**CSVFormatSettings().load_format_settings)
+            df = self._fetch_data()
             if all([isinstance(column, int) for column in df.columns]):
                 df.rename(
                     columns={
