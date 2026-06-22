@@ -88,6 +88,7 @@ class Dataset:
     dropped_columns: Set = field(default_factory=set)
     format: Dict = field(default_factory=dict)
     to_datetime_conversion: Dict = field(default_factory=dict)
+    date_types_to_restore: Dict = field(default_factory=dict)
     excluded_columns: Set = field(default_factory=set)
 
     def _select_str_columns(self) -> List[str]:
@@ -1054,6 +1055,24 @@ class Dataset:
             - self.uuid_columns
         )
         self._set_date_columns()
+        schema_date_columns = set(
+            column for column, data_type in self.fields.items() if data_type == "date"
+        )
+        self.date_columns = self.date_columns.union(schema_date_columns)
+        self.date_columns = (
+            self.date_columns
+            - self.categorical_columns
+            - self.binary_columns
+        )
+        self.to_datetime_conversion = {
+            column: column in schema_date_columns
+            for column in self.date_columns
+        }
+        date_types_to_restore = self.schema.get("date_types_to_restore", {})
+        self.date_types_to_restore = {
+            column: date_types_to_restore.get(column, "datetime")
+            for column in schema_date_columns
+        }
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categorical_columns - self.binary_columns
         self.uuid_columns_types = {
@@ -1105,7 +1124,8 @@ class Dataset:
             feature.fit(
                 self.df[self.columns[name]],
                 date_mapping=self.date_mapping,
-                to_datetime_conversion=self.to_datetime_conversion
+                to_datetime_conversion=self.to_datetime_conversion,
+                date_restore_types=self.date_types_to_restore
             )
 
         self.all_columns = [col for col in self.columns]
