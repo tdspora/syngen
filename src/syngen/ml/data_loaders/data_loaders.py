@@ -174,7 +174,10 @@ class CSVLoader(BaseDataLoader):
 
     def __get_columns(self):
         head_df = pd.read_csv(self.path, **CSVFormatSettings().load_format_settings, nrows=0)
-        return list(head_df.columns)
+        columns = list(head_df.columns)
+        if all(isinstance(c, int) for c in columns):
+            columns = [f"column_{i}" for i in range(len(columns))]
+        return columns
 
     def get_columns(self) -> List[str]:
         return self._get_columns()

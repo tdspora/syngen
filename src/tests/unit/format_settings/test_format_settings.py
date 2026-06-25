@@ -562,7 +562,7 @@ def test_save_format_settings_does_not_mutate_stored_settings(rp_logger):
 
 
 # ---------------------------------------------------------------------------
-# 'load_saved_artifact' — the context manager
+# 'load_saved_artifact' — CSV branch (detected via CSVFormatSettings)
 # ---------------------------------------------------------------------------
 
 def test_load_saved_artifact_normalizes_multi_char_sep_inside_context(rp_logger):
@@ -644,4 +644,231 @@ def test_load_saved_artifact_normalizes_various_multi_char_seps(sep, rp_logger):
     with load_saved_artifact():
         assert FormatSettings().format_settings["sep"] == ","
     assert FormatSettings().format_settings["sep"] == sep
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("load_only_field, value", [
+    ("engine", "python"),
+    ("engine", "c"),
+    ("engine", "pyarrow"),
+    ("on_bad_lines", "skip"),
+    ("on_bad_lines", "warn"),
+    ("on_bad_lines", "error"),
+    ("skiprows", 1),
+    ("skiprows", 3),
+])
+def test_load_saved_artifact_strips_each_load_only_field_inside_context(
+    rp_logger, load_only_field, value
+):
+    rp_logger.info(
+        f"Testing 'load_saved_artifact' strips '{load_only_field}' "
+        f"with value {value!r} inside context"
+    )
+    set_format_settings({"sep": ",", load_only_field: value})
+    with load_saved_artifact():
+        assert load_only_field not in FormatSettings().format_settings
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_strips_all_load_only_fields_when_all_present(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' strips 'engine', 'on_bad_lines', and 'skiprows' "
+        "when all three are present"
+    )
+    set_format_settings({
+        "sep": ",",
+        "engine": "python",
+        "on_bad_lines": "skip",
+        "skiprows": 1,
+    })
+    with load_saved_artifact():
+        fmt = FormatSettings().format_settings
+        assert "engine" not in fmt
+        assert "on_bad_lines" not in fmt
+        assert "skiprows" not in fmt
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_restores_load_only_fields_after_context(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' restores 'engine', 'on_bad_lines', and 'skiprows' "
+        "after the context exits"
+    )
+    set_format_settings({
+        "sep": ",",
+        "engine": "python",
+        "on_bad_lines": "skip",
+        "skiprows": 1,
+    })
+    with load_saved_artifact():
+        pass
+    fmt = FormatSettings().format_settings
+    assert fmt["engine"] == "python"
+    assert fmt["on_bad_lines"] == "skip"
+    assert fmt["skiprows"] == 1
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_preserves_non_load_only_fields_when_load_only_present(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' preserves non-load-only fields inside context "
+        "even when load-only fields are also present"
+    )
+    set_format_settings({
+        "sep": ",",
+        "encoding": "utf-8",
+        "quoting": "all",
+        "engine": "python",
+        "on_bad_lines": "skip",
+        "skiprows": 2,
+    })
+    with load_saved_artifact():
+        fmt = FormatSettings().format_settings
+        assert fmt["encoding"] == "utf-8"
+        assert fmt["quoting"] == "all"
+        assert fmt["sep"] == ","
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_combines_sep_normalization_and_load_only_stripping(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' normalizes multi-char sep to ',' and strips "
+        "load-only fields simultaneously"
+    )
+    set_format_settings({
+        "sep": "|||",
+        "encoding": "utf-8",
+        "engine": "python",
+        "on_bad_lines": "skip",
+        "skiprows": 1,
+    })
+    with load_saved_artifact():
+        fmt = FormatSettings().format_settings
+        assert fmt["sep"] == ","
+        assert "engine" not in fmt
+        assert "on_bad_lines" not in fmt
+        assert "skiprows" not in fmt
+        assert fmt["encoding"] == "utf-8"
+    restored = FormatSettings().format_settings
+    assert restored["sep"] == "|||"
+    assert restored["engine"] == "python"
+    assert restored["on_bad_lines"] == "skip"
+    assert restored["skiprows"] == 1
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_restores_load_only_fields_after_exception(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' restores load-only fields after an exception "
+        "is raised inside the context"
+    )
+    set_format_settings({
+        "sep": ",",
+        "engine": "python",
+        "on_bad_lines": "skip",
+        "skiprows": 1,
+    })
+    with pytest.raises(RuntimeError):
+        with load_saved_artifact():
+            raise RuntimeError("simulated error")
+    fmt = FormatSettings().format_settings
+    assert fmt["engine"] == "python"
+    assert fmt["on_bad_lines"] == "skip"
+    assert fmt["skiprows"] == 1
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+# ---------------------------------------------------------------------------
+# 'load_saved_artifact' — Excel branch (detected via ExcelFormatSettings)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("sheet_name", [
+    pytest.param("Customers"),
+    pytest.param("Sheet1"),
+    pytest.param(1),
+    pytest.param(None),
+])
+def test_load_saved_artifact_excel_sets_sheet_name_to_zero_inside_context(
+    rp_logger, sheet_name
+):
+    rp_logger.info(
+        f"Testing 'load_saved_artifact' detects Excel format via 'ExcelFormatSettings' "
+        f"and sets 'sheet_name' to 0 inside context when original 'sheet_name' is {sheet_name!r}"
+    )
+    set_format_settings({"sheet_name": sheet_name})
+    with load_saved_artifact():
+        assert FormatSettings().format_settings["sheet_name"] == 0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("sheet_name", [
+    pytest.param("Customers"),
+    pytest.param("Sheet1"),
+    pytest.param(1),
+    pytest.param(None),
+])
+def test_load_saved_artifact_excel_restores_original_sheet_name_after_context(
+    rp_logger, sheet_name
+):
+    rp_logger.info(
+        f"Testing 'load_saved_artifact' restores original 'sheet_name' {sheet_name!r} "
+        "after context exits"
+    )
+    set_format_settings({"sheet_name": sheet_name})
+    with load_saved_artifact():
+        pass
+    assert FormatSettings().format_settings["sheet_name"] == sheet_name
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_excel_does_not_strip_sheet_name_after_context(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' does not permanently remove 'sheet_name' "
+        "from format settings after the context exits"
+    )
+    set_format_settings({"sheet_name": "Customers"})
+    with load_saved_artifact():
+        pass
+    assert "sheet_name" in FormatSettings().format_settings
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_excel_restores_format_after_exception(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' restores original 'sheet_name' after an "
+        "exception is raised inside the context"
+    )
+    set_format_settings({"sheet_name": "Customers"})
+    with pytest.raises(RuntimeError):
+        with load_saved_artifact():
+            raise RuntimeError("simulated error")
+    assert FormatSettings().format_settings["sheet_name"] == "Customers"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_csv_branch_when_no_excel_fields_present(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' applies CSV logic (load-only stripping, "
+        "sep normalisation) when 'ExcelFormatSettings' returns empty — i.e. no Excel "
+        "fields are present in format settings"
+    )
+    set_format_settings({"sep": "|||", "engine": "python", "on_bad_lines": "skip"})
+    with load_saved_artifact():
+        fmt = FormatSettings().format_settings
+        assert fmt["sep"] == ","
+        assert "engine" not in fmt
+        assert "on_bad_lines" not in fmt
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_load_saved_artifact_excel_branch_skips_csv_logic(rp_logger):
+    rp_logger.info(
+        "Testing 'load_saved_artifact' does not apply CSV logic (load-only stripping, "
+        "sep normalisation) when 'ExcelFormatSettings' is non-empty"
+    )
+    set_format_settings({"sheet_name": "Customers", "sep": "|||"})
+    with load_saved_artifact():
+        fmt = FormatSettings().format_settings
+        assert fmt["sheet_name"] == 0
+        assert fmt.get("sep") == "|||"
     rp_logger.info(SUCCESSFUL_MESSAGE)

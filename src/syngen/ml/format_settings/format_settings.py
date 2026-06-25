@@ -183,16 +183,36 @@ def set_format_settings(format_dict: Dict):
 @contextmanager
 def load_saved_artifact():
     """
-    The context manager for loading a file that was saved with 'save_format_settings'.
+    Context manager for loading a file saved by the train/infer pipeline.
 
-    'save_format_settings' normalises separators longer than one character to ",",
-    so loading such a file must use that same effective separator, not the original
-    multi-char one. Restores the previous format settings on exit.
+    Applies format-specific logic before yielding and restores the original
+    format settings on exit (including after exceptions).
+
+    CSV / text sources
+    ------------------
+    - Load-only parameters ('engine', 'on_bad_lines', 'skiprows') are stripped:
+      the generated artifact is a clean file that was never written with those
+      parameters, so they must not be applied when reading the generated data.
+    - Multi-character separators are normalised to "," to match the separator
+      that 'save_format_settings' used when writing the file.
+
+    Excel sources
+    -------------
+    - 'sheet_name' is set to 0 so the first (and only) sheet of the generated
+      artifact is read. The artifact is always written to the default sheet
+      regardless of the sheet name used in the original source.
     """
     saved_format = FormatSettings().format_settings
-    effective_sep = CSVFormatSettings().save_format_settings.get("sep")
-    if effective_sep is not None and effective_sep != saved_format.get("sep"):
-        set_format_settings({**saved_format, "sep": effective_sep})
+
+    if ExcelFormatSettings().format_settings:
+        artifact_format = {**saved_format, "sheet_name": 0}
+    else:
+        artifact_format = {k: v for k, v in saved_format.items() if k not in _LOAD_ONLY_FIELDS}
+        effective_sep = CSVFormatSettings().save_format_settings.get("sep")
+        if effective_sep is not None and effective_sep != saved_format.get("sep"):
+            artifact_format["sep"] = effective_sep
+
+    set_format_settings(artifact_format)
     try:
         yield
     finally:
