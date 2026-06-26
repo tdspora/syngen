@@ -188,7 +188,7 @@ class ContinuousFeature(BaseFeature):
         self.feature_type = "numeric"
 
     def fit(self, data: pd.DataFrame, **kwargs):
-        self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
+        self.is_positive = (data >= 0).sum().item() >= len(data)
         self.scaler = self._select_scaler(data)
         self.scaler.fit(data)
         self.input_dimension = data.shape[1]
