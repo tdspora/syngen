@@ -53,6 +53,7 @@ dependencies = [
     "PyYAML==6.*",
     "scikit_learn==1.5.*",
     "scipy==1.14.*",
+    "sdmetrics==0.28.*",
     "seaborn==0.13.*",
     "tensorflow==2.15.*",
     "tornado==6.5.*",
