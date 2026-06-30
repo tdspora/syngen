@@ -1497,3 +1497,118 @@ def test_preprocess_data_row_limit_larger_than_data(
     assert len(result) == 10
     assert handler.row_subset == 10
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+# tests for PostprocessHandler.restore_int_dtypes
+def _make_dataset_config(int_columns, nan_labels_dict=None):
+    from types import SimpleNamespace
+    return SimpleNamespace(
+        int_columns=set(int_columns),
+        nan_labels_dict=nan_labels_dict or {},
+    )
+
+
+def test_restore_int_dtypes_plain_int_column_cast_to_int64(rp_logger):
+    rp_logger.info(
+        "Test that 'restore_int_dtypes' casts a plain integer column "
+        "(stored as float, no NaN, no nan-label) to 'int64'."
+    )
+    data = pd.DataFrame({"age": [1.0, 2.0, 3.0]})
+    config = _make_dataset_config(["age"])
+    result = PostprocessHandler.restore_int_dtypes(data, config)
+    assert result["age"].dtype == np.dtype("int64")
+    assert list(result["age"]) == [1, 2, 3]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_restore_int_dtypes_int_column_with_nan_cast_to_Int64(rp_logger):
+    rp_logger.info(
+        "Test that 'restore_int_dtypes' casts an integer column "
+        "with NaN values to nullable 'Int64'."
+    )
+    data = pd.DataFrame({"age": [1.0, np.nan, 3.0]})
+    config = _make_dataset_config(["age"])
+    result = PostprocessHandler.restore_int_dtypes(data, config)
+    assert result["age"].dtype == pd.Int64Dtype()
+    assert result["age"][0] == 1
+    assert pd.isna(result["age"][1])
+    assert result["age"][2] == 3
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_restore_int_dtypes_nan_label_sentinel_preserved(rp_logger):
+    rp_logger.info(
+        "Test that 'restore_int_dtypes' preserves the nan-label sentinel string "
+        "while converting numeric values to int in an object column."
+    )
+    data = pd.DataFrame({"score": [1.0, "missing", 3.0, "missing"]})
+    config = _make_dataset_config(["score"], nan_labels_dict={"score": "missing"})
+    result = PostprocessHandler.restore_int_dtypes(data, config)
+    assert result["score"].dtype == object
+    assert result["score"][0] == 1
+    assert result["score"][1] == "missing"
+    assert result["score"][2] == 3
+    assert result["score"][3] == "missing"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_restore_int_dtypes_nan_label_and_actual_nan_both_preserved(rp_logger):
+    rp_logger.info(
+        "Test that 'restore_int_dtypes' preserves both the nan-label sentinel "
+        "and actual NaN values alongside integer values."
+    )
+    data = pd.DataFrame({"score": [1.0, "missing", np.nan, 4.0]})
+    config = _make_dataset_config(["score"], nan_labels_dict={"score": "missing"})
+    result = PostprocessHandler.restore_int_dtypes(data, config)
+    assert result["score"].dtype == object
+    assert result["score"][0] == 1
+    assert result["score"][1] == "missing"
+    assert pd.isna(result["score"][2])
+    assert result["score"][3] == 4
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_restore_int_dtypes_column_not_in_data_is_skipped(rp_logger):
+    rp_logger.info(
+        "Test that 'restore_int_dtypes' silently skips columns listed in "
+        "'int_columns' that are not present in the DataFrame."
+    )
+    data = pd.DataFrame({"age": [1.0, 2.0]})
+    config = _make_dataset_config(["age", "nonexistent"])
+    result = PostprocessHandler.restore_int_dtypes(data, config)
+    assert "nonexistent" not in result.columns
+    assert result["age"].dtype == np.dtype("int64")
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_restore_int_dtypes_multiple_columns_mixed(rp_logger):
+    rp_logger.info(
+        "Test that 'restore_int_dtypes' handles multiple columns: "
+        "one plain int, one with NaN, one with a nan-label sentinel."
+    )
+    data = pd.DataFrame({
+        "a": [1.0, 2.0, 3.0],
+        "b": [1.0, np.nan, 3.0],
+        "c": [10.0, "n/a", 30.0],
+    })
+    config = _make_dataset_config(["a", "b", "c"], nan_labels_dict={"c": "n/a"})
+    result = PostprocessHandler.restore_int_dtypes(data, config)
+    assert result["a"].dtype == np.dtype("int64")
+    assert result["b"].dtype == pd.Int64Dtype()
+    assert result["c"].dtype == object
+    assert result["c"][0] == 10
+    assert result["c"][1] == "n/a"
+    assert result["c"][2] == 30
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_restore_int_dtypes_no_int_columns_data_unchanged(rp_logger):
+    rp_logger.info(
+        "Test that 'restore_int_dtypes' leaves the DataFrame unchanged "
+        "when 'int_columns' is empty."
+    )
+    data = pd.DataFrame({"name": ["Alice", "Bob"], "score": [1.5, 2.5]})
+    config = _make_dataset_config([])
+    result = PostprocessHandler.restore_int_dtypes(data, config)
+    assert_series_equal(result["score"], data["score"])
+    rp_logger.info(SUCCESSFUL_MESSAGE)
