@@ -1777,8 +1777,8 @@ class CoverageMetric(BaseMetric):
                 )
                 continue
             score = min(RangeCoverage.compute(
-                self.original[col].dropna(),
-                self.synthetic[col].dropna(),
+                    self.original[col].dropna(),
+                    self.synthetic[col].dropna(),
                 ),
                 RangeCoverage.compute(
                     self.synthetic[col].dropna(),
