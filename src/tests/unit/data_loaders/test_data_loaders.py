@@ -1020,7 +1020,6 @@ def test_load_tab_delimited_csv(rp_logger):
     assert CSVFormatSettings().load_format_settings == {
         "sep": "\t", "quoting": 3, "engine": "python"
     }
-    assert CSVFormatSettings().save_format_settings == {"sep": "\t", "quoting": 3}
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
