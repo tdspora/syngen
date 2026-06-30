@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 from datetime import datetime, timedelta, timezone, date, time
 
 import numpy as np
+import pandas as pd
 
 from syngen.ml.utils import (
     slugify_attribute,
@@ -199,18 +200,59 @@ def test_timestamp_to_datetime_with_delta(rp_logger):
 
 @pytest.mark.parametrize(
     "value, date_format, na_values, expected_result", [
+        # valid string date
         (
             "01-02-2023", "%d-%m-%Y", [], 1675209600.0
         ),
         (
             "01-02-2023", "%d-%m-%Y", None, 1675209600.0
         ),
+        # datetime object
+        (
+            datetime(2023, 2, 1), "%d-%m-%Y", [], 1675209600.0
+        ),
+        # date object
+        (
+            date(2023, 2, 1), "%d-%m-%Y", [], 1675209600.0
+        ),
+        # numpy datetime64
+        (
+            np.datetime64("2023-02-01"), "%d-%m-%Y", [], 1675209600.0
+        ),
+        # datetime.time object — encoded as seconds since midnight
+        (
+            time(12, 30, 0), "%H:%M:%S", [], 45000.0
+        ),
+        # value in na_values list → None
         (
             "label", "%d-%m-%Y", ["label"], None
         ),
+        # value is None → None
         (
             None, "%d-%m-%Y", [], None
-        )
+        ),
+        # pd.NA (ambiguous boolean) → None
+        (
+            pd.NA, "%d-%m-%Y", [], None
+        ),
+        (
+            pd.NA, "%d-%m-%Y", None, None
+        ),
+        (
+            pd.NA, "%d-%m-%Y", ["N/A", "missing"], None
+        ),
+        # np.nan → None
+        (
+            np.nan, "%d-%m-%Y", ["N/A", "missing"], None
+        ),
+        # "N/A" → None
+        (
+            "N/A", "%d-%m-%Y", ["N/A", "missing"], None
+        ),
+        # unrecognised type: datetime_to_timestamp returns None implicitly,
+        (
+            42, "%d-%m-%Y", [], None
+        ),
     ]
 )
 def test_convert_date_to_timestamp(value, date_format, na_values, expected_result, rp_logger):

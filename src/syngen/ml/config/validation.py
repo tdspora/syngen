@@ -13,6 +13,7 @@ from loguru import logger
 from syngen.ml.data_loaders import MetadataLoader, DataLoader, DataEncryptor, DataFrameFetcher
 from syngen.ml.validation_schema import ValidationSchema, ReportTypes
 from syngen.ml.utils import ValidationError, fetch_config, get_source_path_extension
+from syngen.ml.format_settings import set_format_settings
 
 
 @dataclass
@@ -156,8 +157,7 @@ class Validator:
     def _get_columns_of_source(
         self,
         path_to_source: str,
-        table_name: str,
-        **format_settings
+        table_name: str
     ) -> List[str]:
         """
         Check if the source of the certain table exists, and fetch the list of its columns
@@ -170,7 +170,9 @@ class Validator:
             )
             self.errors["check existence of the source"][table_name] = message
         else:
-            return DataLoader(path=path_to_source).get_columns(**format_settings)
+            format_settings = self.merged_metadata[table_name].get("format", {})
+            set_format_settings(format_settings)
+            return DataLoader(path=path_to_source).get_columns()
 
     def _get_columns_by_loader(self, table_name: str):
         """
@@ -363,14 +365,11 @@ class Validator:
         """
         Fetch the list of the columns of the source table
         """
-        metadata_of_table = self.merged_metadata[table_name]
-        format_settings = metadata_of_table.get("format", {})
         path_to_source = self._fetch_path_to_source(table_name)
         if path_to_source is not None:
             return self._get_columns_of_source(
                 path_to_source=path_to_source,
-                table_name=table_name,
-                **format_settings
+                table_name=table_name
             )
         else:
             return self._get_columns_by_loader(table_name)

@@ -11,8 +11,8 @@ import numpy as np
 from syngen.ml.flatten_json import unflatten_list, safe_flatten
 
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
+from syngen.ml.format_settings import set_format_settings, load_saved_artifact
 from syngen.ml.utils import fetch_unique_root, fetch_config, get_source_path_extension
-from syngen.ml.context import get_context
 
 
 class Processor:
@@ -433,7 +433,8 @@ class PostprocessHandler(Processor):
         """
         Load generated data from the predefined path
         """
-        data, schema = DataLoader(path=path_to_generated_data).load_data()
+        with load_saved_artifact():
+            data, _ = DataLoader(path=path_to_generated_data).load_data()
         return data
 
     @staticmethod
@@ -500,6 +501,7 @@ class PostprocessHandler(Processor):
         and save the processed data to the predefined path
         """
         for table_name in self.metadata.keys():
+            set_format_settings(self.metadata[table_name].get("format", {}))
             path_to_merged_infer = fetch_config(
                 f"model_artifacts/resources/{slugify(table_name)}/vae/checkpoints/train_config.pkl"
             ).paths["path_to_merged_infer"]
@@ -546,10 +548,7 @@ class PostprocessHandler(Processor):
         Save the preview data in '.csv' format for the fast review of the generated data
         """
         preview_path = f"{os.path.splitext(path_to_destination)[0]}_preview.csv"
-        DataLoader(path=preview_path).save_data(
-            preview_df,
-            format=get_context().get_config(),
-        )
+        DataLoader(path=preview_path).save_data(preview_df)
         logger.info(
             f"Preview saved in '{preview_path}' (first {len(preview_df)} rows)"
         )
@@ -574,7 +573,6 @@ class PostprocessHandler(Processor):
         generated_data = generated_data[order_of_columns]
         DataLoader(path=path_to_destination).save_data(
             generated_data,
-            format=get_context().get_config(),
             schema=original_schema
         )
         if self.type_of_process == "infer":
