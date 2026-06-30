@@ -1300,6 +1300,8 @@ def test_load_text_file(rp_logger):
                       "csv_tables/table_with_data.txt")
     rp_logger.info("Loading table with data in '.txt' format")
     data, _ = CSVLoader(path_to_source).load_data()
+    assert CSVFormatSettings().format_settings == {}
+    assert CSVFormatSettings().load_format_settings == {}
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -1309,6 +1311,9 @@ def test_save_text_file(test_csv_path, rp_logger):
                       "csv_tables/table_with_data.txt")
     rp_logger.info("Saving CSV table in '.txt' format")
     data, _ = CSVLoader(path_to_source).load_data()
+    assert CSVFormatSettings().format_settings == {}
+    assert CSVFormatSettings().load_format_settings == {}
+    assert CSVFormatSettings().save_format_settings == {}
     CSVLoader(test_csv_path).save_data(data)
     data, _ = CSVLoader(test_csv_path).load_data()
     assert data.shape == (15, 6)
