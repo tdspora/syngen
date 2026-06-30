@@ -564,6 +564,7 @@ class PostprocessHandler(Processor):
         Columns without a sentinel are cast to nullable 'Int64'
         (if NaN present) or 'int64'.
         """
+        restored_columns = []
         nan_labels = dataset_config.nan_labels_dict
         for column in dataset_config.int_columns:
             # exclude columns that are not present in the generated data
@@ -588,6 +589,10 @@ class PostprocessHandler(Processor):
                     numeric.astype("Int64") if numeric.isna().any()
                     else numeric.astype("int64")
                 )
+            restored_columns.append(column)
+        logger.debug(
+            f"Integer dtypes are restored for columns: {restored_columns}"
+        )
         return data
 
     @staticmethod
