@@ -1776,10 +1776,17 @@ class CoverageMetric(BaseMetric):
                     f"Column '{col}' not found in one of the datasets. Skipping."
                 )
                 continue
-            score = RangeCoverage.compute(
+            score = min(RangeCoverage.compute(
                 self.original[col].dropna(),
                 self.synthetic[col].dropna(),
+                ),
+                RangeCoverage.compute(
+                    self.synthetic[col].dropna(),
+                    self.original[col].dropna(),
+                )
             )
+            # RangeCoverage is not symmetric, so we take the minimum of the
+            # two directions to ensure a fair assessment of coverage.
             scores[col] = score
             if np.isnan(score):
                 logger.info(

@@ -44,7 +44,7 @@ dependencies = [
     "marshmallow==3.19.*",
     "matplotlib==3.7.*",
     "mlflow-skinny==2.11.*",
-    "numpy==1.23.*",
+    "numpy==1.26.*",
     "openpyxl",
     "pandas==2.2.*",
     "pandavro==1.8.*",
