@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
+from sdmetrics.single_column import RangeCoverage
 
 from unittest.mock import patch
 
@@ -159,6 +160,48 @@ def test_coverage_metric_numerical_columns(rp_logger, coverage_dataframes):
         )
     # age: synthetic range [25, 55] vs original [20, 60]  →  coverage = 1 - 0.125 - 0.125 = 0.75
     assert scores["age"] == pytest.approx(0.75, abs=1e-6)
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_coverage_metric_symmetrical_score_matches_directional_minimum(rp_logger):
+    """
+    CoverageMetric score should match min(original->synthetic, synthetic->original).
+    """
+    rp_logger.info("Testing directional minimum behavior with real RangeCoverage")
+    original = pd.DataFrame({"value": [0.0, 10.0, 20.0, np.nan]})
+    synthetic = pd.DataFrame({"value": [5.0, 15.0, np.nan]})
+
+    forward = RangeCoverage.compute(original["value"].dropna(), synthetic["value"].dropna())
+    reverse = RangeCoverage.compute(synthetic["value"].dropna(), original["value"].dropna())
+
+    metric = CoverageMetric(original, synthetic, plot=False, reports_path="")
+    scores = metric.calculate_all(cont_columns=["value"], categorical_columns=[])
+
+    assert forward != reverse
+    assert scores["value"] == pytest.approx(min(forward, reverse), abs=1e-9)
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_coverage_metric_synthetic_range_wider_than_original(rp_logger):
+    """
+    When synthetic range is wider than original, symmetric score should
+    use min(original->synthetic, synthetic->original) and be < 1.
+    """
+    rp_logger.info("Testing CoverageMetric when synthetic range is wider than original")
+    original = pd.DataFrame({"value": [10.0, 15.0, 20.0]})
+    synthetic = pd.DataFrame({"value": [0.0, 10.0, 20.0, 30.0]})
+
+    forward = RangeCoverage.compute(original["value"], synthetic["value"])
+    reverse = RangeCoverage.compute(synthetic["value"], original["value"])
+
+    metric = CoverageMetric(original, synthetic, plot=False, reports_path="")
+    scores = metric.calculate_all(cont_columns=["value"], categorical_columns=[])
+
+    assert forward == pytest.approx(1.0, abs=1e-9)
+    assert reverse < 1.0
+    assert scores["value"] == pytest.approx(min(forward, reverse), abs=1e-9)
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
