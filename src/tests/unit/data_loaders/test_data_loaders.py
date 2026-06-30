@@ -1299,7 +1299,6 @@ def test_load_text_file(rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/table_with_data.txt")
     rp_logger.info("Loading table with data in '.txt' format")
-    set_format_settings({})
     data, _ = CSVLoader(path_to_source).load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
