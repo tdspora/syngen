@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.11-bookworm
+FROM python:3.11-slim-trixie
 
 WORKDIR /src
 
@@ -12,7 +12,7 @@ COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git build-essential python3.11-dev && \
+    apt-get install -y --no-install-recommends git build-essential python3-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir --upgrade pip setuptools wheel && \

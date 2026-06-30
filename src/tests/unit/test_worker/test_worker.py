@@ -3804,3 +3804,93 @@ def test_should_generate_synth_reports(
     )
     worker._should_generate_synth_data(metadata, type_of_process) == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "__attrs_post_init__")
+def test_get_row_subset_for_surrogate_table_returns_parent_subset(mock_post_init):
+    worker = Worker(
+        table_name="orders",
+        metadata_path=None,
+        settings={},
+        log_level="INFO",
+        type_of_process="train",
+        loader=None,
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+    )
+    worker.initial_table_names = ["orders"]
+    worker.divided = ["orders_pk", "orders_fk"]
+    worker.row_subset_mapping = {"orders": 120}
+
+    assert worker._get_row_subset_for_table("orders_pk") == 120
+
+
+@patch.object(Worker, "__attrs_post_init__")
+def test_get_row_subset_for_surrogate_table_raises_key_error(mock_post_init):
+    worker = Worker(
+        table_name="orders",
+        metadata_path=None,
+        settings={},
+        log_level="INFO",
+        type_of_process="train",
+        loader=None,
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+    )
+    worker.initial_table_names = ["orders"]
+    worker.divided = ["orders_pk", "orders_fk"]
+    worker.row_subset_mapping = {}
+
+    with pytest.raises(
+        KeyError,
+        match="Row subset for table 'orders_pk' is missing in row_subset_mapping",
+    ):
+        worker._get_row_subset_for_table("orders_pk")
+
+
+@patch("syngen.ml.worker.worker.MlflowTracker.end_run")
+@patch("syngen.ml.worker.worker.MlflowTracker.start_run")
+@patch("syngen.ml.worker.worker.ProgressBarHandler.set_progress")
+@patch("syngen.ml.worker.worker.global_context")
+@patch.object(Worker, "_write_success_file")
+@patch("syngen.ml.worker.worker.InferStrategy.run")
+@patch.object(Worker, "__attrs_post_init__")
+def test_infer_table_uses_parent_subset_for_surrogate_table(
+    mock_post_init,
+    mock_infer_strategy_run,
+    mock_write_success_file,
+    mock_global_context,
+    mock_set_progress,
+    mock_start_run,
+    mock_end_run,
+):
+    worker = Worker(
+        table_name="orders",
+        metadata_path=None,
+        settings={},
+        log_level="INFO",
+        type_of_process="train",
+        loader=None,
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+    )
+    worker.initial_table_names = ["orders"]
+    worker.divided = ["orders_pk", "orders_fk"]
+    worker.row_subset_mapping = {"orders": 120}
+
+    metadata = {
+        "orders_pk": {
+            "train_settings": {
+                "reports": ["accuracy"],
+            },
+            "format": {},
+        }
+    }
+
+    worker._infer_table(
+        table="orders_pk",
+        metadata=metadata,
+        type_of_process="train",
+        delta=0.1,
+    )
+
+    infer_kwargs = mock_infer_strategy_run.call_args.kwargs
+    assert infer_kwargs["size"] == 120
+    assert infer_kwargs["both_keys"] is True
