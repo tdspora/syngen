@@ -5,7 +5,9 @@ from syngen.ml.metrics.metrics_classes.metrics import (  # noqa: F401;
     JensenShannonDistance,
     Correlations,
     Clustering,
-    Utility
+    Utility,
+    CoverageMetric,
+    DetectionMetric,
 )
 from syngen.ml.metrics.accuracy_test.accuracy_test import (  # noqa: F401;
     BaseTest,
