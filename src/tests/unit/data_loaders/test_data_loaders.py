@@ -31,7 +31,8 @@ FERNET_KEY_2 = os.getenv("FERNET_KEY_2")
 @pytest.fixture(autouse=True)
 def reset_context():
     """
-    Reset the context of format settings before and after each test to avoid
+    Reset the context of format settings before and after each test
+    to avoid side effects between tests.
     """
     set_format_settings({})
     yield
