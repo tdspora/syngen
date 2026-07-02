@@ -4,6 +4,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from pandas.testing import assert_series_equal
+from types import SimpleNamespace
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
 from syngen.ml.data_loaders import DataLoader, MetadataLoader
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
@@ -1500,11 +1501,15 @@ def test_preprocess_data_row_limit_larger_than_data(
 
 
 # tests for PostprocessHandler.restore_int_dtypes
-def _make_dataset_config(int_columns, nan_labels_dict=None):
-    from types import SimpleNamespace
+def _make_dataset_config(
+        int_columns,
+        nan_labels_dict=None,
+        table_name="test_table"
+):
     return SimpleNamespace(
         int_columns=set(int_columns),
         nan_labels_dict=nan_labels_dict or {},
+        table_name=table_name,
     )
 
 
@@ -1611,4 +1616,17 @@ def test_restore_int_dtypes_no_int_columns_data_unchanged(rp_logger):
     config = _make_dataset_config([])
     result = PostprocessHandler.restore_int_dtypes(data, config)
     assert_series_equal(result["score"], data["score"])
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_restore_int_dtypes_debug_log_not_emitted_when_no_columns_restored(rp_logger):
+    rp_logger.info(
+        "Test that 'restore_int_dtypes' does not emit a debug log "
+        "when 'int_columns' is empty (nothing to restore)."
+    )
+    data = pd.DataFrame({"score": [1.5, 2.5]})
+    config = _make_dataset_config([])
+    with patch("syngen.ml.processors.processors.logger") as mock_logger:
+        PostprocessHandler.restore_int_dtypes(data, config)
+    mock_logger.debug.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
