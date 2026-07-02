@@ -590,9 +590,11 @@ class PostprocessHandler(Processor):
                     else numeric.astype("int64")
                 )
             restored_columns.append(column)
-        logger.debug(
-            f"Integer dtypes are restored for columns: {restored_columns}"
-        )
+        if restored_columns:
+            logger.debug(
+                f"In the table '{dataset_config.table_name}' "
+                f"integer dtypes were restored for columns: {restored_columns}"
+            )
         return data
 
     @staticmethod
