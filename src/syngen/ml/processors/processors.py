@@ -592,8 +592,8 @@ class PostprocessHandler(Processor):
             restored_columns.append(column)
         if restored_columns:
             logger.debug(
-                f"In the table '{dataset_config.table_name}' "
-                f"integer dtypes were restored for columns: {restored_columns}"
+                f"In the table '{dataset_config.table_name}' integer dtypes "
+                f"were restored for columns: {sorted(restored_columns)}"
             )
         return data
 
