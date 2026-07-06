@@ -1679,6 +1679,25 @@ def test_get_column_from_table_in_xls_format_with_formatting_settings(rp_logger)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("extension", ["xlsx", "xls"])
+def test_get_columns_from_table_with_3_sheets_using_named_sheet(rp_logger, extension):
+    rp_logger.info(
+        f"Get the list of columns from the '.{extension}' table with 3 sheets "
+        "using a specific named sheet"
+    )
+    set_format_settings({"sheet_name": "Sheet2"})
+    data_loader = DataLoader(
+        f"{DIR_NAME}/unit/data_loaders/fixtures/"
+        f"excel_tables/table_with_3_sheets.{extension}"
+    )
+    columns = data_loader.get_columns()
+    assert ExcelFormatSettings().format_settings == {"sheet_name": "Sheet2"}
+    assert ExcelFormatSettings().load_format_settings == {"sheet_name": "Sheet2"}
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert columns == ["gender", "height", "id"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_get_columns_from_empty_excel_table(caplog, rp_logger):
     rp_logger.info("Get the list of the columns from the empty table in '.xlsx' format")
     data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"
