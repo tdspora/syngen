@@ -403,7 +403,9 @@ def test_load_tab_delimited_csv(rp_logger):
     assert CSVFormatSettings().format_settings == {
         "sep": "\t", "quoting": "none", "engine": "python"
     }
-    assert CSVFormatSettings().load_format_settings == {"sep": "\t", "quoting": 3, "engine": "python"}
+    assert CSVFormatSettings().load_format_settings == {
+        "sep": "\t", "quoting": 3, "engine": "python"
+    }
     data = data_loader.load_data()
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)

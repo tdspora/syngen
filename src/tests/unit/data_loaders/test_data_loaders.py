@@ -1599,6 +1599,38 @@ def test_load_data_from_table_in_excel_format_from_2_sheets_of_2_sheets(rp_logge
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("extension", ["xlsx", "xls"])
+def test_load_data_from_table_in_excel_format_from_list_of_sheets(rp_logger, extension):
+    rp_logger.info(
+        f"Loading data from local Excel table in '.{extension}' format "
+        "from a list of specified sheets"
+    )
+    set_format_settings({"sheet_name": ["Sheet1", "Sheet2"]})
+    data_loader = DataLoader(
+        f"{DIR_NAME}/unit/data_loaders/fixtures/"
+        f"excel_tables/table_with_3_sheets.{extension}"
+    )
+    df, schema = data_loader.load_data()
+    assert ExcelFormatSettings().format_settings == {"sheet_name": ["Sheet1", "Sheet2"]}
+    assert ExcelFormatSettings().load_format_settings == {"sheet_name": ["Sheet1", "Sheet2"]}
+    assert isinstance(data_loader.file_loader, ExcelLoader)
+    assert (
+        assert_frame_equal(
+            df,
+            pd.DataFrame(
+                {
+                    "gender": [0, 1],
+                    "height": [162.9182, 173.5145],
+                    "id": [821, 383],
+                }
+            ),
+        )
+        is None
+    )
+    assert schema == CSV_SCHEMA
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_load_data_from_empty_excel_table(rp_logger, caplog):
     rp_logger.info("Loading data from local empty Excel table in '.xlsx' format")
     data_loader = DataLoader(f"{DIR_NAME}/unit/data_loaders/fixtures/"

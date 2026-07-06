@@ -553,7 +553,9 @@ class ExcelLoader(BaseDataLoader):
         """
         try:
             data = self._fetch_data()
-            if isinstance(self.sheet_name, list) or self.sheet_name is None:
+            if isinstance(self.sheet_name, list):
+                data = pd.concat([data[sheet] for sheet in self.sheet_name], ignore_index=True)
+            elif self.sheet_name is None:
                 data = pd.concat(data.values(), ignore_index=True)
             return data, CSVConvertor(data).schema
         except FileNotFoundError as error:
