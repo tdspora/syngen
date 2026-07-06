@@ -466,7 +466,7 @@ class VAEWrapper(BaseWrapper):
         return torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     def __create_optimizer(self):
-        learning_rate = 5e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
+        learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
         return self._create_optimizer(self.model, learning_rate)
 
     @staticmethod
