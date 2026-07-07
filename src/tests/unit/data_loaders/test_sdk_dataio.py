@@ -12,6 +12,7 @@ from syngen.ml.data_loaders import (
     ExcelLoader,
     DataEncryptor
 )
+from syngen.ml.format_settings import CSVFormatSettings, ExcelFormatSettings
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 from syngen.sdk import DataIO
 
@@ -342,7 +343,8 @@ def test_load_pipe_delimited_csv(rp_logger):
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/pipe_delimited_text.csv")
     dataio_loader = DataIO(path_to_source, sep="|", quoting="none")
-    assert dataio_loader.format_settings == {"sep": "|", "quoting": "none"}
+    assert CSVFormatSettings().format_settings == {"sep": "|", "quoting": "none"}
+    assert CSVFormatSettings().load_format_settings == {"sep": "|", "quoting": 3}
     data = dataio_loader.load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -353,9 +355,14 @@ def test_save_pipe_delimited_csv(test_csv_path, rp_logger):
     path_to_source = (
         f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.csv"
     )
-    data = DataIO(path_to_source, sep="|", quoting="none", skiprows=None).load_data()
-    DataIO(test_csv_path, sep="|", quoting="none", skiprows=None).save_data(data)
-    data = DataIO(test_csv_path, sep="|", quoting="none", skiprows=None).load_data()
+    data_loader = DataIO(path_to_source, sep="|", quoting="none", skiprows=None)
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": "|", "quoting": "none", "skiprows": None}
+    assert CSVFormatSettings().load_format_settings == {"sep": "|", "quoting": 3, "skiprows": None}
+    assert CSVFormatSettings().save_format_settings == {"sep": "|", "quoting": 3}
+    data_loader = DataIO(test_csv_path, sep="|", quoting="none", skiprows=None)
+    data_loader.save_data(data)
+    data = data_loader.load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -365,37 +372,57 @@ def test_load_semicolon_delimited_csv(rp_logger):
     path_to_source = (
         f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/semicolon_delimited_text.csv"
     )
-    data = DataIO(path_to_source, sep=";", quoting="none").load_data()
+    data_loader = DataIO(path_to_source, sep=";", quoting="none")
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": ";", "quoting": "none"}
+    assert CSVFormatSettings().load_format_settings == {"sep": ";", "quoting": 3}
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_save_semicolon_delimited_csv(test_csv_path, rp_logger):
-    rp_logger.info("Saving data in the '.csv' format with semicolon delimiter")
+    rp_logger.info("Saving data in the '.csv' format with the semicolon delimiter")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/semicolon_delimited_text.csv")
-    data = DataIO(path_to_source, sep=";", quoting="none").load_data()
-    DataIO(test_csv_path, sep=";", quoting="none").save_data(data)
-    data = DataIO(test_csv_path, sep=";", quoting="none").load_data()
+    data_loader = DataIO(path_to_source, sep=";", quoting="none", skiprows=None)
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": ";", "quoting": "none", "skiprows": None}
+    assert CSVFormatSettings().load_format_settings == {"sep": ";", "quoting": 3, "skiprows": None}
+    assert CSVFormatSettings().save_format_settings == {"sep": ";", "quoting": 3}
+    data_loader = DataIO(test_csv_path, sep=";", quoting="none", skiprows=None)
+    data_loader.save_data(data)
+    data = data_loader.load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_load_tab_delimited_csv(rp_logger):
-    rp_logger.info("Loading data in the '.csv' format with tab delimiter")
+    rp_logger.info("Loading data in the '.csv' format with the tab delimiter")
     path_to_source = f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/tab_delimited_text.csv"
-    data = DataIO(path_to_source, sep="\t", quoting="none", engine="python").load_data()
+    data_loader = DataIO(path_to_source, sep="\t", quoting="none", engine="python")
+    assert CSVFormatSettings().format_settings == {
+        "sep": "\t", "quoting": "none", "engine": "python"
+    }
+    assert CSVFormatSettings().load_format_settings == {
+        "sep": "\t", "quoting": 3, "engine": "python"
+    }
+    data = data_loader.load_data()
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_save_tab_delimited_csv(test_csv_path, rp_logger):
-    rp_logger.info("Saving data in '.csv' format with tab delimiter")
+    rp_logger.info("Saving data in the '.csv' format with the tab delimiter")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/"
                       "fixtures/csv_tables/tab_delimited_text.csv")
-    data = DataIO(path_to_source, sep="\t", quoting="none").load_data()
-    DataIO(test_csv_path, sep="\t", quoting="none").save_data(data)
-    data = DataIO(test_csv_path, sep="\t", quoting="none").load_data()
+    data_loader = DataIO(path_to_source, sep="\t", quoting="none")
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": "\t", "quoting": "none"}
+    assert CSVFormatSettings().load_format_settings == {"sep": "\t", "quoting": 3}
+    assert CSVFormatSettings().save_format_settings == {"sep": "\t", "quoting": 3}
+    data_loader = DataIO(test_csv_path, sep="\t", quoting="none")
+    data_loader.save_data(data)
+    data = data_loader.load_data()
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -404,7 +431,7 @@ def test_load_multiline_bad_line_csv(rp_logger):
     rp_logger.info("Loading data in the '.csv' format with multiline texts")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/multiline_bad_line_text.csv")
-    data = DataIO(
+    data_loader = DataIO(
         path_to_source,
         sep=",",
         quoting="all",
@@ -413,7 +440,26 @@ def test_load_multiline_bad_line_csv(rp_logger):
         skiprows=1,
         encoding="utf-8",
         on_bad_lines="skip"
-    ).load_data()
+    )
+    CSVFormatSettings().format_settings == {
+        "sep": ",",
+        "quoting": "all",
+        "quotechar": '"',
+        "escapechar": "\\",
+        "skiprows": 1,
+        "encoding": "utf-8",
+        "on_bad_lines": "skip"
+    }
+    assert CSVFormatSettings().load_format_settings == {
+        "sep": ",",
+        "quoting": 1,
+        "quotechar": '"',
+        "escapechar": "\\",
+        "skiprows": 1,
+        "encoding": "utf-8",
+        "on_bad_lines": "skip"
+    }
+    data = data_loader.load_data()
     assert data.shape == (12, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -422,7 +468,7 @@ def test_save_multiline_bad_line_csv(test_csv_path, rp_logger):
     rp_logger.info("Saving data in the '.csv' format with multiline texts")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/multiline_bad_line_text.csv")
-    data = DataIO(
+    data_loader = DataIO(
         path_to_source,
         sep=",",
         quoting="all",
@@ -431,8 +477,34 @@ def test_save_multiline_bad_line_csv(test_csv_path, rp_logger):
         skiprows=1,
         encoding="utf-8",
         on_bad_lines="skip"
-    ).load_data()
-    DataIO(
+    )
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {
+        "sep": ",",
+        "quoting": "all",
+        "quotechar": '"',
+        "escapechar": "\\",
+        "skiprows": 1,
+        "encoding": "utf-8",
+        "on_bad_lines": "skip"
+    }
+    assert CSVFormatSettings().load_format_settings == {
+        "sep": ",",
+        "quoting": 1,
+        "quotechar": '"',
+        "escapechar": "\\",
+        "skiprows": 1,
+        "encoding": "utf-8",
+        "on_bad_lines": "skip"
+    }
+    assert CSVFormatSettings().save_format_settings == {
+        "sep": ",",
+        "quoting": 1,
+        "quotechar": '"',
+        "escapechar": "\\",
+        "encoding": "utf-8"
+    }
+    data_loader = DataIO(
         test_csv_path,
         sep=",",
         quoting="all",
@@ -441,17 +513,19 @@ def test_save_multiline_bad_line_csv(test_csv_path, rp_logger):
         skiprows=1,
         encoding="utf-8",
         on_bad_lines="skip"
-    ).save_data(data)
-    data = DataIO(
+    )
+    assert data.shape == (12, 6)
+    data_loader.save_data(data)
+    data_loader = DataIO(
         test_csv_path,
         sep=",",
         quoting="all",
         quotechar='"',
         escapechar="\\",
-        skiprows=None,
         encoding="utf-8",
         on_bad_lines="skip"
-    ).load_data()
+    )
+    data = data_loader.load_data()
     assert data.shape == (12, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -460,11 +534,10 @@ def test_load_double_quoted_csv(rp_logger):
     rp_logger.info("Loading data in the '.csv' format with double quoted values")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/double_quoted_text.csv")
-    data = DataIO(
-        path_to_source,
-        sep=",",
-        quotechar='"'
-    ).load_data()
+    data_loader = DataIO(path_to_source, sep=",", quotechar='"')
+    assert CSVFormatSettings().format_settings == {"sep": ",", "quotechar": '"'}
+    assert CSVFormatSettings().load_format_settings == {"sep": ",", "quotechar": '"'}
+    data = data_loader.load_data()
     assert data.shape == (15, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -473,17 +546,18 @@ def test_save_double_quoted_csv(test_csv_path, rp_logger):
     rp_logger.info("Saving data in the '.csv' format with double quoted values")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/double_quoted_text.csv")
-    data = DataIO(path_to_source, sep=",", quotechar='"').load_data()
-    DataIO(
+    data_loader = DataIO(path_to_source, sep=",", quotechar='"')
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": ",", "quotechar": '"'}
+    assert CSVFormatSettings().load_format_settings == {"sep": ",", "quotechar": '"'}
+    assert CSVFormatSettings().save_format_settings == {"sep": ",", "quotechar": '"'}
+    data_loader = DataIO(
         test_csv_path,
         sep=",",
         quotechar='"'
-    ).save_data(data)
-    data = DataIO(
-        test_csv_path,
-        sep=",",
-        quotechar='"'
-    ).load_data()
+    )
+    data_loader.save_data(data)
+    data = data_loader.load_data()
     assert data.shape == (15, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -492,7 +566,14 @@ def test_load_escaped_quoted_csv(rp_logger):
     rp_logger.info("Loading data in the '.csv' format with escaped quoted values")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/escaped_quoted_text.csv")
-    data = DataIO(path_to_source, sep=",", quotechar='"', escapechar="\\").load_data()
+    data_loader = DataIO(path_to_source, sep=",", quotechar='"', escapechar="\\")
+    assert CSVFormatSettings().format_settings == {
+        "sep": ",", "quotechar": '"', "escapechar": "\\"
+    }
+    assert CSVFormatSettings().load_format_settings == {
+        "sep": ",", "quotechar": '"', "escapechar": "\\"
+    }
+    data = data_loader.load_data()
     assert data.shape == (15, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -501,19 +582,25 @@ def test_save_escaped_quoted_csv(test_csv_path, rp_logger):
     rp_logger.info("Saving data in the '.csv' format with escaped quoted values")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/escaped_quoted_text.csv")
-    data = DataIO(path_to_source, sep=",", quotechar='"').load_data()
-    DataIO(
+    data_loader = DataIO(path_to_source, sep=",", quotechar='"', escapechar="\\")
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {
+        "sep": ",", "quotechar": '"', "escapechar": "\\"
+    }
+    assert CSVFormatSettings().load_format_settings == {
+        "sep": ",", "quotechar": '"', "escapechar": "\\"
+    }
+    assert CSVFormatSettings().save_format_settings == {
+        "sep": ",", "quotechar": '"', "escapechar": "\\"
+    }
+    data_loader = DataIO(
         test_csv_path,
         sep=",",
         quotechar='"',
         escapechar="\\"
-    ).save_data(data)
-    data = DataIO(
-        test_csv_path,
-        sep=",",
-        quotechar='"',
-        escapechar="\\"
-    ).load_data()
+    )
+    data_loader.save_data(data)
+    data = data_loader.load_data()
     assert data.shape == (15, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -522,14 +609,29 @@ def test_load_csv_without_header(rp_logger):
     rp_logger.info("Loading data in the '.csv' format without the header")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/text_without_header.csv")
-    data = DataIO(
+    data_loader = DataIO(
         path_to_source,
         sep=",",
         header=None,
         encoding="ascii",
         quoting="non-numeric",
         quotechar='"'
-    ).load_data()
+    )
+    assert CSVFormatSettings().format_settings == {
+        "sep": ",",
+        "header": None,
+        "encoding": "ascii",
+        "quoting": "non-numeric",
+        "quotechar": '"'
+    }
+    assert CSVFormatSettings().load_format_settings == {
+        "sep": ",",
+        "header": None,
+        "encoding": "ascii",
+        "quoting": 2,
+        "quotechar": '"'
+    }
+    data = data_loader.load_data()
     assert data.shape == (7, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -538,31 +640,46 @@ def test_save_csv_without_header(test_csv_path, rp_logger):
     rp_logger.info("Saving data in the '.csv' format without the header")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/text_without_header.csv")
-    data = DataIO(
+    data_loader = DataIO(
         path_to_source,
         sep=",",
         header=None,
         encoding="ascii",
         quoting="non-numeric",
         quotechar='"'
-    ).load_data()
-    DataIO(
+    )
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {
+        "sep": ",",
+        "header": None,
+        "encoding": "ascii",
+        "quoting": "non-numeric",
+        "quotechar": '"'
+    }
+    assert CSVFormatSettings().load_format_settings == {
+        "sep": ",",
+        "header": None,
+        "encoding": "ascii",
+        "quoting": 2,
+        "quotechar": '"'
+    }
+    assert CSVFormatSettings().save_format_settings == {
+        "sep": ",",
+        "header": False,
+        "encoding": "ascii",
+        "quoting": 2,
+        "quotechar": '"'
+    }
+    data_loader = DataIO(
         test_csv_path,
         sep=",",
         header=None,
         encoding="ascii",
         quoting="non-numeric",
         quotechar='"'
-    ).save_data(data)
-    data = DataIO(
-        test_csv_path,
-        sep=",",
-        header=None,
-        encoding="ascii",
-        quoting="non-numeric",
-        skiprows=None,
-        quotechar='"'
-    ).load_data()
+    )
+    data_loader.save_data(data)
+    data = data_loader.load_data()
     assert data.shape == (7, 3)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -573,7 +690,10 @@ def test_load_csv_with_triple_colons(rp_logger):
     )
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/multicolon_delimited_text.csv")
-    data = DataIO(path_to_source, sep=":::").load_data()
+    data_loader = DataIO(path_to_source, sep=":::")
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": ":::"}
+    assert CSVFormatSettings().load_format_settings == {"sep": ":::"}
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -584,7 +704,11 @@ def test_save_csv_with_triple_colons(test_csv_path, rp_logger):
     )
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/multicolon_delimited_text.csv")
-    data = DataIO(path_to_source, sep=":::").load_data()
+    data_loader = DataIO(path_to_source, sep=":::")
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": ":::"}
+    assert CSVFormatSettings().load_format_settings == {"sep": ":::"}
+    assert CSVFormatSettings().save_format_settings == {"sep": ","}
     DataIO(test_csv_path, sep=":::").save_data(data)
     data = DataIO(test_csv_path, sep=",").load_data()
     assert data.shape == (15, 6)
@@ -595,7 +719,10 @@ def test_load_text_file(rp_logger):
     rp_logger.info("Loading data in the '.txt' format")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/table_with_data.txt")
-    data = DataIO(path_to_source).load_data()
+    data_loader = DataIO(path_to_source)
+    assert CSVFormatSettings().format_settings == {}
+    assert CSVFormatSettings().load_format_settings == {}
+    data = data_loader.load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -604,7 +731,11 @@ def test_save_text_file(test_csv_path, rp_logger):
     rp_logger.info("Saving data in the '.txt' format")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/table_with_data.txt")
-    data = DataIO(path_to_source).load_data()
+    data_loader = DataIO(path_to_source)
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {}
+    assert CSVFormatSettings().load_format_settings == {}
+    assert CSVFormatSettings().save_format_settings == {}
     DataIO(test_csv_path).save_data(data)
     data = DataIO(test_csv_path).load_data()
     assert data.shape == (15, 6)
@@ -615,7 +746,10 @@ def test_load_pcv_file(rp_logger):
     rp_logger.info("Loading data in the '.pcv' format")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/pipe_delimited_text.psv")
-    data = DataIO(path_to_source).load_data()
+    data_loader = DataIO(path_to_source)
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": "|"}
+    assert CSVFormatSettings().load_format_settings == {"sep": "|"}
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -623,9 +757,14 @@ def test_load_pcv_file(rp_logger):
 def test_save_pcv_file(test_csv_path, rp_logger):
     rp_logger.info("Saving data in the '.pcv' format")
     path_to_source = f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/pipe_delimited_text.psv"
-    data = DataIO(path_to_source).load_data()
-    DataIO(test_csv_path).save_data(data)
-    data = DataIO(test_csv_path).load_data()
+    data_loader = DataIO(path_to_source)
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": "|"}
+    assert CSVFormatSettings().load_format_settings == {"sep": "|"}
+    assert CSVFormatSettings().save_format_settings == {"sep": "|"}
+    data_loader = DataIO(test_csv_path)
+    data_loader.save_data(data)
+    data = data_loader.load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -634,7 +773,10 @@ def test_load_tcv_file(rp_logger):
     rp_logger.info("Loading data in the '.tcv' format")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/tab_delimited_text.tsv")
-    data = DataIO(path_to_source).load_data()
+    data_loader = DataIO(path_to_source)
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": "\t"}
+    assert CSVFormatSettings().load_format_settings == {"sep": "\t"}
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -643,8 +785,13 @@ def test_save_tcv_file(test_csv_path, rp_logger):
     rp_logger.info("Saving data in the '.tcv' format")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/tab_delimited_text.tsv")
-    data = DataIO(path_to_source).load_data()
-    DataIO(test_csv_path).save_data(data)
+    data_loader = DataIO(path_to_source)
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": "\t"}
+    assert CSVFormatSettings().load_format_settings == {"sep": "\t"}
+    assert CSVFormatSettings().save_format_settings == {"sep": "\t"}
+    data_loader = DataIO(test_csv_path)
+    data_loader.save_data(data)
     data = DataIO(test_csv_path).load_data()
     assert data.shape == (15, 7)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -655,7 +802,10 @@ def test_load_csv_with_nested_field(rp_logger):
     path_to_source = (
         f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/text_contained_nested_field.csv"
     )
-    data = DataIO(path_to_source, quotechar='"', quoting="minimal").load_data()
+    data_loader = DataIO(path_to_source, quotechar='"', quoting="minimal")
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"quotechar": '"', "quoting": "minimal"}
+    assert CSVFormatSettings().load_format_settings == {"quotechar": '"', "quoting": 0}
     assert data.shape == (15, 5)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -665,13 +815,14 @@ def test_save_csv_with_nested_field(test_csv_path, rp_logger):
         f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/text_contained_nested_field.csv"
     )
     rp_logger.info("Saving data in the '.csv' format with nested field")
-    data = DataIO(path_to_source, quotechar='"', quoting="minimal").load_data()
-    DataIO(test_csv_path, quotechar='"', quoting="minimal").save_data(data)
-    data = DataIO(
-        test_csv_path,
-        quotechar='"',
-        quoting="minimal"
-    ).load_data()
+    data_loader = DataIO(path_to_source, quotechar='"', quoting="minimal")
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"quotechar": '"', "quoting": "minimal"}
+    assert CSVFormatSettings().load_format_settings == {"quotechar": '"', "quoting": 0}
+    assert CSVFormatSettings().save_format_settings == {"quotechar": '"', "quoting": 0}
+    data_loader = DataIO(test_csv_path, quotechar='"', quoting="minimal")
+    data_loader.save_data(data)
+    data = data_loader.load_data()
     assert data.shape == (15, 5)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -680,21 +831,29 @@ def test_load_csv_with_double_pipe_delimited_text(rp_logger):
     rp_logger.info("Loading CSV with the double pipe delimited text")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/double_pipe_delimited_text.csv")
-    data = DataIO(path_to_source, sep=r"\|\|").load_data()
+    data_loader = DataIO(path_to_source, sep=r"\|\|")
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": r"\|\|"}
+    assert CSVFormatSettings().load_format_settings == {"sep": r"\|\|"}
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_save_csv_with_double_pipe_delimited_text(test_csv_path, rp_logger):
     rp_logger.info(
-        "Saving data in the '.csv' format contained the fields with double pipe delimited text"
+        "Saving data in the '.csv' format contained the fields with the double pipe delimited text"
     )
     path_to_source = (
         f"{DIR_NAME}/unit/data_loaders/fixtures/csv_tables/double_pipe_delimited_text.csv"
     )
-    data = DataIO(path_to_source, sep=r"\|\|").load_data()
-    DataIO(test_csv_path, sep=r"\|\|").save_data(data)
-    data = DataIO(test_csv_path, sep=",").load_data()
+    data_loader = DataIO(path_to_source, sep=r"\|\|")
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"sep": r"\|\|"}
+    assert CSVFormatSettings().load_format_settings == {"sep": r"\|\|"}
+    assert CSVFormatSettings().save_format_settings == {"sep": ","}
+    data_loader = DataIO(test_csv_path, sep=r"\|\|")
+    data_loader.save_data(data)
+    data = DataIO(test_csv_path).load_data()
     assert data.shape == (15, 6)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -703,7 +862,10 @@ def test_load_csv_with_na_values(rp_logger):
     rp_logger.info("Loading data in the '.csv' format contained NA values")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/table_with_na_values.csv")
-    data = DataIO(path_to_source, na_values=["-", "Missing"]).load_data()
+    data_loader = DataIO(path_to_source, na_values=["-", "Missing"])
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"na_values": ["-", "Missing"]}
+    assert CSVFormatSettings().load_format_settings == {"na_values": ["-", "Missing"]}
     assert data.shape == (10, 11)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -712,9 +874,14 @@ def test_save_csv_with_na_values(test_csv_path, rp_logger):
     rp_logger.info("Saving data in the '.csv' format contained NA values")
     path_to_source = (f"{DIR_NAME}/unit/data_loaders/fixtures/"
                       "csv_tables/table_with_na_values.csv")
-    data = DataIO(path_to_source, na_values=["-", "Missing", "NaN"]).load_data()
-    DataIO(test_csv_path, na_values=["-", "Missing", "NaN"]).save_data(data)
-    data = DataIO(test_csv_path, na_values=["-", "Missing", "NaN"]).load_data()
+    data_loader = DataIO(path_to_source, na_values=["-", "Missing", "NaN"])
+    data = data_loader.load_data()
+    assert CSVFormatSettings().format_settings == {"na_values": ["-", "Missing", "NaN"]}
+    assert CSVFormatSettings().load_format_settings == {"na_values": ["-", "Missing", "NaN"]}
+    assert CSVFormatSettings().save_format_settings == {"na_rep": "-"}
+    data_loader = DataIO(test_csv_path, na_values=["-"])
+    data_loader.save_data(data)
+    data = data_loader.load_data()
     assert data.shape == (10, 11)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -780,7 +947,8 @@ def test_load_data_from_table_in_excel_format_from_1_sheet_of_2_sheets(rp_logger
         "excel_tables/table_with_data_and_2_nonempty_sheets.xlsx",
         sheet_name="TestName"
     )
-    assert test_data_loader.format_settings == {"sheet_name": "TestName"}
+    assert ExcelFormatSettings().format_settings == {"sheet_name": "TestName"}
+    assert ExcelFormatSettings().load_format_settings == {"sheet_name": "TestName"}
     df = test_data_loader.load_data()
     assert isinstance(test_data_loader.data_loader.file_loader, ExcelLoader)
     assert (
@@ -801,7 +969,7 @@ def test_load_data_from_table_in_excel_format_from_1_sheet_of_2_sheets(rp_logger
 
 def test_load_data_from_table_in_excel_format_from_2_sheets_of_2_sheets(rp_logger):
     rp_logger.info(
-        "Loading data from the local Excel table in '.xlsx' format "
+        "Loading data from the local Excel table in the '.xlsx' format "
         "that contains 2 non-empty sheets"
     )
     test_data_loader = DataIO(
@@ -810,6 +978,8 @@ def test_load_data_from_table_in_excel_format_from_2_sheets_of_2_sheets(rp_logge
         sheet_name=None
     )
     df = test_data_loader.load_data()
+    assert ExcelFormatSettings().format_settings == {"sheet_name": None}
+    assert ExcelFormatSettings().load_format_settings == {"sheet_name": None}
     assert isinstance(test_data_loader.data_loader.file_loader, ExcelLoader)
     assert (
         assert_frame_equal(
@@ -824,9 +994,7 @@ def test_load_data_from_table_in_excel_format_from_2_sheets_of_2_sheets(rp_logge
         )
         is None
     )
-
     assert isinstance(df, pd.DataFrame)
-
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
