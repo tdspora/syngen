@@ -3849,7 +3849,7 @@ def test_get_row_subset_for_surrogate_table_raises_key_error(mock_post_init):
 @patch("syngen.ml.worker.worker.MlflowTracker.end_run")
 @patch("syngen.ml.worker.worker.MlflowTracker.start_run")
 @patch("syngen.ml.worker.worker.ProgressBarHandler.set_progress")
-@patch("syngen.ml.worker.worker.global_context")
+@patch("syngen.ml.worker.worker.set_format_settings")
 @patch.object(Worker, "_write_success_file")
 @patch("syngen.ml.worker.worker.InferStrategy.run")
 @patch.object(Worker, "__attrs_post_init__")

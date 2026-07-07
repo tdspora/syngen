@@ -312,7 +312,7 @@ def convert_date_to_timestamp(
     na_values: Optional[list]
 ) -> float | None:
     """Helper to convert a single date value to a timestamp"""
-    if value is None or (na_values is not None and value in na_values):
+    if value is None or pd.isna(value) or (na_values is not None and value in na_values):
         return None
     result = datetime_to_timestamp(value, date_format)
     try:
