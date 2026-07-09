@@ -311,9 +311,21 @@ class AvroLoader(BaseDataLoader):
         extended["fields"] = schema["fields"] + inferred["fields"]
         return extended
 
+    def _filter_schema_fields(self, schema: Dict, df: pd.DataFrame) -> Dict:
+        """
+        Return schema filtered to only include fields that exist in the dataframe.
+        This is useful if the schema has fields that are not present in the DataFrame.
+        """
+        df_columns = set(df.columns)
+        filtered_fields = [f for f in schema.get("fields", []) if f["name"] in df_columns]
+        filtered_schema = deepcopy(schema)
+        filtered_schema["fields"] = filtered_fields
+        return filtered_schema
+
     def save_data(self, df: pd.DataFrame, schema: Optional[Dict], **kwargs):
         if schema is not None:
             schema = self._extend_schema(schema, df)
+            schema = self._filter_schema_fields(schema, df)
             logger.trace(f"The data will be saved with the schema: {schema}")
 
         preprocessed_schema = self._get_preprocessed_schema(schema)
