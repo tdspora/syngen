@@ -34,7 +34,6 @@ from syngen.ml.utils import (
     get_source_path_extension,
     timing,
 )
-from syngen.ml.context import get_context
 
 
 MEMORY_THRESHOLD = 90  # Memory usage threshold in percent
@@ -735,7 +734,6 @@ class VaeInferHandler(BaseHandler):
         """
         DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
             data=generated_data,
-            format=get_context().get_config(),
             schema=self.original_schema
         )
 
