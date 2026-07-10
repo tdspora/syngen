@@ -23,6 +23,12 @@ RUN apt-get update && \
 
 ENV HOME=/tmp
 ENV MPLCONFIGDIR=/tmp
+# Make OpenMP/MKL idle threads sleep instead of busy-waiting. Without this,
+# PyTorch's native thread pools spin on every core, so several containers
+# running concurrently peg all CPUs at 100% with no forward progress. Thread
+# *counts* are bounded at runtime (cgroup-aware) by limit_thread_parallelism().
+ENV OMP_WAIT_POLICY=passive
+ENV KMP_BLOCKTIME=0
 # /src lets `python -m start` and the `python syngen/train.py` subprocess it
 # spawns resolve `import syngen`; /src/syngen lets that subprocess import the
 # package's own top-level modules. (Base image does not define PYTHONPATH.)

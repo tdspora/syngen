@@ -4,13 +4,20 @@ import click
 from loguru import logger
 import pandas as pd
 
-from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     get_reports,
     fetch_env_variables,
-    timing
+    timing,
+    limit_thread_parallelism
 )
+
+# Bound native (OpenMP/MKL) thread pools and disable their busy-wait spinning
+# before ``torch`` is imported (via ``Worker`` below), so that many concurrent
+# syngen processes do not over-subscribe the CPUs. Honours pre-set env vars.
+limit_thread_parallelism()
+
+from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
 
 

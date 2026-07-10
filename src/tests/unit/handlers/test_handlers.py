@@ -95,7 +95,7 @@ def test_get_pk_path(
 )
 @patch("os.path.exists", return_value=True)
 @patch.object(VaeInferHandler, "__attrs_post_init__")
-@patch("multiprocessing.cpu_count")
+@patch("syngen.ml.handlers.handlers.get_available_cpu_count")
 def test_split_by_batches(
         mock_cpu_count,
         mock_handler_post_init,
@@ -185,7 +185,7 @@ def test_split_by_batches(
         (1, 1, 8, 1, 1, 1),
     ],
 )
-@patch('multiprocessing.cpu_count')
+@patch('syngen.ml.handlers.handlers.get_available_cpu_count')
 @patch('multiprocessing.Pool')
 @patch("os.path.exists", return_value=True)
 @patch.object(VaeInferHandler, "__attrs_post_init__")

@@ -566,6 +566,81 @@ def fetch_env_variables(options: Dict) -> Dict:
     return options
 
 
+def _cgroup_cpu_quota() -> Optional[int]:
+    """
+    Return the CPU budget imposed by a Linux cgroup CPU quota, or None if no
+    quota is set. Supports cgroup v2 (``/sys/fs/cgroup/cpu.max``) and cgroup v1
+    (``cpu.cfs_quota_us`` / ``cpu.cfs_period_us``).
+
+    A container started with ``docker run --cpus=N`` translates to
+    ``quota/period == N``; this lets the process see ``N`` instead of the whole
+    host core count.
+    """
+    try:
+        with open("/sys/fs/cgroup/cpu.max") as f:
+            quota, period = f.read().split()
+        if quota != "max" and int(period) > 0:
+            return max(1, math.ceil(int(quota) / int(period)))
+    except (OSError, ValueError):
+        pass
+    try:
+        with open("/sys/fs/cgroup/cpu/cpu.cfs_quota_us") as f:
+            quota = int(f.read())
+        with open("/sys/fs/cgroup/cpu/cpu.cfs_period_us") as f:
+            period = int(f.read())
+        if quota > 0 and period > 0:
+            return max(1, math.ceil(quota / period))
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def get_available_cpu_count() -> int:
+    """
+    Return the number of CPUs actually usable by this process.
+
+    Honours (in order of precedence, taking the smallest positive signal):
+    a cgroup CPU quota (so ``docker run --cpus=N`` reports ``N`` rather than the
+    host core count), the process CPU-affinity mask, and finally
+    ``os.cpu_count()``. Always returns at least 1.
+
+    This matters because PyTorch/OpenMP/MKL and ``multiprocessing.cpu_count()``
+    read the host topology and ignore the ``--cpus`` quota, which leads to
+    massive thread over-subscription when many containers run concurrently.
+    """
+    candidates = [_cgroup_cpu_quota()]
+    try:
+        candidates.append(len(os.sched_getaffinity(0)))
+    except (AttributeError, OSError):
+        pass
+    candidates.append(os.cpu_count())
+    positive = [c for c in candidates if c and c > 0]
+    return max(1, min(positive)) if positive else 1
+
+
+def limit_thread_parallelism() -> int:
+    """
+    Bound native math-library (OpenMP/MKL) thread pools and disable their
+    idle-thread busy-waiting, so many concurrent syngen processes do not
+    over-subscribe the CPUs.
+
+    Sets, only when the caller has not already exported them (``setdefault``):
+    ``OMP_NUM_THREADS`` / ``MKL_NUM_THREADS`` to the cgroup-aware CPU budget, and
+    ``OMP_WAIT_POLICY=passive`` / ``KMP_BLOCKTIME=0`` so waiting threads sleep
+    instead of spinning.
+
+    Must be called **before** ``torch`` (and thus OpenMP/MKL) is first imported,
+    because those runtimes read these variables at initialisation. Returns the
+    CPU budget that was applied.
+    """
+    cpu_count = get_available_cpu_count()
+    os.environ.setdefault("OMP_NUM_THREADS", str(cpu_count))
+    os.environ.setdefault("MKL_NUM_THREADS", str(cpu_count))
+    os.environ.setdefault("OMP_WAIT_POLICY", "passive")
+    os.environ.setdefault("KMP_BLOCKTIME", "0")
+    return cpu_count
+
+
 def file_sink(message):
     """
     Save logs to the log file

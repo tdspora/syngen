@@ -32,6 +32,7 @@ from syngen.ml.utils import (
     get_initial_table_name,
     ProgressBarHandler,
     get_source_path_extension,
+    get_available_cpu_count,
     timing,
 )
 
@@ -320,8 +321,11 @@ class VaeInferHandler(BaseHandler):
         Returns:
             Tuple[int, int, int]: (batch_size, batch_num, n_jobs)
         """
-        # use all available CPUs minus one to avoid overloading the system
-        cpu_count = max(1, mp.cpu_count() - 1)
+        # use all available CPUs minus one to avoid overloading the system.
+        # ``get_available_cpu_count`` is cgroup-aware, so inside a container
+        # started with ``docker run --cpus=N`` this respects ``N`` instead of
+        # the host core count returned by ``mp.cpu_count()``.
+        cpu_count = max(1, get_available_cpu_count() - 1)
 
         if self.batch_num > 1:
             n_jobs = min(self.batch_num, cpu_count)

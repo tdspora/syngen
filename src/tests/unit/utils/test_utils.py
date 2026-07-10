@@ -1,10 +1,13 @@
+import os
+
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, mock_open
 from datetime import datetime, timedelta, timezone, date, time
 
 import numpy as np
 import pandas as pd
 
+import syngen.ml.utils.utils as utils_module
 from syngen.ml.utils import (
     slugify_attribute,
     slugify_parameters,
@@ -17,7 +20,10 @@ from syngen.ml.utils import (
     get_source_path_extension,
     generate_unique_values_by_regex,
     is_number_regex_pattern,
+    get_available_cpu_count,
+    limit_thread_parallelism,
 )
+from syngen.ml.utils.utils import _cgroup_cpu_quota
 
 from tests.conftest import SUCCESSFUL_MESSAGE
 
@@ -673,4 +679,107 @@ def test_get_source_path_extension_with_metadata(path, expected, rp_logger):
         },
     }
     assert get_source_path_extension(table_name="pk_test", metadata=test_metadata) == expected
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def _fake_open(files):
+    """
+    Return an ``open`` replacement that serves in-memory content for the given
+    paths and raises FileNotFoundError for anything else, so cgroup file lookups
+    can be simulated regardless of the host's real cgroup layout.
+    """
+    def _open(path, *args, **kwargs):
+        if path in files:
+            return mock_open(read_data=files[path])()
+        raise FileNotFoundError(path)
+
+    return _open
+
+
+def test_cgroup_cpu_quota_v2(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' reads a cgroup v2 'cpu.max' quota")
+    files = {"/sys/fs/cgroup/cpu.max": "4000000 100000"}
+    with patch("builtins.open", _fake_open(files)):
+        assert _cgroup_cpu_quota() == 40
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cgroup_cpu_quota_v2_unlimited(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' returns None when cgroup v2 quota is 'max'")
+    files = {"/sys/fs/cgroup/cpu.max": "max 100000"}
+    with patch("builtins.open", _fake_open(files)):
+        assert _cgroup_cpu_quota() is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cgroup_cpu_quota_v1(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' reads cgroup v1 cfs quota/period")
+    files = {
+        "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "250000",
+        "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000",
+    }
+    with patch("builtins.open", _fake_open(files)):
+        # ceil(250000 / 100000) == 3
+        assert _cgroup_cpu_quota() == 3
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cgroup_cpu_quota_absent(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' returns None when no cgroup files exist")
+    with patch("builtins.open", _fake_open({})):
+        assert _cgroup_cpu_quota() is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_available_cpu_count_honours_quota(rp_logger):
+    rp_logger.info("Test 'get_available_cpu_count' returns the cgroup quota when it is the smallest")
+    with patch.object(utils_module, "_cgroup_cpu_quota", return_value=40), \
+            patch("os.sched_getaffinity", return_value=set(range(96))), \
+            patch("os.cpu_count", return_value=96):
+        assert get_available_cpu_count() == 40
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_available_cpu_count_affinity_fallback(rp_logger):
+    rp_logger.info("Test 'get_available_cpu_count' falls back to the affinity mask without a quota")
+    with patch.object(utils_module, "_cgroup_cpu_quota", return_value=None), \
+            patch("os.sched_getaffinity", return_value=set(range(8))), \
+            patch("os.cpu_count", return_value=96):
+        assert get_available_cpu_count() == 8
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_available_cpu_count_minimum_one(rp_logger):
+    rp_logger.info("Test 'get_available_cpu_count' returns at least 1 when nothing is detectable")
+    with patch.object(utils_module, "_cgroup_cpu_quota", return_value=None), \
+            patch("os.sched_getaffinity", side_effect=OSError), \
+            patch("os.cpu_count", return_value=None):
+        assert get_available_cpu_count() == 1
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_sets_defaults(rp_logger, monkeypatch):
+    rp_logger.info("Test 'limit_thread_parallelism' sets thread/spin env vars from the CPU budget")
+    for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OMP_WAIT_POLICY", "KMP_BLOCKTIME"):
+        monkeypatch.delenv(var, raising=False)
+    with patch.object(utils_module, "get_available_cpu_count", return_value=4):
+        applied = limit_thread_parallelism()
+    assert applied == 4
+    assert os.environ["OMP_NUM_THREADS"] == "4"
+    assert os.environ["MKL_NUM_THREADS"] == "4"
+    assert os.environ["OMP_WAIT_POLICY"] == "passive"
+    assert os.environ["KMP_BLOCKTIME"] == "0"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_respects_preset(rp_logger, monkeypatch):
+    rp_logger.info("Test 'limit_thread_parallelism' does not override caller-provided env vars")
+    monkeypatch.setenv("OMP_NUM_THREADS", "2")
+    monkeypatch.setenv("OMP_WAIT_POLICY", "active")
+    monkeypatch.delenv("MKL_NUM_THREADS", raising=False)
+    with patch.object(utils_module, "get_available_cpu_count", return_value=40):
+        limit_thread_parallelism()
+    assert os.environ["OMP_NUM_THREADS"] == "2"        # preserved
+    assert os.environ["OMP_WAIT_POLICY"] == "active"   # preserved
+    assert os.environ["MKL_NUM_THREADS"] == "40"       # filled from budget
     rp_logger.info(SUCCESSFUL_MESSAGE)
