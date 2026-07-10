@@ -733,8 +733,10 @@ def test_cgroup_cpu_quota_absent(rp_logger):
 
 def test_get_available_cpu_count_honours_quota(rp_logger):
     rp_logger.info("Test 'get_available_cpu_count' returns the cgroup quota when it is the smallest")
+    # create=True so the patch works on Windows, where os.sched_getaffinity
+    # does not exist (the production code guards it with try/except).
     with patch.object(utils_module, "_cgroup_cpu_quota", return_value=40), \
-            patch("os.sched_getaffinity", return_value=set(range(96))), \
+            patch("os.sched_getaffinity", return_value=set(range(96)), create=True), \
             patch("os.cpu_count", return_value=96):
         assert get_available_cpu_count() == 40
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -743,7 +745,7 @@ def test_get_available_cpu_count_honours_quota(rp_logger):
 def test_get_available_cpu_count_affinity_fallback(rp_logger):
     rp_logger.info("Test 'get_available_cpu_count' falls back to the affinity mask without a quota")
     with patch.object(utils_module, "_cgroup_cpu_quota", return_value=None), \
-            patch("os.sched_getaffinity", return_value=set(range(8))), \
+            patch("os.sched_getaffinity", return_value=set(range(8)), create=True), \
             patch("os.cpu_count", return_value=96):
         assert get_available_cpu_count() == 8
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -752,7 +754,7 @@ def test_get_available_cpu_count_affinity_fallback(rp_logger):
 def test_get_available_cpu_count_minimum_one(rp_logger):
     rp_logger.info("Test 'get_available_cpu_count' returns at least 1 when nothing is detectable")
     with patch.object(utils_module, "_cgroup_cpu_quota", return_value=None), \
-            patch("os.sched_getaffinity", side_effect=OSError), \
+            patch("os.sched_getaffinity", side_effect=OSError, create=True), \
             patch("os.cpu_count", return_value=None):
         assert get_available_cpu_count() == 1
     rp_logger.info(SUCCESSFUL_MESSAGE)
