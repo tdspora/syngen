@@ -163,25 +163,6 @@ class InferConfig:
         """
         return fetch_config(self.paths["train_config_pickle_path"])
 
-    def _set_paths(self):
-        """
-        Create the paths which used in inference process
-        """
-        self.paths.update({
-            "original_schema_path": f"model_artifacts/tmp_store/{self.slugify_table_name}/"
-                                    f"original_schema_{self.slugify_table_name}.pkl",
-            "path_to_flatten_metadata":
-                f"model_artifacts/system_store/flatten_configs/"
-                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
-            "input_data_path": self.train_config.paths["input_data_path"],
-            "path_to_accuracy_report": (
-                "model_artifacts/"
-                f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
-                f"/{self.slugify_table_name}/reports/accuracy-report.html"
-            ),
-            "generated_reports": {}
-        })
-
     @slugify_attribute(table_name="slugify_table_name")
     def __set_paths(self):
         """
@@ -198,6 +179,13 @@ class InferConfig:
             path=self.train_config.paths["path_to_merged_infer"]
         )
         self.paths.update({
+            "path_to_flatten_metadata":
+                f"model_artifacts/system_store/flatten_configs/"
+                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
+            "input_data_path": self.train_config.paths["input_data_path"],
+            "generated_reports": {},
+            "original_schema_path": f"model_artifacts/tmp_store/{dynamic_name}/"
+                                    f"original_schema_{dynamic_name}.pkl",
             "reports_path": (
                 f"model_artifacts/"
                 f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
@@ -224,7 +212,10 @@ class InferConfig:
             "fk_kde_path":
                 f"model_artifacts/resources/{dynamic_name}/vae/checkpoints/stat_keys/",
             "path_to_no_ml":
-                f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl"
+                f"model_artifacts/resources/{dynamic_name}/no_ml/checkpoints/kde_params.pkl",
+            "path_to_accuracy_report": (
+                "model_artifacts/"
+                f"{'tmp_store' if self.type_of_process == 'infer' else 'resources'}"
+                f"/{dynamic_name}/reports/accuracy-report.html"
+            )
         })
-
-        self._set_paths()
