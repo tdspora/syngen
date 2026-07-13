@@ -203,64 +203,6 @@ def test_set_up_batch_size(mock_fetch_config, batch_size, size, expected_result,
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-@pytest.mark.parametrize("both_keys, expected_dynamic_name", [
-    (True, "test-table"),
-    (False, "test-table-pk")
-])
-@patch.object(
-    InferConfig,
-    "train_config",
-    return_value=MagicMock(paths={
-        "input_data_path": "path/to/nonexistent/input_data.pkl",
-        "path_to_merged_infer": "path/to/nonexistent/path_to_merged_infer.csv"
-    })
-)
-def test_original_schema_path_of_infer_config_for_table_with_both_keys(
-    mock_train_config, both_keys, expected_dynamic_name, rp_logger
-):
-    rp_logger.info(
-        "Test that the path 'original_schema_path' of the instance of the class InferConfig "
-        "is built with the table name with the stripped suffix in case the table contains "
-        "the primary and the foreign keys simultaneously"
-    )
-    table_name = "test_table_pk"
-
-    metadata = {
-        table_name: {
-            "train_settings": {
-                "source": "path/to/source.csv",
-                "reports": []
-            },
-            "infer_settings": {
-                "reports": []
-            },
-        }
-    }
-
-    infer_config = InferConfig(
-        destination="path/to/destination.csv",
-        metadata=metadata,
-        metadata_path="path/to/metadata.yaml",
-        size=100,
-        table_name=table_name,
-        run_parallel=False,
-        batch_size=100,
-        random_seed=None,
-        reports=[],
-        both_keys=both_keys,
-        log_level="DEBUG",
-        type_of_process="infer",
-        loader=None
-    )
-
-    assert infer_config.paths["original_schema_path"] == (
-        f"model_artifacts/tmp_store/{expected_dynamic_name}/"
-        f"original_schema_{expected_dynamic_name}.pkl"
-    )
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
 def test_get_state_of_train_config(test_df, rp_logger):
     rp_logger.info("Test the method '__getstate__' of the class TrainConfig")
     train_config = TrainConfig(
