@@ -179,9 +179,7 @@ class InferConfig:
             path=self.train_config.paths["path_to_merged_infer"]
         )
         self.paths.update({
-            "path_to_flatten_metadata":
-                f"model_artifacts/system_store/flatten_configs/"
-                f"flatten_metadata_{fetch_unique_root(self.table_name, self.metadata_path)}.json",
+            "path_to_flatten_metadata": self.train_config.paths["path_to_flatten_metadata"],
             "input_data_path": self.train_config.paths["input_data_path"],
             "generated_reports": {},
             "original_schema_path": f"model_artifacts/tmp_store/{dynamic_name}/"
