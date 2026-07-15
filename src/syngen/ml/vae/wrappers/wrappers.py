@@ -511,11 +511,10 @@ class VAEWrapper(BaseWrapper):
                 "numpy.datetime64 date columns from Parquet/Delta sources)."
             )
 
-    @tf.function
-    def _train_step_graph(self, batch: Tuple[tf.Tensor]):
+    def _train_step_graph_impl(self, batch: Tuple[tf.Tensor]):
         """
         Graph-compiled forward/backward/optimizer-apply step. Returns tensors only
-        (no `.numpy()`) so it can be traced by `@tf.function` - conversion to numpy
+        (no `.numpy()`) so it can be traced by `tf.function` - conversion to numpy
         happens in `_train_step`, outside the compiled graph.
         """
         with tf.GradientTape() as tape:
@@ -535,6 +534,12 @@ class VAEWrapper(BaseWrapper):
         return loss, kl_loss, feature_losses
 
     def _train_step(self, batch: Tuple[tf.Tensor]):
+        # `self` (VanillaVAEWrapper) isn't hashable, so `@tf.function` can't be used
+        # as a class-level method decorator (it needs a weakref-keyed descriptor
+        # cache). Wrap the bound method once instead, cached on the instance.
+        if not hasattr(self, "_train_step_graph"):
+            self._train_step_graph = tf.function(self._train_step_graph_impl)
+
         loss, kl_loss, feature_losses = self._train_step_graph(batch)
         order_of_features = list(self.vae.feature_losses.keys())
         feature_losses = {
