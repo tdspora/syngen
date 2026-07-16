@@ -44,6 +44,7 @@ class Worker:
 
     def __attrs_post_init__(self):
         self.__fetch_metadata()
+        self.__validate_schema()
         self._clean_up()
         self._update_metadata()
         self.__validate_metadata()
@@ -256,7 +257,6 @@ class Worker:
                     "format": {}
                 }
             }
-        self.__validate_schema()
 
     @staticmethod
     def _get_tables_without_keys(config_of_tables: Dict) -> List[str]:
