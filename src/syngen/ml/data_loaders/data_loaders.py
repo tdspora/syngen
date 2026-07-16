@@ -1,10 +1,9 @@
 import os
+from copy import deepcopy
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Tuple, List, Literal
 import pickle as pkl
-import csv
-import inspect
 from dataclasses import dataclass
 
 import pandas as pd
@@ -21,14 +20,8 @@ from cryptography.fernet import Fernet
 from syngen.ml.validation_schema import SUPPORTED_EXCEL_EXTENSIONS
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.utils import trim_string, fetch_env_variables
-from syngen.ml.context import get_context, global_context
-from syngen.ml.validation_schema import (
-    ExcelFormatSettingsSchema,
-    CSVFormatSettingsSchema,
-    ReportTypes
-)
-
-DELIMITERS = {"\\t": "\t"}
+from syngen.ml.format_settings import set_format_settings, CSVFormatSettings, ExcelFormatSettings
+from syngen.ml.validation_schema import ReportTypes
 
 
 class BaseDataLoader(ABC):
@@ -134,8 +127,8 @@ class DataLoader(BaseDataLoader):
         if data is not None:
             self.file_loader.save_data(data, **kwargs)
 
-    def get_columns(self, **kwargs) -> List[str]:
-        return self.file_loader.get_columns(**kwargs)
+    def get_columns(self) -> List[str]:
+        return self.file_loader.get_columns()
 
 
 class CSVLoader(BaseDataLoader):
@@ -145,50 +138,19 @@ class CSVLoader(BaseDataLoader):
 
     def __init__(self, path: str, **kwargs):
         super().__init__(path)
-        self.format = get_context().get_config()
-        self.format.update(kwargs)
-        self.format = {
-            k: v
-            for k, v in self.format.items()
-            if k in CSVFormatSettingsSchema._declared_fields.keys()
-        }
+        format_settings = dict(kwargs)
+        format_settings.update(CSVFormatSettings().format_settings)
+        set_format_settings(format_settings)
 
-    @staticmethod
-    def _get_quoting(quoting: Optional[str]) -> int:
-        quoting_map = {
-            "minimal": csv.QUOTE_MINIMAL,
-            "all": csv.QUOTE_ALL,
-            "non-numeric": csv.QUOTE_NONNUMERIC,
-            "none": csv.QUOTE_NONE,
-        }
-        if isinstance(quoting, int):
-            return quoting
-        else:
-            return (
-                quoting_map.get(quoting.lower(), csv.QUOTE_MINIMAL)
-                if quoting
-                else csv.QUOTE_MINIMAL
-            )
+    def _fetch_data(self):
+        return (
+            pd.read_csv(self.path, **CSVFormatSettings().load_format_settings)
+            .apply(trim_string, axis=0)
+        )
 
-    @staticmethod
-    def _get_csv_params(**kwargs):
-        params = {}
-        format_params = kwargs.get("format")
-
-        if format_params:
-            params.update(format_params)
-            quoting = format_params.get("quoting", None)
-            params["quoting"] = CSVLoader._get_quoting(quoting)
-
-        return params
-
-    def _fetch_data(self, **params):
-        return pd.read_csv(self.path, **params).apply(trim_string, axis=0)
-
-    def _load_data(self, **kwargs) -> Tuple[pd.DataFrame, Dict]:
-        params = CSVLoader._get_csv_params(**kwargs)
+    def _load_data(self) -> Tuple[pd.DataFrame, Dict]:
         try:
-            df = self._fetch_data(**params)
+            df = self._fetch_data()
             if all([isinstance(column, int) for column in df.columns]):
                 df.rename(
                     columns={
@@ -196,11 +158,6 @@ class CSVLoader(BaseDataLoader):
                     },
                     inplace=True,
                 )
-            sep = params.get("sep", ",")
-            if len(sep) > 1:
-                params["sep"] = ","
-            params["skiprows"] = None
-            global_context(params)
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"
@@ -213,21 +170,24 @@ class CSVLoader(BaseDataLoader):
         return df, CSVConvertor(df).schema
 
     def load_data(self, **kwargs):
-        return self._load_data(format=self.format, **kwargs)
+        return self._load_data()
 
-    def __get_columns(self, **kwargs):
-        head_df = pd.read_csv(self.path, **kwargs, nrows=0)
-        return list(head_df.columns)
+    def __get_columns(self):
+        head_df = pd.read_csv(self.path, **CSVFormatSettings().load_format_settings, nrows=0)
+        columns = list(head_df.columns)
+        if all(isinstance(c, int) for c in columns):
+            columns = [f"column_{i}" for i in range(len(columns))]
+        return columns
 
-    def get_columns(self, **kwargs) -> List[str]:
-        return self._get_columns(**kwargs)
+    def get_columns(self) -> List[str]:
+        return self._get_columns()
 
-    def _get_columns(self, **kwargs) -> List[str]:
+    def _get_columns(self) -> List[str]:
         """
         Get the column names of the table located in the path
         """
         try:
-            return self.__get_columns(**kwargs)
+            return self.__get_columns()
         except pd.errors.EmptyDataError as error:
             logger.error(
                 f"The empty file was provided. Unable to train this table located "
@@ -235,58 +195,21 @@ class CSVLoader(BaseDataLoader):
             )
             raise error
 
-    def _write_data(self, df, **kwargs):
+    def _write_data(self, df):
         """
         Save the dataframe in '.csv' format
         """
-        df.to_csv(self.path, **kwargs, index=False)
+        df.to_csv(self.path, **CSVFormatSettings().save_format_settings, index=False)
 
     def _save_data(self, df: pd.DataFrame, **kwargs):
         """
         Save the provided DataFrame to a CSV file.
-        :param path: The file path to save the DataFrame.
-        :param df: The DataFrame to be saved.
-        :param kwargs: Additional keyword arguments to be passed to the to_csv method.
         """
-        format_params = CSVLoader._get_csv_params(**kwargs)
         if df is not None:
-            # Extract valid parameters
-            valid_parameters = inspect.signature(pd.DataFrame.to_csv).parameters
-
-            # Filter out any keyword arguments that are not valid parameters
-            filtered_kwargs = {k: v for k, v in format_params.items() if k in valid_parameters}
-            for k, v in filtered_kwargs.items():
-                if isinstance(v, str) and v in DELIMITERS.keys():
-                    filtered_kwargs[k] = v.replace(v, DELIMITERS[v])
-
-            if "header" in filtered_kwargs and filtered_kwargs.get("header", None) is None:
-                filtered_kwargs["header"] = False
-            else:
-                filtered_kwargs["header"] = True
-
-            if "sep" in filtered_kwargs and len(filtered_kwargs.get("sep", None)) > 1:
-                filtered_kwargs["sep"] = ","
-                logger.warning(
-                    "As the length of the value of the parameter 'separator' is more than "
-                    "1 character, the 'separator' will be set to ',' in accordance with "
-                    "the standard 'RFC 4180'"
-                )
-            if (
-                "na_values" in format_params
-                and format_params.get("na_values", [])
-                and df.isnull().values.any()
-            ):
-                filtered_kwargs["na_rep"] = format_params["na_values"][0]
-                logger.warning(
-                    "Since the 'na_values' parameter in the 'format' sections is not empty, "
-                    "the missing values will be filled with "
-                    "the first value from the 'na_values' parameter"
-                )
-
-            self._write_data(df, **filtered_kwargs)
+            self._write_data(df)
 
     def save_data(self, df: pd.DataFrame, **kwargs):
-        self._save_data(df, **kwargs)
+        self._save_data(df)
 
 
 class AvroLoader(BaseDataLoader):
@@ -368,14 +291,41 @@ class AvroLoader(BaseDataLoader):
 
             series = df[name]
             # Convert pandas missing markers to None, so the Avro union selects the null branch.
-            series = series.where(~series.isna(), None)
-
+            series = series.astype(object).where(~series.isna(), None)
             df[name] = series
 
         return df
 
+    @staticmethod
+    def _extend_schema(schema: Dict, df: pd.DataFrame) -> Dict:
+        """
+        Return schema extended with inferred Avro fields for any columns in df
+        that are absent from schema's field list.
+        """
+        existing_names = {f["name"] for f in schema.get("fields", [])}
+        new_cols = [col for col in df.columns if col not in existing_names]
+        if not new_cols:
+            return schema
+        inferred = pdx.schema_infer(df[new_cols])
+        extended = deepcopy(schema)
+        extended["fields"] = schema["fields"] + inferred["fields"]
+        return extended
+
+    def _filter_schema_fields(self, schema: Dict, df: pd.DataFrame) -> Dict:
+        """
+        Return schema filtered to only include fields that exist in the dataframe.
+        This is useful if the schema has fields that are not present in the DataFrame.
+        """
+        df_columns = set(df.columns)
+        filtered_fields = [f for f in schema.get("fields", []) if f["name"] in df_columns]
+        filtered_schema = deepcopy(schema)
+        filtered_schema["fields"] = filtered_fields
+        return filtered_schema
+
     def save_data(self, df: pd.DataFrame, schema: Optional[Dict], **kwargs):
         if schema is not None:
+            schema = self._extend_schema(schema, df)
+            schema = self._filter_schema_fields(schema, df)
             logger.trace(f"The data will be saved with the schema: {schema}")
 
         preprocessed_schema = self._get_preprocessed_schema(schema)
@@ -424,7 +374,7 @@ class AvroLoader(BaseDataLoader):
         schema = self.load_schema()
         return list(schema.keys())
 
-    def get_columns(self, **kwargs) -> List[str]:
+    def get_columns(self) -> List[str]:
         try:
             return self._get_columns()
         except InvalidAvroBinaryEncoding as error:
@@ -578,7 +528,7 @@ class BinaryLoader(BaseDataLoader):
             return pkl.load(f)
 
     def get_columns(self) -> List[str]:
-        data, schema = self.load_data()
+        data, _ = self.load_data()
         return data.columns.tolist()
 
     def load_data(self) -> Tuple[pd.DataFrame, None]:
@@ -602,13 +552,9 @@ class ExcelLoader(BaseDataLoader):
 
     def __init__(self, path: str):
         super().__init__(path)
-        self.format = get_context().get_config()
-        self.sheet_name = self.format.get("sheet_name", 0)
-        self.format = {
-            k: v
-            for k, v in self.format.items()
-            if k in ExcelFormatSettingsSchema._declared_fields.keys()
-        }
+        excel_settings = ExcelFormatSettings()
+        self.sheet_name = excel_settings.sheet_name
+        self.format = excel_settings.load_format_settings
 
     def _fetch_data(self) -> pd.DataFrame:
         return pd.read_excel(self.path, sheet_name=self.sheet_name)
@@ -618,12 +564,12 @@ class ExcelLoader(BaseDataLoader):
         Load data in Excel format
         """
         try:
-            df = self._fetch_data()
-            if isinstance(self.sheet_name, list) or self.sheet_name is None:
-                dfs = [df for sheet_name, df in df.items()]
-                df = pd.concat(dfs, ignore_index=True)
-            global_context({})
-            return df, CSVConvertor(df).schema
+            data = self._fetch_data()
+            if isinstance(self.sheet_name, list):
+                data = pd.concat([data[sheet] for sheet in self.sheet_name], ignore_index=True)
+            elif self.sheet_name is None:
+                data = pd.concat(data.values(), ignore_index=True)
+            return data, CSVConvertor(data).schema
         except FileNotFoundError as error:
             message = (
                 f"It seems that the path to the table isn't valid.\n"
@@ -646,15 +592,15 @@ class ExcelLoader(BaseDataLoader):
         if df is not None:
             df.to_excel(self.path, index=False, engine="openpyxl")
 
-    def _get_columns(self, **kwargs) -> List[str]:
+    def _get_columns(self) -> List[str]:
         """
         Get the column names of the table located in the path
         """
-        head_df = pd.read_excel(self.path, **kwargs, nrows=0)
+        head_df = pd.read_excel(self.path, sheet_name=self.sheet_name, nrows=0)
         return list(head_df.columns)
 
-    def get_columns(self, **kwargs) -> List[str]:
-        return self._get_columns(**kwargs)
+    def get_columns(self) -> List[str]:
+        return self._get_columns()
 
 
 class DataEncryptor(BaseDataLoader):
@@ -691,7 +637,7 @@ class DataEncryptor(BaseDataLoader):
         """
         Get the column names of the table
         """
-        data, schema = self.load_data()
+        data, _ = self.load_data()
         return data.columns.tolist()
 
     @staticmethod

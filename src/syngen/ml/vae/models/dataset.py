@@ -34,6 +34,7 @@ from syngen.ml.utils import (
 )
 from syngen.ml.utils import slugify_parameters
 from syngen.ml.utils import clean_up_metadata
+from slugify import slugify
 from syngen.ml.mlflow_tracker import MlflowTracker
 
 
@@ -87,6 +88,8 @@ class Dataset:
     dropped_columns: Set = field(default_factory=set)
     format: Dict = field(default_factory=dict)
     to_datetime_conversion: Dict = field(default_factory=dict)
+    date_types_to_restore: Dict = field(default_factory=dict)
+    excluded_columns: Set = field(default_factory=set)
 
     def _select_str_columns(self) -> List[str]:
         """
@@ -101,7 +104,7 @@ class Dataset:
             text_columns = [
                 col
                 for col, data_type in self.fields.items()
-                if data_type == "string"
+                if data_type == "string" and col in self.df.columns
             ]
         return text_columns
 
@@ -124,13 +127,15 @@ class Dataset:
         self._set_categorical_columns()
         self.binary_columns -= self.categorical_columns
 
-    def _preprocess_df(self, excluded_columns: Set[str]):
+    def _preprocess_df(self):
         """
         Preprocess the dataframe
         """
-        self.nan_labels_dict = get_nan_labels(self.df, excluded_columns)
-        self.df = nan_labels_to_float(self.df, self.nan_labels_dict)
-        self._cast_to_numeric(excluded_columns)
+        self.nan_labels_dict = get_nan_labels(self.df, excluded_columns=self.excluded_columns)
+        self.df = nan_labels_to_float(
+            self.df, self.nan_labels_dict, excluded_columns=self.excluded_columns
+        )
+        self._cast_to_numeric()
 
     def _preparation_step(self):
         """
@@ -142,20 +147,20 @@ class Dataset:
         self._update_metadata(table_config)
         self._set_metadata()
         self._detect_categorical_columns()
-        excluded_columns = set().union(
+        self.excluded_columns = self.excluded_columns.union(
             self.categorical_columns,
             self.binary_columns
         )
-        self._preprocess_df(excluded_columns)
+        self._preprocess_df()
         self._update_schema()
 
-    def _cast_to_numeric(self, excluded_columns: Set[str]):
+    def _cast_to_numeric(self):
         """
         Cast the values in the column to 'integer' or 'float' data type
         in case all of them might be cast to this data type
         """
         text_columns = self._select_str_columns()
-        list_of_columns = set(text_columns) - excluded_columns
+        list_of_columns = set(text_columns) - self.excluded_columns
         for column in list_of_columns:
             try:
                 if self.df[column].dropna().apply(lambda x: float(x).is_integer()).all():
@@ -217,30 +222,28 @@ class Dataset:
         """
         Check null values and uniqueness in primary key
         """
-        errors = []
+        warnings = []
         # Check NA values in primary key columns
         if self.df[self.pk_columns].isna().any(axis=None):
             pk_columns_with_na = [
                 column for column in self.pk_columns if self.df[column].isna().any()
             ]
-            error_msg = (
+            warning_msg = (
                 f"The primary key '{self.primary_key_name}' "
                 f"contains null values in columns: {pk_columns_with_na}. "
             )
-            errors.append(error_msg)
+            warnings.append(warning_msg)
 
         # Check uniqueness of primary key
         if self.df[self.pk_columns].duplicated().any():
-            error_msg = (
+            warning_msg = (
                 f"The primary key '{self.primary_key_name}' "
                 f"contains duplicates. "
             )
-            errors.append(error_msg)
+            warnings.append(warning_msg)
 
-        if errors:
-            raise ValueError(
-                " ".join(errors) + "Please check the original data."
-            )
+        if warnings:
+            logger.warning(" ".join(warnings) + "Please check the original data.")
         else:
             logger.info("Values in primary key are unique.")
 
@@ -277,27 +280,25 @@ class Dataset:
         uq_keys_mapping = dict(
             zip(self.unique_keys_mapping_list, self.uq_columns_lists)
         )
-        errors = []
+        warnings = []
         for key_name, key_columns in uq_keys_mapping.items():
             # explicitly check for > 1 null values in unique key columns
             all_na_mask = self.df[key_columns].isna().all(axis=1)
             if all_na_mask.sum() > 1:
-                error_msg = (
+                warning_msg = (
                     f"The unique key '{key_name}' contains > 1 null values. "
                 )
-                errors.append(error_msg)
+                warnings.append(warning_msg)
 
             not_all_na_mask = ~all_na_mask
             if self.df[not_all_na_mask][key_columns].duplicated().any():
-                error_msg = (
-                    f"Values in the unique key '{key_name}' are not unique. "
+                warning_msg = (
+                    f"The unique key '{key_name}' contains duplicates. "
                 )
-                errors.append(error_msg)
+                warnings.append(warning_msg)
 
-        if errors:
-            raise ValueError(
-                " ".join(errors) + "Please check the original data."
-            )
+        if warnings:
+            logger.warning(" ".join(warnings) + "Please check the original data.")
         else:
             logger.info("Values in unique keys are unique.")
 
@@ -367,11 +368,11 @@ class Dataset:
                 )
                 self.pk_uq_keys_types[column] = column_type
 
-    def __map_text_pk(self):
+    def _map_text_pk(self):
         for pk, pk_type in self.pk_uq_keys_types.items():
             if pk_type is str:
                 mapper = {k: n for n, k in enumerate(self.df[pk])}
-                with open(f"{self.paths['fk_kde_path']}{pk}_mapper.pkl", "wb") as file:
+                with open(f"{self.paths['fk_kde_path']}{slugify(pk)}_mapper.pkl", "wb") as file:
                     pickle.dump(mapper, file)
 
     def _set_metadata(self):
@@ -1054,6 +1055,24 @@ class Dataset:
             - self.uuid_columns
         )
         self._set_date_columns()
+        schema_date_columns = set(
+            column for column, data_type in self.fields.items() if data_type == "date"
+        )
+        self.date_columns = self.date_columns.union(schema_date_columns)
+        self.date_columns = (
+            self.date_columns
+            - self.categorical_columns
+            - self.binary_columns
+        )
+        self.to_datetime_conversion = {
+            column: column in schema_date_columns
+            for column in self.date_columns
+        }
+        date_types_to_restore = self.schema.get("date_types_to_restore", {})
+        self.date_types_to_restore = {
+            column: date_types_to_restore.get(column, "datetime")
+            for column in schema_date_columns
+        }
         self.str_columns -= self.date_columns
         self.uuid_columns = self.uuid_columns - self.categorical_columns - self.binary_columns
         self.uuid_columns_types = {
@@ -1105,7 +1124,8 @@ class Dataset:
             feature.fit(
                 self.df[self.columns[name]],
                 date_mapping=self.date_mapping,
-                to_datetime_conversion=self.to_datetime_conversion
+                to_datetime_conversion=self.to_datetime_conversion,
+                date_restore_types=self.date_types_to_restore
             )
 
         self.all_columns = [col for col in self.columns]
@@ -1259,7 +1279,7 @@ class Dataset:
             return mapper
         except FileNotFoundError:
             logger.warning(
-                f"The mapper for the {fk_column} text key is not found. "
+                f"The mapper for the '{fk_column}' text key is not found. "
                 f"Simple sampling will be used."
             )
 
@@ -1465,7 +1485,7 @@ class Dataset:
         pk_uq_keys_mapping = self.primary_keys_mapping
         if pk_uq_keys_mapping:
             self.__set_types(pk_uq_keys_mapping)
-            self.__map_text_pk()
+            self._map_text_pk()
 
     def _assign_feature(self, column: str):
         """

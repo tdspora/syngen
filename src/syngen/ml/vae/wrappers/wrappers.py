@@ -65,6 +65,7 @@ class VAEWrapper(BaseWrapper):
     log_level: str
     losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
+    preloaded_dataset: Optional[Dataset] = field(default=None, kw_only=True)
     vae: CVAE = field(init=False, default=None)
     model: Model = field(init=False, default=None)
     num_batches: int = field(init=False)
@@ -84,7 +85,11 @@ class VAEWrapper(BaseWrapper):
             self.df = self.dataset.pipeline()
             self._save_dataset()
         elif self.process == "infer":
-            self.dataset = fetch_config(self.paths["dataset_pickle_path"])
+            # for multiprocessing
+            if self.preloaded_dataset is not None:
+                self.dataset = self.preloaded_dataset
+            else:
+                self.dataset = fetch_config(self.paths["dataset_pickle_path"])
             self._update_dataset()
             self._save_dataset()
 
@@ -457,6 +462,7 @@ class VAEWrapper(BaseWrapper):
         Define batched dataset for training vae
         """
         transformed_data = self.dataset.transform(df)
+        self._validate_transformed_data(transformed_data)
 
         feature_datasets = []
         options = tf.data.Options()
@@ -467,6 +473,43 @@ class VAEWrapper(BaseWrapper):
 
         dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
         return dataset.batch(self.batch_size, drop_remainder=True)
+
+    @staticmethod
+    def _find_non_finite_features(
+        feature_names: List[str], transformed_data: List
+    ) -> List[str]:
+        """
+        Return the names of features whose transformed (model-input) arrays
+        contain NaN or inf values.
+        """
+        invalid_features = []
+        for name, array in zip(feature_names, transformed_data):
+            array = np.asarray(array)
+            if np.issubdtype(array.dtype, np.number) and not np.isfinite(array).all():
+                invalid_features.append(name)
+        return invalid_features
+
+    def _validate_transformed_data(self, transformed_data: List):
+        """
+        Guardrail: refuse to start training on data that contains NaN/inf.
+
+        Non-finite values in the transformed feature arrays (for example a date
+        column that failed to convert from numpy.datetime64) would silently
+        poison the VAE and produce a NaN model whose generated output later
+        crashes during inference. Fail fast with a clear, data-free message
+        naming the offending feature(s) instead.
+        """
+        invalid_features = self._find_non_finite_features(
+            list(self.dataset.features.keys()), transformed_data
+        )
+        if invalid_features:
+            raise ValueError(
+                "Non-finite values (NaN/inf) were found in the transformed "
+                f"training data for feature(s): {invalid_features}. Training "
+                "has been aborted to avoid producing a NaN model. This usually "
+                "indicates source values that could not be encoded (for example "
+                "numpy.datetime64 date columns from Parquet/Delta sources)."
+            )
 
     def _train_step(self, batch: Tuple[tf.Tensor]):
         with tf.GradientTape() as tape:
@@ -574,7 +617,9 @@ class VanillaVAEWrapper(VAEWrapper):
             main_process: str,
             batch_size: int,
             latent_dim: int = 10,
-            latent_components: int = 30):
+            latent_components: int = 30,
+            **kwargs
+    ):
 
         log_level = os.getenv("LOGURU_LEVEL")
 
@@ -587,7 +632,8 @@ class VanillaVAEWrapper(VAEWrapper):
             process,
             main_process,
             batch_size,
-            log_level
+            log_level,
+            **kwargs
         )
         self.latent_dim = min(latent_dim, int(len(self.dataset.columns) / 2))
         self.vae = CVAE(

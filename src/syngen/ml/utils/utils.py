@@ -3,7 +3,7 @@ import sys
 import re
 from typing import List, Dict, Optional, Union, Set, Tuple, Literal
 from dateutil import parser
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta, date, timezone, time as datetime_time
 import time
 from pathlib import Path
 import math
@@ -138,22 +138,65 @@ def datetime_to_timestamp(dt, date_format):
     """
     if pd.isnull(dt):
         return np.nan
+    if isinstance(dt, np.datetime64):
+        # numpy.datetime64 (e.g. date columns loaded from Parquet/Delta) is not
+        # an instance of datetime/date, so without this branch it would fall
+        # through and return None - silently turning the date feature into NaN
+        # and poisoning model training. Normalise it to a pandas Timestamp
+        # (a datetime subclass) so it is handled by the datetime branch below.
+        dt = pd.Timestamp(dt)
     if isinstance(dt, str):
         return datetime_str_to_timestamp(dt, date_format)
     if isinstance(dt, datetime):
-        return dt.timestamp()
+        # Strip timezone to stay consistent with 'datetime_str_to_timestamp',
+        # which always strips tz via .replace(tzinfo=None) before computing delta
+        return (dt.replace(tzinfo=None) - datetime(1970, 1, 1)).total_seconds()
+    if isinstance(dt, datetime_time):
+        # time-millis / time-micros Avro logical types decode as datetime.time objects.
+        # Encode as seconds since midnight so the date feature pipeline receives a
+        # finite numeric value instead of returning None (which becomes NaN).
+        return dt.hour * 3600 + dt.minute * 60 + dt.second + dt.microsecond / 1_000_000
     if isinstance(dt, date):
-        # Convert date to datetime at midnight
-        return datetime.combine(dt, datetime.min.time()).timestamp()
+        # Convert date to datetime at midnight, compute delta from epoch
+        # (avoid .timestamp() which applies the local OS timezone offset)
+        return (datetime.combine(dt, datetime.min.time()) - datetime(1970, 1, 1)).total_seconds()
 
 
-def timestamp_to_datetime(timestamp: int, delta=False):
+def timestamp_to_datetime(
+    timestamp: float,
+    delta: bool = False,
+    restore_type: Optional[str] = None,
+):
     """
-    Convert the timestamp to the datetime object or timedelta object
+    Convert the timestamp to the datetime object or timedelta object.
+
+    ``restore_type`` controls the Python type returned for Avro date columns:
+      - ``"date"``     → ``datetime.date`` (Avro ``date`` logical type)
+      - ``"time"``     → ``datetime.time`` (Avro ``time-millis`` / ``time-micros``)
+      - ``"datetime"`` → ``datetime.datetime`` (
+          Avro ``timestamp-millis`` / ``timestamp-micros`` /
+          ``local-timestamp-millis`` / ``local-timestamp-micros``
+    )
     """
-    # Calculate the number of seconds in the UNIX epoch and the number of seconds left
     if pd.isnull(timestamp):
         return np.nan
+
+    # time-of-day columns are encoded as seconds since midnight (not since epoch).
+    # Reconstruct `datetime.time` before any epoch-based arithmetic.
+    if restore_type == "time":
+        # Normalise to [0, 86400) so that model-generated values outside the valid
+        # range (negative or > 86400) are wrapped rather than crashing.
+        seconds = float(timestamp) % 86400
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        s = int(seconds % 60)
+        # Use `seconds % 1` (always in [0, 1)) instead of `seconds - int(seconds)`
+        # which can be negative for negative inputs before the modulo above.
+        # Clamp to 999_999 to guard against floating-point round() returning 1_000_000.
+        us = min(round((seconds % 1) * 1_000_000), 999_999)
+        return datetime_time(h, m, s, us)
+
+    timestamp = int(timestamp)
 
     if timestamp >= MAX_ALLOWED_TIME_MS:
         return datetime(9999, 12, 31, 23, 59, 59, 999999)
@@ -172,23 +215,42 @@ def timestamp_to_datetime(timestamp: int, delta=False):
     if delta:
         return delta_of_time
 
-    else:
-        return epoch_datetime + delta_of_time
+    dt = epoch_datetime + delta_of_time
+
+    if restore_type == "date":
+        return dt.date()
+
+    return dt
 
 
 def convert_to_date(
     value: Union[int, float],
     date_format: str,
-    to_datetime_conversion: bool = False
-) -> Union[str, Union[datetime, timedelta]]:
+    to_datetime_conversion: bool = False,
+    date_restore_type: Optional[str] = None,
+) -> Union[str, datetime, date, datetime_time, float]:
     """
     Convert timestamp to date string values or values of date objects
-    represented dates in a column
+    represented dates in a column.
+
+    ``date_restore_type`` carries the Avro logical-type hint from the convertor:
+      - ``"date"``     → return ``datetime.date``
+      - ``"time"``     → return ``datetime.time``
+      - ``"datetime"`` or ``None`` → return ``datetime.datetime``
+    When ``to_datetime_conversion`` is ``False`` the result is always a
+    formatted string regardless of ``date_restore_type``.
     """
     date_format = date_format if date_format else "%Y-%m-%d %H:%M:%S"
-    dt = timestamp_to_datetime(int(value))
+    if pd.isnull(value):
+        # Guard against NaN/None: ``int(value)`` raises "cannot convert float
+        # NaN to integer". Mirror ``timestamp_to_datetime``'s null handling so a
+        # non-finite generated value degrades to NaN instead of crashing.
+        return np.nan
+    dt = timestamp_to_datetime(value, restore_type=date_restore_type)
     if to_datetime_conversion:
         return dt
+    if isinstance(dt, datetime_time):
+        return dt.strftime("%H:%M:%S.%f") if dt.microsecond else dt.strftime("%H:%M:%S")
     return dt.strftime(date_format)
 
 
@@ -247,10 +309,10 @@ def get_date_columns(df: pd.DataFrame, str_columns: List[str]):
 def convert_date_to_timestamp(
     value,
     date_format: str,
-    na_values: list
+    na_values: Optional[list]
 ) -> float | None:
     """Helper to convert a single date value to a timestamp"""
-    if value is None or value in na_values:
+    if value is None or pd.isna(value) or (na_values is not None and value in na_values):
         return None
     result = datetime_to_timestamp(value, date_format)
     try:
@@ -317,7 +379,7 @@ def get_nan_labels(df: pd.DataFrame, excluded_columns: Set[str]) -> Dict:
 def nan_labels_to_float(
     df: pd.DataFrame,
     columns_nan_labels: dict,
-    exclude_columns: set = set(),
+    excluded_columns: set = set(),
     process="training"
 ) -> pd.DataFrame:
     """
@@ -326,7 +388,7 @@ def nan_labels_to_float(
     """
     df_with_nan = df.copy()
     for column, label in columns_nan_labels.items():
-        if column not in exclude_columns:
+        if column not in excluded_columns:
             df_with_nan[column].replace(label, np.NaN, inplace=True)
             df_with_nan[column] = df_with_nan[column].astype(float)
             if process == "training":

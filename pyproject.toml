@@ -2,3 +2,105 @@
 requires = ["setuptools>=70.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["src/tests"]
+
+[project]
+name = "syngen"
+dynamic = ["version"]
+description = "Synthetic data generation tool that uncovers patterns, trends, and correlations hidden within production datasets and replicates them in less protected environments, using ML models to deliver accurate, referentially intact datasets."
+readme = "README.md"
+requires-python = ">3.9,<3.12"
+license = { text = "GPLv3 License" }
+authors = [{ name = "EPAM Systems, Inc." }]
+maintainers = [{ name = "Hanna Imshenetska" }]
+keywords = ["data", "generation", "synthetic", "vae", "tabular"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "aiohttp>=3.10.11",
+    "attrs",
+    "avro",
+    "base32-crockford",
+    "boto3",
+    "click",
+    "cryptography",
+    "exrex",
+    "Jinja2",
+    "keras==2.15.*",
+    "lazy==1.4",
+    "loguru",
+    "MarkupSafe==2.1.1",
+    "marshmallow==3.19.*",
+    "matplotlib==3.10.*",
+    "mlflow==3.11.*",
+    "numpy==1.26.*",
+    "openpyxl",
+    "pandas==2.2.*",
+    "pandavro==1.8.*",
+    "pathos==0.2.*",
+    "pillow==10.3.*",
+    "psutil",
+    "py-ulid",
+    "python-slugify[unidecode]>=7.0.0",
+    "PyYAML==6.*",
+    "scikit_learn==1.5.*",
+    "scipy==1.14.*",
+    "seaborn==0.13.*",
+    "tensorflow==2.15.*",
+    "tornado==6.5.*",
+    "tqdm==4.66.3",
+    "Werkzeug==3.1.*",
+    "xlrd",
+    "xlwt",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-reportportal",
+    "reportportal-client",
+]
+
+[project.scripts]
+train = "syngen.train:cli_launch_train"
+infer = "syngen.infer:cli_launch_infer"
+syngen = "syngen:main"
+
+[project.urls]
+Homepage = "https://github.com/tdspora/syngen"
+
+[tool.setuptools.dynamic]
+version = { file = "src/syngen/VERSION" }
+
+[tool.setuptools]
+# Defaults to true in pyproject mode, which would sweep git-tracked files under
+# src/ (e.g. src/tests/*) into the wheel. Disable it and ship only the explicit
+# package-data globs below.
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["syngen*"]
+
+[tool.setuptools.package-data]
+# Replaces the former MANIFEST.in `graft src/syngen` + include_package_data.
+# Recursive globs are required: report assets live in non-package subdirs
+# (e.g. ml/metrics/accuracy_test/src/fonts/*.ttf), and VERSION is read at
+# runtime by syngen/__init__.py.
+syngen = [
+    "VERSION",
+    "**/*.html",
+    "**/*.css",
+    "**/*.js",
+    "**/*.svg",
+    "**/*.ttf",
+    "**/.gitkeep",
+]

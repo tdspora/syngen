@@ -3,6 +3,7 @@ import pytest
 import datetime
 import random
 import string
+import pickle
 from unittest.mock import patch
 
 import pandas as pd
@@ -134,6 +135,7 @@ def test_save_dataset(mock_fetch_config, rp_logger):
         "is_fitted",
         "all_columns",
         "null_num_column_names",
+        "excluded_columns",
         "zero_num_column_names",
         "nan_labels_dict",
         "uuid_columns",
@@ -169,6 +171,7 @@ def test_save_dataset(mock_fetch_config, rp_logger):
         "format",
         "cast_to_float",
         "cast_to_integer",
+        "date_types_to_restore",
     }
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -975,6 +978,61 @@ def test_handle_missing_values_in_numeric_columns_in_avro_file(mock_fetch_config
 
 
 @patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_avro_logical_date_columns_assigned_as_date_columns(mock_fetch_config, rp_logger):
+    """EPMCTDM-7581 (Avro counterpart): columns typed as 'date' in an Avro schema
+    (from date/timestamp logical types) must be classified as date columns - with
+    'to_datetime_conversion' enabled - exactly like Parquet/Delta date columns,
+    instead of being treated as integers (which crashed at load time)."""
+    rp_logger.info(
+        "Test that Avro 'date' schema columns are classified as date columns "
+        "with datetime conversion enabled"
+    )
+    metadata = {"mock_table": {"keys": {}}}
+
+    dates = pd.date_range("2015-01-01", periods=100, freq="D")
+    data = {
+        # Avro 'date' logical type -> object dtype of datetime.date
+        "date_logical": [d.date() for d in dates],
+        # Avro 'timestamp' logical type -> tz-aware datetime64[ns, UTC]
+        "ts_logical": dates.tz_localize("UTC"),
+        "date_string": [d.strftime("%Y-%m-%d") for d in dates],
+        "str_col": [f"value_{i}" for i in range(100)],
+        "int_col": range(1, 101),
+    }
+    df = pd.DataFrame(data)
+
+    schema = {
+        "format": "Avro",
+        "fields": {
+            "date_logical": "date",
+            "date_string": "string",
+            "ts_logical": "date",
+            "str_col": "string",
+            "int_col": "int",
+        },
+    }
+    mock_dataset = Dataset(
+        df=df,
+        schema=schema,
+        metadata=metadata,
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train"
+    )
+    mock_dataset.launch_detection()
+
+    assert {"date_logical", "ts_logical", "date_string"} == mock_dataset.date_columns
+    assert mock_dataset.to_datetime_conversion["date_logical"] is True
+    assert mock_dataset.to_datetime_conversion["ts_logical"] is True
+    assert mock_dataset.to_datetime_conversion["date_string"] is False
+    assert "int_col" in mock_dataset.int_columns
+    assert "str_col" in mock_dataset.str_columns
+    assert mock_dataset.date_columns.isdisjoint(mock_dataset.int_columns)
+    assert mock_dataset.date_columns.isdisjoint(mock_dataset.str_columns)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
 def test_cast_to_numeric_in_avro_file(mock_fetch_config, rp_logger):
     rp_logger.info(
         "Test the process of casting the string values to numeric provided in a '.avro' file"
@@ -1017,4 +1075,286 @@ def test_cast_to_numeric_in_avro_file(mock_fetch_config, rp_logger):
     mock_dataset.launch_detection()
     assert mock_dataset.int_columns == {"column1", "column2", "column3", "column4", "column5"}
     assert mock_dataset.float_columns == {"column6"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "pk_name, expected_slug",
+    [
+        # underscore in column name is converted to hyphen
+        ("brand_id", "brand-id"),
+        # column name without special characters stays the same
+        ("brandid", "brandid"),
+        # mixed case is lowered and underscores become hyphens
+        ("Brand_ID", "brand-id"),
+    ],
+)
+def test_map_text_pk_saves_mapper_with_slugified_filename(
+    pk_name, expected_slug, tmp_path, rp_logger
+):
+    """
+    Test that _map_text_pk saves mapper .pkl files using slugified pk name
+    so that _fetch_mapper (decorated with @slugify_parameters) can find them.
+    """
+    rp_logger.info(
+        "Test that _map_text_pk saves mapper with slugified filename"
+    )
+    fk_kde_path = str(tmp_path) + "/"
+    df = pd.DataFrame({pk_name: ["alpha", "beta", "gamma"]})
+    dataset = Dataset(
+        df=df,
+        schema={"fields": {}, "format": "CSV"},
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={
+            "fk_kde_path": fk_kde_path,
+            "initial_order_of_columns_path": "mock_path.pkl",
+        },
+        main_process="train",
+    )
+    dataset.pk_uq_keys_types = {pk_name: str}
+
+    # invoke the private method under test
+    dataset._map_text_pk()
+
+    expected_file = tmp_path / f"{expected_slug}_mapper.pkl"
+    assert expected_file.exists(), (
+        f"Expected mapper file '{expected_file.name}' not found. "
+        f"Files present: {[f.name for f in tmp_path.iterdir()]}"
+    )
+
+    with open(expected_file, "rb") as f:
+        mapper = pickle.load(f)
+    assert mapper == {"alpha": 0, "beta": 1, "gamma": 2}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_map_text_pk_skips_numeric_pk(tmp_path, rp_logger):
+    """
+    Test that _map_text_pk does not create mapper files for numeric PKs.
+    """
+    rp_logger.info(
+        "Test that _map_text_pk skips numeric PK columns"
+    )
+    fk_kde_path = str(tmp_path) + "/"
+    df = pd.DataFrame({"id": [1, 2, 3]})
+    dataset = Dataset(
+        df=df,
+        schema={"fields": {}, "format": "CSV"},
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={
+            "fk_kde_path": fk_kde_path,
+            "initial_order_of_columns_path": "mock_path.pkl",
+        },
+        main_process="train",
+    )
+    dataset.pk_uq_keys_types = {"id": float}
+
+    dataset._map_text_pk()
+
+    assert list(tmp_path.iterdir()) == [], (
+        "No mapper file should be created for numeric PK"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.logger")
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_validate_pk_key_valid_data_logs_info(mock_fetch_config, mock_logger, rp_logger):
+    rp_logger.info("Test that '_validate_pk_key' logs info when PK values are unique and non-null")
+    df = pd.DataFrame({"id": [1, 2, 3], "name": ["a", "b", "c"]})
+    dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    dataset.pk_columns = ["id"]
+    dataset.primary_key_name = "PK"
+    mock_logger.reset_mock()
+    dataset._validate_pk_key()
+    mock_logger.info.assert_called_with("Values in primary key are unique.")
+    mock_logger.warning.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.logger")
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_validate_pk_key_with_nulls_emits_warning(mock_fetch_config, mock_logger, rp_logger):
+    rp_logger.info("Test that '_validate_pk_key' emits a warning when PK contains nulls")
+    df = pd.DataFrame({"id": [1, np.NaN, 3], "name": ["a", "b", "c"]})
+    dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    dataset.pk_columns = ["id"]
+    dataset.primary_key_name = "PK"
+    mock_logger.reset_mock()
+    dataset._validate_pk_key()
+    mock_logger.warning.assert_called_once()
+    warning_msg = mock_logger.warning.call_args[0][0]
+    assert "contains null values" in warning_msg
+    assert "Please check the original data." in warning_msg
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.logger")
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_validate_pk_key_with_duplicates_emits_warning(mock_fetch_config, mock_logger, rp_logger):
+    rp_logger.info("Test that '_validate_pk_key' emits a warning when PK contains duplicates")
+    df = pd.DataFrame({"id": [1, 1, 3], "name": ["a", "b", "c"]})
+    dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    dataset.pk_columns = ["id"]
+    dataset.primary_key_name = "PK"
+    mock_logger.reset_mock()
+    dataset._validate_pk_key()
+    mock_logger.warning.assert_called_once()
+    warning_msg = mock_logger.warning.call_args[0][0]
+    assert "contains duplicates" in warning_msg
+    assert "Please check the original data." in warning_msg
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.logger")
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_validate_pk_key_with_nulls_and_duplicates_emits_warning(
+    mock_fetch_config, mock_logger, rp_logger
+):
+    rp_logger.info(
+        "Test that '_validate_pk_key' emits a combined warning "
+        "when PK contains both nulls and duplicates"
+    )
+    df = pd.DataFrame({"id": [1, 1, np.NaN], "name": ["a", "b", "c"]})
+    dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    dataset.pk_columns = ["id"]
+    dataset.primary_key_name = "PK"
+    mock_logger.reset_mock()
+    dataset._validate_pk_key()
+    mock_logger.warning.assert_called_once()
+    warning_msg = mock_logger.warning.call_args[0][0]
+    assert "contains null values" in warning_msg
+    assert "contains duplicates" in warning_msg
+    assert "Please check the original data." in warning_msg
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.logger")
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_validate_uq_keys_valid_data_logs_info(mock_fetch_config, mock_logger, rp_logger):
+    rp_logger.info("Test that '_validate_uq_keys' logs info when UQ values are unique")
+    df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
+    dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    dataset.unique_keys_mapping_list = ["UQ"]
+    dataset.uq_columns_lists = [["col1", "col2"]]
+    mock_logger.reset_mock()
+    dataset._validate_uq_keys()
+    mock_logger.info.assert_called_with("Values in unique keys are unique.")
+    mock_logger.warning.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.logger")
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_validate_uq_keys_with_duplicates_emits_warning(mock_fetch_config, mock_logger, rp_logger):
+    rp_logger.info(
+        "Test that '_validate_uq_keys' emits a warning when UQ key has duplicate values"
+    )
+    df = pd.DataFrame({"col1": [1, 1, 3], "col2": ["a", "a", "c"]})
+    dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    dataset.unique_keys_mapping_list = ["UQ"]
+    dataset.uq_columns_lists = [["col1", "col2"]]
+    mock_logger.reset_mock()
+    dataset._validate_uq_keys()
+    mock_logger.warning.assert_called_once()
+    warning_msg = mock_logger.warning.call_args[0][0]
+    assert "contains duplicates" in warning_msg
+    assert "Please check the original data." in warning_msg
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.logger")
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_validate_uq_keys_with_multiple_all_null_rows_emits_warning(
+    mock_fetch_config, mock_logger, rp_logger
+):
+    rp_logger.info(
+        "Test that '_validate_uq_keys' emits a warning when UQ key has > 1 fully-null rows"
+    )
+    df = pd.DataFrame({"col1": [np.NaN, np.NaN, 3], "col2": [np.NaN, np.NaN, "c"]})
+    dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    dataset.unique_keys_mapping_list = ["UQ"]
+    dataset.uq_columns_lists = [["col1", "col2"]]
+    mock_logger.reset_mock()
+    dataset._validate_uq_keys()
+    mock_logger.warning.assert_called_once()
+    warning_msg = mock_logger.warning.call_args[0][0]
+    assert "contains > 1 null values" in warning_msg
+    assert "Please check the original data." in warning_msg
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.logger")
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_validate_uq_keys_with_single_null_row_does_not_warn(
+    mock_fetch_config, mock_logger, rp_logger
+):
+    rp_logger.info(
+        "Test that '_validate_uq_keys' does not warn when UQ key has exactly one fully-null row"
+    )
+    df = pd.DataFrame({"col1": [np.NaN, 2, 3], "col2": [np.NaN, "b", "c"]})
+    dataset = Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train",
+    )
+    dataset.unique_keys_mapping_list = ["UQ"]
+    dataset.uq_columns_lists = [["col1", "col2"]]
+    mock_logger.reset_mock()
+    dataset._validate_uq_keys()
+    mock_logger.warning.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)

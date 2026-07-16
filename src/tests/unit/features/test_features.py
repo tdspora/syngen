@@ -14,6 +14,7 @@ from syngen.ml.vae.models.features import (
     CharBasedTextFeature,
     ContinuousFeature,
     CategoricalFeature,
+    DateFeature,
 )
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
@@ -34,6 +35,54 @@ def test_init_base_feature(name, expected_name, rp_logger):
     assert feature.name == expected_name
     assert feature.original_name == name
     assert feature.weight == 1.0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_date_feature_fit_transform_with_numpy_datetime64(rp_logger):
+    """EPMCTDM-7581: a datetime64[ns] column (as loaded from Parquet/Delta) must
+    not poison the date feature. Previously 'datetime_to_timestamp' returned None
+    for numpy.datetime64, making the fitted/transformed data entirely NaN, which
+    diverged training to a NaN model and crashed at inference."""
+    rp_logger.info(
+        "Testing 'DateFeature.fit'/'transform' on a datetime64[ns] column"
+    )
+    dates = pd.Series(pd.date_range("2015-01-01", periods=300, freq="D"))
+    data = pd.DataFrame({"created_dt": dates})
+    assert str(data["created_dt"].dtype) == "datetime64[ns]"
+
+    feature = DateFeature(name="created_dt")
+    feature.fit(
+        data,
+        date_mapping={"created_dt": "%Y-%m-%d"},
+        to_datetime_conversion={"created_dt": False},
+    )
+    transformed = np.asarray(feature.transform(data), dtype=float)
+    assert np.isfinite(transformed).all()
+    assert not np.isnan(transformed).any()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_date_feature_fit_transform_with_tz_aware_datetime64(rp_logger):
+    """EPMCTDM-7581 (Avro counterpart): a tz-aware datetime64[ns, UTC] column (as
+    produced by Avro 'timestamp' logical types via pandavro) must not poison the
+    date feature. The timezone is stripped during conversion and every transformed
+    value stays finite."""
+    rp_logger.info(
+        "Testing 'DateFeature.fit'/'transform' on a tz-aware datetime64[ns, UTC] column"
+    )
+    dates = pd.date_range("2015-01-01", periods=300, freq="D").tz_localize("UTC")
+    data = pd.DataFrame({"created_ts": dates})
+    assert str(data["created_ts"].dtype) == "datetime64[ns, UTC]"
+
+    feature = DateFeature(name="created_ts")
+    feature.fit(
+        data,
+        date_mapping={"created_ts": "%Y-%m-%d %H:%M:%S%z"},
+        to_datetime_conversion={"created_ts": True},
+    )
+    transformed = np.asarray(feature.transform(data), dtype=float)
+    assert np.isfinite(transformed).all()
+    assert not np.isnan(transformed).any()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

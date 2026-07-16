@@ -21,8 +21,8 @@ from syngen.ml.reporters import (
     AccuracyReporter,
     SampleAccuracyReporter,
 )
-from syngen.ml.validation_schema import ValidationMetadataSchema, ReportTypes
-from syngen.ml.context import global_context, get_context
+from syngen.ml.validation_schema import ValidationSchema, ReportTypes
+from syngen.ml.format_settings import set_format_settings
 
 
 class BaseDataIO(ABC):
@@ -35,7 +35,7 @@ class BaseDataIO(ABC):
         self.format_settings = kwargs
         self.metadata = self._create_metadata()
         self._validate_metadata()
-        global_context(metadata=kwargs)
+        set_format_settings(format_dict=self.format_settings)
         self._create_data_loader()
 
     @abstractmethod
@@ -113,8 +113,7 @@ class DataIO(BaseDataIO):
         """
         self.data_loader.save_data(
             df,
-            schema=kwargs.get("schema"),
-            format=get_context().get_config()
+            schema=kwargs.get("schema")
         )
 
 

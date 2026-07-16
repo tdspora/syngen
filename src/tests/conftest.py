@@ -14,9 +14,17 @@ from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.data_loaders import DataEncryptor
 from syngen.sdk import DataIO
 
+
 SUCCESSFUL_MESSAGE = "The test passed successfully"
-os.environ["FERNET_KEY"] = "VrToTpXdm35CNT3Tur3EGIa2OZ8bfjo-asHo_b-0DTY="
-os.environ["FERNET_KEY_2"] = "k64ntCKv3k7ihkNmbjN5cIlkRGxkPoHskJNcKB6bVuI="
+# Fernet test keys are generated per pytest session.
+# If FERNET_KEY / FERNET_KEY_2 are already set in the environment (e.g. by CI),
+# those values are honored; otherwise we generate ephemeral keys here so no
+# literal key material is committed to source. Tests reference the env-var
+# *names* (`"FERNET_KEY"`, `"FERNET_KEY_2"`); the encryption API resolves the
+# value at runtime, so a fresh per-session key is sufficient as long as a
+# single test process round-trips through the same key.
+os.environ.setdefault("FERNET_KEY", Fernet.generate_key().decode())
+os.environ.setdefault("FERNET_KEY_2", Fernet.generate_key().decode())
 
 
 def get_dir_name():
