@@ -21,7 +21,7 @@ from syngen.ml.reporters import (
     AccuracyReporter,
     SampleAccuracyReporter,
 )
-from syngen.ml.validation_schema import ValidationSchema, ReportTypes
+from syngen.ml.validation_schema import ValidationMetadataSchema, ReportTypes
 from syngen.ml.format_settings import set_format_settings
 
 

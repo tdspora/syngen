@@ -568,7 +568,8 @@ def test_validation_of_metadata_file_with_invalid_encryption_settings(
         ),
         (
             {"engine": "not a valid value"},
-            "The details are - {'fk_test': {'engine': ['Must be one of: c, python, pyarrow.']}}",
+            'The error(s) found in - "fk_test": {\n    "engine": '
+            '[\n        "Must be one of: c, python, pyarrow."\n    ]\n}',
         ),
         (
             {"sheet_name": 0},
