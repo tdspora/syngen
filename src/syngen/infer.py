@@ -39,7 +39,7 @@ def launch_infer(
     batch_size: Optional[int] = None,
     reports: Union[
         Literal["accuracy", "metrics_only", "all", "none"],
-        List[Literal["accuracy", "metrics_only", "all", "none"]]
+        List[Literal["accuracy", "metrics_only"]]
         ] = "none",
     random_seed: Optional[int] = None,
     log_level: Literal[

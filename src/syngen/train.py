@@ -67,11 +67,12 @@ def launch_train(
     drop_null: bool = False,
     row_limit: Optional[int] = None,
     reports: Union[
-        Literal["accuracy", "metrics_only", "all", "none"],
-        List[Literal["accuracy", "metrics_only", "all", "none"]]
+        Literal["accuracy", "sample", "metrics_only", "all", "none"],
+        List[Literal["accuracy", "sample", "metrics_only"]]
     ] = "none",
     log_level: Literal[
-        "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
+        "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+    ] = "INFO",
     batch_size: int = 32,
     fernet_key: Optional[str] = None,
     loader: Optional[Callable[[str], pd.DataFrame]] = None,
