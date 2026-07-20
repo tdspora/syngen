@@ -1958,6 +1958,134 @@ def test_extend_schema_does_not_mutate_original_schema(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_filter_schema_fields_removes_fields_not_in_df(rp_logger):
+    rp_logger.info(
+        "Test that '_filter_schema_fields' removes schema fields absent from the dataframe"
+    )
+    schema = {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]},
+            {"name": "id", "type": ["null", "long"]},
+        ],
+    }
+    df = pd.DataFrame({"gender": [0, 1], "height": [157.2, 166.8]})
+    loader = AvroLoader.__new__(AvroLoader)
+    result = loader._filter_schema_fields(schema, df)
+    assert result["fields"] == [
+        {"name": "gender", "type": ["null", "long"]},
+        {"name": "height", "type": ["null", "double"]},
+    ]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_filter_schema_fields_returns_all_when_all_present(rp_logger):
+    rp_logger.info(
+        "Test that '_filter_schema_fields' keeps all fields "
+        "when all are present in the dataframe"
+    )
+    schema = {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]},
+            {"name": "id", "type": ["null", "long"]},
+        ],
+    }
+    df = pd.DataFrame({"gender": [0], "height": [157.2], "id": [925]})
+    loader = AvroLoader.__new__(AvroLoader)
+    result = loader._filter_schema_fields(schema, df)
+    assert result["fields"] == schema["fields"]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_filter_schema_fields_returns_empty_fields_when_no_match(rp_logger):
+    rp_logger.info(
+        "Test that '_filter_schema_fields' returns empty fields list "
+        "when no schema field matches the dataframe"
+    )
+    schema = {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]},
+        ],
+    }
+    df = pd.DataFrame({"unrelated_col": [1, 2]})
+    loader = AvroLoader.__new__(AvroLoader)
+    result = loader._filter_schema_fields(schema, df)
+    assert result["fields"] == []
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_filter_schema_fields_does_not_mutate_original_schema(rp_logger):
+    rp_logger.info(
+        "Test that '_filter_schema_fields' does not modify the original schema dict"
+    )
+    original_fields = [
+        {"name": "gender", "type": ["null", "long"]},
+        {"name": "height", "type": ["null", "double"]},
+        {"name": "id", "type": ["null", "long"]},
+    ]
+    schema = {"type": "record", "name": "Root", "fields": original_fields}
+    df = pd.DataFrame({"gender": [0]})
+    loader = AvroLoader.__new__(AvroLoader)
+    loader._filter_schema_fields(schema, df)
+    assert schema["fields"] == original_fields
+    assert len(schema["fields"]) == 3
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_save_data_in_avro_format_filters_schema_fields_not_in_df(
+    test_avro_path, test_avro_schema, rp_logger
+):
+    rp_logger.info(
+        "Test that 'save_data' filters out schema fields absent from the dataframe "
+        "before writing the Avro file"
+    )
+    df = pd.DataFrame(
+        {
+            "gender": pd.array([0, 1], dtype="int64"),
+            "height": [157.2, 166.8],
+        }
+    )
+    loader = DataLoader(test_avro_path)
+
+    assert test_avro_schema == {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]},
+            {"name": "id", "type": ["null", "long"]},
+        ],
+    }
+    loader.save_data(df, schema=test_avro_schema)
+
+    assert os.path.exists(test_avro_path)
+    loaded_df, schema = loader.load_data()
+    assert list(loaded_df.columns) == ["gender", "height"]
+    assert "id" not in loaded_df.columns
+    assert loader.original_schema == {
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "gender", "type": ["null", "long"]},
+            {"name": "height", "type": ["null", "double"]},
+        ],
+    }
+    assert schema == {
+        "fields": {"gender": "int", "height": "float"},
+        "format": "Avro",
+        "date_types_to_restore": {},
+    }
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_save_data_in_avro_format_extends_schema_with_extra_columns(
     test_avro_path, test_avro_schema, rp_logger
 ):

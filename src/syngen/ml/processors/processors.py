@@ -533,11 +533,71 @@ class PostprocessHandler(Processor):
                     f"Finish of restoring of the JSON columns "
                     f"of the generated data of the table - '{table_name}'"
                 )
+
+            # restore integer columns that were converted to float
+            # due to NaN values in the original data
+            original_schema = fetch_config(
+                config_pickle_path=f"model_artifacts/tmp_store/{slugify(table_name)}"
+                                   f"/original_schema_{slugify(table_name)}.pkl"
+            )
+            # only if there is no original schema
+            if original_schema is None:
+                dataset_config = fetch_config(
+                    config_pickle_path=f"model_artifacts/resources/{slugify(table_name)}/vae/"
+                                       f"checkpoints/model_dataset.pkl"
+                )
+                # restore integer columns that were converted to float
+                # due to NaN values or nan-labels in the original data
+                data = self.restore_int_dtypes(data, dataset_config)
             self._save_generated_data(
                 data,
                 path_to_generated_data,
                 table_name
             )
+
+    @staticmethod
+    def restore_int_dtypes(data: pd.DataFrame, dataset_config) -> pd.DataFrame:
+        """
+        Cast a generated DataFrame back to integer dtypes for columns that were
+        originally integers but were converted to float due to NaN values
+        or nan-labels.
+        Columns with a nan-label sentinel keep 'object' dtype with integers
+        and the sentinel string mixed (e.g. 486, 'missing', 12).
+        Columns without a sentinel are cast to nullable 'Int64'
+        (if NaN present) or 'int64'.
+        """
+        restored_columns = []
+        nan_labels = dataset_config.nan_labels_dict
+        for column in dataset_config.int_columns:
+            # exclude columns that are not present in the generated data
+            if column not in data.columns:
+                continue
+
+            # keep the sentinel label as is, but convert other values to int
+            label = nan_labels.get(column)
+            if label is not None:
+                label_mask = data[column] == label
+                numeric = pd.to_numeric(
+                    data[column].where(~label_mask), errors="coerce"
+                )
+                data[column] = data[column].astype(object)
+                valid_ints = ~label_mask & numeric.notna()
+                data.loc[valid_ints, column] = (
+                    numeric[valid_ints].astype("int64").to_numpy()
+                )
+            else:
+                numeric = pd.to_numeric(data[column], errors="coerce")
+                data[column] = (
+                    numeric.astype("Int64") if numeric.isna().any()
+                    else numeric.astype("int64")
+                )
+            restored_columns.append(column)
+        if restored_columns:
+            logger.debug(
+                f"In the table '{dataset_config.table_name}' integer dtypes "
+                f"were restored for columns: {sorted(restored_columns)}"
+            )
+        return data
 
     @staticmethod
     def _save_preview_data(
