@@ -414,11 +414,8 @@ def test_launch_train_table_with_invalid_epochs(mock_setup_log, rp_logger, caplo
             launch_train(epochs=0, table_name=TABLE_NAME, source=PATH_TO_TABLE)
     mock_setup_log.assert_called_once()
     error_message = (
-        'The error(s) found in - "train_settings": {\n'
-        '    "epochs": [\n'
-        '        "Must be greater than or equal to 1."\n'
-        '    ]\n'
-        '}'
+        'The error(s) found in - "train_settings": {\'epochs\': [\'Must be greater than '
+        'or equal to 1.\']}'
     )
     assert error_message in caplog.text
     assert error_message in str(error.value)
@@ -491,11 +488,8 @@ def test_launch_train_table_with_invalid_drop_null(mock_setup_log, rp_logger, ca
             launch_train(drop_null="test", table_name=TABLE_NAME, source=PATH_TO_TABLE)
     mock_setup_log.assert_called_once()
     error_message = (
-        'The error(s) found in - "train_settings": {\n'
-        '    "drop_null": [\n'
-        '        "Not a valid boolean."\n'
-        '    ]\n'
-        '}'
+        'The error(s) found in - "train_settings": {\'drop_null\': [\'Not a valid '
+        'boolean.\']}'
     )
     assert error_message in caplog.text
     assert error_message in str(error.value)
@@ -564,11 +558,8 @@ def test_launch_train_table_with_invalid_row_limit(mock_setup_log, rp_logger, ca
             launch_train(row_limit=0, table_name=TABLE_NAME, source=PATH_TO_TABLE)
     mock_setup_log.assert_called_once()
     error_message = (
-        'The error(s) found in - "train_settings": {\n'
-        '    "row_limit": [\n'
-        '        "Must be greater than or equal to 1."\n'
-        '    ]\n'
-        '}'
+        'The error(s) found in - "train_settings": {\'row_limit\': [\'Must be greater '
+        'than or equal to 1.\']}'
     )
     assert error_message in str(error.value)
     assert error_message in caplog.text
@@ -840,11 +831,8 @@ def test_launch_train_table_with_invalid_batch_size(mock_setup_log, rp_logger, c
             launch_train(batch_size=0, table_name=TABLE_NAME, source=PATH_TO_TABLE)
     mock_setup_log.assert_called_once()
     error_message = (
-        'The error(s) found in - "train_settings": {\n'
-        '    "batch_size": [\n'
-        '        "Must be greater than or equal to 1."\n'
-        '    ]\n'
-        '}'
+        'The error(s) found in - "train_settings": {\'batch_size\': [\'Must be greater '
+        'than or equal to 1.\']}'
     )
     assert error_message in str(error.value)
     assert error_message in caplog.text

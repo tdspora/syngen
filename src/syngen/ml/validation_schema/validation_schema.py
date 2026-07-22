@@ -1,5 +1,4 @@
 from typing import Dict, Literal, List
-import json
 from pathlib import Path
 from dataclasses import dataclass, field
 import re
@@ -459,7 +458,7 @@ class ValidationMetadataSchema:
             message = "Validation error(s) found in the schema of the metadata. "
             for section, errors_details in errors.items():
                 message += (
-                    f'The error(s) found in - "{section}": {json.dumps(errors_details, indent=4)}'
+                    f'The error(s) found in - "{section}": {errors_details}'
                 )
             logger.error(message)
             raise ValidationError(f"{message}")
@@ -496,7 +495,7 @@ class ValidationSettingsSchema:
             message = f"Validation error(s) found in the {self.process} settings. "
             for section, errors_details in errors.items():
                 message += (
-                    f'The error(s) found in - "{section}": {json.dumps(errors_details, indent=4)}'
+                    f'The error(s) found in - "{section}": {errors_details}'
                 )
             logger.error(message)
             raise ValidationError(message)

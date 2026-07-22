@@ -86,10 +86,9 @@ def test_initialize_dataio_for_local_table_in_unsupported_format(rp_logger):
     with pytest.raises(ValidationError) as error:
         DataIO("path/to/table.test")
     assert str(error.value) == (
-        "Validation error(s) found in the schema of the metadata. "
-        "The error(s) found in - \"table\": {\n    \"_schema\": [\n        "
-        "\"The supported file extensions are: .csv, .psv, .txt, .tsv, .xls, .xlsx, "
-        ".avro, .dat, .pkl. Got: '.test'.\"\n    ]\n}"
+        'Validation error(s) found in the schema of the metadata. The error(s) found '
+        'in - "table": {\'_schema\': ["The supported file extensions are: .csv, .psv, '
+        '.txt, .tsv, .xls, .xlsx, .avro, .dat, .pkl. Got: \'.test\'."]}'
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
