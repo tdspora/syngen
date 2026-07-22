@@ -1,8 +1,14 @@
+import gc
+import pickle
+from types import SimpleNamespace
+
 import pytest
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from unittest.mock import patch, MagicMock
 
+from syngen.ml.vae.models.features import CharBasedTextFeature
 from syngen.ml.vae.models.model import CVAE
 from tests.conftest import SUCCESSFUL_MESSAGE
 
@@ -23,6 +29,92 @@ def mock_cvae():
         cvae.dataset = dataset
         cvae.inverse_transformed_df = pd.DataFrame()
     return cvae
+
+
+def _build_text_cvae(serialized_feature):
+    feature = pickle.loads(serialized_feature)
+    dataset = SimpleNamespace(
+        features={"text": feature},
+        order_of_columns=["text"],
+    )
+    cvae = CVAE(
+        dataset=dataset,
+        batch_size=2,
+        latent_dim=2,
+        intermediate_dim=8,
+        latent_components=2,
+    )
+    cvae.build_model()
+    return cvae
+
+
+@pytest.mark.parametrize("architecture_version", [1, 2])
+def test_text_checkpoint_round_trip_preserves_architecture(
+    architecture_version,
+    tmp_path,
+    rp_logger,
+):
+    tf.keras.backend.clear_session()
+    data = pd.DataFrame({"text": ["ABCDEF", "FEDCBA"]})
+    feature = CharBasedTextFeature(name="text", text_max_len=6, rnn_units=32)
+    feature.architecture_version = architecture_version
+    feature.fit(data)
+    if architecture_version == 1:
+        del feature.architecture_version
+    serialized_feature = pickle.dumps(feature)
+
+    source = _build_text_cvae(serialized_feature)
+    source.latent_model = {"architecture_version": architecture_version}
+    latent_input = tf.zeros((2, 2), dtype=tf.float32)
+    source_input = source.dataset.features["text"].transform(data)
+    expected_encoder = source.encoder_model(source_input, training=False).numpy()
+    expected = source.generator_model(latent_input, training=False).numpy()
+    source.save_state(str(tmp_path))
+
+    tf.keras.backend.clear_session()
+    restored = _build_text_cvae(serialized_feature)
+    restored.load_state(str(tmp_path))
+    restored_input = restored.dataset.features["text"].transform(data)
+    actual_encoder = restored.encoder_model(restored_input, training=False).numpy()
+    actual = restored.generator_model(latent_input, training=False).numpy()
+
+    np.testing.assert_allclose(actual_encoder, expected_encoder)
+    np.testing.assert_allclose(actual, expected)
+    assert actual.shape == (2, 6, restored.dataset.features["text"].vocab_size)
+    assert restored.latent_model == {"architecture_version": architecture_version}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_text_checkpoint_rejects_cross_architecture_loading(tmp_path, rp_logger):
+    tf.keras.backend.clear_session()
+    data = pd.DataFrame({"text": ["ABCDEF", "FEDCBA"]})
+    legacy_feature = CharBasedTextFeature(
+        name="text",
+        text_max_len=6,
+        rnn_units=32,
+    )
+    legacy_feature.architecture_version = 1
+    legacy_feature.fit(data)
+    del legacy_feature.architecture_version
+    legacy = _build_text_cvae(pickle.dumps(legacy_feature))
+    legacy.latent_model = {"architecture_version": 1}
+    legacy.save_state(str(tmp_path))
+
+    tf.keras.backend.clear_session()
+    optimized_feature = CharBasedTextFeature(name="text", text_max_len=6)
+    optimized_feature.fit(data)
+    optimized = _build_text_cvae(pickle.dumps(optimized_feature))
+
+    tensorflow_log_level = tf.get_logger().level
+    tf.get_logger().setLevel("ERROR")
+    try:
+        with pytest.raises((ValueError, tf.errors.InvalidArgumentError)):
+            optimized.load_state(str(tmp_path))
+        del optimized
+        gc.collect()
+    finally:
+        tf.get_logger().setLevel(tensorflow_log_level)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 class TestMakePkUqUnique:

@@ -1189,19 +1189,7 @@ class Dataset:
 
     def _preprocess_str_params(self, feature: str) -> Tuple[int, int]:
         max_len = int(self.df[feature].apply(lambda line: len(line)).max())
-        rnn_units = 16
-        if 1 <= max_len < 7:
-            rnn_units = 32
-
-        if 6 < max_len < 13:
-            rnn_units = 128
-
-        if 12 < max_len < 17:
-            rnn_units = 256
-
-        if max_len > 16:
-            rnn_units = 512
-        return max_len, rnn_units
+        return max_len, 32
 
     def _preprocess_nan_cols(
         self, feature: str, fillna_strategy: str = None, zero_cutoff: float = 0.3

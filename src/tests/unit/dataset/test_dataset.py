@@ -942,6 +942,18 @@ def test_set_email_columns(mock_fetch_config, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("text_max_len", [0, 1, 6, 7, 12, 13, 16, 17, 64, 200])
+def test_preprocess_str_params_has_fixed_recurrent_capacity(text_max_len, rp_logger):
+    dataset = Dataset.__new__(Dataset)
+    dataset.df = pd.DataFrame({"text": ["X" * text_max_len]})
+
+    detected_max_len, rnn_units = dataset._preprocess_str_params("text")
+
+    assert detected_max_len == text_max_len
+    assert rnn_units == 32
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @patch("syngen.ml.vae.models.dataset.fetch_config")
 def test_set_long_text_columns(mock_fetch_config, rp_logger):
     rp_logger.info("Test the method '_set_long_text_columns' of the class Dataset")

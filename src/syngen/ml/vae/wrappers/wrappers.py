@@ -362,8 +362,11 @@ class VAEWrapper(BaseWrapper):
             )
             pass
 
+    def _compile_train_step(self):
+        return tf.function(self._train_step, reduce_retracing=True)
+
     def _train(self, dataset, epochs: int):
-        step = self._train_step
+        step = self._compile_train_step()
 
         loss_grows_num_epochs = 0
         prev_total_loss = float("inf")
@@ -472,7 +475,10 @@ class VAEWrapper(BaseWrapper):
             feature_datasets.append(dataset)
 
         dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
-        return dataset.batch(self.batch_size, drop_remainder=True)
+        return dataset.batch(
+            self.batch_size,
+            drop_remainder=True,
+        ).prefetch(tf.data.AUTOTUNE)
 
     @staticmethod
     def _find_non_finite_features(
@@ -518,9 +524,9 @@ class VAEWrapper(BaseWrapper):
             # Compute reconstruction loss
             loss = sum(self.model.losses)
             order_of_features = list(self.vae.feature_losses.keys())
-            kl_loss = self.model.losses[-1].numpy()
+            kl_loss = self.model.losses[-1]
             feature_losses = {
-                name: loss.numpy()
+                name: loss
                 for name, loss in
                 zip(order_of_features, self.model.losses[:-1])
             }

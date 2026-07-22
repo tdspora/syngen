@@ -18,6 +18,8 @@ from tensorflow.keras import losses
 from tensorflow.keras.layers import (
     Bidirectional,
     Dense,
+    Embedding,
+    GRU,
     Input,
     LSTM,
     Layer,
@@ -33,6 +35,10 @@ from syngen.ml.utils import (
 )
 
 KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
+LEGACY_TEXT_ARCHITECTURE_VERSION = 1
+TEXT_ARCHITECTURE_VERSION = 2
+TEXT_EMBEDDING_DIM = 16
+TEXT_RNN_UNITS = 32
 
 
 class BaseFeature:
@@ -473,6 +479,18 @@ class CharBasedTextFeature(BaseFeature):
         self.rnn_unit = LSTM
         self.dropout = dropout
         self.feature_type = "text"
+        self.architecture_version = TEXT_ARCHITECTURE_VERSION
+
+    @property
+    def _uses_optimized_architecture(self) -> bool:
+        return (
+            getattr(
+                self,
+                "architecture_version",
+                LEGACY_TEXT_ARCHITECTURE_VERSION,
+            )
+            >= TEXT_ARCHITECTURE_VERSION
+        )
 
     def fit(self, data: pd.DataFrame, **kwargs):
         from tensorflow.keras.preprocessing.text import Tokenizer
@@ -487,6 +505,10 @@ class CharBasedTextFeature(BaseFeature):
         tokenizer.inverse_dict = inverse_dict(tokenizer.word_index)
 
         self.vocab_size = len(tokenizer.word_index)
+        if self._uses_optimized_architecture:
+            # Keras tokenizers reserve index 0 for padding. It must be included
+            # in the output classes, together with the highest character index.
+            self.vocab_size += 1
         self.tokenizer = tokenizer
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
@@ -505,7 +527,9 @@ class CharBasedTextFeature(BaseFeature):
             truncating="post",
             value=0.0,
         )
-        # return data_gen
+        if self._uses_optimized_architecture:
+            return data_gen.astype("int32")
+
         return K.one_hot(K.cast(data_gen, "int32"), self.vocab_size)
 
     @staticmethod
@@ -601,16 +625,37 @@ class CharBasedTextFeature(BaseFeature):
 
     @lazy
     def input(self) -> tf.Tensor:
-        self.index_input = Input(
-            shape=(self.text_max_len, self.vocab_size), name="input_%s" % self.name
-        )
+        if self._uses_optimized_architecture:
+            self.index_input = Input(
+                shape=(self.text_max_len,),
+                dtype="int32",
+                name="input_%s" % self.name,
+            )
+        else:
+            self.index_input = Input(
+                shape=(self.text_max_len, self.vocab_size),
+                name="input_%s" % self.name,
+            )
 
         return self.index_input
 
     @lazy
     def encoder(self) -> tf.Tensor:
-        rnn_encoder_layer = Bidirectional(self.rnn_unit(self.rnn_units, return_sequences=False))
+        if self._uses_optimized_architecture:
+            embedding = Embedding(
+                input_dim=self.vocab_size,
+                output_dim=TEXT_EMBEDDING_DIM,
+                mask_zero=True,
+                name="%s_embedding" % self.name,
+            )
+            embedded_input = embedding(self.input)
+            rnn_encoder_layer = Bidirectional(
+                GRU(TEXT_RNN_UNITS, return_sequences=False),
+                name="%s_bidirectional_gru" % self.name,
+            )
+            return rnn_encoder_layer(embedded_input)
 
+        rnn_encoder_layer = Bidirectional(self.rnn_unit(self.rnn_units, return_sequences=False))
         rnn_econder = rnn_encoder_layer(self.input)
         return rnn_econder
 
@@ -619,7 +664,10 @@ class CharBasedTextFeature(BaseFeature):
         decoder_layers = list()
 
         decoder_layers.append(RepeatVector(self.text_max_len))
-        decoder_layers.append(self.rnn_unit(self.rnn_units, return_sequences=True))
+        if self._uses_optimized_architecture:
+            decoder_layers.append(GRU(TEXT_RNN_UNITS, return_sequences=True))
+        else:
+            decoder_layers.append(self.rnn_unit(self.rnn_units, return_sequences=True))
         decoder_layers.append(TimeDistributed(Dense(self.vocab_size, activation="linear")))
 
         return decoder_layers
@@ -641,6 +689,15 @@ class CharBasedTextFeature(BaseFeature):
     def loss(self) -> tf.Tensor:
         if not hasattr(self, "decoder"):
             Exception("Decoder isn't created")
+
+        if self._uses_optimized_architecture:
+            return self.weight * K.mean(
+                losses.sparse_categorical_crossentropy(
+                    self.input,
+                    self.decoder,
+                    from_logits=True,
+                )
+            )
 
         return self.weight * K.mean(
             tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(

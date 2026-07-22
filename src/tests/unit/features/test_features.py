@@ -1,3 +1,5 @@
+import pickle
+
 import pytest
 import numpy as np
 import pandas as pd
@@ -15,6 +17,7 @@ from syngen.ml.vae.models.features import (
     ContinuousFeature,
     CategoricalFeature,
     DateFeature,
+    EmailFeature,
 )
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
@@ -166,6 +169,122 @@ def test_top_p_filtering(rp_logger):
         f"{DIR_NAME}/unit/features/fixtures/top_p-tensor.csv"
     ).reshape((20, 4, 12))
     np.testing.assert_allclose(result, ethalon, rtol=1e-6)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def _build_text_feature_model(feature):
+    shared_decoder = tf.keras.layers.Dense(128)(feature.encoder)
+    output = feature.create_decoder(shared_decoder)
+    model = tf.keras.Model(feature.input, output)
+    model.add_loss(feature.loss)
+    return model
+
+
+def test_char_feature_uses_integer_tokens_and_complete_vocabulary(rp_logger):
+    data = pd.DataFrame({"text": ["ab", "caba"]})
+    feature = CharBasedTextFeature(name="text", text_max_len=5)
+    feature.fit(data)
+
+    transformed = feature.transform(data)
+
+    assert transformed.dtype == np.int32
+    assert transformed.shape == (2, 5)
+    assert feature.vocab_size == len(feature.tokenizer.word_index) + 1
+    assert transformed.max() == len(feature.tokenizer.word_index)
+    assert np.all(transformed[:, -1] == 0)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_char_feature_optimized_model_has_finite_sparse_loss(rp_logger):
+    data = pd.DataFrame({"text": ["ABC123", "DEF456", "ABC456"]})
+    feature = CharBasedTextFeature(name="text", text_max_len=7)
+    feature.fit(data)
+    model = _build_text_feature_model(feature)
+
+    transformed = feature.transform(data)
+    output = model(transformed, training=True)
+    loss = tf.add_n(model.losses)
+    expected_loss = tf.reduce_mean(
+        tf.keras.losses.sparse_categorical_crossentropy(
+            transformed,
+            output,
+            from_logits=True,
+        )
+    )
+    embeddings = [
+        layer
+        for layer in model.submodules
+        if isinstance(layer, tf.keras.layers.Embedding)
+    ]
+
+    assert output.shape == (3, 7, feature.vocab_size)
+    assert np.isfinite(float(loss.numpy()))
+    np.testing.assert_allclose(loss.numpy(), expected_loss.numpy())
+    assert len(embeddings) == 1
+    assert embeddings[0].input_dim == feature.vocab_size
+    assert any(isinstance(layer, tf.keras.layers.GRU) for layer in model.submodules)
+    assert not any(isinstance(layer, tf.keras.layers.LSTM) for layer in model.submodules)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_char_feature_has_no_parameter_cliff_at_length_seven(rp_logger):
+    parameter_counts = []
+    for text_max_len in (6, 7):
+        tf.keras.backend.clear_session()
+        data = pd.DataFrame({"text": ["ABCDEF", "FEDCBA"]})
+        feature = CharBasedTextFeature(name="text", text_max_len=text_max_len)
+        feature.fit(data)
+        parameter_counts.append(_build_text_feature_model(feature).count_params())
+
+    assert parameter_counts[0] == parameter_counts[1]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_char_feature_without_version_uses_legacy_lstm(rp_logger):
+    data = pd.DataFrame({"text": ["ABCDEF", "FEDCBA"]})
+    feature = CharBasedTextFeature(name="text", text_max_len=6, rnn_units=32)
+    feature.architecture_version = 1
+    feature.fit(data)
+    del feature.architecture_version
+
+    restored = pickle.loads(pickle.dumps(feature))
+    transformed = restored.transform(data)
+    model = _build_text_feature_model(restored)
+
+    assert restored.vocab_size == len(restored.tokenizer.word_index)
+    assert transformed.shape == (2, 6, restored.vocab_size)
+    assert any(isinstance(layer, tf.keras.layers.LSTM) for layer in model.submodules)
+    assert not any(isinstance(layer, tf.keras.layers.GRU) for layer in model.submodules)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_char_feature_optimized_pickle_round_trip(rp_logger):
+    data = pd.DataFrame({"text": ["ABCDEF", "FEDCBA"]})
+    feature = CharBasedTextFeature(name="text", text_max_len=6)
+    feature.fit(data)
+
+    restored = pickle.loads(pickle.dumps(feature))
+
+    np.testing.assert_array_equal(restored.transform(data), feature.transform(data))
+    assert restored.architecture_version == 2
+    assert restored.tokenizer.word_index == feature.tokenizer.word_index
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_email_feature_optimizes_only_the_local_part(rp_logger):
+    data = pd.DataFrame({"email": ["AA11@example.com", "BB22@example.com"]})
+    feature = EmailFeature(name="email", text_max_len=15, rnn_units=32)
+
+    feature.fit(data)
+    transformed = feature.transform(data)
+
+    assert set(feature.tokenizer.word_index) == {"A", "B", "1", "2"}
+    assert feature.vocab_size == len(feature.tokenizer.word_index) + 1
+    assert transformed.dtype == np.int32
+    assert transformed.shape == (2, 15)
+    assert all(value.endswith("@tdspora.ai") for value in feature.inverse_transform(
+        np.zeros((2, 15, feature.vocab_size), dtype=np.float32)
+    ))
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
