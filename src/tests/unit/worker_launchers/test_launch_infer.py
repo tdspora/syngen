@@ -217,11 +217,8 @@ def test_launch_infer_table_with_invalid_size(mock_setup_log, rp_logger, caplog)
             launch_infer(size=0, table_name=TABLE_NAME)
     mock_setup_log.assert_called_once()
     error_message = (
-        'The error(s) found in - "infer_settings": {\n'
-        '    "size": [\n'
-        '        "Must be greater than or equal to 1."\n'
-        '    ]\n'
-        '}'
+        'The error(s) found in - "infer_settings": {\'size\': [\'Must be greater than or '
+        'equal to 1.\']}'
     )
     assert error_message in caplog.text
     assert error_message in str(error.value)
@@ -290,11 +287,8 @@ def test_launch_infer_table_with_invalid_run_parallel(mock_setup_log, rp_logger,
             launch_infer(run_parallel="test", table_name=TABLE_NAME)
     mock_setup_log.assert_called_once()
     error_message = (
-        'The error(s) found in - "infer_settings": {\n'
-        '    "run_parallel": [\n'
-        '        "Not a valid boolean."\n'
-        '    ]\n'
-        '}'
+        'The error(s) found in - "infer_settings": {\'run_parallel\': [\'Not a valid '
+        'boolean.\']}'
     )
     assert error_message in str(error.value)
     assert error_message in caplog.text
@@ -359,11 +353,8 @@ def test_launch_infer_table_with_invalid_batch_size(mock_setup_log, rp_logger, c
             launch_infer(batch_size=0, table_name=TABLE_NAME)
     mock_setup_log.assert_called_once()
     error_message = (
-        'The error(s) found in - "infer_settings": {\n'
-        '    "batch_size": [\n'
-        '        "Must be greater than or equal to 1."\n'
-        '    ]\n'
-        '}'
+        'The error(s) found in - "infer_settings": {\'batch_size\': [\'Must be greater '
+        'than or equal to 1.\']}'
     )
     assert error_message in str(error.value)
     assert error_message in caplog.text
@@ -428,11 +419,8 @@ def test_launch_infer_table_with_invalid_random_seed(mock_setup_log, rp_logger, 
             launch_infer(random_seed=-1, table_name=TABLE_NAME)
     mock_setup_log.assert_called_once()
     error_message = (
-        'The error(s) found in - "infer_settings": {\n'
-        '    "random_seed": [\n'
-        '        "Must be greater than or equal to 0."\n'
-        '    ]\n'
-        '}'
+        'The error(s) found in - "infer_settings": {\'random_seed\': [\'Must be greater '
+        'than or equal to 0.\']}'
     )
     assert error_message in str(error.value)
     assert error_message in caplog.text
