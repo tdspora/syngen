@@ -293,6 +293,11 @@ def test_validation_of_metadata_file_with_invalid_global_training_settings(
             'valid integer.\']}}',
         ),
         (
+            {"size": None},
+            'The error(s) found in - "fk_test": {\'infer_settings\': {\'size\': '
+            '[\'Field may not be null.\']}}',
+        ),
+        (
             {"run_parallel": "not a valid type of a value"},
             'The error(s) found in - "fk_test": {\'infer_settings\': {\'run_parallel\': '
             '[\'Not a valid boolean.\']}}',
@@ -343,6 +348,11 @@ def test_validation_of_metadata_file_with_invalid_infer_settings(
             {"size": 0},
             'The error(s) found in - "global": {\'infer_settings\': {\'size\': [\'Must be '
             'greater than or equal to 1.\']}}',
+        ),
+        (
+            {"size": None},
+            'The error(s) found in - "global": {\'infer_settings\': {\'size\': '
+            '[\'Field may not be null.\']}}',
         ),
         (
             {"size": "not a valid type of a value"},
