@@ -33,7 +33,7 @@ def validate_required_parameters(
 
 def launch_infer(
     metadata_path: Optional[str] = None,
-    size: Optional[int] = 100,
+    size: int = 100,
     table_name: Optional[str] = None,
     run_parallel: bool = False,
     batch_size: Optional[int] = None,
@@ -169,7 +169,7 @@ def launch_infer(
 @timing
 def cli_launch_infer(
     metadata_path: Optional[str],
-    size: Optional[int],
+    size: int,
     table_name: Optional[str],
     run_parallel: bool,
     batch_size: Optional[int],
