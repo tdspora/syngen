@@ -1,4 +1,4 @@
-from typing import Union, List, Optional, Dict, Literal
+from typing import Union, List, Optional, Dict, Literal, Tuple
 from abc import ABC
 from itertools import combinations
 import random
@@ -24,6 +24,8 @@ from scipy.stats import kurtosis, skew
 import seaborn as sns
 from slugify import slugify
 from loguru import logger
+from sdmetrics.single_column import RangeCoverage, CategoryCoverage
+from sdmetrics.single_table import LogisticDetection, SVCDetection
 
 from syngen.ml.utils import (
     timestamp_to_datetime,
@@ -1722,3 +1724,168 @@ class Utility(BaseMetric):
                 return False
 
         return True
+
+
+class CoverageMetric(BaseMetric):
+    """Evaluates per-column coverage of synthetic data over the original data using sdmetrics:
+
+    - :class:`sdmetrics.single_column.RangeCoverage` for numerical (continuous) columns —
+      measures what fraction of the original numeric range is covered by the synthetic values.
+    - :class:`sdmetrics.single_column.CategoryCoverage` for categorical columns —
+      measures what fraction of the original categories appear in the synthetic data.
+
+    All scores are floats in ``[0.0, 1.0]`` where ``1.0`` means full coverage.
+    ``NaN`` is produced by ``RangeCoverage`` when the original column has zero variance.
+
+    After calling :meth:`calculate_all`, the mean coverage across all valid columns is stored in
+    ``self.value`` and accessible via :meth:`get_value`.
+    """
+
+    def __init__(
+        self,
+        original: pd.DataFrame,
+        synthetic: pd.DataFrame,
+        plot: bool,
+        reports_path: str,
+    ):
+        super().__init__(original, synthetic, plot, reports_path)
+
+    def calculate_all(
+        self,
+        cont_columns: List[str],
+        categorical_columns: List[str],
+    ) -> Dict[str, float]:
+        """Calculate coverage scores for every specified column.
+
+        Args:
+            cont_columns: Names of continuous / numerical columns.
+                :class:`~sdmetrics.single_column.RangeCoverage` is applied to each.
+            categorical_columns: Names of categorical columns.
+                :class:`~sdmetrics.single_column.CategoryCoverage` is applied to each.
+
+        Returns:
+            A ``dict`` mapping column name to its coverage score.
+            The mean of all non-NaN scores is stored in ``self.value``.
+        """
+
+        scores: Dict[str, float] = {}
+
+        for col in cont_columns:
+            if col not in self.original.columns or col not in self.synthetic.columns:
+                logger.warning(
+                    f"Column '{col}' not found in one of the datasets. Skipping."
+                )
+                continue
+            score = min(RangeCoverage.compute(
+                    self.original[col].dropna(),
+                    self.synthetic[col].dropna(),
+                ),
+                RangeCoverage.compute(
+                    self.synthetic[col].dropna(),
+                    self.original[col].dropna(),
+                )
+            )
+            # RangeCoverage is not symmetric, so we take the minimum of the
+            # two directions to ensure a fair assessment of coverage.
+            scores[col] = score
+            if np.isnan(score):
+                logger.info(
+                    f"RangeCoverage for numerical column '{col}': NaN "
+                    "(original column has zero variance)"
+                )
+            else:
+                logger.info(f"RangeCoverage for numerical column '{col}': {score:.4f}")
+
+        for col in categorical_columns:
+            if col not in self.original.columns or col not in self.synthetic.columns:
+                logger.warning(
+                    f"Column '{col}' not found in one of the datasets. Skipping."
+                )
+                continue
+            score = CategoryCoverage.compute(
+                self.original[col],
+                self.synthetic[col],
+            )
+            scores[col] = score
+            logger.info(f"CategoryCoverage for categorical column '{col}': {score:.4f}")
+
+        valid_scores = [s for s in scores.values() if not np.isnan(s)]
+        self.value = float(np.mean(valid_scores)) if valid_scores else float("nan")
+        if np.isnan(self.value):
+            logger.info("Mean coverage score: NaN (no valid scores)")
+        else:
+            logger.info(f"Mean coverage score: {self.value:.4f}")
+        return scores
+
+
+_DETECTION_METHODS = {
+    "logistic": LogisticDetection,
+    "svc": SVCDetection,
+}
+
+
+class DetectionMetric(BaseMetric):
+    """Evaluates how distinguishable the synthetic data is from the real data.
+
+    Trains a binary classifier (either Logistic Regression or SVC) to separate the
+    real rows from the synthetic rows using stratified 3-fold cross-validation.
+    The final score is ``1 - mean_ROC_AUC_adjusted``:
+
+    - Score close to **1.0** → the classifier cannot tell synthetic from real
+      (high-quality synthetic data).
+    - Score close to **0.0** → the classifier easily distinguishes them
+      (low-quality synthetic data).
+
+    The underlying implementation is provided by
+    :class:`sdmetrics.single_table.LogisticDetection` and
+    :class:`sdmetrics.single_table.SVCDetection`.
+
+    Args:
+        original: Real dataset.
+        synthetic: Synthetic dataset.
+        plot: Whether to produce plots (unused by this metric, kept for API consistency).
+        reports_path: Directory for saving report artefacts.
+        method: Detection classifier to use — ``"logistic"`` (default) or ``"svc"``.
+
+    Raises:
+        ValueError: If *method* is not ``"logistic"`` or ``"svc"``.
+    """
+
+    def __init__(
+        self,
+        original: pd.DataFrame,
+        synthetic: pd.DataFrame,
+        plot: bool,
+        reports_path: str,
+        method: Literal["logistic", "svc"] = "logistic",
+    ):
+        if method not in _DETECTION_METHODS:
+            raise ValueError(
+                f"Unknown detection method '{method}'. "
+                f"Allowed values: {list(_DETECTION_METHODS.keys())}"
+            )
+        super().__init__(original, synthetic, plot, reports_path)
+        self.method = method
+        self._detector = _DETECTION_METHODS[method]
+
+    def calculate_all(self, metadata: Optional[Dict] = None) -> float:
+        """Run the detection metric on the full datasets.
+
+        Args:
+            metadata: Optional sdmetrics table-metadata dict.  When omitted,
+                sdmetrics infers it automatically from the DataFrame dtypes.
+
+        Returns:
+            Detection score in ``[0.0, 1.0]``.
+        """
+        logger.info(
+            f"Calculating DetectionMetric using method='{self.method}'"
+        )
+        self.value = self._detector.compute(
+            self.original, self.synthetic, metadata=metadata
+        )
+        logger.info(
+            f"DetectionMetric ({self.method}) score: {self.value:.4f}"
+        )
+        return self.value
+
