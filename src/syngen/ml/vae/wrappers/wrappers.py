@@ -511,19 +511,19 @@ class VAEWrapper(BaseWrapper):
                 "numpy.datetime64 date columns from Parquet/Delta sources)."
             )
 
-    def _train_step(self, batch: Tuple[tf.Tensor]):
+    def _train_step_graph_impl(self, batch: Tuple[tf.Tensor]):
+        """
+        Graph-compiled forward/backward/optimizer-apply step. Returns tensors only
+        (no `.numpy()`) so it can be traced by `tf.function` - conversion to numpy
+        happens in `_train_step`, outside the compiled graph.
+        """
         with tf.GradientTape() as tape:
             self.model(batch)
 
             # Compute reconstruction loss
             loss = sum(self.model.losses)
-            order_of_features = list(self.vae.feature_losses.keys())
-            kl_loss = self.model.losses[-1].numpy()
-            feature_losses = {
-                name: loss.numpy()
-                for name, loss in
-                zip(order_of_features, self.model.losses[:-1])
-            }
+            kl_loss = self.model.losses[-1]
+            feature_losses = self.model.losses[:-1]
 
         self.optimizer.minimize(
             loss=loss,
@@ -532,6 +532,21 @@ class VAEWrapper(BaseWrapper):
         )
         self.loss_metric(loss)
         return loss, kl_loss, feature_losses
+
+    def _train_step(self, batch: Tuple[tf.Tensor]):
+        # `self` (VanillaVAEWrapper) isn't hashable, so `@tf.function` can't be used
+        # as a class-level method decorator (it needs a weakref-keyed descriptor
+        # cache). Wrap the bound method once instead, cached on the instance.
+        if not hasattr(self, "_train_step_graph"):
+            self._train_step_graph = tf.function(self._train_step_graph_impl)
+
+        loss, kl_loss, feature_losses = self._train_step_graph(batch)
+        order_of_features = list(self.vae.feature_losses.keys())
+        feature_losses = {
+            name: loss.numpy()
+            for name, loss in zip(order_of_features, feature_losses)
+        }
+        return loss, kl_loss.numpy(), feature_losses
 
     @staticmethod
     def display_losses(feature_losses: Dict):
