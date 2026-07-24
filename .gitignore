@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 .idea/
 .pypirc
+.cursor/
 
 # .DS_Store
 *.DS_Store
