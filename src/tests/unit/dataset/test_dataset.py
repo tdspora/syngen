@@ -722,6 +722,118 @@ def test_define_date_format_with_extreme_values(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def _build_dataset(data, mock_fetch_config):
+    df = pd.DataFrame({"Date": data}, columns=["Date"])
+    return Dataset(
+        df=df,
+        schema=CSV_SCHEMA,
+        metadata={"mock_table": {"keys": {}}},
+        table_name="mock_table",
+        paths={"initial_order_of_columns_path": "mock_path.pkl"},
+        main_process="train"
+    )
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_define_date_format_dayfirst_column_outvoted_by_ambiguous_dates(
+    mock_fetch_config, rp_logger
+):
+    """
+    Regression test for the non-deterministic day-first / month-first detection bug:
+    a day-first ("%d/%m/%Y") column whose ambiguous (day <= 12) dates outnumber its
+    unambiguous (day > 12) ones must still resolve to "%d/%m/%Y" - a plain majority
+    vote over the sampled guesses would incorrectly pick "%m/%d/%Y" here.
+    """
+    rp_logger.info(
+        "Test that a day-first date column is correctly detected as '%d/%m/%Y' "
+        "even when ambiguous (day <= 12) dates outnumber unambiguous ones in the sample"
+    )
+    unambiguous_dayfirst = [
+        f"{day:02d}/{month:02d}/2020" for day in range(13, 29) for month in range(1, 6)
+    ][:10]
+    ambiguous = [
+        f"{day:02d}/{month:02d}/2020" for day in range(1, 13) for month in range(1, 13)
+    ][:90]
+    data = unambiguous_dayfirst + ambiguous
+    assert len(data) == 100
+
+    for _ in range(20):
+        mock_dataset = _build_dataset(data, mock_fetch_config)
+        mock_dataset.launch_detection()
+        assert mock_dataset.date_mapping == {"Date": "%d/%m/%Y"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_define_date_format_monthfirst_column_not_affected_by_fix(
+    mock_fetch_config, rp_logger
+):
+    """
+    A genuinely month-first column never produces a "%d before %m" guess, so the
+    unambiguous-evidence rule must not change its (already correct) detection.
+    """
+    rp_logger.info(
+        "Test that a month-first date column is still correctly detected as '%m/%d/%Y' "
+        "after the day-first detection fix"
+    )
+    data = [
+        f"{month:02d}/{day:02d}/2020" for day in range(1, 13) for month in range(1, 13)
+    ][:100]
+
+    for _ in range(20):
+        mock_dataset = _build_dataset(data, mock_fetch_config)
+        mock_dataset.launch_detection()
+        assert mock_dataset.date_mapping == {"Date": "%m/%d/%Y"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_define_date_format_fully_ambiguous_column_defaults_deterministically(
+    mock_fetch_config, rp_logger
+):
+    """
+    A fully ambiguous column (every date has day <= 12 and month <= 12) carries no
+    ordering evidence either way; the deterministic month-first default must be
+    preserved (and stay stable across repeated runs, unlike the old unseeded sample).
+    """
+    rp_logger.info(
+        "Test that a fully ambiguous date column deterministically defaults "
+        "to '%m/%d/%Y' across repeated detections"
+    )
+    data = [
+        f"{day:02d}/{month:02d}/2020" for day in range(1, 13) for month in range(1, 9)
+    ][:96]
+
+    results = set()
+    for _ in range(20):
+        mock_dataset = _build_dataset(data, mock_fetch_config)
+        mock_dataset.launch_detection()
+        results.add(mock_dataset.date_mapping["Date"])
+    assert results == {"%m/%d/%Y"}
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.models.dataset.fetch_config")
+def test_define_date_format_logs_assigned_format(mock_fetch_config, rp_logger, caplog):
+    rp_logger.info(
+        "Test that the assigned date format for a column is logged"
+    )
+    data = [
+        f"{day:02d}/{month:02d}/2020" for day in range(13, 29) for month in range(1, 6)
+    ][:60]
+    mock_dataset = _build_dataset(data, mock_fetch_config)
+
+    with caplog.at_level("INFO"):
+        mock_dataset.launch_detection()
+
+    assert mock_dataset.date_mapping == {"Date": "%d/%m/%Y"}
+    assert any(
+        "Date" in record.message and "%d/%m/%Y" in record.message
+        for record in caplog.records
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 @patch("syngen.ml.vae.models.dataset.fetch_config")
 def test_is_valid_uuid(mock_fetch_config, rp_logger):
     rp_logger.info(

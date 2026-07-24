@@ -305,22 +305,12 @@ def test_train_table_with_invalid_epochs(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(epochs=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "epochs": [\n'
-                '            "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': {\'epochs\': '
+                '[\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "epochs": [\n'
-                '            "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': {\'epochs\': '
+                '[\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -359,22 +349,12 @@ def test_train_table_with_invalid_drop_null(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(drop_null="test")
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "drop_null": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'drop_null\': [\'Not a valid boolean.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "drop_null": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'drop_null\': [\'Not a valid boolean.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -406,22 +386,12 @@ def test_train_table_with_invalid_row_limit(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(row_limit=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "row_limit": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'row_limit\': [\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "row_limit": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'row_limit\': [\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -542,22 +512,12 @@ def test_train_table_with_invalid_batch_size(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(batch_size=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'batch_size\': [\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'batch_size\': [\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -666,22 +626,12 @@ def test_infer_table_with_invalid_size(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(size=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': {\'size\': '
+                '[\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': {\'size\': '
+                '[\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -720,22 +670,12 @@ def test_infer_table_with_invalid_run_parallel(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(run_parallel="test")
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "run_parallel": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'run_parallel\': [\'Not a valid boolean.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "run_parallel": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'run_parallel\': [\'Not a valid boolean.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -765,22 +705,12 @@ def test_infer_table_with_invalid_batch_size(rp_logger, caplog):
         with caplog.at_level("ERROR") as caplog:
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(batch_size=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'batch_size\': [\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'batch_size\': [\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -811,22 +741,12 @@ def test_infer_table_with_invalid_random_seed(rp_logger, caplog):
         with caplog.at_level("ERROR") as caplog:
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(random_seed=-1)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "random_seed": [\n'
-                '             "Must be greater than or equal to 0."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'random_seed\': [\'Must be greater than or equal to 0.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "random_seed": [\n'
-                '             "Must be greater than or equal to 0."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'random_seed\': [\'Must be greater than or equal to 0.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 

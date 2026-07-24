@@ -9,7 +9,14 @@ from syngen.ml.validation_schema.validation_schema import (  # noqa: F401;
     ConfigurationSchemaWithSource,
     BaseConfigurationSchema,
     KeysSchema,
-    ValidationSchema,
+    ValidationMetadataSchema,
+    ValidationSettingsSchema,
+    CLITrainingSettingsSchema,
+    CLIInferSettingsSchema,
     SUPPORTED_EXCEL_EXTENSIONS,
-    ReportTypes
+    SUPPORTED_CSV_EXTENSIONS,
+    SUPPORTED_OS_EXTENSIONS,
+    LOG_LEVELS,
+    ReportTypes,
+    validate_source_field
 )

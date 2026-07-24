@@ -1,5 +1,4 @@
 from typing import Dict, Literal, List
-import json
 from pathlib import Path
 from dataclasses import dataclass, field
 import re
@@ -14,7 +13,28 @@ from marshmallow import (
 )
 from loguru import logger
 
+
 SUPPORTED_EXCEL_EXTENSIONS = [".xls", ".xlsx"]
+SUPPORTED_CSV_EXTENSIONS = [".csv", '.psv', '.txt', '.tsv']
+SUPPORTED_OS_EXTENSIONS = (
+    SUPPORTED_CSV_EXTENSIONS + SUPPORTED_EXCEL_EXTENSIONS + [".avro", '.dat', '.pkl']
+)
+LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+
+def validate_source_field(source, supported_extensions=SUPPORTED_OS_EXTENSIONS):
+    """
+    Validate the 'source' parameter whether it has a supported file extension
+    """
+    if source.strip() == "":
+        raise ValidationError("The 'source' parameter must not be empty string.")
+    source_extension = Path(source).suffix
+    if source_extension not in supported_extensions:
+        raise ValidationError(
+            "The supported file extensions are: "
+            f"{', '.join(supported_extensions)}. "
+            f"Got: {source_extension!r}."
+        )
 
 
 @dataclass
@@ -214,6 +234,15 @@ class TrainingSettingsSchema(Schema):
     )
 
 
+class CLITrainingSettingsSchema(TrainingSettingsSchema):
+    source = fields.String(required=False, allow_none=True, validate=validate_source_field)
+    fernet_key = fields.String(required=False, allow_none=True)
+
+    @staticmethod
+    def validate_source_field(source):
+        return validate_source_field(source) if source is not None else source
+
+
 class ExtendedTrainingSettingsSchemaWithSource(TrainingSettingsSchema):
     source = fields.String(required=True, allow_none=False)
     column_types = fields.Dict(
@@ -274,6 +303,10 @@ class InferSettingsSchema(Schema):
         required=False,
         validate=validate_reports
     )
+
+
+class CLIInferSettingsSchema(InferSettingsSchema):
+    fernet_key = fields.String(required=False, allow_none=True)
 
 
 class CSVFormatSettingsSchema(Schema):
@@ -337,16 +370,18 @@ class BaseConfigurationSchema(Schema):
 
     @staticmethod
     def get_format_schema(source):
-        if Path(source).suffix == ".csv":
+        extension = Path(source).suffix
+        if extension in SUPPORTED_CSV_EXTENSIONS:
             return CSVFormatSettingsSchema
-        if Path(source).suffix in SUPPORTED_EXCEL_EXTENSIONS:
+        if extension in SUPPORTED_EXCEL_EXTENSIONS:
             return ExcelFormatSettingsSchema
 
     @post_load
-    def process_format_field(self, data, **kwargs):
-        train_settings = data.get("train_settings", {})
-        path_to_source = train_settings.get("source") if train_settings else None
-        if train_settings and path_to_source:
+    def validate_format_field(self, data, **kwargs):
+        train_settings = data.get("train_settings")
+        path_to_source = train_settings.get("source") if train_settings is not None else None
+        if path_to_source:
+            validate_source_field(path_to_source)
             format_schema = self.get_format_schema(path_to_source)
             if format_schema is not None and data.get("format") is not None:
                 data["format"] = format_schema().load(data["format"])
@@ -386,7 +421,7 @@ class ConfigurationSchemaWithoutSource(BaseConfigurationSchema):
     )
 
 
-class ValidationSchema:
+class ValidationMetadataSchema:
     def __init__(
         self,
         metadata: Dict,
@@ -397,9 +432,9 @@ class ValidationSchema:
         self.global_schema = GlobalSettingsSchema()
         self.process = process
         self.validation_of_source = validation_of_source
-        self.configuration_schema = self.get_configuration_schema()
 
-    def get_configuration_schema(self):
+    @property
+    def configuration_schema(self):
         if self.validation_of_source and self.process == "train":
             return ConfigurationSchemaWithSource()
         elif self.process == "infer":
@@ -420,12 +455,49 @@ class ValidationSchema:
             except ValidationError as err:
                 errors[table_name] = err.messages
         if errors:
-            message = "Validation error(s) found in the schema of the metadata"
-            logger.error(message)
+            message = "Validation error(s) found in the schema of the metadata. "
             for section, errors_details in errors.items():
-                logger.error(
-                    f'The error(s) found in - "{section}": {json.dumps(errors_details, indent=4)}'
+                message += (
+                    f'The error(s) found in - "{section}": {errors_details}'
                 )
-            raise ValidationError(f"{message}. The details are - {errors}")
+            logger.error(message)
+            raise ValidationError(f"{message}")
         if not errors:
-            logger.debug("The schema of the metadata is valid")
+            logger.debug("The schema of the metadata is valid.")
+
+
+class ValidationSettingsSchema:
+    def __init__(
+        self,
+        settings: Dict,
+        process: Literal["train", "infer"]
+    ):
+        self.settings = settings
+        self.process = process
+
+    @property
+    def configuration_schema(self):
+        if self.process == "train":
+            return CLITrainingSettingsSchema()
+        elif self.process == "infer":
+            return CLIInferSettingsSchema()
+
+    def validate_schema(self):
+        """
+        Validate the metadata file
+        """
+        errors = {}
+        try:
+            self.configuration_schema.load(self.settings)
+        except ValidationError as err:
+            errors[f"{self.process}_settings"] = err.messages
+        if errors:
+            message = f"Validation error(s) found in the {self.process} settings. "
+            for section, errors_details in errors.items():
+                message += (
+                    f'The error(s) found in - "{section}": {errors_details}'
+                )
+            logger.error(message)
+            raise ValidationError(message)
+        if not errors:
+            logger.debug(f"The schema of the {self.process} settings is valid")
