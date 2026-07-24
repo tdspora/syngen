@@ -240,6 +240,18 @@ def test_char_feature_has_no_parameter_cliff_at_length_seven(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("text_max_len", [1, 6, 7, 16, 17, 47, 1000])
+def test_char_feature_rnn_units_remain_fixed_across_lengths(text_max_len, rp_logger):
+    from syngen.ml.vae.models.features import TEXT_RNN_UNITS
+
+    data = pd.DataFrame({"text": ["ABCDEF", "FEDCBA"]})
+    feature = CharBasedTextFeature(name="text", text_max_len=text_max_len)
+    feature.fit(data)
+
+    assert feature._text_rnn_units == TEXT_RNN_UNITS
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_char_feature_without_version_uses_legacy_lstm(rp_logger):
     data = pd.DataFrame({"text": ["ABCDEF", "FEDCBA"]})
     feature = CharBasedTextFeature(name="text", text_max_len=6, rnn_units=32)
@@ -253,21 +265,111 @@ def test_char_feature_without_version_uses_legacy_lstm(rp_logger):
 
     assert restored.vocab_size == len(restored.tokenizer.word_index)
     assert transformed.shape == (2, 6, restored.vocab_size)
+    assert not restored._uses_invariant_text_tokens
     assert any(isinstance(layer, tf.keras.layers.LSTM) for layer in model.submodules)
     assert not any(isinstance(layer, tf.keras.layers.GRU) for layer in model.submodules)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_char_feature_optimized_pickle_round_trip(rp_logger):
-    data = pd.DataFrame({"text": ["ABCDEF", "FEDCBA"]})
-    feature = CharBasedTextFeature(name="text", text_max_len=6)
+    from syngen.ml.vae.models.features import TEXT_ARCHITECTURE_VERSION
+
+    data = pd.DataFrame({"text": ["https://a", "https://b"]})
+    feature = CharBasedTextFeature(name="text", text_max_len=9)
     feature.fit(data)
 
     restored = pickle.loads(pickle.dumps(feature))
 
     np.testing.assert_array_equal(restored.transform(data), feature.transform(data))
-    assert restored.architecture_version == 2
+    np.testing.assert_array_equal(
+        restored.invariant_token_ids,
+        feature.invariant_token_ids,
+    )
+    assert np.any(restored.invariant_token_ids >= 0)
+    assert restored.architecture_version == TEXT_ARCHITECTURE_VERSION
     assert restored.tokenizer.word_index == feature.tokenizer.word_index
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_char_feature_fixed_width_v2_checkpoint_keeps_flat_units(rp_logger):
+    """A pre-existing version-2 artifact (the first optimized architecture,
+    shipped with a flat rnn_units=32 regardless of length) must keep using
+    exactly that width after this smooth-scaling fix, or its checkpoint
+    would fail to load (shape mismatch against already-saved weights).
+    """
+    from syngen.ml.vae.models.features import TEXT_RNN_UNITS
+
+    data = pd.DataFrame({"text": ["ABCDEFGHIJKLMNOPQRST", "TSRQPONMLKJIHGFEDCBA"]})
+    feature = CharBasedTextFeature(name="text", text_max_len=20)
+    feature.architecture_version = 2
+    feature.fit(data)
+
+    assert feature._text_rnn_units == TEXT_RNN_UNITS
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_char_feature_restores_invariant_tokens_after_stochastic_sampling(rp_logger):
+    data = pd.DataFrame(
+        {
+            "text": [
+                "https://www.example.com",
+                "https://www.acme.test",
+                "https://www.data.local",
+            ]
+        }
+    )
+    feature = CharBasedTextFeature(name="text", text_max_len=24)
+    feature.fit(data)
+
+    # Uniform logits deliberately make every generated position uncertain.
+    # The invariant prefix must nevertheless survive the real stochastic
+    # top-p sampling path exactly.
+    logits = np.zeros((100, 24, feature.vocab_size), dtype=np.float32)
+    generated = feature.inverse_transform(logits)
+
+    assert all(value.startswith("https://www.") for value in generated)
+    assert len(set(generated)) > 1
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_char_feature_invariant_tokens_distinguish_padding_from_variable_positions(rp_logger):
+    data = pd.DataFrame({"text": ["prefixA", "prefix"]})
+    feature = CharBasedTextFeature(name="text", text_max_len=8)
+    feature.fit(data)
+
+    # "prefix" is common, position 6 differs (A versus padding), and position
+    # 7 is padding in every row.
+    assert np.all(feature.invariant_token_ids[:6] >= 0)
+    assert feature.invariant_token_ids[6] == -1
+    assert feature.invariant_token_ids[7] == 0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_char_feature_empty_fit_has_no_invariant_tokens(rp_logger):
+    data = pd.DataFrame({"text": pd.Series(dtype=str)})
+    feature = CharBasedTextFeature(name="text", text_max_len=4)
+    feature.fit(data)
+
+    assert np.all(feature.invariant_token_ids == -1)
+    logits = np.zeros((1, 4, feature.vocab_size), dtype=np.float32)
+    assert len(feature.inverse_transform(logits)) == 1
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_char_feature_v2_does_not_apply_v3_invariant_tokens(rp_logger):
+    data = pd.DataFrame(
+        {
+            "text": [
+                "https://www.example.com",
+                "https://www.acme.test",
+            ]
+        }
+    )
+    feature = CharBasedTextFeature(name="text", text_max_len=24)
+    feature.architecture_version = 2
+    feature.fit(data)
+
+    assert not hasattr(feature, "invariant_token_ids")
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

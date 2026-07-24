@@ -36,7 +36,9 @@ from syngen.ml.utils import (
 
 KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
 LEGACY_TEXT_ARCHITECTURE_VERSION = 1
-TEXT_ARCHITECTURE_VERSION = 2
+FIXED_WIDTH_TEXT_ARCHITECTURE_VERSION = 2
+INVARIANT_TEXT_ARCHITECTURE_VERSION = 3
+TEXT_ARCHITECTURE_VERSION = INVARIANT_TEXT_ARCHITECTURE_VERSION
 TEXT_EMBEDDING_DIM = 16
 TEXT_RNN_UNITS = 32
 
@@ -489,7 +491,23 @@ class CharBasedTextFeature(BaseFeature):
                 "architecture_version",
                 LEGACY_TEXT_ARCHITECTURE_VERSION,
             )
-            >= TEXT_ARCHITECTURE_VERSION
+            >= FIXED_WIDTH_TEXT_ARCHITECTURE_VERSION
+        )
+
+    @property
+    def _text_rnn_units(self) -> int:
+        """Fixed GRU width shared by all embedding-based text versions."""
+        return TEXT_RNN_UNITS
+
+    @property
+    def _uses_invariant_text_tokens(self) -> bool:
+        return (
+            getattr(
+                self,
+                "architecture_version",
+                LEGACY_TEXT_ARCHITECTURE_VERSION,
+            )
+            >= INVARIANT_TEXT_ARCHITECTURE_VERSION
         )
 
     def fit(self, data: pd.DataFrame, **kwargs):
@@ -510,6 +528,31 @@ class CharBasedTextFeature(BaseFeature):
             # in the output classes, together with the highest character index.
             self.vocab_size += 1
         self.tokenizer = tokenizer
+
+        if self._uses_invariant_text_tokens:
+            from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+            sequences = tokenizer.texts_to_sequences(data)
+            padded = pad_sequences(
+                sequences,
+                maxlen=self.text_max_len,
+                padding="post",
+                truncating="post",
+                value=0.0,
+            ).astype("int32")
+            if len(padded):
+                invariant_mask = np.all(padded == padded[0], axis=0)
+                self.invariant_token_ids = np.where(
+                    invariant_mask,
+                    padded[0],
+                    -1,
+                ).astype("int32")
+            else:
+                self.invariant_token_ids = np.full(
+                    self.text_max_len,
+                    -1,
+                    dtype="int32",
+                )
 
     def transform(self, data: pd.DataFrame) -> np.ndarray:
         if len(data.columns) > 1:
@@ -603,6 +646,11 @@ class CharBasedTextFeature(BaseFeature):
             lambda x: np.argmax(np.random.multinomial(1, x)), -1, probs
         )
 
+        invariant_token_ids = getattr(self, "invariant_token_ids", None)
+        if self._uses_invariant_text_tokens and invariant_token_ids is not None:
+            invariant_mask = invariant_token_ids >= 0
+            multinomial_samples[:, invariant_mask] = invariant_token_ids[invariant_mask]
+
         chars_array = np.vectorize(lambda x: self.tokenizer.inverse_dict.get(x, ''))(
             multinomial_samples)
 
@@ -650,7 +698,7 @@ class CharBasedTextFeature(BaseFeature):
             )
             embedded_input = embedding(self.input)
             rnn_encoder_layer = Bidirectional(
-                GRU(TEXT_RNN_UNITS, return_sequences=False),
+                GRU(self._text_rnn_units, return_sequences=False),
                 name="%s_bidirectional_gru" % self.name,
             )
             return rnn_encoder_layer(embedded_input)
@@ -665,7 +713,7 @@ class CharBasedTextFeature(BaseFeature):
 
         decoder_layers.append(RepeatVector(self.text_max_len))
         if self._uses_optimized_architecture:
-            decoder_layers.append(GRU(TEXT_RNN_UNITS, return_sequences=True))
+            decoder_layers.append(GRU(self._text_rnn_units, return_sequences=True))
         else:
             decoder_layers.append(self.rnn_unit(self.rnn_units, return_sequences=True))
         decoder_layers.append(TimeDistributed(Dense(self.vocab_size, activation="linear")))

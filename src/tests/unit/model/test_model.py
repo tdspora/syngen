@@ -48,7 +48,7 @@ def _build_text_cvae(serialized_feature):
     return cvae
 
 
-@pytest.mark.parametrize("architecture_version", [1, 2])
+@pytest.mark.parametrize("architecture_version", [1, 2, 3])
 def test_text_checkpoint_round_trip_preserves_architecture(
     architecture_version,
     tmp_path,
@@ -114,6 +114,33 @@ def test_text_checkpoint_rejects_cross_architecture_loading(tmp_path, rp_logger)
         gc.collect()
     finally:
         tf.get_logger().setLevel(tensorflow_log_level)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_text_checkpoint_loads_from_v2_into_invariant_v3(tmp_path, rp_logger):
+    """v3 adds decoding metadata but deliberately keeps v2's exact topology."""
+    tf.keras.backend.clear_session()
+    data = pd.DataFrame({"text": ["AA" + "B" * 18, "AA" + "C" * 18]})
+    fixed_width_feature = CharBasedTextFeature(name="text", text_max_len=20)
+    fixed_width_feature.architecture_version = 2
+    fixed_width_feature.fit(data)
+    fixed_width = _build_text_cvae(pickle.dumps(fixed_width_feature))
+    fixed_width.latent_model = {"architecture_version": 2}
+    latent_input = tf.zeros((2, 2), dtype=tf.float32)
+    expected = fixed_width.generator_model(latent_input, training=False).numpy()
+    fixed_width.save_state(str(tmp_path))
+
+    tf.keras.backend.clear_session()
+    invariant_feature = CharBasedTextFeature(name="text", text_max_len=20)
+    assert invariant_feature.architecture_version == 3
+    invariant_feature.fit(data)
+    invariant = _build_text_cvae(pickle.dumps(invariant_feature))
+    invariant.load_state(str(tmp_path))
+    actual = invariant.generator_model(latent_input, training=False).numpy()
+
+    np.testing.assert_allclose(actual, expected)
+    generated = invariant.dataset.features["text"].inverse_transform(actual)
+    assert all(value.startswith("AA") for value in generated)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

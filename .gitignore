@@ -49,6 +49,7 @@ pytest*.xml
 
 .vscode/
 .log*
+.cursor/
 
 #build files
 build/
