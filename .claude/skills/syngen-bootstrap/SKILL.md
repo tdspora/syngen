@@ -105,6 +105,26 @@ APPROVAL REQUIRED: install missing module(s) <list> via
     "${PY}" -m pip install <list>
 ```
 
+### Step 2b — installed-vs-source version parity
+
+This library is consumed downstream by `tdm_syngen`, whose tests frequently run against this source tree via `PYTHONPATH=<syngen>/src` rather than an install. An **installed `syngen` wheel of a different version** then silently shadows or mismatches the source you are editing, producing failures (or false passes) that have nothing to do with your change. Before trusting any test result, compare the installed version to this source tree's `src/syngen/VERSION`:
+
+```bash
+"${PY}" - <<'PY'
+from importlib.metadata import version, PackageNotFoundError
+from pathlib import Path
+src = Path("src/syngen/VERSION").read_text().strip()
+try:
+    inst = version("syngen")
+except PackageNotFoundError:
+    inst = "(not installed)"
+print(f"source={src}  installed={inst}")
+print("MATCH" if inst == src else "DRIFT — prefer PYTHONPATH=<syngen>/src, or reinstall the matching wheel (escalation)")
+PY
+```
+
+On `DRIFT`, do **not** `pip install --upgrade` (denied by `.claude/settings.json` and a dependency change requiring escalation). Either run against the source tree with `PYTHONPATH` set, or escalate to reinstall the exact matching wheel. Report the drift in your handoff.
+
 ### Step 3 — verify pytest collection
 
 ```bash

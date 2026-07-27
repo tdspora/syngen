@@ -14,6 +14,7 @@ from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.data_loaders import DataEncryptor
 from syngen.sdk import DataIO
 
+
 SUCCESSFUL_MESSAGE = "The test passed successfully"
 # Fernet test keys are generated per pytest session.
 # If FERNET_KEY / FERNET_KEY_2 are already set in the environment (e.g. by CI),

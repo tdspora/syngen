@@ -62,6 +62,30 @@ def test_date_feature_fit_transform_with_numpy_datetime64(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_date_feature_fit_transform_with_tz_aware_datetime64(rp_logger):
+    """EPMCTDM-7581 (Avro counterpart): a tz-aware datetime64[ns, UTC] column (as
+    produced by Avro 'timestamp' logical types via pandavro) must not poison the
+    date feature. The timezone is stripped during conversion and every transformed
+    value stays finite."""
+    rp_logger.info(
+        "Testing 'DateFeature.fit'/'transform' on a tz-aware datetime64[ns, UTC] column"
+    )
+    dates = pd.date_range("2015-01-01", periods=300, freq="D").tz_localize("UTC")
+    data = pd.DataFrame({"created_ts": dates})
+    assert str(data["created_ts"].dtype) == "datetime64[ns, UTC]"
+
+    feature = DateFeature(name="created_ts")
+    feature.fit(
+        data,
+        date_mapping={"created_ts": "%Y-%m-%d %H:%M:%S%z"},
+        to_datetime_conversion={"created_ts": True},
+    )
+    transformed = np.asarray(feature.transform(data), dtype=float)
+    assert np.isfinite(transformed).all()
+    assert not np.isnan(transformed).any()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_inverse_transform_of_char_based_text_feature(rp_logger):
     rp_logger.info(
         "Testing the method 'inverse_transform' of the class CharBasedTextFeature"

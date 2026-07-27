@@ -188,7 +188,7 @@ class ContinuousFeature(BaseFeature):
         self.feature_type = "numeric"
 
     def fit(self, data: pd.DataFrame, **kwargs):
-        self.is_positive = (data >= 0).sum().item() >= len(data) * 0.99
+        self.is_positive = (data >= 0).sum().item() >= len(data)
         self.scaler = self._select_scaler(data)
         self.scaler.fit(data)
         self.input_dimension = data.shape[1]
@@ -714,6 +714,7 @@ class DateFeature(BaseFeature):
     def fit(self, data, **kwargs):
         self.date_format = kwargs["date_mapping"].get(self.original_name)
         self.to_datetime_conversion = kwargs["to_datetime_conversion"].get(self.original_name)
+        self.date_restore_type = kwargs.get("date_restore_types", {}).get(self.original_name)
         self.data = chain.from_iterable(data.values)
         self.data = pd.DataFrame(
             list(
@@ -742,7 +743,8 @@ class DateFeature(BaseFeature):
                 lambda t: convert_to_date(
                     value=t,
                     date_format=self.date_format,
-                    to_datetime_conversion=self.to_datetime_conversion
+                    to_datetime_conversion=self.to_datetime_conversion,
+                    date_restore_type=self.date_restore_type
                 ),
                 unscaled,
             )

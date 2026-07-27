@@ -14,11 +14,11 @@ from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
-from syngen.ml.context.context import global_context
+from syngen.ml.format_settings import set_format_settings
 from syngen.ml.utils import ProgressBarHandler, get_source_path_extension
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
-from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.validation_schema import ValidationMetadataSchema
 
 
 @define
@@ -43,10 +43,10 @@ class Worker:
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
-        self.metadata = self.__fetch_metadata()
-        self._update_metadata()
+        self.__fetch_metadata()
         self.__validate_schema()
         self._clean_up()
+        self._update_metadata()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
@@ -128,7 +128,7 @@ class Worker:
         """
         Validate the schema of the metadata file
         """
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=self.metadata,
             validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
@@ -238,16 +238,15 @@ class Worker:
         elif self.table_name:
             self._update_metadata_for_table()
 
-    def __fetch_metadata(self) -> Dict:
+    def __fetch_metadata(self):
         """
         Fetch the metadata for training or infer process
         """
         if self.metadata_path:
-            metadata = MetadataLoader(path=self.metadata_path).load_data()
-            return metadata
+            self.metadata = MetadataLoader(path=self.metadata_path).load_data()
         elif self.table_name:
             source = self.settings.get("source")
-            metadata = {
+            self.metadata = {
                 self.table_name: {
                     "train_settings": {
                         "source": source,
@@ -258,7 +257,6 @@ class Worker:
                     "format": {}
                 }
             }
-            return metadata
 
     @staticmethod
     def _get_tables_without_keys(config_of_tables: Dict) -> List[str]:
@@ -432,7 +430,6 @@ class Worker:
         Train process for a single table
         """
         config_of_table = metadata[table]
-        global_context(config_of_table.get("format", {}))
         train_settings = config_of_table["train_settings"]
         log_message = f"Training process of the table - '{table}' has started"
         logger.info(log_message)
@@ -479,6 +476,7 @@ class Worker:
         delta = 0.49 / len(tables_for_training)
 
         for table in tables_for_training:
+            set_format_settings(metadata_for_training[table].get("format", {}))
             data, schema = self.__preprocess_data(table_name=table)
             self._train_table(data, schema, table, metadata_for_training, delta)
 
@@ -517,12 +515,28 @@ class Worker:
             ), None
         )
 
+    def _get_row_subset_for_table(self, table: str) -> int:
+        """
+        Resolve row subset for a table, including surrogate tables
+        produced by PK/FK split.
+        """
+        if table in self.row_subset_mapping:
+            return self.row_subset_mapping[table]
+
+        parent_table = self._find_parent_table(table)
+        if parent_table and parent_table in self.row_subset_mapping:
+            return self.row_subset_mapping[parent_table]
+
+        raise KeyError(
+            f"Row subset for table '{table}' is missing in row_subset_mapping"
+        )
+
     def _infer_table(self, table, metadata, type_of_process, delta, is_nested=False):
         """
         Infer process for a single table
         """
         config_of_table = metadata[table]
-        global_context(config_of_table.get("format", {}))
+        set_format_settings(config_of_table.get("format", {}))
         log_message = f"Infer process of the table - '{table}' has started"
         logger.info(log_message)
         ProgressBarHandler().set_progress(delta=delta, message=log_message)
@@ -541,7 +555,7 @@ class Worker:
             size=(
                 settings.get("size")
                 if type_of_process == "infer"
-                else self.row_subset_mapping[table]
+                else self._get_row_subset_for_table(table)
             ),
             table_name=table,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,

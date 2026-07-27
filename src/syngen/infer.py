@@ -1,4 +1,4 @@
-from typing import Optional, List, Union, Tuple, Callable
+from typing import Optional, List, Union, Callable, Literal
 
 import click
 from loguru import logger
@@ -8,9 +8,10 @@ from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     get_reports,
-    fetch_env_variables
+    fetch_env_variables,
+    timing
 )
-from syngen.ml.validation_schema import ReportTypes
+from syngen.ml.validation_schema import ReportTypes, ValidationSettingsSchema
 
 
 def validate_required_parameters(
@@ -32,13 +33,18 @@ def validate_required_parameters(
 
 def launch_infer(
     metadata_path: Optional[str] = None,
-    size: Optional[int] = 100,
+    size: int = 100,
     table_name: Optional[str] = None,
     run_parallel: bool = False,
     batch_size: Optional[int] = None,
-    reports: Union[List[str], Tuple[str], str] = "none",
+    reports: Union[
+        Literal["accuracy", "metrics_only", "all", "none"],
+        List[Literal["accuracy", "metrics_only"]]
+        ] = "none",
     random_seed: Optional[int] = None,
-    log_level: str = "INFO",
+    log_level: Literal[
+        "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+        ] = "INFO",
     fernet_key: Optional[str] = None,
     loader: Optional[Callable[[str], pd.DataFrame]] = None
 ):
@@ -49,6 +55,23 @@ def launch_infer(
         metadata_path=metadata_path
     )
 
+    reports = get_reports(
+        value=reports,
+        report_types=ReportTypes(),
+        type_of_process="infer"
+    )
+    ValidationSettingsSchema(
+        settings={
+            "size": size,
+            "run_parallel": run_parallel,
+            "batch_size": batch_size,
+            "reports": reports,
+            "random_seed": random_seed,
+            "fernet_key": fernet_key
+        },
+        process="infer"
+    ).validate_schema()
+
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
 
     worker = Worker(
@@ -58,11 +81,7 @@ def launch_infer(
             "size": size,
             "run_parallel": run_parallel,
             "batch_size": batch_size,
-            "reports": get_reports(
-                value=reports,
-                report_types=ReportTypes(),
-                type_of_process="infer"
-            ),
+            "reports": reports,
             "random_seed": random_seed
         },
         log_level=log_level,
@@ -147,9 +166,10 @@ def launch_infer(
     help="The name of the environment variable that kept the value of the Fernet key "
          "to decrypt the sensitive data stored on the disk",
 )
+@timing
 def cli_launch_infer(
     metadata_path: Optional[str],
-    size: Optional[int],
+    size: int,
     table_name: Optional[str],
     run_parallel: bool,
     batch_size: Optional[int],

@@ -20,3 +20,12 @@ Review Syngen base library changes for security issues.
 
 - Read-only: do not edit files.
 - Do not inspect `.env` files or live credentials.
+- **Do not read full contents of large flat/tabular or binary files** — this includes
+  `.csv`, `.tsv`, `.xlsx`, `.xls`, `.parquet`, `.json` data dumps, `.pkl`, `.h5`, `.npz`,
+  `.zip`, `.png`/`.jpg`, and similar dataset/artifact formats, wherever they appear
+  (including `examples/`, test fixtures, or accidentally-staged paths).
+  For these, use `Glob`/`Grep` (or `git status`/`git diff --stat` if available) to
+  confirm *whether* such a file is newly added or modified in this change — that
+  alone answers the "Generated artifact commits" and "Data flow" checklist items.
+  Only read into a file's content if it is small (a few KB) and directly relevant,
+  e.g. a small fixture explicitly reviewed for embedded secrets.

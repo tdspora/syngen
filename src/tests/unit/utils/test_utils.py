@@ -1,8 +1,9 @@
 import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone, date, time
 
 import numpy as np
+import pandas as pd
 
 from syngen.ml.utils import (
     slugify_attribute,
@@ -114,6 +115,52 @@ def test_datetime_to_timestamp_numpy_datetime64(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+@pytest.mark.parametrize("time_value, expected_seconds", [
+    # midnight → 0
+    (time(0, 0, 0), 0.0),
+    # whole hours
+    (time(1, 0, 0), 3600.0),
+    (time(12, 0, 0), 43200.0),
+    (time(23, 0, 0), 82800.0),
+    # hours + minutes + seconds
+    (time(2, 30, 0), 9000.0),
+    (time(14, 30, 0), 52200.0),
+    (time(23, 59, 59), 86399.0),
+    # sub-second precision (microseconds)
+    (time(0, 0, 0, 500000), 0.5),
+    (time(10, 30, 45, 500000), 37845.5),
+    (time(0, 0, 0, 1), 0.000001),
+])
+def test_datetime_to_timestamp_datetime_time(time_value, expected_seconds, rp_logger):
+    """EPMCTDM-7585: 'datetime_to_timestamp' must handle datetime.time values
+    produced by fastavro for Avro 'time-millis' and 'time-micros' logical types.
+    Previously such inputs fell through all branches and returned None, turning
+    the time feature into NaN and aborting model training."""
+    rp_logger.info(
+        f"Test 'datetime_to_timestamp' with datetime.time input: {time_value}"
+    )
+    result = datetime_to_timestamp(time_value, "%H:%M:%S")
+
+    assert result is not None, "datetime.time must not return None (becomes NaN in training)"
+    assert not np.isnan(result), "datetime.time must not produce NaN"
+    assert np.isfinite(result), "datetime.time must produce a finite numeric value"
+    assert result == pytest.approx(expected_seconds), (
+        f"time({time_value}) should encode as {expected_seconds}s since midnight"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_datetime_to_timestamp_datetime_time_null_degrades_to_nan(rp_logger):
+    """Null sentinels passed alongside datetime.time values must still return NaN,
+    not crash or silently skip the null-guard branch."""
+    rp_logger.info(
+        "Test 'datetime_to_timestamp' null-guard is preserved for time-column nulls"
+    )
+    assert np.isnan(datetime_to_timestamp(np.nan, "%H:%M:%S"))
+    assert np.isnan(datetime_to_timestamp(None, "%H:%M:%S"))
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_timestamp_to_datetime(rp_logger):
     test_cases = [
         (-62135596800.0, datetime(1, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)),
@@ -153,21 +200,70 @@ def test_timestamp_to_datetime_with_delta(rp_logger):
 
 @pytest.mark.parametrize(
     "value, date_format, na_values, expected_result", [
+        # valid string date
         (
             "01-02-2023", "%d-%m-%Y", [], 1675209600.0
         ),
         (
+            "01-02-2023", "%d-%m-%Y", None, 1675209600.0
+        ),
+        # datetime object
+        (
+            datetime(2023, 2, 1), "%d-%m-%Y", [], 1675209600.0
+        ),
+        # date object
+        (
+            date(2023, 2, 1), "%d-%m-%Y", [], 1675209600.0
+        ),
+        # numpy datetime64
+        (
+            np.datetime64("2023-02-01"), "%d-%m-%Y", [], 1675209600.0
+        ),
+        # datetime.time object — encoded as seconds since midnight
+        (
+            time(12, 30, 0), "%H:%M:%S", [], 45000.0
+        ),
+        # value in na_values list → None
+        (
             "label", "%d-%m-%Y", ["label"], None
         ),
+        # value is None → None
         (
             None, "%d-%m-%Y", [], None
-        )
+        ),
+        # pd.NA (ambiguous boolean) → None
+        (
+            pd.NA, "%d-%m-%Y", [], None
+        ),
+        (
+            pd.NA, "%d-%m-%Y", None, None
+        ),
+        (
+            pd.NA, "%d-%m-%Y", ["N/A", "missing"], None
+        ),
+        # np.nan → None
+        (
+            np.nan, "%d-%m-%Y", ["N/A", "missing"], None
+        ),
+        # "N/A" → None
+        (
+            "N/A", "%d-%m-%Y", ["N/A", "missing"], None
+        ),
+        # unrecognised type: datetime_to_timestamp returns None implicitly,
+        (
+            42, "%d-%m-%Y", [], None
+        ),
     ]
 )
 def test_convert_date_to_timestamp(value, date_format, na_values, expected_result, rp_logger):
     rp_logger.info("Test the function 'convert_date_to_timestamp'")
     assert convert_date_to_timestamp(value, date_format, na_values) == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+# strftime formatting of year 1 is platform-dependent:
+# Linux renders it as "1", Windows renders it as "0001".
+_MIN_DATE_STR = datetime(1, 1, 1).strftime("%d-%m-%Y")
 
 
 @pytest.mark.parametrize("value, date_format, to_datetime_conversion, expected_result", [
@@ -177,10 +273,67 @@ def test_convert_date_to_timestamp(value, date_format, na_values, expected_resul
     (1675209600.0, "%Y-%m-%d", True, datetime(2023, 2, 1, 0, 0)),
     (1680480000.0, "%Y-%m-%d", True, datetime(2023, 4, 3, 0, 0)),
     (1685923200.0, "%Y-%m-%d", True, datetime(2023, 6, 5, 0, 0)),
+    # date_format=None falls back to "%Y-%m-%d %H:%M:%S"
+    (1675209600.0, None, False, "2023-02-01 00:00:00"),
+    # MAX boundary is clamped to datetime(9999, 12, 31, 23, 59, 59, 999999)
+    (253402300800, "%d-%m-%Y", False, "31-12-9999"),
+    (253402300800, "%d-%m-%Y", True, datetime(9999, 12, 31, 23, 59, 59, 999999)),
+    # MIN boundary is clamped to datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc);
+    # year-1 formatting differs by OS (Linux: "1", Windows: "0001")
+    (-62135510400, "%d-%m-%Y", False, _MIN_DATE_STR),
+    (-62135510400, "%d-%m-%Y", True, datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc)),
 ])
 def test_convert_to_date(value, date_format, expected_result, to_datetime_conversion, rp_logger):
     rp_logger.info("Test the function 'convert_to_date'")
     assert convert_to_date(value, date_format, to_datetime_conversion) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "value, date_format, to_datetime_conversion, date_restore_type, expected_result",
+    [
+        # restore_type="date" → returns datetime.date when to_datetime_conversion=True
+        (1675209600.0, "%d-%m-%Y", True, "date", date(2023, 2, 1)),
+        # restore_type="date" → returns formatted string when to_datetime_conversion=False
+        (1675209600.0, "%d-%m-%Y", False, "date", "01-02-2023"),
+        # restore_type="datetime" behaves the same as the default (None)
+        (1675209600.0, "%Y-%m-%d", True, "datetime", datetime(2023, 2, 1, 0, 0)),
+        # restore_type="time" with to_datetime_conversion=True → datetime.time object
+        (3723.0, "%H:%M:%S", True, "time", time(1, 2, 3)),
+        # restore_type="time" with to_datetime_conversion=False → "HH:MM:SS" string
+        (3723.0, "%H:%M:%S", False, "time", "01:02:03"),
+        # restore_type="time" with sub-second precision → "HH:MM:SS.ffffff" string
+        (3723.5, "%H:%M:%S", False, "time", "01:02:03.500000"),
+        # restore_type="time" with sub-second precision,
+        # to_datetime_conversion=True → time with microseconds
+        (3723.5, "%H:%M:%S", True, "time", time(1, 2, 3, 500000)),
+    ])
+def test_convert_to_date_with_restore_type(
+    value, date_format, to_datetime_conversion, date_restore_type, expected_result, rp_logger
+):
+    rp_logger.info("Test 'convert_to_date' with the 'date_restore_type' parameter")
+    assert convert_to_date(
+        value, date_format, to_datetime_conversion, date_restore_type
+    ) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("value", [
+    3723.9999995,   # round(fractional * 1e6) == 1_000_000 without upper clamp
+    -1.5,           # seconds - int(seconds) == -0.5 → negative microsecond without % 1
+    -37845.0,       # negative seconds from model output
+    86401.5,        # seconds > 86400, normalised to [0, 86400)
+])
+def test_timestamp_to_datetime_time_edge_cases(value, rp_logger):
+    """EPMCTDM-7585: timestamp_to_datetime with restore_type='time' must not raise
+    ValueError for out-of-range or floating-point-rounded microseconds."""
+    rp_logger.info(
+        "Test that 'timestamp_to_datetime' with restore_type='time' handles "
+        "edge cases without raising ValueError"
+    )
+    result = timestamp_to_datetime(value, restore_type="time")
+    assert isinstance(result, time)
+    assert 0 <= result.microsecond <= 999_999
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
