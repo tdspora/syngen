@@ -1,6 +1,6 @@
 ---
 name: syngen-bootstrap
-description: Use to verify or set up the local Syngen development environment — creates a `.venv` if missing, installs `requirements.txt`, probes runtime imports, and confirms pytest collection works. Invoke this on a fresh checkout, when pytest reports `ModuleNotFoundError`, or when `python -m build / twine / mypy` says the tool is not installed.
+description: Use to verify or set up the local Syngen development environment — creates a `.venv` if missing, installs the project and its dependencies from `pyproject.toml`, probes runtime imports, and confirms pytest collection works. Invoke this on a fresh checkout, when pytest reports `ModuleNotFoundError`, or when `python -m build / twine / mypy` says the tool is not installed.
 ---
 
 # Syngen Bootstrap
@@ -48,7 +48,6 @@ If the version is not 3.10.x or 3.11.x (the supported range), the venv is stale 
 APPROVAL REQUIRED: create .venv at ${REPO_ROOT}/.venv via
     python3.11 -m venv "${REPO_ROOT}/.venv"
     "${REPO_ROOT}/.venv/bin/python" -m pip install --upgrade pip
-    "${REPO_ROOT}/.venv/bin/python" -m pip install -r "${REPO_ROOT}/requirements.txt"
     "${REPO_ROOT}/.venv/bin/python" -m pip install -e "${REPO_ROOT}"
     "${REPO_ROOT}/.venv/bin/python" -m pip install build twine
 ```
@@ -57,8 +56,8 @@ Wait for `approved` per CLAUDE.md "Approval contract". After approval, run each 
 
 - Use `python3.11` (Python 3.10 also works; the project supports both).
 - The `pip install --upgrade pip` step is a benign upgrade of pip itself inside the new venv — this is the only `--upgrade` use the harness permits, and it is bounded to the freshly created venv. All other `pip install --upgrade` invocations remain denied by `.claude/settings.json`.
-- The `-e .` step installs the package in editable mode so the `train`, `infer`, and `syngen` console scripts are created on the venv's PATH.
-- `build` and `twine` are dev-only release tools; install them with the venv since the project does not list them in `requirements.txt`.
+- The `-e .` step installs the package in editable mode so the `train`, `infer`, and `syngen` console scripts are created on the venv's PATH. It also pulls every runtime dependency, since `pyproject.toml` is the single source of truth for them — there is no separate requirements file to install first.
+- `build` and `twine` are dev-only release tools; install them with the venv since the project does not list them in `pyproject.toml`.
 
 **Branch C — user denies venv creation.** Fall back to the system Python:
 
@@ -158,13 +157,13 @@ These should not exist on a fresh checkout. If they do, they are leftover from a
 - Fresh `git clone`.
 - Any `python -m pytest …` reports `ModuleNotFoundError`.
 - Before running a release wheel build, `mypy`, or `pip-audit`.
-- After a change to `requirements.txt`, `setup.cfg`, `pyproject.toml`, or `MANIFEST.in`.
+- After a change to `pyproject.toml`.
 - After a Python interpreter upgrade.
 
 ## Do not
 
 - Do not `pip install --upgrade <package>` for any package other than `pip` itself inside a freshly created venv. All other `--upgrade` / `--force-reinstall` / `-U` invocations are denied by `.claude/settings.json` because they constitute dependency changes that must go through `syngen-release-engineer`.
-- Do not edit `requirements.txt` to satisfy a missing import — escalate via the Approval contract.
+- Do not edit the `dependencies` list in `pyproject.toml` to satisfy a missing import — escalate via the Approval contract.
 - Do not commit the `.venv` directory.
 - Do not restore the literal Fernet keys that used to live in `src/tests/conftest.py`. The current `os.environ.setdefault(..., Fernet.generate_key().decode())` pattern is the correct one. If a test fails because it expects a specific encrypted payload, the test is wrong — fix the test, not the fixture.
 

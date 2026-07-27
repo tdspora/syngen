@@ -11,7 +11,7 @@ When a term appears in `[[brackets]]` it is defined elsewhere in this document. 
 | Term | Definition you can use in requirements |
 |---|---|
 | **Syngen (base)** | The open-source Python library for synthetic tabular data generation. Distributed as the `syngen` wheel on PyPI; consumed by **[[tdm_syngen]]** as a pinned dependency. |
-| **CLI entry points** | Three console scripts shipped by the wheel (per `setup.cfg`): `train`, `infer`, and `syngen`. The "launch" names (`launch_train`, `launch_infer`) refer to the Python functions inside the package, not the CLI binaries. |
+| **CLI entry points** | Three console scripts shipped by the wheel (per `pyproject.toml [project.scripts]`): `train`, `infer`, and `syngen`. Their targets are the click-wrapped `cli_launch_train` / `cli_launch_infer` functions; the bare "launch" names (`launch_train`, `launch_infer`) are the plain Python functions inside the package, not the CLI binaries. |
 | **SDK** | `Syngen` class in `src/syngen/sdk.py`. Programmatic Python interface for embedding the library. |
 | **Public API** | The set of names this library guarantees to keep stable for downstream consumers: the three [[CLI entry points]], the [[SDK]] class and its public methods, the [[validation schema]] surface, and the [[metadata YAML]] vocabulary. Any change here is a [[backward-compatibility]] event. |
 

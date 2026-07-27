@@ -35,7 +35,7 @@ ${PY} -m flake8 --max-line-length 99 src/syngen --count --statistics
 ```
 
 Notes:
-- `--max-line-length` and `--max-complexity` are intentionally NOT passed on the command line. The repo's `.flake8` file (and `setup.cfg`) is the source of truth for those values; passing flags would diverge from CI.
+- `--max-line-length` and `--max-complexity` are intentionally NOT passed on the command line. The repo's `.flake8` file is the source of truth for those values; passing flags would diverge from CI.
 - Scope lint to changed paths (`src/syngen/<subpath>`), not the whole repo, to keep feedback fast.
 
 ## Escalation
