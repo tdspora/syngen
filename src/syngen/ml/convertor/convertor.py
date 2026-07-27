@@ -344,7 +344,9 @@ class Convertor:
                     "If this is not the case, there might be issues with the "
                     "consistency between the data and the provided schema."
                 )
-                self.preprocessed_df[column] = self.preprocessed_df[column].map(self._to_tuples_recursive)
+                self.preprocessed_df[column] = self.preprocessed_df[column].map(
+                    self._to_tuples_recursive
+                )
             if "list" in data_type:
                 self.preprocessed_df[column] = (
                     self.preprocessed_df[column].map(
@@ -479,7 +481,7 @@ class AvroConvertor(Convertor):
         custom_schema["date_types_to_restore"] = dict()
         for column, data_type in self.original_schema.items():
             fields = custom_schema["fields"]
-            type_names, logical_types = _extract_type_names(data_type)
+            type_names, logical_types = _extract_types(data_type)
 
             if "boolean" in type_names:
                 fields[column] = "boolean"

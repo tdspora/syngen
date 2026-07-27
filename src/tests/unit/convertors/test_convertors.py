@@ -298,7 +298,7 @@ def test_initiate_avro_convertor_with_schema_containing_logical_date_types(rp_lo
         "timestamp_millis_col_nullable": pd.DatetimeTZDtype(tz="UTC"),
     }
 
-    assert convertor.converted_schema == {
+    assert convertor.custom_schema == {
         "date_types_to_restore": {
             "date_col": "date",
             "date_col_nullable": "date",
@@ -551,8 +551,8 @@ def test_preprocess_df_maps_avro_logical_date_types_to_date(
 
     convertor = AvroConvertor({"Test": avro_type}, df)
 
-    assert convertor.converted_schema["fields"] == {"Test": "date"}
-    assert convertor.converted_schema["date_types_to_restore"] == {
+    assert convertor.custom_schema["fields"] == {"Test": "date"}
+    assert convertor.custom_schema["date_types_to_restore"] == {
         "Test": expected_dtype_to_restore
     }
     assert convertor.preprocessed_df["Test"].dtype == expected_dtype
