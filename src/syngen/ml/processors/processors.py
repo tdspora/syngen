@@ -538,13 +538,13 @@ class PostprocessHandler(Processor):
             # due to NaN values in the original data
             original_schema = fetch_config(
                 config_pickle_path=f"model_artifacts/tmp_store/{slugify(table_name)}"
-                               f"/original_schema_{slugify(table_name)}.pkl"
+                                   f"/original_schema_{slugify(table_name)}.pkl"
             )
             # only if there is no original schema
             if original_schema is None:
                 dataset_config = fetch_config(
                     config_pickle_path=f"model_artifacts/resources/{slugify(table_name)}/vae/"
-                                   f"checkpoints/model_dataset.pkl"
+                                       f"checkpoints/model_dataset.pkl"
                 )
                 # restore integer columns that were converted to float
                 # due to NaN values or nan-labels in the original data

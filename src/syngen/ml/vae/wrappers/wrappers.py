@@ -558,7 +558,8 @@ class VAEWrapper(BaseWrapper):
 
         kl_loss = kl_divergence(mu, log_sigma)
         # KL weight 0: reported under `kl_loss` but excluded from the optimized
-        # total — re-enabling it is the prime collapse suspect (hypothesis #1).
+        # total — mirrors the TF graph, which registers `add_loss(kl_loss * 0)`
+        # (model.py:129 on `main`).
         loss = recon_total + 0.0 * kl_loss
 
         loss.backward()

@@ -946,18 +946,32 @@ class Dataset:
         date_text = self.df[column].dropna()
 
         n_samples = min(100, len(date_text))
-        sample = date_text.sample(n_samples).values
+        sample = date_text.sample(n_samples, random_state=42).values
 
         types = [self.__get_date_format(str(i)) for i in sample]
 
         if not any(types):
             return "%d-%m-%Y"
 
-        most_common = Counter(types).most_common()
-        if most_common[0][0] is None:
-            chosen_format = most_common[1][0] if len(most_common) > 1 else "%d-%m-%Y"
+        counter = Counter(t for t in types if t is not None)
+
+        # A "%d before %m" guess can only be produced for a date whose first field is > 12,
+        # which is impossible in month-first data - so the mere presence of such a guess is
+        # proof the column is day-first. Without this, ambiguous (day <= 12) dates - which
+        # guess_datetime_format defaults to "%m/%d/%Y" - can outnumber the genuine day-first
+        # evidence in the random sample and flip the detected format nondeterministically.
+        dayfirst_formats = {
+            fmt: count for fmt, count in counter.items()
+            if "%d" in fmt and "%m" in fmt and fmt.index("%d") < fmt.index("%m")
+        }
+        if dayfirst_formats:
+            chosen_format = Counter(dayfirst_formats).most_common()[0][0]
         else:
-            chosen_format = most_common[0][0]
+            chosen_format = counter.most_common()[0][0]
+
+        logger.info(
+            f"The date format '{chosen_format}' has been assigned to the column '{column}'"
+        )
 
         return chosen_format
 
