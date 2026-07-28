@@ -25,6 +25,13 @@ from syngen.ml.utils import (
 )
 
 KURTOSIS_THRESHOLD = 50  # threshold for kurtosis to consider extreme outliers
+# The normality test that selects a column's scaler runs on a 500-row subsample and its
+# p-value is compared against a hard 0.05 threshold. Drawn unseeded, a column whose true
+# p-value sits near that threshold picks a different scaler between runs - a different
+# transform, so a different model and different generated data at a fixed seed. This
+# happens during train-time fitting, before any model-side seeding takes effect
+# (EPMCTDM-7630). Value matches the train-time fitting seed in dataset.py.
+NORMALITY_SAMPLE_SEED = 42
 _CE_EPS = 1e-7  # clip for categorical cross-entropy, mirrors keras epsilon
 
 
@@ -282,7 +289,9 @@ class ContinuousFeature(BaseFeature):
         data = data.iloc[:, 0]
 
         kurt = kurtosis(data)
-        normality = shapiro(data.sample(n=min(len(data), 500))).pvalue
+        normality = shapiro(
+            data.sample(n=min(len(data), 500), random_state=NORMALITY_SAMPLE_SEED)
+        ).pvalue
 
         if normality >= 0.05:
             return StandardScaler()
@@ -625,7 +634,11 @@ class DateFeature(BaseFeature):
             )
         )
         self.is_positive = (self.data >= 0).sum().item() >= len(self.data) * 0.99
-        normality = shapiro(self.data.sample(n=min(len(self.data), 500))).pvalue
+        normality = shapiro(
+            self.data.sample(
+                n=min(len(self.data), 500), random_state=NORMALITY_SAMPLE_SEED
+            )
+        ).pvalue
         self.data = np.array(self.data).reshape(-1, 1)
 
         self.scaler = StandardScaler() if normality >= 0.05 else MinMaxScaler()

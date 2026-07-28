@@ -14,6 +14,7 @@ from torch.utils.data import (
     DataLoader as TorchDataLoader,
     Dataset as TorchDataset,
     SequentialSampler,
+    default_collate,
 )
 import matplotlib.pyplot as plt
 import time
@@ -48,6 +49,63 @@ def _seed_everything(seed: int):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+
+
+class _FeatureTuples(TorchDataset):
+    """Holds the transformed per-feature tensors and serves them as batch tuples.
+
+    ``__len__`` reports the **row** count (not the batch count), which consumers rely
+    on to derive a sampling rate - see ``VAEWrapper._create_batched_dataset``.
+
+    Module-level rather than nested inside that method so the dataset stays picklable:
+    a function-local class cannot be sent to worker processes under the ``spawn`` start
+    method, which is the default on Windows and macOS (EPMCTDM-7630).
+    """
+
+    def __init__(self, tensors):
+        self.tensors = tensors
+        self.n = tensors[0].shape[0]
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, idx):
+        # With automatic batching off, the fetcher hands over the whole index list at
+        # once, so fancy-index a complete batch in one op per feature. With it on,
+        # indices arrive one at a time and re-collating is left to
+        # ``collate_feature_batch``.
+        if isinstance(idx, list):
+            index = torch.as_tensor(idx)
+            return tuple(tensor[index] for tensor in self.tensors)
+        return tuple(tensor[idx] for tensor in self.tensors)
+
+
+def collate_feature_batch(batch):
+    """Return the per-feature batch as a tuple of stacked tensors.
+
+    Sampler-agnostic on purpose, because which shape arrives depends on whether
+    PyTorch's automatic batching is on:
+
+    * **Off** - this loader's own arrangement (a ``BatchSampler`` in the ``sampler``
+      slot with ``batch_size=None``). The fetcher hands the whole index list to
+      ``__getitem__``, which fancy-indexes a complete batch, so an already-batched
+      tuple of tensors arrives here and is passed straight through.
+    * **On** - what any consumer that installs its own ``batch_sampler`` gets. The
+      fetcher then gathers one row per index, so a *list of per-row tuples* arrives
+      and has to be re-collated.
+
+    Returning a ``tuple`` in both cases keeps the contract that a batch is a tuple of
+    per-feature tensors in ``Dataset.transform`` order - the order ``_train_step``
+    zips against ``vae.feature_order``.
+
+    Must stay a module-level function rather than a lambda so the loader remains
+    picklable for ``num_workers > 0`` under the ``spawn`` start method. The dataset
+    class ``_FeatureTuples`` is hoisted to module level for the same reason - fixing
+    only one of the two leaves the loader unpicklable (EPMCTDM-7630).
+    """
+    if isinstance(batch, tuple) and batch and torch.is_tensor(batch[0]):
+        return batch
+    return tuple(default_collate(batch))
 
 
 class BaseWrapper(ABC):
@@ -500,11 +558,14 @@ class VAEWrapper(BaseWrapper):
         ops plus ``F`` stacks per batch - ~3.4 M index ops over a 15-epoch housing
         run (EPMCTDM-7630).
 
-        ``__len__`` deliberately reports the **row** count, not the batch count: on
-        the enterprise differential-privacy path Opacus wraps this loader in a
-        ``DPDataLoader`` whose ``UniformWithReplacementSampler`` derives the Poisson
-        sample rate from ``len(dataset)``. A batch-level dataset would silently give
-        it the wrong rate, so the row-level contract is load-bearing.
+        ``__len__`` deliberately reports the **row** count, not the batch count, and
+        ``drop_last=True`` keeps ``len(loader) == rows // batch_size``. Both are
+        load-bearing for consumers that derive a sampling rate from these numbers - a
+        batch-level ``__len__`` would silently change that rate rather than fail - so
+        do not "simplify" either one.
+
+        Batch construction is sampler-agnostic: see ``collate_feature_batch`` for the
+        two shapes a batch can arrive in and why both are handled.
         """
         # Validate the raw (numpy) transformed arrays for NaN/inf before
         # converting to tensors, then tensorize for the PyTorch training loop.
@@ -512,37 +573,19 @@ class VAEWrapper(BaseWrapper):
         self._validate_transformed_data(raw_transformed)
         transformed_data = _to_tensors(raw_transformed)
 
-        class _FeatureTuples(TorchDataset):
-            def __init__(self, tensors):
-                self.tensors = tensors
-                self.n = tensors[0].shape[0]
-
-            def __len__(self):
-                return self.n
-
-            def __getitem__(self, idx):
-                # A BatchSampler hands over a list of indices; a plain sampler (or
-                # Opacus, which substitutes its own) hands over one index at a time.
-                if isinstance(idx, list):
-                    index = torch.as_tensor(idx)
-                    return tuple(tensor[index] for tensor in self.tensors)
-                return tuple(tensor[idx] for tensor in self.tensors)
-
         dataset = _FeatureTuples(transformed_data)
         batch_sampler = BatchSampler(
             SequentialSampler(dataset), batch_size=self.batch_size, drop_last=True
         )
-        # ``batch_size=None`` disables the automatic-batching layer, so the tuple
-        # returned above is passed through as the batch instead of being re-collated.
-        # An explicit identity ``collate_fn`` is still required: the default
-        # ``default_convert`` rebuilds any sequence it is handed as a *list*, and the
-        # batch has always been a tuple (both here and in the TF-era ``tf.data.zip``
-        # path), so leaving it would quietly change that contract for every consumer.
+        # ``batch_size=None`` disables automatic batching, so ``__getitem__`` returns a
+        # whole batch. An explicit ``collate_fn`` is still required: the default
+        # ``default_convert`` would rebuild the tuple as a *list*, and the batch has
+        # always been a tuple (here and in the TF-era ``tf.data.zip`` path).
         return TorchDataLoader(
             dataset,
             sampler=batch_sampler,
             batch_size=None,
-            collate_fn=lambda batch: batch,
+            collate_fn=collate_feature_batch,
         )
 
     @staticmethod
