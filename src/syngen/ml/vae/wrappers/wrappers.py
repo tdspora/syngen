@@ -9,7 +9,12 @@ import warnings
 import pickle
 import random
 import torch
-from torch.utils.data import DataLoader as TorchDataLoader, Dataset as TorchDataset
+from torch.utils.data import (
+    BatchSampler,
+    DataLoader as TorchDataLoader,
+    Dataset as TorchDataset,
+    SequentialSampler,
+)
 import matplotlib.pyplot as plt
 import time
 import tqdm
@@ -463,7 +468,13 @@ class VAEWrapper(BaseWrapper):
 
     @staticmethod
     def _create_optimizer(model, learning_rate):
-        return torch.optim.Adam(model.parameters(), lr=learning_rate)
+        # ``foreach=True`` batches the per-parameter update into a handful of
+        # ``_foreach_*`` calls. Left at the default, torch only enables it for CUDA
+        # params, so a CPU install silently takes ``_single_tensor_adam``: a Python
+        # loop issuing ~6 elementwise ops per parameter tensor, every step. On
+        # housing that is ~400 op dispatches/step and ~18% of train wall-clock.
+        # The arithmetic is unchanged - losses stay bit-identical (EPMCTDM-7630).
+        return torch.optim.Adam(model.parameters(), lr=learning_rate, foreach=True)
 
     def __create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
@@ -480,9 +491,20 @@ class VAEWrapper(BaseWrapper):
 
         Mirrors the TF ``tf.data … .batch(drop_remainder=True)`` (which did *not*
         shuffle, wrappers.py:455-469): per-feature tensors are kept in
-        ``Dataset.transform`` order so the default collate preserves the feature
-        tuple order (collapse hypothesis #4), and the final partial batch is
-        dropped (``drop_last=True``).
+        ``Dataset.transform`` order so the batch preserves the feature tuple order
+        (collapse hypothesis #4), and the final partial batch is dropped.
+
+        Batching is driven by a ``BatchSampler``, so ``__getitem__`` receives the
+        whole index list and fancy-indexes each feature once. Gathering one row at a
+        time and letting the default collate re-stack cost ``batch_size * F`` index
+        ops plus ``F`` stacks per batch - ~3.4 M index ops over a 15-epoch housing
+        run (EPMCTDM-7630).
+
+        ``__len__`` deliberately reports the **row** count, not the batch count: on
+        the enterprise differential-privacy path Opacus wraps this loader in a
+        ``DPDataLoader`` whose ``UniformWithReplacementSampler`` derives the Poisson
+        sample rate from ``len(dataset)``. A batch-level dataset would silently give
+        it the wrong rate, so the row-level contract is load-bearing.
         """
         # Validate the raw (numpy) transformed arrays for NaN/inf before
         # converting to tensors, then tensorize for the PyTorch training loop.
@@ -499,13 +521,28 @@ class VAEWrapper(BaseWrapper):
                 return self.n
 
             def __getitem__(self, idx):
+                # A BatchSampler hands over a list of indices; a plain sampler (or
+                # Opacus, which substitutes its own) hands over one index at a time.
+                if isinstance(idx, list):
+                    index = torch.as_tensor(idx)
+                    return tuple(tensor[index] for tensor in self.tensors)
                 return tuple(tensor[idx] for tensor in self.tensors)
 
+        dataset = _FeatureTuples(transformed_data)
+        batch_sampler = BatchSampler(
+            SequentialSampler(dataset), batch_size=self.batch_size, drop_last=True
+        )
+        # ``batch_size=None`` disables the automatic-batching layer, so the tuple
+        # returned above is passed through as the batch instead of being re-collated.
+        # An explicit identity ``collate_fn`` is still required: the default
+        # ``default_convert`` rebuilds any sequence it is handed as a *list*, and the
+        # batch has always been a tuple (both here and in the TF-era ``tf.data.zip``
+        # path), so leaving it would quietly change that contract for every consumer.
         return TorchDataLoader(
-            _FeatureTuples(transformed_data),
-            batch_size=self.batch_size,
-            shuffle=False,
-            drop_last=True,
+            dataset,
+            sampler=batch_sampler,
+            batch_size=None,
+            collate_fn=lambda batch: batch,
         )
 
     @staticmethod
@@ -545,7 +582,7 @@ class VAEWrapper(BaseWrapper):
                 "numpy.datetime64 date columns from Parquet/Delta sources)."
             )
 
-    def _train_step(self, batch):
+    def _train_step(self, batch: Tuple[torch.Tensor, ...]):
         self.optimizer.zero_grad()
         recons, mu, log_sigma = self.model(batch)
 

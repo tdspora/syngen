@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 import torch
 
@@ -157,4 +158,103 @@ def test_train_step_excludes_kl_from_optimized_loss(rp_logger):
     loss, kl_loss, feature_losses = stub._train_step(_make_batch(1.0))
 
     assert loss == pytest.approx(sum(feature_losses.values()))
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+class _BatchingStub:
+    """Drives the real `_create_batched_dataset` without building a full VAE."""
+
+    def __init__(self, n_rows: int, n_features: int, batch_size: int):
+        # each feature's column encodes its own index, so a reordered tuple is visible
+        self._features = [
+            np.arange(n_rows, dtype="float32").reshape(n_rows, 1) + i * 10_000
+            for i in range(n_features)
+        ]
+        self.batch_size = batch_size
+        names = [f"f{i}" for i in range(n_features)]
+        features = self._features
+
+        class _Dataset:
+            features_dict = {n: None for n in names}
+
+            @staticmethod
+            def transform(df):
+                return features
+
+        self.dataset = _Dataset()
+
+    def _validate_transformed_data(self, transformed_data):
+        return None
+
+    _create_batched_dataset = VAEWrapper._create_batched_dataset
+
+
+def test_batched_dataset_reports_row_length_for_opacus(rp_logger):
+    """EPMCTDM-7630: `__len__` must stay the ROW count, not the batch count.
+
+    On the enterprise DP path Opacus wraps this loader in a `DPDataLoader` whose
+    `UniformWithReplacementSampler` derives the Poisson sample rate from
+    `len(dataset)`. A batch-level dataset would hand it a rate wrong by a factor of
+    `batch_size` and silently weaken the privacy guarantee - no exception raised.
+    """
+    rp_logger.info("Test '_create_batched_dataset' exposes row-level __len__")
+    loader = _BatchingStub(1000, 5, 32)._create_batched_dataset(pd.DataFrame())
+
+    assert len(loader.dataset) == 1000, "must be rows, not batches"
+    assert isinstance(loader, torch.utils.data.DataLoader), "Opacus must be able to wrap it"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_batched_dataset_preserves_feature_order_and_shape(rp_logger):
+    """EPMCTDM-7630 / guardrail G7: the batch must remain a *tuple* of per-feature
+    tensors in `Dataset.transform` order.
+
+    `_train_step` zips `vae.feature_order` against this tuple, so a reordering
+    mis-assigns every feature's loss without raising. The container type matters too:
+    the DataLoader's `default_convert` rebuilds sequences as lists unless an identity
+    `collate_fn` is supplied.
+    """
+    rp_logger.info("Test '_create_batched_dataset' preserves feature order/shape")
+    n_rows, n_features, batch_size = 1000, 5, 32
+    loader = _BatchingStub(n_rows, n_features, batch_size)._create_batched_dataset(
+        pd.DataFrame()
+    )
+    batches = list(loader)
+
+    assert len(batches) == n_rows // batch_size, "partial trailing batch must be dropped"
+    first = batches[0]
+    assert isinstance(first, tuple), "batch container must stay a tuple"
+    assert len(first) == n_features
+    assert all(tuple(t.shape) == (batch_size, 1) for t in first)
+    # feature i is offset by i*10_000, so this pins the ordering
+    assert [t[0, 0].item() for t in first] == [i * 10_000 for i in range(n_features)]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_batched_dataset_covers_every_row_in_order(rp_logger):
+    """Batching must stay unshuffled and gap-free: the concatenated batches have to
+    reproduce the original row sequence exactly (minus the dropped tail)."""
+    rp_logger.info("Test '_create_batched_dataset' yields rows sequentially")
+    n_rows, batch_size = 1000, 32
+    loader = _BatchingStub(n_rows, 3, batch_size)._create_batched_dataset(pd.DataFrame())
+
+    seen = torch.cat([b[0] for b in loader]).flatten().numpy()
+    expected = np.arange(n_rows // batch_size * batch_size, dtype="float32")
+    assert np.array_equal(seen, expected)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_create_optimizer_enables_foreach(rp_logger):
+    """EPMCTDM-7630: torch only defaults `foreach=True` for CUDA params, so a CPU
+    install otherwise falls back to `_single_tensor_adam` - a Python loop issuing ~6
+    elementwise ops per parameter tensor on every step (~18% of train wall-clock on
+    housing). Pin it so the CPU path cannot silently regress."""
+    rp_logger.info("Test 'VAEWrapper._create_optimizer' pins foreach=True")
+    model = torch.nn.Linear(4, 4)
+
+    optimizer = VAEWrapper._create_optimizer(model, 1e-4)
+
+    assert isinstance(optimizer, torch.optim.Adam)
+    assert all(g["foreach"] is True for g in optimizer.param_groups)
+    assert all(g["lr"] == pytest.approx(1e-4) for g in optimizer.param_groups)
     rp_logger.info(SUCCESSFUL_MESSAGE)
