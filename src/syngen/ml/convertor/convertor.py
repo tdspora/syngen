@@ -290,10 +290,7 @@ class Convertor:
     @staticmethod
     def _is_null(x):
         """Safely check for null without triggering ambiguous array truth errors."""
-        if x is None:
-            return True
-        # Only call pd.isna on scalars; arrays/lists raise ValueError
-        if np.isscalar(x):
+        if x is None or np.isscalar(x):
             return pd.isna(x)
         return False
 
