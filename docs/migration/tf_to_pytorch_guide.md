@@ -396,6 +396,35 @@ Text is the trickiest feature family. It was rebuilt **without Keras**:
 `vae.ckpt` raises a **clear error** ("Retrain with the PyTorch backend") instead of
 silently loading the wrong thing.
 
+### Artifact hashes are NOT a "same model?" check
+
+**`model_dataset.pkl` is deliberately not byte-stable, and comparing artifact hashes will
+not tell you whether two runs produced the same model.** This was investigated under
+EPMCTDM-7630 after a hash comparison raised a false alarm downstream; the conclusion is
+recorded here so nobody repeats it.
+
+Two causes, and the second is decisive:
+
+1. **Set iteration order.** 15 `Dataset` attributes are Python `set`s
+   (`categorical_columns`, `float_columns`, `int_columns`, `long_text_columns`, …).
+   Pickled set order for strings follows `PYTHONHASHSEED`, which is randomised per
+   process. Verified: two otherwise identical trains differing *only* in
+   `PYTHONHASHSEED` produce different pickle bytes while every set compares **equal**.
+2. **A per-run timestamp is part of the pickled state.** `paths["losses_path"]` embeds the
+   run's timestamp (`losses-<table>-<YYYY-MM-DD-HH-MM-SS-ffffff>.csv`), so the bytes differ
+   on *every* run regardless of hash seed.
+
+Because of (2), normalising set ordering — the obvious fix — would **not** make the artifact
+byte-stable. It was therefore deliberately not implemented: a partial fix would still not
+support the intended check, while adding a backward-compatibility surface to artifact
+deserialisation (models trained by earlier releases must keep loading).
+
+**To compare two runs, compare content, not bytes:** the fitted state is what matters —
+feature classes, scaler classes and fitted scaler parameters. Those *are* deterministic
+(verified identical across runs, to the bit). Note `Dataset.features` values do not define
+`__eq__`, so a naive `==` on them compares identity and will report a spurious difference;
+compare the scaler classes and their fitted attributes instead.
+
 ---
 
 ## 11. Dependencies
