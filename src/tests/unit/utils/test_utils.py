@@ -22,6 +22,8 @@ from syngen.ml.utils import (
     is_number_regex_pattern,
     get_available_cpu_count,
     limit_thread_parallelism,
+    setup_log_process,
+    SUPPORTED_LOG_LEVELS,
 )
 from syngen.ml.utils.utils import _cgroup_cpu_quota
 
@@ -784,4 +786,67 @@ def test_limit_thread_parallelism_respects_preset(rp_logger, monkeypatch):
     assert os.environ["OMP_NUM_THREADS"] == "2"        # preserved
     assert os.environ["OMP_WAIT_POLICY"] == "active"   # preserved
     assert os.environ["MKL_NUM_THREADS"] == "40"       # filled from budget
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("level", SUPPORTED_LOG_LEVELS)
+def test_setup_log_process_accepts_every_supported_level(level, rp_logger, monkeypatch, tmp_path):
+    """EPMCTDM-7630: every level loguru actually supports must be accepted."""
+    rp_logger.info(f"Test 'setup_log_process' accepts the supported level '{level}'")
+    monkeypatch.chdir(tmp_path)
+
+    setup_log_process(
+        type_of_process="train", log_level=level, table_name="t", metadata_path=None
+    )
+
+    assert os.environ["LOGURU_LEVEL"] == level
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_setup_log_process_rejects_unsupported_level(rp_logger, monkeypatch, tmp_path):
+    """EPMCTDM-7630: an unsupported level must raise a clear message naming the parameter
+    and listing the supported levels - not loguru's bare internal error - and must do so
+    BEFORE anything is written to `os.environ`, so an invalid value cannot propagate to a
+    child process and fail its import (as it did in round 3, tmp/os-3rd-report.md §7.2)."""
+    rp_logger.info("Test 'setup_log_process' rejects an unsupported level")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("LOGURU_LEVEL", raising=False)
+
+    with pytest.raises(ValueError) as error:
+        setup_log_process(
+            type_of_process="train", log_level="test", table_name="t", metadata_path=None
+        )
+
+    assert str(error.value) == (
+        "Unsupported log level: 'test'. The supported log levels are: "
+        "TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL."
+    )
+    assert "LOGURU_LEVEL" not in os.environ
+    assert not (tmp_path / "model_artifacts").exists()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_supported_log_levels_matches_loguru(rp_logger):
+    """EPMCTDM-7630: `SUPPORTED_LOG_LEVELS` is a hardcoded tuple rather than derived from
+    loguru's internals, so this pins it against loguru's actual level set - a loguru upgrade
+    that adds or renames a level would otherwise drift silently."""
+    rp_logger.info("Test 'SUPPORTED_LOG_LEVELS' matches loguru's own registered levels")
+    from loguru import logger as loguru_logger
+
+    actual_levels = set(loguru_logger._core.levels.keys())
+    assert set(SUPPORTED_LOG_LEVELS) == actual_levels
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cli_log_level_choices_match_supported_levels(rp_logger):
+    """EPMCTDM-7630: base's CLI accepted 6 of loguru's 7 levels (missing SUCCESS) while the
+    SDK's Literal listed the same 6 - two sets of accepted values silently drifting apart.
+    Pin both CLI commands' `click.Choice` against the single shared constant."""
+    rp_logger.info("Test train/infer CLI --log_level choices match SUPPORTED_LOG_LEVELS")
+    from syngen.train import cli_launch_train
+    from syngen.infer import cli_launch_infer
+
+    for command in (cli_launch_train, cli_launch_infer):
+        option = next(p for p in command.params if p.name == "log_level")
+        assert tuple(option.type.choices) == SUPPORTED_LOG_LEVELS
     rp_logger.info(SUCCESSFUL_MESSAGE)

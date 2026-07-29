@@ -9,7 +9,8 @@ from syngen.ml.utils import (
     setup_log_process,
     get_reports,
     fetch_env_variables,
-    limit_thread_parallelism
+    limit_thread_parallelism,
+    SUPPORTED_LOG_LEVELS
 )
 
 # Bound native (OpenMP/MKL) thread pools and disable their busy-wait spinning
@@ -76,8 +77,11 @@ def launch_train(
         Literal["accuracy", "sample", "metrics_only", "all", "none"],
         List[Literal["accuracy", "sample", "metrics_only"]]
     ] = "none",
+    # Kept in sync with `syngen.ml.utils.SUPPORTED_LOG_LEVELS` - a `Literal` cannot be
+    # built from a runtime tuple, so `test_log_level_literal_matches_supported_levels`
+    # asserts the two stay identical.
     log_level: Literal[
-        "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+        "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"
     ] = "INFO",
     batch_size: int = 32,
     fernet_key: Optional[str] = None,
@@ -193,7 +197,7 @@ def launch_train(
 @click.option(
     "--log_level",
     default="INFO",
-    type=click.Choice(["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    type=click.Choice(SUPPORTED_LOG_LEVELS),
     help="Set the logging level which will be used in the process. "
          "If absent, it's defaulted to 'INFO'",
 )

@@ -35,5 +35,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     generate_unique_values_by_regex,
     is_number_regex_pattern,
     get_available_cpu_count,
-    limit_thread_parallelism
+    limit_thread_parallelism,
+    SUPPORTED_LOG_LEVELS
 )

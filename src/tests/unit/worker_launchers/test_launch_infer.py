@@ -1,4 +1,5 @@
 from unittest.mock import patch
+import os
 import pytest
 import shutil
 
@@ -760,12 +761,26 @@ def test_cli_launch_infer_table_with_invalid_log_level(rp_logger):
 
 
 def test_launch_infer_table_with_invalid_log_level(rp_logger):
+    """EPMCTDM-7630: an unsupported log level must be rejected with a clear message naming
+    the supported levels, raised before anything is written to `os.environ` - not loguru's
+    bare internal error, and not after `model_artifacts/` has already been created."""
     rp_logger.info(
         "Launch the inference process by using the function 'launch_infer' "
         "with the invalid 'log_level' parameter equals 'test'"
     )
+    log_level_before = os.environ.get("LOGURU_LEVEL")
+    model_artifacts_existed_before = os.path.exists("model_artifacts")
     with pytest.raises(ValueError) as error:
         launch_infer(log_level="test", table_name=TABLE_NAME)
-    assert str(error.value) == "Level 'test' does not exist"
+    error_message = (
+        "Unsupported log level: 'test'. The supported log levels are: "
+        "TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL."
+    )
+    assert str(error.value) == error_message
+    assert os.environ.get("LOGURU_LEVEL") == log_level_before
+    # ambient test pollution may have already created model_artifacts/ from an
+    # unrelated earlier test; the property this asserts is that THIS call created
+    # nothing new, not that the directory is absent outright
+    assert os.path.exists("model_artifacts") == model_artifacts_existed_before
 
     rp_logger.info(SUCCESSFUL_MESSAGE)

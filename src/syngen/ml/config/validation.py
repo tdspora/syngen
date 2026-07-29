@@ -33,15 +33,14 @@ class Validator:
     merged_metadata: Dict = field(default_factory=dict)
     mapping: Dict = field(default_factory=dict)
     existed_columns_mapping: Dict = field(default_factory=dict)
-    # NOTE (EPMCTDM-7630): this is a bare class attribute, not a dataclass field, so the
-    # dict is SHARED by every Validator in the process and is never cleared. Errors from one
-    # validation therefore leak into the next, and a second validation in the same process
-    # can fail on a table it already passed. Changing it to
-    # `field(default_factory=lambda: defaultdict(defaultdict))` fixes that but shifts the
-    # point at which ValidationError is raised, which changes 7 expected values in
-    # tests/unit/validation_metadata - so it needs owner sign-off rather than a drive-by fix.
-    # See tmp/os-3rd-report.md §6.
-    errors = defaultdict(defaultdict)
+    # Must be a dataclass *field*, not a bare class attribute: a bare attribute's dict is
+    # created once at class definition and SHARED by every Validator in the process, and it
+    # is never cleared. Errors from one validation then leak into the next, so a second
+    # validation in the same process can fail on a table it already passed - hit in practice
+    # via the SDK, where train() then infer() share one process (EPMCTDM-7630, confirmed
+    # present on `main` too - not a migration regression - see tmp/os-3rd-report.md §7.1 and
+    # tmp/os-4rd-report.md §2).
+    errors: Dict = field(default_factory=lambda: defaultdict(defaultdict))
 
     def _define_mapping(self):
         """

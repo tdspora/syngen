@@ -641,6 +641,13 @@ def limit_thread_parallelism() -> int:
     return cpu_count
 
 
+# The levels loguru itself supports. A plain constant rather than deriving from
+# loguru's internals (`logger._core.levels`), which would touch a private API for a
+# set that changes only on a loguru major version - see
+# `test_supported_log_levels_matches_loguru` for a check that catches any drift.
+SUPPORTED_LOG_LEVELS = ("TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL")
+
+
 def file_sink(message):
     """
     Save logs to the log file
@@ -677,6 +684,11 @@ def setup_log_process(
     """
     Set up the logging process with the specified level
     """
+    if log_level not in SUPPORTED_LOG_LEVELS:
+        raise ValueError(
+            f"Unsupported log level: '{log_level}'. "
+            f"The supported log levels are: {', '.join(SUPPORTED_LOG_LEVELS)}."
+        )
     os.environ["LOGURU_LEVEL"] = log_level
     os.makedirs("model_artifacts/system_store/logs", exist_ok=True)
     os.environ["SUCCESS_LOG_FILE"] = get_log_path(

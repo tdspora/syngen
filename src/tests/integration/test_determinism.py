@@ -9,10 +9,14 @@ Deliberately end-to-end and deliberately cheap: a few hundred rows, one epoch, a
 `size`. It is a determinism assertion, not a quality one.
 
 Each run happens in a **subprocess**. That is the faithful reproduction of what is being
-asserted - two separate processes, each with its own hash seed and RNG state - and it is
-also required for isolation: ``Validator.errors`` is a bare class attribute shared by every
-``Validator`` in a process and never cleared, so an in-process run inherits validation
-errors from whatever ran before it. See ``tmp/os-3rd-report.md`` §6.
+asserted - two separate processes, each with its own hash seed and RNG state. It was also
+required for isolation in round 3, when ``Validator.errors`` was still a bare class
+attribute shared by every ``Validator`` in a process; that is fixed now (EPMCTDM-7630,
+``syngen.ml.config.validation``), but subprocesses remain the more faithful reproduction
+of the scenario, so the design is unchanged. `setup_log_process` validating the log level
+before writing to `os.environ` (EPMCTDM-7630) means an earlier test's `LOGURU_LEVEL` can no
+longer be an invalid value, so no `env.pop("LOGURU_LEVEL", ...)` is needed here either. See
+``tmp/os-3rd-report.md`` §6 and ``tmp/os-4rd-report.md`` §3.
 
 The fixture table exercises all three seeded fitting decisions in one run:
 
@@ -87,10 +91,6 @@ def _run_once(workdir, source_csv, hash_seed: str) -> pd.DataFrame:
     runner.write_text(_RUNNER)
 
     env = dict(os.environ)
-    # `setup_logger` writes LOGURU_LEVEL into os.environ (utils.py), so whatever level the
-    # last test in this process configured is still set - and loguru validates the level at
-    # *import*, before the runner can override it. Drop it so the subprocess starts clean.
-    env.pop("LOGURU_LEVEL", None)
     # a different hash seed per run, so anything depending on set/dict iteration order
     # differs between the two - the runs must still agree despite that
     env["PYTHONHASHSEED"] = hash_seed
