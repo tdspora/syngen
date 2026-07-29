@@ -111,13 +111,13 @@ class Convertor:
     def _get_serializable_columns_mapping(self):
         """
         Get the mapping of columns and their data types with complex data types
-        (dict, list, tuple, 'numpy.ndarray') or binary)
+        (dict, list, tuple, 'numpy.ndarray')
         that require serialization to JSON strings
         """
         return {
             column: data_type
             for column, data_type in self.custom_schema.get("fields", {}).items()
-            if data_type.startswith("complex") or data_type == "binary"
+            if data_type.startswith("complex")
         }
 
     def _set_none_values_to_nan(self):
@@ -273,6 +273,21 @@ class Convertor:
 
         self.preprocessed_df[column] = self.preprocessed_df[column].map(_decode)
 
+    def _cast_binary_columns(self) -> None:
+        """
+        Decode every binary column in the DataFrame to strings using the detected
+        character encoding, and record that encoding under
+        `custom_schema["encoding"][column]` so downstream consumers
+        can re-encode the synthetic output to bytes.
+        """
+        binary_columns = [
+            column
+            for column, data_type in self.custom_schema.get("fields", {}).items()
+            if data_type == "binary"
+        ]
+        for column in binary_columns:
+            self._cast_binary_column(column)
+
     def _to_tuples_recursive(self, x):
         """
         Recursively convert nested lists into tuples (for PyArrow `map` data type).
@@ -304,15 +319,11 @@ class Convertor:
         for column in serializable_columns:
             if column not in self.preprocessed_df.columns:
                 continue
-            data_type = self.custom_schema["fields"].get(column)
-            if data_type == "binary":
-                self._cast_binary_column(column)
-            else:
-                self.preprocessed_df[column] = (
-                    self.preprocessed_df[column].map(
-                        lambda x: self._serialize_complex_value(x, column)
-                    )
+            self.preprocessed_df[column] = (
+                self.preprocessed_df[column].map(
+                    lambda x: self._serialize_complex_value(x, column)
                 )
+            )
 
     def _deserialize_values_from_json(self):
         """
@@ -374,21 +385,10 @@ class Convertor:
                 else:
                     self._cast_columns_to_schema_types()
                     self._cast_values_to_string()
-                    if (
-                        any(
-                            "complex" in data_type
-                            for data_type in self.custom_schema.get("fields", {}).values()
-                        )
-                        and self.serialize_complex_types is True
-                    ):
+                    if self.serialize_complex_types:
                         self._cast_values_to_json()
-                    if (
-                        any(
-                            "complex" in data_type
-                            for data_type in self.custom_schema.get("fields", {}).values()
-                        )
-                        and self.serialize_complex_types is False
-                    ):
+                        self._cast_binary_columns()
+                    else:
                         self._postprocess_encoded_columns()
                         self._deserialize_values_from_json()
             except Exception as e:
