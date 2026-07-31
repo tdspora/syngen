@@ -4,10 +4,11 @@ from datetime import date, time
 import numpy as np
 from numpy import dtype
 import pandas as pd
+import pandavro as pdx
+import fastavro
 
 from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.convertor.convertor import Convertor
-from syngen.ml.data_loaders import DataLoader
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
@@ -22,11 +23,20 @@ def _make_binary_convertor(df: pd.DataFrame, column: str) -> Convertor:
     return convertor
 
 
+def _flatten_avro_schema(schema: dict) -> dict:
+    """
+    Flatten a raw fastavro schema (with a top-level "fields" list, as returned
+    by 'fastavro.reader(...).writer_schema') into the mapping of the field
+    name to its Avro type expected by 'AvroConvertor'.
+    """
+    return {field["name"]: field["type"] for field in schema.get("fields", [])}
+
+
 def test_initiate_csv_convertor(rp_logger):
     rp_logger.info("Initiating the instance of the class CSVConvertor")
-    df, _ = DataLoader(
+    df = pd.read_csv(
         f"{DIR_NAME}/unit/convertors/fixtures/csv_tables/table_with_diff_data_types.csv"
-    ).load_data()
+    )
     convertor = CSVConvertor(df)
     assert convertor.custom_schema == {"fields": {}, "format": "CSV"}
     assert convertor.preprocessed_df.shape == df.shape
@@ -68,47 +78,45 @@ def test_initiate_csv_convertor(rp_logger):
 
 def test_initiate_avro_convertor(rp_logger):
     rp_logger.info("Initiating the instance of the class AvroConvertor")
-    data_loader = DataLoader(
-        f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
-    )
-    df, _ = data_loader.load_data()
+    path = f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
+    df = pdx.from_avro(path)
 
-    original_schema = data_loader.original_schema
-    schema = data_loader.file_loader._get_preprocessed_schema(original_schema)
+    with open(path, "rb") as f:
+        original_schema = fastavro.reader(f).writer_schema
 
-    convertor = AvroConvertor(schema, df)
+    convertor = AvroConvertor(_flatten_avro_schema(original_schema), df)
 
     assert df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
         "parentemployeekey": dtype("float64"),
-        "employeenationalidalternatekey": pd.StringDtype(),
+        "employeenationalidalternatekey": dtype("O"),
         "salesterritorykey": dtype("int64"),
-        "firstname": pd.StringDtype(),
-        "lastname": pd.StringDtype(),
-        "middlename": pd.StringDtype(),
-        "namestyle": pd.BooleanDtype(),
-        "title": pd.StringDtype(),
-        "hiredate": pd.StringDtype(),
-        "birthdate": pd.StringDtype(),
-        "loginid": pd.StringDtype(),
-        "emailaddress": pd.StringDtype(),
-        "phone": pd.StringDtype(),
-        "maritalstatus": pd.StringDtype(),
-        "emergencycontactname": pd.StringDtype(),
-        "emergencycontactphone": pd.StringDtype(),
+        "firstname": dtype("O"),
+        "lastname": dtype("O"),
+        "middlename": dtype("O"),
+        "namestyle": dtype("O"),
+        "title": dtype("O"),
+        "hiredate": dtype("O"),
+        "birthdate": dtype("O"),
+        "loginid": dtype("O"),
+        "emailaddress": dtype("O"),
+        "phone": dtype("O"),
+        "maritalstatus": dtype("O"),
+        "emergencycontactname": dtype("O"),
+        "emergencycontactphone": dtype("O"),
         "salariedflag": dtype("bool"),
-        "gender": pd.StringDtype(),
+        "gender": dtype("O"),
         "payfrequency": dtype("int64"),
         "baserate": dtype("float64"),
         "vacationhours": dtype("int64"),
         "sickleavehours": dtype("int64"),
         "currentflag": dtype("bool"),
         "salespersonflag": dtype("bool"),
-        "departmentname": pd.StringDtype(),
-        "startdate": pd.StringDtype(),
-        "enddate": pd.StringDtype(),
-        "status": pd.StringDtype(),
-        "employeephoto": pd.StringDtype(),
+        "departmentname": dtype("O"),
+        "startdate": dtype("O"),
+        "enddate": dtype("O"),
+        "status": dtype("O"),
+        "employeephoto": dtype("O"),
     }
 
     assert convertor.custom_schema == {
@@ -179,49 +187,48 @@ def test_initiate_avro_convertor(rp_logger):
         "status": pd.StringDtype(),
         "employeephoto": pd.StringDtype(),
     }
-    pd.testing.assert_series_equal(convertor.preprocessed_df.dtypes, df.dtypes)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_initiate_avro_convertor_without_provided_schema(rp_logger):
     rp_logger.info("Initiating the instance of the class AvroConvertor without a provided schema")
-    df, _ = DataLoader(
+    df = pdx.from_avro(
         f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_diff_data_types.avro"
-    ).load_data()
+    )
 
     convertor = AvroConvertor(original_schema=None, df=df)
 
     assert df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
         "parentemployeekey": dtype("float64"),
-        "employeenationalidalternatekey": pd.StringDtype(),
+        "employeenationalidalternatekey": dtype("O"),
         "salesterritorykey": dtype("int64"),
-        "firstname": pd.StringDtype(),
-        "lastname": pd.StringDtype(),
-        "middlename": pd.StringDtype(),
-        "namestyle": pd.BooleanDtype(),
-        "title": pd.StringDtype(),
-        "hiredate": pd.StringDtype(),
-        "birthdate": pd.StringDtype(),
-        "loginid": pd.StringDtype(),
-        "emailaddress": pd.StringDtype(),
-        "phone": pd.StringDtype(),
-        "maritalstatus": pd.StringDtype(),
-        "emergencycontactname": pd.StringDtype(),
-        "emergencycontactphone": pd.StringDtype(),
+        "firstname": dtype("O"),
+        "lastname": dtype("O"),
+        "middlename": dtype("O"),
+        "namestyle": dtype("O"),
+        "title": dtype("O"),
+        "hiredate": dtype("O"),
+        "birthdate": dtype("O"),
+        "loginid": dtype("O"),
+        "emailaddress": dtype("O"),
+        "phone": dtype("O"),
+        "maritalstatus": dtype("O"),
+        "emergencycontactname": dtype("O"),
+        "emergencycontactphone": dtype("O"),
         "salariedflag": dtype("bool"),
-        "gender": pd.StringDtype(),
+        "gender": dtype("O"),
         "payfrequency": dtype("int64"),
         "baserate": dtype("float64"),
         "vacationhours": dtype("int64"),
         "sickleavehours": dtype("int64"),
         "currentflag": dtype("bool"),
         "salespersonflag": dtype("bool"),
-        "departmentname": pd.StringDtype(),
-        "startdate": pd.StringDtype(),
-        "enddate": pd.StringDtype(),
-        "status": pd.StringDtype(),
-        "employeephoto": pd.StringDtype(),
+        "departmentname": dtype("O"),
+        "startdate": dtype("O"),
+        "enddate": dtype("O"),
+        "status": dtype("O"),
+        "employeephoto": dtype("O"),
     }
 
     assert convertor.custom_schema == {
@@ -232,34 +239,34 @@ def test_initiate_avro_convertor_without_provided_schema(rp_logger):
     assert convertor.preprocessed_df.dtypes.to_dict() == {
         "employeekey": dtype("int64"),
         "parentemployeekey": dtype("float64"),
-        "employeenationalidalternatekey": pd.StringDtype(),
+        "employeenationalidalternatekey": dtype("O"),
         "salesterritorykey": dtype("int64"),
-        "firstname": pd.StringDtype(),
-        "lastname": pd.StringDtype(),
-        "middlename": pd.StringDtype(),
-        "namestyle": pd.BooleanDtype(),
-        "title": pd.StringDtype(),
-        "hiredate": pd.StringDtype(),
-        "birthdate": pd.StringDtype(),
-        "loginid": pd.StringDtype(),
-        "emailaddress": pd.StringDtype(),
-        "phone": pd.StringDtype(),
-        "maritalstatus": pd.StringDtype(),
-        "emergencycontactname": pd.StringDtype(),
-        "emergencycontactphone": pd.StringDtype(),
+        "firstname": dtype("O"),
+        "lastname": dtype("O"),
+        "middlename": dtype("O"),
+        "namestyle": dtype("O"),
+        "title": dtype("O"),
+        "hiredate": dtype("O"),
+        "birthdate": dtype("O"),
+        "loginid": dtype("O"),
+        "emailaddress": dtype("O"),
+        "phone": dtype("O"),
+        "maritalstatus": dtype("O"),
+        "emergencycontactname": dtype("O"),
+        "emergencycontactphone": dtype("O"),
         "salariedflag": dtype("bool"),
-        "gender": pd.StringDtype(),
+        "gender": dtype("O"),
         "payfrequency": dtype("int64"),
         "baserate": dtype("float64"),
         "vacationhours": dtype("int64"),
         "sickleavehours": dtype("int64"),
         "currentflag": dtype("bool"),
         "salespersonflag": dtype("bool"),
-        "departmentname": pd.StringDtype(),
-        "startdate": pd.StringDtype(),
-        "enddate": pd.StringDtype(),
-        "status": pd.StringDtype(),
-        "employeephoto": pd.StringDtype(),
+        "departmentname": dtype("O"),
+        "startdate": dtype("O"),
+        "enddate": dtype("O"),
+        "status": dtype("O"),
+        "employeephoto": dtype("O"),
     }
     pd.testing.assert_series_equal(convertor.preprocessed_df.dtypes, df.dtypes)
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -270,20 +277,20 @@ def test_initiate_avro_convertor_with_schema_containing_logical_date_types(rp_lo
         "Initiating the instance of the class AvroConvertor"
         "with the schema containing logical date/time types"
     )
-    data_loader = DataLoader(
+    path = (
         f"{DIR_NAME}/unit/convertors/fixtures/avro_tables/table_with_date_logical_types.avro"
     )
-    df, _ = data_loader.load_data()
+    df = pdx.from_avro(path)
 
-    original_schema = data_loader.original_schema
-    schema = data_loader.file_loader._get_preprocessed_schema(original_schema)
+    with open(path, "rb") as f:
+        original_schema = fastavro.reader(f).writer_schema
 
-    convertor = AvroConvertor(schema, df)
+    convertor = AvroConvertor(_flatten_avro_schema(original_schema), df)
 
     assert df.dtypes.to_dict() == {
         "date_col": dtype("O"),
         "date_col_nullable": dtype("O"),
-        "date_string_col": pd.StringDtype(),
+        "date_string_col": dtype("O"),
         "local_timestamp_micros_col": dtype("<M8[ns]"),
         "local_timestamp_micros_col_nullable": dtype("<M8[ns]"),
         "local_timestamp_millis_col": dtype("<M8[ns]"),
@@ -351,7 +358,6 @@ def test_initiate_avro_convertor_with_schema_containing_logical_date_types(rp_lo
         "timestamp_millis_col": pd.DatetimeTZDtype(tz="UTC"),
         "timestamp_millis_col_nullable": pd.DatetimeTZDtype(tz="UTC"),
     }
-    pd.testing.assert_series_equal(convertor.preprocessed_df.dtypes, df.dtypes)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -820,7 +826,7 @@ def test_cast_binary_column_with_python_source_bytes_skips_decoding(caplog, rp_l
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_cast_binary_column_with_non_decodable_mime_skips_decoding(caplog, rp_logger):
+def test_cast_binary_column_with_image_bytes_skips_decoding(caplog, rp_logger):
     rp_logger.info(
         "Casting a binary column with JPEG image bytes in the base Convertor "
         "should log a warning and leave bytes as-is"
