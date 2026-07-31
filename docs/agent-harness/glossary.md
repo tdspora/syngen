@@ -52,6 +52,7 @@ When a term appears in `[[brackets]]` it is defined elsewhere in this document. 
 | **`column_types.categorical`** | Force-cast columns to categorical even when the heuristic would not. |
 | **`column_types.passthrough`** | Mark columns as [[passthrough columns]]. |
 | **[[Fernet key]]** | Symmetric AES-128-CBC + HMAC key. The `encryption.fernet_key` field carries the **env-var name** holding the key — never the value. |
+| **`SYNGEN_DEPLOYMENT_MODE`** | Environment variable selecting the CPU policy: `dedicated` is the default for one Syngen job; `shared` makes idle OpenMP/MKL threads sleep when concurrent containers share CPU resources. |
 
 ## 5. Validation & quality terms
 

@@ -11,3 +11,4 @@
 | 2026-07-27 | .claude/skills/syngen-implement-feature/SKILL.md | Bootstrap-check note: runtime deps come from `pyproject.toml`, not `requirements.txt` | human (`approved`) |
 | 2026-07-27 | .claude/skills/syngen-test-selection/SKILL.md | Lint note: `.flake8` is the sole source of truth for line-length/complexity; dropped the stale "(and `setup.cfg`)" | human (`approved`) |
 | 2026-07-27 | .claude/settings.json | Removed 5 dead permission entries for files that no longer exist (`cat ./MANIFEST.in`, `cat ./setup.cfg`, `Edit(./setup.cfg)`, `Edit(./requirements*.txt)`, `Edit(./MANIFEST.in)`); the `pyproject.toml` equivalents were already present | human (`approved`) |
+| 2026-07-31 | docs/agent-harness/glossary.md | Define `SYNGEN_DEPLOYMENT_MODE` for the CPU deployment policy | human (`approved`) |

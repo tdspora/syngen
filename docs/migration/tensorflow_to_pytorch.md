@@ -2,7 +2,7 @@
 
 **Ticket:** EPMCTDM-7630
 **Branch:** `tf-to-pytorch-migration`
-**Shipped as:** `1.0.1rc5`
+**Migration shipped as:** `1.0.1rc5`; CPU deployment policy updated in `1.0.1rc6`
 **Status:** Authoritative. Supersedes the documents listed in section 0.5.
 
 ---
@@ -2090,7 +2090,7 @@ this, and the changes are documented in their own sections:
 | --- | --- | --- |
 | `foreach=True` on Adam | 6.3 | ~18% of train wall-clock |
 | Batch-level fancy indexing | 5.2.1 | ~3.4M index operations removed over a 15-epoch run |
-| `OMP_WAIT_POLICY=passive` | Part 8 | Prevents cross-container CPU saturation; costs some single-job throughput |
+| `SYNGEN_DEPLOYMENT_MODE=shared` | Part 8 | Reduces cross-container spin contention with passive native-thread waiting; does not allocate CPUs or change thread counts |
 
 Net effect measured at roughly 1.21× on the training loop and 1.12× end to end, against an
 initial gap of about 2.51× slower per epoch than TensorFlow.
@@ -2431,202 +2431,168 @@ even when it worked. But the instruction must go, and README mentions PyTorch no
 all. Section 13.2 of the follow-up work tracks it; it is user-facing and worth fixing
 before the release is announced.
 
-### 8.3 Migration Card: CPU thread budgeting
+### 8.3 Migration Card: CPU and process parallelism
 
-**High-Level Overview.** The real hardware work of this migration. PyTorch's numerical
-libraries assume they own the machine. In a container, they are wrong about that, and the
-consequences were severe enough to warrant a dedicated fix.
+**High-level overview.** Syngen has two independent forms of CPU parallelism:
 
-**The Rationale.** PyTorch delegates numerical work to OpenMP and MKL, which size their
-thread pools from the host's CPU topology. Two problems follow in a containerised
-deployment:
+1. **Native numerical threads.** PyTorch, OpenMP, and MKL use threads inside one Python
+   process. Training and ordinary inference use this layer.
+2. **Inference worker processes.** `run_parallel=true` is an inference-only option that
+   splits generation batches across a `multiprocessing.Pool`.
 
-1. **They ignore the container's CPU quota.** A container limited to 4 CPUs on a 128-core
-   host still creates 128 threads, because the host topology is what the libraries can
-   see. Run several such containers and each spawns 128 threads for 4 CPUs' worth of work.
-2. **Idle threads busy-wait by default.** OpenMP's default is to spin while waiting for
-   the next work item, on the assumption that spinning beats sleeping when the next item
-   is imminent. That assumption holds when the process owns the machine. When many
-   containers share it, every spinning thread consumes a core doing nothing.
+The resource policy must account for both layers. Giving every inference worker a
+machine-wide native thread pool causes process × thread oversubscription; limiting workers
+without accounting for a container's actual CPU allocation causes the same problem across
+containers.
 
-Together these produced the observed failure: concurrent syngen jobs pegging every CPU at
-100% while making very little forward progress. All the capacity went to contention and
-spinning.
+#### 8.3.1 CPU budget: quota, affinity, then topology
 
-**The Legacy Workflow.** None. TensorFlow has its own threading configuration and syngen
-did not set it, but the failure mode was not observed in practice at the same severity.
+`get_available_cpu_count()` calculates the process's CPU budget as the smallest positive
+value among the following signals, with a minimum of one:
 
-**The Modern Workflow.** Three functions in `utils.py`, called before torch is imported.
-
-**Visual Flow**
-
-```mermaid
-flowchart TB
-    A["limit_thread_parallelism()"] --> B["get_available_cpu_count()"]
-    B --> C["_cgroup_cpu_quota()<br/>cgroup v2 then v1"]
-    B --> D["os.sched_getaffinity(0)"]
-    B --> E["os.cpu_count()"]
-    C --> F["take the smallest positive<br/>floor at 1"]
-    D --> F
-    E --> F
-    F --> G["setdefault OMP_NUM_THREADS<br/>and MKL_NUM_THREADS"]
-    A --> H["setdefault OMP_WAIT_POLICY=passive<br/>and KMP_BLOCKTIME=0"]
-    G --> I["then, and only then, import torch"]
-    H --> I
-```
-
-**Side-by-Side Code Comparison**
-
-```python
-# === legacy_syngen_tensorflow.py ===
-# No equivalent. Thread pools were left at framework defaults.
-# handlers.py used the host core count directly for parallel inference:
-cpu_count = max(1, mp.cpu_count() - 1)
-```
-
-```python
-# === modern_syngen_pytorch.py ===
-# utils.py:636-641
-cpu_count = get_available_cpu_count()
-os.environ.setdefault("OMP_NUM_THREADS", str(cpu_count))
-os.environ.setdefault("MKL_NUM_THREADS", str(cpu_count))
-os.environ.setdefault("OMP_WAIT_POLICY", "passive")
-os.environ.setdefault("KMP_BLOCKTIME", "0")
-return cpu_count
-```
-
-**Developer/DS Takeaways.** Note what is *not* used: `torch.set_num_threads()` is never
-called. Everything is done through environment variables, for the reason in section 8.3.3.
-
-#### 8.3.1 Detecting the real CPU budget
-
-`get_available_cpu_count()` (`utils.py:598`) takes the smallest positive value among three
-signals, with a floor of 1:
-
-| Signal | Detects |
+| Signal | What it represents |
 | --- | --- |
-| `_cgroup_cpu_quota()` | The container's `--cpus=N` limit |
-| `os.sched_getaffinity(0)` | CPU pinning, for example under `taskset` |
-| `os.cpu_count()` | The host topology — the fallback |
+| cgroup CPU quota | The CPU capacity assigned by the runtime, for example `docker run --cpus=N` |
+| `os.sched_getaffinity(0)` | CPUs the process is allowed to run on, for example via `taskset` or a cpuset |
+| `os.cpu_count()` | Host logical CPU count, used only as the fallback |
 
-Taking the minimum is right because each signal describes a different constraint and all
-of them apply simultaneously. The affinity call is wrapped in `except (AttributeError,
-OSError)` because it does not exist on Windows or macOS.
+The minimum is intentional: quota and affinity are simultaneous constraints, not competing
+estimates. CPU affinity is unavailable on some platforms, so its lookup is best-effort.
 
-#### 8.3.2 Reading the cgroup quota
+On Linux, `_cgroup_cpu_quota()` supports both cgroup v2 (`/sys/fs/cgroup/cpu.max`) and
+cgroup v1 (`cpu.cfs_quota_us` / `cpu.cfs_period_us`). A fractional quota is rounded up:
+`--cpus=2.5` produces a budget of three. On cgroup v1, a non-positive quota means
+unlimited and is treated as no quota. If cgroup files are absent or unreadable, Syngen
+continues with affinity or host topology rather than failing.
 
-`_cgroup_cpu_quota()` (`utils.py:569`) tries cgroup v2 first, then v1:
+This budget applies in both deployment modes. `shared` does **not** discover or divide
+resources between otherwise unbounded containers: the orchestrator must provide a quota or
+CPU affinity for each container. Without that allocation every container can see the host
+topology, and no process-local calculation can know how many peers are active.
 
-- **v2:** `/sys/fs/cgroup/cpu.max` holds a quota and a period, with the literal `max`
-  meaning unlimited.
-- **v1:** `cpu.cfs_quota_us` and `cpu.cfs_period_us` as separate files, with a negative
-  quota meaning unlimited.
+#### 8.3.2 Native thread environment
 
-In both cases the budget is `ceil(quota / period)` — `docker run --cpus=2.5` gives a
-quota-to-period ratio of 2.5, rounded up to 3. Both paths return `None` on `OSError` or
-`ValueError`, so a non-Linux host or an unreadable cgroup filesystem degrades to the other
-signals rather than failing.
+`limit_thread_parallelism()` runs before Syngen imports torch. If the caller has not
+already configured them, it sets:
 
-Eight unit tests cover this, including both cgroup versions, the unlimited case, and total
-absence.
+```text
+OMP_NUM_THREADS=<CPU budget>
+MKL_NUM_THREADS=<CPU budget>
+```
 
-#### 8.3.3 The ordering constraint
+`OMP_NUM_THREADS` controls OpenMP thread pools; `MKL_NUM_THREADS` controls MKL thread
+pools. Each variable is set independently with `setdefault`, so an operator-supplied value
+wins while any unset variable still receives Syngen's CPU-budget default. This is important
+for schedulers and platform manifests that already impose a stricter per-process limit.
 
-**This is the part most likely to be broken by an innocent refactor.**
-
-OpenMP and MKL read their configuration once, when they are first initialised — which
-happens when torch is imported. Setting `OMP_NUM_THREADS` after that point has no effect
-whatsoever, silently.
-
-So `limit_thread_parallelism()` must run *before* the first torch import. Both CLI entry
-points enforce this by placing the call between two import blocks:
+OpenMP and MKL initialize their configuration when the numerical runtime is first loaded.
+Changing these variables after torch has initialized is too late and can silently have no
+effect. The split import order in `train.py` and `infer.py` is therefore load-bearing:
+`limit_thread_parallelism()` runs before importing `Worker`, which transitively imports
+torch.
 
 ```python
-# train.py:8-21 (infer.py:8-21 is identical in structure)
-from syngen.ml.utils import (
-    setup_log_process,
-    get_reports,
-    fetch_env_variables,
-    limit_thread_parallelism,
-    SUPPORTED_LOG_LEVELS
-)
+from syngen.ml.utils import limit_thread_parallelism
 
-# Bound native (OpenMP/MKL) thread pools and disable their busy-wait spinning
-# before ``torch`` is imported (via ``Worker`` below), so that many concurrent
-# syngen processes do not over-subscribe the CPUs. Honours pre-set env vars.
 limit_thread_parallelism()
 
 from syngen.ml.worker import Worker
 ```
 
-Executable code between imports is unusual and will look like a style violation. It is
-load-bearing: `Worker` is what transitively imports torch. Moving that call up with the
-other imports, or moving the `Worker` import above it, disables the fix without any
-error appearing.
+Applications using the SDK get this ordering through `sdk.py` importing the train and infer
+launch modules. An application that imports torch or Syngen's VAE internals first must
+export its intended `OMP_*` and `MKL_*` values before starting Python.
 
-#### 8.3.4 Operator overrides always win
+#### 8.3.3 Deployment mode and idle-thread policy
 
-Every variable is set with `setdefault`, never assignment. If an operator has exported
-`OMP_NUM_THREADS` — in a Kubernetes manifest, a shell profile, a job scheduler — syngen
-leaves it alone.
+`SYNGEN_DEPLOYMENT_MODE` selects the waiting policy, not the CPU budget:
 
-This is the right default for a library: it means the automatic behaviour is a sensible
-floor rather than a policy that fights the platform. `test_limit_thread_parallelism_respects_preset`
-locks it.
+| Mode | Default | Behaviour when wait-policy variables are unset |
+| --- | --- | --- |
+| `dedicated` | Yes | Leaves OpenMP/MKL runtime waiting defaults intact for one Syngen job that owns the host |
+| `shared` | No | Defaults `OMP_WAIT_POLICY=passive` and `KMP_BLOCKTIME=0`, so idle native threads sleep instead of spinning |
 
-### 8.4 Container configuration
+The Docker image does not hard-code these variables; the same image configures itself at
+process startup. Explicit values for `OMP_WAIT_POLICY` or `KMP_BLOCKTIME` also win, so
+`dedicated` does not clear a policy an operator already exported. An invalid deployment
+mode logs a warning and falls back to `dedicated`.
 
-The Dockerfile sets the two wait-policy variables at image level (`Dockerfile:26-31`):
+Passive waiting does not alter calculations or generated values. It can reduce wake-up
+responsiveness for one job, but avoids spin contention when many containers share CPUs.
 
-```dockerfile
-# Make OpenMP/MKL idle threads sleep instead of busy-waiting. Without this,
-# PyTorch's native thread pools spin on every core, so several containers
-# running concurrently peg all CPUs at 100% with no forward progress. Thread
-# *counts* are bounded at runtime (cgroup-aware) by limit_thread_parallelism().
-ENV OMP_WAIT_POLICY=passive
-ENV KMP_BLOCKTIME=0
+#### 8.3.4 Effective native-thread budget
+
+`get_thread_parallelism_budget()` is used where Syngen also creates processes. It takes the
+minimum of the CPU budget and any positive integer `OMP_NUM_THREADS` /
+`MKL_NUM_THREADS` values. This preserves an operator's tighter native-thread limit when
+choosing a worker count, including a partial override where only one of the variables was
+preset. Non-numeric OpenMP values are intentionally left to the OpenMP runtime because
+Syngen cannot safely interpret their nested-thread semantics.
+
+### 8.4 Parallel inference
+
+Training is single-process: its PyTorch data loader uses no loader worker processes, and
+tables are trained sequentially. `run_parallel` has no effect on training.
+
+Inference is sequential by default. When `run_parallel=true`, `VaeInferHandler` creates a
+standard-library `multiprocessing.Pool` and sends generation batches through it. The pool
+uses `fork` on POSIX and `spawn` on Windows. Each worker loads its own VAE model; this
+improves CPU parallelism but increases memory use and can duplicate log messages.
+`run_parallel` is meaningful only for a table with VAE features: the pool is initialized
+only in that case.
+
+The pool's CPU budget is:
+
+```text
+worker CPU budget = max(1, effective native-thread budget - 1)
+worker count      = min(number of generation batches, worker CPU budget)
+threads per worker = max(1, worker CPU budget // worker count)
 ```
 
-The division of responsibility is deliberate and worth understanding. The **policy**
-variables are static and correct for every container, so they belong in the image. The
-**count** variable is not — it depends on the quota this particular container was started
-with, which the image cannot know. That is computed at runtime.
+The reserved CPU is retained from the earlier implementation. Before each worker loads its
+VAE, it calls `torch.set_num_threads(threads per worker)`. This limits PyTorch's intra-op
+threads inside that worker and prevents `run_parallel` from multiplying a full PyTorch
+thread pool by every worker process.
 
-Setting these at image level also covers any entry path that bypasses the Python helper,
-including the gap in section 8.6.
+The worker-level call does not retroactively rewrite `OMP_NUM_THREADS` or
+`MKL_NUM_THREADS` in a forked process. Those variables must still be established before
+torch imports, as described in section 8.3.2. The documented guarantee is therefore a
+bounded PyTorch intra-op pool per inference worker; third-party numerical code retains its
+own runtime configuration. Workers inherit the parent environment, so an OpenMP or MKL
+runtime in each worker can still see the parent-wide value. To cap all such native libraries
+per worker, the operator must export an appropriately lower OMP/MKL value before Python
+starts; Syngen cannot safely rewrite those runtimes after initialization.
 
-One unrelated change in the same file: `pip uninstall -y pip` was appended to the install
-chain (`Dockerfile:22`), reducing attack surface by removing the package installer from the
-runtime image. Unrelated to torch, but it will break any downstream image that tries to
-`pip install` on top of this one.
+For a single dedicated job, `run_parallel=true` is not automatically faster than sequential
+inference: model size, batch count, memory pressure, and process startup cost determine the
+result. It is an opt-in inference setting and should be benchmarked with representative
+data.
 
-### 8.5 Parallel inference
+### 8.5 Container configuration
 
-Inference can process batches across several worker processes. The worker count now comes
-from the same cgroup-aware source (`handlers.py:328`):
+Use `SYNGEN_DEPLOYMENT_MODE=dedicated` (or omit it) for the normal one-instance workflow.
+Use `SYNGEN_DEPLOYMENT_MODE=shared` when a CI/CD system runs several Syngen containers on
+the same host, and assign each container a CPU quota or affinity. For example:
 
-```python
-cpu_count = max(1, get_available_cpu_count() - 1)
+```bash
+docker run --rm \
+  --cpus=4 \
+  -e SYNGEN_DEPLOYMENT_MODE=shared \
+  tdspora/syngen --task=infer --metadata_path=metadata.yaml
 ```
 
-Previously `mp.cpu_count()`, which reports host topology and ignores the container quota —
-so a 4-CPU container would have started dozens of worker processes. Reserving one CPU is
-pre-existing behaviour, retained.
+The policy applies to Docker, the installed CLI, and normal SDK imports. It does not make
+unbounded concurrent containers safe; the CPU allocation remains the responsibility of
+Jenkins, Docker, Kubernetes, or the host scheduler.
 
-### 8.6 Gap: the SDK does not budget threads
+One unrelated image change removes `pip` after installation. It is not part of the CPU
+policy, but downstream images that install additional packages must account for it.
 
-`limit_thread_parallelism()` is called at import time by `train.py` and `infer.py`. It is
-not called by `src/syngen/sdk.py` or the `syngen` console script.
+### 8.6 SDK thread-budget ordering
 
-A caller using the `Syngen` SDK class in their own process therefore gets unbounded OpenMP
-thread pools — the exact condition section 8.3 exists to prevent. Container-level
-environment variables in the Dockerfile cover the deployed case for wait policy, but not
-thread count, and not for SDK use outside a syngen container.
-
-The fix is not simply calling the function from inside the SDK, because of the ordering
-constraint in section 8.3.3: by the time SDK code runs, torch may already be imported. It
-needs to move to a location guaranteed to execute first. Recorded as an open question
-(section 13.3.6).
+Normal SDK imports establish Syngen's defaults before torch is imported. The boundary is
+the application's import order: importing torch or a Syngen VAE module before the SDK means
+the application, not Syngen, owns native-thread initialization.
 
 ### 8.7 Gap: the image carries unused GPU libraries
 
@@ -2913,7 +2879,8 @@ and asserts the two generated CSV files are identical with `pd.testing.assert_fr
   column with three exactly-tied values, to force the mode tie; and `row_limit` below the
   row count, to trigger subset sampling. Without this, the test would pass on data that
   never exercises the bugs.
-- **`OMP_NUM_THREADS=4`** pinned — see section 9.6.
+- **`OMP_NUM_THREADS=4`** pinned for the subprocesses. `MKL_NUM_THREADS` is not pinned
+  and therefore defaults from the detected CPU budget — see section 9.6.
 - **One epoch, 300 rows.** Fast enough for CI.
 
 Registered under a `determinism` marker in `src/tests/pytest.ini` so it can be selected or
@@ -2924,16 +2891,21 @@ excluded.
 A guarantee whose boundary is undocumented invites people to rely on it where it does not
 hold. Stated precisely:
 
-**What is guaranteed and tested.** Same seed, same machine, same thread count, same
-package version: byte-identical generated output, independent of process hash seed.
+**What is guaranteed and tested.** Same seed, same machine, same process configuration,
+and same package version: byte-identical generated output, independent of process hash
+seed. The test's explicit native-thread control is `OMP_NUM_THREADS=4`.
+`MKL_NUM_THREADS` remains an automatic CPU-budget default, and inference is sequential.
 
 **What is not tested, and should not be assumed:**
 
-- **Across thread counts.** The test pins `OMP_NUM_THREADS=4`, while
-  `limit_thread_parallelism()` sets it at runtime from the detected CPU budget. Parallel
-  floating-point reduction is order-dependent, so a differently-sized container may produce
-  different output from the same seed. This is the most important gap and the cheapest to
-  close — section 13.4.1 sets out the experiment.
+- **Across CPU and thread configurations.** The test pins `OMP_NUM_THREADS=4`; when
+  unset, Syngen defaults both `OMP_NUM_THREADS` and `MKL_NUM_THREADS` from the detected CPU
+  budget. Parallel floating-point reduction is order-dependent, so a differently-sized
+  container or a different native-thread setting may produce different output from the same
+  seed. This is the most important gap and the cheapest to close — section 13.4.1 sets out
+  the experiment.
+- **Parallel inference (`run_parallel=true`).** The test does not exercise worker count or
+  the per-worker PyTorch intra-op-thread configuration described in section 8.4.
 - **Across machines or CPU architectures.** Different instruction sets take different code
   paths in the numerical libraries.
 - **Across torch versions.** Kernel implementations change between releases.
@@ -3041,12 +3013,13 @@ point; it is not a migration matter.
 
 ### 10.4 Container image
 
-The Dockerfile diff is nine lines and contains no change to the base image
-(`python:3.11-slim-trixie`) or the install mechanism (`pip install --no-cache-dir .`).
+The Dockerfile leaves CPU policy to the runtime deployment mode and contains no change to
+the base image (`python:3.11-slim-trixie`) or the install mechanism
+(`pip install --no-cache-dir .`).
 
 | Change | Purpose |
 | --- | --- |
-| `ENV OMP_WAIT_POLICY=passive` and `ENV KMP_BLOCKTIME=0` | Stop idle OpenMP threads busy-waiting (section 8.4) |
+| Runtime `SYNGEN_DEPLOYMENT_MODE` policy | Select dedicated or shared native-thread waiting (section 8.3.3) |
 | `pip uninstall -y pip` appended to the install chain | Attack-surface reduction; unrelated to torch |
 
 The `pip uninstall` deserves a note in release communications: it makes the image immutable
@@ -3162,7 +3135,7 @@ well-intentioned refactor would otherwise undo silently.
 | Data loader | Feature order preserved across batching and collation; every row covered in order | 5.3 |
 | Data loader | Collate handles both automatic-batching arrangements; loader is picklable for worker processes | 5.2.3 |
 | Optimiser | `foreach=True` is set | 6.3 |
-| CPU budgeting | cgroup v1 and v2 parsing, affinity fallback, minimum of one, `setdefault` semantics | 8.3 |
+| CPU and process budgeting | cgroup parsing, affinity fallback, native-thread overrides, deployment modes, and inference-worker allocation | 8.3–8.5 |
 | Log levels | All seven accepted; unsupported rejected; CLI, SDK, and internal list stay aligned with loguru | 2.6 |
 | Determinism | Scaler selection, tied-mode imputation, and `row_limit` sampling are each reproducible | 9.3 |
 | Determinism | Full train-then-infer cycle is byte-identical under a fixed seed | 9.5 |
@@ -3235,7 +3208,8 @@ file, and enforced by nothing but a code comment.
 **No performance regression harness.** Every number in section 6.11 is from a single
 manual run. A change that halves throughput passes CI.
 
-**Determinism is tested narrowly.** One fixture, 300 rows, one epoch, one thread count
+**Determinism is tested narrowly.** One fixture, 300 rows, one epoch, one native-thread
+configuration
 (section 9.6).
 
 **Some verification was one-off.** The prior guide records manual checks — Avro and Excel
@@ -3406,7 +3380,7 @@ Items surfaced by this work that are decisions rather than defects, each with it
 | Version history skips `1.0.0` and `rc3` | 10.5 |
 | Container image carries unused CUDA libraries | 8.7 |
 | The TF-checkpoint diagnostic is discarded by the wrapper | 7.6 |
-| The SDK path does not budget threads | 8.6 |
+| Applications importing torch before the SDK must configure threads first | 8.6 |
 
 ---
 
@@ -3623,25 +3597,24 @@ rather than being bounded by batch size. **Open question:** at what row count do
 become a problem, and should inference reuse the training loader rather than carry a
 second, unbatched path? Nothing currently tests the upper bound.
 
-#### 13.3.5 Report generation ignores the CPU budget
+#### 13.3.5 Report generation ignores the effective thread budget
 
-Part 8 describes careful cgroup-aware thread budgeting — but it is not applied uniformly.
-The estimators used to compute accuracy reports request every core via `n_jobs=-1`
-(`metrics/metrics_classes/metrics.py:1673`, `:1680`, `:1688`), bypassing the budget that
-the training and inference paths respect.
+Part 8 describes cgroup-aware CPU and native-thread budgeting, but it is not applied
+uniformly. The estimators used to compute accuracy reports request every core via
+`n_jobs=-1` (`metrics/metrics_classes/metrics.py:1673`, `:1680`, `:1688`), bypassing both
+the container allocation and any explicit `OMP_NUM_THREADS` / `MKL_NUM_THREADS` cap.
 
 This is the same oversubscription failure mode Part 8 exists to prevent, in a code path
 that was not part of that fix. **Open question — and the most actionable item in this
-section:** should these estimators take `get_available_cpu_count()`? Low risk, since it
-affects only report generation, and it closes a real gap in the resource story.
+section:** should these estimators take `get_thread_parallelism_budget()`? Low risk, since
+it affects only report generation, and it closes a real gap in the resource story.
 
-#### 13.3.6 The SDK path does not budget threads at all
+#### 13.3.6 SDK imports apply the thread budget
 
-`limit_thread_parallelism()` is called at import time by `train.py` and `infer.py`, but
-not by the SDK. A caller using the `Syngen` class in-process therefore gets unbounded
-OpenMP thread pools. Because the setting must be applied before torch is first imported,
-this cannot be fixed by calling it later from inside the SDK — it needs to move to a point
-that is guaranteed to run first. See section 8.6.
+`sdk.py` imports the train and infer launch modules, so importing `Syngen` normally applies
+the thread budget before `Worker` imports torch. The remaining constraint is application
+ordering: an application that imports torch or Syngen's VAE modules first must export its
+`OMP_*` and `MKL_*` settings before starting Python. See section 8.6.
 
 #### 13.3.7 No GPU path exists
 
@@ -3664,15 +3637,17 @@ Parallel floating-point reduction is order-dependent. Summing the same values ac
 threads and across sixteen threads can produce results differing in the last bits, and
 across an epoch of training those differences compound.
 
-Our determinism test controls for this by pinning `OMP_NUM_THREADS=4`
-(`test_determinism.py:98`). Meanwhile `limit_thread_parallelism()` sets the thread count
-at runtime from the detected CPU budget (`utils.py:636-641`), which varies by machine and
-by container size.
+Our determinism test controls its OpenMP setting by pinning `OMP_NUM_THREADS=4`
+(`test_determinism.py:98`). When thread variables are unset, `limit_thread_parallelism()`
+defaults both OpenMP and MKL counts from the detected CPU budget, which varies by machine
+and container size. `run_parallel=true` adds worker-count and PyTorch intra-op-thread
+choices that the determinism test does not exercise.
 
-Put together: **we have verified that the same seed reproduces on the same thread count.
-We have not verified that it reproduces across different thread counts** — and there is
-good theoretical reason to expect it does not. A user training with `--cpus=4` and a user
-training with `--cpus=16`, same seed, same data, may get different synthetic output.
+Put together: **we have verified that the same seed reproduces under the test's process
+configuration. We have not verified it across different CPU budgets, OpenMP/MKL settings,
+or parallel-inference worker configurations** — and there is good theoretical reason to
+expect differences. A user training with `--cpus=4` and a user training with `--cpus=16`,
+with the same seed and data, may get different synthetic output.
 
 **Open questions:**
 - Does output actually diverge across thread counts here? This is a cheap experiment: run
@@ -3689,17 +3664,15 @@ training with `--cpus=16`, same seed, same data, may get different synthetic out
 Worth stating explicitly, since these two variables are the ones people reach for when
 suspecting nondeterminism.
 
-They control what idle OpenMP threads do between work items — spin, or sleep. Setting them
-to `passive` and `0` (`Dockerfile:26-31`, and as defaults in `limit_thread_parallelism()`)
-changes CPU consumption and wake-up latency. **It does not change the arithmetic, the
+They control what idle OpenMP threads do between work items — spin, or sleep. In `shared`
+mode, setting them to `passive` and `0` in `limit_thread_parallelism()` changes CPU
+consumption and wake-up latency. **It does not change the arithmetic, the
 number of threads, or the reduction order, and therefore cannot change generated output.**
 
-They do affect *timing*, and measurably: the same mixture fit was roughly twice as slow
-with passive waiting in one measurement. That is a throughput trade accepted deliberately,
-because the alternative was many concurrent containers saturating every core while making
-almost no progress. **Open question:** the right setting depends on whether a machine runs
-one syngen job or many, and we currently apply one policy to both cases. Should it be
-configurable for single-tenant deployments?
+They affect *timing*. One non-reproducible measurement found a mixture fit roughly twice as
+slow with passive waiting; it is directional evidence rather than a benchmark result.
+`SYNGEN_DEPLOYMENT_MODE` resolves the policy choice: `dedicated` is the default for a
+single job, while `shared` enables passive waiting for concurrent containers.
 
 #### 13.4.3 PyTorch's deterministic mode is not enabled
 
@@ -3771,7 +3744,7 @@ Ordered by value against effort, not by section.
 | # | Item | Type | Effort | Why this order |
 | --- | --- | --- | --- | --- |
 | 1 | Test determinism across thread counts (13.4.1) | Variability | Low | Cheap experiment; determines whether a reproducibility claim we may already be making is true |
-| 2 | Apply the CPU budget to report estimators (13.3.5) | Speed | Low | Closes a real gap in Part 8's resource story; low blast radius |
+| 2 | Apply the effective native-thread budget to report estimators (13.3.5) | Speed | Low | Closes a real gap in Part 8's resource story; low blast radius |
 | 3 | Seed torch on the inference path (13.4.5) | Variability | Low | One line, no-op today, removes a silent future trap |
 | 4 | Enable deterministic algorithms (13.4.3) | Variability | Low | Free if nothing raises; prerequisite for a GPU path |
 | 5 | Build a statistical quality gate (Part 11) | Enabler | Medium | **Blocks every quality item below.** Nothing in 13.2 can be evaluated without it |
@@ -3833,7 +3806,7 @@ own **[[backward compatibility]]** definition would classify as a reportable eve
 |---|---|
 | **distribution collapse** | A failure where generated values span a narrower range than the source data. The migration's central risk, and still observed on multimodal numeric columns. |
 | **range coverage** | The fraction of the source column's range that generated values span. The primary measure for [[distribution collapse]]. |
-| **reproducibility envelope** | The conditions under which a fixed seed is guaranteed to reproduce output: same machine, thread count, and package version. Outside it, reproducibility is untested. |
+| **reproducibility envelope** | The conditions under which a fixed seed is guaranteed to reproduce output: same machine, native-thread and worker configuration, and package version. Outside it, reproducibility is untested. |
 | **fitting decision** | A random draw that selects *how* data is processed rather than producing a value — for example scaler selection. Unseeded, it makes runs differ structurally rather than numerically. |
 | **statistical quality gate** | An automated check that generated data resembles source data within tolerance. Syngen does not currently have one. |
 
@@ -3841,8 +3814,9 @@ own **[[backward compatibility]]** definition would classify as a reportable eve
 
 | Term | Proposed definition |
 |---|---|
-| **CPU budget** | The number of CPUs actually available to the process, accounting for cgroup quota and affinity — not the host core count. Computed by `get_available_cpu_count()`. |
-| **thread oversubscription** | Numerical libraries sizing thread pools from host topology while running under a container quota, so concurrent jobs saturate the CPUs without progressing. |
+| **CPU budget** | The number of CPUs available to the process after cgroup quota and CPU-affinity constraints, rather than the host core count. Computed by `get_available_cpu_count()`. |
+| **effective native-thread budget** | The CPU budget further limited by a positive integer `OMP_NUM_THREADS` or `MKL_NUM_THREADS` value. Computed by `get_thread_parallelism_budget()` for process allocation. |
+| **thread oversubscription** | More runnable native threads or worker processes than the allocated CPU capacity, for example every concurrent container using the host topology or every inference worker receiving a full PyTorch thread pool. |
 | **release candidate** | A pre-release version of the form `1.0.1rcN`, published for downstream validation before a final tag. |
 
 ### 14.2 Errata: corrections to prior migration documents
@@ -3963,10 +3937,10 @@ attributes — binary and text features use `self.weight`, the others `self.loss
 
 | File | Change | Part |
 |---|---|---|
-| `ml/utils/utils.py` | cgroup CPU detection, thread budgeting, supported log levels | 8, 2 |
+| `ml/utils/utils.py` | cgroup CPU detection, deployment policy, native-thread budgeting, supported log levels | 8, 2 |
 | `ml/utils/__init__.py` | Exports for the above | 8 |
 | `train.py`, `infer.py` | Thread budgeting before torch import; log-level choices; TF env var removed | 8, 2 |
-| `ml/handlers/handlers.py` | `CharTokenizer` replaces the Keras tokenizer; cgroup-aware worker count | 4, 8 |
+| `ml/handlers/handlers.py` | `CharTokenizer` replaces the Keras tokenizer; effective-budget worker count and per-worker PyTorch threads | 4, 8 |
 | `ml/strategies/strategies.py` | TF log-level env var and unused import removed | 10 |
 
 **Reproducibility and defect fixes**
@@ -3982,7 +3956,7 @@ attributes — binary and text features use `self.weight`, the others `self.loss
 | File | Change | Part |
 |---|---|---|
 | `pyproject.toml`, `databricks/pyproject.toml` | TensorFlow and Keras out, torch in | 10 |
-| `Dockerfile` | OpenMP wait-policy variables; pip removed from the image | 8, 10 |
+| `Dockerfile` | Documents runtime `SYNGEN_DEPLOYMENT_MODE`; pip removed from the image | 8, 10 |
 | `src/syngen/VERSION` | `0.12.14` to `1.0.1rc5` | 10 |
 
 **Tests** — 12 files, 967 insertions
@@ -3992,7 +3966,7 @@ attributes — binary and text features use `self.weight`, the others `self.loss
 | `integration/test_determinism.py`, `integration/__init__.py` | End-to-end same-seed reproducibility |
 | `pytest.ini` | The `determinism` marker |
 | `unit/wrappers/test_wrappers.py` | KL at zero, loader length contract, feature order, picklability, `foreach=True` |
-| `unit/utils/test_utils.py` | cgroup detection, thread budgeting, log-level alignment |
+| `unit/utils/test_utils.py` | cgroup detection, deployment and thread-budget policy, log-level alignment |
 | `unit/features/`, `unit/dataset/`, `unit/processors/`, `unit/metrics/` | The four fitting-decision seeds |
 | `unit/validation_metadata/` | Validator error isolation |
 | `unit/sdk/`, `unit/handlers/`, `unit/worker_launchers/` | Adjusted for log-level and entry-point changes |

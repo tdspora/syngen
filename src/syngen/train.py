@@ -13,9 +13,9 @@ from syngen.ml.utils import (
     SUPPORTED_LOG_LEVELS
 )
 
-# Bound native (OpenMP/MKL) thread pools and disable their busy-wait spinning
-# before ``torch`` is imported (via ``Worker`` below), so that many concurrent
-# syngen processes do not over-subscribe the CPUs. Honours pre-set env vars.
+# Bound native (OpenMP/MKL) thread pools before ``torch`` is imported (via
+# ``Worker`` below). Shared mode additionally disables idle-thread busy-waiting.
+# Honours pre-set env vars.
 limit_thread_parallelism()
 
 from syngen.ml.worker import Worker

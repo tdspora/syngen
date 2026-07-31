@@ -95,7 +95,7 @@ def test_get_pk_path(
 )
 @patch("os.path.exists", return_value=True)
 @patch.object(VaeInferHandler, "__attrs_post_init__")
-@patch("syngen.ml.handlers.handlers.get_available_cpu_count")
+@patch("syngen.ml.handlers.handlers.get_thread_parallelism_budget")
 def test_split_by_batches(
         mock_cpu_count,
         mock_handler_post_init,
@@ -166,26 +166,27 @@ def test_split_by_batches(
 
 @pytest.mark.parametrize(
     "size, batch_size, cpu_count, "
-    "expected_batch_num, expected_batch_size, expected_n_jobs",
+    "expected_batch_num, expected_batch_size, expected_n_jobs, "
+    "expected_threads_per_worker",
     [
         # batch_num > 1, batch_num < cpu_count
-        (100, 20, 8, 5, 20, 5),
+        (100, 20, 8, 5, 20, 5, 1),
         # batch_num > 1, batch_num > cpu_count
-        (100, 24, 4, 5, 24, 3),
+        (100, 24, 4, 5, 24, 3, 1),
         # batch_num > 1, size < cpu_count, even division
-        (16, 4, 32, 4, 4, 4),
+        (16, 4, 32, 4, 4, 4, 7),
         # batch_num > 1, size < cpu_count, uneven division
-        (16, 5, 32, 4, 5, 4),
+        (16, 5, 32, 4, 5, 4, 7),
         # batch_num == 1 (size == batch_size)
-        (100, 100, 8, 7, 15, 7),
+        (100, 100, 8, 7, 15, 7, 1),
         # batch_num == 1, case when batch_size is decreased
         # because no points are left for the last batch
-        (10, 10, 8, 7, 1, 7),
+        (10, 10, 8, 7, 1, 7, 1),
         # size == 1
-        (1, 1, 8, 1, 1, 1),
+        (1, 1, 8, 1, 1, 1, 7),
     ],
 )
-@patch('syngen.ml.handlers.handlers.get_available_cpu_count')
+@patch('syngen.ml.handlers.handlers.get_thread_parallelism_budget')
 @patch('multiprocessing.Pool')
 @patch("os.path.exists", return_value=True)
 @patch.object(VaeInferHandler, "__attrs_post_init__")
@@ -200,6 +201,7 @@ def test_setup_parallel_processing(
     expected_batch_num,
     expected_batch_size,
     expected_n_jobs,
+    expected_threads_per_worker,
     rp_logger
 ):
     """
@@ -255,12 +257,35 @@ def test_setup_parallel_processing(
         call_args = mock_pool.call_args
         assert call_args[1]['processes'] == expected_n_jobs
         assert call_args[1]['initializer'] == VaeInferHandler.worker_init
+        assert call_args[1]['initargs'][1] == expected_threads_per_worker
 
         # verify that partial function is callable
         assert callable(call_args[1]['initargs'][0])
 
     assert handler._pool is not None, "Expected _pool to be initialized"
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.handlers.handlers.torch.set_num_threads")
+def test_worker_init_limits_native_threads(mock_set_num_threads, rp_logger):
+    mock_wrapper = MagicMock()
+
+    VaeInferHandler.worker_init(mock_wrapper, threads_per_worker=2)
+
+    mock_set_num_threads.assert_called_once_with(2)
+    mock_wrapper.assert_called_once_with()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.handlers.handlers.torch.set_num_threads")
+def test_worker_init_keeps_legacy_single_argument_usage(mock_set_num_threads, rp_logger):
+    mock_wrapper = MagicMock()
+
+    VaeInferHandler.worker_init(mock_wrapper)
+
+    mock_set_num_threads.assert_not_called()
+    mock_wrapper.assert_called_once_with()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

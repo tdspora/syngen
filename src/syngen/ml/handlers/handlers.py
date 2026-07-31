@@ -13,6 +13,7 @@ from copy import deepcopy
 
 import pandas as pd
 import numpy as np
+import torch
 from numpy.random import seed
 import dill
 from scipy.stats import gaussian_kde
@@ -32,7 +33,7 @@ from syngen.ml.utils import (
     get_initial_table_name,
     ProgressBarHandler,
     get_source_path_extension,
-    get_available_cpu_count,
+    get_thread_parallelism_budget,
     timing,
 )
 
@@ -300,6 +301,7 @@ class VaeInferHandler(BaseHandler):
         self.batch_size, self.batch_num, n_jobs = (
             self._calculate_batch_configuration()
         )
+        threads_per_worker = max(1, self._get_worker_cpu_budget() // n_jobs)
 
         func_for_worker_init = functools.partial(
             self.__class__._initialize_worker_vae_model,
@@ -310,7 +312,7 @@ class VaeInferHandler(BaseHandler):
         self._pool = mp.Pool(
             processes=n_jobs,
             initializer=self.__class__.worker_init,
-            initargs=(func_for_worker_init,)
+            initargs=(func_for_worker_init, threads_per_worker)
         )
 
     def _calculate_batch_configuration(self) -> Tuple[int, int, int]:
@@ -321,11 +323,7 @@ class VaeInferHandler(BaseHandler):
         Returns:
             Tuple[int, int, int]: (batch_size, batch_num, n_jobs)
         """
-        # use all available CPUs minus one to avoid overloading the system.
-        # ``get_available_cpu_count`` is cgroup-aware, so inside a container
-        # started with ``docker run --cpus=N`` this respects ``N`` instead of
-        # the host core count returned by ``mp.cpu_count()``.
-        cpu_count = max(1, get_available_cpu_count() - 1)
+        cpu_count = self._get_worker_cpu_budget()
 
         if self.batch_num > 1:
             n_jobs = min(self.batch_num, cpu_count)
@@ -350,8 +348,17 @@ class VaeInferHandler(BaseHandler):
         return self.batch_size, self.batch_num, n_jobs
 
     @staticmethod
-    def worker_init(get_wrapper_func_from_main):
+    def _get_worker_cpu_budget() -> int:
+        """
+        Reserve one CPU and honour the effective native-thread budget.
+        """
+        return max(1, get_thread_parallelism_budget() - 1)
+
+    @staticmethod
+    def worker_init(get_wrapper_func_from_main, threads_per_worker=None):
         global vae_model
+        if threads_per_worker is not None:
+            torch.set_num_threads(threads_per_worker)
         vae_model = get_wrapper_func_from_main()
 
     @staticmethod

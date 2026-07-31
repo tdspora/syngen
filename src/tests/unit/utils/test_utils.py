@@ -21,6 +21,8 @@ from syngen.ml.utils import (
     generate_unique_values_by_regex,
     is_number_regex_pattern,
     get_available_cpu_count,
+    get_deployment_mode,
+    get_thread_parallelism_budget,
     limit_thread_parallelism,
     setup_log_process,
     SUPPORTED_LOG_LEVELS,
@@ -762,10 +764,49 @@ def test_get_available_cpu_count_minimum_one(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_limit_thread_parallelism_sets_defaults(rp_logger, monkeypatch):
-    rp_logger.info("Test 'limit_thread_parallelism' sets thread/spin env vars from the CPU budget")
+def test_get_deployment_mode_defaults_to_dedicated(rp_logger, monkeypatch):
+    monkeypatch.delenv("SYNGEN_DEPLOYMENT_MODE", raising=False)
+
+    assert get_deployment_mode() == "dedicated"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_deployment_mode_uses_dedicated_for_invalid_value(rp_logger, monkeypatch):
+    monkeypatch.setenv("SYNGEN_DEPLOYMENT_MODE", "invalid")
+
+    assert get_deployment_mode() == "dedicated"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_thread_parallelism_budget_honours_native_thread_cap(rp_logger, monkeypatch):
+    monkeypatch.setenv("OMP_NUM_THREADS", "2")
+    monkeypatch.setenv("MKL_NUM_THREADS", "4")
+    with patch.object(utils_module, "get_available_cpu_count", return_value=8):
+        assert get_thread_parallelism_budget() == 2
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_sets_dedicated_defaults(rp_logger, monkeypatch):
+    rp_logger.info("Test 'limit_thread_parallelism' sets thread defaults from the CPU budget")
     for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OMP_WAIT_POLICY", "KMP_BLOCKTIME"):
+        monkeypatch.setenv(var, "")
         monkeypatch.delenv(var, raising=False)
+    monkeypatch.delenv("SYNGEN_DEPLOYMENT_MODE", raising=False)
+    with patch.object(utils_module, "get_available_cpu_count", return_value=4):
+        applied = limit_thread_parallelism()
+    assert applied == 4
+    assert os.environ["OMP_NUM_THREADS"] == "4"
+    assert os.environ["MKL_NUM_THREADS"] == "4"
+    assert "OMP_WAIT_POLICY" not in os.environ
+    assert "KMP_BLOCKTIME" not in os.environ
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_sets_shared_wait_policy(rp_logger, monkeypatch):
+    for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OMP_WAIT_POLICY", "KMP_BLOCKTIME"):
+        monkeypatch.setenv(var, "")
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("SYNGEN_DEPLOYMENT_MODE", "shared")
     with patch.object(utils_module, "get_available_cpu_count", return_value=4):
         applied = limit_thread_parallelism()
     assert applied == 4
@@ -778,6 +819,7 @@ def test_limit_thread_parallelism_sets_defaults(rp_logger, monkeypatch):
 
 def test_limit_thread_parallelism_respects_preset(rp_logger, monkeypatch):
     rp_logger.info("Test 'limit_thread_parallelism' does not override caller-provided env vars")
+    monkeypatch.setenv("SYNGEN_DEPLOYMENT_MODE", "shared")
     monkeypatch.setenv("OMP_NUM_THREADS", "2")
     monkeypatch.setenv("OMP_WAIT_POLICY", "active")
     monkeypatch.delenv("MKL_NUM_THREADS", raising=False)
