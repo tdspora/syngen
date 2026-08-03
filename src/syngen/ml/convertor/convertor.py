@@ -25,23 +25,34 @@ class Convertor:
         df: pd.DataFrame = None,
         serialize_complex_types: bool = True
     ):
-        self.original_schema = original_schema
+        self.original_schema = original_schema or {}
         self.df = df
         self.excluded_dtypes: Tuple = (
             str, bytes, datetime, date, time, bool, list, dict, np.ndarray
         )
-        self.custom_schema = {}
         self.preprocessed_df = self.df.copy()
         self.serialize_complex_types = serialize_complex_types
+        self.custom_schema = self._get_custom_schema()
+        self._preprocess_df()
 
-    def _check_dtype_or_nan(self, included_dtypes: Tuple, excluded_dtypes: Tuple = ()):
+    def _get_custom_schema(self) -> Dict:
         """
-        Check if the value is of the specified data types or 'np.NaN'
+        Resolve the format-specific schema into the unified `custom_schema` shape.
+        Must be overridden by subclasses.
         """
-        return (
-            lambda x: (isinstance(x, included_dtypes) and not isinstance(x, excluded_dtypes))
-            or (not isinstance(x, self.excluded_dtypes) and np.isnan(x))
+        raise NotImplementedError
+
+    def _raise_unsupported_type(self, column: str, data_type) -> None:
+        """
+        Log and raise for a column whose data type isn't recognized by the
+        format-specific schema resolver.
+        """
+        message = (
+            f"It seems that the column - '{column}' "
+            f"has unsupported data type - '{data_type}'"
         )
+        logger.error(message)
+        raise ValueError(message)
 
     def _cast_columns_to_schema_types(self):
         """
@@ -79,36 +90,6 @@ class Convertor:
                     self.preprocessed_df[column] = self.preprocessed_df[column].astype("float64")
                 else:
                     self.preprocessed_df[column] = self.preprocessed_df[column].astype("int64")
-
-    def _cast_columns_if_schema_is_not_provided(self):
-        """
-        Cast DataFrame column types if the schema is not provided
-        just based on the values contained in columns
-        """
-        for column in self.preprocessed_df.columns:
-            # Check for boolean first (bool is subclass of int in Python)
-            if self.preprocessed_df[column].map(
-                self._check_dtype_or_nan(included_dtypes=(bool,))
-            ).all():
-                # Keep boolean columns as-is, don't convert to int
-                continue
-            elif self.preprocessed_df[column].map(
-                self._check_dtype_or_nan(included_dtypes=(int,), excluded_dtypes=(bool,))
-            ).all():
-                if self.preprocessed_df[column].isnull().any():
-                    self.preprocessed_df[column] = self.preprocessed_df[column].astype("float64")
-                else:
-                    self.preprocessed_df[column] = self.preprocessed_df[column].astype('int64')
-            elif self.preprocessed_df[column].map(
-                self._check_dtype_or_nan(included_dtypes=(int, float))
-            ).all():
-                self.preprocessed_df[column] = self.preprocessed_df[column].astype(float)
-            elif self.preprocessed_df[column].map(
-                self._check_dtype_or_nan(included_dtypes=(str, bytes))
-            ).all():
-                self.preprocessed_df[column] = (
-                    self.preprocessed_df[column].astype(pd.StringDtype())
-                )
 
     def _get_serializable_columns_mapping(self):
         """
@@ -374,6 +355,20 @@ class Convertor:
                     lambda x: x.encode(encoding) if not pd.isna(x) else x
                 )
 
+    def _apply_format_specific_preprocessing(self):
+        """
+        Default preprocessing pipeline for schema-driven formats (Avro, PyArrow, Delta).
+        'CSVConvertor' overrides this — it has no schema to cast columns against.
+        """
+        self._cast_columns_to_schema_types()
+        self._cast_values_to_string()
+        if self.serialize_complex_types:
+            self._cast_values_to_json()
+            self._cast_binary_columns()
+        else:
+            self._postprocess_encoded_columns()
+            self._deserialize_values_from_json()
+
     def _preprocess_df(self):
         """
         Get the preprocessed data frame, update data types of columns
@@ -381,18 +376,7 @@ class Convertor:
         if not self.preprocessed_df.empty:
             try:
                 self._set_none_values_to_nan()
-                if self.custom_schema.get("format") == "CSV":
-                    self._cast_values_to_string()
-                    self._cast_columns_if_schema_is_not_provided()
-                else:
-                    self._cast_columns_to_schema_types()
-                    self._cast_values_to_string()
-                    if self.serialize_complex_types:
-                        self._cast_values_to_json()
-                        self._cast_binary_columns()
-                    else:
-                        self._postprocess_encoded_columns()
-                        self._deserialize_values_from_json()
+                self._apply_format_specific_preprocessing()
             except Exception as e:
                 logger.error(e)
                 raise e
@@ -405,8 +389,52 @@ class CSVConvertor(Convertor):
 
     def __init__(self, df):
         super().__init__(original_schema=None, df=df)
-        self.custom_schema = {"fields": {}, "format": "CSV"}
-        self._preprocess_df()
+
+    def _get_custom_schema(self) -> Dict:
+        return {"fields": {}, "format": "CSV"}
+
+    def _check_dtype_or_nan(self, included_dtypes: Tuple, excluded_dtypes: Tuple = ()):
+        """
+        Check if the value is of the specified data types or 'np.NaN'
+        """
+        return (
+            lambda x: (isinstance(x, included_dtypes) and not isinstance(x, excluded_dtypes))
+            or (not isinstance(x, self.excluded_dtypes) and np.isnan(x))
+        )
+
+    def _cast_columns_if_schema_is_not_provided(self):
+        """
+        Cast DataFrame column types if the schema is not provided
+        just based on the values contained in columns
+        """
+        for column in self.preprocessed_df.columns:
+            # Check for boolean first (bool is subclass of int in Python)
+            if self.preprocessed_df[column].map(
+                self._check_dtype_or_nan(included_dtypes=(bool,))
+            ).all():
+                # Keep boolean columns as-is, don't convert to int
+                continue
+            elif self.preprocessed_df[column].map(
+                self._check_dtype_or_nan(included_dtypes=(int,), excluded_dtypes=(bool,))
+            ).all():
+                if self.preprocessed_df[column].isnull().any():
+                    self.preprocessed_df[column] = self.preprocessed_df[column].astype("float64")
+                else:
+                    self.preprocessed_df[column] = self.preprocessed_df[column].astype('int64')
+            elif self.preprocessed_df[column].map(
+                self._check_dtype_or_nan(included_dtypes=(int, float))
+            ).all():
+                self.preprocessed_df[column] = self.preprocessed_df[column].astype(float)
+            elif self.preprocessed_df[column].map(
+                self._check_dtype_or_nan(included_dtypes=(str, bytes))
+            ).all():
+                self.preprocessed_df[column] = (
+                    self.preprocessed_df[column].astype(pd.StringDtype())
+                )
+
+    def _apply_format_specific_preprocessing(self):
+        self._cast_values_to_string()
+        self._cast_columns_if_schema_is_not_provided()
 
 
 class AvroConvertor(Convertor):
@@ -414,11 +442,6 @@ class AvroConvertor(Convertor):
     Class for converting the fetched avro schema
     """
 
-    # Avro logical types that represent a date/time and must be modelled as a
-    # date feature. They are mapped to the unified "date" type (mirroring how
-    # PyArrowSchemaConvertor maps Parquet/Delta date & timestamp types). Without
-    # this they would be mapped to "int" and crash in 'Convertor._update_data_types'
-    # when the loaded column holds 'datetime.date' / 'datetime64' objects.
     DATE_LOGICAL_TYPES = frozenset({
         "date",
         "time-millis",
@@ -428,9 +451,6 @@ class AvroConvertor(Convertor):
         "local-timestamp-millis",
         "local-timestamp-micros",
     })
-
-    # Maps each Avro date logical type to the Python type string used during
-    # inference to restore the original object type from a numeric timestamp.
     DATE_TYPE_TO_RESTORE: Dict = {
         "date": "date",
         "time-millis": "time",
@@ -440,18 +460,7 @@ class AvroConvertor(Convertor):
         "local-timestamp-millis": "datetime",
         "local-timestamp-micros": "datetime",
     }
-
-    def __init__(
-        self,
-        original_schema: Optional[Dict] = None,
-        df: pd.DataFrame = None,
-        serialize_complex_types: bool = True
-    ):
-        super().__init__(original_schema, df, serialize_complex_types)
-        self.original_schema = original_schema or {}
-        self.complex_types = {"array", "map", "record", "enum", "fixed"}
-        self.custom_schema = self._get_custom_schema()
-        self._preprocess_df()
+    COMPLEX_TYPES = frozenset({"array", "map", "record", "enum", "fixed"})
 
     def _get_custom_schema(self) -> Dict:
         """
@@ -494,16 +503,11 @@ class AvroConvertor(Convertor):
                 fields[column] = "int"
             elif type_names & {"float", "double"}:
                 fields[column] = "float"
-            elif type_names & {"string", "bytes"}.union(self.complex_types):
+            elif type_names & {"string", "bytes"}.union(self.COMPLEX_TYPES):
                 fields[column] = "string"
             elif type_names == {"null"}:
                 fields[column] = "null"
             else:
-                message = (
-                    f"It seems that the column - '{column}' has unsupported data type - "
-                    f"'{data_type}'"
-                )
-                logger.error(message)
-                raise ValueError(message)
+                self._raise_unsupported_type(column, data_type)
         custom_schema["format"] = "Avro"
         return custom_schema

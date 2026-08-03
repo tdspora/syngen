@@ -11,6 +11,7 @@ from syngen.ml.convertor import CSVConvertor, AvroConvertor
 from syngen.ml.convertor.convertor import Convertor
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
+from unittest.mock import patch
 
 
 def _make_binary_convertor(df: pd.DataFrame, column: str) -> Convertor:
@@ -18,8 +19,13 @@ def _make_binary_convertor(df: pd.DataFrame, column: str) -> Convertor:
     Build a minimal Convertor instance that exercises the binary cast path.
     AvroConvertor maps bytes → string (no binary path), so we use the base
     class directly and configure it to treat `column` as binary.
+    'Convertor._get_custom_schema' is abstract (raises 'NotImplementedError'),
+    so it's patched here to return the unified schema shape directly.
     """
-    convertor = Convertor(original_schema={column: "binary"}, df=df)
+    with patch.object(
+        Convertor, "_get_custom_schema", return_value={"fields": {column: "binary"}}
+    ):
+        convertor = Convertor(original_schema={column: "binary"}, df=df)
     return convertor
 
 
