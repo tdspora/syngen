@@ -25,11 +25,13 @@ def _make_binary_convertor(df: pd.DataFrame, column: str) -> Convertor:
 
 def _flatten_avro_schema(schema: dict) -> dict:
     """
-    Flatten a raw fastavro schema (with a top-level "fields" list, as returned
-    by 'fastavro.reader(...).writer_schema') into the mapping of the field
-    name to its Avro type expected by 'AvroConvertor'.
+    Flatten an Avro schema to a simple dict mapping column names to types.
+    This is a minimal implementation for testing purposes.
     """
-    return {field["name"]: field["type"] for field in schema.get("fields", [])}
+    return {
+        field["name"]: field["type"]
+        for field in schema.get("fields", [])
+    }
 
 
 def test_initiate_csv_convertor(rp_logger):
