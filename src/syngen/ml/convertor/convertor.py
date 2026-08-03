@@ -27,7 +27,9 @@ class Convertor:
     ):
         self.original_schema = original_schema
         self.df = df
-        self.excluded_dtypes: Tuple = (str, bytes, datetime, date, time, bool, list, dict)
+        self.excluded_dtypes: Tuple = (
+            str, bytes, datetime, date, time, bool, list, dict, np.ndarray
+        )
         self.custom_schema = {}
         self.preprocessed_df = self.df.copy()
         self.serialize_complex_types = serialize_complex_types
