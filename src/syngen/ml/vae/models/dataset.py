@@ -37,6 +37,13 @@ from syngen.ml.utils import clean_up_metadata
 from slugify import slugify
 from syngen.ml.mlflow_tracker import MlflowTracker
 
+# Seed for the draws that decide *how the data is fitted*: the date-format probe and the
+# tied-mode fill value. These run during train-time fitting, before any model-side
+# seeding takes effect, so an unseeded draw silently gives two otherwise identical runs a
+# different transform or a different imputed value (EPMCTDM-7630). Shared with
+# features.py's NORMALITY_SAMPLE_SEED so all train-time fitting decisions use one seed.
+FITTING_SAMPLE_SEED = 42
+
 
 @dataclass
 class Dataset:
@@ -946,7 +953,7 @@ class Dataset:
         date_text = self.df[column].dropna()
 
         n_samples = min(100, len(date_text))
-        sample = date_text.sample(n_samples, random_state=42).values
+        sample = date_text.sample(n_samples, random_state=FITTING_SAMPLE_SEED).values
 
         types = [self.__get_date_format(str(i)) for i in sample]
 
@@ -1248,7 +1255,15 @@ class Dataset:
             if fillna_strategy == "mean":
                 fillna_value = self.df[feature].mean()
             elif fillna_strategy == "mode":
-                fillna_value = self.df[feature].dropna().mode().sample(1).values[0]
+                # `mode()` returns *every* most-frequent value, so a tie leaves a real
+                # choice here. Unseeded, two identical runs impute different values.
+                fillna_value = (
+                    self.df[feature]
+                    .dropna()
+                    .mode()
+                    .sample(1, random_state=FITTING_SAMPLE_SEED)
+                    .values[0]
+                )
             elif (fillna_strategy == "text") or (fillna_strategy == "email"):
                 fillna_value = ""
             else:

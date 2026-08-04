@@ -1,10 +1,13 @@
+import os
+
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, mock_open
 from datetime import datetime, timedelta, timezone, date, time
 
 import numpy as np
 import pandas as pd
 
+import syngen.ml.utils.utils as utils_module
 from syngen.ml.utils import (
     slugify_attribute,
     slugify_parameters,
@@ -17,7 +20,14 @@ from syngen.ml.utils import (
     get_source_path_extension,
     generate_unique_values_by_regex,
     is_number_regex_pattern,
+    get_available_cpu_count,
+    get_deployment_mode,
+    get_thread_parallelism_budget,
+    limit_thread_parallelism,
+    setup_log_process,
+    SUPPORTED_LOG_LEVELS,
 )
+from syngen.ml.utils.utils import _cgroup_cpu_quota
 
 from tests.conftest import SUCCESSFUL_MESSAGE
 
@@ -673,4 +683,212 @@ def test_get_source_path_extension_with_metadata(path, expected, rp_logger):
         },
     }
     assert get_source_path_extension(table_name="pk_test", metadata=test_metadata) == expected
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def _fake_open(files):
+    """
+    Return an ``open`` replacement that serves in-memory content for the given
+    paths and raises FileNotFoundError for anything else, so cgroup file lookups
+    can be simulated regardless of the host's real cgroup layout.
+    """
+    def _open(path, *args, **kwargs):
+        if path in files:
+            return mock_open(read_data=files[path])()
+        raise FileNotFoundError(path)
+
+    return _open
+
+
+def test_cgroup_cpu_quota_v2(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' reads a cgroup v2 'cpu.max' quota")
+    files = {"/sys/fs/cgroup/cpu.max": "4000000 100000"}
+    with patch("builtins.open", _fake_open(files)):
+        assert _cgroup_cpu_quota() == 40
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cgroup_cpu_quota_v2_unlimited(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' returns None when cgroup v2 quota is 'max'")
+    files = {"/sys/fs/cgroup/cpu.max": "max 100000"}
+    with patch("builtins.open", _fake_open(files)):
+        assert _cgroup_cpu_quota() is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cgroup_cpu_quota_v1(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' reads cgroup v1 cfs quota/period")
+    files = {
+        "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "250000",
+        "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000",
+    }
+    with patch("builtins.open", _fake_open(files)):
+        # ceil(250000 / 100000) == 3
+        assert _cgroup_cpu_quota() == 3
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cgroup_cpu_quota_absent(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' returns None when no cgroup files exist")
+    with patch("builtins.open", _fake_open({})):
+        assert _cgroup_cpu_quota() is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_available_cpu_count_honours_quota(rp_logger):
+    rp_logger.info("Test 'get_available_cpu_count' returns the cgroup quota when it is the smallest")
+    # create=True so the patch works on Windows, where os.sched_getaffinity
+    # does not exist (the production code guards it with try/except).
+    with patch.object(utils_module, "_cgroup_cpu_quota", return_value=40), \
+            patch("os.sched_getaffinity", return_value=set(range(96)), create=True), \
+            patch("os.cpu_count", return_value=96):
+        assert get_available_cpu_count() == 40
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_available_cpu_count_affinity_fallback(rp_logger):
+    rp_logger.info("Test 'get_available_cpu_count' falls back to the affinity mask without a quota")
+    with patch.object(utils_module, "_cgroup_cpu_quota", return_value=None), \
+            patch("os.sched_getaffinity", return_value=set(range(8)), create=True), \
+            patch("os.cpu_count", return_value=96):
+        assert get_available_cpu_count() == 8
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_available_cpu_count_minimum_one(rp_logger):
+    rp_logger.info("Test 'get_available_cpu_count' returns at least 1 when nothing is detectable")
+    with patch.object(utils_module, "_cgroup_cpu_quota", return_value=None), \
+            patch("os.sched_getaffinity", side_effect=OSError, create=True), \
+            patch("os.cpu_count", return_value=None):
+        assert get_available_cpu_count() == 1
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_deployment_mode_defaults_to_dedicated(rp_logger, monkeypatch):
+    monkeypatch.delenv("SYNGEN_DEPLOYMENT_MODE", raising=False)
+
+    assert get_deployment_mode() == "dedicated"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_deployment_mode_uses_dedicated_for_invalid_value(rp_logger, monkeypatch):
+    monkeypatch.setenv("SYNGEN_DEPLOYMENT_MODE", "invalid")
+
+    assert get_deployment_mode() == "dedicated"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_thread_parallelism_budget_honours_native_thread_cap(rp_logger, monkeypatch):
+    monkeypatch.setenv("OMP_NUM_THREADS", "2")
+    monkeypatch.setenv("MKL_NUM_THREADS", "4")
+    with patch.object(utils_module, "get_available_cpu_count", return_value=8):
+        assert get_thread_parallelism_budget() == 2
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_sets_dedicated_defaults(rp_logger, monkeypatch):
+    rp_logger.info("Test 'limit_thread_parallelism' sets thread defaults from the CPU budget")
+    for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OMP_WAIT_POLICY", "KMP_BLOCKTIME"):
+        monkeypatch.setenv(var, "")
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.delenv("SYNGEN_DEPLOYMENT_MODE", raising=False)
+    with patch.object(utils_module, "get_available_cpu_count", return_value=4):
+        applied = limit_thread_parallelism()
+    assert applied == 4
+    assert os.environ["OMP_NUM_THREADS"] == "4"
+    assert os.environ["MKL_NUM_THREADS"] == "4"
+    assert "OMP_WAIT_POLICY" not in os.environ
+    assert "KMP_BLOCKTIME" not in os.environ
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_sets_shared_wait_policy(rp_logger, monkeypatch):
+    for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OMP_WAIT_POLICY", "KMP_BLOCKTIME"):
+        monkeypatch.setenv(var, "")
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("SYNGEN_DEPLOYMENT_MODE", "shared")
+    with patch.object(utils_module, "get_available_cpu_count", return_value=4):
+        applied = limit_thread_parallelism()
+    assert applied == 4
+    assert os.environ["OMP_NUM_THREADS"] == "4"
+    assert os.environ["MKL_NUM_THREADS"] == "4"
+    assert os.environ["OMP_WAIT_POLICY"] == "passive"
+    assert os.environ["KMP_BLOCKTIME"] == "0"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_respects_preset(rp_logger, monkeypatch):
+    rp_logger.info("Test 'limit_thread_parallelism' does not override caller-provided env vars")
+    monkeypatch.setenv("SYNGEN_DEPLOYMENT_MODE", "shared")
+    monkeypatch.setenv("OMP_NUM_THREADS", "2")
+    monkeypatch.setenv("OMP_WAIT_POLICY", "active")
+    monkeypatch.delenv("MKL_NUM_THREADS", raising=False)
+    with patch.object(utils_module, "get_available_cpu_count", return_value=40):
+        limit_thread_parallelism()
+    assert os.environ["OMP_NUM_THREADS"] == "2"        # preserved
+    assert os.environ["OMP_WAIT_POLICY"] == "active"   # preserved
+    assert os.environ["MKL_NUM_THREADS"] == "40"       # filled from budget
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("level", SUPPORTED_LOG_LEVELS)
+def test_setup_log_process_accepts_every_supported_level(level, rp_logger, monkeypatch, tmp_path):
+    """EPMCTDM-7630: every level loguru actually supports must be accepted."""
+    rp_logger.info(f"Test 'setup_log_process' accepts the supported level '{level}'")
+    monkeypatch.chdir(tmp_path)
+
+    setup_log_process(
+        type_of_process="train", log_level=level, table_name="t", metadata_path=None
+    )
+
+    assert os.environ["LOGURU_LEVEL"] == level
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_setup_log_process_rejects_unsupported_level(rp_logger, monkeypatch, tmp_path):
+    """EPMCTDM-7630: an unsupported level must raise a clear message naming the parameter
+    and listing the supported levels - not loguru's bare internal error - and must do so
+    BEFORE anything is written to `os.environ`, so an invalid value cannot propagate to a
+    child process and fail its import (as it did in round 3, tmp/os-3rd-report.md §7.2)."""
+    rp_logger.info("Test 'setup_log_process' rejects an unsupported level")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("LOGURU_LEVEL", raising=False)
+
+    with pytest.raises(ValueError) as error:
+        setup_log_process(
+            type_of_process="train", log_level="test", table_name="t", metadata_path=None
+        )
+
+    assert str(error.value) == (
+        "Unsupported log level: 'test'. The supported log levels are: "
+        "TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL."
+    )
+    assert "LOGURU_LEVEL" not in os.environ
+    assert not (tmp_path / "model_artifacts").exists()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_supported_log_levels_matches_loguru(rp_logger):
+    """EPMCTDM-7630: `SUPPORTED_LOG_LEVELS` is a hardcoded tuple rather than derived from
+    loguru's internals, so this pins it against loguru's actual level set - a loguru upgrade
+    that adds or renames a level would otherwise drift silently."""
+    rp_logger.info("Test 'SUPPORTED_LOG_LEVELS' matches loguru's own registered levels")
+    from loguru import logger as loguru_logger
+
+    actual_levels = set(loguru_logger._core.levels.keys())
+    assert set(SUPPORTED_LOG_LEVELS) == actual_levels
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cli_log_level_choices_match_supported_levels(rp_logger):
+    """EPMCTDM-7630: base's CLI accepted 6 of loguru's 7 levels (missing SUCCESS) while the
+    SDK's Literal listed the same 6 - two sets of accepted values silently drifting apart.
+    Pin both CLI commands' `click.Choice` against the single shared constant."""
+    rp_logger.info("Test train/infer CLI --log_level choices match SUPPORTED_LOG_LEVELS")
+    from syngen.train import cli_launch_train
+    from syngen.infer import cli_launch_infer
+
+    for command in (cli_launch_train, cli_launch_infer):
+        option = next(p for p in command.params if p.name == "log_level")
+        assert tuple(option.type.choices) == SUPPORTED_LOG_LEVELS
     rp_logger.info(SUCCESSFUL_MESSAGE)

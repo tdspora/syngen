@@ -11,7 +11,7 @@ Use the names defined in `docs/agent-harness/glossary.md` (business / product, p
 
 ## Workflow
 
-0. **Bootstrap check.** If pytest fails to collect or any `python -m …` command reports `ModuleNotFoundError`, invoke the `syngen-bootstrap` skill before continuing. The harness fixed a structural collection break on 2026-05-27 by adding `src/tests/__init__.py` and a `[tool.pytest.ini_options]` block in `pyproject.toml`; runtime deps from `requirements.txt` may still be missing locally.
+0. **Bootstrap check.** If pytest fails to collect or any `python -m …` command reports `ModuleNotFoundError`, invoke the `syngen-bootstrap` skill before continuing. The harness fixed a structural collection break on 2026-05-27 by adding `src/tests/__init__.py` and a `[tool.pytest.ini_options]` block in `pyproject.toml`; runtime deps declared in `pyproject.toml` may still be missing locally.
 1. **Frame the change.** Restate the requested change and identify affected workflows: [[training run]], [[inference run]], [[metadata YAML]], [[reports]].
 2. **Research.** Inspect relevant source under `src/syngen/`, tests under `src/tests/unit/`, examples in `examples/`, demo notebooks, CI configuration.
 3. **Identify public-surface impact.** [[CLI entry points]] (`train`, `infer`, `syngen` — note these are the binary names; `launch_train` / `launch_infer` are the function names), [[SDK]] (`Syngen` class in `src/syngen/sdk.py`), [[metadata YAML]] schema, or serialization format. Any break is an [[escalation trigger]].

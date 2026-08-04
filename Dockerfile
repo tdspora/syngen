@@ -18,10 +18,14 @@ RUN apt-get update && \
     pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir . && \
     mv src/* . && \
-    rm -rf src pyproject.toml README.md
+    rm -rf src pyproject.toml README.md && \
+    pip uninstall -y pip
 
 ENV HOME=/tmp
 ENV MPLCONFIGDIR=/tmp
+# CPU resource policy is selected at runtime by SYNGEN_DEPLOYMENT_MODE:
+# dedicated (default) optimizes a single Syngen job; shared configures sleeping
+# OpenMP/MKL wait threads for concurrent containers.
 # /src lets `python -m start` and the `python syngen/train.py` subprocess it
 # spawns resolve `import syngen`; /src/syngen lets that subprocess import the
 # package's own top-level modules. (Base image does not define PYTHONPATH.)

@@ -1,7 +1,8 @@
+import random
+
 import pytest
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 from unittest.mock import patch, MagicMock
 from sklearn.preprocessing import (
     StandardScaler,
@@ -152,12 +153,11 @@ def test_top_p_filtering(rp_logger):
         name="text_column",
         text_max_len=4
     )
-    data = tf.nn.softmax(
-        np.loadtxt(
-            f"{DIR_NAME}/unit/features/fixtures/tensor.csv"
-        ).reshape((20, 4, 12)).astype(np.float32),
-        axis=-1
-    )
+    logits = np.loadtxt(
+        f"{DIR_NAME}/unit/features/fixtures/tensor.csv"
+    ).reshape((20, 4, 12)).astype(np.float32)
+    exp = np.exp(logits - logits.max(axis=-1, keepdims=True))
+    data = exp / exp.sum(axis=-1, keepdims=True)
 
     result = feature._top_p_filtering(data, top_p=0.7)
     result /= result.sum(axis=2, keepdims=True)
@@ -465,5 +465,35 @@ def test_categorical_feature_fit_transform_pipeline(input_data, rp_logger):
     np.testing.assert_array_equal(
         recovered,
         input_data['col'].astype(str).values
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_select_scaler_is_deterministic_for_borderline_column(rp_logger):
+    """EPMCTDM-7630: the scaler decision must not depend on the global RNG.
+
+    `_select_scaler` runs Shapiro on a 500-row subsample and compares the p-value against
+    a hard 0.05 threshold. This column is 999 standard-normal values plus one extreme
+    outlier, so a 500-of-1000 draw includes the outlier about half the time: when it does
+    the p-value collapses and a different scaler is chosen. Unseeded that is a coin flip
+    per run, and the scaler determines the column's transform - so a different model and
+    different generated data at a fixed seed.
+
+    The bug is latent on real columns (their p-values sit nowhere near 0.05), which is why
+    the column here is engineered to be borderline.
+    """
+    rp_logger.info("Testing _select_scaler is deterministic for a borderline column")
+    values = np.random.default_rng(0).normal(size=1000)
+    values[0] = 1e6
+    data = pd.DataFrame({"c": values})
+
+    picks = []
+    for i in range(8):
+        random.seed(i * 7919)
+        np.random.seed(i * 104729)      # perturb the global RNG, as separate runs do
+        picks.append(type(ContinuousFeature(name="c")._select_scaler(data)).__name__)
+
+    assert len(set(picks)) == 1, (
+        f"scaler choice must be stable regardless of global RNG state, got {set(picks)}"
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)

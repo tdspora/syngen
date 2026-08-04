@@ -566,6 +566,125 @@ def fetch_env_variables(options: Dict) -> Dict:
     return options
 
 
+def _cgroup_cpu_quota() -> Optional[int]:
+    """
+    Return the CPU budget imposed by a Linux cgroup CPU quota, or None if no
+    quota is set. Supports cgroup v2 (``/sys/fs/cgroup/cpu.max``) and cgroup v1
+    (``cpu.cfs_quota_us`` / ``cpu.cfs_period_us``).
+
+    A container started with ``docker run --cpus=N`` translates to
+    ``quota/period == N``; this lets the process see ``N`` instead of the whole
+    host core count.
+    """
+    try:
+        with open("/sys/fs/cgroup/cpu.max") as f:
+            quota, period = f.read().split()
+        if quota != "max" and int(period) > 0:
+            return max(1, math.ceil(int(quota) / int(period)))
+    except (OSError, ValueError):
+        pass
+    try:
+        with open("/sys/fs/cgroup/cpu/cpu.cfs_quota_us") as f:
+            quota = int(f.read())
+        with open("/sys/fs/cgroup/cpu/cpu.cfs_period_us") as f:
+            period = int(f.read())
+        if quota > 0 and period > 0:
+            return max(1, math.ceil(quota / period))
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def get_available_cpu_count() -> int:
+    """
+    Return the number of CPUs actually usable by this process.
+
+    Honours (in order of precedence, taking the smallest positive signal):
+    a cgroup CPU quota (so ``docker run --cpus=N`` reports ``N`` rather than the
+    host core count), the process CPU-affinity mask, and finally
+    ``os.cpu_count()``. Always returns at least 1.
+
+    This matters because PyTorch/OpenMP/MKL and ``multiprocessing.cpu_count()``
+    read the host topology and ignore the ``--cpus`` quota, which leads to
+    massive thread over-subscription when many containers run concurrently.
+    """
+    candidates = [_cgroup_cpu_quota()]
+    try:
+        candidates.append(len(os.sched_getaffinity(0)))
+    except (AttributeError, OSError):
+        pass
+    candidates.append(os.cpu_count())
+    positive = [c for c in candidates if c and c > 0]
+    return max(1, min(positive)) if positive else 1
+
+
+def get_deployment_mode() -> Literal["dedicated", "shared"]:
+    """
+    Return the CPU-resource policy selected for this Syngen process.
+
+    ``dedicated`` is the default for one Syngen job that owns its host. ``shared``
+    configures waiting OpenMP threads to sleep, which prevents contention when
+    multiple containers share the same CPU resources.
+    """
+    mode = os.environ.get("SYNGEN_DEPLOYMENT_MODE", "dedicated").strip().lower()
+    if mode not in ("dedicated", "shared"):
+        logger.warning(
+            "Ignoring invalid SYNGEN_DEPLOYMENT_MODE='{}'. "
+            "Expected 'dedicated' or 'shared'; using 'dedicated'.",
+            mode
+        )
+        return "dedicated"
+    return mode
+
+
+def get_thread_parallelism_budget() -> int:
+    """
+    Return the CPU budget after applying explicit OpenMP/MKL thread limits.
+
+    Only positive integer values are used. OpenMP also accepts non-numeric
+    values, such as a nested thread-list, which this process-level budget cannot
+    safely interpret and therefore leaves to the runtime.
+    """
+    candidates = [get_available_cpu_count()]
+    for variable in ("OMP_NUM_THREADS", "MKL_NUM_THREADS"):
+        try:
+            configured_count = int(os.environ.get(variable, ""))
+        except ValueError:
+            continue
+        if configured_count > 0:
+            candidates.append(configured_count)
+    return min(candidates)
+
+
+def limit_thread_parallelism() -> int:
+    """
+    Bound native math-library (OpenMP/MKL) thread pools to the CPU budget.
+
+    Sets, only when the caller has not already exported them (``setdefault``):
+    ``OMP_NUM_THREADS`` / ``MKL_NUM_THREADS`` to the cgroup-aware CPU budget.
+    In ``shared`` deployment mode, it also sets ``OMP_WAIT_POLICY=passive`` /
+    ``KMP_BLOCKTIME=0`` so waiting threads sleep instead of spinning.
+
+    Must be called **before** ``torch`` (and thus OpenMP/MKL) is first imported,
+    because those runtimes read these variables at initialisation. Returns the
+    CPU budget that was applied.
+    """
+    cpu_count = get_available_cpu_count()
+    os.environ.setdefault("OMP_NUM_THREADS", str(cpu_count))
+    os.environ.setdefault("MKL_NUM_THREADS", str(cpu_count))
+    if get_deployment_mode() == "shared":
+        os.environ.setdefault("OMP_WAIT_POLICY", "passive")
+        os.environ.setdefault("KMP_BLOCKTIME", "0")
+    return cpu_count
+
+
+# The levels loguru itself supports. A plain constant rather than deriving from
+# loguru's internals (`logger._core.levels`), which would touch a private API for a
+# set that changes only on a loguru major version - see
+# `test_supported_log_levels_matches_loguru` for a check that catches any drift.
+SUPPORTED_LOG_LEVELS = ("TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL")
+
+
 def file_sink(message):
     """
     Save logs to the log file
@@ -602,6 +721,11 @@ def setup_log_process(
     """
     Set up the logging process with the specified level
     """
+    if log_level not in SUPPORTED_LOG_LEVELS:
+        raise ValueError(
+            f"Unsupported log level: '{log_level}'. "
+            f"The supported log levels are: {', '.join(SUPPORTED_LOG_LEVELS)}."
+        )
     os.environ["LOGURU_LEVEL"] = log_level
     os.makedirs("model_artifacts/system_store/logs", exist_ok=True)
     os.environ["SUCCESS_LOG_FILE"] = get_log_path(

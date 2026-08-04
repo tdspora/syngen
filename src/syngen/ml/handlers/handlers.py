@@ -13,11 +13,11 @@ from copy import deepcopy
 
 import pandas as pd
 import numpy as np
+import torch
 from numpy.random import seed
 import dill
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
-from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
 from attrs import define, field
@@ -26,12 +26,14 @@ from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.reporters import Report
 from syngen.ml.vae.models.dataset import Dataset
+from syngen.ml.vae.models.features import CharTokenizer
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
     get_initial_table_name,
     ProgressBarHandler,
     get_source_path_extension,
+    get_thread_parallelism_budget,
     timing,
 )
 
@@ -122,7 +124,7 @@ class LongTextsHandler(BaseHandler):
         if len(long_text_columns) > 0:
             features = {}
             for col in long_text_columns:
-                tokenizer = Tokenizer(lower=False, char_level=True)
+                tokenizer = CharTokenizer(lower=False, char_level=True)
                 if type(data[col].dropna().values[0]) is bytes:
                     text_col = data[col].str.decode("utf-8", errors="ignore")
                 else:
@@ -299,6 +301,7 @@ class VaeInferHandler(BaseHandler):
         self.batch_size, self.batch_num, n_jobs = (
             self._calculate_batch_configuration()
         )
+        threads_per_worker = max(1, self._get_worker_cpu_budget() // n_jobs)
 
         func_for_worker_init = functools.partial(
             self.__class__._initialize_worker_vae_model,
@@ -309,7 +312,7 @@ class VaeInferHandler(BaseHandler):
         self._pool = mp.Pool(
             processes=n_jobs,
             initializer=self.__class__.worker_init,
-            initargs=(func_for_worker_init,)
+            initargs=(func_for_worker_init, threads_per_worker)
         )
 
     def _calculate_batch_configuration(self) -> Tuple[int, int, int]:
@@ -320,8 +323,7 @@ class VaeInferHandler(BaseHandler):
         Returns:
             Tuple[int, int, int]: (batch_size, batch_num, n_jobs)
         """
-        # use all available CPUs minus one to avoid overloading the system
-        cpu_count = max(1, mp.cpu_count() - 1)
+        cpu_count = self._get_worker_cpu_budget()
 
         if self.batch_num > 1:
             n_jobs = min(self.batch_num, cpu_count)
@@ -346,8 +348,17 @@ class VaeInferHandler(BaseHandler):
         return self.batch_size, self.batch_num, n_jobs
 
     @staticmethod
-    def worker_init(get_wrapper_func_from_main):
+    def _get_worker_cpu_budget() -> int:
+        """
+        Reserve one CPU and honour the effective native-thread budget.
+        """
+        return max(1, get_thread_parallelism_budget() - 1)
+
+    @staticmethod
+    def worker_init(get_wrapper_func_from_main, threads_per_worker=None):
         global vae_model
+        if threads_per_worker is not None:
+            torch.set_num_threads(threads_per_worker)
         vae_model = get_wrapper_func_from_main()
 
     @staticmethod

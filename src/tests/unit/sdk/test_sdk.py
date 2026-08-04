@@ -1,7 +1,6 @@
 from unittest.mock import patch
 import pytest
 import os
-import shutil
 
 from marshmallow import ValidationError
 from cryptography.fernet import Fernet
@@ -587,13 +586,26 @@ def test_train_table_with_valid_log_level(
 
 
 def test_train_table_with_invalid_log_level(rp_logger):
+    """EPMCTDM-7630: an unsupported log level must be rejected with a clear message naming
+    the supported levels, raised before anything is written to `os.environ` - not loguru's
+    bare internal error, and not after `model_artifacts/` has already been created."""
     rp_logger.info(
         "Launch the training process with the invalid 'log_level' parameter equals 'test'"
     )
+    log_level_before = os.environ.get("LOGURU_LEVEL")
+    model_artifacts_existed_before = os.path.exists("model_artifacts")
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(log_level="test")
-        assert str(error.value) == "ValueError: Level 'test' does not exist"
-    shutil.rmtree("model_artifacts/")
+    error_message = (
+        "Unsupported log level: 'test'. The supported log levels are: "
+        "TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL."
+    )
+    assert str(error.value) == error_message
+    assert os.environ.get("LOGURU_LEVEL") == log_level_before
+    # ambient test pollution may have already created model_artifacts/ from an
+    # unrelated earlier test; the property this asserts is that THIS call created
+    # nothing new, not that the directory is absent outright
+    assert os.path.exists("model_artifacts") == model_artifacts_existed_before
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -900,13 +912,26 @@ def test_infer_table_with_valid_log_level(
 
 
 def test_infer_table_with_invalid_log_level(rp_logger):
+    """EPMCTDM-7630: an unsupported log level must be rejected with a clear message naming
+    the supported levels, raised before anything is written to `os.environ` - not loguru's
+    bare internal error, and not after `model_artifacts/` has already been created."""
     rp_logger.info(
         "Launch the inference process with the invalid 'log_level' parameter equals 'test'"
     )
+    log_level_before = os.environ.get("LOGURU_LEVEL")
+    model_artifacts_existed_before = os.path.exists("model_artifacts")
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(log_level="test")
-        assert str(error.value) == "ValueError: Level 'test' does not exist"
-    shutil.rmtree("model_artifacts/")
+    error_message = (
+        "Unsupported log level: 'test'. The supported log levels are: "
+        "TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL."
+    )
+    assert str(error.value) == error_message
+    assert os.environ.get("LOGURU_LEVEL") == log_level_before
+    # ambient test pollution may have already created model_artifacts/ from an
+    # unrelated earlier test; the property this asserts is that THIS call created
+    # nothing new, not that the directory is absent outright
+    assert os.path.exists("model_artifacts") == model_artifacts_existed_before
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

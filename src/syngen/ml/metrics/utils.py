@@ -8,6 +8,14 @@ import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
 from loguru import logger
 
+# Seed for the accuracy report's own "pick a subset to display" draws (which column
+# pairs get a bivariate plot, which ticks are labelled, which categorical bars are
+# shown). Drawing from the global RNG made the same data produce a different report on
+# every run. Matches the random_state=10 already used by the estimators in
+# metrics_classes.metrics, so all report randomness shares one seed (EPMCTDM-7630).
+# The aim is run-to-run stability, not user control.
+METRIC_SAMPLE_SEED = 10
+
 
 def encode_categorical_features(dfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
     """
@@ -83,7 +91,11 @@ def get_ratio_counts(ratio_counts, count: int = 30) -> Dict:
     most_common_items = ratio_counts.most_common(most_least_count)
     least_common_items = ratio_counts.most_common()[: -most_least_count - 1: -1]
     between_items = ratio_counts.most_common()[most_least_count:-most_least_count]
-    selected_between_items = random.sample(between_items, min(other_items, len(between_items)))
+    # Seeded so the same data always yields the same displayed subset: drawing from
+    # the global RNG made the univariate plot differ between runs (EPMCTDM-7630).
+    selected_between_items = random.Random(METRIC_SAMPLE_SEED).sample(
+        between_items, min(other_items, len(between_items))
+    )
 
     updated_ratio_counts = dict(
         most_common_items + selected_between_items + least_common_items

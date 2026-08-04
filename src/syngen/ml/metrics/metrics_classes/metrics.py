@@ -30,6 +30,7 @@ from syngen.ml.utils import (
     fetch_config
 )
 from syngen.ml.metrics.utils import (
+    METRIC_SAMPLE_SEED,
     get_outlier_ratio_iqr,
     plot_dist,
     sanitize_labels,
@@ -413,7 +414,9 @@ class BivariateMetric(BaseMetric):
         }
         all_columns = fetched_columns - excluded_cols
         all_column_pairs = list(combinations(all_columns, 2))
-        column_pairs = random.sample(
+        # a dedicated Random instance, not the module-level `random`, so the choice
+        # cannot be perturbed by whatever else has drawn from the global RNG
+        column_pairs = random.Random(METRIC_SAMPLE_SEED).sample(
             all_column_pairs, min(max_num_combinations, len(all_column_pairs))
         )
         bi_imgs = {}
@@ -587,7 +590,7 @@ class BivariateMetric(BaseMetric):
         remaining_ticks = categ_ticks[min_ticks:-max_ticks]
 
         # Randomly select other_ticks elements from the remaining list
-        selected_other_ticks = random.sample(
+        selected_other_ticks = random.Random(METRIC_SAMPLE_SEED).sample(
             remaining_ticks, min(other_ticks, len(remaining_ticks))
         )
 

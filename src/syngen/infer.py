@@ -4,13 +4,21 @@ import click
 from loguru import logger
 import pandas as pd
 
-from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     get_reports,
     fetch_env_variables,
-    timing
+    timing,
+    limit_thread_parallelism,
+    SUPPORTED_LOG_LEVELS
 )
+
+# Bound native (OpenMP/MKL) thread pools before ``torch`` is imported (via
+# ``Worker`` below). Shared mode additionally disables idle-thread busy-waiting.
+# Honours pre-set env vars.
+limit_thread_parallelism()
+
+from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes, ValidationSettingsSchema
 
 
@@ -42,8 +50,11 @@ def launch_infer(
         List[Literal["accuracy", "metrics_only"]]
         ] = "none",
     random_seed: Optional[int] = None,
+    # Kept in sync with `syngen.ml.utils.SUPPORTED_LOG_LEVELS` - a `Literal` cannot be
+    # built from a runtime tuple, so `test_log_level_literal_matches_supported_levels`
+    # asserts the two stay identical.
     log_level: Literal[
-        "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+        "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"
         ] = "INFO",
     fernet_key: Optional[str] = None,
     loader: Optional[Callable[[str], pd.DataFrame]] = None
@@ -155,7 +166,7 @@ def launch_infer(
 @click.option(
     "--log_level",
     default="INFO",
-    type=click.Choice(["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    type=click.Choice(SUPPORTED_LOG_LEVELS),
     help="Set the logging level which will be used in the process. "
          "If absent, it's defaulted to 'INFO'",
 )

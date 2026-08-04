@@ -14,6 +14,13 @@ from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.format_settings import set_format_settings, load_saved_artifact
 from syngen.ml.utils import fetch_unique_root, fetch_config, get_source_path_extension
 
+# Row selection must be reproducible: the 'row_limit' draw happens in the
+# preprocessing layer, before any model-side seeding, so an unseeded sample
+# silently hands every run a different training subset and makes any table
+# configured with 'row_limit' irreproducible even at a fixed seed
+# (EPMCTDM-7630).
+ROW_SUBSET_SEED = 0
+
 
 class Processor:
     """
@@ -157,7 +164,7 @@ class PreprocessHandler(Processor):
 
             if row_limit:
                 self.row_subset = min(row_limit, len(data))
-                data = data.sample(n=self.row_subset)
+                data = data.sample(n=self.row_subset, random_state=ROW_SUBSET_SEED)
 
         if len(data) < 100:
             logger.warning(

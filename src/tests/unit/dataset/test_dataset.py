@@ -1470,3 +1470,38 @@ def test_validate_uq_keys_with_single_null_row_does_not_warn(
     dataset._validate_uq_keys()
     mock_logger.warning.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_preprocess_nan_cols_mode_is_deterministic_on_tie(rp_logger):
+    """EPMCTDM-7630: the 'mode' fill value must not depend on the global RNG.
+
+    `mode()` returns *every* most-frequent value, so on a tie there is a real choice.
+    Unseeded, two otherwise identical runs impute a different value into the training
+    data. Ties are not exotic - low-cardinality and small columns produce them readily.
+
+    Here three values are tied at 30 occurrences each, so pandas returns all three.
+    """
+    rp_logger.info("Test '_preprocess_nan_cols' picks a stable mode on a tie")
+    column = pd.Series(["a"] * 30 + ["b"] * 30 + ["c"] * 30 + [None] * 10, name="c")
+    assert len(column.dropna().mode()) == 3, "test needs a genuine tie"
+
+    filled = []
+    for i in range(8):
+        random.seed(i * 7919)
+        np.random.seed(i * 104729)      # perturb the global RNG, as separate runs do
+        dataset = Dataset(
+            df=pd.DataFrame({"c": column}),
+            schema={"fields": {}, "format": "CSV"},
+            metadata={"mock_table": {}},
+            table_name="mock_table",
+            paths={"initial_order_of_columns_path": "mock_path.pkl"},
+            main_process="train",
+        )
+        dataset._preprocess_nan_cols("c", fillna_strategy="mode")
+        # the imputed value is whatever now sits where the NaNs were
+        filled.append(dataset.df["c"].iloc[-1])
+
+    assert len(set(filled)) == 1, (
+        f"mode fill value must be stable regardless of global RNG state, got {set(filled)}"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
