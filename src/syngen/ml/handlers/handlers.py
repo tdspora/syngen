@@ -129,7 +129,21 @@ class LongTextsHandler(BaseHandler):
                     text_col = data[col].str.decode("utf-8", errors="ignore")
                 else:
                     text_col = data[col]
-                text_col = text_col.fillna("")
+
+                # Fit the KDE on real texts only. Filling NULLs with "" would add
+                # (char_len=0, word_count=0) points that both skew the modelled text
+                # length towards zero and turn NULL reproduction into an accident of
+                # where the KDE tail happens to land. The NULL share is recorded
+                # separately and applied as an explicit mask at generation time.
+                non_null_col = text_col.dropna()
+                if len(non_null_col) < 2:
+                    # gaussian_kde needs at least two points. Keep the legacy
+                    # behaviour for such a column instead of failing the whole run.
+                    text_col, null_share = text_col.fillna(""), 0.0
+                else:
+                    null_share = float(text_col.isna().mean())
+                    text_col = non_null_col
+
                 tokenizer.fit_on_texts(text_col)
 
                 indexes = OrderedDict((k, v) for k, v in tokenizer.word_index.items() if k != " ")
@@ -152,6 +166,13 @@ class LongTextsHandler(BaseHandler):
                     "counts": counts,
                     "indexes": ordered_indexes,
                     "kde": kde,
+                    # Minimum number of words seen in a real (non-NULL) source text.
+                    # 0 means the source contains genuine empty strings, which the
+                    # generator is then allowed to reproduce.
+                    "min_word_count": int(text_structure[1].min()),
+                    # Share of source rows that were NULL, reproduced at generation
+                    # time as real NaN rather than inferred from the KDE tail.
+                    "null_share": null_share,
                 }
 
             self._save_no_ml_checkpoints(features)
@@ -385,6 +406,19 @@ class VaeInferHandler(BaseHandler):
             )
         )
 
+    def _synth_text(self, char_len: int, word_count: int, indexes, counts) -> str:
+        """
+        Build one synthetic text of roughly 'char_len' characters split into
+        'word_count' words. A word count of 0 yields an empty text.
+        """
+        # Guard the division so an intentionally empty text does not emit a
+        # divide-by-zero warning; with word_count == 0 no word length is drawn.
+        mean_word_len = char_len / word_count if word_count else 0.0
+        word_lengths = np.maximum(
+            np.random.normal(mean_word_len, 1, word_count).astype("int32"), 2
+        )
+        return " ".join(self._synth_word(s, indexes, counts) for s in word_lengths)
+
     def _get_wrapper(self, dataset_to_preload: Optional[Dataset] = None):
         """
         Create and get the wrapper for the VAE model
@@ -435,18 +469,27 @@ class VaeInferHandler(BaseHandler):
             features = dill.load(file)
         for col in features.keys():
             kde = features[col]["kde"]
-            text_structures = np.maximum(kde.resample(size).astype("int32"), 0)
             indexes = features[col]["indexes"]
             counts = features[col]["counts"]
-            generated_column = [
-                " ".join(
-                    [
-                        self._synth_word(s, indexes, counts)
-                        for s in np.maximum(np.random.normal(i / j, 1, j).astype("int32"), 2)
-                    ]
-                )
-                for i, j in zip(*text_structures)
-            ]
+            # A generated text may be empty only if the source contained empty texts;
+            # otherwise it must hold at least one word. Rounding before applying the
+            # floor matters: truncating a word count that sits just below 1 collapses
+            # it to 0, and the row is then emitted as an empty string - a NULL that
+            # does not exist in the source.
+            floors = np.array([[0], [min(features[col]["min_word_count"], 1)]])
+            text_structures = np.maximum(np.rint(kde.resample(size)), floors).astype("int32")
+            generated_column = np.array(
+                [
+                    self._synth_text(i, j, indexes, counts)
+                    for i, j in zip(*text_structures)
+                ],
+                dtype=object,
+            )
+            # Reproduce the measured source NULL share as real NaN. An empty string
+            # would only read back as NULL from CSV, not from Avro.
+            null_share = features[col]["null_share"]
+            if null_share:
+                generated_column[np.random.random(size) < null_share] = np.nan
             logger.debug(f"Long text for column '{col}' is generated.")
             synthetic_infer[col] = generated_column
         return synthetic_infer
