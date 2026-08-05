@@ -36,6 +36,25 @@ from syngen.ml.utils import (
     get_thread_parallelism_budget,
     timing,
 )
+from syngen.ml.utils.device import assign_gpu_index, cuda_device_count, resolve_device
+
+
+def _select_mp_start_method() -> str:
+    """Isolated as its own function so it's unit-testable without calling the
+    real mp.set_start_method (a global, one-shot, process-wide setting that's
+    awkward to exercise repeatedly across tests).
+
+    `spawn` is required whenever any GPU is visible, not just when this
+    specific pool will use more than one: the parent process may already
+    hold a live CUDA context (e.g. a table trained on GPU earlier in the same
+    Worker process), and forking after the parent has touched CUDA is unsafe
+    regardless of what the child pool itself does. On CPU-only machines
+    (cuda_device_count() == 0) this is byte-identical to the pre-existing
+    fork-on-POSIX behavior.
+    """
+    if sys.platform == "win32" or cuda_device_count() > 0:
+        return "spawn"
+    return "fork"
 
 
 MEMORY_THRESHOLD = 90  # Memory usage threshold in percent
@@ -90,6 +109,7 @@ class BaseHandler(AbstractHandler):
             main_process=kwargs["main_process"],
             process=kwargs["process"],
             preloaded_dataset=initial_dataset_to_pass,
+            device=kwargs.get("device"),
         )
 
 
@@ -171,6 +191,7 @@ class VaeTrainHandler(BaseHandler):
     batch_size: int = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
     reports: List[str] = field(kw_only=True)
+    device: Optional[torch.device] = field(kw_only=True, default=None)
 
     def __fit_model(self, data: Optional[pd.DataFrame]):
         logger.info("Start VAE training")
@@ -188,6 +209,7 @@ class VaeTrainHandler(BaseHandler):
             batch_size=self.batch_size,
             main_process=self.type_of_process,
             process="train",
+            device=self.device,
         )
         self.model.batch_size = min(self.batch_size, len(data))
         list_of_reports = [f'\'{report}\'' for report in self.reports]
@@ -271,25 +293,17 @@ class VaeInferHandler(BaseHandler):
             self._pool = None
 
     @staticmethod
-    def _initialize_worker_vae_model(handler_instance, dataset_for_worker):
+    def _initialize_worker_vae_model(handler_instance, dataset_for_worker, gpu_index=None):
         return handler_instance._get_wrapper(
-            dataset_to_preload=dataset_for_worker
+            dataset_to_preload=dataset_for_worker,
+            device=resolve_device(gpu_index),
         )
 
     @timing
     def _setup_parallel_processing(self):
 
         logger.info("Running in parallel mode")
-        # windows does not support fork,
-        # we use spawn method to start new processes.
-        # Significantly slower than fork,
-        # but it is the only way to run in parallel on windows
-        if sys.platform == "win32":
-            mp.set_start_method('spawn', force=True)
-        else:
-            # POSIX systems allows child processes
-            # to share memory with the parent process
-            mp.set_start_method('fork', force=True)
+        mp.set_start_method(_select_mp_start_method(), force=True)
 
         logger.warning(
             "Note: Running in parallel mode causes "
@@ -309,10 +323,16 @@ class VaeInferHandler(BaseHandler):
             dataset_for_worker=self.dataset
         )
 
+        # One GPU index per worker slot, round-robin across visible GPUs -
+        # deliberately not capped by GPU count, so multiple workers may share
+        # one GPU when n_jobs > cuda_device_count() (the CVAE is small enough
+        # that this oversubscription is cheap to allow).
+        gpu_indices = [assign_gpu_index(w) for w in range(n_jobs)]
+
         self._pool = mp.Pool(
             processes=n_jobs,
             initializer=self.__class__.worker_init,
-            initargs=(func_for_worker_init, threads_per_worker)
+            initargs=(func_for_worker_init, threads_per_worker, gpu_indices)
         )
 
     def _calculate_batch_configuration(self) -> Tuple[int, int, int]:
@@ -355,10 +375,23 @@ class VaeInferHandler(BaseHandler):
         return max(1, get_thread_parallelism_budget() - 1)
 
     @staticmethod
-    def worker_init(get_wrapper_func_from_main, threads_per_worker=None):
+    def worker_init(get_wrapper_func_from_main, threads_per_worker=None, gpu_indices=None):
         global vae_model
         if threads_per_worker is not None:
             torch.set_num_threads(threads_per_worker)
+        if gpu_indices:
+            # mp.Pool's initializer/initargs are identical for every worker -
+            # there's no built-in per-worker ordinal - so workers are told
+            # apart via CPython's stable, long-standing 1-based pool-worker
+            # ordinal. This is private API, used deliberately here since the
+            # model is built once per worker and reused for every task that
+            # worker later handles, so GPU assignment must happen once, at
+            # init time, not per task.
+            ordinal = mp.current_process()._identity[0] - 1
+            gpu_index = gpu_indices[ordinal % len(gpu_indices)]
+            get_wrapper_func_from_main = functools.partial(
+                get_wrapper_func_from_main, gpu_index=gpu_index
+            )
         vae_model = get_wrapper_func_from_main()
 
     @staticmethod
@@ -385,7 +418,11 @@ class VaeInferHandler(BaseHandler):
             )
         )
 
-    def _get_wrapper(self, dataset_to_preload: Optional[Dataset] = None):
+    def _get_wrapper(
+        self,
+        dataset_to_preload: Optional[Dataset] = None,
+        device: Optional[torch.device] = None,
+    ):
         """
         Create and get the wrapper for the VAE model
         """
@@ -395,7 +432,8 @@ class VaeInferHandler(BaseHandler):
             "paths": self.paths,
             "batch_size": self.batch_size,
             "main_process": self.type_of_process,
-            "process": "infer"
+            "process": "infer",
+            "device": device,
         }
 
         return self.create_wrapper(

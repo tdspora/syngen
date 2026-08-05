@@ -90,6 +90,7 @@ class TrainStrategy(Strategy, ABC):
             batch_size=self.config.batch_size,
             reports=self.config.reports,
             type_of_process="train",
+            device=self.config.device,
         )
 
         long_text_handler = LongTextsHandler(

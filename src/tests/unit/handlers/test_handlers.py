@@ -1,4 +1,5 @@
 from unittest.mock import patch, MagicMock
+import multiprocessing as mp
 import pytest
 import math
 
@@ -7,8 +8,14 @@ import dill
 from scipy.stats import gaussian_kde
 
 from syngen.ml.handlers import VaeInferHandler
+from syngen.ml.handlers.handlers import _select_mp_start_method
 from syngen.ml.data_loaders import MetadataLoader
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
+
+
+def _get_worker_ordinal(_):
+    """Module-level (not nested) so it stays picklable under `spawn`."""
+    return mp.current_process()._identity[0]
 
 
 @patch("os.path.exists", return_value=True)
@@ -287,6 +294,78 @@ def test_worker_init_keeps_legacy_single_argument_usage(mock_set_num_threads, rp
     mock_set_num_threads.assert_not_called()
     mock_wrapper.assert_called_once_with()
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "platform, gpu_count, expected",
+    [
+        ("linux", 0, "fork"),
+        ("linux", 1, "spawn"),
+        ("linux", 4, "spawn"),
+        ("win32", 0, "spawn"),
+        ("win32", 4, "spawn"),
+    ],
+)
+def test_select_mp_start_method(platform, gpu_count, expected, rp_logger):
+    """`spawn` is required whenever any GPU is visible (or on Windows) -
+    forking after the parent has touched CUDA is unsafe regardless of how
+    many GPUs this specific pool will use. On CPU-only POSIX machines this
+    must stay byte-identical to the pre-existing `fork` behavior."""
+    rp_logger.info(
+        "Test '_select_mp_start_method' picks spawn whenever a GPU is visible or on Windows"
+    )
+    with (
+        patch("syngen.ml.handlers.handlers.sys.platform", platform),
+        patch("syngen.ml.handlers.handlers.cuda_device_count", return_value=gpu_count),
+    ):
+        assert _select_mp_start_method() == expected
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.handlers.handlers.torch.set_num_threads")
+def test_worker_init_pins_gpu_by_pool_worker_ordinal(mock_set_num_threads, rp_logger):
+    """Unlike training, the VAE model is built once per worker and reused for
+    every task that worker later handles, so GPU assignment must happen once,
+    at init time, pinned to mp.current_process()._identity - the stable,
+    1-based pool-worker ordinal CPython's multiprocessing.Pool assigns (no
+    built-in per-worker ordinal exists otherwise)."""
+    rp_logger.info("Test 'worker_init' pins each worker to a GPU index via its pool ordinal")
+    get_wrapper_func_from_main = MagicMock()
+    gpu_indices = [0, 1, 2]
+
+    with patch("syngen.ml.handlers.handlers.mp.current_process") as mock_current_process:
+        mock_current_process.return_value._identity = (2,)  # 1-based -> ordinal 1
+        VaeInferHandler.worker_init(
+            get_wrapper_func_from_main, threads_per_worker=1, gpu_indices=gpu_indices
+        )
+
+    get_wrapper_func_from_main.assert_called_once_with(gpu_index=1)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.handlers.handlers.torch.set_num_threads")
+def test_worker_init_skips_gpu_pinning_when_no_gpu_indices(mock_set_num_threads, rp_logger):
+    """On a CPU-only machine gpu_indices is falsy (empty list), so worker_init
+    must call the wrapper factory unmodified - byte-identical to today."""
+    rp_logger.info("Test 'worker_init' skips GPU pinning when gpu_indices is empty")
+    get_wrapper_func_from_main = MagicMock()
+
+    VaeInferHandler.worker_init(
+        get_wrapper_func_from_main, threads_per_worker=1, gpu_indices=[]
+    )
+
+    get_wrapper_func_from_main.assert_called_once_with()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_pool_worker_ordinal_is_stable_1_based():
+    """De-risks worker_init's reliance on mp.current_process()._identity: a
+    real (non-CUDA) spawn Pool must actually yield stable 1..N ordinals
+    across its workers, without needing GPU hardware to exercise it."""
+    ctx = mp.get_context("spawn")
+    with ctx.Pool(processes=3) as pool:
+        ordinals = sorted(pool.map(_get_worker_ordinal, range(3)))
+    assert ordinals == [1, 2, 3]
 
 
 # ---------------------------------------------------------------------------

@@ -1,10 +1,97 @@
+from unittest.mock import patch
+
 import numpy as np
 import pandas as pd
 import pytest
 import torch
 
-from syngen.ml.vae.wrappers.wrappers import VAEWrapper, collate_feature_batch
+from syngen.ml.vae.wrappers.wrappers import (
+    VAEWrapper,
+    _seed_everything,
+    _unfreeze_lstm_submodules,
+    collate_feature_batch,
+)
 from tests.conftest import SUCCESSFUL_MESSAGE
+
+
+def test_seed_everything_skips_cuda_calls_when_unavailable(rp_logger):
+    """The CPU path must stay byte-identical: no cuda seeding/determinism
+    flags are touched when no CUDA device is visible.
+
+    ``torch.manual_seed`` is also mocked here: on a machine with a real CUDA
+    device (this includes this very sandbox), it has its own internal hook
+    that propagates the seed to every visible GPU regardless of what
+    ``torch.cuda.is_available`` is mocked to return - mocking it out isolates
+    the assertion to `_seed_everything`'s own cuda-branch logic.
+    """
+    rp_logger.info("Test '_seed_everything' skips CUDA seeding when CUDA is unavailable")
+    with (
+        patch("torch.manual_seed"),
+        patch("torch.cuda.is_available", return_value=False),
+        patch("torch.cuda.manual_seed_all") as manual_seed_all,
+    ):
+        _seed_everything(42)
+        manual_seed_all.assert_not_called()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_seed_everything_seeds_cuda_when_available(rp_logger):
+    """When a CUDA device is visible, cuda seeding and cuDNN determinism
+    flags must be set alongside the existing CPU/numpy/torch seeding.
+
+    ``torch.manual_seed`` is mocked for the same reason as above - it would
+    otherwise seed CUDA devices itself on a machine with a real GPU, double
+    counting the ``manual_seed_all`` call this test asserts on.
+    """
+    rp_logger.info("Test '_seed_everything' seeds CUDA and sets cuDNN determinism when available")
+    prev_deterministic = torch.backends.cudnn.deterministic
+    prev_benchmark = torch.backends.cudnn.benchmark
+    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.benchmark = True
+    try:
+        with (
+            patch("torch.manual_seed"),
+            patch("torch.cuda.is_available", return_value=True),
+            patch("torch.cuda.manual_seed_all") as manual_seed_all,
+        ):
+            _seed_everything(42)
+            manual_seed_all.assert_called_once_with(42)
+            assert torch.backends.cudnn.deterministic is True
+            assert torch.backends.cudnn.benchmark is False
+    finally:
+        torch.backends.cudnn.deterministic = prev_deterministic
+        torch.backends.cudnn.benchmark = prev_benchmark
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_unfreeze_lstm_submodules_restores_train_mode_on_lstm_only(rp_logger):
+    """Regression: on a real CUDA device, calling backward() on an LSTM whose
+    module is left in eval() mode raises "cudnn RNN backward can only be
+    called in training mode" - discovered by actually running training on
+    GPU hardware (invisible on CPU, where this restriction doesn't exist).
+    `_unfreeze_lstm_submodules` must flip LSTM submodules back to train()
+    without touching sibling Dropout/BatchNorm modules, which must stay in
+    eval() (collapse hypothesis #3 - frozen BatchNorm stats, Dropout off).
+    """
+    rp_logger.info(
+        "Test '_unfreeze_lstm_submodules' restores train() on LSTM submodules only"
+    )
+    model = torch.nn.Sequential(
+        torch.nn.LSTM(input_size=4, hidden_size=4, batch_first=True),
+        torch.nn.Dropout(0.2),
+        torch.nn.BatchNorm1d(4),
+    )
+    model.eval()
+    assert not model[0].training
+    assert not model[1].training
+    assert not model[2].training
+
+    _unfreeze_lstm_submodules(model)
+
+    assert model[0].training, "LSTM submodule must be back in train() mode"
+    assert not model[1].training, "Dropout must stay in eval() mode"
+    assert not model[2].training, "BatchNorm must stay in eval() mode"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_find_non_finite_features_detects_nan_and_inf(rp_logger):
@@ -105,6 +192,7 @@ class _StubTrainStepWrapper:
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.1)
         self.vae = type("_Vae", (), {"feature_order": ["feat_a"]})()
         self.dataset = type("_Dataset", (), {"features": {"feat_a": _FakeFeature()}})()
+        self.device = torch.device("cpu")
 
 
 def _make_batch(value: float):
@@ -144,6 +232,38 @@ def test_train_step_updates_model_weights(rp_logger):
     assert updated_weight != initial_weight
     assert abs(updated_weight - 1.0) < abs(initial_weight - 1.0), (
         "weight should move closer to the batch target (1.0) after training steps"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_train_step_accumulator_matches_recon_device(rp_logger, monkeypatch):
+    """Regression: the loss accumulator must be created with an explicit
+    `device=` matching the model's reconstruction output, not left to the
+    default device.
+
+    A hardcoded `torch.zeros((), dtype=...)` with no `device=` is invisible on
+    today's CPU-only CI (the default device is already `cpu`), but raises a
+    device-mismatch error the moment `recons[0]` lives on a CUDA device - see
+    `docs/pytorch_migration/tensorflow_to_pytorch.md` s8.8.2. Asserting the
+    call always passes an explicit `device=` catches the missing-kwarg bug
+    directly, without needing GPU hardware to exercise the mismatch itself.
+    """
+    rp_logger.info("Test '_train_step' loss accumulator is created with an explicit device")
+    stub = _StubTrainStepWrapper()
+    real_zeros = torch.zeros
+    captured = {}
+
+    def _spy_zeros(*args, **kwargs):
+        captured["device"] = kwargs.get("device")
+        return real_zeros(*args, **kwargs)
+
+    monkeypatch.setattr("syngen.ml.vae.wrappers.wrappers.torch.zeros", _spy_zeros)
+
+    stub._train_step(_make_batch(1.0))
+
+    assert captured["device"] is not None, (
+        "the loss accumulator's torch.zeros(...) call must pass an explicit "
+        "device= matching the model output's device"
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
