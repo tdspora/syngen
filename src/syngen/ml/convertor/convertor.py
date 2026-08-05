@@ -177,6 +177,9 @@ class Convertor:
           - encoding could not be determined (`chardet` returns `None`);
           - multiple different encodings found across values.
         """
+        warning_message = (
+            "Decoding will be skipped; binary values will be replaced by null values."
+        )
         non_decodable_mime_types = sorted({
             info["mime_type"]
             for info in encoding_infos
@@ -190,8 +193,7 @@ class Convertor:
             mime_str = "', '".join(non_decodable_mime_types)
             logger.warning(
                 f"The binary column '{column}' contains values with non-decodable "
-                f"MIME type(s): '{mime_str}'. "
-                f"Decoding will be skipped; binary values will be placed as-is."
+                f"MIME type(s): '{mime_str}'. {warning_message}"
             )
             return False
 
@@ -201,8 +203,7 @@ class Convertor:
         ):
             logger.warning(
                 f"The binary column '{column}' contains values "
-                f"whose character encoding could not be determined. "
-                f"Decoding will be skipped; binary values will be placed as-is."
+                f"whose character encoding could not be determined. {warning_message}"
             )
             return False
 
@@ -215,8 +216,7 @@ class Convertor:
             encodings_str = "', '".join(plain_text_encodings)
             logger.warning(
                 f"The binary column '{column}' contains plain-text values with "
-                f"multiple different character encodings: '{encodings_str}'. "
-                f"Decoding will be skipped; binary values will be placed as-is."
+                f"multiple different character encodings: '{encodings_str}'. {warning_message}"
             )
             return False
 
@@ -226,21 +226,11 @@ class Convertor:
         self.custom_schema.setdefault("encoding", {})[column] = plain_text_encodings[0]
         return True
 
-    def _cast_binary_column(self, column: str) -> None:
+    def _decode_binary_column(self, column: str) -> None:
         """
-        Decode every binary value in `column` to a string using the detected
-        character encoding, and record that encoding under
-        `custom_schema["encoding"][column]` so downstream consumers
-        can re-encode the synthetic output to bytes.
-
-        When validation cannot determine a safe single encoding (non-decodable
-        MIME, unknown encoding, or mixed encodings), decoding is skipped and
-        the raw bytes are left as-is in the column.
+        Decode every binary value in `column` to a string using the
+        encoding recorded under `custom_schema["encoding"][column]`.
         """
-        encoding_infos = self._collect_encoding_infos(column)
-        can_decode = self._validate_binary_encoding_infos(column, encoding_infos)
-        if not can_decode:
-            return
         encoding = self.custom_schema["encoding"][column]
 
         def _decode(value):
@@ -256,12 +246,34 @@ class Convertor:
 
         self.preprocessed_df[column] = self.preprocessed_df[column].map(_decode)
 
+    def _cast_binary_column(self, column: str) -> None:
+        """
+        Decode every binary value in `column` to a string using the detected
+        character encoding, and record that encoding under
+        `custom_schema["encoding"][column]` so downstream consumers
+        can re-encode the synthetic output to bytes.
+
+        When validation cannot determine a safe single encoding (non-decodable
+        MIME, unknown encoding, or mixed encodings), decoding is skipped and
+        all values in the column are replaced by null instead.
+        """
+        encoding_infos = self._collect_encoding_infos(column)
+        can_decode = self._validate_binary_encoding_infos(column, encoding_infos)
+        if not can_decode:
+            self.preprocessed_df[column] = np.NaN
+            return
+        self._decode_binary_column(column)
+
     def _cast_binary_columns(self) -> None:
         """
         Decode every binary column in the DataFrame to strings using the detected
         character encoding, and record that encoding under
         `custom_schema["encoding"][column]` so downstream consumers
         can re-encode the synthetic output to bytes.
+
+        For a column whose values cannot be safely decoded (non-decodable
+        MIME type, undetermined encoding, or mixed encodings), all of its
+        values are replaced by null instead of being decoded.
         """
         binary_columns = [
             column
