@@ -2659,9 +2659,10 @@ GPU support landed in follow-up work after this migration, reusing the device-ab
 seams this document identified below when the codebase was still CPU-only. It is
 **auto-detected and transparent**: no new CLI flag, SDK parameter, or metadata field exists.
 The same `train`/`infer` invocation that ran on CPU runs on GPU, unchanged, if one is visible.
-This section is the durable, permanent record of that work — design notes and validation logs
-produced while implementing it were session-scoped working artifacts, not committed to the
-repository, so this section does not rely on them and restates everything needed here.
+This section is the durable summary of that work; `docs/pytorch_migration/gpu_support_notes.md`
+is the companion document with the full narrative — every bug's exact traceback, the
+commit-level detail of the fix that caused a regression during a later merge, and the
+step-by-step performance-benchmarking methodology behind the numbers in 8.8.8.
 
 #### 8.8.1 A device abstraction
 
@@ -2784,7 +2785,35 @@ question.
    also moving that write, in the right order, made the report try to read a file that did not
    exist yet. Fixed by ordering the write before the report call inside the worker.
 
-#### 8.8.6 Packaging implications — unchanged, by decision
+#### 8.8.6 A fifth bug — not GPU-specific, found by a basic post-merge smoke test
+
+The four bugs above share a lesson: they only exist once code actually runs on real GPU
+hardware. A fifth bug, found afterward, makes the opposite point — some regressions need no
+GPU at all to reproduce, only the discipline of running a smoke test after every merge.
+
+A routine merge of `main` into the branch carrying this work silently reverted
+`VaeInferHandler._get_wrapper`'s signature, dropping the `device` parameter this work had
+added, while correctly keeping an unrelated `main`-side change (a long-text NULL/empty-string
+fix) that had landed new code immediately adjacent to that same method. Both branches had
+touched code next to `_get_wrapper` from the same parent commit; the merge kept `main`'s
+version of the signature and lost the `device` parameter. The result: every **non-parallel**
+`infer` call — on CPU included, not just GPU — raised `NameError: name 'device' is not
+defined`, since the method's own body still referenced `device` in its kwargs dict.
+
+This shipped past CPU-only unit tests undetected, because no existing test exercised
+`_get_wrapper`'s signature directly — it was only caught by running `train`/`infer`
+end-to-end after the merge. Fixed by restoring the parameter; a regression test was added
+that asserts `_get_wrapper` accepts and forwards `device` both as its default (`None`) and as
+an explicit value. Full detail, including the exact commit graph that shows how the merge
+produced this, is in `gpu_support_notes.md`.
+
+**Consequence for process, not just code:** a signature silently reverted by a merge that
+touched adjacent code is invisible to a normal code review (the diff against either single
+parent looks fine) and is only reliably caught by actually exercising the affected code path
+after any merge from `main` — which is why a quick train+infer smoke test across every
+device configuration is now the recommended check before opening a PR that merges `main`.
+
+#### 8.8.7 Packaging implications — unchanged, by decision
 
 Section 8.7's gap (the image carries GPU libraries most deployments never load) was **not**
 closed by this work, deliberately: the default PyPI torch wheel already resolves to a
@@ -2794,17 +2823,39 @@ Closing 8.7 (installing from PyTorch's CPU index, or offering a CUDA-specific im
 remains an open, separate decision — still gated by the dependency-change approval rule this
 document already names, and orthogonal to whether GPU support itself works.
 
-#### 8.8.7 What is still not verified
+#### 8.8.8 Performance: now measured
 
-Correctness was the focus of the validation pass that produced this section, not performance.
-Not yet measured, and worth doing before relying on this for capacity planning:
+The original version of this section listed real wall-clock speedup as unmeasured. It has
+since been benchmarked properly: every single-table dataset, and a related-table matrix of
+`{2,4,6,8,16} tables × {4,8,16,32} columns × {1,000, 2,000} rows`, trained and inferred on
+CPU, on a single visible GPU, and on four visible GPUs. Headline findings (full per-dataset
+tables and methodology in `gpu_support_notes.md`):
 
-- Real wall-clock speedup (single-GPU vs CPU, multi-GPU vs single-GPU). Worth measuring across
-  a matrix of row count, column count, datatype mix, and multi-table PK/FK structure before
-  relying on this for capacity planning — none of that benchmark data is currently checked
-  into the repository.
+- **Multi-GPU training decisively wins for multi-table, metadata-driven runs**, and the
+  margin grows with table count and column count — up to roughly 4.6x faster than CPU on the
+  largest related-table configuration tested. This is the task-parallel-across-tables design
+  (8.8.3) paying off exactly where it was expected to.
+- **GPU is a net loss for single-table workloads at the sizes tested** (2,000-16,000 rows) —
+  CPU wins every single-table case, train and infer, since the CVAE is too small to amortize
+  CUDA context/transfer/kernel-launch overhead. This confirms the "not DDP" reasoning in
+  8.8.3 from the other direction: there just isn't enough per-table compute for a GPU to help
+  when there's only one table to place on it.
+- **`run_parallel=true` inference is only worth it on CPU, not on GPU, at the sizes tested (up
+  to 256,000 rows).** Any GPU visible forces `multiprocessing.spawn` for the inference pool
+  (8.8.3's `spawn`-over-`fork` requirement applies here too), and each spawned worker pays a
+  fresh interpreter + CUDA-context-init cost of roughly 1-3 seconds before doing any real
+  work — a fixed cost per run of around 100 seconds that CPU's cheap `fork`-based pool never
+  pays. On CPU, `run_parallel=true` crosses over from a loss at small sizes to a clear win
+  (up to ~3.8x faster) as table size grows; on GPU it did not win at any scale tested here.
+  Verified with no fallback: single-GPU runs engage only the one visible GPU, multi-GPU runs
+  engage all visible GPUs, and CPU runs touch no GPU at all.
+
+Still not measured, and worth doing before relying on this for capacity planning beyond what
+was tested above:
+
 - Multi-process GPU memory contention when the inference worker count exceeds the visible GPU
-  count under sustained load (oversubscription was exercised only briefly).
+  count under **sustained** load (large batch counts and generated sizes were exercised above
+  without hitting OOM, but that is not the same as a long-running contention test).
 - Driver-level races between sibling spawned processes concurrently initializing CUDA contexts
   under heavier concurrency than was tested.
 
@@ -3897,7 +3948,7 @@ Ordered by value against effort, not by section.
 | 8 | Revisit the KL weight, with per-row noise (13.2.2, 13.2.4) | Quality | Medium | Two coupled questions; investigate together or not at all |
 | 9 | Evaluate live dropout and batch statistics (13.2.3) | Quality | Medium | A retuning study, not a patch |
 | 10 | Match LSTM initialisation to Keras (13.2.5) | Quality | Low | Easy change, but needs item 5 to justify |
-| 11 | ~~GPU support (13.3.7)~~ **Done** — implemented in follow-up work, see 8.8 | Speed | — | Task-parallel across tables/batches, not DDP; real wall-clock speedup still not measured (8.8.7) |
+| 11 | ~~GPU support (13.3.7)~~ **Done** — implemented in follow-up work, see 8.8 | Speed | — | Task-parallel across tables/batches, not DDP; real wall-clock speedup now measured (8.8.8) — multi-GPU wins decisively for multi-table training, but is a net loss for single-table workloads and for `run_parallel` infer at the sizes tested |
 
 The dependency worth internalising: **item 5 gates items 7 through 10.** Without a
 statistical gate, any change to the generative path can only be evaluated by eye, and
