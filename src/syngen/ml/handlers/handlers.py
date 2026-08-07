@@ -452,7 +452,11 @@ class VaeInferHandler(BaseHandler):
         )
         return " ".join(self._synth_word(s, indexes, counts) for s in word_lengths)
 
-    def _get_wrapper(self, dataset_to_preload: Optional[Dataset] = None):
+    def _get_wrapper(
+        self,
+        dataset_to_preload: Optional[Dataset] = None,
+        device: Optional[torch.device] = None,
+    ):
         """
         Create and get the wrapper for the VAE model
         """

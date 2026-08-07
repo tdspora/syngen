@@ -8,6 +8,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import dill
+import torch
 from scipy.stats import gaussian_kde
 
 from syngen.ml.handlers import VaeInferHandler
@@ -71,6 +72,47 @@ def test_get_pk_path(
             loader=None
         )
         assert handler._get_pk_path("parent_table", "child_table") == expected_path
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("os.path.exists", return_value=True)
+def test_get_wrapper_forwards_device_without_nameerror(mock_os_path_exists, rp_logger):
+    """
+    Regression test for a 'device' NameError in VaeInferHandler._get_wrapper:
+    the non-parallel infer path (__attrs_post_init__'s
+    `self._get_wrapper(dataset_to_preload=self.dataset)` call, made with no
+    'device' kwarg) crashed because `_get_wrapper` built its wrapper_kwargs
+    dict from a bare `device` name that was never declared as a parameter -
+    a NameError on every non-parallel infer run, regardless of device.
+    """
+    rp_logger.info(
+        "Test that VaeInferHandler._get_wrapper accepts and forwards 'device'"
+    )
+    with patch.object(VaeInferHandler, "__attrs_post_init__", lambda x: None):
+        path_to_metadata = f"{DIR_NAME}/unit/handlers/fixtures/metadata.yaml"
+        metadata = MetadataLoader(path_to_metadata).load_data()
+        handler = VaeInferHandler(
+            metadata=metadata,
+            table_name="parent_table",
+            paths={"path_to_merged_infer": "path/to/merged_infer_parent-table.csv"},
+            metadata_path=path_to_metadata,
+            random_seed=0,
+            size=100,
+            batch_size=100,
+            run_parallel=False,
+            reports=[],
+            wrapper_name="MMDVAEWrapper",
+            log_level="INFO",
+            type_of_process="infer",
+            loader=None
+        )
+        with patch.object(VaeInferHandler, "create_wrapper") as mock_create_wrapper:
+            handler._get_wrapper(dataset_to_preload="fake_dataset")
+            assert mock_create_wrapper.call_args.kwargs["device"] is None
+
+            explicit_device = torch.device("cpu")
+            handler._get_wrapper(dataset_to_preload="fake_dataset", device=explicit_device)
+            assert mock_create_wrapper.call_args.kwargs["device"] == explicit_device
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
