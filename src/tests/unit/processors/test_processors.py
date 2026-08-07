@@ -1630,3 +1630,63 @@ def test_restore_int_dtypes_debug_log_not_emitted_when_no_columns_restored(rp_lo
         PostprocessHandler.restore_int_dtypes(data, config)
     mock_logger.debug.assert_not_called()
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def _row_limit_handler(data: pd.DataFrame, row_limit: int) -> PreprocessHandler:
+    """A PreprocessHandler wired just enough to exercise `_preprocess_data`'s
+    `row_limit` branch, without touching the filesystem."""
+    metadata = {
+        "test_table": {
+            "train_settings": {"drop_null": False, "row_limit": row_limit},
+            "keys": {},
+        }
+    }
+    handler = PreprocessHandler(
+        metadata=metadata, metadata_path=None, table_name="test_table"
+    )
+    handler.original_df = data
+    handler.initial_order_of_columns = list(data.columns)
+    handler.loader = None
+    handler.schema = {"fields": {}, "format": "CSV"}
+    return handler
+
+
+def test_row_limit_sampling_is_reproducible(rp_logger):
+    """EPMCTDM-7630 regression: the `row_limit` draw must select the SAME rows every
+    run.
+
+    It happens in the preprocessing layer, before any model-side seeding, so an
+    unseeded `DataFrame.sample` gave every run a different training subset - making any
+    table configured with `row_limit` irreproducible even at a fixed seed. Downstream
+    this showed up as the same seed producing different synthetic output.
+    """
+    rp_logger.info("Test 'PreprocessHandler._preprocess_data' samples reproducibly")
+    data = pd.DataFrame({"a": range(1000), "b": range(1000, 2000)})
+
+    subsets = []
+    for _ in range(3):
+        # perturb the global RNG between draws: this is what differs between two
+        # real processes, and what the old unseeded sample picked up
+        np.random.seed(None)
+        subsets.append(_row_limit_handler(data.copy(), 300)._preprocess_data())
+
+    first = subsets[0]
+    assert len(first) == 300
+    for other in subsets[1:]:
+        assert first.index.equals(other.index), "row_limit must select the same rows"
+        assert first.equals(other)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_row_limit_caps_at_table_length(rp_logger):
+    """`row_limit` larger than the table must not raise or up-sample: the subset is
+    `min(row_limit, len(data))`."""
+    rp_logger.info("Test 'PreprocessHandler._preprocess_data' caps row_limit")
+    data = pd.DataFrame({"a": range(50)})
+
+    handler = _row_limit_handler(data.copy(), 500)
+    result = handler._preprocess_data()
+
+    assert len(result) == 50
+    assert handler.row_subset == 50
+    rp_logger.info(SUCCESSFUL_MESSAGE)

@@ -461,6 +461,32 @@ docker run --rm \
 You can add any arguments listed in the corresponding sections for infer and training processes in the CLI call, however, they will be
 overwritten by corresponding arguments in the metadata file.
 
+#### CPU deployment mode
+
+Set `SYNGEN_DEPLOYMENT_MODE` when starting the container to select the CPU policy:
+
+- `dedicated` is the default. Use it when one training or inference job owns the
+  host; Syngen uses its available CPU budget without forcing idle OpenMP/MKL
+  threads to sleep.
+- `shared` is for CI/CD or orchestration that runs multiple Syngen containers on
+  one host. It configures idle OpenMP/MKL threads to sleep. Both modes use the
+  container's cgroup CPU quota or CPU affinity when calculating the CPU budget.
+
+For shared deployments, set a CPU quota or CPU affinity for every container.
+Without one, each container can see the whole host and cannot reliably divide
+resources among its peers.
+
+The variable applies equally to Docker, the installed CLI, and SDK imports.
+
+```bash
+docker run --rm \
+  -e SYNGEN_DEPLOYMENT_MODE=shared \
+  --cpus=4 \
+  -v PATH_TO_LOCAL_FOLDER:/src/model_artifacts tdspora/syngen \
+  --task=infer \
+  --metadata_path=./model_artifacts/PATH_TO_METADATA_YAML
+```
+
 #### MLflow monitoring
 
 Set the `MLFLOW_TRACKING_URI` environment variable to the desired MLflow tracking server, for instance:

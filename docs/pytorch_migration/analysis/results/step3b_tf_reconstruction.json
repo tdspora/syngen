@@ -1,0 +1,24 @@
+{
+  "latent": {
+    "mu_std_mean": 1.3997,
+    "bgm_sampled_std_mean": 1.3973
+  },
+  "latlon_std": {
+    "original": {
+      "latitude": 2.136,
+      "longitude": 2.0035
+    },
+    "A_decode_mu": {
+      "latitude": 1.8368,
+      "longitude": 1.8198
+    },
+    "B_full_reconstruction": {
+      "latitude": 1.8352,
+      "longitude": 1.8206
+    },
+    "C_generation_bgm": {
+      "latitude": 1.8086,
+      "longitude": 1.7907
+    }
+  }
+}

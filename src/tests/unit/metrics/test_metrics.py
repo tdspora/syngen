@@ -1,3 +1,5 @@
+import random
+
 import pandas as pd
 import numpy as np
 import pytest
@@ -5,6 +7,7 @@ import pytest
 from unittest.mock import patch
 
 from syngen.ml.metrics.metrics_classes.metrics import (
+    BivariateMetric,
     Clustering,
     Utility,
     UnivariateMetric
@@ -107,4 +110,38 @@ def test_calculate_ratio(
 
     assert ratio == expected_result, f"Expected {expected_result}, got {ratio}"
 
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_categorical_tick_selection_is_deterministic(rp_logger):
+    """EPMCTDM-7630: which categorical ticks the bivariate heatmap labels must not
+    depend on the global RNG.
+
+    `_get_categorical_ticks` keeps the first and last ticks and samples the middle.
+    Drawing that middle slice from the module-level `random` meant the same data
+    produced differently-labelled axes on every run.
+
+    Driven through a stub instance because `BivariateMetric.__init__` requires a
+    pickled dataset config, which this method does not touch.
+    """
+    rp_logger.info("Test 'BivariateMetric._get_categorical_ticks' is deterministic")
+    values = [f"cat_{i:03d}" for i in range(80)]
+    frame = pd.DataFrame({"c": values})
+
+    stub = object.__new__(BivariateMetric)
+    stub.original = frame
+    stub.synthetic = frame
+
+    selections = []
+    for seed in (1, 7919, 104729):
+        random.seed(seed)          # perturb the global RNG between calls
+        selections.append(tuple(stub._get_categorical_ticks("c")))
+
+    assert len(set(selections)) == 1, (
+        "tick selection must be stable regardless of global RNG state"
+    )
+    # seeding must not change the shape of the selection
+    ticks = selections[0]
+    assert values[0] in ticks and values[-1] in ticks, "extremes must be kept"
+    assert len(ticks) == 50, "default ticks_count is unchanged"
     rp_logger.info(SUCCESSFUL_MESSAGE)

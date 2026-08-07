@@ -1,17 +1,23 @@
-import os
 from typing import Literal, Optional, List, Union, Callable
 
 import click
 from loguru import logger
 import pandas as pd
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     get_reports,
-    fetch_env_variables
+    fetch_env_variables,
+    limit_thread_parallelism,
+    SUPPORTED_LOG_LEVELS
 )
+
+# Bound native (OpenMP/MKL) thread pools before ``torch`` is imported (via
+# ``Worker`` below). Shared mode additionally disables idle-thread busy-waiting.
+# Honours pre-set env vars.
+limit_thread_parallelism()
+
+from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
 from syngen.ml.validation_schema import ValidationSettingsSchema
 
@@ -70,8 +76,11 @@ def launch_train(
         Literal["accuracy", "sample", "metrics_only", "all", "none"],
         List[Literal["accuracy", "sample", "metrics_only"]]
     ] = "none",
+    # Kept in sync with `syngen.ml.utils.SUPPORTED_LOG_LEVELS` - a `Literal` cannot be
+    # built from a runtime tuple, so `test_log_level_literal_matches_supported_levels`
+    # asserts the two stay identical.
     log_level: Literal[
-        "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+        "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"
     ] = "INFO",
     batch_size: int = 32,
     fernet_key: Optional[str] = None,
@@ -187,7 +196,7 @@ def launch_train(
 @click.option(
     "--log_level",
     default="INFO",
-    type=click.Choice(["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    type=click.Choice(SUPPORTED_LOG_LEVELS),
     help="Set the logging level which will be used in the process. "
          "If absent, it's defaulted to 'INFO'",
 )

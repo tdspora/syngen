@@ -6,7 +6,8 @@
 - Package root: `src/syngen`.
 - Supported Python versions: 3.10 and 3.11
 - Primary workflows: `train`, `infer`, and YAML metadata-driven execution.
-- Console-script entry points (per `setup.cfg [options.entry_points]`): `train` (→ `syngen.train:launch_train`), `infer` (→ `syngen.infer:launch_infer`), `syngen` (→ `syngen:main`). The `launch_train` / `launch_infer` names refer to the *function* objects, not the CLI binaries.
+- Console-script entry points (per `pyproject.toml [project.scripts]`): `train` (→ `syngen.train:cli_launch_train`), `infer` (→ `syngen.infer:cli_launch_infer`), `syngen` (→ `syngen:main`). The click-wrapped `cli_launch_*` functions are the CLI targets; the bare `launch_train` / `launch_infer` are the plain Python/SDK entry functions.
+- Packaging is consolidated in `pyproject.toml` — there is no `setup.cfg`, `setup.py`, `requirements.txt`, or `MANIFEST.in`. Dependencies live in `[project.dependencies]`, packaged data in `[tool.setuptools.package-data]`.
 - Python SDK: `Syngen` class in `src/syngen/sdk.py`.
 - Metadata validation is schema-driven (marshmallow, `syngen/ml/validation_schema/`); must remain backward compatible.
 - **Downstream dependency**: `tdm_syngen` (enterprise edition) depends on this library as a versioned pip package. Any breaking change in public API, CLI flags, SDK methods, or metadata schema propagates to `tdm_syngen`.

@@ -7,9 +7,15 @@ from dataclasses import dataclass, field
 
 import warnings
 import pickle
-import tensorflow as tf
-from tensorflow.python.data.experimental import AutoShardPolicy
-from tensorflow.keras.models import Model
+import random
+import torch
+from torch.utils.data import (
+    BatchSampler,
+    DataLoader as TorchDataLoader,
+    Dataset as TorchDataset,
+    SequentialSampler,
+    default_collate,
+)
 import matplotlib.pyplot as plt
 import time
 import tqdm
@@ -18,7 +24,7 @@ import numpy as np
 from loguru import logger
 from slugify import slugify
 
-from syngen.ml.vae.models.model import CVAE
+from syngen.ml.vae.models.model import CVAE, kl_divergence, _to_tensors
 from syngen.ml.vae.models import Dataset
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.utils import (
@@ -32,6 +38,74 @@ from syngen.ml.data_loaders import DataLoader
 warnings.filterwarnings("ignore")
 
 BATCH_SIZE_DEFAULT = 32
+# Fixed training seed for reproducible CPU runs (Phase E). Applied only on the
+# train path so it never overrides the infer-time numpy seed that
+# VaeInferHandler sets from `random_seed` (handlers.py:224).
+_TRAIN_SEED = 42
+
+
+def _seed_everything(seed: int):
+    """Seed Python / numpy / torch for deterministic CPU training."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+
+class _FeatureTuples(TorchDataset):
+    """Holds the transformed per-feature tensors and serves them as batch tuples.
+
+    ``__len__`` reports the **row** count (not the batch count), which consumers rely
+    on to derive a sampling rate - see ``VAEWrapper._create_batched_dataset``.
+
+    Module-level rather than nested inside that method so the dataset stays picklable:
+    a function-local class cannot be sent to worker processes under the ``spawn`` start
+    method, which is the default on Windows and macOS (EPMCTDM-7630).
+    """
+
+    def __init__(self, tensors):
+        self.tensors = tensors
+        self.n = tensors[0].shape[0]
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, idx):
+        # With automatic batching off, the fetcher hands over the whole index list at
+        # once, so fancy-index a complete batch in one op per feature. With it on,
+        # indices arrive one at a time and re-collating is left to
+        # ``collate_feature_batch``.
+        if isinstance(idx, list):
+            index = torch.as_tensor(idx)
+            return tuple(tensor[index] for tensor in self.tensors)
+        return tuple(tensor[idx] for tensor in self.tensors)
+
+
+def collate_feature_batch(batch):
+    """Return the per-feature batch as a tuple of stacked tensors.
+
+    Sampler-agnostic on purpose, because which shape arrives depends on whether
+    PyTorch's automatic batching is on:
+
+    * **Off** - this loader's own arrangement (a ``BatchSampler`` in the ``sampler``
+      slot with ``batch_size=None``). The fetcher hands the whole index list to
+      ``__getitem__``, which fancy-indexes a complete batch, so an already-batched
+      tuple of tensors arrives here and is passed straight through.
+    * **On** - what any consumer that installs its own ``batch_sampler`` gets. The
+      fetcher then gathers one row per index, so a *list of per-row tuples* arrives
+      and has to be re-collated.
+
+    Returning a ``tuple`` in both cases keeps the contract that a batch is a tuple of
+    per-feature tensors in ``Dataset.transform`` order - the order ``_train_step``
+    zips against ``vae.feature_order``.
+
+    Must stay a module-level function rather than a lambda so the loader remains
+    picklable for ``num_workers > 0`` under the ``spawn`` start method. The dataset
+    class ``_FeatureTuples`` is hoisted to module level for the same reason - fixing
+    only one of the two leaves the loader unpicklable (EPMCTDM-7630).
+    """
+    if isinstance(batch, tuple) and batch and torch.is_tensor(batch[0]):
+        return batch
+    return tuple(default_collate(batch))
 
 
 class BaseWrapper(ABC):
@@ -67,7 +141,7 @@ class VAEWrapper(BaseWrapper):
     dataset: Dataset = field(init=False)
     preloaded_dataset: Optional[Dataset] = field(default=None, kw_only=True)
     vae: CVAE = field(init=False, default=None)
-    model: Model = field(init=False, default=None)
+    model: Optional[torch.nn.Module] = field(init=False, default=None)
     num_batches: int = field(init=False)
     feature_types: Dict = field(init=False, default_factory=dict)
 
@@ -370,9 +444,19 @@ class VAEWrapper(BaseWrapper):
         es_min_delta = 0.005
         es_patience = 10
         pth = Path(self.paths["state_path"])
+        pth.mkdir(parents=True, exist_ok=True)
+        best_weights_path = str(pth / "vae_best_weights_tmp.pt")
         # loss that corresponds to the best saved weights
         saved_weights_loss = float("inf")
 
+        # The TF training loop called ``model(batch)`` inside GradientTape WITHOUT
+        # ``training=True``, so the forward ran in *inference* mode: Dropout off and
+        # BatchNorm as a fixed affine (moving stats frozen at init 0/1 — verified
+        # empirically against the TF code). We replicate that by training in
+        # ``eval()`` mode, which also keeps the train / fit_sampler / generation
+        # encodings identical (the real defense against latent drift, collapse
+        # hypothesis #3). Gradients still flow through the BN affine and all weights.
+        self.model.eval()
         delta = ProgressBarHandler().delta / (epochs * 2)
         for epoch in range(epochs):
             log_message = (
@@ -404,7 +488,7 @@ class VAEWrapper(BaseWrapper):
             if mean_loss >= prev_total_loss - es_min_delta:
                 loss_grows_num_epochs += 1
             else:
-                self.model.save_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                torch.save(self.model.state_dict(), best_weights_path)
                 loss_grows_num_epochs = 0
                 # loss that corresponds to the best saved weights
                 saved_weights_loss = mean_loss
@@ -429,7 +513,7 @@ class VAEWrapper(BaseWrapper):
             prev_total_loss = mean_loss
 
             if loss_grows_num_epochs == es_patience:
-                self.model.load_weights(str(pth / "vae_best_weights_tmp.ckpt"))
+                self.model.load_state_dict(torch.load(best_weights_path, weights_only=True))
                 logger.info(
                     f"The loss does not become lower for "
                     f"{loss_grows_num_epochs} epochs in a row. "
@@ -441,38 +525,68 @@ class VAEWrapper(BaseWrapper):
         self._log_losses_info_to_mlflow()
 
     @staticmethod
-    def _create_optimizer(learning_rate):
-        import platform
-        if platform.processor() == 'arm':
-            logger.info('Mac ARM processor is detected. Legacy Adam optimizer has been created.')
-            return tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-        else:
-            return tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    def _create_optimizer(model, learning_rate):
+        # ``foreach=True`` batches the per-parameter update into a handful of
+        # ``_foreach_*`` calls. Left at the default, torch only enables it for CUDA
+        # params, so a CPU install silently takes ``_single_tensor_adam``: a Python
+        # loop issuing ~6 elementwise ops per parameter tensor, every step. On
+        # housing that is ~400 op dispatches/step and ~18% of train wall-clock.
+        # The arithmetic is unchanged - losses stay bit-identical (EPMCTDM-7630).
+        return torch.optim.Adam(model.parameters(), lr=learning_rate, foreach=True)
 
     def __create_optimizer(self):
         learning_rate = 1e-04 * np.sqrt(self.batch_size / BATCH_SIZE_DEFAULT)
-        return self._create_optimizer(learning_rate)
+        return self._create_optimizer(self.model, learning_rate)
 
     @staticmethod
     def _create_loss():
-        return tf.keras.metrics.Mean()
+        # Kept for API parity; the PyTorch loop tracks the running loss directly.
+        return None
 
     def _create_batched_dataset(self, df: pd.DataFrame):
         """
-        Define batched dataset for training vae
+        Define a batched dataset for training the VAE.
+
+        Mirrors the TF ``tf.data … .batch(drop_remainder=True)`` (which did *not*
+        shuffle, wrappers.py:455-469): per-feature tensors are kept in
+        ``Dataset.transform`` order so the batch preserves the feature tuple order
+        (collapse hypothesis #4), and the final partial batch is dropped.
+
+        Batching is driven by a ``BatchSampler``, so ``__getitem__`` receives the
+        whole index list and fancy-indexes each feature once. Gathering one row at a
+        time and letting the default collate re-stack cost ``batch_size * F`` index
+        ops plus ``F`` stacks per batch - ~3.4 M index ops over a 15-epoch housing
+        run (EPMCTDM-7630).
+
+        ``__len__`` deliberately reports the **row** count, not the batch count, and
+        ``drop_last=True`` keeps ``len(loader) == rows // batch_size``. Both are
+        load-bearing for consumers that derive a sampling rate from these numbers - a
+        batch-level ``__len__`` would silently change that rate rather than fail - so
+        do not "simplify" either one.
+
+        Batch construction is sampler-agnostic: see ``collate_feature_batch`` for the
+        two shapes a batch can arrive in and why both are handled.
         """
-        transformed_data = self.dataset.transform(df)
-        self._validate_transformed_data(transformed_data)
+        # Validate the raw (numpy) transformed arrays for NaN/inf before
+        # converting to tensors, then tensorize for the PyTorch training loop.
+        raw_transformed = self.dataset.transform(df)
+        self._validate_transformed_data(raw_transformed)
+        transformed_data = _to_tensors(raw_transformed)
 
-        feature_datasets = []
-        options = tf.data.Options()
-        options.experimental_distribute.auto_shard_policy = AutoShardPolicy.DATA
-        for inp in transformed_data:
-            dataset = tf.data.Dataset.from_tensor_slices(inp).with_options(options)
-            feature_datasets.append(dataset)
-
-        dataset = tf.data.Dataset.zip(tuple(feature_datasets)).with_options(options)
-        return dataset.batch(self.batch_size, drop_remainder=True)
+        dataset = _FeatureTuples(transformed_data)
+        batch_sampler = BatchSampler(
+            SequentialSampler(dataset), batch_size=self.batch_size, drop_last=True
+        )
+        # ``batch_size=None`` disables automatic batching, so ``__getitem__`` returns a
+        # whole batch. An explicit ``collate_fn`` is still required: the default
+        # ``default_convert`` would rebuild the tuple as a *list*, and the batch has
+        # always been a tuple (here and in the TF-era ``tf.data.zip`` path).
+        return TorchDataLoader(
+            dataset,
+            sampler=batch_sampler,
+            batch_size=None,
+            collate_fn=collate_feature_batch,
+        )
 
     @staticmethod
     def _find_non_finite_features(
@@ -511,42 +625,28 @@ class VAEWrapper(BaseWrapper):
                 "numpy.datetime64 date columns from Parquet/Delta sources)."
             )
 
-    def _train_step_graph_impl(self, batch: Tuple[tf.Tensor]):
-        """
-        Graph-compiled forward/backward/optimizer-apply step. Returns tensors only
-        (no `.numpy()`) so it can be traced by `tf.function` - conversion to numpy
-        happens in `_train_step`, outside the compiled graph.
-        """
-        with tf.GradientTape() as tape:
-            self.model(batch)
+    def _train_step(self, batch: Tuple[torch.Tensor, ...]):
+        self.optimizer.zero_grad()
+        recons, mu, log_sigma = self.model(batch)
 
-            # Compute reconstruction loss
-            loss = sum(self.model.losses)
-            kl_loss = self.model.losses[-1]
-            feature_losses = self.model.losses[:-1]
+        feature_losses = {}
+        recon_total = torch.zeros((), dtype=recons[0].dtype)
+        for name, recon, target in zip(self.vae.feature_order, recons, batch):
+            feature_loss = self.dataset.features[name].compute_loss(target, recon)
+            feature_losses[name] = feature_loss
+            recon_total = recon_total + feature_loss
 
-        self.optimizer.minimize(
-            loss=loss,
-            var_list=self.model.trainable_weights,
-            tape=tape
-        )
-        self.loss_metric(loss)
-        return loss, kl_loss, feature_losses
+        kl_loss = kl_divergence(mu, log_sigma)
+        # KL weight 0: reported under `kl_loss` but excluded from the optimized
+        # total — mirrors the TF graph, which registers `add_loss(kl_loss * 0)`
+        # (model.py:129 on `main`).
+        loss = recon_total + 0.0 * kl_loss
 
-    def _train_step(self, batch: Tuple[tf.Tensor]):
-        # `self` (VanillaVAEWrapper) isn't hashable, so `@tf.function` can't be used
-        # as a class-level method decorator (it needs a weakref-keyed descriptor
-        # cache). Wrap the bound method once instead, cached on the instance.
-        if not hasattr(self, "_train_step_graph"):
-            self._train_step_graph = tf.function(self._train_step_graph_impl)
+        loss.backward()
+        self.optimizer.step()
 
-        loss, kl_loss, feature_losses = self._train_step_graph(batch)
-        order_of_features = list(self.vae.feature_losses.keys())
-        feature_losses = {
-            name: loss.numpy()
-            for name, loss in zip(order_of_features, feature_losses)
-        }
-        return loss, kl_loss.numpy(), feature_losses
+        feature_losses = {name: float(value.detach()) for name, value in feature_losses.items()}
+        return float(loss.detach()), float(kl_loss.detach()), feature_losses
 
     @staticmethod
     def display_losses(feature_losses: Dict):
@@ -637,6 +737,11 @@ class VanillaVAEWrapper(VAEWrapper):
     ):
 
         log_level = os.getenv("LOGURU_LEVEL")
+
+        # Seed before dataset fitting + model init so training is reproducible
+        # (Phase E). Train path only — see _seed_everything.
+        if process == "train":
+            _seed_everything(_TRAIN_SEED)
 
         super().__init__(
             df,

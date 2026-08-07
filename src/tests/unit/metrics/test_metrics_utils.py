@@ -1,3 +1,5 @@
+import random
+
 import pandas as pd
 import numpy as np
 import pytest
@@ -8,6 +10,7 @@ from syngen.ml.metrics.utils import (
     get_ratio_counts,
     plot_dist
 )
+from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 @pytest.fixture
@@ -265,3 +268,40 @@ class TestPlotDist:
         assert abs(result["a"] - (2/5 * 100)) < 1e-10  # 40%
         assert abs(result["b"] - (2/5 * 100)) < 1e-10  # 40%
         assert abs(result["c"] - (1/5 * 100)) < 1e-10  # 20%
+
+
+def test_get_ratio_counts_selection_is_deterministic(rp_logger):
+    """EPMCTDM-7630: which categorical bars the univariate plot shows must not depend
+    on the global RNG.
+
+    `get_ratio_counts` keeps the most and least common items plus a random selection
+    from the middle. Drawing that middle slice from the module-level `random` meant the
+    same data produced a different accuracy report on every run.
+    """
+    rp_logger.info("Test 'get_ratio_counts' selects the same items across runs")
+    ratio_counts = {f"v{i}": 100 - i for i in range(60)}
+
+    selections = []
+    for seed in (1, 7919, 104729):
+        random.seed(seed)          # perturb the global RNG between calls
+        selections.append(tuple(get_ratio_counts(dict(ratio_counts)).keys()))
+
+    assert len(set(selections)) == 1, (
+        "selection must be stable regardless of global RNG state"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_ratio_counts_keeps_extremes_and_size(rp_logger):
+    """Seeding must not change *what kind* of selection is made: the most and least
+    common items are still always present and the count is unchanged, so metric
+    magnitudes stay comparable with previously published reports."""
+    rp_logger.info("Test 'get_ratio_counts' still keeps extremes and count")
+    ratio_counts = {f"v{i}": 100 - i for i in range(60)}
+
+    result = get_ratio_counts(dict(ratio_counts), count=30)
+
+    assert "v0" in result, "most common item must be kept"
+    assert "v59" in result, "least common item must be kept"
+    assert len(result) == 30
+    rp_logger.info(SUCCESSFUL_MESSAGE)

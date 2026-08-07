@@ -61,6 +61,7 @@ tmp/
 
 # Configuration file for CLAUDE agents
 AGENTS.md
+tmp/
 
 # Claude Code local overrides (never commit)
 CLAUDE.local.md

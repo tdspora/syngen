@@ -13,11 +13,11 @@ from copy import deepcopy
 
 import pandas as pd
 import numpy as np
+import torch
 from numpy.random import seed
 import dill
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
-from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
 from attrs import define, field
@@ -26,12 +26,14 @@ from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.reporters import Report
 from syngen.ml.vae.models.dataset import Dataset
+from syngen.ml.vae.models.features import CharTokenizer
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
     get_initial_table_name,
     ProgressBarHandler,
     get_source_path_extension,
+    get_thread_parallelism_budget,
     timing,
 )
 
@@ -122,12 +124,26 @@ class LongTextsHandler(BaseHandler):
         if len(long_text_columns) > 0:
             features = {}
             for col in long_text_columns:
-                tokenizer = Tokenizer(lower=False, char_level=True)
+                tokenizer = CharTokenizer(lower=False, char_level=True)
                 if type(data[col].dropna().values[0]) is bytes:
                     text_col = data[col].str.decode("utf-8", errors="ignore")
                 else:
                     text_col = data[col]
-                text_col = text_col.fillna("")
+
+                # Fit the KDE on real texts only. Filling NULLs with "" would add
+                # (char_len=0, word_count=0) points that both skew the modelled text
+                # length towards zero and turn NULL reproduction into an accident of
+                # where the KDE tail happens to land. The NULL share is recorded
+                # separately and applied as an explicit mask at generation time.
+                non_null_col = text_col.dropna()
+                if len(non_null_col) < 2:
+                    # gaussian_kde needs at least two points. Keep the legacy
+                    # behaviour for such a column instead of failing the whole run.
+                    text_col, null_share = text_col.fillna(""), 0.0
+                else:
+                    null_share = float(text_col.isna().mean())
+                    text_col = non_null_col
+
                 tokenizer.fit_on_texts(text_col)
 
                 indexes = OrderedDict((k, v) for k, v in tokenizer.word_index.items() if k != " ")
@@ -150,6 +166,13 @@ class LongTextsHandler(BaseHandler):
                     "counts": counts,
                     "indexes": ordered_indexes,
                     "kde": kde,
+                    # Minimum number of words seen in a real (non-NULL) source text.
+                    # 0 means the source contains genuine empty strings, which the
+                    # generator is then allowed to reproduce.
+                    "min_word_count": int(text_structure[1].min()),
+                    # Share of source rows that were NULL, reproduced at generation
+                    # time as real NaN rather than inferred from the KDE tail.
+                    "null_share": null_share,
                 }
 
             self._save_no_ml_checkpoints(features)
@@ -299,6 +322,7 @@ class VaeInferHandler(BaseHandler):
         self.batch_size, self.batch_num, n_jobs = (
             self._calculate_batch_configuration()
         )
+        threads_per_worker = max(1, self._get_worker_cpu_budget() // n_jobs)
 
         func_for_worker_init = functools.partial(
             self.__class__._initialize_worker_vae_model,
@@ -309,7 +333,7 @@ class VaeInferHandler(BaseHandler):
         self._pool = mp.Pool(
             processes=n_jobs,
             initializer=self.__class__.worker_init,
-            initargs=(func_for_worker_init,)
+            initargs=(func_for_worker_init, threads_per_worker)
         )
 
     def _calculate_batch_configuration(self) -> Tuple[int, int, int]:
@@ -320,8 +344,7 @@ class VaeInferHandler(BaseHandler):
         Returns:
             Tuple[int, int, int]: (batch_size, batch_num, n_jobs)
         """
-        # use all available CPUs minus one to avoid overloading the system
-        cpu_count = max(1, mp.cpu_count() - 1)
+        cpu_count = self._get_worker_cpu_budget()
 
         if self.batch_num > 1:
             n_jobs = min(self.batch_num, cpu_count)
@@ -346,8 +369,17 @@ class VaeInferHandler(BaseHandler):
         return self.batch_size, self.batch_num, n_jobs
 
     @staticmethod
-    def worker_init(get_wrapper_func_from_main):
+    def _get_worker_cpu_budget() -> int:
+        """
+        Reserve one CPU and honour the effective native-thread budget.
+        """
+        return max(1, get_thread_parallelism_budget() - 1)
+
+    @staticmethod
+    def worker_init(get_wrapper_func_from_main, threads_per_worker=None):
         global vae_model
+        if threads_per_worker is not None:
+            torch.set_num_threads(threads_per_worker)
         vae_model = get_wrapper_func_from_main()
 
     @staticmethod
@@ -373,6 +405,19 @@ class VaeInferHandler(BaseHandler):
                 )
             )
         )
+
+    def _synth_text(self, char_len: int, word_count: int, indexes, counts) -> str:
+        """
+        Build one synthetic text of roughly 'char_len' characters split into
+        'word_count' words. A word count of 0 yields an empty text.
+        """
+        # Guard the division so an intentionally empty text does not emit a
+        # divide-by-zero warning; with word_count == 0 no word length is drawn.
+        mean_word_len = char_len / word_count if word_count else 0.0
+        word_lengths = np.maximum(
+            np.random.normal(mean_word_len, 1, word_count).astype("int32"), 2
+        )
+        return " ".join(self._synth_word(s, indexes, counts) for s in word_lengths)
 
     def _get_wrapper(self, dataset_to_preload: Optional[Dataset] = None):
         """
@@ -424,18 +469,27 @@ class VaeInferHandler(BaseHandler):
             features = dill.load(file)
         for col in features.keys():
             kde = features[col]["kde"]
-            text_structures = np.maximum(kde.resample(size).astype("int32"), 0)
             indexes = features[col]["indexes"]
             counts = features[col]["counts"]
-            generated_column = [
-                " ".join(
-                    [
-                        self._synth_word(s, indexes, counts)
-                        for s in np.maximum(np.random.normal(i / j, 1, j).astype("int32"), 2)
-                    ]
-                )
-                for i, j in zip(*text_structures)
-            ]
+            # A generated text may be empty only if the source contained empty texts;
+            # otherwise it must hold at least one word. Rounding before applying the
+            # floor matters: truncating a word count that sits just below 1 collapses
+            # it to 0, and the row is then emitted as an empty string - a NULL that
+            # does not exist in the source.
+            floors = np.array([[0], [min(features[col]["min_word_count"], 1)]])
+            text_structures = np.maximum(np.rint(kde.resample(size)), floors).astype("int32")
+            generated_column = np.array(
+                [
+                    self._synth_text(i, j, indexes, counts)
+                    for i, j in zip(*text_structures)
+                ],
+                dtype=object,
+            )
+            # Reproduce the measured source NULL share as real NaN. An empty string
+            # would only read back as NULL from CSV, not from Avro.
+            null_share = features[col]["null_share"]
+            if null_share:
+                generated_column[np.random.random(size) < null_share] = np.nan
             logger.debug(f"Long text for column '{col}' is generated.")
             synthetic_infer[col] = generated_column
         return synthetic_infer
