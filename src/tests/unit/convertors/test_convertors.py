@@ -960,3 +960,98 @@ def test_cast_binary_column_with_all_null_values_skips_decoding(rp_logger):
     assert convertor.preprocessed_df["Data"].isna().all()
     assert "encoding" not in convertor.custom_schema
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cast_binary_column_with_some_null_values_decodes_non_null_values(rp_logger):
+    rp_logger.info(
+        "Casting a binary column with a decodable encoding that also contains "
+        "null values in the base Convertor should decode the non-null values "
+        "and leave the null values untouched, without raising an error"
+    )
+    df = pd.DataFrame({"Blob": [b"hello", None, np.nan]})
+    convertor = _make_binary_convertor(df, "Blob")
+    result = convertor.preprocessed_df["Blob"].tolist()
+    assert result[0] == "hello"
+    assert pd.isna(result[1])
+    assert pd.isna(result[2])
+    assert convertor.custom_schema["encoding"]["Blob"] == "ascii"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cast_binary_column_encoding_detection_stops_after_sample_size(rp_logger):
+    rp_logger.info(
+        "Casting a binary column with more non-null values than the encoding "
+        "detection sample size in the base Convertor should run 'chardet.detect' "
+        "only on the sampled values instead of scanning the whole column"
+    )
+    row_count = Convertor._ENCODING_DETECTION_SAMPLE_SIZE + 50
+    df = pd.DataFrame({"Blob": [b"hello"] * row_count})
+    with patch(
+        "syngen.ml.convertor.convertor.chardet.detect", wraps=__import__("chardet").detect
+    ) as mocked_detect:
+        convertor = _make_binary_convertor(df, "Blob")
+    assert mocked_detect.call_count == Convertor._ENCODING_DETECTION_SAMPLE_SIZE
+    assert convertor.custom_schema["encoding"]["Blob"] == "ascii"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_postprocess_encoded_columns_with_unknown_codec_raises_lookup_error(caplog, rp_logger):
+    rp_logger.info(
+        "Postprocessing an encoded column with a codec name unknown to Python's "
+        "codec registry in the base Convertor should raise the 'LookupError'"
+    )
+    convertor = Convertor.__new__(Convertor)
+    convertor.preprocessed_df = pd.DataFrame({"Blob": ["hello"]})
+    convertor.custom_schema = {"encoding": {"Blob": "not-a-real-codec"}}
+    with caplog.at_level("ERROR"):
+        with pytest.raises(LookupError) as error:
+            convertor._postprocess_encoded_columns()
+    assert "unknown encoding: not-a-real-codec" in str(error.value)
+    assert (
+        "Failed to encode a value in the column 'Blob' "
+        "using the encoding 'not-a-real-codec'."
+    ) in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_postprocess_encoded_columns_with_non_encodable_char_raises_unicode_encode_error(
+    caplog, rp_logger
+):
+    rp_logger.info(
+        "Postprocessing an encoded column with a value containing a character "
+        "that can't be represented in the recorded encoding in the base Convertor "
+        "should raise the 'UnicodeEncodeError'"
+    )
+    convertor = Convertor.__new__(Convertor)
+    convertor.preprocessed_df = pd.DataFrame({"Blob": ["héllo"]})
+    convertor.custom_schema = {"encoding": {"Blob": "ascii"}}
+    with caplog.at_level("ERROR"):
+        with pytest.raises(UnicodeEncodeError) as error:
+            convertor._postprocess_encoded_columns()
+    assert "'ascii' codec can't encode character" in str(error.value)
+    assert (
+        "Failed to encode a value in the column 'Blob' "
+        "using the encoding 'ascii'."
+    ) in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_postprocess_encoded_columns_with_non_string_encoding_raises_type_error(
+    caplog, rp_logger
+):
+    rp_logger.info(
+        "Postprocessing an encoded column with a recorded encoding that isn't a "
+        "string in the base Convertor should raise the 'TypeError'"
+    )
+    convertor = Convertor.__new__(Convertor)
+    convertor.preprocessed_df = pd.DataFrame({"Blob": ["hello"]})
+    convertor.custom_schema = {"encoding": {"Blob": 123}}
+    with caplog.at_level("ERROR"):
+        with pytest.raises(TypeError) as error:
+            convertor._postprocess_encoded_columns()
+    assert "encode() argument 'encoding' must be str, not int" in str(error.value)
+    assert (
+        "Failed to encode a value in the column 'Blob' "
+        "using the encoding '123'."
+    ) in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)

@@ -18,6 +18,9 @@ class Convertor:
     _NON_DECODABLE_MIME_PREFIXES = (
         "image/", "audio/", "video/", "application/", "font/"
     )
+    # Cap on the number of non-null binary values inspected by `chardet` per column,
+    # since 'chardet.detect' is pure-Python and scanning an entire large column is wasteful
+    _ENCODING_DETECTION_SAMPLE_SIZE = 100
 
     def __init__(
         self,
@@ -155,14 +158,19 @@ class Convertor:
 
     def _collect_encoding_infos(self, column: str) -> List[dict]:
         """
-        Run `chardet` on every non-null binary value in `column`
-        and return the list of `mime/encoding` records.
+        Run `chardet` on up to `_ENCODING_DETECTION_SAMPLE_SIZE` non-null binary
+        values in `column` and return the list of `mime/encoding` records.
+        Stops early once the sample size is reached instead of scanning
+        the whole column.
         """
-        return [
-            self._get_encoding_info(value)
-            for value in self.preprocessed_df[column]
-            if isinstance(value, (bytes, bytearray))
-        ]
+        encoding_infos = []
+        for value in self.preprocessed_df[column]:
+            if not isinstance(value, (bytes, bytearray)):
+                continue
+            encoding_infos.append(self._get_encoding_info(value))
+            if len(encoding_infos) >= self._ENCODING_DETECTION_SAMPLE_SIZE:
+                break
+        return encoding_infos
 
     def _validate_binary_encoding_infos(
         self, column: str, encoding_infos: List[dict]
@@ -234,9 +242,11 @@ class Convertor:
         encoding = self.custom_schema["encoding"][column]
 
         def _decode(value):
+            if pd.isna(value):
+                return value
             try:
                 return value.decode(encoding)
-            except (UnicodeDecodeError, TypeError) as exc:
+            except (UnicodeDecodeError, LookupError, TypeError) as exc:
                 message = (
                     f"Failed to decode a value in the binary column '{column}' "
                     f"using the encoding '{encoding}'. Underlying error: {exc}."
@@ -328,11 +338,11 @@ class Convertor:
         for column, data_type in serializable_columns_mapping.items():
             if column not in self.preprocessed_df.columns:
                 continue
-            if "struct" in data_type:
+            elif "struct" in data_type:
                 self.preprocessed_df[column] = self.preprocessed_df[column].map(
                     lambda x: json.loads(x) if not pd.isna(x) else x
                 )
-            if "map" in data_type:
+            elif "map" in data_type:
                 self.preprocessed_df[column] = (
                     self.preprocessed_df[column].map(
                         lambda x: json.loads(x).get(f"{column}") if not pd.isna(x) else x
@@ -350,7 +360,7 @@ class Convertor:
                 self.preprocessed_df[column] = self.preprocessed_df[column].map(
                     self._to_tuples_recursive
                 )
-            if "list" in data_type:
+            elif "list" in data_type:
                 self.preprocessed_df[column] = (
                     self.preprocessed_df[column].map(
                         lambda x: json.loads(x).get(f"{column}") if not pd.isna(x) else x
@@ -364,8 +374,25 @@ class Convertor:
         if self.custom_schema.get("encoding"):
             for column, encoding in self.custom_schema["encoding"].items():
                 self.preprocessed_df[column] = self.preprocessed_df[column].map(
-                    lambda x: x.encode(encoding) if not pd.isna(x) else x
+                    lambda x: self._encode_value(x, column, encoding)
                 )
+
+    @staticmethod
+    def _encode_value(value, column: str, encoding: str):
+        """
+        Encode a single string value back to bytes using the recorded encoding.
+        """
+        if pd.isna(value):
+            return value
+        try:
+            return value.encode(encoding)
+        except (UnicodeEncodeError, LookupError, TypeError) as exc:
+            message = (
+                f"Failed to encode a value in the column '{column}' "
+                f"using the encoding '{encoding}'. Underlying error: {exc}."
+            )
+            logger.error(message)
+            raise exc
 
     def _apply_format_specific_preprocessing(self):
         """
