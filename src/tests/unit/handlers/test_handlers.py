@@ -12,6 +12,7 @@ import torch
 from scipy.stats import gaussian_kde
 
 from syngen.ml.handlers import VaeInferHandler
+from syngen.ml.handlers.handlers import _select_mp_start_method, LongTextsHandler
 from syngen.ml.data_loaders import MetadataLoader
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
