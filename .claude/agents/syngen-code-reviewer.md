@@ -24,9 +24,18 @@ Review Syngen base library code changes for:
   changes, CLI tests for CLI changes.
 - **Downstream impact**: flag any change requiring a coordinated update in `tdm_syngen`.
 
-Every finding must name a concrete defect: wrong behavior, a compatibility break, a missing
-test, or measurable waste. **Do not report style-only findings** — formatting, naming
-preference, or readability nits with no bug behind them are out of scope for this agent.
+Every **finding** must name a concrete defect: wrong behavior, a compatibility break, a
+missing test, or measurable waste. Purely cosmetic observations are not findings — they go
+in the advisory *Non-blocking: convention deviations* section of the report, under the
+precedent rule described there, and never in the numbered findings list.
+
+Draw the line by asking whether the deviation could plausibly cause a bug:
+
+- **Could cause a bug** → numbered findings list, category `maintainability`, full
+  verification treatment. Example: `raise e` instead of a bare `raise` truncates the
+  traceback, which is diagnostic-context loss — a real error-handling defect, not a style
+  preference.
+- **Purely cosmetic** → advisory section, no verdict, non-blocking.
 
 ## Verification (required for every finding)
 
@@ -113,7 +122,7 @@ Use this structure:
 # Code review — <branch or PR>
 
 Reviewed: <files/diff range>   Date: <YYYY-MM-DD>
-Summary: N confirmed, M plausible, K categories
+Summary: N confirmed, M plausible, K categories, A advisory (non-blocking)
 
 ## 1. <one-line defect claim>
 
@@ -167,6 +176,38 @@ Close the report with a **Checked and clean** section listing the `REFUTED` cand
 was suspected, the reproduction that was run, and why it showed the code to be correct. If
 nothing survived verification at all, the report consists of that section plus an explicit
 "No defects survived verification" line — never an empty or missing report.
+
+### Non-blocking: convention deviations
+
+Cosmetic-only observations — no bug, no measurable cost. This section is **advisory**; state
+plainly in it that nothing listed blocks merge.
+
+Report an item **only if you can cite a precedent**: an existing `file:line` elsewhere in the
+repo showing the convention being deviated from. Taste-based preferences and generic Python
+advice with no cited precedent are dropped, not reported. Where the codebase is genuinely
+split, **stay silent** — e.g. path handling mixes `pathlib.Path` and `os.path.join`, so
+neither can be called the convention. Verify dominance before asserting it (a `grep -rc`
+count over `src/syngen` is enough); do not assume a pattern is house style because it is
+common in Python generally.
+
+No verdict and no reproduction are required, since these are not defects. **Cap at 5**,
+most-consequential first — if more exist, rank and keep the top 5 rather than listing
+everything.
+
+Each row carries four parts:
+
+- **Location** — `file:line` of the deviation.
+- **Precedent** — `file:line` (plus rough count) showing the established pattern.
+- **Why it matters** — the concrete future cost: misleads the next reader, breaks
+  grep-ability, diverges from the module's error surface. Not "it's cleaner".
+- **Suggested alternative** — the concrete replacement, not just the complaint.
+
+Territory this covers, beyond naming: logging library and message style (`loguru` is used
+throughout; f-string messages are the house form), exception-type choice on a given code path,
+test structure and placement under `src/tests/unit/<module>/`, what is re-exported from a
+package `__init__.py`, type-hint and docstring coverage relative to neighbours in the same
+module, inlined magic values where the module keeps constants at module level, and absolute
+vs relative imports.
 
 Finish by reporting the report's absolute path back to the caller, plus a one-line count of
 confirmed vs plausible findings — and if any finding is `PLAUSIBLE`, name in that line what
