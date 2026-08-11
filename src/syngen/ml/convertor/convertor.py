@@ -252,7 +252,7 @@ class Convertor:
                     f"using the encoding '{encoding}'. Underlying error: {exc}."
                 )
                 logger.error(message)
-                raise ValueError(message) from exc
+                raise exc
 
         self.preprocessed_df[column] = self.preprocessed_df[column].map(_decode)
 
