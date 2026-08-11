@@ -21,6 +21,10 @@ class Convertor:
     # Cap on the number of non-null binary values inspected by `chardet` per column,
     # since 'chardet.detect' is pure-Python and scanning an entire large column is wasteful
     _ENCODING_DETECTION_SAMPLE_SIZE = 100
+    _WARNING_MESSAGE = (
+        "Decoding will be skipped; "
+        "binary values will be replaced by null values."
+    )
 
     def __init__(
         self,
@@ -185,9 +189,6 @@ class Convertor:
           - encoding could not be determined (`chardet` returns `None`);
           - multiple different encodings found across values.
         """
-        warning_message = (
-            "Decoding will be skipped; binary values will be replaced by null values."
-        )
         non_decodable_mime_types = sorted({
             info["mime_type"]
             for info in encoding_infos
@@ -201,7 +202,7 @@ class Convertor:
             mime_str = "', '".join(non_decodable_mime_types)
             logger.warning(
                 f"The binary column '{column}' contains values with non-decodable "
-                f"MIME type(s): '{mime_str}'. {warning_message}"
+                f"MIME type(s): '{mime_str}'. {self._WARNING_MESSAGE}"
             )
             return False
 
@@ -211,7 +212,7 @@ class Convertor:
         ):
             logger.warning(
                 f"The binary column '{column}' contains values "
-                f"whose character encoding could not be determined. {warning_message}"
+                f"whose character encoding could not be determined. {self._WARNING_MESSAGE}"
             )
             return False
 
@@ -224,7 +225,8 @@ class Convertor:
             encodings_str = "', '".join(plain_text_encodings)
             logger.warning(
                 f"The binary column '{column}' contains plain-text values with "
-                f"multiple different character encodings: '{encodings_str}'. {warning_message}"
+                f"multiple different character encodings: '{encodings_str}'. "
+                f"{self._WARNING_MESSAGE}"
             )
             return False
 
@@ -249,7 +251,8 @@ class Convertor:
             except (UnicodeDecodeError, LookupError, TypeError) as exc:
                 message = (
                     f"Failed to decode a value in the binary column '{column}' "
-                    f"using the encoding '{encoding}'. Underlying error: {exc}."
+                    f"using the detected encoding '{encoding}'. Underlying error: {exc}. "
+                    f"{self._WARNING_MESSAGE}"
                 )
                 logger.error(message)
                 raise exc
@@ -265,14 +268,18 @@ class Convertor:
 
         When validation cannot determine a safe single encoding (non-decodable
         MIME, unknown encoding, or mixed encodings), decoding is skipped and
-        all values in the column are replaced by null instead.
+        all values in the column are replaced by null instead. If decoding
+        itself fails, all values in the column are replaced by null as well.
         """
         encoding_infos = self._collect_encoding_infos(column)
         can_decode = self._validate_binary_encoding_infos(column, encoding_infos)
         if not can_decode:
             self.preprocessed_df[column] = np.NaN
             return
-        self._decode_binary_column(column)
+        try:
+            self._decode_binary_column(column)
+        except (UnicodeDecodeError, LookupError, TypeError):
+            self.preprocessed_df[column] = np.NaN
 
     def _cast_binary_columns(self) -> None:
         """

@@ -978,6 +978,23 @@ def test_cast_binary_column_with_some_null_values_decodes_non_null_values(rp_log
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_cast_binary_column_with_decode_error_replaces_column_with_null(rp_logger):
+    rp_logger.info(
+        "Casting a binary column whose validated encoding still fails to decode "
+        "in the base Convertor should replace all values in the column with null "
+        "instead of raising an error"
+    )
+    df = pd.DataFrame({"Blob": [b"hello", b"world"]})
+    with patch.object(
+        Convertor,
+        "_decode_binary_column",
+        side_effect=UnicodeDecodeError("ascii", b"\xff", 0, 1, "invalid byte"),
+    ):
+        convertor = _make_binary_convertor(df, "Blob")
+    assert convertor.preprocessed_df["Blob"].isna().all()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_cast_binary_column_encoding_detection_stops_after_sample_size(rp_logger):
     rp_logger.info(
         "Casting a binary column with more non-null values than the encoding "
