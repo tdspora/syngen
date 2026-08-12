@@ -1,4 +1,3 @@
-import os
 from typing import Literal, Optional, List, Union, Callable
 
 import click
