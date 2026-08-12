@@ -257,7 +257,9 @@ class Convertor:
                 logger.error(message)
                 raise exc
 
-        self.preprocessed_df[column] = self.preprocessed_df[column].map(_decode)
+        self.preprocessed_df[column] = (
+            self.preprocessed_df[column].map(_decode).astype("string")
+        )
 
     def _cast_binary_column(self, column: str) -> None:
         """
@@ -506,7 +508,6 @@ class AvroConvertor(Convertor):
         "local-timestamp-millis": "datetime",
         "local-timestamp-micros": "datetime",
     }
-    COMPLEX_TYPES = frozenset({"array", "map", "record", "enum", "fixed"})
 
     def _get_custom_schema(self) -> Dict:
         """
@@ -549,7 +550,7 @@ class AvroConvertor(Convertor):
                 fields[column] = "int"
             elif type_names & {"float", "double"}:
                 fields[column] = "float"
-            elif type_names & {"string", "bytes"}.union(self.COMPLEX_TYPES):
+            elif "string" in type_names:
                 fields[column] = "string"
             elif type_names == {"null"}:
                 fields[column] = "null"
