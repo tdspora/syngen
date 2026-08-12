@@ -577,15 +577,58 @@ def test_preprocess_df_maps_avro_logical_date_types_to_date(
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_preprocess_df_if_column_is_binary(rp_logger):
+def test_preprocess_df_if_column_is_binary(caplog, rp_logger):
     rp_logger.info(
         "Initiating the instance of the class AvroConvertor "
         "with the schema containing one column with data type - 'bytes'"
     )
     df = pd.DataFrame({"Test": [b"test", b"test2", b"test3"]})
+    error_message = (
+        "It seems that the column - 'Test' has unsupported data type - '['bytes']'"
+    )
 
-    convertor = AvroConvertor({"Test": ["bytes"]}, df)
-    assert convertor.preprocessed_df.dtypes.to_dict() == {"Test": "string[python]"}
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            AvroConvertor({"Test": ["bytes"]}, df)
+
+    assert str(error.value) == error_message
+    assert error_message in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "avro_type",
+    [
+        {"type": "array", "items": "string"},
+        {"type": "map", "values": "string"},
+        {
+            "type": "record",
+            "name": "SubRecord",
+            "fields": [{"name": "field_1", "type": "string"}],
+        },
+        {"type": "enum", "name": "Suit", "symbols": ["SPADES", "HEARTS"]},
+        {"type": "fixed", "name": "MD5", "size": 16},
+    ],
+    ids=["array", "map", "record", "enum", "fixed"],
+)
+def test_initiate_avro_convertor_if_schema_contains_complex_data_type(
+    avro_type, caplog, rp_logger
+):
+    rp_logger.info(
+        "Initiating the instance of the class AvroConvertor with the schema "
+        f"containing the unsupported complex Avro data type - '{avro_type['type']}'"
+    )
+    df = pd.DataFrame({"Test": [None, None, None]})
+    error_message = (
+        f"It seems that the column - 'Test' has unsupported data type - '{avro_type}'"
+    )
+
+    with pytest.raises(ValueError) as error:
+        with caplog.at_level("ERROR"):
+            AvroConvertor(original_schema={"Test": avro_type}, df=df)
+
+    assert str(error.value) == error_message
+    assert error_message in caplog.text
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
