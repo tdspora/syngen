@@ -34,6 +34,7 @@ from syngen.ml.utils import (
     ProgressBarHandler,
     get_source_path_extension,
     get_thread_parallelism_budget,
+    enable_flush_denormal,
     timing,
 )
 
@@ -378,6 +379,11 @@ class VaeInferHandler(BaseHandler):
     @staticmethod
     def worker_init(get_wrapper_func_from_main, threads_per_worker=None):
         global vae_model
+        # Unconditional, and deliberately not left to wrapper construction below:
+        # FTZ/DAZ is per-process CPU state, and spawned workers (Windows, see
+        # `_setup_parallel_processing`) start from a fresh interpreter that
+        # inherits no MXCSR state (EPMCTDM-7643).
+        enable_flush_denormal()
         if threads_per_worker is not None:
             torch.set_num_threads(threads_per_worker)
         vae_model = get_wrapper_func_from_main()

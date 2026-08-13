@@ -31,6 +31,7 @@ from syngen.ml.utils import (
     generate_uuid,
     fetch_config,
     check_if_features_assigned,
+    enable_flush_denormal,
     ProgressBarHandler
 )
 from syngen.ml.data_loaders import DataLoader
@@ -146,6 +147,9 @@ class VAEWrapper(BaseWrapper):
     feature_types: Dict = field(init=False, default_factory=dict)
 
     def __post_init__(self):
+        # Both paths run the char-level text LSTMs, so both pay the denormal
+        # penalty this guards against (EPMCTDM-7643).
+        enable_flush_denormal()
         if self.process == "train":
             self.dataset = Dataset(
                 df=self.df,

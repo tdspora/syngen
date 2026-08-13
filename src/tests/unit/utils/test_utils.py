@@ -1,4 +1,6 @@
+import ast
 import os
+from pathlib import Path
 
 import pytest
 from unittest.mock import Mock, patch, mock_open
@@ -24,6 +26,7 @@ from syngen.ml.utils import (
     get_deployment_mode,
     get_thread_parallelism_budget,
     limit_thread_parallelism,
+    enable_flush_denormal,
     setup_log_process,
     SUPPORTED_LOG_LEVELS,
 )
@@ -891,4 +894,73 @@ def test_cli_log_level_choices_match_supported_levels(rp_logger):
     for command in (cli_launch_train, cli_launch_infer):
         option = next(p for p in command.params if p.name == "log_level")
         assert tuple(option.type.choices) == SUPPORTED_LOG_LEVELS
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("torch.set_flush_denormal")
+def test_enable_flush_denormal(mock_set_flush_denormal, rp_logger):
+    """EPMCTDM-7643: subnormal gradients in the char-level text LSTM backward
+    cost 2.5-3.0x wall-clock; FTZ/DAZ removes it with a bit-identical loss."""
+    rp_logger.info("Test 'enable_flush_denormal' turns FTZ/DAZ on")
+    mock_set_flush_denormal.return_value = True
+
+    enable_flush_denormal()
+
+    mock_set_flush_denormal.assert_called_once_with(True)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(utils_module.logger, "warning")
+@patch("torch.set_flush_denormal")
+def test_enable_flush_denormal_warns_if_unsupported(
+    mock_set_flush_denormal, mock_warning, rp_logger
+):
+    """A CPU without SSE FTZ support must warn, not raise."""
+    rp_logger.info("Test 'enable_flush_denormal' warns on an unsupported CPU")
+    mock_set_flush_denormal.return_value = False
+
+    enable_flush_denormal()
+
+    mock_set_flush_denormal.assert_called_once_with(True)
+    mock_warning.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def _imports_torch_at_module_level(path: Path) -> bool:
+    """Whether `path` imports torch at module level; function-local imports ignored."""
+    # `tree.body` is top-level statements only, so an `import torch` nested inside a
+    # function body is correctly not counted.
+    for node in ast.parse(path.read_text(encoding="utf-8")).body:
+        if isinstance(node, ast.Import):
+            if any(alias.name.split(".")[0] == "torch" for alias in node.names):
+                return True
+        elif isinstance(node, ast.ImportFrom):
+            if (node.module or "").split(".")[0] == "torch":
+                return True
+    return False
+
+
+def test_torch_import_stays_behind_the_utils_phase_boundary(rp_logger):
+    """EPMCTDM-7643: every entry point imports `syngen.ml.utils` *before* calling
+    `limit_thread_parallelism()` (OS train.py:8/infer.py:8 before their :19 call; EE's
+    train.py, infer.py and api/sections/* import it before reaching the call inside
+    syngen_ee's worker.py). OpenMP/MKL read those env vars only at torch's first
+    import, so a module-level `import torch` anywhere in this package would silently
+    set the limits too late, process-wide. `enable_flush_denormal` therefore imports
+    torch inside the function body; without this test that rule is only a docstring,
+    and breaking it fails nothing."""
+    rp_logger.info("Test no module in syngen/ml/utils/ imports torch at module level")
+    utils_dir = Path(utils_module.__file__).parent
+
+    offenders = sorted(
+        path.name
+        for path in utils_dir.glob("*.py")
+        if _imports_torch_at_module_level(path)
+    )
+    assert not offenders, (
+        f"{offenders} import torch at module level, which makes "
+        "`limit_thread_parallelism()` set the OMP/MKL limits too late for every entry "
+        "point. Import torch inside the function body instead, as "
+        "`enable_flush_denormal` does."
+    )
     rp_logger.info(SUCCESSFUL_MESSAGE)

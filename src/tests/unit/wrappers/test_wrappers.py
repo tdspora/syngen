@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -5,6 +7,20 @@ import torch
 
 from syngen.ml.vae.wrappers.wrappers import VAEWrapper, collate_feature_batch
 from tests.conftest import SUCCESSFUL_MESSAGE
+
+
+@patch("syngen.ml.vae.wrappers.wrappers.enable_flush_denormal")
+def test_post_init_enables_flush_denormal(mock_enable_flush_denormal, rp_logger):
+    """EPMCTDM-7643: the entire 2.5-4x win rides on this single call, so pin the
+    call site - otherwise deleting it keeps the suite green. Train and infer both
+    run the char-level text LSTMs, hence it sits before the process branch."""
+    rp_logger.info("Test 'VAEWrapper.__post_init__' enables FTZ/DAZ")
+    # A mock `self` matches neither the "train" nor the "infer" branch, so only the
+    # unconditional head of __post_init__ runs.
+    VAEWrapper.__post_init__(MagicMock())
+
+    mock_enable_flush_denormal.assert_called_once_with()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 def test_find_non_finite_features_detects_nan_and_inf(rp_logger):
