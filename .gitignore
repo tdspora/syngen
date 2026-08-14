@@ -5,6 +5,7 @@ __pycache__/
 .idea/
 .pypirc
 .cursor/
+.codemie/
 
 # .DS_Store
 *.DS_Store

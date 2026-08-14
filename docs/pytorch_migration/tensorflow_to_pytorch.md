@@ -242,7 +242,7 @@ without a `1.0.0` ever being released, and `rc3` is skipped. Neither affects beh
 | Existing trained models stop loading | **High** — action required | Section 7.5 |
 | Public API, CLI, SDK, metadata schema | None — verified unchanged | Part 2 |
 | Log-level handling is now strictly validated | Low — could surface a previously silent misconfiguration | Section 2.6 |
-| Container images carry unused GPU libraries | Low — image size only | Section 8.7 |
+| Container images carry GPU libraries most deployments never load | Low — image size only | Section 8.7 (GPU support since added, section 8.8, uses this same wheel) |
 | No automated statistical quality gate exists | **Medium** — affects confidence in future changes, not this one | Part 11 |
 
 ---
@@ -1629,7 +1629,9 @@ distribution strategy, so this configured a mechanism that was never engaged. Th
 PyTorch equivalent because there is nothing to be equivalent to.
 
 **Batched inference.** The TF code called `predict(batch_size=self.batch_size)`, which
-chunked the forward pass. The PyTorch generation path does not chunk — see section 5.7.
+chunked the forward pass. The PyTorch generation path initially did not chunk this at all;
+`predict`/`fit_sampler` have since regained batching (for a different reason — GPU memory
+bounds, not a TF-parity concern) — see section 5.7.
 
 ### 5.6 Cost model
 
@@ -1644,17 +1646,25 @@ For readers deciding whether to change any of this, the per-batch cost:
 | Shuffling | None | None |
 | Parallel workers | Not used | Not used, but supported |
 
-### 5.7 Inference is not batched
+### 5.7 Inference batching — resolved for `predict`/`fit_sampler`, still open for sampling
 
-Training batches. Generation does not: the entire table goes through the model in one
-forward pass under `no_grad` (`model.py:182-186`, and the same pattern in `sample`,
-`less_likely_sample`, and `fit_sampler`).
+**Update: this section originally described `predict`, `sample`, `less_likely_sample`, and
+`fit_sampler` as all running the entire table through the model in one unbatched forward pass
+under `no_grad`, removing the TF version's chunking. That "fine at current scales" framing
+turned out to be wrong the moment real GPU hardware was used** — see section 8.8.5, bug #2:
+a table with a long-text column tried to allocate 26+ GiB in one shot on a 22GB GPU. `predict`
+and `fit_sampler` are now chunked by `batch_size` (`_batched_forward`/`_batched_encode` in
+`model.py`), bounding peak memory to one batch's worth of activations regardless of table
+size, with output identical to the old unbatched call (eval-mode `BatchNorm` is a fixed
+affine, so chunking changes only memory, never the result).
 
-This is simpler, and it removes the TF version's chunking. The trade is that peak memory
-during inference now scales with table size rather than being bounded by batch size. At
-current scales this is fine, and no test establishes where the ceiling is. Section 13.3.4
-records it as an open question, and it is the item most likely to surface first as
-customer data grows.
+`sample` and `less_likely_sample` remain unbatched, but this was a deliberate choice, not an
+oversight: they decode from a small latent-space vector (dimension `latent_dim`, typically
+≤10) rather than the full one-hot/text input tensor, so their memory footprint doesn't scale
+with input width the way `predict`'s input-side encode does — the OOM failure mode that
+motivated batching `predict`/`fit_sampler` doesn't apply to them the same way. Section 13.3.4
+has been updated accordingly; this is no longer a fully open question, but the sampling-path
+half of it still has no explicit ceiling test.
 
 ---
 
@@ -1784,10 +1794,12 @@ equivalent, since the tape is fresh per context.
 The `.detach()` calls before converting to floats keep the returned values from holding
 references to the computation graph, which would otherwise prevent it being freed.
 
-One line to flag for anyone attempting GPU support: `torch.zeros((), dtype=...)` has no
-`device` argument, so the accumulator is always created on the CPU. On a GPU run this
-raises a device-mismatch error on the first addition. Concrete evidence that the GPU path
-has never been exercised (section 8.8.2).
+One line flagged here for anyone attempting GPU support, at the time this section was
+written: `torch.zeros((), dtype=...)` had no `device` argument, so the accumulator was
+always created on the CPU, raising a device-mismatch error on the first GPU addition —
+concrete evidence the GPU path had never been exercised. It has since been fixed and GPU
+support implemented; see section 8.8.2 for the resolution and section 8.8.5 for the further
+bugs that only surfaced once the fix was validated on real GPU hardware.
 
 ### 6.3 Migration Card: The optimiser
 
@@ -2271,8 +2283,11 @@ def load_state(self, path: str):
 ```
 
 **Developer/DS Takeaways.** `map_location="cpu"` pins loading to the CPU regardless of
-where the tensors were saved, which is correct today and would need revisiting alongside
-any GPU work.
+where the tensors were saved. GPU support has since been added (section 8.8) and this line
+was deliberately left unchanged — `build_model()` already moves the model to the target
+device before `load_state_dict()` copies loaded values in, so pinning `torch.load` itself to
+CPU is what keeps a checkpoint trained on one device loadable on any other, not something
+that needed revisiting.
 
 Note `weights_only=False` here, against `weights_only=True` for the early-stopping reload
 in section 6.9. The difference is deliberate: `weights_only=True` restricts unpickling to
@@ -2380,8 +2395,11 @@ what the determinism test does (section 9.5).
 
 ## Part 8 — Hardware alignment
 
-*Audience: DevOps and platform engineers. Section 8.1 matters to everyone; section 8.8 is
-forward-looking and describes work not yet done.*
+*Audience: DevOps and platform engineers. Section 8.1 matters to everyone and describes the
+state of the codebase as delivered by the TensorFlow-to-PyTorch migration itself. GPU support
+was added in follow-up work after that migration landed; section 8.8 has been updated in place
+to describe the implemented result rather than a forward-looking proposal — see the note at the
+end of 8.1.*
 
 **Overview.** This part must open by contradicting an expectation. A framework migration
 is often motivated by hardware — better GPU support, a new accelerator. That is not what
@@ -2407,9 +2425,17 @@ moved, and loading pins to CPU explicitly. Training and inference run on the CPU
 construction.
 
 Anyone reading this part hoping for CUDA configuration guidance should skip to section 8.8,
-which describes what such support would require. Everything between here and there is
-about making CPU execution behave correctly, which is where the migration's real
-hardware-related work went.
+which now describes GPU support as implemented, in follow-up work after this migration.
+Everything between here and there is about making CPU execution behave correctly, which is
+where the migration's own real hardware-related work went.
+
+> **Update note.** Sections 8.1-8.7 are left as originally written: they describe the
+> TensorFlow-to-PyTorch migration itself, which was and remained CPU-only by design. GPU
+> support — auto-detected device placement plus task-parallel multi-GPU training/inference —
+> was added afterward and is documented in the rewritten section 8.8 below. It reuses the
+> exact device-abstraction seams this document already identified in 8.8.1 and closes the
+> concrete blockers listed in the (now historical) 8.8.2 table, plus a few more that only
+> surfaced once the code actually ran on real GPU hardware.
 
 ### 8.2 What we gave up
 
@@ -2430,6 +2456,11 @@ and the surrounding preprocessing is scikit-learn, the practical benefit was lik
 even when it worked. But the instruction must go, and README mentions PyTorch nowhere at
 all. Section 13.2 of the follow-up work tracks it; it is user-facing and worth fixing
 before the release is announced.
+
+**This is still unresolved even after GPU support (section 8.8) landed.** That work is
+NVIDIA/CUDA-only (`torch.cuda`) and does nothing for Apple Silicon — it neither restores
+Metal acceleration nor makes the `tensorflow-metal` instruction any less wrong. The README
+fix above remains a separate, still-open item.
 
 ### 8.3 Migration Card: CPU and process parallelism
 
@@ -2594,18 +2625,27 @@ Normal SDK imports establish Syngen's defaults before torch is imported. The bou
 the application's import order: importing torch or a Syngen VAE module before the SDK means
 the application, not Syngen, owns native-thread initialization.
 
-### 8.7 Gap: the image carries unused GPU libraries
+### 8.7 Gap: the image carries GPU libraries that most deployments never load
 
 The Dockerfile installs `torch>=2.2` from the default package index with no CPU-specific
 index configured (`Dockerfile:19`). On Linux x86-64, the default torch wheel bundles the
 NVIDIA CUDA runtime — cuBLAS, cuDNN, and related libraries.
 
-Since syngen is CPU-only (section 8.1), **none of that is ever loaded.** It is downloaded
-on every image build and shipped in every layer.
+**Update (post-migration):** at the time this section was first written, syngen was CPU-only
+(section 8.1) and none of that was ever loaded. GPU support has since been added (section
+8.8) and deliberately kept this dependency exactly as-is, since the same wheel already
+provides both the CPU and CUDA code paths — no `pyproject.toml`, Dockerfile, or CI change was
+needed to make GPU support work. The original framing of this gap is therefore still
+accurate for the common case: on a CPU-only deployment (the majority) or a GPU deployment
+that already needed the CUDA runtime for other reasons, nothing changed. It is downloaded on
+every image build and shipped in every layer regardless of whether that particular deployment
+ever uses a GPU.
 
 The conventional remedy is to install from PyTorch's CPU index
-(`--index-url https://download.pytorch.org/whl/cpu`) or pin a `+cpu` build. This would
-reduce image size substantially and speed up builds and CI, which also installs plainly.
+(`--index-url https://download.pytorch.org/whl/cpu`) or pin a `+cpu` build for CPU-only
+deployments specifically — trading that against needing a separate GPU-capable image variant
+for deployments that do use one. This would reduce image size substantially and speed up
+builds and CI for the CPU-only case, which also installs plainly.
 
 Two honest caveats. First, this is a change to installation behaviour and therefore falls
 under the dependency-change approval rule — it is a recommendation, not something to apply
@@ -2613,66 +2653,211 @@ unilaterally. Second, **the image was not built or measured as part of writing t
 document.** The absence of a CPU index is verified; the size impact is inferred from how
 the wheels are packaged, not observed here. Measure before quoting a number.
 
-### 8.8 What a GPU port would require
+### 8.8 GPU support (implemented)
 
-*Forward-looking. None of this describes current behaviour.*
-
-Included because "add GPU support" is the obvious next question, and the answer is more
-tractable than it might appear — the blockers are few and small, but they are real and
-they are not merely a matter of calling `.to("cuda")`.
+GPU support landed in follow-up work after this migration, reusing the device-abstraction
+seams this document identified below when the codebase was still CPU-only. It is
+**auto-detected and transparent**: no new CLI flag, SDK parameter, or metadata field exists.
+The same `train`/`infer` invocation that ran on CPU runs on GPU, unchanged, if one is visible.
+This section is the durable summary of that work; `docs/pytorch_migration/gpu_support_notes.md`
+is the companion document with the full narrative — every bug's exact traceback, the
+commit-level detail of the fix that caused a regression during a later merge, and the
+step-by-step performance-benchmarking methodology behind the numbers in 8.8.8.
 
 #### 8.8.1 A device abstraction
 
-There is no concept of a device anywhere in the codebase. One would need introducing:
-resolved once from configuration or auto-detection, threaded through model construction,
-tensor creation, and loading. This is the bulk of the work, and it is ordinary work.
+Implemented as `src/syngen/ml/utils/device.py`: `cuda_device_count()`, `gpu_available()`,
+`assign_gpu_index(i)` (round-robin over visible GPUs), and `resolve_device(gpu_index)`
+(falls back to `cpu` whenever CUDA isn't actually available, even if an index is passed).
 
-The natural boundaries already exist. `_to_tensors` (`model.py:30-33`) is the single place
-input tensors are created, and `CVAEModule` is the single place the model is constructed.
+It threads through exactly the two boundaries this document already called out as the
+natural seams: `CVAE.__init__` resolves a device once (auto-detecting `cuda:0` when
+`device=None`, the default), and `CVAEModule` construction (`build_model()`) moves the model
+there with `.to(self.device)`. `_to_tensors` (`model.py`) gained a `device` parameter with a
+CPU default, so every existing call site that doesn't need GPU placement is unaffected.
 
-#### 8.8.2 Concrete blockers in today's code
+This module is deliberately **not** re-exported through `syngen/ml/utils/__init__.py` — it's
+imported directly wherever needed. `train.py`/`infer.py` call `limit_thread_parallelism()`
+(sets `OMP_NUM_THREADS`/`MKL_NUM_THREADS`) before importing anything that pulls in `torch`;
+re-exporting a torch-importing module from `utils/__init__.py` would silently break that
+ordering.
 
-Small, specific, and each would fail on the first GPU run:
+#### 8.8.2 Concrete blockers in the old table — all resolved
 
-| Location | Problem |
-| --- | --- |
-| `wrappers.py:633` | `torch.zeros((), dtype=...)` with no `device` — the loss accumulator is always CPU, so the first addition raises a device mismatch |
-| `model.py:33` | `_to_tensors` creates CPU tensors unconditionally |
-| `model.py:318` | `torch.load(..., map_location="cpu")` pins loading to CPU |
-| `model.py:174` and similar | `.cpu().numpy()` calls, harmless today, correct on GPU, worth auditing |
-| `wrappers.py:534` | `foreach=True` was forced *because* CPU; on CUDA it is the default and the reasoning in the comment no longer applies |
+The blockers this document predicted before any GPU hardware was available, and what
+actually happened to each once real hardware was used to validate the fix:
 
-The first entry is the informative one. It is proof the GPU path has never been run — not
-even once, not even accidentally.
+| Location | Original problem | Resolution |
+| --- | --- | --- |
+| `wrappers.py:633` (`_train_step`) | `torch.zeros((), dtype=...)` with no `device` — loss accumulator always CPU | Fixed: `device=recons[0].device` added. Confirmed via regression test that spies on the `torch.zeros` call rather than comparing devices, since CPU-only CI can never actually reproduce the mismatch |
+| `model.py` `_to_tensors` | Created CPU tensors unconditionally | Gained a `device` parameter (CPU default, so unaffected call sites need no change) |
+| `model.py` `load_state` | `torch.load(..., map_location="cpu")` | **Kept exactly as-is, deliberately.** `build_model()` already moves the model to the target device before `load_state_dict()` runs, which copies loaded values in place into the already-placed parameters — keeping `map_location="cpu"` is what makes a checkpoint trained on one device loadable on any other |
+| `model.py` `.cpu().numpy()` calls | Predicted harmless, worth auditing | Confirmed harmless: `.cpu()` is a no-op on CPU tensors and correct on GPU tensors; no changes needed |
+| `wrappers.py` `foreach=True` | Forced because of the CPU-only reasoning in the comment | Comment updated: CUDA already defaults to `foreach=True`, so the explicit forcing is now load-bearing for the CPU path only |
 
-#### 8.8.3 Determinism implications
+The prediction that "the first entry is proof the GPU path has never been run" held exactly:
+that was the very first failure on the very first GPU training run performed against this
+code.
 
-Part 9's reproducibility guarantee is a CPU guarantee. On GPU it would need revisiting:
+#### 8.8.3 Multi-GPU strategy: task-parallel, not DistributedDataParallel
 
-- `torch.cuda.manual_seed_all` would have to join `_seed_everything`.
-- `torch.use_deterministic_algorithms(True)` moves from optional to necessary — several
-  CUDA kernels are nondeterministic by default (section 13.4.3).
-- cuDNN benchmarking selects algorithms by timing, which varies run to run.
-- GPU floating-point reduction order differs from CPU, so results would not match CPU runs
-  even with everything seeded. Cross-device bit-reproducibility is not achievable; only
-  same-device reproducibility is.
+Multi-GPU means **task parallelism across tables (training) and batches (inference)** — one
+whole model per GPU, never one model's batch split across GPUs via DDP. This was a
+deliberate choice, not an oversight:
 
-This compounds the thread-count question in section 13.4.1: the reproducibility contract
-would need to name the device as well as the seed.
+- The CVAE is architecturally small (a handful of Linear/BatchNorm blocks, default
+  `batch_size=32`). DDP's per-step gradient-sync overhead can exceed the compute it saves for
+  a model this size.
+- Most of syngen's end-to-end wall-clock isn't in the neural network at all — the mixture fit
+  (section 13.3.3), preprocessing, and report generation are scikit-learn/pandas and stay on
+  CPU regardless, exactly as this document predicted before any GPU work existed. A perfect
+  DDP speedup on the training loop alone would not translate to a proportional end-to-end
+  speedup.
+- Task-parallel-across-tables matches the pre-existing sequential-per-table architecture and
+  gives real speedup for the common case (multiple tables in one metadata-driven run) with far
+  less complexity than DDP (no process groups, no gradient synchronization).
 
-#### 8.8.4 Packaging implications
+**Consequence worth naming explicitly:** a single large table's *training* still uses exactly
+one GPU no matter how many are installed — task parallelism only helps when there is more
+than one table to spread across GPUs. Inference is less constrained, since it reuses the
+pre-existing CPU batch-splitting mechanism (`run_parallel`), so one table's *generation* can
+spread across every visible GPU regardless of table count.
 
-Today's single CPU-only distribution would become a choice. The options — a CUDA wheel by
-default, an optional extra, or separate images — each trade image size against usability,
-and the decision affects `pyproject.toml`, the Dockerfile, and CI. Section 8.7 becomes a
-decision to make deliberately rather than a gap to close.
+Implementation: `Worker._should_train_in_parallel` gates a `multiprocessing.get_context
+("spawn")` pool in `worker.py` — only reachable with more than one table, more than one GPU,
+and no custom SDK loader (picklability), so it is provably unreachable, and therefore zero
+risk, on single-GPU/CPU-only machines (all current CI, the large majority of users). `spawn`
+is required rather than the CPU pool's `fork`, because CUDA contexts cannot be safely forked.
 
-Worth stating for planning: for a model of this size, most of syngen's wall-clock is not
-in the neural network. The mixture fit (section 13.3.3), preprocessing, and report
-generation are all scikit-learn and pandas, and none of them moves to a GPU. A GPU port
-would accelerate the training loop and leave the rest untouched — so the end-to-end gain
-would be considerably smaller than the training-loop gain. That should be measured on a
-representative table before the work is committed to.
+#### 8.8.4 Determinism implications — implemented, with the predicted caveat confirmed
+
+`_seed_everything` now also does, gated behind `torch.cuda.is_available()` so the CPU path is
+untouched:
+
+```python
+torch.cuda.manual_seed_all(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+```
+
+The prediction in the original version of this section held: GPU floating-point reduction
+order differs from CPU, so seeding does not make GPU and CPU runs bit-identical — only
+same-device reproducibility is achievable. `torch.use_deterministic_algorithms(True)` was
+**not** enabled; the cuDNN flags above were judged sufficient for this model's op set, and
+enabling the stricter global flag is a candidate follow-up if a nondeterministic-on-GPU op is
+ever found in practice. This still compounds the thread-count question in section 13.4.1: the
+reproducibility contract needs to name the device as well as the seed.
+
+#### 8.8.5 Bugs that only surfaced on real GPU hardware
+
+None of these were predicted by this document, or by the design plan written before
+implementation — all four were found only by actually training/generating on real GPUs, which
+is the strongest argument in this entire document for why "the blockers are few and small"
+(8.8, original text) is true only up to the point where code actually runs on the hardware in
+question.
+
+1. **cuDNN refuses `backward()` on an LSTM left in `.eval()` mode.** Training deliberately
+   runs the whole model in `.eval()` (freezes BatchNorm/Dropout, matches the original
+   TensorFlow behavior exactly — section 6, collapse hypothesis #3). This is invisible on CPU,
+   where no such restriction exists, and crashed with `RuntimeError: cudnn RNN backward can
+   only be called in training mode` on the first table with a text column. Fixed by forcing
+   just the `nn.LSTM` submodules in `TextEncoder`/`TextDecoder` back to `.train()` after the
+   blanket `.eval()` call — safe because those LSTMs are single-layer with no inter-layer
+   dropout, so `.train()`/`.eval()` has zero effect on their actual math.
+2. **Unbatched full-table forward passes ran out of GPU memory.** `CVAE.fit_sampler` and
+   `CVAE.predict` ran an entire table through the model in one forward pass — fine in system
+   RAM, but tried to allocate 26+ GiB on a 22GB GPU for a table with a long-text column. Fixed
+   by chunking both calls by `batch_size` and concatenating results (`_batched_encode`/
+   `_batched_forward` in `model.py`) — safe because eval-mode `BatchNorm` is a fixed affine
+   transform independent of batch composition, so chunking changes only peak memory, never the
+   result.
+3. **`ProgressBarHandler` (a singleton) doesn't survive `multiprocessing.spawn`.** The training
+   loop divides by `ProgressBarHandler().delta` directly; the sequential path always primes it
+   in the parent before training starts, but a freshly spawned child process's own singleton
+   had never had it set, raising `TypeError: unsupported operand type(s) for /: 'NoneType' and
+   'int'`. Fixed by priming it as the first line of the per-table job function dispatched to
+   each spawned worker.
+4. **Report generation raced ahead of the file it reads back.** `Report()` is also a singleton
+   that doesn't survive `spawn`, so report generation has to happen inside the same spawned
+   worker that did the training (the parent's `Report()` never saw that worker's reporter
+   registrations). The sample report's `_extract_report_data()` reads back a file that a
+   different, pre-existing method writes — moving report generation into the worker without
+   also moving that write, in the right order, made the report try to read a file that did not
+   exist yet. Fixed by ordering the write before the report call inside the worker.
+
+#### 8.8.6 A fifth bug — not GPU-specific, found by a basic post-merge smoke test
+
+The four bugs above share a lesson: they only exist once code actually runs on real GPU
+hardware. A fifth bug, found afterward, makes the opposite point — some regressions need no
+GPU at all to reproduce, only the discipline of running a smoke test after every merge.
+
+A routine merge of `main` into the branch carrying this work silently reverted
+`VaeInferHandler._get_wrapper`'s signature, dropping the `device` parameter this work had
+added, while correctly keeping an unrelated `main`-side change (a long-text NULL/empty-string
+fix) that had landed new code immediately adjacent to that same method. Both branches had
+touched code next to `_get_wrapper` from the same parent commit; the merge kept `main`'s
+version of the signature and lost the `device` parameter. The result: every **non-parallel**
+`infer` call — on CPU included, not just GPU — raised `NameError: name 'device' is not
+defined`, since the method's own body still referenced `device` in its kwargs dict.
+
+This shipped past CPU-only unit tests undetected, because no existing test exercised
+`_get_wrapper`'s signature directly — it was only caught by running `train`/`infer`
+end-to-end after the merge. Fixed by restoring the parameter; a regression test was added
+that asserts `_get_wrapper` accepts and forwards `device` both as its default (`None`) and as
+an explicit value. Full detail, including the exact commit graph that shows how the merge
+produced this, is in `gpu_support_notes.md`.
+
+**Consequence for process, not just code:** a signature silently reverted by a merge that
+touched adjacent code is invisible to a normal code review (the diff against either single
+parent looks fine) and is only reliably caught by actually exercising the affected code path
+after any merge from `main` — which is why a quick train+infer smoke test across every
+device configuration is now the recommended check before opening a PR that merges `main`.
+
+#### 8.8.7 Packaging implications — unchanged, by decision
+
+Section 8.7's gap (the image carries GPU libraries most deployments never load) was **not**
+closed by this work, deliberately: the default PyPI torch wheel already resolves to a
+CUDA-capable build on Linux,
+so no `pyproject.toml`, Dockerfile, or CI change was needed to make GPU support work at all.
+Closing 8.7 (installing from PyTorch's CPU index, or offering a CUDA-specific image variant)
+remains an open, separate decision — still gated by the dependency-change approval rule this
+document already names, and orthogonal to whether GPU support itself works.
+
+#### 8.8.8 Performance: now measured
+
+The original version of this section listed real wall-clock speedup as unmeasured. It has
+since been benchmarked properly: every single-table dataset, and a related-table matrix of
+`{2,4,6,8,16} tables × {4,8,16,32} columns × {1,000, 2,000} rows`, trained and inferred on
+CPU, on a single visible GPU, and on four visible GPUs. Headline findings (full per-dataset
+tables and methodology in `gpu_support_notes.md`):
+
+- **Multi-GPU training decisively wins for multi-table, metadata-driven runs**, and the
+  margin grows with table count and column count — up to roughly 4.6x faster than CPU on the
+  largest related-table configuration tested. This is the task-parallel-across-tables design
+  (8.8.3) paying off exactly where it was expected to.
+- **GPU is a net loss for single-table workloads at the sizes tested** (2,000-16,000 rows) —
+  CPU wins every single-table case, train and infer, since the CVAE is too small to amortize
+  CUDA context/transfer/kernel-launch overhead. This confirms the "not DDP" reasoning in
+  8.8.3 from the other direction: there just isn't enough per-table compute for a GPU to help
+  when there's only one table to place on it.
+- **`run_parallel=true` inference is only worth it on CPU, not on GPU, at the sizes tested (up
+  to 256,000 rows).** Any GPU visible forces `multiprocessing.spawn` for the inference pool
+  (8.8.3's `spawn`-over-`fork` requirement applies here too), and each spawned worker pays a
+  fresh interpreter + CUDA-context-init cost of roughly 1-3 seconds before doing any real
+  work — a fixed cost per run of around 100 seconds that CPU's cheap `fork`-based pool never
+  pays. On CPU, `run_parallel=true` crosses over from a loss at small sizes to a clear win
+  (up to ~3.8x faster) as table size grows; on GPU it did not win at any scale tested here.
+  Verified with no fallback: single-GPU runs engage only the one visible GPU, multi-GPU runs
+  engage all visible GPUs, and CPU runs touch no GPU at all.
+
+Still not measured, and worth doing before relying on this for capacity planning beyond what
+was tested above:
+
+- Multi-process GPU memory contention when the inference worker count exceeds the visible GPU
+  count under **sustained** load (large batch counts and generated sizes were exercised above
+  without hitting OOM, but that is not the same as a long-running contention test).
+- Driver-level races between sibling spawned processes concurrently initializing CUDA contexts
+  under heavier concurrency than was tested.
 
 ---
 
@@ -3031,8 +3216,11 @@ and `strategies.py`, and was removed there. `strategies.py`'s entire contributio
 migration is the deletion of that line and its now-unused `import os`.
 
 Not addressed: the image installs torch from the default index and therefore carries CUDA
-libraries that are never loaded (section 8.7). This is the largest available improvement to
-image size and build time, and it is a dependency change requiring approval.
+libraries that, at the time this section was written, were never loaded. GPU support has
+since been added (section 8.8) and deliberately left this alone, since the same wheel already
+provides both code paths — see section 8.7 for the updated framing. Splitting CPU-only and
+GPU-capable images remains the largest available improvement to image size and build time for
+CPU-only deployments specifically, and it is a dependency change requiring approval.
 
 ### 10.5 Version history
 
@@ -3073,7 +3261,7 @@ Items this document surfaces that want a decision before tagging:
 | 4 | `torch>=2.2` has no upper bound | 10.1 | Consider bounding, for reproducibility as much as safety |
 | 5 | Databricks scope exclusion contradicted by the change | 10.2 | Record a decision; correct the sign-off record |
 | 6 | Version skips `1.0.0` and `rc3` | 10.5 | Cosmetic; decide whether to renumber before general release |
-| 7 | Image carries unused CUDA libraries | 8.7 | Measure, then decide; needs dependency approval |
+| 7 | Image carries CUDA libraries most deployments never load (GPU support since added, section 8.8, uses the same wheel) | 8.7 | Measure, then decide; needs dependency approval |
 
 Items 1 and 5 are documentation correctness. Items 2, 3, and 4 are one-line changes. Item 7
 is the only one requiring measurement.
@@ -3303,7 +3491,9 @@ the README.
 
 Listed among the limitations because it is user-facing and unresolved. It is the one item
 in this part that is a straightforward defect rather than a considered trade-off, and
-section 10.6 flags it as fix-before-announcing.
+section 10.6 flags it as fix-before-announcing. Still unresolved even after GPU support
+(section 8.8) was implemented — that work is NVIDIA/CUDA-only and has no bearing on Apple
+Silicon, so it does not make this instruction any less wrong.
 
 ### 12.3 Accepted: conditional generation was not ported
 
@@ -3378,7 +3568,7 @@ Items surfaced by this work that are decisions rather than defects, each with it
 | `torch>=2.2` has no upper bound | 10.1 |
 | Databricks migrated despite an explicit scope exclusion | 10.2 |
 | Version history skips `1.0.0` and `rc3` | 10.5 |
-| Container image carries unused CUDA libraries | 8.7 |
+| Container image carries CUDA libraries most deployments never load (GPU support since added, 8.8) | 8.7 |
 | The TF-checkpoint diagnostic is discarded by the wrapper | 7.6 |
 | Applications importing torch before the SDK must configure threads first | 8.6 |
 
@@ -3616,12 +3806,15 @@ the thread budget before `Worker` imports torch. The remaining constraint is app
 ordering: an application that imports torch or Syngen's VAE modules first must export its
 `OMP_*` and `MKL_*` settings before starting Python. See section 8.6.
 
-#### 13.3.7 No GPU path exists
+#### 13.3.7 GPU path
 
-Syngen is CPU-only by construction, before and after the migration. Part 8.8 sets out what
-a CUDA or Metal port would require. The honest framing for planning: this is the largest
-available speedup and also the largest amount of work, and the concrete blockers listed in
-8.8.2 are small individually.
+Syngen was CPU-only by construction immediately after this migration; a GPU path was added in
+follow-up work and is documented in section 8.8, including the multi-GPU task-parallel design
+and the bugs found while validating it on real hardware (8.8.5). It is auto-detected and
+transparent — no CLI/API surface changed. The concrete blockers originally listed in 8.8.2
+turned out to be small individually, as predicted, but were not the whole story: several
+more bugs surfaced only once the fix was run on real GPU hardware, none of which this
+document (written before any GPU hardware was available) could have predicted.
 
 ### 13.4 Uncontrolled variability: where determinism stops
 
@@ -3684,8 +3877,10 @@ On CPU with this model's operations, the practical exposure is low — which is 
 why the determinism test passes without it. But the guarantee currently rests on the
 absence of nondeterministic kernels in the ops we happen to use, not on anything enforced.
 **Open question:** enable it and see whether anything raises. If nothing does, the cost is
-zero and the guarantee gets stronger. This becomes essential rather than optional if a GPU
-path is ever added (section 8.8.3).
+zero and the guarantee gets stronger. A GPU path now exists (section 8.8) and did not enable
+this flag either — see section 8.8.4 for why the cuDNN-specific determinism flags set there
+were judged sufficient for now, and this remains the same open question, just no longer
+hypothetical.
 
 #### 13.4.4 The mixture model has no fixed random state
 
@@ -3746,14 +3941,14 @@ Ordered by value against effort, not by section.
 | 1 | Test determinism across thread counts (13.4.1) | Variability | Low | Cheap experiment; determines whether a reproducibility claim we may already be making is true |
 | 2 | Apply the effective native-thread budget to report estimators (13.3.5) | Speed | Low | Closes a real gap in Part 8's resource story; low blast radius |
 | 3 | Seed torch on the inference path (13.4.5) | Variability | Low | One line, no-op today, removes a silent future trap |
-| 4 | Enable deterministic algorithms (13.4.3) | Variability | Low | Free if nothing raises; prerequisite for a GPU path |
+| 4 | Enable deterministic algorithms (13.4.3) | Variability | Low | Free if nothing raises; a GPU path now exists (8.8) and did not enable this either, so it's no longer hypothetical |
 | 5 | Build a statistical quality gate (Part 11) | Enabler | Medium | **Blocks every quality item below.** Nothing in 13.2 can be evaluated without it |
 | 6 | Settle the latent dimension question (13.2.6) | Quality | Low to answer | Cheap to determine intent; capacity change to act on |
 | 7 | Quantile or mixture numeric head (13.2.1) | Quality | High | Largest expected quality gain; needs item 5 first |
 | 8 | Revisit the KL weight, with per-row noise (13.2.2, 13.2.4) | Quality | Medium | Two coupled questions; investigate together or not at all |
 | 9 | Evaluate live dropout and batch statistics (13.2.3) | Quality | Medium | A retuning study, not a patch |
 | 10 | Match LSTM initialisation to Keras (13.2.5) | Quality | Low | Easy change, but needs item 5 to justify |
-| 11 | GPU support (13.3.7) | Speed | High | Largest speedup available; see 8.8 |
+| 11 | ~~GPU support (13.3.7)~~ **Done** — implemented in follow-up work, see 8.8 | Speed | — | Task-parallel across tables/batches, not DDP; real wall-clock speedup now measured (8.8.8) — multi-GPU wins decisively for multi-table training, but is a net loss for single-table workloads and for `run_parallel` infer at the sizes tested |
 
 The dependency worth internalising: **item 5 gates items 7 through 10.** Without a
 statistical gate, any change to the generative path can only be evaluated by eye, and
