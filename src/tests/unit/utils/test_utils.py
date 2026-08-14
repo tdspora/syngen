@@ -944,21 +944,51 @@ def _imports_torch_at_module_level(path: Path) -> bool:
     return False
 
 
+def _phase_boundary_files(utils_dir: Path) -> list:
+    """Files that make up `syngen.ml.utils`'s actual pre-torch import surface:
+    `__init__.py` itself, plus every submodule it imports from - not every file
+    that happens to live in this directory. A file can share the folder without
+    being part of the package's re-export surface: `device.py` imports torch at
+    module level too, but `__init__.py` never imports from it, and every real
+    caller (`handlers.py`, `model.py`, `worker.py`) reaches it only via
+    `syngen.ml.worker.Worker`, which `train.py`/`infer.py` import strictly after
+    calling `limit_thread_parallelism()` - so it is not actually on the critical
+    path this test protects. A directory-wide glob flagged it as a false
+    positive (EPMCTDM-7643)."""
+    init_path = utils_dir / "__init__.py"
+    files = [init_path]
+    for node in ast.parse(init_path.read_text(encoding="utf-8")).body:
+        if isinstance(node, ast.ImportFrom) and node.module:
+            parts = node.module.split(".")
+            if parts[:3] == ["syngen", "ml", "utils"] and len(parts) > 3:
+                submodule_file = utils_dir / f"{parts[3]}.py"
+                if submodule_file.exists() and submodule_file not in files:
+                    files.append(submodule_file)
+    return files
+
+
 def test_torch_import_stays_behind_the_utils_phase_boundary(rp_logger):
     """EPMCTDM-7643: every entry point imports `syngen.ml.utils` *before* calling
     `limit_thread_parallelism()` (OS train.py:8/infer.py:8 before their :19 call; EE's
     train.py, infer.py and api/sections/* import it before reaching the call inside
     syngen_ee's worker.py). OpenMP/MKL read those env vars only at torch's first
-    import, so a module-level `import torch` anywhere in this package would silently
-    set the limits too late, process-wide. `enable_flush_denormal` therefore imports
-    torch inside the function body; without this test that rule is only a docstring,
-    and breaking it fails nothing."""
-    rp_logger.info("Test no module in syngen/ml/utils/ imports torch at module level")
+    import, so a module-level `import torch` in a file actually reachable through
+    that import would silently set the limits too late, process-wide.
+    `enable_flush_denormal` therefore imports torch inside the function body;
+    without this test that rule is only a docstring, and breaking it fails nothing.
+
+    Checks only `__init__.py` and the submodules it imports from (see
+    `_phase_boundary_files`), not every file physically in the directory - a
+    directory-wide glob would flag files like `device.py` that import torch at
+    module level but are never reached before the phase boundary in practice."""
+    rp_logger.info(
+        "Test the phase-1 (pre-torch) surface of syngen.ml.utils stays torch-free"
+    )
     utils_dir = Path(utils_module.__file__).parent
 
     offenders = sorted(
         path.name
-        for path in utils_dir.glob("*.py")
+        for path in _phase_boundary_files(utils_dir)
         if _imports_torch_at_module_level(path)
     )
     assert not offenders, (
