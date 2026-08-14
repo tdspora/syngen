@@ -49,12 +49,12 @@ def test_init_train_config(input_batch_size, expected_batch_size, rp_logger):
     assert train_config.slugify_table_name == "test-table"
     assert set(train_config.__dict__.keys()) == {
         "source", "epochs", "data", "schema", "drop_null", "row_limit", "table_name", "metadata",
-        "metadata_path", "reports", "batch_size", "loader", "slugify_table_name",
+        "metadata_path", "reports", "batch_size", "loader", "device", "slugify_table_name",
         "paths", "row_subset"
     }
     assert set(train_config.__getstate__().keys()) == {
         "source", "epochs", "drop_null", "row_limit", "table_name", "metadata",
-        "metadata_path", "reports", "batch_size", "loader", "slugify_table_name",
+        "metadata_path", "reports", "batch_size", "loader", "device", "slugify_table_name",
         "paths", "schema", "row_subset"
     }
 
@@ -238,6 +238,7 @@ def test_get_state_of_train_config(test_df, rp_logger):
         "reports",
         "batch_size",
         "loader",
+        "device",
         "paths",
         "slugify_table_name",
     }

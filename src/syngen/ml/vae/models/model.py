@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 import pickle
 
 import torch
@@ -14,6 +15,7 @@ from syngen.ml.utils import (
     generate_unique_values_by_regex,
     is_number_regex_pattern
 )
+from syngen.ml.utils.device import assign_gpu_index, resolve_device
 
 # Activation slopes chosen to match the TF graph exactly:
 #   encoder used tf.nn.leaky_relu (alpha=0.2);
@@ -27,10 +29,51 @@ BN_EPS = 1e-3
 DROPOUT = 0.2
 
 
-def _to_tensors(transformed):
+def _to_tensors(transformed, device: torch.device = torch.device("cpu")):
     """List of per-feature numpy arrays (in feature order) -> list of float32
     tensors, preserving order (collapse hypothesis #4)."""
-    return [torch.as_tensor(np.asarray(arr), dtype=torch.float32) for arr in transformed]
+    return [
+        torch.as_tensor(np.asarray(arr), dtype=torch.float32, device=device)
+        for arr in transformed
+    ]
+
+
+def _batched_encode(model: nn.Module, tensors, batch_size: int):
+    """Run model.encode(...) over `tensors` in row-chunks of batch_size,
+    concatenating (mu, log_sigma).
+
+    Eval-mode BatchNorm uses running statistics (a fixed affine transform),
+    so chunking never changes the result - it only bounds peak memory to a
+    single chunk's activations, which matters for tables with large
+    one-hot/text inputs on GPUs with limited VRAM (a full-table encode can
+    try to allocate tens of GiB at once for a long-text column).
+    """
+    n_rows = tensors[0].shape[0]
+    mus, log_sigmas = [], []
+    for start in range(0, n_rows, batch_size):
+        chunk = [t[start:start + batch_size] for t in tensors]
+        mu, log_sigma = model.encode(chunk)
+        mus.append(mu)
+        log_sigmas.append(log_sigma)
+    return torch.cat(mus, dim=0), torch.cat(log_sigmas, dim=0)
+
+
+def _batched_forward(model: nn.Module, tensors, batch_size: int):
+    """Same idea as `_batched_encode` but for the full forward pass
+    (recons, mu, log_sigma), used by CVAE.predict."""
+    n_rows = tensors[0].shape[0]
+    recon_chunks, mus, log_sigmas = [], [], []
+    for start in range(0, n_rows, batch_size):
+        chunk = [t[start:start + batch_size] for t in tensors]
+        recons, mu, log_sigma = model(chunk)
+        recon_chunks.append(recons)
+        mus.append(mu)
+        log_sigmas.append(log_sigma)
+    n_features = len(recon_chunks[0])
+    recons = [
+        torch.cat([chunk[i] for chunk in recon_chunks], dim=0) for i in range(n_features)
+    ]
+    return recons, torch.cat(mus, dim=0), torch.cat(log_sigmas, dim=0)
 
 
 class CVAEModule(nn.Module):
@@ -139,7 +182,15 @@ class CVAE:
     BACKEND = "pytorch"
     ARTIFACT_VERSION = 1
 
-    def __init__(self, dataset, batch_size, latent_dim, intermediate_dim, latent_components):
+    def __init__(
+        self,
+        dataset,
+        batch_size,
+        latent_dim,
+        intermediate_dim,
+        latent_components,
+        device: Optional[torch.device] = None,
+    ):
         self.dataset = dataset
         self.intermediate_dim = intermediate_dim
         self.batch_size = batch_size
@@ -149,12 +200,17 @@ class CVAE:
         self.latent_model = None       # BayesianGaussianMixture
         self.feature_types = dict()
         self.feature_order = list()
+        # None means "not explicitly assigned a GPU" - auto-detect a single
+        # GPU (index 0) if one is visible, else fall back to CPU. This is
+        # what keeps every existing CVAE(...) call site transparent (no
+        # code change needed) per the auto-detect device selection design.
+        self.device = device if device is not None else resolve_device(assign_gpu_index(0))
 
     def build_model(self):
         features = self.dataset.features
         self.feature_order = list(features.keys())
         self.feature_types = {name: feature.feature_type for name, feature in features.items()}
-        self.model = CVAEModule(features, self.latent_dim, self.intermediate_dim)
+        self.model = CVAEModule(features, self.latent_dim, self.intermediate_dim).to(self.device)
         return self.model
 
     def fit_sampler(self, data: pd.DataFrame):
@@ -170,7 +226,9 @@ class CVAE:
         # encoder_model that outputs `mu` (model.py:101,190).
         self.model.eval()
         with torch.no_grad():
-            mu, _ = self.model.encode(_to_tensors(transformed_data))
+            mu, _ = _batched_encode(
+                self.model, _to_tensors(transformed_data, self.device), self.batch_size
+            )
         latent_points = mu.cpu().numpy()
 
         logger.info("Creating BayesianGaussianMixture")
@@ -182,7 +240,9 @@ class CVAE:
     def predict(self, data: pd.DataFrame) -> pd.DataFrame:
         self.model.eval()
         with torch.no_grad():
-            recons, _, _ = self.model(_to_tensors(self.dataset.transform(data)))
+            recons, _, _ = _batched_forward(
+                self.model, _to_tensors(self.dataset.transform(data), self.device), self.batch_size
+            )
         prediction = [r.cpu().numpy() for r in recons]
         return self.dataset.inverse_transform(prediction)
 
@@ -194,7 +254,7 @@ class CVAE:
         # (collapse hypothesis #3); decode the BGM draw, not N(0,1) (hypothesis #6).
         self.model.eval()
         with torch.no_grad():
-            latent = torch.as_tensor(latent_sample, dtype=torch.float32)
+            latent = torch.as_tensor(latent_sample, dtype=torch.float32, device=self.device)
             outputs = self.model.decode(latent)
         synthetic_prediction = [o.cpu().numpy() for o in outputs]
         self.inverse_transformed_df = self.dataset.inverse_transform(synthetic_prediction)
@@ -219,7 +279,9 @@ class CVAE:
             log_likelihoods = self.latent_model.score_samples(latent_sample)
             sliced_latent_sample.append(pop_npoints(latent_sample, log_likelihoods))
 
-        latent = torch.as_tensor(np.concatenate(sliced_latent_sample), dtype=torch.float32)
+        latent = torch.as_tensor(
+            np.concatenate(sliced_latent_sample), dtype=torch.float32, device=self.device
+        )
         self.model.eval()
         with torch.no_grad():
             outputs = self.model.decode(latent)

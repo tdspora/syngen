@@ -46,10 +46,38 @@ _TRAIN_SEED = 42
 
 
 def _seed_everything(seed: int):
-    """Seed Python / numpy / torch for deterministic CPU training."""
+    """Seed Python / numpy / torch for deterministic training.
+
+    GPU floating-point reduction order differs from CPU, so seeding alone
+    does not make CPU and GPU runs bit-identical - only same-device runs are
+    reproducible. cuDNN determinism flags are only set when CUDA is actually
+    available, so the CPU path is untouched.
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
+def _unfreeze_lstm_submodules(model: torch.nn.Module):
+    """Force any nn.LSTM submodule back to train() mode after a blanket
+    model.eval() call.
+
+    cuDNN's fused LSTM kernel refuses backward() on a module left in eval()
+    mode ("cudnn RNN backward can only be called in training mode") - a
+    GPU-only failure invisible on CPU, where the native LSTM implementation
+    has no such restriction. TextEncoder/TextDecoder's LSTMs (custom_layers.py)
+    are single-layer with no inter-layer dropout, so train()/eval() has no
+    effect on their math - only on cuDNN's internal reserve-buffer bookkeeping
+    needed for backward - so this is safe and leaves the BatchNorm/Dropout
+    freeze the caller relies on (collapse hypothesis #3) untouched.
+    """
+    for module in model.modules():
+        if isinstance(module, torch.nn.LSTM):
+            module.train()
 
 
 class _FeatureTuples(TorchDataset):
@@ -141,6 +169,7 @@ class VAEWrapper(BaseWrapper):
     losses_info: pd.DataFrame = field(init=True, default_factory=pd.DataFrame)
     dataset: Dataset = field(init=False)
     preloaded_dataset: Optional[Dataset] = field(default=None, kw_only=True)
+    device: Optional[torch.device] = field(default=None, kw_only=True)
     vae: CVAE = field(init=False, default=None)
     model: Optional[torch.nn.Module] = field(init=False, default=None)
     num_batches: int = field(init=False)
@@ -461,6 +490,7 @@ class VAEWrapper(BaseWrapper):
         # encodings identical (the real defense against latent drift, collapse
         # hypothesis #3). Gradients still flow through the BN affine and all weights.
         self.model.eval()
+        _unfreeze_lstm_submodules(self.model)
         delta = ProgressBarHandler().delta / (epochs * 2)
         for epoch in range(epochs):
             log_message = (
@@ -536,6 +566,8 @@ class VAEWrapper(BaseWrapper):
         # loop issuing ~6 elementwise ops per parameter tensor, every step. On
         # housing that is ~400 op dispatches/step and ~18% of train wall-clock.
         # The arithmetic is unchanged - losses stay bit-identical (EPMCTDM-7630).
+        # On CUDA, torch already defaults to ``foreach=True``, so this forcing is
+        # now load-bearing for the CPU path only.
         return torch.optim.Adam(model.parameters(), lr=learning_rate, foreach=True)
 
     def __create_optimizer(self):
@@ -630,11 +662,13 @@ class VAEWrapper(BaseWrapper):
             )
 
     def _train_step(self, batch: Tuple[torch.Tensor, ...]):
+        if self.device.type != "cpu":
+            batch = tuple(t.to(self.device, non_blocking=True) for t in batch)
         self.optimizer.zero_grad()
         recons, mu, log_sigma = self.model(batch)
 
         feature_losses = {}
-        recon_total = torch.zeros((), dtype=recons[0].dtype)
+        recon_total = torch.zeros((), dtype=recons[0].dtype, device=recons[0].device)
         for name, recon, target in zip(self.vae.feature_order, recons, batch):
             feature_loss = self.dataset.features[name].compute_loss(target, recon)
             feature_losses[name] = feature_loss
@@ -766,7 +800,12 @@ class VanillaVAEWrapper(VAEWrapper):
             latent_dim=latent_dim,
             latent_components=min(latent_components, latent_dim * 2),
             intermediate_dim=128,
+            device=self.device,
         )
         self.vae.build_model()
+        # Replace the possibly-None input with the device CVAE actually
+        # resolved (auto-detected when device was None), so every later use
+        # of self.device on the wrapper is safe to branch on directly.
+        self.device = self.vae.device
         if self.process == "infer":
             self.load_state(self.paths["state_path"])

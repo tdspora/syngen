@@ -3,6 +3,7 @@ from typing import Optional, Dict, List, Callable, Literal
 from datetime import datetime
 
 import pandas as pd
+import torch
 from slugify import slugify
 
 from syngen.ml.utils import (
@@ -30,6 +31,7 @@ class TrainConfig:
     reports: List[str]
     batch_size: int
     loader: Optional[Callable[[str], pd.DataFrame]]
+    device: Optional[torch.device] = None
     paths: Dict = field(init=False)
     row_subset: int = field(init=False)
     slugify_table_name: str = field(init=False)
