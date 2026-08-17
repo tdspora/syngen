@@ -1,12 +1,14 @@
 from unittest.mock import patch
+import pickle
 import pytest
 import os
 
 import pandas as pd
 
 from syngen.ml.worker import Worker
+from syngen.ml.worker.worker import _TrainTableJob, _run_train_table_job
 from syngen.ml.config import Validator
-from syngen.ml.utils import ValidationError, fetch_env_variables
+from syngen.ml.utils import ProgressBarHandler, ValidationError, fetch_env_variables
 
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME, get_dataframe
 
@@ -3803,4 +3805,245 @@ def test_should_generate_synth_reports(
         encryption_settings=fetch_env_variables({"fernet_key": None})
     )
     worker._should_generate_synth_data(metadata, type_of_process) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch.object(Worker, "__attrs_post_init__")
+def test_get_row_subset_for_surrogate_table_returns_parent_subset(mock_post_init):
+    worker = Worker(
+        table_name="orders",
+        metadata_path=None,
+        settings={},
+        log_level="INFO",
+        type_of_process="train",
+        loader=None,
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+    )
+    worker.initial_table_names = ["orders"]
+    worker.divided = ["orders_pk", "orders_fk"]
+    worker.row_subset_mapping = {"orders": 120}
+
+    assert worker._get_row_subset_for_table("orders_pk") == 120
+
+
+@patch.object(Worker, "__attrs_post_init__")
+def test_get_row_subset_for_surrogate_table_raises_key_error(mock_post_init):
+    worker = Worker(
+        table_name="orders",
+        metadata_path=None,
+        settings={},
+        log_level="INFO",
+        type_of_process="train",
+        loader=None,
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+    )
+    worker.initial_table_names = ["orders"]
+    worker.divided = ["orders_pk", "orders_fk"]
+    worker.row_subset_mapping = {}
+
+    with pytest.raises(
+        KeyError,
+        match="Row subset for table 'orders_pk' is missing in row_subset_mapping",
+    ):
+        worker._get_row_subset_for_table("orders_pk")
+
+
+@patch("syngen.ml.worker.worker.MlflowTracker.end_run")
+@patch("syngen.ml.worker.worker.MlflowTracker.start_run")
+@patch("syngen.ml.worker.worker.ProgressBarHandler.set_progress")
+@patch("syngen.ml.worker.worker.set_format_settings")
+@patch.object(Worker, "_write_success_file")
+@patch("syngen.ml.worker.worker.InferStrategy.run")
+@patch.object(Worker, "__attrs_post_init__")
+def test_infer_table_uses_parent_subset_for_surrogate_table(
+    mock_post_init,
+    mock_infer_strategy_run,
+    mock_write_success_file,
+    mock_global_context,
+    mock_set_progress,
+    mock_start_run,
+    mock_end_run,
+):
+    worker = Worker(
+        table_name="orders",
+        metadata_path=None,
+        settings={},
+        log_level="INFO",
+        type_of_process="train",
+        loader=None,
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+    )
+    worker.initial_table_names = ["orders"]
+    worker.divided = ["orders_pk", "orders_fk"]
+    worker.row_subset_mapping = {"orders": 120}
+
+    metadata = {
+        "orders_pk": {
+            "train_settings": {
+                "reports": ["accuracy"],
+            },
+            "format": {},
+        }
+    }
+
+    worker._infer_table(
+        table="orders_pk",
+        metadata=metadata,
+        type_of_process="train",
+        delta=0.1,
+    )
+
+    infer_kwargs = mock_infer_strategy_run.call_args.kwargs
+    assert infer_kwargs["size"] == 120
+    assert infer_kwargs["both_keys"] is True
+
+
+@pytest.mark.parametrize(
+    "gpu_count, table_count, loader, expected",
+    [
+        (0, 1, None, False),
+        (0, 5, None, False),
+        (1, 1, None, False),
+        (1, 5, None, False),
+        (4, 1, None, False),
+        (4, 5, None, True),
+        (4, 5, lambda path: pd.DataFrame(), False),
+    ],
+)
+@patch.object(Worker, "__attrs_post_init__")
+def test_should_train_in_parallel_gating(
+    mock_post_init, gpu_count, table_count, loader, expected, rp_logger
+):
+    """Task-parallel multi-GPU training must only trigger for
+    (>1 table AND >1 GPU AND loader is None) - every other combination must
+    fall back to the untouched sequential path, keeping CPU-only and
+    single-GPU environments (all current CI, the majority of users) at zero
+    behavioral risk."""
+    rp_logger.info(
+        "Test 'Worker._should_train_in_parallel' gates on table count, GPU count, and loader"
+    )
+    worker = Worker(
+        table_name="table",
+        metadata_path=None,
+        settings={},
+        log_level="INFO",
+        type_of_process="train",
+        loader=loader,
+        encryption_settings=fetch_env_variables({"fernet_key": None}),
+    )
+    tables_for_training = [f"table_{i}" for i in range(table_count)]
+
+    with patch("syngen.ml.worker.worker.cuda_device_count", return_value=gpu_count):
+        assert worker._should_train_in_parallel(tables_for_training) is expected
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_train_table_job_is_picklable(rp_logger):
+    """`_TrainTableJob` is dispatched to a `spawn`-started worker process, so
+    it (and every field it carries) must survive a pickle round-trip. Built
+    module-level (not nested) for the same reason `_FeatureTuples` is
+    module-level in wrappers.py (EPMCTDM-7630)."""
+    rp_logger.info("Test '_TrainTableJob' survives a pickle round-trip")
+    job = _TrainTableJob(
+        table="orders",
+        data=pd.DataFrame({"a": [1, 2, 3]}),
+        schema={"fields": {}, "format": "CSV"},
+        metadata={"orders": {"train_settings": {"epochs": 1}}},
+        metadata_path=None,
+        gpu_index=1,
+        delta=0.1,
+    )
+
+    restored = pickle.loads(pickle.dumps(job))
+
+    assert restored.table == job.table
+    assert restored.gpu_index == job.gpu_index
+    assert restored.metadata == job.metadata
+    pd.testing.assert_frame_equal(restored.data, job.data)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.worker.worker.DataLoader")
+@patch("syngen.ml.worker.worker.Report")
+@patch("syngen.ml.worker.worker.MlflowTrackerFactory")
+@patch("syngen.ml.worker.worker.TrainStrategy")
+def test_run_train_table_job_primes_progress_bar_delta_before_running(
+    mock_train_strategy, mock_mlflow_tracker_factory, mock_report, mock_data_loader, rp_logger
+):
+    """Regression: a spawned child process starts with a fresh
+    ProgressBarHandler singleton whose `.delta` is None - `VAEWrapper._train`
+    divides by it directly, so without priming it first via
+    `set_progress(delta=...)`, training crashes with
+    `TypeError: unsupported operand type(s) for /: 'NoneType' and 'int'`
+    on the very first table (found by actually running multi-table training
+    on real GPU hardware, not previously covered by any test or the design
+    doc). `_run_train_table_job` must call `ProgressBarHandler().set_progress
+    (delta=...)` before `TrainStrategy().run(...)`."""
+    rp_logger.info(
+        "Test '_run_train_table_job' primes ProgressBarHandler().delta before training"
+    )
+    ProgressBarHandler()
+    ProgressBarHandler.reset_instance()
+    job = _TrainTableJob(
+        table="orders",
+        data=pd.DataFrame({"a": [1, 2, 3]}),
+        schema={"fields": {}, "format": "CSV"},
+        metadata={"orders": {"train_settings": {
+            "epochs": 1, "drop_null": False, "row_limit": None,
+            "reports": [], "batch_size": 32, "source": None,
+        }}},
+        metadata_path=None,
+        gpu_index=None,
+        delta=0.25,
+    )
+
+    _run_train_table_job(job)
+
+    assert ProgressBarHandler().delta == 0.25
+    mock_train_strategy.return_value.run.assert_called_once()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.worker.worker.DataLoader")
+@patch("syngen.ml.worker.worker.Report")
+@patch("syngen.ml.worker.worker.MlflowTrackerFactory")
+@patch("syngen.ml.worker.worker.TrainStrategy")
+def test_run_train_table_job_saves_input_data_before_generating_report(
+    mock_train_strategy, mock_mlflow_tracker_factory, mock_report, mock_data_loader, rp_logger
+):
+    """Regression: the sample report's `_extract_report_data()` reads back
+    `input_data_{table}.pkl`, the exact file `_save_input_data_for_job`
+    writes. Calling `Report().generate_report()` before that write (as an
+    earlier version of this function did) makes the report try to read a
+    file that doesn't exist yet, raising `FileNotFoundError` - found by
+    actually running multi-table training on real GPU hardware. The write
+    must happen first."""
+    rp_logger.info(
+        "Test '_run_train_table_job' saves input data before generating the report"
+    )
+    ProgressBarHandler()
+    ProgressBarHandler.reset_instance()
+    call_order = []
+    mock_data_loader.return_value.save_data.side_effect = (
+        lambda *a, **k: call_order.append("save_input_data")
+    )
+    mock_report.return_value.generate_report.side_effect = (
+        lambda: call_order.append("generate_report")
+    )
+    job = _TrainTableJob(
+        table="orders",
+        data=pd.DataFrame({"a": [1, 2, 3]}),
+        schema={"fields": {}, "format": "CSV"},
+        metadata={"orders": {"train_settings": {
+            "epochs": 1, "drop_null": False, "row_limit": None,
+            "reports": [], "batch_size": 32, "source": None,
+        }}},
+        metadata_path=None,
+        gpu_index=None,
+        delta=0.25,
+    )
+
+    _run_train_table_job(job)
+
+    assert call_order == ["save_input_data", "generate_report"]
     rp_logger.info(SUCCESSFUL_MESSAGE)

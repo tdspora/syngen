@@ -1,18 +1,25 @@
-import os
-from typing import Optional, List, Union, Tuple, Callable
+from typing import Literal, Optional, List, Union, Callable
 
 import click
 from loguru import logger
 import pandas as pd
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-from syngen.ml.worker import Worker
 from syngen.ml.utils import (
     setup_log_process,
     get_reports,
-    fetch_env_variables
+    fetch_env_variables,
+    limit_thread_parallelism,
+    SUPPORTED_LOG_LEVELS
 )
+
+# Bound native (OpenMP/MKL) thread pools before ``torch`` is imported (via
+# ``Worker`` below). Shared mode additionally disables idle-thread busy-waiting.
+# Honours pre-set env vars.
+limit_thread_parallelism()
+
+from syngen.ml.worker import Worker
 from syngen.ml.validation_schema import ReportTypes
+from syngen.ml.validation_schema import ValidationSettingsSchema
 
 
 def validate_required_parameters(
@@ -65,8 +72,16 @@ def launch_train(
     epochs: int = 10,
     drop_null: bool = False,
     row_limit: Optional[int] = None,
-    reports: Union[List[str], Tuple[str], str] = "none",
-    log_level: str = "INFO",
+    reports: Union[
+        Literal["accuracy", "sample", "metrics_only", "all", "none"],
+        List[Literal["accuracy", "sample", "metrics_only"]]
+    ] = "none",
+    # Kept in sync with `syngen.ml.utils.SUPPORTED_LOG_LEVELS` - a `Literal` cannot be
+    # built from a runtime tuple, so `test_log_level_literal_matches_supported_levels`
+    # asserts the two stay identical.
+    log_level: Literal[
+        "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"
+    ] = "INFO",
     batch_size: int = 32,
     fernet_key: Optional[str] = None,
     loader: Optional[Callable[[str], pd.DataFrame]] = None,
@@ -77,6 +92,24 @@ def launch_train(
         table_name=table_name,
         metadata_path=metadata_path
     )
+    reports = get_reports(
+        value=reports,
+        report_types=ReportTypes(),
+        type_of_process="train"
+    )
+
+    ValidationSettingsSchema(
+        settings={
+            "source": source,
+            "epochs": epochs,
+            "drop_null": drop_null,
+            "row_limit": row_limit,
+            "batch_size": batch_size,
+            "reports": reports,
+            "fernet_key": fernet_key
+        },
+        process="train"
+    ).validate_schema()
 
     encryption_settings = fetch_env_variables({"fernet_key": fernet_key})
 
@@ -89,11 +122,7 @@ def launch_train(
             "drop_null": drop_null,
             "row_limit": row_limit,
             "batch_size": batch_size,
-            "reports": get_reports(
-                value=reports,
-                report_types=ReportTypes(),
-                type_of_process="train"
-            ),
+            "reports": reports,
         },
         log_level=log_level,
         type_of_process="train",
@@ -167,7 +196,7 @@ def launch_train(
 @click.option(
     "--log_level",
     default="INFO",
-    type=click.Choice(["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    type=click.Choice(SUPPORTED_LOG_LEVELS),
     help="Set the logging level which will be used in the process. "
          "If absent, it's defaulted to 'INFO'",
 )

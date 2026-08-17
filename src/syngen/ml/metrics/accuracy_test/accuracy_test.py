@@ -197,9 +197,12 @@ class AccuracyTest(BaseTest):
         bi_images = dict()
 
         if self.plot_exists:
+            date_restore_types = fetch_config(self.dataset_pickle_path).date_types_to_restore
+
             self.update_progress_bar("Generation of the univariate distributions...")
             uni_images = self.univariate.calculate_all(
-                kwargs["cont_columns"], kwargs["categorical_columns"], kwargs["date_columns"]
+                kwargs["cont_columns"], kwargs["categorical_columns"], kwargs["date_columns"],
+                date_restore_types=date_restore_types,
             )
             self.update_progress_bar(
                 "The univariate distributions have been generated", delta
@@ -207,7 +210,8 @@ class AccuracyTest(BaseTest):
 
             self.update_progress_bar("Generation of the bivariate distributions...")
             bi_images = self.bivariate.calculate_all(
-                kwargs["cont_columns"], kwargs["categorical_columns"], kwargs["date_columns"]
+                kwargs["cont_columns"], kwargs["categorical_columns"], kwargs["date_columns"],
+                date_restore_types=date_restore_types,
             )
             self.update_progress_bar(
                 "The bivariate distributions have been generated", delta

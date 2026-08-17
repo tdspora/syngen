@@ -1,11 +1,8 @@
 from abc import ABC, abstractmethod
-import os
 import traceback
 
 from loguru import logger
 from copy import deepcopy
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from syngen.ml.handlers import RootHandler
 from syngen.ml.reporters import Report, AccuracyReporter, SampleAccuracyReporter
@@ -93,6 +90,7 @@ class TrainStrategy(Strategy, ABC):
             batch_size=self.config.batch_size,
             reports=self.config.reports,
             type_of_process="train",
+            device=self.config.device,
         )
 
         long_text_handler = LongTextsHandler(

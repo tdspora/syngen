@@ -1,0 +1,8 @@
+{
+  "baseline_pt_10ep_lr1e-4":  {"lat_recon":0.50,"lon_recon":0.39,"lat_gen":0.50,"lon_gen":0.39,"final_loss":0.063},
+  "tf_reference_10ep":        {"lat_recon":0.86,"lon_recon":0.91,"lat_gen":0.85,"lon_gen":0.89},
+  "pt_50ep_lr1e-4":           {"lat_recon":0.85,"lon_recon":0.82,"lat_gen":0.83,"lon_gen":0.78},
+  "pt_10ep_trainmode":        {"lat_recon":0.32,"lon_recon":0.39,"lat_gen":0.34,"lon_gen":0.39,"final_loss":1.62,"verdict":"worse"},
+  "pt_10ep_lr5e-4":           {"lat_recon":0.99,"lon_recon":0.93,"lat_gen":0.95,"lon_gen":0.92,"final_loss":0.029,"verdict":"BEST"},
+  "pt_10ep_lr1e-3":           {"lat_recon":0.72,"lon_recon":0.62,"lat_gen":0.72,"lon_gen":0.61,"final_loss":0.079,"verdict":"overshoots"}
+}

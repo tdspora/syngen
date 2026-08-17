@@ -7,12 +7,12 @@ import json
 
 import pandas as pd
 from loguru import logger
-
 from syngen.ml.utils import (
     nan_labels_to_float,
     convert_date_to_timestamp,
     fetch_config
 )
+from syngen.ml.format_settings import set_format_settings, load_saved_artifact
 from syngen.ml.metrics import AccuracyTest, SampleAccuracyTest
 from syngen.ml.data_loaders import DataLoader, DataFrameFetcher
 from syngen.ml.metrics.utils import text_to_continuous
@@ -55,11 +55,18 @@ class Reporter:
                 return technical_columns
         return set()
 
+    def _apply_table_format_settings(self):
+        """
+        Apply the format settings for the table if they exist
+        """
+        dataset = fetch_config(self.paths["dataset_pickle_path"])
+        set_format_settings(dataset.format)
+
     def _fetch_dataframe(self) -> pd.DataFrame:
         """
         Fetch the data using the callback function
         """
-        data, schema = DataFrameFetcher(
+        data, _ = DataFrameFetcher(
             loader=self.loader,
             table_name=self.table_name
         ).load_data()
@@ -74,13 +81,15 @@ class Reporter:
         if self.loader:
             original = self._fetch_dataframe()
         else:
-            original, schema = DataLoader(
+            self._apply_table_format_settings()
+            original, _ = DataLoader(
                 path=self.paths["input_data_path"],
                 table_name=self.table_name,
                 metadata=self.metadata,
                 sensitive=True
             ).load_data()
-        synthetic, schema = DataLoader(path=self.paths["path_to_merged_infer"]).load_data()
+        with load_saved_artifact():
+            synthetic, _ = DataLoader(path=self.paths["path_to_merged_infer"]).load_data()
         synthetic = synthetic[
             [col for col in synthetic.columns if col not in self.technical_columns]
         ]
@@ -129,7 +138,7 @@ class Reporter:
         without keys columns
         """
         types = self.fetch_data_types()
-        exclude_columns = self.dataset.uuid_columns
+        excluded_columns = self.dataset.uuid_columns
         for column in self.dataset.cast_to_integer:
             original[column] = pd.to_numeric(
                 original[column], errors="coerce", downcast="integer"
@@ -145,10 +154,10 @@ class Reporter:
                 synthetic[column], errors="coerce", downcast="float"
             )
         original = nan_labels_to_float(
-            original, self.columns_nan_labels, exclude_columns, process="report"
+            original, self.columns_nan_labels, excluded_columns, process="report"
         )
         synthetic = nan_labels_to_float(
-            synthetic, self.columns_nan_labels, exclude_columns, process="report"
+            synthetic, self.columns_nan_labels, excluded_columns, process="report"
         )
         (
             str_columns,
@@ -163,7 +172,7 @@ class Reporter:
 
         original = original[[col for col in original.columns if col in set().union(*types)]]
         synthetic = synthetic[[col for col in synthetic.columns if col in set().union(*types)]]
-        na_values = self.dataset.format.get("na_values", [])
+        na_values = self.dataset.format.get("na_values")
         for date_col, date_format in self.dataset.date_mapping.items():
             original[date_col] = self.convert_dates_to_timestamps(
                 original[date_col], date_format, na_values
@@ -376,8 +385,9 @@ class SampleAccuracyReporter(Reporter):
     report_type = "sample"
 
     def _extract_report_data(self):
-        original, schema = DataLoader(path=self.paths["source_path"]).load_data()
-        sampled, schema = DataLoader(
+        self._apply_table_format_settings()
+        original, _ = DataLoader(path=self.paths["source_path"]).load_data()
+        sampled, _ = DataLoader(
             path=self.paths["input_data_path"],
             table_name=self.table_name,
             metadata=self.metadata,

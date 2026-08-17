@@ -1,7 +1,6 @@
 from unittest.mock import patch
 import pytest
 import os
-import shutil
 
 from marshmallow import ValidationError
 from cryptography.fernet import Fernet
@@ -305,22 +304,12 @@ def test_train_table_with_invalid_epochs(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(epochs=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "epochs": [\n'
-                '            "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': {\'epochs\': '
+                '[\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "epochs": [\n'
-                '            "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': {\'epochs\': '
+                '[\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -359,22 +348,12 @@ def test_train_table_with_invalid_drop_null(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(drop_null="test")
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "drop_null": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'drop_null\': [\'Not a valid boolean.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "drop_null": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'drop_null\': [\'Not a valid boolean.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -406,22 +385,12 @@ def test_train_table_with_invalid_row_limit(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(row_limit=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "row_limit": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'row_limit\': [\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "row_limit": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'row_limit\': [\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -542,22 +511,12 @@ def test_train_table_with_invalid_batch_size(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(batch_size=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'batch_size\': [\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "train_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'train_settings\': '
+                '{\'batch_size\': [\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -627,13 +586,26 @@ def test_train_table_with_valid_log_level(
 
 
 def test_train_table_with_invalid_log_level(rp_logger):
+    """EPMCTDM-7630: an unsupported log level must be rejected with a clear message naming
+    the supported levels, raised before anything is written to `os.environ` - not loguru's
+    bare internal error, and not after `model_artifacts/` has already been created."""
     rp_logger.info(
         "Launch the training process with the invalid 'log_level' parameter equals 'test'"
     )
+    log_level_before = os.environ.get("LOGURU_LEVEL")
+    model_artifacts_existed_before = os.path.exists("model_artifacts")
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).train(log_level="test")
-        assert str(error.value) == "ValueError: Level 'test' does not exist"
-    shutil.rmtree("model_artifacts/")
+    error_message = (
+        "Unsupported log level: 'test'. The supported log levels are: "
+        "TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL."
+    )
+    assert str(error.value) == error_message
+    assert os.environ.get("LOGURU_LEVEL") == log_level_before
+    # ambient test pollution may have already created model_artifacts/ from an
+    # unrelated earlier test; the property this asserts is that THIS call created
+    # nothing new, not that the directory is absent outright
+    assert os.path.exists("model_artifacts") == model_artifacts_existed_before
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -666,22 +638,12 @@ def test_infer_table_with_invalid_size(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(size=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': {\'size\': '
+                '[\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': {\'size\': '
+                '[\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -720,22 +682,12 @@ def test_infer_table_with_invalid_run_parallel(rp_logger, caplog):
         with caplog.at_level("ERROR"):
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(run_parallel="test")
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "run_parallel": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'run_parallel\': [\'Not a valid boolean.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "run_parallel": [\n'
-                '             "Not a valid boolean."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'run_parallel\': [\'Not a valid boolean.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -765,22 +717,12 @@ def test_infer_table_with_invalid_batch_size(rp_logger, caplog):
         with caplog.at_level("ERROR") as caplog:
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(batch_size=0)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'batch_size\': [\'Must be greater than or equal to 1.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "batch_size": [\n'
-                '             "Must be greater than or equal to 1."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'batch_size\': [\'Must be greater than or equal to 1.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -811,22 +753,12 @@ def test_infer_table_with_invalid_random_seed(rp_logger, caplog):
         with caplog.at_level("ERROR") as caplog:
             Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(random_seed=-1)
             assert str(error.value) == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "random_seed": [\n'
-                '             "Must be greater than or equal to 0."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'random_seed\': [\'Must be greater than or equal to 0.\']}}'
             )
             assert caplog.text == (
-                'The error(s) found in - "test_table": {\n'
-                '    "infer_settings": {\n'
-                '        "random_seed": [\n'
-                '             "Must be greater than or equal to 0."\n'
-                '        ]\n'
-                '    }\n'
-                '}'
+                'The error(s) found in - "test_table": {\'infer_settings\': '
+                '{\'random_seed\': [\'Must be greater than or equal to 0.\']}}'
             )
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -980,13 +912,26 @@ def test_infer_table_with_valid_log_level(
 
 
 def test_infer_table_with_invalid_log_level(rp_logger):
+    """EPMCTDM-7630: an unsupported log level must be rejected with a clear message naming
+    the supported levels, raised before anything is written to `os.environ` - not loguru's
+    bare internal error, and not after `model_artifacts/` has already been created."""
     rp_logger.info(
         "Launch the inference process with the invalid 'log_level' parameter equals 'test'"
     )
+    log_level_before = os.environ.get("LOGURU_LEVEL")
+    model_artifacts_existed_before = os.path.exists("model_artifacts")
     with pytest.raises(ValueError) as error:
         Syngen(table_name=TABLE_NAME, source=PATH_TO_TABLE).infer(log_level="test")
-        assert str(error.value) == "ValueError: Level 'test' does not exist"
-    shutil.rmtree("model_artifacts/")
+    error_message = (
+        "Unsupported log level: 'test'. The supported log levels are: "
+        "TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL."
+    )
+    assert str(error.value) == error_message
+    assert os.environ.get("LOGURU_LEVEL") == log_level_before
+    # ambient test pollution may have already created model_artifacts/ from an
+    # unrelated earlier test; the property this asserts is that THIS call created
+    # nothing new, not that the directory is absent outright
+    assert os.path.exists("model_artifacts") == model_artifacts_existed_before
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 

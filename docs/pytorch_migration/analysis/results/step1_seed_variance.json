@@ -1,0 +1,62 @@
+{
+  "original": {
+    "latitude": {
+      "mean": 35.6319,
+      "std": 2.136
+    },
+    "longitude": {
+      "mean": -119.5697,
+      "std": 2.0035
+    }
+  },
+  "pytorch_runs": {
+    "latitude": {
+      "1": {
+        "mean": 35.3765,
+        "std": 1.0819
+      },
+      "2": {
+        "mean": 35.3784,
+        "std": 1.0843
+      },
+      "3": {
+        "mean": 35.3757,
+        "std": 1.079
+      },
+      "report": {
+        "mean": 35.3757,
+        "std": 1.079
+      },
+      "_summary": {
+        "std_mean_across_runs": 1.081,
+        "std_sd_across_runs": 0.0022,
+        "original_std": 2.136,
+        "std_retention_pct": 50.6
+      }
+    },
+    "longitude": {
+      "1": {
+        "mean": -119.8855,
+        "std": 0.8092
+      },
+      "2": {
+        "mean": -119.8817,
+        "std": 0.8059
+      },
+      "3": {
+        "mean": -119.894,
+        "std": 0.7948
+      },
+      "report": {
+        "mean": -119.894,
+        "std": 0.7948
+      },
+      "_summary": {
+        "std_mean_across_runs": 0.8011,
+        "std_sd_across_runs": 0.0065,
+        "original_std": 2.0035,
+        "std_retention_pct": 40.0
+      }
+    }
+  }
+}

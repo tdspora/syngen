@@ -1,19 +1,23 @@
-from typing import Tuple, Optional, Dict, List, Callable
+import sys
+from typing import Tuple, Optional, Dict, List, Callable, Any
 from abc import ABC, abstractmethod
 import os
 import math
 from ulid import ULID
 from uuid import UUID
+
+import multiprocessing as mp
+import functools
+import psutil
 from copy import deepcopy
 
 import pandas as pd
 import numpy as np
-from numpy.random import seed, choice
-from pathos.multiprocessing import ProcessingPool
+import torch
+from numpy.random import seed
 import dill
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
-from tensorflow.keras.preprocessing.text import Tokenizer
 from slugify import slugify
 from loguru import logger
 from attrs import define, field
@@ -22,14 +26,40 @@ from syngen.ml.vae import *  # noqa: F403
 from syngen.ml.data_loaders import DataLoader
 from syngen.ml.reporters import Report
 from syngen.ml.vae.models.dataset import Dataset
+from syngen.ml.vae.models.features import CharTokenizer
 from syngen.ml.utils import (
     fetch_config,
     check_if_features_assigned,
     get_initial_table_name,
     ProgressBarHandler,
-    get_source_path_extension
+    get_source_path_extension,
+    get_thread_parallelism_budget,
+    timing,
 )
-from syngen.ml.context import get_context
+from syngen.ml.utils.device import assign_gpu_index, cuda_device_count, resolve_device
+
+
+def _select_mp_start_method() -> str:
+    """Isolated as its own function so it's unit-testable without calling the
+    real mp.set_start_method (a global, one-shot, process-wide setting that's
+    awkward to exercise repeatedly across tests).
+
+    `spawn` is required whenever any GPU is visible, not just when this
+    specific pool will use more than one: the parent process may already
+    hold a live CUDA context (e.g. a table trained on GPU earlier in the same
+    Worker process), and forking after the parent has touched CUDA is unsafe
+    regardless of what the child pool itself does. On CPU-only machines
+    (cuda_device_count() == 0) this is byte-identical to the pre-existing
+    fork-on-POSIX behavior.
+    """
+    if sys.platform == "win32" or cuda_device_count() > 0:
+        return "spawn"
+    return "fork"
+
+
+MEMORY_THRESHOLD = 90  # Memory usage threshold in percent
+# Recommended factor to reduce batch size in case of memory overflow
+BATCH_SIZE_REDUCTION_FACTOR = 4
 
 
 class AbstractHandler(ABC):
@@ -63,7 +93,11 @@ class BaseHandler(AbstractHandler):
 
     @staticmethod
     def create_wrapper(
-        cls_name, data: Optional[pd.DataFrame] = None, schema: Optional[Dict] = None, **kwargs
+        cls_name,
+        data: Optional[pd.DataFrame] = None,
+        schema: Optional[Dict] = None,
+        initial_dataset_to_pass: Optional[Any] = None,
+        **kwargs
     ):
         return globals()[cls_name](
             data,
@@ -74,6 +108,8 @@ class BaseHandler(AbstractHandler):
             batch_size=kwargs["batch_size"],
             main_process=kwargs["main_process"],
             process=kwargs["process"],
+            preloaded_dataset=initial_dataset_to_pass,
+            device=kwargs.get("device"),
         )
 
 
@@ -108,12 +144,26 @@ class LongTextsHandler(BaseHandler):
         if len(long_text_columns) > 0:
             features = {}
             for col in long_text_columns:
-                tokenizer = Tokenizer(lower=False, char_level=True)
+                tokenizer = CharTokenizer(lower=False, char_level=True)
                 if type(data[col].dropna().values[0]) is bytes:
                     text_col = data[col].str.decode("utf-8", errors="ignore")
                 else:
                     text_col = data[col]
-                text_col = text_col.fillna("")
+
+                # Fit the KDE on real texts only. Filling NULLs with "" would add
+                # (char_len=0, word_count=0) points that both skew the modelled text
+                # length towards zero and turn NULL reproduction into an accident of
+                # where the KDE tail happens to land. The NULL share is recorded
+                # separately and applied as an explicit mask at generation time.
+                non_null_col = text_col.dropna()
+                if len(non_null_col) < 2:
+                    # gaussian_kde needs at least two points. Keep the legacy
+                    # behaviour for such a column instead of failing the whole run.
+                    text_col, null_share = text_col.fillna(""), 0.0
+                else:
+                    null_share = float(text_col.isna().mean())
+                    text_col = non_null_col
+
                 tokenizer.fit_on_texts(text_col)
 
                 indexes = OrderedDict((k, v) for k, v in tokenizer.word_index.items() if k != " ")
@@ -136,6 +186,13 @@ class LongTextsHandler(BaseHandler):
                     "counts": counts,
                     "indexes": ordered_indexes,
                     "kde": kde,
+                    # Minimum number of words seen in a real (non-NULL) source text.
+                    # 0 means the source contains genuine empty strings, which the
+                    # generator is then allowed to reproduce.
+                    "min_word_count": int(text_structure[1].min()),
+                    # Share of source rows that were NULL, reproduced at generation
+                    # time as real NaN rather than inferred from the KDE tail.
+                    "null_share": null_share,
                 }
 
             self._save_no_ml_checkpoints(features)
@@ -155,6 +212,7 @@ class VaeTrainHandler(BaseHandler):
     batch_size: int = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
     reports: List[str] = field(kw_only=True)
+    device: Optional[torch.device] = field(kw_only=True, default=None)
 
     def __fit_model(self, data: Optional[pd.DataFrame]):
         logger.info("Start VAE training")
@@ -172,6 +230,7 @@ class VaeTrainHandler(BaseHandler):
             batch_size=self.batch_size,
             main_process=self.type_of_process,
             process="train",
+            device=self.device,
         )
         self.model.batch_size = min(self.batch_size, len(data))
         list_of_reports = [f'\'{report}\'' for report in self.reports]
@@ -212,7 +271,7 @@ class VaeInferHandler(BaseHandler):
     wrapper_name: str = field(kw_only=True)
     log_level: str = field(kw_only=True)
     type_of_process: str = field(kw_only=True)
-    random_seed_list: List = field(init=False)
+    random_seeds_list: List = field(init=False)
     vae: Optional[VAEWrapper] = field(init=False)  # noqa: F405
     dataset: Dataset = field(init=False)
     original_schema: Dict = field(init=False)
@@ -221,7 +280,7 @@ class VaeInferHandler(BaseHandler):
     batch_num: int = field(init=False)
 
     def __attrs_post_init__(self):
-        if self.random_seed:
+        if self.random_seed is not None:
             seed(self.random_seed)
         self.batch_num = math.ceil(self.size / self.batch_size)
         self.random_seeds_list = list()
@@ -231,12 +290,141 @@ class VaeInferHandler(BaseHandler):
         self.original_schema = (
             fetch_config(path_to_schema) if os.path.exists(path_to_schema) else None
         )
+
         self.has_vae = len(self.dataset.features) > 0
 
-        if self.has_vae:
-            self.vae = self.__get_wrapper()
-
         self.has_no_ml = os.path.exists(f'{self.paths["path_to_no_ml"]}')
+
+        # set it to None to avoid serialization issues
+        self._pool = None
+
+        if self.has_vae and not self.run_parallel:
+            self.vae = self._get_wrapper(dataset_to_preload=self.dataset)
+
+        if self.has_vae and self.run_parallel:
+            self._setup_parallel_processing()
+
+        if self.batch_num > 1:
+            self._set_random_seeds()
+
+    def _cleanup_pool(self):
+        if self._pool is not None:
+            self._pool.close()
+            self._pool.join()
+            self._pool = None
+
+    @staticmethod
+    def _initialize_worker_vae_model(handler_instance, dataset_for_worker, gpu_index=None):
+        return handler_instance._get_wrapper(
+            dataset_to_preload=dataset_for_worker,
+            device=resolve_device(gpu_index),
+        )
+
+    @timing
+    def _setup_parallel_processing(self):
+
+        logger.info("Running in parallel mode")
+        mp.set_start_method(_select_mp_start_method(), force=True)
+
+        logger.warning(
+            "Note: Running in parallel mode causes "
+            "some log messages to appear multiple times. "
+            "This is expected behavior as the model is loaded "
+            "on multiple devices to ensure efficient processing."
+        )
+
+        self.batch_size, self.batch_num, n_jobs = (
+            self._calculate_batch_configuration()
+        )
+        threads_per_worker = max(1, self._get_worker_cpu_budget() // n_jobs)
+
+        func_for_worker_init = functools.partial(
+            self.__class__._initialize_worker_vae_model,
+            handler_instance=self,
+            dataset_for_worker=self.dataset
+        )
+
+        # One GPU index per worker slot, round-robin across visible GPUs -
+        # deliberately not capped by GPU count, so multiple workers may share
+        # one GPU when n_jobs > cuda_device_count() (the CVAE is small enough
+        # that this oversubscription is cheap to allow).
+        gpu_indices = [assign_gpu_index(w) for w in range(n_jobs)]
+
+        self._pool = mp.Pool(
+            processes=n_jobs,
+            initializer=self.__class__.worker_init,
+            initargs=(func_for_worker_init, threads_per_worker, gpu_indices)
+        )
+
+    def _calculate_batch_configuration(self) -> Tuple[int, int, int]:
+        """
+        Calculate optimal batch size, batch number, and worker count
+        for parallel processing.
+
+        Returns:
+            Tuple[int, int, int]: (batch_size, batch_num, n_jobs)
+        """
+        cpu_count = self._get_worker_cpu_budget()
+
+        if self.batch_num > 1:
+            n_jobs = min(self.batch_num, cpu_count)
+        else:
+            self.batch_num = min(self.size, cpu_count)
+
+            # equal batches for each process in last batch keep the remainder
+            self.batch_size = math.ceil(self.size / self.batch_num)
+
+            # ensure that we have at least 1 record in the last batch
+            if self.batch_size * (self.batch_num - 1) >= self.size:
+                self.batch_size = math.floor(self.size / self.batch_num)
+
+            logger.info(
+                f"Splitting data into {self.batch_num} "
+                f"batches with batch_size={self.batch_size} "
+                f"to run in parallel mode"
+            )
+
+            n_jobs = self.batch_num
+
+        return self.batch_size, self.batch_num, n_jobs
+
+    @staticmethod
+    def _get_worker_cpu_budget() -> int:
+        """
+        Reserve one CPU and honour the effective native-thread budget.
+        """
+        return max(1, get_thread_parallelism_budget() - 1)
+
+    @staticmethod
+    def worker_init(get_wrapper_func_from_main, threads_per_worker=None, gpu_indices=None):
+        global vae_model
+        if threads_per_worker is not None:
+            torch.set_num_threads(threads_per_worker)
+        if gpu_indices:
+            # mp.Pool's initializer/initargs are identical for every worker -
+            # there's no built-in per-worker ordinal - so workers are told
+            # apart via CPython's stable, long-standing 1-based pool-worker
+            # ordinal. This is private API, used deliberately here since the
+            # model is built once per worker and reused for every task that
+            # worker later handles, so GPU assignment must happen once, at
+            # init time, not per task.
+            ordinal = mp.current_process()._identity[0] - 1
+            gpu_index = gpu_indices[ordinal % len(gpu_indices)]
+            get_wrapper_func_from_main = functools.partial(
+                get_wrapper_func_from_main, gpu_index=gpu_index
+            )
+        vae_model = get_wrapper_func_from_main()
+
+    @staticmethod
+    def worker_process(params, random_seed,
+                       random_seeds_list, run_separate_func):
+        global vae_model  # noqa: F824
+        i, size = params
+        if random_seed:
+            seed(random_seeds_list[i % len(random_seeds_list)])
+
+        result = run_separate_func((i, size), vae_model)
+        return result
 
     @staticmethod
     def _synth_word(size, indexes, counts):
@@ -251,18 +439,41 @@ class VaeInferHandler(BaseHandler):
             )
         )
 
-    def __get_wrapper(self):
+    def _synth_text(self, char_len: int, word_count: int, indexes, counts) -> str:
+        """
+        Build one synthetic text of roughly 'char_len' characters split into
+        'word_count' words. A word count of 0 yields an empty text.
+        """
+        # Guard the division so an intentionally empty text does not emit a
+        # divide-by-zero warning; with word_count == 0 no word length is drawn.
+        mean_word_len = char_len / word_count if word_count else 0.0
+        word_lengths = np.maximum(
+            np.random.normal(mean_word_len, 1, word_count).astype("int32"), 2
+        )
+        return " ".join(self._synth_word(s, indexes, counts) for s in word_lengths)
+
+    def _get_wrapper(
+        self,
+        dataset_to_preload: Optional[Dataset] = None,
+        device: Optional[torch.device] = None,
+    ):
         """
         Create and get the wrapper for the VAE model
         """
+        wrapper_kwargs = {
+            "metadata": deepcopy(self.metadata),
+            "table_name": self.table_name,
+            "paths": self.paths,
+            "batch_size": self.batch_size,
+            "main_process": self.type_of_process,
+            "process": "infer",
+            "device": device,
+        }
+
         return self.create_wrapper(
-            self.wrapper_name,
-            metadata=deepcopy(self.metadata),
-            table_name=self.table_name,
-            paths=self.paths,
-            batch_size=self.batch_size,
-            main_process=self.type_of_process,
-            process="infer",
+            cls_name=self.wrapper_name,
+            initial_dataset_to_pass=dataset_to_preload,
+            **wrapper_kwargs
         )
 
     def _prepare_dir(self):
@@ -287,8 +498,8 @@ class VaeInferHandler(BaseHandler):
                         cumm_len += len(frame)
         return pd.concat(df_slices, ignore_index=True)
 
-    def generate_vae(self, size):
-        synthetic_infer = self.vae.predict_sampled_df(size)
+    def generate_vae(self, size, vae_model):
+        synthetic_infer = vae_model.predict_sampled_df(size)
         return synthetic_infer
 
     def generate_long_texts(self, size, synthetic_infer):
@@ -296,33 +507,42 @@ class VaeInferHandler(BaseHandler):
             features = dill.load(file)
         for col in features.keys():
             kde = features[col]["kde"]
-            text_structures = np.maximum(kde.resample(size).astype("int32"), 0)
             indexes = features[col]["indexes"]
             counts = features[col]["counts"]
-            generated_column = [
-                " ".join(
-                    [
-                        self._synth_word(s, indexes, counts)
-                        for s in np.maximum(np.random.normal(i / j, 1, j).astype("int32"), 2)
-                    ]
-                )
-                for i, j in zip(*text_structures)
-            ]
+            # A generated text may be empty only if the source contained empty texts;
+            # otherwise it must hold at least one word. Rounding before applying the
+            # floor matters: truncating a word count that sits just below 1 collapses
+            # it to 0, and the row is then emitted as an empty string - a NULL that
+            # does not exist in the source.
+            floors = np.array([[0], [min(features[col]["min_word_count"], 1)]])
+            text_structures = np.maximum(np.rint(kde.resample(size)), floors).astype("int32")
+            generated_column = np.array(
+                [
+                    self._synth_text(i, j, indexes, counts)
+                    for i, j in zip(*text_structures)
+                ],
+                dtype=object,
+            )
+            # Reproduce the measured source NULL share as real NaN. An empty string
+            # would only read back as NULL from CSV, not from Avro.
+            null_share = features[col]["null_share"]
+            if null_share:
+                generated_column[np.random.random(size) < null_share] = np.nan
             logger.debug(f"Long text for column '{col}' is generated.")
             synthetic_infer[col] = generated_column
         return synthetic_infer
 
-    def run_separate(self, params: Tuple):
+    def run_separate(self, params: Tuple, vae_model):
         i, size = params
 
-        if self.random_seed:
+        if self.batch_num > 1:
             seed(self.random_seeds_list[i])
 
         synthetic_infer = pd.DataFrame()
 
         if self.has_vae:
-            logger.info(f"VAE generation for '{self.table_name}' started.")
-            synthetic_infer = self.generate_vae(size)
+            synthetic_infer = self.generate_vae(size, vae_model)
+
         if self.has_no_ml:
             logger.info(f"Long texts generation for '{self.table_name}' started.")
             synthetic_infer = self.generate_long_texts(size, synthetic_infer)
@@ -339,39 +559,136 @@ class VaeInferHandler(BaseHandler):
         Each batch will have a size equal to batch_size,
         except for the last batch, which will contain the remaining size
         """
-        quote = self.batch_size
+        full_batch_size = self.batch_size
         nodes = self.batch_num
-        data = [quote] * (nodes - 1)
-        data.append(self.size - quote * (nodes - 1))
+        data = [full_batch_size] * (nodes - 1)
+        data.append(self.size - full_batch_size * (nodes - 1))
         return data
 
     def run(self, size: int, run_parallel: bool):
         logger.info("Start data synthesis")
-        if run_parallel:
-            pool = ProcessingPool()
-            if self.random_seed:
-                self.random_seeds_list = choice(
-                    range(0, max(100, pool.nodes)), pool.nodes, replace=False
-                )
+        batches = list(enumerate(self.split_by_batches()))
+        delta = ProgressBarHandler().delta / self.batch_num
 
-            frames = pool.map(
-                self.run_separate, enumerate(self.split_by_batches())
-            )
-            generated = self._concat_slices_with_unique_pk(frames)
+        if self.has_vae:
+            logger.info(f'VAE generation for {self.table_name} started')
+
+        if run_parallel:
+            generated_data = self._run_parallel(batches)
+            return generated_data
         else:
-            if self.random_seed:
-                self.random_seeds_list = [self.random_seed]
-            generated = self.run_separate((0, size))
-        return generated
+            generated_data = self._run_sequential(batches, delta)
+            return generated_data
+
+    def _run_parallel(self, batches: List[Tuple[int, int]]) -> pd.DataFrame:
+        """
+        Handle parallel processing
+        """
+        worker_func = functools.partial(
+            self.worker_process,
+            random_seed=self.random_seed,
+            random_seeds_list=self.random_seeds_list,
+            run_separate_func=self.run_separate
+        )
+
+        frames = []
+        for result in self._pool.imap_unordered(
+                worker_func,
+                ((i, batch_size) for i, batch_size in batches)
+        ):
+            frames.append(result)
+            self._check_memory_usage(len(frames))
+
+        logger.trace(
+            "Finished processing all batches. "
+            f"Memory usage: {psutil.virtual_memory().percent}%"
+        )
+
+        generated_data = frames if frames else pd.DataFrame()
+        return generated_data
+
+    def _run_sequential(self, batches: List[Tuple[int, int]], delta: float) -> pd.DataFrame:
+        """
+        Handle sequential processing
+        """
+        prepared_batches = []
+
+        for i, batch_size in batches:
+            log_message = (
+                f"Data synthesis for the table - '{self.table_name}'. "
+                f"Generating the batch {i + 1} of {self.batch_num}"
+            )
+            ProgressBarHandler().set_progress(
+                progress=ProgressBarHandler().progress + delta,
+                delta=delta,
+                message=log_message,
+            )
+            logger.info(log_message)
+
+            prepared_batch = self.run_separate((i, batch_size), self.vae)
+            prepared_batches.append(prepared_batch)
+
+            self._check_memory_usage(len(prepared_batches))
+
+        generated_data = prepared_batches if prepared_batches else pd.DataFrame()
+        return generated_data
+
+    def _check_memory_usage(self, processed_count: int) -> None:
+        """
+        Check memory usage and log progress
+        """
+        memory_usage = psutil.virtual_memory().percent
+
+        logger.info(
+            f"{processed_count} batches out of {self.batch_num} are processed. "
+            f"Memory usage: {memory_usage}%"
+        )
+
+        if memory_usage > MEMORY_THRESHOLD:
+            self._handle_memory_overflow(memory_usage)
+
+    def _handle_memory_overflow(self, memory_usage: float) -> None:
+        """
+        Handle memory overflow situation by cleaning up and raising error.
+
+        Args:
+            memory_usage: Current memory usage percentage
+
+        Raises:
+            MemoryError: Always raises to stop processing
+        """
+        recommended_batch_size = max(
+            1000,
+            round(self.batch_size // BATCH_SIZE_REDUCTION_FACTOR, -3)
+        )
+
+        error_message = (
+            f"High memory usage detected: {memory_usage}%. "
+            "To avoid memory overflow, reduce the batch size "
+            "and launch the process again. "
+            f"Current batch_size={self.batch_size}. "
+            f"Recommended batch_size={recommended_batch_size}. "
+            "Stopping the process to avoid memory overflow."
+        )
+
+        logger.warning(error_message)
+        self._cleanup_pool()
+
+        raise MemoryError(error_message)
 
     def kde_gen(self, pk_table, pk_column_label, size, fk_label):
         pk = pk_table[pk_column_label]
 
         try:
-            with open(f'{self.paths["fk_kde_path"]}{fk_label}.pkl', "rb") as file:
+            with open(f'{self.paths["fk_kde_path"]}{slugify(fk_label)}.pkl', "rb") as file:
                 kde = dill.load(file)
             pk = pk.dropna()
-            numeric_pk = np.arange(len(pk)) if pk.dtype == "object" else pk
+
+            numeric_pk = (
+                np.arange(len(pk))
+                if pd.api.types.is_string_dtype(pk)
+                else pk
+            )
             fk_pdf = np.maximum(kde.evaluate(numeric_pk), 1e-12)
             synth_fk = np.random.choice(pk, size=size, p=fk_pdf / sum(fk_pdf), replace=True)
             synth_fk = pd.DataFrame({fk_label: synth_fk}).reset_index(drop=True)
@@ -503,19 +820,16 @@ class VaeInferHandler(BaseHandler):
             )
         return prepared_data
 
-    def _save_data(self, generated_data):
+    def _save_data(self, generated_data: pd.DataFrame):
         """
         Save generated data to the path
         """
-        original_schema = fetch_config(
-            config_pickle_path=self.paths["original_schema_path"]
-        )
         DataLoader(path=self.paths["path_to_merged_infer"]).save_data(
             data=generated_data,
-            format=get_context().get_config(),
-            schema=original_schema
+            schema=self.original_schema
         )
 
+    @timing
     def handle(self, **kwargs):
         self._prepare_dir()
         list_of_reports = [f'\'{report}\'' for report in self.reports]
@@ -529,24 +843,12 @@ class VaeInferHandler(BaseHandler):
             log_message += f", reports - {list_of_reports}"
         logger.debug(log_message)
         logger.info(f"Total of {self.batch_num} batch(es)")
-        batches = self.split_by_batches()
-        delta = ProgressBarHandler().delta / self.batch_num
-        prepared_batches = []
-        for i, batch in enumerate(batches):
-            log_message = (f"Data synthesis for the table - '{self.table_name}'. "
-                           f"Generating the batch {i + 1} of {self.batch_num}")
-            ProgressBarHandler().set_progress(
-                progress=ProgressBarHandler().progress + delta,
-                delta=delta,
-                message=log_message,
-            )
-            logger.info(log_message)
-            prepared_batch = self.run(batch, self.run_parallel)
-            prepared_batches.append(prepared_batch)
+        generated_data = self.run(self.size, self.run_parallel)
+
         prepared_data = (
-            self._concat_slices_with_unique_pk(prepared_batches)
-            if len(prepared_batches) > 0
-            else pd.DataFrame()
+            self._concat_slices_with_unique_pk(
+                generated_data
+                ) if generated_data else pd.DataFrame()
         )
 
         prepared_data = self._restore_empty_columns(prepared_data)
@@ -569,3 +871,28 @@ class VaeInferHandler(BaseHandler):
                 self._save_data(prepared_data)
         if self.metadata_path is None:
             self._save_data(prepared_data)
+
+        self._cleanup_pool()
+
+    def _set_random_seeds(self):
+        """
+        Generate deterministic per-batch seeds when user provides random_seed,
+        or truly random seeds when random_seed is None.
+
+        Returns:
+            list: Per-batch random seeds
+        """
+        seed_range = self.batch_num * 100
+
+        # Create isolated RNG (not affected by global state)
+        rng = np.random.default_rng(self.random_seed)
+
+        # Generate per-batch seeds deterministically
+        # if random_seed is provided, otherwise truly random seeds
+        self.random_seeds_list = rng.choice(
+            seed_range,
+            size=self.batch_num,
+            replace=False
+        ).tolist()
+
+        return self.random_seeds_list

@@ -1,9 +1,13 @@
+import os
+
 import pytest
-from unittest.mock import Mock, patch
-from datetime import datetime, timedelta, timezone
+from unittest.mock import Mock, patch, mock_open
+from datetime import datetime, timedelta, timezone, date, time
 
 import numpy as np
+import pandas as pd
 
+import syngen.ml.utils.utils as utils_module
 from syngen.ml.utils import (
     slugify_attribute,
     slugify_parameters,
@@ -16,9 +20,16 @@ from syngen.ml.utils import (
     get_source_path_extension,
     generate_unique_values_by_regex,
     is_number_regex_pattern,
+    get_available_cpu_count,
+    get_deployment_mode,
+    get_thread_parallelism_budget,
+    limit_thread_parallelism,
+    setup_log_process,
+    SUPPORTED_LOG_LEVELS,
 )
+from syngen.ml.utils.utils import _cgroup_cpu_quota
 
-from tests.conftest import SUCCESSFUL_MESSAGE, rp_logger
+from tests.conftest import SUCCESSFUL_MESSAGE
 
 
 def test_slugify_attribute(rp_logger):
@@ -72,7 +83,17 @@ def test_datetime_to_timestamp(rp_logger):
         ("9999-12-31", 253402214400, "%Y-%m-%d"),
         ("10000-12-31", 253402300800, "%Y-%m-%d"),
         (np.nan, np.nan, "%Y-%m-%d"),
-        ("31-11-28", 1953590400.0, "%Y-%m-%d")
+        ("31-11-28", 1953590400.0, "%Y-%m-%d"),
+        # numpy.datetime64 — converted via pd.Timestamp, treated as naive
+        (np.datetime64("2023-01-01"), 1672531200.0, "%Y-%m-%d"),
+        # tz-aware datetime — tz is stripped, wall-clock time used as-is
+        (
+            datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=5))),
+            1672531200.0,
+            "%Y-%m-%d"
+        ),
+        # datetime.date object — combined with midnight, delta from epoch
+        (date(2023, 1, 1), 1672531200.0, "%Y-%m-%d"),
     ]
     rp_logger.info("Test the method 'datetime_to_timestamp'")
     for date_time, expected_timestamp, date_format in test_cases:
@@ -81,6 +102,72 @@ def test_datetime_to_timestamp(rp_logger):
             assert np.isnan(calculated_timestamp)
         else:
             assert int(calculated_timestamp) == int(expected_timestamp)
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_datetime_to_timestamp_numpy_datetime64(rp_logger):
+    """EPMCTDM-7581: 'datetime_to_timestamp' must handle numpy.datetime64 values
+    (as produced by Parquet/Delta date columns). Previously such inputs fell
+    through all branches and returned None, turning the date feature into NaN."""
+    rp_logger.info("Test 'datetime_to_timestamp' with numpy.datetime64 input")
+    test_cases = [
+        (np.datetime64("1970-01-01"), 0.0),
+        (np.datetime64("2000-01-01"), 946684800.0),
+        (np.datetime64("2023-01-01"), 1672531200.0),
+        (np.datetime64("2023-01-01T00:00:00"), 1672531200.0),
+    ]
+    for date_time, expected_timestamp in test_cases:
+        calculated_timestamp = datetime_to_timestamp(date_time, "%Y-%m-%d")
+        assert calculated_timestamp is not None
+        assert int(calculated_timestamp) == int(expected_timestamp)
+    # numpy NaT must degrade to NaN, never None or a crash
+    assert np.isnan(datetime_to_timestamp(np.datetime64("NaT"), "%Y-%m-%d"))
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("time_value, expected_seconds", [
+    # midnight → 0
+    (time(0, 0, 0), 0.0),
+    # whole hours
+    (time(1, 0, 0), 3600.0),
+    (time(12, 0, 0), 43200.0),
+    (time(23, 0, 0), 82800.0),
+    # hours + minutes + seconds
+    (time(2, 30, 0), 9000.0),
+    (time(14, 30, 0), 52200.0),
+    (time(23, 59, 59), 86399.0),
+    # sub-second precision (microseconds)
+    (time(0, 0, 0, 500000), 0.5),
+    (time(10, 30, 45, 500000), 37845.5),
+    (time(0, 0, 0, 1), 0.000001),
+])
+def test_datetime_to_timestamp_datetime_time(time_value, expected_seconds, rp_logger):
+    """EPMCTDM-7585: 'datetime_to_timestamp' must handle datetime.time values
+    produced by fastavro for Avro 'time-millis' and 'time-micros' logical types.
+    Previously such inputs fell through all branches and returned None, turning
+    the time feature into NaN and aborting model training."""
+    rp_logger.info(
+        f"Test 'datetime_to_timestamp' with datetime.time input: {time_value}"
+    )
+    result = datetime_to_timestamp(time_value, "%H:%M:%S")
+
+    assert result is not None, "datetime.time must not return None (becomes NaN in training)"
+    assert not np.isnan(result), "datetime.time must not produce NaN"
+    assert np.isfinite(result), "datetime.time must produce a finite numeric value"
+    assert result == pytest.approx(expected_seconds), (
+        f"time({time_value}) should encode as {expected_seconds}s since midnight"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_datetime_to_timestamp_datetime_time_null_degrades_to_nan(rp_logger):
+    """Null sentinels passed alongside datetime.time values must still return NaN,
+    not crash or silently skip the null-guard branch."""
+    rp_logger.info(
+        "Test 'datetime_to_timestamp' null-guard is preserved for time-column nulls"
+    )
+    assert np.isnan(datetime_to_timestamp(np.nan, "%H:%M:%S"))
+    assert np.isnan(datetime_to_timestamp(None, "%H:%M:%S"))
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -123,21 +210,70 @@ def test_timestamp_to_datetime_with_delta(rp_logger):
 
 @pytest.mark.parametrize(
     "value, date_format, na_values, expected_result", [
+        # valid string date
         (
             "01-02-2023", "%d-%m-%Y", [], 1675209600.0
         ),
         (
+            "01-02-2023", "%d-%m-%Y", None, 1675209600.0
+        ),
+        # datetime object
+        (
+            datetime(2023, 2, 1), "%d-%m-%Y", [], 1675209600.0
+        ),
+        # date object
+        (
+            date(2023, 2, 1), "%d-%m-%Y", [], 1675209600.0
+        ),
+        # numpy datetime64
+        (
+            np.datetime64("2023-02-01"), "%d-%m-%Y", [], 1675209600.0
+        ),
+        # datetime.time object — encoded as seconds since midnight
+        (
+            time(12, 30, 0), "%H:%M:%S", [], 45000.0
+        ),
+        # value in na_values list → None
+        (
             "label", "%d-%m-%Y", ["label"], None
         ),
+        # value is None → None
         (
             None, "%d-%m-%Y", [], None
-        )
+        ),
+        # pd.NA (ambiguous boolean) → None
+        (
+            pd.NA, "%d-%m-%Y", [], None
+        ),
+        (
+            pd.NA, "%d-%m-%Y", None, None
+        ),
+        (
+            pd.NA, "%d-%m-%Y", ["N/A", "missing"], None
+        ),
+        # np.nan → None
+        (
+            np.nan, "%d-%m-%Y", ["N/A", "missing"], None
+        ),
+        # "N/A" → None
+        (
+            "N/A", "%d-%m-%Y", ["N/A", "missing"], None
+        ),
+        # unrecognised type: datetime_to_timestamp returns None implicitly,
+        (
+            42, "%d-%m-%Y", [], None
+        ),
     ]
 )
 def test_convert_date_to_timestamp(value, date_format, na_values, expected_result, rp_logger):
     rp_logger.info("Test the function 'convert_date_to_timestamp'")
     assert convert_date_to_timestamp(value, date_format, na_values) == expected_result
     rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+# strftime formatting of year 1 is platform-dependent:
+# Linux renders it as "1", Windows renders it as "0001".
+_MIN_DATE_STR = datetime(1, 1, 1).strftime("%d-%m-%Y")
 
 
 @pytest.mark.parametrize("value, date_format, to_datetime_conversion, expected_result", [
@@ -147,10 +283,79 @@ def test_convert_date_to_timestamp(value, date_format, na_values, expected_resul
     (1675209600.0, "%Y-%m-%d", True, datetime(2023, 2, 1, 0, 0)),
     (1680480000.0, "%Y-%m-%d", True, datetime(2023, 4, 3, 0, 0)),
     (1685923200.0, "%Y-%m-%d", True, datetime(2023, 6, 5, 0, 0)),
+    # date_format=None falls back to "%Y-%m-%d %H:%M:%S"
+    (1675209600.0, None, False, "2023-02-01 00:00:00"),
+    # MAX boundary is clamped to datetime(9999, 12, 31, 23, 59, 59, 999999)
+    (253402300800, "%d-%m-%Y", False, "31-12-9999"),
+    (253402300800, "%d-%m-%Y", True, datetime(9999, 12, 31, 23, 59, 59, 999999)),
+    # MIN boundary is clamped to datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc);
+    # year-1 formatting differs by OS (Linux: "1", Windows: "0001")
+    (-62135510400, "%d-%m-%Y", False, _MIN_DATE_STR),
+    (-62135510400, "%d-%m-%Y", True, datetime(1, 1, 1, 0, 0, tzinfo=timezone.utc)),
 ])
 def test_convert_to_date(value, date_format, expected_result, to_datetime_conversion, rp_logger):
     rp_logger.info("Test the function 'convert_to_date'")
     assert convert_to_date(value, date_format, to_datetime_conversion) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    "value, date_format, to_datetime_conversion, date_restore_type, expected_result",
+    [
+        # restore_type="date" → returns datetime.date when to_datetime_conversion=True
+        (1675209600.0, "%d-%m-%Y", True, "date", date(2023, 2, 1)),
+        # restore_type="date" → returns formatted string when to_datetime_conversion=False
+        (1675209600.0, "%d-%m-%Y", False, "date", "01-02-2023"),
+        # restore_type="datetime" behaves the same as the default (None)
+        (1675209600.0, "%Y-%m-%d", True, "datetime", datetime(2023, 2, 1, 0, 0)),
+        # restore_type="time" with to_datetime_conversion=True → datetime.time object
+        (3723.0, "%H:%M:%S", True, "time", time(1, 2, 3)),
+        # restore_type="time" with to_datetime_conversion=False → "HH:MM:SS" string
+        (3723.0, "%H:%M:%S", False, "time", "01:02:03"),
+        # restore_type="time" with sub-second precision → "HH:MM:SS.ffffff" string
+        (3723.5, "%H:%M:%S", False, "time", "01:02:03.500000"),
+        # restore_type="time" with sub-second precision,
+        # to_datetime_conversion=True → time with microseconds
+        (3723.5, "%H:%M:%S", True, "time", time(1, 2, 3, 500000)),
+    ])
+def test_convert_to_date_with_restore_type(
+    value, date_format, to_datetime_conversion, date_restore_type, expected_result, rp_logger
+):
+    rp_logger.info("Test 'convert_to_date' with the 'date_restore_type' parameter")
+    assert convert_to_date(
+        value, date_format, to_datetime_conversion, date_restore_type
+    ) == expected_result
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("value", [
+    3723.9999995,   # round(fractional * 1e6) == 1_000_000 without upper clamp
+    -1.5,           # seconds - int(seconds) == -0.5 → negative microsecond without % 1
+    -37845.0,       # negative seconds from model output
+    86401.5,        # seconds > 86400, normalised to [0, 86400)
+])
+def test_timestamp_to_datetime_time_edge_cases(value, rp_logger):
+    """EPMCTDM-7585: timestamp_to_datetime with restore_type='time' must not raise
+    ValueError for out-of-range or floating-point-rounded microseconds."""
+    rp_logger.info(
+        "Test that 'timestamp_to_datetime' with restore_type='time' handles "
+        "edge cases without raising ValueError"
+    )
+    result = timestamp_to_datetime(value, restore_type="time")
+    assert isinstance(result, time)
+    assert 0 <= result.microsecond <= 999_999
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("value", [np.nan, float("nan"), None])
+def test_convert_to_date_is_nan_safe(value, rp_logger):
+    """EPMCTDM-7581: a NaN/None timestamp must degrade to NaN instead of raising
+    'cannot convert float NaN to integer'."""
+    rp_logger.info("Test that 'convert_to_date' is NaN-safe")
+    result = convert_to_date(value, "%Y-%m-%d")
+    assert isinstance(result, float) and np.isnan(result)
+    result_as_datetime = convert_to_date(value, "%Y-%m-%d", to_datetime_conversion=True)
+    assert isinstance(result_as_datetime, float) and np.isnan(result_as_datetime)
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -265,7 +470,7 @@ def test_get_source_path_extension_with_various_path(path, expected, rp_logger):
         "to ensure it correctly identifies the file extension(s)."
     )
     assert get_source_path_extension(path=path) == expected
-    rp_logger.info(SUCCESSFUL_MESSAGE)    
+    rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
 class TestGenerateUniqueValuesByRegex:
@@ -478,4 +683,216 @@ def test_get_source_path_extension_with_metadata(path, expected, rp_logger):
         },
     }
     assert get_source_path_extension(table_name="pk_test", metadata=test_metadata) == expected
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def _fake_open(files):
+    """
+    Return an ``open`` replacement that serves in-memory content for the given
+    paths and raises FileNotFoundError for anything else, so cgroup file lookups
+    can be simulated regardless of the host's real cgroup layout.
+    """
+    def _open(path, *args, **kwargs):
+        if path in files:
+            return mock_open(read_data=files[path])()
+        raise FileNotFoundError(path)
+
+    return _open
+
+
+def test_cgroup_cpu_quota_v2(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' reads a cgroup v2 'cpu.max' quota")
+    files = {"/sys/fs/cgroup/cpu.max": "4000000 100000"}
+    with patch("builtins.open", _fake_open(files)):
+        assert _cgroup_cpu_quota() == 40
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cgroup_cpu_quota_v2_unlimited(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' returns None when cgroup v2 quota is 'max'")
+    files = {"/sys/fs/cgroup/cpu.max": "max 100000"}
+    with patch("builtins.open", _fake_open(files)):
+        assert _cgroup_cpu_quota() is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cgroup_cpu_quota_v1(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' reads cgroup v1 cfs quota/period")
+    files = {
+        "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "250000",
+        "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000",
+    }
+    with patch("builtins.open", _fake_open(files)):
+        # ceil(250000 / 100000) == 3
+        assert _cgroup_cpu_quota() == 3
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cgroup_cpu_quota_absent(rp_logger):
+    rp_logger.info("Test '_cgroup_cpu_quota' returns None when no cgroup files exist")
+    with patch("builtins.open", _fake_open({})):
+        assert _cgroup_cpu_quota() is None
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_available_cpu_count_honours_quota(rp_logger):
+    rp_logger.info(
+        "Test 'get_available_cpu_count' returns the cgroup quota when it is the smallest"
+    )
+    # create=True so the patch works on Windows, where os.sched_getaffinity
+    # does not exist (the production code guards it with try/except).
+    with patch.object(utils_module, "_cgroup_cpu_quota", return_value=40), \
+            patch("os.sched_getaffinity", return_value=set(range(96)), create=True), \
+            patch("os.cpu_count", return_value=96):
+        assert get_available_cpu_count() == 40
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_available_cpu_count_affinity_fallback(rp_logger):
+    rp_logger.info(
+        "Test 'get_available_cpu_count' falls back to the affinity mask without a quota"
+    )
+    with patch.object(utils_module, "_cgroup_cpu_quota", return_value=None), \
+            patch("os.sched_getaffinity", return_value=set(range(8)), create=True), \
+            patch("os.cpu_count", return_value=96):
+        assert get_available_cpu_count() == 8
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_available_cpu_count_minimum_one(rp_logger):
+    rp_logger.info("Test 'get_available_cpu_count' returns at least 1 when nothing is detectable")
+    with patch.object(utils_module, "_cgroup_cpu_quota", return_value=None), \
+            patch("os.sched_getaffinity", side_effect=OSError, create=True), \
+            patch("os.cpu_count", return_value=None):
+        assert get_available_cpu_count() == 1
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_deployment_mode_defaults_to_dedicated(rp_logger, monkeypatch):
+    monkeypatch.delenv("SYNGEN_DEPLOYMENT_MODE", raising=False)
+
+    assert get_deployment_mode() == "dedicated"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_deployment_mode_uses_dedicated_for_invalid_value(rp_logger, monkeypatch):
+    monkeypatch.setenv("SYNGEN_DEPLOYMENT_MODE", "invalid")
+
+    assert get_deployment_mode() == "dedicated"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_get_thread_parallelism_budget_honours_native_thread_cap(rp_logger, monkeypatch):
+    monkeypatch.setenv("OMP_NUM_THREADS", "2")
+    monkeypatch.setenv("MKL_NUM_THREADS", "4")
+    with patch.object(utils_module, "get_available_cpu_count", return_value=8):
+        assert get_thread_parallelism_budget() == 2
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_sets_dedicated_defaults(rp_logger, monkeypatch):
+    rp_logger.info("Test 'limit_thread_parallelism' sets thread defaults from the CPU budget")
+    for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OMP_WAIT_POLICY", "KMP_BLOCKTIME"):
+        monkeypatch.setenv(var, "")
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.delenv("SYNGEN_DEPLOYMENT_MODE", raising=False)
+    with patch.object(utils_module, "get_available_cpu_count", return_value=4):
+        applied = limit_thread_parallelism()
+    assert applied == 4
+    assert os.environ["OMP_NUM_THREADS"] == "4"
+    assert os.environ["MKL_NUM_THREADS"] == "4"
+    assert "OMP_WAIT_POLICY" not in os.environ
+    assert "KMP_BLOCKTIME" not in os.environ
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_sets_shared_wait_policy(rp_logger, monkeypatch):
+    for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OMP_WAIT_POLICY", "KMP_BLOCKTIME"):
+        monkeypatch.setenv(var, "")
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("SYNGEN_DEPLOYMENT_MODE", "shared")
+    with patch.object(utils_module, "get_available_cpu_count", return_value=4):
+        applied = limit_thread_parallelism()
+    assert applied == 4
+    assert os.environ["OMP_NUM_THREADS"] == "4"
+    assert os.environ["MKL_NUM_THREADS"] == "4"
+    assert os.environ["OMP_WAIT_POLICY"] == "passive"
+    assert os.environ["KMP_BLOCKTIME"] == "0"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_limit_thread_parallelism_respects_preset(rp_logger, monkeypatch):
+    rp_logger.info("Test 'limit_thread_parallelism' does not override caller-provided env vars")
+    monkeypatch.setenv("SYNGEN_DEPLOYMENT_MODE", "shared")
+    monkeypatch.setenv("OMP_NUM_THREADS", "2")
+    monkeypatch.setenv("OMP_WAIT_POLICY", "active")
+    monkeypatch.delenv("MKL_NUM_THREADS", raising=False)
+    with patch.object(utils_module, "get_available_cpu_count", return_value=40):
+        limit_thread_parallelism()
+    assert os.environ["OMP_NUM_THREADS"] == "2"        # preserved
+    assert os.environ["OMP_WAIT_POLICY"] == "active"   # preserved
+    assert os.environ["MKL_NUM_THREADS"] == "40"       # filled from budget
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@pytest.mark.parametrize("level", SUPPORTED_LOG_LEVELS)
+def test_setup_log_process_accepts_every_supported_level(level, rp_logger, monkeypatch, tmp_path):
+    """EPMCTDM-7630: every level loguru actually supports must be accepted."""
+    rp_logger.info(f"Test 'setup_log_process' accepts the supported level '{level}'")
+    monkeypatch.chdir(tmp_path)
+
+    setup_log_process(
+        type_of_process="train", log_level=level, table_name="t", metadata_path=None
+    )
+
+    assert os.environ["LOGURU_LEVEL"] == level
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_setup_log_process_rejects_unsupported_level(rp_logger, monkeypatch, tmp_path):
+    """EPMCTDM-7630: an unsupported level must raise a clear message naming the parameter
+    and listing the supported levels - not loguru's bare internal error - and must do so
+    BEFORE anything is written to `os.environ`, so an invalid value cannot propagate to a
+    child process and fail its import (as it did in round 3, tmp/os-3rd-report.md §7.2)."""
+    rp_logger.info("Test 'setup_log_process' rejects an unsupported level")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("LOGURU_LEVEL", raising=False)
+
+    with pytest.raises(ValueError) as error:
+        setup_log_process(
+            type_of_process="train", log_level="test", table_name="t", metadata_path=None
+        )
+
+    assert str(error.value) == (
+        "Unsupported log level: 'test'. The supported log levels are: "
+        "TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL."
+    )
+    assert "LOGURU_LEVEL" not in os.environ
+    assert not (tmp_path / "model_artifacts").exists()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_supported_log_levels_matches_loguru(rp_logger):
+    """EPMCTDM-7630: `SUPPORTED_LOG_LEVELS` is a hardcoded tuple rather than derived from
+    loguru's internals, so this pins it against loguru's actual level set - a loguru upgrade
+    that adds or renames a level would otherwise drift silently."""
+    rp_logger.info("Test 'SUPPORTED_LOG_LEVELS' matches loguru's own registered levels")
+    from loguru import logger as loguru_logger
+
+    actual_levels = set(loguru_logger._core.levels.keys())
+    assert set(SUPPORTED_LOG_LEVELS) == actual_levels
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_cli_log_level_choices_match_supported_levels(rp_logger):
+    """EPMCTDM-7630: base's CLI accepted 6 of loguru's 7 levels (missing SUCCESS) while the
+    SDK's Literal listed the same 6 - two sets of accepted values silently drifting apart.
+    Pin both CLI commands' `click.Choice` against the single shared constant."""
+    rp_logger.info("Test train/infer CLI --log_level choices match SUPPORTED_LOG_LEVELS")
+    from syngen.train import cli_launch_train
+    from syngen.infer import cli_launch_infer
+
+    for command in (cli_launch_train, cli_launch_infer):
+        option = next(p for p in command.params if p.name == "log_level")
+        assert tuple(option.type.choices) == SUPPORTED_LOG_LEVELS
     rp_logger.info(SUCCESSFUL_MESSAGE)

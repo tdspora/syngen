@@ -1,9 +1,11 @@
-from typing import Dict, List, Optional, Any, Callable, Literal, Tuple
+from typing import Dict, List, NamedTuple, Optional, Any, Callable, Literal, Tuple
+import multiprocessing as mp
 import os
 import shutil
 from itertools import product
 
 import pandas as pd
+import torch
 from attrs import define, field
 from copy import deepcopy
 from loguru import logger
@@ -14,11 +16,114 @@ from syngen.ml.strategies import TrainStrategy, InferStrategy
 from syngen.ml.reporters import Report
 from syngen.ml.config import Validator
 from syngen.ml.mlflow_tracker import MlflowTrackerFactory
-from syngen.ml.context.context import global_context
-from syngen.ml.utils import ProgressBarHandler, get_source_path_extension
+from syngen.ml.format_settings import set_format_settings
+from syngen.ml.utils import (
+    ProgressBarHandler,
+    get_source_path_extension,
+    get_thread_parallelism_budget,
+)
+from syngen.ml.utils.device import assign_gpu_index, cuda_device_count, resolve_device
 from syngen.ml.mlflow_tracker import MlflowTracker
 from syngen.ml.processors import PreprocessHandler, PostprocessHandler
-from syngen.ml.validation_schema import ValidationSchema
+from syngen.ml.validation_schema import ValidationMetadataSchema
+
+
+class _TrainTableJob(NamedTuple):
+    """One table's worth of work dispatched to a spawned training process.
+
+    Module-level (not nested) so it stays picklable under the `spawn` start
+    method, mirroring `_FeatureTuples` in wrappers.py (EPMCTDM-7630).
+    """
+
+    table: str
+    data: pd.DataFrame
+    schema: Dict
+    metadata: Dict
+    metadata_path: Optional[str]
+    gpu_index: Optional[int]
+    delta: float
+
+
+def _train_worker_init(threads_per_worker: int):
+    torch.set_num_threads(threads_per_worker)
+
+
+def _save_input_data_for_job(metadata: Dict, data: pd.DataFrame, table_name: str):
+    """Mirrors `Worker._save_input_data`, callable without a Worker instance.
+
+    Must run inside `_run_train_table_job`, BEFORE `Report().generate_report()`
+    - the sample report's `_extract_report_data()` reads this exact file back,
+    and in the sequential path `_train_table` already writes it immediately
+    after training, well before the later, separate `_generate_reports()`
+    pass. Moving report generation into the child (see `_run_train_table_job`)
+    without also moving this write into the child - and before the report
+    call - would make the report try to read a file the parent hasn't written
+    yet, since the parent's write is now more than a full job iteration later
+    (found by actually running multi-table training on real GPU hardware).
+    """
+    fernet_key = metadata[table_name].get("encryption", {}).get("fernet_key", None)
+    path_to_input_data = (
+        f"model_artifacts/tmp_store/{slugify(table_name)}/"
+        f"input_data_{slugify(table_name)}.{'dat' if fernet_key else 'pkl'}"
+    )
+    DataLoader(
+        path=path_to_input_data,
+        table_name=table_name,
+        metadata=metadata,
+        sensitive=True
+    ).save_data(data)
+
+
+def _run_train_table_job(job: "_TrainTableJob") -> str:
+    """Runs in a spawned worker process. `spawn` gives every child a fresh
+    interpreter, so none of the process-local singletons the sequential path
+    relies on carry over - each must be re-primed here before delegating to
+    TrainStrategy().run():
+
+    - `ProgressBarHandler().delta` is read directly (not just written) by
+      `VAEWrapper._train`, which divides by it - a fresh child's instance has
+      never had `set_progress(delta=...)` called on it, so that division
+      raises `TypeError: unsupported operand type(s) for /: 'NoneType' and
+      'int'` unless primed here first. Per-epoch progress on top of this only
+      updates the child's own instance, invisible to the parent - an accepted
+      granularity loss during the parallel-training phase.
+    - `MlflowTrackerFactory.create_tracker` configures the `MlflowTracker`
+      singleton (experiment name, tracking URI); without it, `MlflowTracker()`
+      is never activated in the child and logging becomes a silent no-op.
+    - `Report().generate_report()` must run here too: `TrainStrategy.
+      add_reporters()` (called inside `TrainStrategy().run()` below)
+      registers reporters against the child's `Report()` registry, which the
+      parent's later blanket `_generate_reports()` call can never see.
+      `Report.generate_report()` groups reporters by table_name and generates
+      each table's report independently, so calling it once per table here is
+      safe - but it must run AFTER `_save_input_data_for_job`, since the
+      sample report reads that file back.
+    """
+    train_settings = job.metadata[job.table]["train_settings"]
+    ProgressBarHandler().set_progress(
+        delta=job.delta,
+        message=f"Training process of the table - '{job.table}' has started",
+    )
+    MlflowTrackerFactory.create_tracker(table_name=job.table, metadata_path=job.metadata_path)
+    TrainStrategy().run(
+        data=job.data,
+        schema=job.schema,
+        metadata=job.metadata,
+        metadata_path=job.metadata_path,
+        source=train_settings.get("source"),
+        epochs=train_settings["epochs"],
+        drop_null=train_settings["drop_null"],
+        row_limit=train_settings["row_limit"],
+        table_name=job.table,
+        reports=train_settings["reports"],
+        batch_size=train_settings["batch_size"],
+        loader=None,
+        device=resolve_device(job.gpu_index),
+    )
+    _save_input_data_for_job(job.metadata, job.data, job.table)
+    Report().generate_report()
+    Report().clear_report()
+    return job.table
 
 
 @define
@@ -43,10 +148,10 @@ class Worker:
     infer_stages: List = ["INFER", "REPORT"]
 
     def __attrs_post_init__(self):
-        self.metadata = self.__fetch_metadata()
-        self._update_metadata()
+        self.__fetch_metadata()
         self.__validate_schema()
         self._clean_up()
+        self._update_metadata()
         self.__validate_metadata()
         self.initial_table_names = list(self.merged_metadata.keys())
         self._set_mlflow()
@@ -128,7 +233,7 @@ class Worker:
         """
         Validate the schema of the metadata file
         """
-        ValidationSchema(
+        ValidationMetadataSchema(
             metadata=self.metadata,
             validation_of_source=False if self.loader is not None else True,
             process=self.type_of_process
@@ -238,16 +343,15 @@ class Worker:
         elif self.table_name:
             self._update_metadata_for_table()
 
-    def __fetch_metadata(self) -> Dict:
+    def __fetch_metadata(self):
         """
         Fetch the metadata for training or infer process
         """
         if self.metadata_path:
-            metadata = MetadataLoader(path=self.metadata_path).load_data()
-            return metadata
+            self.metadata = MetadataLoader(path=self.metadata_path).load_data()
         elif self.table_name:
             source = self.settings.get("source")
-            metadata = {
+            self.metadata = {
                 self.table_name: {
                     "train_settings": {
                         "source": source,
@@ -258,7 +362,6 @@ class Worker:
                     "format": {}
                 }
             }
-            return metadata
 
     @staticmethod
     def _get_tables_without_keys(config_of_tables: Dict) -> List[str]:
@@ -432,7 +535,6 @@ class Worker:
         Train process for a single table
         """
         config_of_table = metadata[table]
-        global_context(config_of_table.get("format", {}))
         train_settings = config_of_table["train_settings"]
         log_message = f"Training process of the table - '{table}' has started"
         logger.info(log_message)
@@ -461,6 +563,70 @@ class Worker:
             self._save_input_data(data=data, table_name=table)
         self._write_success_file(table_name=table, type_of_process="train")
 
+    def _should_train_in_parallel(self, tables_for_training: List) -> bool:
+        """
+        Task-parallel multi-GPU training only applies when there's more than
+        one table AND more than one GPU visible - otherwise a single table
+        would just serialize onto one GPU/CPU, same as the sequential path.
+        `self.loader` (an Optional[Callable] an SDK caller can supply) must
+        be None: a bound lambda/closure over unpicklable state would break
+        the `spawn` start method required for CUDA-safety, and there is no
+        cheap way to probe picklability up front - so the parallel path is
+        skipped whenever a custom loader is in use, falling back to the
+        untouched sequential path.
+        """
+        return (
+            self.loader is None
+            and len(tables_for_training) > 1
+            and cuda_device_count() > 1
+        )
+
+    def __train_tables_parallel(
+        self, tables_for_training: List, metadata_for_training: Dict, delta: float
+    ):
+        """
+        Train multiple tables in parallel, one GPU per table (task-parallel
+        across tables, not DistributedDataParallel - see tmp/plan-gpu.md).
+        Preprocessing runs sequentially in the parent first since it has
+        side effects on self.row_subset_mapping; only the TrainStrategy().run
+        call itself is dispatched to a spawned worker process per table.
+        """
+        jobs = []
+        for i, table in enumerate(tables_for_training):
+            set_format_settings(metadata_for_training[table].get("format", {}))
+            data, schema = self.__preprocess_data(table_name=table)
+            jobs.append(
+                _TrainTableJob(
+                    table=table,
+                    data=data,
+                    schema=schema,
+                    metadata=metadata_for_training,
+                    metadata_path=self.metadata_path,
+                    gpu_index=assign_gpu_index(i),
+                    delta=delta,
+                )
+            )
+        n_jobs = min(len(tables_for_training), cuda_device_count())
+        threads_per_worker = max(1, get_thread_parallelism_budget() // n_jobs)
+
+        # `_save_input_data_for_job` already runs inside `_run_train_table_job`
+        # (before that job's own report generation, which reads it back), so
+        # the parent's finalize step - unlike the sequential `_train_table` -
+        # does not repeat it here.
+        ctx = mp.get_context("spawn")
+        with ctx.Pool(
+            processes=n_jobs,
+            initializer=_train_worker_init,
+            initargs=(threads_per_worker,),
+        ) as pool:
+            for table in pool.imap_unordered(_run_train_table_job, jobs):
+                self._save_metadata_file()
+                ProgressBarHandler().set_progress(
+                    delta=delta,
+                    message=f"Training of the table - '{table}' was completed"
+                )
+                self._write_success_file(table_name=table, type_of_process="train")
+
     def __train_tables(
         self,
         tables_for_training: List,
@@ -478,9 +644,13 @@ class Worker:
         """
         delta = 0.49 / len(tables_for_training)
 
-        for table in tables_for_training:
-            data, schema = self.__preprocess_data(table_name=table)
-            self._train_table(data, schema, table, metadata_for_training, delta)
+        if self._should_train_in_parallel(tables_for_training):
+            self.__train_tables_parallel(tables_for_training, metadata_for_training, delta)
+        else:
+            for table in tables_for_training:
+                set_format_settings(metadata_for_training[table].get("format", {}))
+                data, schema = self.__preprocess_data(table_name=table)
+                self._train_table(data, schema, table, metadata_for_training, delta)
 
         if generation_of_synth_data:
             self.__infer_tables(
@@ -517,12 +687,28 @@ class Worker:
             ), None
         )
 
+    def _get_row_subset_for_table(self, table: str) -> int:
+        """
+        Resolve row subset for a table, including surrogate tables
+        produced by PK/FK split.
+        """
+        if table in self.row_subset_mapping:
+            return self.row_subset_mapping[table]
+
+        parent_table = self._find_parent_table(table)
+        if parent_table and parent_table in self.row_subset_mapping:
+            return self.row_subset_mapping[parent_table]
+
+        raise KeyError(
+            f"Row subset for table '{table}' is missing in row_subset_mapping"
+        )
+
     def _infer_table(self, table, metadata, type_of_process, delta, is_nested=False):
         """
         Infer process for a single table
         """
         config_of_table = metadata[table]
-        global_context(config_of_table.get("format", {}))
+        set_format_settings(config_of_table.get("format", {}))
         log_message = f"Infer process of the table - '{table}' has started"
         logger.info(log_message)
         ProgressBarHandler().set_progress(delta=delta, message=log_message)
@@ -541,7 +727,7 @@ class Worker:
             size=(
                 settings.get("size")
                 if type_of_process == "infer"
-                else self.row_subset_mapping[table]
+                else self._get_row_subset_for_table(table)
             ),
             table_name=table,
             run_parallel=settings.get("run_parallel") if type_of_process == "infer" else False,

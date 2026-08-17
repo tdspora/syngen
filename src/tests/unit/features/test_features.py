@@ -1,7 +1,8 @@
+import random
+
 import pytest
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 from unittest.mock import patch, MagicMock
 from sklearn.preprocessing import (
     StandardScaler,
@@ -14,6 +15,7 @@ from syngen.ml.vae.models.features import (
     CharBasedTextFeature,
     ContinuousFeature,
     CategoricalFeature,
+    DateFeature,
 )
 from tests.conftest import SUCCESSFUL_MESSAGE, DIR_NAME
 
@@ -34,6 +36,54 @@ def test_init_base_feature(name, expected_name, rp_logger):
     assert feature.name == expected_name
     assert feature.original_name == name
     assert feature.weight == 1.0
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_date_feature_fit_transform_with_numpy_datetime64(rp_logger):
+    """EPMCTDM-7581: a datetime64[ns] column (as loaded from Parquet/Delta) must
+    not poison the date feature. Previously 'datetime_to_timestamp' returned None
+    for numpy.datetime64, making the fitted/transformed data entirely NaN, which
+    diverged training to a NaN model and crashed at inference."""
+    rp_logger.info(
+        "Testing 'DateFeature.fit'/'transform' on a datetime64[ns] column"
+    )
+    dates = pd.Series(pd.date_range("2015-01-01", periods=300, freq="D"))
+    data = pd.DataFrame({"created_dt": dates})
+    assert str(data["created_dt"].dtype) == "datetime64[ns]"
+
+    feature = DateFeature(name="created_dt")
+    feature.fit(
+        data,
+        date_mapping={"created_dt": "%Y-%m-%d"},
+        to_datetime_conversion={"created_dt": False},
+    )
+    transformed = np.asarray(feature.transform(data), dtype=float)
+    assert np.isfinite(transformed).all()
+    assert not np.isnan(transformed).any()
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_date_feature_fit_transform_with_tz_aware_datetime64(rp_logger):
+    """EPMCTDM-7581 (Avro counterpart): a tz-aware datetime64[ns, UTC] column (as
+    produced by Avro 'timestamp' logical types via pandavro) must not poison the
+    date feature. The timezone is stripped during conversion and every transformed
+    value stays finite."""
+    rp_logger.info(
+        "Testing 'DateFeature.fit'/'transform' on a tz-aware datetime64[ns, UTC] column"
+    )
+    dates = pd.date_range("2015-01-01", periods=300, freq="D").tz_localize("UTC")
+    data = pd.DataFrame({"created_ts": dates})
+    assert str(data["created_ts"].dtype) == "datetime64[ns, UTC]"
+
+    feature = DateFeature(name="created_ts")
+    feature.fit(
+        data,
+        date_mapping={"created_ts": "%Y-%m-%d %H:%M:%S%z"},
+        to_datetime_conversion={"created_ts": True},
+    )
+    transformed = np.asarray(feature.transform(data), dtype=float)
+    assert np.isfinite(transformed).all()
+    assert not np.isnan(transformed).any()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
@@ -103,12 +153,11 @@ def test_top_p_filtering(rp_logger):
         name="text_column",
         text_max_len=4
     )
-    data = tf.nn.softmax(
-        np.loadtxt(
-            f"{DIR_NAME}/unit/features/fixtures/tensor.csv"
-        ).reshape((20, 4, 12)).astype(np.float32),
-        axis=-1
-    )
+    logits = np.loadtxt(
+        f"{DIR_NAME}/unit/features/fixtures/tensor.csv"
+    ).reshape((20, 4, 12)).astype(np.float32)
+    exp = np.exp(logits - logits.max(axis=-1, keepdims=True))
+    data = exp / exp.sum(axis=-1, keepdims=True)
 
     result = feature._top_p_filtering(data, top_p=0.7)
     result /= result.sum(axis=2, keepdims=True)
@@ -416,5 +465,35 @@ def test_categorical_feature_fit_transform_pipeline(input_data, rp_logger):
     np.testing.assert_array_equal(
         recovered,
         input_data['col'].astype(str).values
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_select_scaler_is_deterministic_for_borderline_column(rp_logger):
+    """EPMCTDM-7630: the scaler decision must not depend on the global RNG.
+
+    `_select_scaler` runs Shapiro on a 500-row subsample and compares the p-value against
+    a hard 0.05 threshold. This column is 999 standard-normal values plus one extreme
+    outlier, so a 500-of-1000 draw includes the outlier about half the time: when it does
+    the p-value collapses and a different scaler is chosen. Unseeded that is a coin flip
+    per run, and the scaler determines the column's transform - so a different model and
+    different generated data at a fixed seed.
+
+    The bug is latent on real columns (their p-values sit nowhere near 0.05), which is why
+    the column here is engineered to be borderline.
+    """
+    rp_logger.info("Testing _select_scaler is deterministic for a borderline column")
+    values = np.random.default_rng(0).normal(size=1000)
+    values[0] = 1e6
+    data = pd.DataFrame({"c": values})
+
+    picks = []
+    for i in range(8):
+        random.seed(i * 7919)
+        np.random.seed(i * 104729)      # perturb the global RNG, as separate runs do
+        picks.append(type(ContinuousFeature(name="c")._select_scaler(data)).__name__)
+
+    assert len(set(picks)) == 1, (
+        f"scaler choice must be stable regardless of global RNG state, got {set(picks)}"
     )
     rp_logger.info(SUCCESSFUL_MESSAGE)
