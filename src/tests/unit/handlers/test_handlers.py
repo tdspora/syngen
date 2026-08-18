@@ -413,6 +413,25 @@ def test_pool_worker_ordinal_is_stable_1_based():
     assert ordinals == [1, 2, 3]
 
 
+@patch("syngen.ml.handlers.handlers.enable_flush_denormal")
+@patch("syngen.ml.handlers.handlers.torch.set_num_threads")
+def test_worker_init_enables_flush_denormal(
+    mock_set_num_threads, mock_enable_flush_denormal, rp_logger
+):
+    """EPMCTDM-7643: FTZ/DAZ is per-process CPU state and spawned workers inherit
+    none, so worker_init must set it - and unconditionally, not behind the
+    `threads_per_worker` guard."""
+    mock_wrapper = MagicMock()
+
+    VaeInferHandler.worker_init(mock_wrapper, threads_per_worker=2)
+    VaeInferHandler.worker_init(mock_wrapper)
+
+    assert mock_enable_flush_denormal.call_count == 2, (
+        "expected FTZ to be enabled on both the threaded and the legacy path"
+    )
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 # ---------------------------------------------------------------------------
 # kde_gen: slugified filename lookup
 # ---------------------------------------------------------------------------

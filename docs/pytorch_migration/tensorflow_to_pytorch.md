@@ -196,7 +196,8 @@ The honest position: the PyTorch training loop was initially slower per epoch th
 TensorFlow one, and a round of optimisation work recovered most but not all of that gap.
 Section 6.11 gives the specific measurements along with a clear statement of what they do
 and do not establish, since they came from single runs on one machine and no benchmark
-harness is committed to the repository.
+harness is committed to the repository. A later and larger win, specific to tables with
+character-level text columns, came from flushing subnormal floats to zero — section 6.12.
 
 More consequential than raw speed is a resource-management fix. When several syngen jobs
 ran on the same machine, PyTorch's internal thread pools would each try to use every
@@ -1670,7 +1671,7 @@ half of it still has no explicit ceiling test.
 
 ## Part 6 — Training and optimisation
 
-*Audience: data scientists primarily. Developers should read 6.2 and 6.11.*
+*Audience: data scientists primarily. Developers should read 6.2, 6.11 and 6.12.*
 
 **Overview.** This is where the two frameworks differ most visibly, and where the
 migration made its most consequential decision. TensorFlow computes gradients by recording
@@ -2119,6 +2120,60 @@ Two candidates were measured and rejected: worker processes (about 1.4× slower,
 
 Not addressed: the mixture-model fit, which is a large fixed cost unrelated to the backend
 (section 13.3.3).
+
+A second, larger throughput defect was found later and is documented separately in section
+6.12.
+
+### 6.12 Denormal gradients in the character-level text branches
+
+EPMCTDM-7643 found a throughput defect larger than anything in 6.11, and one the backend swap
+neither introduced nor fixed: neither backend ever called `torch.set_flush_denormal(True)`, so
+the CPU ran with flush-to-zero off. Backward through the character-level text branches drives
+intermediate gradients below the smallest normal float (about 1.18e-38) into the **subnormal**
+range, where x86 falls back to microcoded arithmetic that is orders of magnitude slower.
+
+Whether a run sits in that regime depends on where training dynamics put the recurrent
+gradients, which is why it presented as erratic rather than as a constant tax. A run could
+stay slow for its entire lifetime, or leave the regime part-way through and speed up three- to
+fourfold with no change in the work being done — same batch size, same architecture, same
+per-batch tensor shapes throughout.
+
+| Change | Where | Effect |
+| --- | --- | --- |
+| `torch.set_flush_denormal(True)` | `utils.py:enable_flush_denormal`, called from `wrappers.py:__post_init__` and `handlers.py:worker_init` | 2.5–3.0× on a 33-text-column fixture (50 batches, 8 threads, 3 seeds) |
+
+**The size of the gain depends on how much of the run was already fast.** The 2.5–3.0× figure
+is over a 50-batch window, which is dominated by the slow band. Over a full 156-batch epoch on
+the same fixture the gain is about 1.71× (283.77 s to 166.35 s), because the unflushed run
+escapes the regime part-way through on its own and dilutes the average. Both numbers are real;
+they answer different questions, and quoting the larger one as the end-to-end figure would
+overstate it.
+
+**The fix is numerically free.** Per-batch loss is bit-identical with and without the flag —
+maximum relative difference 0.000e+00 over 50 batches, across all three seeds — so no loss
+baseline needed re-basing. Values that small contribute nothing to the result, only to the
+timing.
+
+**Two call sites, for two different reasons.** `VAEWrapper.__post_init__` covers train and
+infer alike, since both run the same character-level text LSTMs. `VaeInferHandler.worker_init`
+sets it again, and unconditionally rather than behind the `threads_per_worker` guard, because
+flush-to-zero is per-process CPU state and a spawned worker starts from a fresh interpreter
+that inherits none of it (section 8.4).
+
+**`enable_flush_denormal` imports torch inside the function body**, which is load-bearing
+rather than stylistic: `syngen.ml.utils` must stay importable before torch is, or
+`limit_thread_parallelism` would set the native-thread limits too late to take effect
+(sections 8.3 and 8.6). `test_torch_import_stays_behind_the_utils_phase_boundary` now enforces
+that, so the constraint fails CI instead of living only in a docstring.
+
+**Downstream, with one wrinkle.** `tdm_syngen` does not inherit the `__post_init__` call — its
+`MMDVAEWrapper` overrides that method without calling `super()` — so it calls
+`enable_flush_denormal` explicitly in its own wrappers and pins those call sites with tests.
+Its measured gain is larger, 3.8–4.1×, because its training configuration sits deeper in the
+subnormal band and never left it unaided.
+
+Same caveat as 6.11: **measured, not enforced.** Single machine, no committed benchmark
+harness, no regression guard on the timings themselves.
 
 ---
 
@@ -2624,6 +2679,15 @@ policy, but downstream images that install additional packages must account for 
 Normal SDK imports establish Syngen's defaults before torch is imported. The boundary is
 the application's import order: importing torch or a Syngen VAE module before the SDK means
 the application, not Syngen, owns native-thread initialization.
+
+Inside the library the same boundary is now checked rather than merely documented:
+`syngen/ml/utils/` is the pre-torch half of the import graph, and
+`test_torch_import_stays_behind_the_utils_phase_boundary` fails if a module-level
+`import torch` appears in `__init__.py` or in any submodule it imports from — which is why
+`enable_flush_denormal` imports torch inside its function body (section 6.12). The test scopes
+itself to that actual import surface rather than to every file in the directory: `device.py`
+also imports torch at module level, but nothing reaches it until `syngen.ml.worker.Worker` is
+imported, which is after `limit_thread_parallelism()` has already run.
 
 ### 8.7 Gap: the image carries GPU libraries that most deployments never load
 

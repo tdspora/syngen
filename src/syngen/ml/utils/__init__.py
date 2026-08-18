@@ -38,5 +38,6 @@ from syngen.ml.utils.utils import (  # noqa: F401;
     get_deployment_mode,
     get_thread_parallelism_budget,
     limit_thread_parallelism,
+    enable_flush_denormal,
     SUPPORTED_LOG_LEVELS
 )

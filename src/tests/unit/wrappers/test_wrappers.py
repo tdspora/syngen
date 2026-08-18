@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -91,6 +91,20 @@ def test_unfreeze_lstm_submodules_restores_train_mode_on_lstm_only(rp_logger):
     assert model[0].training, "LSTM submodule must be back in train() mode"
     assert not model[1].training, "Dropout must stay in eval() mode"
     assert not model[2].training, "BatchNorm must stay in eval() mode"
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+@patch("syngen.ml.vae.wrappers.wrappers.enable_flush_denormal")
+def test_post_init_enables_flush_denormal(mock_enable_flush_denormal, rp_logger):
+    """EPMCTDM-7643: the entire 2.5-4x win rides on this single call, so pin the
+    call site - otherwise deleting it keeps the suite green. Train and infer both
+    run the char-level text LSTMs, hence it sits before the process branch."""
+    rp_logger.info("Test 'VAEWrapper.__post_init__' enables FTZ/DAZ")
+    # A mock `self` matches neither the "train" nor the "infer" branch, so only the
+    # unconditional head of __post_init__ runs.
+    VAEWrapper.__post_init__(MagicMock())
+
+    mock_enable_flush_denormal.assert_called_once_with()
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
