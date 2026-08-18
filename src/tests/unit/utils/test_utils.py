@@ -1,4 +1,5 @@
 import ast
+import importlib.util
 import os
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from datetime import datetime, timedelta, timezone, date, time
 import numpy as np
 import pandas as pd
 
+import syngen.ml.utils as utils_package
 import syngen.ml.utils.utils as utils_module
 from syngen.ml.utils import (
     slugify_attribute,
@@ -944,26 +946,67 @@ def _imports_torch_at_module_level(path: Path) -> bool:
     return False
 
 
-def _phase_boundary_files(utils_dir: Path) -> list:
-    """Files that make up `syngen.ml.utils`'s actual pre-torch import surface:
-    `__init__.py` itself, plus every submodule it imports from - not every file
-    that happens to live in this directory. A file can share the folder without
-    being part of the package's re-export surface: `device.py` imports torch at
-    module level too, but `__init__.py` never imports from it, and every real
-    caller (`handlers.py`, `model.py`, `worker.py`) reaches it only via
-    `syngen.ml.worker.Worker`, which `train.py`/`infer.py` import strictly after
-    calling `limit_thread_parallelism()` - so it is not actually on the critical
-    path this test protects. A directory-wide glob flagged it as a false
-    positive (EPMCTDM-7643)."""
-    init_path = utils_dir / "__init__.py"
-    files = [init_path]
+def _imported_submodule_names(init_path: Path, package_name: str) -> set:
+    """Names of `package_name`'s own submodules that its `__init__.py`
+    imports from, covering both the absolute
+    (`from syngen.ml.utils.utils import x`) and the relative
+    (`from .utils import x`, `from . import utils`) spellings - a rewrite
+    from one to the other must not change what this test protects."""
+    names = set()
     for node in ast.parse(init_path.read_text(encoding="utf-8")).body:
-        if isinstance(node, ast.ImportFrom) and node.module:
-            parts = node.module.split(".")
-            if parts[:3] == ["syngen", "ml", "utils"] and len(parts) > 3:
-                submodule_file = utils_dir / f"{parts[3]}.py"
-                if submodule_file.exists() and submodule_file not in files:
-                    files.append(submodule_file)
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.level == 0:
+            prefix = f"{package_name}."
+            if (node.module or "").startswith(prefix):
+                names.add(node.module[len(prefix):].split(".")[0])
+        elif node.level == 1:
+            if node.module:
+                names.add(node.module.split(".")[0])
+            else:
+                names.update(alias.name for alias in node.names)
+    return names
+
+
+def _phase_boundary_files(package) -> list:
+    """Files that make up `package`'s actual pre-torch import surface: its
+    `__init__.py`, plus every submodule that `__init__.py` imports from -
+    not every file that happens to live in the same directory. A file can
+    share the folder without being part of the package's re-export surface:
+    `device.py` imports torch at module level too, but `__init__.py` never
+    imports from it, and every real caller (`handlers.py`, `model.py`,
+    `worker.py`) reaches it only via `syngen.ml.worker.Worker`, which
+    `train.py`/`infer.py` import strictly after calling
+    `limit_thread_parallelism()` - so it is not actually on the critical
+    path this test protects. A directory-wide glob flagged it as a false
+    positive (EPMCTDM-7643).
+
+    Each submodule is located through the import system rather than by
+    joining a guessed `<name>.py` onto the directory, so a submodule that
+    becomes a package (`<name>/__init__.py`) is still checked instead of
+    silently dropped."""
+    init_path = Path(package.__file__)
+    files = [init_path]
+    for name in sorted(_imported_submodule_names(init_path, package.__name__)):
+        spec = importlib.util.find_spec(f"{package.__name__}.{name}")
+        assert spec is not None and spec.origin, (
+            f"'{package.__name__}.__init__' imports from '{name}', which "
+            "could not be located - this test cannot verify a submodule it "
+            "cannot find"
+        )
+        path = Path(spec.origin)
+        if path not in files:
+            files.append(path)
+    # A silent empty result is the failure mode to guard against: if the
+    # import spelling in `__init__.py` ever changes to a form the resolver
+    # above does not recognise, this test would keep passing while
+    # protecting nothing.
+    assert len(files) > 1, (
+        f"expected '{package.__name__}.__init__' to import from at least "
+        "one of its own submodules; found none, so the phase-boundary check "
+        "below would be vacuous. Teach `_imported_submodule_names` the new "
+        "import spelling."
+    )
     return files
 
 
@@ -984,11 +1027,9 @@ def test_torch_import_stays_behind_the_utils_phase_boundary(rp_logger):
     rp_logger.info(
         "Test the phase-1 (pre-torch) surface of syngen.ml.utils stays torch-free"
     )
-    utils_dir = Path(utils_module.__file__).parent
-
     offenders = sorted(
         path.name
-        for path in _phase_boundary_files(utils_dir)
+        for path in _phase_boundary_files(utils_package)
         if _imports_torch_at_module_level(path)
     )
     assert not offenders, (
