@@ -42,6 +42,36 @@ matplotlib.use("Agg")
 
 # minimal number of rows in original dataset to perform clustering
 MIN_NUMBER_OF_ROWS_FOR_CLUSTERING = 3
+# upper bound of the candidate range when searching for the optimal number of clusters
+MAX_NUMBER_OF_CLUSTERS = 10
+# sklearn's n_init="auto" resolves to 1 for k-means++, which leaves the result at the mercy
+# of a single seed; 5 is where the chosen number of clusters and the score stop depending
+# on that seed
+N_INIT_FOR_CLUSTERING = 5
+# the number of clusters is a structural property of the data, so the search does not need
+# the whole table: the choice is already unambiguous well below this limit, and on data
+# without cluster structure it is undetermined at any sample size. Only the search is
+# capped - the measurement itself uses every row, because its sampling noise falls as
+# 1 / sqrt(number of rows)
+MAX_ROWS_FOR_CLUSTER_SEARCH = 50_000
+
+
+def encode_categories(original: pd.Series, synthetic: pd.Series) -> Dict:
+    """
+    Build an integer code for every category present in either dataset.
+
+    The codes must not depend on the iteration order of a set: string hashing is
+    randomized per process, so 'enumerate(set(...))' hands out different codes on
+    every run, which changes the distances between rows and therefore the reported
+    numbers. Sorting by the string form keeps the codes stable and tolerates a union
+    of mixed types, on which a bare 'sorted' would raise.
+
+    Every metric encoding the same columns must use this helper: the one that runs
+    first mutates the shared frames, so a single unfixed site re-introduces the
+    instability for all the metrics that follow it.
+    """
+    categories = sorted(set(original) | set(synthetic), key=str)
+    return {category: i + 1 for i, category in enumerate(categories)}
 
 
 class BaseMetric(ABC):
@@ -133,12 +163,9 @@ class JensenShannonDistance(BaseMetric):
         return 1 - abs(original_score - synthetic_score)
 
     def _calculate_pair_categ_vs_continuous(self, first_column, second_column):
-        map_dict = {
-            k: i + 1
-            for i, k in enumerate(
-                set(self.original[first_column]) | set(self.synthetic[first_column])
-            )
-        }
+        map_dict = encode_categories(
+            self.original[first_column], self.synthetic[first_column]
+        )
         original_score = self.__jensen_shannon_distance(
             self.original[first_column].map(map_dict),
             self.original[second_column].fillna(self.original[second_column].mean()),
@@ -151,18 +178,12 @@ class JensenShannonDistance(BaseMetric):
         return 1 - abs(original_score - synthetic_score)
 
     def _calculate_pair_categ_vs_categ(self, first_column, second_column):
-        map_dict_first = {
-            k: i + 1
-            for i, k in enumerate(
-                set(self.original[first_column]) | set(self.synthetic[first_column])
-            )
-        }
-        map_dict_second = {
-            k: i + 1
-            for i, k in enumerate(
-                set(self.original[second_column]) | set(self.synthetic[second_column])
-            )
-        }
+        map_dict_first = encode_categories(
+            self.original[first_column], self.synthetic[first_column]
+        )
+        map_dict_second = encode_categories(
+            self.original[second_column], self.synthetic[second_column]
+        )
 
         original_score = self.__jensen_shannon_distance(
             self.original[first_column].map(map_dict_first),
@@ -176,12 +197,9 @@ class JensenShannonDistance(BaseMetric):
         return 1 - abs(original_score - synthetic_score)
 
     def _calculate_pair_continuous_vs_categ(self, first_column, second_column):
-        map_dict = {
-            k: i + 1
-            for i, k in enumerate(
-                set(self.original[second_column]) | set(self.synthetic[second_column])
-            )
-        }
+        map_dict = encode_categories(
+            self.original[second_column], self.synthetic[second_column]
+        )
 
         original_score = self.__jensen_shannon_distance(
             self.original[first_column].fillna(self.original[first_column].mean()),
@@ -267,9 +285,7 @@ class Correlations(BaseMetric):
         categorical_columns = [col for col in categorical_columns if "word_count" not in col]
         cont_columns = [col for col in cont_columns if "word_count" not in col]
         for col in categorical_columns:
-            map_dict = {
-                k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
-            }
+            map_dict = encode_categories(self.original[col], self.synthetic[col])
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
@@ -1129,17 +1145,13 @@ class Clustering(BaseMetric):
 
     def calculate_all(self, categorical_columns: List[str], cont_columns: List[str]):
         for col in categorical_columns:
-            map_dict = {
-                k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
-            }
+            map_dict = encode_categories(self.original[col], self.synthetic[col])
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
-        # Perform clustering of original dataset
-        # to get optimal number of clusters
-        original_for_clustering = self.original[
-            cont_columns + categorical_columns
-            ].dropna()
+        feature_columns = cont_columns + categorical_columns
+
+        original_for_clustering = self.original[feature_columns].dropna()
 
         warning_message = (
             "It is not sufficient to perform clustering. "
@@ -1155,15 +1167,6 @@ class Clustering(BaseMetric):
             )
             return None
 
-        original_transformed = self.__preprocess_data(original_for_clustering)
-
-        optimal_clust_num = self.__get_optimal_number_of_clusters(
-            original_transformed
-            )
-
-        logger.trace(f"Optimal number of clusters for "
-                     f"original dataset: {optimal_clust_num}")
-
         row_limit = min(len(self.original), len(self.synthetic))
 
         if row_limit < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
@@ -1176,11 +1179,11 @@ class Clustering(BaseMetric):
         self.merged = (
             pd.concat(
                 [
-                    self.original[cont_columns + categorical_columns].sample(
+                    self.original[feature_columns].sample(
                         row_limit,
                         random_state=10
                     ),
-                    self.synthetic[cont_columns + categorical_columns].sample(
+                    self.synthetic[feature_columns].sample(
                         row_limit,
                         random_state=10
                     ),
@@ -1196,7 +1199,36 @@ class Clustering(BaseMetric):
                 "No clustering metric will be formed due to empty DataFrame"
             )
             return None
-        self.merged_transformed = self.__preprocess_data(self.merged)
+
+        # A single scaler, fitted on the merged data, serves both the k search and the
+        # measurement: this keeps the number of clusters and the space it is applied
+        # to consistent, and its surviving (numeric-coercible) columns define the
+        # feature set used everywhere below - so 'level_0'/'level_1', added by the
+        # reset_index() above, can never enter it.
+        merged_numeric = self.__to_numeric(self.merged, feature_columns)
+        self.feature_columns = list(merged_numeric.columns)
+        self.scaler = MinMaxScaler().fit(merged_numeric)
+        self.merged_transformed = self.scaler.transform(merged_numeric)
+
+        # The number of clusters is still chosen on the original data only (not the
+        # merged one), so that a poor synthetic dataset cannot inflate k and thereby
+        # flatter its own score - but now using the same scaler and feature set as
+        # the measurement, so the chosen k is meaningful in the space it is applied to.
+        original_numeric = self.__to_numeric(original_for_clustering, self.feature_columns)
+        original_transformed = self.scaler.transform(original_numeric)
+        if len(original_transformed) > MAX_ROWS_FOR_CLUSTER_SEARCH:
+            sample_idx = np.random.RandomState(10).choice(
+                len(original_transformed), MAX_ROWS_FOR_CLUSTER_SEARCH, replace=False
+            )
+            original_transformed = original_transformed[sample_idx]
+
+        optimal_clust_num = self.__get_optimal_number_of_clusters(
+            original_transformed
+            )
+
+        logger.info(f"Optimal number of clusters for "
+                    f"original dataset: {optimal_clust_num}")
+
         if len(self.merged_transformed) < optimal_clust_num:
             logger.warning(
                 "No clustering metric will be formed: not enough samples "
@@ -1259,10 +1291,17 @@ class Clustering(BaseMetric):
         Calculate the optimal number of clusters using Davies-Bouldin score
         """
         davies_bouldin_scores = []
-        max_clusters = min(10, len(dataset))
+        # davies_bouldin_score needs at least 2 labels and fewer labels than samples,
+        # so the candidate range can legitimately come out empty
+        max_clusters = min(MAX_NUMBER_OF_CLUSTERS, len(dataset) - 1)
 
-        for i in range(2, max_clusters):
-            clusters = KMeans(n_clusters=i, random_state=10).fit(
+        if max_clusters < 2:
+            return 2
+
+        for i in range(2, max_clusters + 1):
+            clusters = KMeans(
+                n_clusters=i, random_state=10, n_init=N_INIT_FOR_CLUSTERING
+            ).fit(
                 dataset
                 )
             labels = clusters.labels_
@@ -1275,17 +1314,24 @@ class Clustering(BaseMetric):
 
         return optimal_clusters
 
-    def __preprocess_data(self, dataset):
-        transformed_dataset = dataset.apply(
-            pd.to_numeric, axis=0, errors="ignore"
-        ).select_dtypes(include="number")
-        scaler = MinMaxScaler()
-        transformed_dataset = scaler.fit_transform(transformed_dataset)
-
-        return transformed_dataset
+    @staticmethod
+    def __to_numeric(dataset, feature_columns: List[str]):
+        """
+        Restrict the dataset to the clustering features and coerce them to numeric.
+        Scaling is left to the caller, which fits a single scaler shared by the
+        original and the merged data so that the chosen number of clusters applies
+        to the space it was chosen in.
+        """
+        return (
+            dataset[feature_columns]
+            .apply(pd.to_numeric, axis=0, errors="ignore")
+            .select_dtypes(include="number")
+        )
 
     def __calculate_clusters(self, n):
-        clusters = KMeans(n_clusters=n, random_state=10).fit(
+        clusters = KMeans(
+            n_clusters=n, random_state=10, n_init=N_INIT_FOR_CLUSTERING
+        ).fit(
             self.merged_transformed
         )
         labels = clusters.labels_
@@ -1326,11 +1372,7 @@ class Utility(BaseMetric):
         logger.info("Calculating utility metric")
 
         for col in categorical_columns:
-            map_dict = {
-                k: i + 1 for i, k in enumerate(
-                    set(self.original[col]) | set(self.synthetic[col])
-                )
-            }
+            map_dict = encode_categories(self.original[col], self.synthetic[col])
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
