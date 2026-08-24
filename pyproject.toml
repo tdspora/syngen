@@ -14,7 +14,7 @@ readme = "README.md"
 requires-python = ">3.9,<3.12"
 license = { text = "GPLv3 License" }
 authors = [{ name = "EPAM Systems, Inc." }]
-maintainers = [{ name = "Hanna Imshenetska" }]
+maintainers = [{ name = "Sergei Kudrenko" }]
 keywords = ["data", "generation", "synthetic", "vae", "tabular"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
