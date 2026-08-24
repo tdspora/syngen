@@ -55,7 +55,7 @@ dependencies = [
     "scipy==1.14.*",
     "seaborn==0.13.*",
     "setuptools==78.1.*",
-    "torch>=2.2",
+    "torch==2.11.*",
     "tornado==6.5.*",
     "tqdm==4.66.3",
     "Werkzeug==3.1.*",
