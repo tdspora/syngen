@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=70.0.0", "wheel"]
+requires = ["setuptools>=78.1.1", "wheel>=0.46.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
@@ -32,21 +32,23 @@ dependencies = [
     "boto3",
     "chardet==7.5.*",
     "click",
-    "cryptography",
+    "cryptography==49.0.0",
     "exrex",
     "Jinja2",
+    "jaraco.context>=6.1.0",
     "lazy==1.4",
     "loguru",
     "MarkupSafe==2.1.1",
     "marshmallow==3.19.*",
     "matplotlib==3.10.*",
     "mlflow==3.15.*",
+    "msgpack>=1.2.1",
     "numpy==1.26.*",
     "openpyxl",
     "pandas==2.2.*",
     "pandavro==1.8.*",
     "pathos==0.2.*",
-    "pillow==10.3.*",
+    "pillow==12.3.0",
     "psutil",
     "py-ulid",
     "python-slugify[unidecode]>=7.0.0",
@@ -54,7 +56,7 @@ dependencies = [
     "scikit_learn==1.5.*",
     "scipy==1.14.*",
     "seaborn==0.13.*",
-    "setuptools==78.1.*",
+    "setuptools>=78.1.1",
     "torch==2.11.*",
     "tornado==6.5.*",
     "tqdm==4.66.3",
