@@ -14,7 +14,7 @@ readme = "README.md"
 requires-python = ">3.9,<3.12"
 license = { text = "GPLv3 License" }
 authors = [{ name = "EPAM Systems, Inc." }]
-maintainers = [{ name = "Hanna Imshenetska" }]
+maintainers = [{ name = "Sergei Kudrenko" }]
 keywords = ["data", "generation", "synthetic", "vae", "tabular"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -40,7 +40,7 @@ dependencies = [
     "MarkupSafe==2.1.1",
     "marshmallow==3.19.*",
     "matplotlib==3.10.*",
-    "mlflow==3.11.*",
+    "mlflow==3.15.*",
     "numpy==1.26.*",
     "openpyxl",
     "pandas==2.2.*",
