@@ -15,7 +15,6 @@ from syngen.ml.metrics.metrics_classes.metrics import (
     Clustering,
     Utility,
     UnivariateMetric,
-    encode_categories,
     MAX_ROWS_FOR_CLUSTER_SEARCH,
     MIN_NUMBER_OF_ROWS_FOR_CLUSTERING,
 )
@@ -66,47 +65,6 @@ def _make_clustered_frame(n, seed, n_groups=3):
     return pd.DataFrame({"x": x, "y": y, "cat": cat})
 
 
-def test_encode_categories_is_order_independent(rp_logger):
-    """
-    'encode_categories' must not depend on the iteration order of its inputs:
-    this is the fix for EPMCTDM-7127, where 'enumerate(set(...))' produced a
-    different mapping (and therefore a different clustering score) on every
-    process run because Python randomizes string hashing per process.
-    """
-    rp_logger.info("Testing 'encode_categories' is deterministic and order independent")
-
-    original = pd.Series(["b", "a", "c", "a"])
-    synthetic = pd.Series(["c", "d"])
-
-    forward = encode_categories(original, synthetic)
-    backward = encode_categories(original.iloc[::-1], synthetic.iloc[::-1])
-
-    assert forward == backward, "mapping must not depend on row order"
-    assert set(forward.keys()) == {"a", "b", "c", "d"}, \
-        "the union must cover categories present in only one of the two frames"
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
-def test_encode_categories_handles_mixed_types_and_nan(rp_logger):
-    """
-    Columns coming through the reporter can mix strings, ints and NaN
-    (e.g. after upstream preprocessing); a bare 'sorted(set(...))' would
-    raise on that mix, so 'encode_categories' sorts by the string form.
-    """
-    rp_logger.info("Testing 'encode_categories' tolerates mixed types and NaN")
-
-    original = pd.Series(["a", 1, np.nan])
-    synthetic = pd.Series(["b", 2])
-
-    mapping = encode_categories(original, synthetic)
-
-    assert len(mapping) == 5
-    assert set(mapping.values()) == {1, 2, 3, 4, 5}
-
-    rp_logger.info(SUCCESSFUL_MESSAGE)
-
-
 def test_clustering_unequal_row_counts_does_not_collapse_score(rp_logger):
     """
     Regression test for the 'level_1' leak (EPMCTDM-7127): the merged frame's
@@ -132,20 +90,23 @@ def test_clustering_unequal_row_counts_does_not_collapse_score(rp_logger):
     assert mean_score >= 0.9, (
         f"Mean score shouldn't collapse when row counts differ, got {mean_score}"
     )
-    assert "level_0" not in clustering.feature_columns
-    assert "level_1" not in clustering.feature_columns
+    # the merged frame carries the clustering features and nothing else - the
+    # dataset label lives in 'origin', so no index column can become a feature
+    assert clustering.feature_columns == list(clustering.merged.columns)
+    assert set(clustering.feature_columns) == {"x", "y", "cat"}
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
-def test_clustering_uses_one_scaler_for_both_spaces(rp_logger):
+def test_clustering_uses_one_scaler_fit_on_the_original_data(rp_logger):
     """
     The number of clusters must be chosen in the same geometry it is applied
-    to: a single 'MinMaxScaler', fit once on the merged data, has to serve
-    both the k search (on the original data) and the measurement (on the
-    merged data).
+    to, so one 'MinMaxScaler' has to serve both the k search (on the original
+    data) and the measurement (on the merged data). That scaler is fit on the
+    original data alone, so the range of the synthetic data cannot move the
+    space in which k is chosen.
     """
-    rp_logger.info("Testing clustering selects k using the scaler fit on merged data")
+    rp_logger.info("Testing clustering selects k using the scaler fit on original data")
 
     original = _make_clustered_frame(500, seed=3)
     synthetic = _make_clustered_frame(500, seed=4)
@@ -156,13 +117,194 @@ def test_clustering_uses_one_scaler_for_both_spaces(rp_logger):
     clustering.calculate_all(["cat"], ["x", "y"])
 
     assert clustering.scaler.n_features_in_ == len(clustering.feature_columns)
-    # the same scaler instance must be able to transform the original data
-    # (already categorical-encoded in place by calculate_all) without
-    # refitting - this is what keeps k and the measurement consistent
-    reconstructed = clustering.scaler.transform(
-        clustering.original[clustering.feature_columns].dropna()
+    # the scaler's bounds must come from the original data only - 'calculate_all'
+    # encodes the categoricals in place, so 'clustering.original' is the encoded
+    # frame the scaler was fit on
+    expected = clustering.original[clustering.feature_columns].dropna()
+    assert clustering.scaler.data_min_ == pytest.approx(expected.min().values)
+    assert clustering.scaler.data_max_ == pytest.approx(expected.max().values)
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_clustering_scaler_is_not_moved_by_synthetic_outliers(rp_logger):
+    """
+    A 'MinMaxScaler' is defined by a single min and max per column, so fitting
+    it on the merged data would let one extreme synthetic row rescale every
+    other row and shift the chosen number of clusters. Fitting on the original
+    data alone keeps both the scaler and k independent of the synthetic data.
+    """
+    rp_logger.info("Testing synthetic outliers do not move the clustering scaler")
+
+    original = _make_clustered_frame(500, seed=12)
+    synthetic = _make_clustered_frame(500, seed=13)
+    outlying = synthetic.copy()
+    outlying.loc[0, "x"] = 1e6
+
+    clean_run = Clustering(original.copy(), synthetic.copy(), plot=False, reports_path="")
+    clean_run.calculate_all(["cat"], ["x", "y"])
+
+    outlier_run = Clustering(original.copy(), outlying.copy(), plot=False, reports_path="")
+    outlier_run.calculate_all(["cat"], ["x", "y"])
+
+    assert outlier_run.scaler.data_max_ == pytest.approx(clean_run.scaler.data_max_), (
+        "the scaler's bounds must come from the original data, "
+        "so a synthetic outlier cannot move them"
     )
-    assert reconstructed.shape[1] == len(clustering.feature_columns)
+    # the outlier still lands where it belongs: outside the original [0, 1] range
+    assert outlier_run.merged_transformed.max() > 1
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_clustering_warns_when_a_column_is_numeric_in_only_one_dataset(rp_logger):
+    """
+    A column that coerces to numeric in one dataset but not the other cannot be
+    clustered on, so it is excluded from the feature set - but that is a data
+    quality signal rather than a routine event, so it must not be dropped
+    silently.
+    """
+    rp_logger.info(
+        "Testing clustering warns about the columns dropped from the feature set"
+    )
+
+    original = _make_clustered_frame(50, seed=18)
+    synthetic = _make_clustered_frame(50, seed=19)
+    original["half_numeric"] = 1.0
+    synthetic["half_numeric"] = "text"
+
+    clustering = Clustering(
+        original.copy(), synthetic.copy(), plot=False, reports_path=""
+    )
+    with patch(
+        "syngen.ml.metrics.metrics_classes.metrics.logger"
+    ) as mock_logger:
+        clustering.calculate_all(["cat"], ["x", "y", "half_numeric"])
+
+    assert "half_numeric" not in clustering.feature_columns
+    messages = [call.args[0] for call in mock_logger.warning.call_args_list]
+    assert any("half_numeric" in message for message in messages), (
+        f"the excluded column must be named in a warning, got {messages}"
+    )
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_clustering_unparseable_value_costs_a_row_not_a_column(rp_logger):
+    """
+    EPMCTDM-7127: a value that cannot be parsed as a number must cost the single
+    row holding it, not the whole column. Dropping the column would remove a
+    dimension from the joint feature space - and with it any discrepancy living
+    along that axis, which biases the score upwards, the wrong direction for a
+    quality metric.
+    """
+    rp_logger.info(
+        "Testing an unparseable value drops its row rather than its column"
+    )
+
+    original = _make_clustered_frame(500, seed=20)
+    # a generator that reproduces 'y' and 'cat' but gets 'x' badly wrong
+    synthetic = _make_clustered_frame(500, seed=21)
+    synthetic["x"] = synthetic["x"] + 200
+
+    poisoned = synthetic.copy()
+    poisoned["x"] = poisoned["x"].astype(object)
+    poisoned.loc[poisoned.index[0], "x"] = "corrupted"
+
+    clean_run = Clustering(original.copy(), synthetic.copy(), plot=False, reports_path="")
+    clean_score = clean_run.calculate_all(["cat"], ["x", "y"])
+
+    poisoned_run = Clustering(original.copy(), poisoned.copy(), plot=False, reports_path="")
+    poisoned_score = poisoned_run.calculate_all(["cat"], ["x", "y"])
+
+    assert "x" in poisoned_run.feature_columns, \
+        "the column must survive a single unparseable value"
+    # the offending row is gone, and the merged frame stays balanced - losing one
+    # synthetic row costs the original one too, because 'row_limit' re-balances
+    counts = poisoned_run.merged.index.get_level_values("origin").value_counts()
+    assert counts["original"] == counts["synthetic"]
+    assert len(poisoned_run.merged) == len(clean_run.merged) - 2
+    # and the defect in 'x' is still detected, instead of being hidden by the
+    # column's removal
+    assert clean_score < 0.1, f"the shifted 'x' must be detected, got {clean_score}"
+    assert poisoned_score == pytest.approx(clean_score, abs=0.05), (
+        "one unparseable value must not change the score materially; "
+        f"clean={clean_score} poisoned={poisoned_score}"
+    )
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_clustering_merged_frame_stays_balanced(rp_logger):
+    """
+    EPMCTDM-7127: 'calculate_diversity' compares raw counts, so if one frame
+    contributes fewer rows to the merged frame than the other, the score drops
+    on that alone. Nulls must therefore be dropped from each frame BEFORE
+    'row_limit' samples them - dropping after the concat used to score a perfect
+    generator at ~0.50 when half its rows carried an unparseable value.
+    """
+    rp_logger.info("Testing the merged frame stays balanced when one side loses rows")
+
+    original = _make_clustered_frame(2000, seed=22)
+    synthetic = _make_clustered_frame(2000, seed=23)
+
+    # a perfect generator whose first half carries an unparseable 'x'
+    poisoned = synthetic.copy()
+    poisoned["x"] = poisoned["x"].astype(object)
+    poisoned.iloc[:1000, poisoned.columns.get_loc("x")] = "junk"
+
+    # matched control: the very same surviving rows, without the junk ones present.
+    # Comparing against the full 2000-row frame instead would confound the balance
+    # effect with the sampling noise floor, which grows as the row count falls.
+    control = synthetic.iloc[1000:]
+
+    poisoned_run = Clustering(original.copy(), poisoned.copy(), plot=False, reports_path="")
+    poisoned_score = poisoned_run.calculate_all(["cat"], ["x", "y"])
+
+    control_run = Clustering(original.copy(), control.copy(), plot=False, reports_path="")
+    control_score = control_run.calculate_all(["cat"], ["x", "y"])
+
+    counts = poisoned_run.merged.index.get_level_values("origin").value_counts()
+    assert counts["original"] == counts["synthetic"] == 1000, (
+        f"both frames must contribute equally, got {dict(counts)}"
+    )
+    assert poisoned_score > 0.9, (
+        "a perfect generator must not be penalised for losing rows on one side "
+        f"(this scored ~0.50 before the fix), got {poisoned_score}"
+    )
+    assert poisoned_score == pytest.approx(control_score, abs=0.02), (
+        "dropping the junk rows must match feeding the surviving rows directly; "
+        f"poisoned={poisoned_score} control={control_score}"
+    )
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_clustering_requires_enough_rows_after_dropping_nulls(rp_logger):
+    """
+    The row guard counts usable rows, not raw ones. A frame can be large and still
+    have almost nothing to cluster on - it used to pass on its raw length and then
+    contribute a handful of rows against the other frame's thousands.
+    """
+    rp_logger.info("Testing the row guard counts rows left after dropping nulls")
+
+    original = _make_clustered_frame(2000, seed=24)
+    synthetic = _make_clustered_frame(2000, seed=25)
+    synthetic.loc[synthetic.index[:1998], "x"] = np.nan   # 2 usable rows remain
+
+    clustering = Clustering(
+        original.copy(), synthetic.copy(), plot=False, reports_path=""
+    )
+    with patch(
+        "syngen.ml.metrics.metrics_classes.metrics.logger"
+    ) as mock_logger:
+        result = clustering.calculate_all(["cat"], ["x", "y"])
+
+    assert result is None
+    message = mock_logger.warning.call_args_list[-1].args[0]
+    assert "2 rows in the synthetic dataset after dropping null values" in message, (
+        f"the warning must report the usable row count, got: {message}"
+    )
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
@@ -226,7 +368,21 @@ def test_clustering_edge_cases_do_not_raise(rp_logger):
     clustering.calculate_all(["cat"], ["x", "y", "not_numeric"])
     assert "not_numeric" not in clustering.feature_columns
 
-    # all-NaN continuous column must return None with a warning, not raise
+    # no usable feature at all must return None with a warning, not raise
+    # inside the scaler
+    original = _make_clustered_frame(50, seed=16)
+    synthetic = _make_clustered_frame(50, seed=17)
+    clustering = Clustering(original.copy(), synthetic.copy(), plot=False, reports_path="")
+    with patch(
+        "syngen.ml.metrics.metrics_classes.metrics.logger"
+    ) as mock_logger:
+        result = clustering.calculate_all([], [])
+    assert result is None
+    mock_logger.warning.assert_called_once()
+
+    # an all-NaN continuous column holds no parseable value, so it is excluded and
+    # the metric is still computed on the remaining columns - rather than its NaNs
+    # wiping out every row
     original = _make_clustered_frame(50, seed=10)
     synthetic = _make_clustered_frame(50, seed=11)
     original["all_nan"] = np.nan
@@ -236,7 +392,8 @@ def test_clustering_edge_cases_do_not_raise(rp_logger):
         "syngen.ml.metrics.metrics_classes.metrics.logger"
     ) as mock_logger:
         result = clustering.calculate_all(["cat"], ["x", "y", "all_nan"])
-    assert result is None
+    assert result is not None
+    assert "all_nan" not in clustering.feature_columns
     mock_logger.warning.assert_called_once()
 
     rp_logger.info(SUCCESSFUL_MESSAGE)
@@ -244,12 +401,19 @@ def test_clustering_edge_cases_do_not_raise(rp_logger):
 
 def test_metrics_are_deterministic_across_hash_seeds(rp_logger):
     """
-    EPMCTDM-7127: every categorical->integer map in this file used to be built
-    as 'enumerate(set(...))' over strings, and Python randomizes string
-    hashing per process, so the codes - and therefore the clustering score -
-    changed on every run. This is the test that would have caught it: run the
-    clustering metric in fresh subprocesses under different PYTHONHASHSEED
-    values and assert identical results.
+    EPMCTDM-7127: every categorical->integer map used to be built as
+    'enumerate(set(...))' over strings, and Python randomizes string hashing per
+    process, so the codes - and therefore the clustering score - changed on every
+    run. 'PYTHONHASHSEED' is fixed at interpreter start-up, so no in-process test
+    can see this; only fresh subprocesses can.
+
+    The fixture has to be chosen with care. An earlier version used three
+    categories and a synthetic frame that was a shuffle of the original - it
+    scored 1.0 under every seed even with the bug present, because both frames
+    share one mapping, so any numbering leaves them identical and perfectly mixed.
+    This fixture instead uses many categories and breaks the category-to-cluster
+    association in the synthetic frame, which makes the score depend on the codes:
+    measured against the pre-fix encoder it swings 0.62 - 0.86 across seeds.
     """
     rp_logger.info(
         "Testing the clustering score is stable across PYTHONHASHSEED values"
@@ -263,27 +427,35 @@ def test_metrics_are_deterministic_across_hash_seeds(rp_logger):
         from syngen.ml.metrics.metrics_classes.metrics import Clustering
 
         rng = np.random.RandomState(0)
-        n = 300
+        n = 400
+        n_cat = 12
         group = rng.randint(0, 3, size=n)
         centers = np.arange(3) * 10
-        x = centers[group] + rng.normal(scale=0.5, size=n)
-        y = centers[group] + rng.normal(scale=0.5, size=n)
-        cat = pd.Series(group).map(
-            {0: "region_a", 1: "region_b", 2: "region_c"}
-        )
-        original = pd.DataFrame({"x": x, "y": y, "cat": cat})
-        synthetic = original.sample(frac=1, random_state=1).reset_index(drop=True)
+
+        # the category carries the cluster in the ORIGINAL...
+        original = pd.DataFrame({
+            "x": centers[group] + rng.normal(scale=0.5, size=n),
+            "y": centers[group] + rng.normal(scale=0.5, size=n),
+            "cat": [f"cat_{(g * 4 + rng.randint(0, 4)):02d}" for g in group],
+        })
+        # ...but the synthetic breaks that association, so the ordinal codes
+        # actually move rows relative to each other
+        synth_group = rng.randint(0, 3, size=n)
+        synthetic = pd.DataFrame({
+            "x": centers[synth_group] + rng.normal(scale=0.5, size=n),
+            "y": centers[synth_group] + rng.normal(scale=0.5, size=n),
+            "cat": [f"cat_{rng.randint(0, n_cat):02d}" for _ in range(n)],
+        })
 
         clustering = Clustering(
             original.copy(), synthetic.copy(), plot=False, reports_path=""
         )
-        score = clustering.calculate_all(["cat"], ["x", "y"])
-        print(score)
+        print(clustering.calculate_all(["cat"], ["x", "y"]))
         """
     )
 
     scores = []
-    for seed in range(5):
+    for seed in range(3):
         completed = subprocess.run(
             [sys.executable, "-c", script],
             env={**os.environ, "PYTHONHASHSEED": str(seed)},

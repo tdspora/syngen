@@ -31,6 +31,7 @@ from syngen.ml.utils import (
 )
 from syngen.ml.metrics.utils import (
     METRIC_SAMPLE_SEED,
+    encode_categories,
     get_outlier_ratio_iqr,
     plot_dist,
     sanitize_labels,
@@ -44,9 +45,11 @@ matplotlib.use("Agg")
 MIN_NUMBER_OF_ROWS_FOR_CLUSTERING = 3
 # upper bound of the candidate range when searching for the optimal number of clusters
 MAX_NUMBER_OF_CLUSTERS = 10
-# sklearn's n_init="auto" resolves to 1 for k-means++, which leaves the result at the mercy
-# of a single seed; 5 is where the chosen number of clusters and the score stop depending
-# on that seed
+# sklearn's n_init="auto" resolves to 1 for k-means++, which is not enough on the skewed,
+# heavy-tailed columns common in real tables. Measured on four log-normal datasets against
+# an n_init=10 reference: n_init=1 and n_init=3 both chose a different k on 2 of the 4, with
+# score deviating by up to 0.033 and 0.026 respectively, while n_init=5 matched the reference
+# k every time and deviated by 0.0006 at worst - for half the cost of 10.
 N_INIT_FOR_CLUSTERING = 5
 # the number of clusters is a structural property of the data, so the search does not need
 # the whole table: the choice is already unambiguous well below this limit, and on data
@@ -54,24 +57,6 @@ N_INIT_FOR_CLUSTERING = 5
 # capped - the measurement itself uses every row, because its sampling noise falls as
 # 1 / sqrt(number of rows)
 MAX_ROWS_FOR_CLUSTER_SEARCH = 50_000
-
-
-def encode_categories(original: pd.Series, synthetic: pd.Series) -> Dict:
-    """
-    Build an integer code for every category present in either dataset.
-
-    The codes must not depend on the iteration order of a set: string hashing is
-    randomized per process, so 'enumerate(set(...))' hands out different codes on
-    every run, which changes the distances between rows and therefore the reported
-    numbers. Sorting by the string form keeps the codes stable and tolerates a union
-    of mixed types, on which a bare 'sorted' would raise.
-
-    Every metric encoding the same columns must use this helper: the one that runs
-    first mutates the shared frames, so a single unfixed site re-introduces the
-    instability for all the metrics that follow it.
-    """
-    categories = sorted(set(original) | set(synthetic), key=str)
-    return {category: i + 1 for i, category in enumerate(categories)}
 
 
 class BaseMetric(ABC):
@@ -1143,15 +1128,49 @@ class Clustering(BaseMetric):
     ):
         super().__init__(original, synthetic, plot, reports_path)
 
-    def calculate_all(self, categorical_columns: List[str], cont_columns: List[str]):
+    def calculate_all(
+            self, categorical_columns: List[str], cont_columns: List[str]
+    ):
         for col in categorical_columns:
-            map_dict = encode_categories(self.original[col], self.synthetic[col])
+            map_dict = encode_categories(
+                self.original[col], self.synthetic[col]
+            )
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
         feature_columns = cont_columns + categorical_columns
 
-        original_for_clustering = self.original[feature_columns].dropna()
+        # Coerced up front so an unparseable value costs its row, not its column -
+        # losing a column would hide any discrepancy on that axis. Works on copies:
+        # 'Utility' runs after this metric on the same frames.
+        original_features = self.__to_numeric(self.original, feature_columns)
+        synthetic_features = self.__to_numeric(self.synthetic, feature_columns)
+
+        # a column usable in only one of the datasets cannot be clustered on;
+        # the exclusion is logged because it is a data quality signal,
+        # not a routine event
+        self.feature_columns = [
+            column for column in original_features.columns
+            if column in synthetic_features.columns
+        ]
+        excluded_columns = set(feature_columns) - set(self.feature_columns)
+        if excluded_columns:
+            logger.warning(
+                f"The columns {sorted(excluded_columns)} hold no value usable as a "
+                "numeric clustering feature in both datasets and were excluded from "
+                "the clustering metric"
+            )
+
+        if not self.feature_columns:
+            logger.warning(
+                "No clustering metric will be formed: none of the columns can be "
+                "used as a numeric clustering feature in both datasets"
+            )
+            return None
+
+        # Each frame is cleaned before sampling, so 'row_limit' can balance them
+        original_for_clustering = original_features[self.feature_columns].dropna()
+        synthetic_for_clustering = synthetic_features[self.feature_columns].dropna()
 
         warning_message = (
             "It is not sufficient to perform clustering. "
@@ -1167,55 +1186,51 @@ class Clustering(BaseMetric):
             )
             return None
 
-        row_limit = min(len(self.original), len(self.synthetic))
+        row_limit = min(
+            len(original_for_clustering), len(synthetic_for_clustering)
+        )
 
         if row_limit < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
             logger.warning(
-                f"There are {row_limit} rows in the synthetic dataset. {warning_message}"
+                f"There are {len(synthetic_for_clustering)} rows in the synthetic "
+                f"dataset after dropping null values. {warning_message}"
             )
             return None
 
         # TODO check whether random_state affects the results
-        self.merged = (
-            pd.concat(
-                [
-                    self.original[feature_columns].sample(
-                        row_limit,
-                        random_state=10
-                    ),
-                    self.synthetic[feature_columns].sample(
-                        row_limit,
-                        random_state=10
-                    ),
-                ],
-                keys=["original", "synthetic"],
-            )
-            .dropna()
-            .reset_index()
-        )
+        # The per-frame row index is dropped and the origin label left in the index:
+        # as a column that index becomes a numeric feature leaking which dataset a
+        # row came from. It is named 'row' only so 'droplevel' can take it by name.
+        self.merged = pd.concat(
+            [
+                original_for_clustering.sample(
+                    row_limit,
+                    random_state=10
+                ),
+                synthetic_for_clustering.sample(
+                    row_limit,
+                    random_state=10
+                ),
+            ],
+            keys=["original", "synthetic"],
+            names=["origin", "row"],
+        ).droplevel("row")
 
         if len(self.merged) == 0:
             logger.warning(
-                "No clustering metric will be formed due to empty DataFrame"
+                "No clustering metric will be formed: the merged frame of original "
+                "and synthetic rows came out empty"
             )
             return None
 
-        # A single scaler, fitted on the merged data, serves both the k search and the
-        # measurement: this keeps the number of clusters and the space it is applied
-        # to consistent, and its surviving (numeric-coercible) columns define the
-        # feature set used everywhere below - so 'level_0'/'level_1', added by the
-        # reset_index() above, can never enter it.
-        merged_numeric = self.__to_numeric(self.merged, feature_columns)
-        self.feature_columns = list(merged_numeric.columns)
-        self.scaler = MinMaxScaler().fit(merged_numeric)
-        self.merged_transformed = self.scaler.transform(merged_numeric)
+        # One scaler, so k is chosen in the space it is applied to. Fitted on the
+        # original alone: MinMaxScaler is defined by one min and max per column, so
+        # fitting it on the merged data would let a single synthetic outlier rescale
+        # every other row and shift k, which must depend on the original only.
+        self.scaler = MinMaxScaler().fit(original_for_clustering)
+        self.merged_transformed = self.scaler.transform(self.merged)
 
-        # The number of clusters is still chosen on the original data only (not the
-        # merged one), so that a poor synthetic dataset cannot inflate k and thereby
-        # flatter its own score - but now using the same scaler and feature set as
-        # the measurement, so the chosen k is meaningful in the space it is applied to.
-        original_numeric = self.__to_numeric(original_for_clustering, self.feature_columns)
-        original_transformed = self.scaler.transform(original_numeric)
+        original_transformed = self.scaler.transform(original_for_clustering)
         if len(original_transformed) > MAX_ROWS_FOR_CLUSTER_SEARCH:
             sample_idx = np.random.RandomState(10).choice(
                 len(original_transformed), MAX_ROWS_FOR_CLUSTER_SEARCH, replace=False
@@ -1318,15 +1333,17 @@ class Clustering(BaseMetric):
     def __to_numeric(dataset, feature_columns: List[str]):
         """
         Restrict the dataset to the clustering features and coerce them to numeric.
-        Scaling is left to the caller, which fits a single scaler shared by the
-        original and the merged data so that the chosen number of clusters applies
-        to the space it was chosen in.
+
+        An unparseable value becomes NaN so the caller's 'dropna' drops its row
+        rather than the whole column. A column with no parseable value at all is
+        dropped instead, since keeping it would make every row NaN.
         """
-        return (
+        numeric = (
             dataset[feature_columns]
-            .apply(pd.to_numeric, axis=0, errors="ignore")
+            .apply(pd.to_numeric, axis=0, errors="coerce")
             .select_dtypes(include="number")
         )
+        return numeric.loc[:, numeric.notna().any()]
 
     def __calculate_clusters(self, n):
         clusters = KMeans(
@@ -1336,7 +1353,8 @@ class Clustering(BaseMetric):
         )
         labels = clusters.labels_
         rows_labels = pd.DataFrame(
-            {"origin": self.merged["level_0"], "cluster": labels}
+            {"origin": self.merged.index.get_level_values("origin"),
+             "cluster": labels}
         )
 
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()

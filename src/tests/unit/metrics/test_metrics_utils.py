@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 
 from syngen.ml.metrics.utils import (
+    encode_categories,
+    encode_categorical_features,
     get_outlier_ratio_iqr,
     sanitize_labels,
     get_ratio_counts,
@@ -304,4 +306,77 @@ def test_get_ratio_counts_keeps_extremes_and_size(rp_logger):
     assert "v0" in result, "most common item must be kept"
     assert "v59" in result, "least common item must be kept"
     assert len(result) == 30
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_encode_categories_is_order_independent(rp_logger):
+    """
+    'encode_categories' must not depend on the iteration order of its inputs:
+    this is the fix for EPMCTDM-7127, where 'enumerate(set(...))' produced a
+    different mapping (and therefore a different clustering score) on every
+    process run because Python randomizes string hashing per process.
+    """
+    rp_logger.info("Testing 'encode_categories' is deterministic and order independent")
+
+    original = pd.Series(["b", "a", "c", "a"])
+    synthetic = pd.Series(["c", "d"])
+
+    forward = encode_categories(original, synthetic)
+    backward = encode_categories(original.iloc[::-1], synthetic.iloc[::-1])
+
+    assert forward == backward, "mapping must not depend on row order"
+    assert set(forward.keys()) == {"a", "b", "c", "d"}, \
+        "the union must cover categories present in only one of the two frames"
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_encode_categories_handles_mixed_types_and_nan(rp_logger):
+    """
+    Columns coming through the reporter can mix strings, ints and NaN
+    (e.g. after upstream preprocessing); a bare 'sorted(set(...))' would
+    raise on that mix, so 'encode_categories' sorts by the string form.
+    """
+    rp_logger.info("Testing 'encode_categories' tolerates mixed types and NaN")
+
+    original = pd.Series(["a", 1, np.nan])
+    synthetic = pd.Series(["b", 2])
+
+    mapping = encode_categories(original, synthetic)
+
+    assert len(mapping) == 5
+    assert set(mapping.values()) == {1, 2, 3, 4, 5}
+
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_encode_categories_is_exported_from_the_metrics_package(rp_logger):
+    """
+    'tdm_syngen' reaches this helper through 'syngen.ml.metrics', the way it already
+    imports 'encode_categorical_features'. Keep the public name importable.
+    """
+    rp_logger.info("Test 'encode_categories' is importable from 'syngen.ml.metrics'")
+    from syngen.ml.metrics import encode_categories as exported
+
+    assert exported is encode_categories
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
+def test_encode_categorical_features_returns_shared_codes_as_arrays(rp_logger):
+    """
+    The return type is a list of bare float arrays, not DataFrames - the column names
+    are lost, which is why 'encode_categories' exists for callers that need them. The
+    encoder is fitted on the concatenation, so codes mean the same thing in both.
+    """
+    rp_logger.info("Test 'encode_categorical_features' shares codes across frames")
+    original = pd.DataFrame({"c": ["x", "y", None]})
+    synthetic = pd.DataFrame({"c": ["y", "z", "x"]})
+
+    encoded = encode_categorical_features([original, synthetic])
+
+    assert [type(frame) for frame in encoded] == [np.ndarray, np.ndarray]
+    # 'x' is the second category of ('?', 'x', 'y', 'z') in both frames
+    assert encoded[0][0, 0] == encoded[1][2, 0]
+    # NaN becomes its own '?' category rather than being dropped
+    assert encoded[0][2, 0] == 0
     rp_logger.info(SUCCESSFUL_MESSAGE)
