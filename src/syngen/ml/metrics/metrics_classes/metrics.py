@@ -31,6 +31,7 @@ from syngen.ml.utils import (
 )
 from syngen.ml.metrics.utils import (
     METRIC_SAMPLE_SEED,
+    encode_categories,
     get_outlier_ratio_iqr,
     plot_dist,
     sanitize_labels,
@@ -42,6 +43,20 @@ matplotlib.use("Agg")
 
 # minimal number of rows in original dataset to perform clustering
 MIN_NUMBER_OF_ROWS_FOR_CLUSTERING = 3
+# upper bound of the candidate range when searching for the optimal number of clusters
+MAX_NUMBER_OF_CLUSTERS = 10
+# sklearn's n_init="auto" resolves to 1 for k-means++, which is not enough on the skewed,
+# heavy-tailed columns common in real tables. Measured on four log-normal datasets against
+# an n_init=10 reference: n_init=1 and n_init=3 both chose a different k on 2 of the 4, with
+# score deviating by up to 0.033 and 0.026 respectively, while n_init=5 matched the reference
+# k every time and deviated by 0.0006 at worst - for half the cost of 10.
+N_INIT_FOR_CLUSTERING = 5
+# the number of clusters is a structural property of the data, so the search does not need
+# the whole table: the choice is already unambiguous well below this limit, and on data
+# without cluster structure it is undetermined at any sample size. Only the search is
+# capped - the measurement itself uses every row, because its sampling noise falls as
+# 1 / sqrt(number of rows)
+MAX_ROWS_FOR_CLUSTER_SEARCH = 50_000
 
 
 class BaseMetric(ABC):
@@ -133,12 +148,9 @@ class JensenShannonDistance(BaseMetric):
         return 1 - abs(original_score - synthetic_score)
 
     def _calculate_pair_categ_vs_continuous(self, first_column, second_column):
-        map_dict = {
-            k: i + 1
-            for i, k in enumerate(
-                set(self.original[first_column]) | set(self.synthetic[first_column])
-            )
-        }
+        map_dict = encode_categories(
+            self.original[first_column], self.synthetic[first_column]
+        )
         original_score = self.__jensen_shannon_distance(
             self.original[first_column].map(map_dict),
             self.original[second_column].fillna(self.original[second_column].mean()),
@@ -151,18 +163,12 @@ class JensenShannonDistance(BaseMetric):
         return 1 - abs(original_score - synthetic_score)
 
     def _calculate_pair_categ_vs_categ(self, first_column, second_column):
-        map_dict_first = {
-            k: i + 1
-            for i, k in enumerate(
-                set(self.original[first_column]) | set(self.synthetic[first_column])
-            )
-        }
-        map_dict_second = {
-            k: i + 1
-            for i, k in enumerate(
-                set(self.original[second_column]) | set(self.synthetic[second_column])
-            )
-        }
+        map_dict_first = encode_categories(
+            self.original[first_column], self.synthetic[first_column]
+        )
+        map_dict_second = encode_categories(
+            self.original[second_column], self.synthetic[second_column]
+        )
 
         original_score = self.__jensen_shannon_distance(
             self.original[first_column].map(map_dict_first),
@@ -176,12 +182,9 @@ class JensenShannonDistance(BaseMetric):
         return 1 - abs(original_score - synthetic_score)
 
     def _calculate_pair_continuous_vs_categ(self, first_column, second_column):
-        map_dict = {
-            k: i + 1
-            for i, k in enumerate(
-                set(self.original[second_column]) | set(self.synthetic[second_column])
-            )
-        }
+        map_dict = encode_categories(
+            self.original[second_column], self.synthetic[second_column]
+        )
 
         original_score = self.__jensen_shannon_distance(
             self.original[first_column].fillna(self.original[first_column].mean()),
@@ -267,9 +270,7 @@ class Correlations(BaseMetric):
         categorical_columns = [col for col in categorical_columns if "word_count" not in col]
         cont_columns = [col for col in cont_columns if "word_count" not in col]
         for col in categorical_columns:
-            map_dict = {
-                k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
-            }
+            map_dict = encode_categories(self.original[col], self.synthetic[col])
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
@@ -1127,19 +1128,49 @@ class Clustering(BaseMetric):
     ):
         super().__init__(original, synthetic, plot, reports_path)
 
-    def calculate_all(self, categorical_columns: List[str], cont_columns: List[str]):
+    def calculate_all(
+            self, categorical_columns: List[str], cont_columns: List[str]
+    ):
         for col in categorical_columns:
-            map_dict = {
-                k: i + 1 for i, k in enumerate(set(self.original[col]) | set(self.synthetic[col]))
-            }
+            map_dict = encode_categories(
+                self.original[col], self.synthetic[col]
+            )
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 
-        # Perform clustering of original dataset
-        # to get optimal number of clusters
-        original_for_clustering = self.original[
-            cont_columns + categorical_columns
-            ].dropna()
+        feature_columns = cont_columns + categorical_columns
+
+        # Coerced up front so an unparseable value costs its row, not its column -
+        # losing a column would hide any discrepancy on that axis. Works on copies:
+        # 'Utility' runs after this metric on the same frames.
+        original_features = self.__to_numeric(self.original, feature_columns)
+        synthetic_features = self.__to_numeric(self.synthetic, feature_columns)
+
+        # a column usable in only one of the datasets cannot be clustered on;
+        # the exclusion is logged because it is a data quality signal,
+        # not a routine event
+        self.feature_columns = [
+            column for column in original_features.columns
+            if column in synthetic_features.columns
+        ]
+        excluded_columns = set(feature_columns) - set(self.feature_columns)
+        if excluded_columns:
+            logger.warning(
+                f"The columns {sorted(excluded_columns)} hold no value usable as a "
+                "numeric clustering feature in both datasets and were excluded from "
+                "the clustering metric"
+            )
+
+        if not self.feature_columns:
+            logger.warning(
+                "No clustering metric will be formed: none of the columns can be "
+                "used as a numeric clustering feature in both datasets"
+            )
+            return None
+
+        # Each frame is cleaned before sampling, so 'row_limit' can balance them
+        original_for_clustering = original_features[self.feature_columns].dropna()
+        synthetic_for_clustering = synthetic_features[self.feature_columns].dropna()
 
         warning_message = (
             "It is not sufficient to perform clustering. "
@@ -1155,48 +1186,64 @@ class Clustering(BaseMetric):
             )
             return None
 
-        original_transformed = self.__preprocess_data(original_for_clustering)
+        row_limit = min(
+            len(original_for_clustering), len(synthetic_for_clustering)
+        )
+
+        if row_limit < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
+            logger.warning(
+                f"There are {len(synthetic_for_clustering)} rows in the synthetic "
+                f"dataset after dropping null values. {warning_message}"
+            )
+            return None
+
+        # TODO check whether random_state affects the results
+        # The per-frame row index is dropped and the origin label left in the index:
+        # as a column that index becomes a numeric feature leaking which dataset a
+        # row came from. It is named 'row' only so 'droplevel' can take it by name.
+        self.merged = pd.concat(
+            [
+                original_for_clustering.sample(
+                    row_limit,
+                    random_state=10
+                ),
+                synthetic_for_clustering.sample(
+                    row_limit,
+                    random_state=10
+                ),
+            ],
+            keys=["original", "synthetic"],
+            names=["origin", "row"],
+        ).droplevel("row")
+
+        if len(self.merged) == 0:
+            logger.warning(
+                "No clustering metric will be formed: the merged frame of original "
+                "and synthetic rows came out empty"
+            )
+            return None
+
+        # One scaler, so k is chosen in the space it is applied to. Fitted on the
+        # original alone: MinMaxScaler is defined by one min and max per column, so
+        # fitting it on the merged data would let a single synthetic outlier rescale
+        # every other row and shift k, which must depend on the original only.
+        self.scaler = MinMaxScaler().fit(original_for_clustering)
+        self.merged_transformed = self.scaler.transform(self.merged)
+
+        original_transformed = self.scaler.transform(original_for_clustering)
+        if len(original_transformed) > MAX_ROWS_FOR_CLUSTER_SEARCH:
+            sample_idx = np.random.RandomState(10).choice(
+                len(original_transformed), MAX_ROWS_FOR_CLUSTER_SEARCH, replace=False
+            )
+            original_transformed = original_transformed[sample_idx]
 
         optimal_clust_num = self.__get_optimal_number_of_clusters(
             original_transformed
             )
 
-        logger.trace(f"Optimal number of clusters for "
-                     f"original dataset: {optimal_clust_num}")
+        logger.info(f"Optimal number of clusters for "
+                    f"original dataset: {optimal_clust_num}")
 
-        row_limit = min(len(self.original), len(self.synthetic))
-
-        if row_limit < MIN_NUMBER_OF_ROWS_FOR_CLUSTERING:
-            logger.warning(
-                f"There are {row_limit} rows in the synthetic dataset. {warning_message}"
-            )
-            return None
-
-        # TODO check whether random_state affects the results
-        self.merged = (
-            pd.concat(
-                [
-                    self.original[cont_columns + categorical_columns].sample(
-                        row_limit,
-                        random_state=10
-                    ),
-                    self.synthetic[cont_columns + categorical_columns].sample(
-                        row_limit,
-                        random_state=10
-                    ),
-                ],
-                keys=["original", "synthetic"],
-            )
-            .dropna()
-            .reset_index()
-        )
-
-        if len(self.merged) == 0:
-            logger.warning(
-                "No clustering metric will be formed due to empty DataFrame"
-            )
-            return None
-        self.merged_transformed = self.__preprocess_data(self.merged)
         if len(self.merged_transformed) < optimal_clust_num:
             logger.warning(
                 "No clustering metric will be formed: not enough samples "
@@ -1259,10 +1306,17 @@ class Clustering(BaseMetric):
         Calculate the optimal number of clusters using Davies-Bouldin score
         """
         davies_bouldin_scores = []
-        max_clusters = min(10, len(dataset))
+        # davies_bouldin_score needs at least 2 labels and fewer labels than samples,
+        # so the candidate range can legitimately come out empty
+        max_clusters = min(MAX_NUMBER_OF_CLUSTERS, len(dataset) - 1)
 
-        for i in range(2, max_clusters):
-            clusters = KMeans(n_clusters=i, random_state=10).fit(
+        if max_clusters < 2:
+            return 2
+
+        for i in range(2, max_clusters + 1):
+            clusters = KMeans(
+                n_clusters=i, random_state=10, n_init=N_INIT_FOR_CLUSTERING
+            ).fit(
                 dataset
                 )
             labels = clusters.labels_
@@ -1275,22 +1329,32 @@ class Clustering(BaseMetric):
 
         return optimal_clusters
 
-    def __preprocess_data(self, dataset):
-        transformed_dataset = dataset.apply(
-            pd.to_numeric, axis=0, errors="ignore"
-        ).select_dtypes(include="number")
-        scaler = MinMaxScaler()
-        transformed_dataset = scaler.fit_transform(transformed_dataset)
+    @staticmethod
+    def __to_numeric(dataset, feature_columns: List[str]):
+        """
+        Restrict the dataset to the clustering features and coerce them to numeric.
 
-        return transformed_dataset
+        An unparseable value becomes NaN so the caller's 'dropna' drops its row
+        rather than the whole column. A column with no parseable value at all is
+        dropped instead, since keeping it would make every row NaN.
+        """
+        numeric = (
+            dataset[feature_columns]
+            .apply(pd.to_numeric, axis=0, errors="coerce")
+            .select_dtypes(include="number")
+        )
+        return numeric.loc[:, numeric.notna().any()]
 
     def __calculate_clusters(self, n):
-        clusters = KMeans(n_clusters=n, random_state=10).fit(
+        clusters = KMeans(
+            n_clusters=n, random_state=10, n_init=N_INIT_FOR_CLUSTERING
+        ).fit(
             self.merged_transformed
         )
         labels = clusters.labels_
         rows_labels = pd.DataFrame(
-            {"origin": self.merged["level_0"], "cluster": labels}
+            {"origin": self.merged.index.get_level_values("origin"),
+             "cluster": labels}
         )
 
         return rows_labels.groupby(["cluster", "origin"]).size().reset_index()
@@ -1326,11 +1390,7 @@ class Utility(BaseMetric):
         logger.info("Calculating utility metric")
 
         for col in categorical_columns:
-            map_dict = {
-                k: i + 1 for i, k in enumerate(
-                    set(self.original[col]) | set(self.synthetic[col])
-                )
-            }
+            map_dict = encode_categories(self.original[col], self.synthetic[col])
             self.original[col] = self.original[col].map(map_dict)
             self.synthetic[col] = self.synthetic[col].map(map_dict)
 

@@ -3013,7 +3013,7 @@ scope, and its effect is not a slightly different number — it is a different c
 Two runs then differ structurally, and no amount of seeding the model afterwards recovers
 the difference.
 
-Four instances were found and fixed.
+Five instances were found and fixed. The first four were found during the migration; the fifth (9.3.5) surfaced afterwards, in the report path.
 
 #### 9.3.1 Scaler selection
 
@@ -3076,6 +3076,40 @@ sampling. Unseeded, the same data produced a visually different report every run
 correctness problem, but it made reports impossible to compare and eroded trust in them.
 Now seeded via `METRIC_SAMPLE_SEED = 10`, chosen to match the `random_state=10` already
 used by the estimators in the same module so all report randomness shares one seed.
+
+#### 9.3.5 Categorical codes in the accuracy report
+
+Found after the migration, in EPMCTDM-7127. It belongs in this section because it is the
+same pattern reached by a different mechanism: the randomness is not an unseeded draw but
+the iteration order of a `set`.
+
+Every categorical column reaching the report metrics was mapped to integers with
+
+```python
+{k: i + 1 for i, k in enumerate(set(original) | set(synthetic))}
+```
+
+written out at seven call sites across `JensenShannonDistance`, `Correlations`,
+`Clustering` and `Utility`. Python randomises string hashing per process, so the codes
+differed between runs. That changed the distances between rows, and therefore the reported
+numbers: the same original and synthetic pair scored differently on every invocation.
+
+Fixed by a shared helper that sorts the union before numbering
+(`metrics/utils.py`, `encode_categories`), sorting by the string form so that a union of
+mixed types does not raise.
+
+**Why the determinism test did not catch it.** Section 9.5's test runs two processes under
+*different* `PYTHONHASHSEED` values precisely to expose set-iteration dependence — but it
+compares **generated data**. These codes are built during reporting, after generation, and
+never touch the generated output. The guarantee and the test were both about the data;
+report metrics sat outside both. Section 9.6 now states that boundary explicitly.
+
+The report path has its own regression test built on the same design:
+`test_metrics_are_deterministic_across_hash_seeds` runs the clustering metric in fresh
+subprocesses across three hash seeds and asserts a single distinct result. Its fixture had
+to be chosen with care — an earlier version scored 1.0 under every seed *even with the bug
+present*, because a synthetic frame that is a shuffle of the original stays perfectly mixed
+under any numbering.
 
 ### 9.4 The shared-state defect in the validator
 
@@ -3160,6 +3194,10 @@ seed. The test's explicit native-thread control is `OMP_NUM_THREADS=4`.
 - **Across torch versions.** Kernel implementations change between releases.
 - **At realistic scale, or on other table shapes.** The fixture is 300 rows and three
   columns.
+- **Accuracy-report metrics.** The test compares generated data only. Report metrics are
+  computed afterwards, and are not covered — which is how the hash-randomised categorical
+  codes in section 9.3.5 survived it. That path now has its own subprocess test, but the
+  end-to-end guarantee still speaks about generated output alone.
 
 **What is deliberately not pinned.** `torch.use_deterministic_algorithms(True)` is not set
 (section 13.4.3), and the mixture model has no explicit `random_state` (section 13.4.4).
@@ -3801,6 +3839,52 @@ defaults to 1.0 everywhere (`features.py:673-680`), so it is inert in practice.
 wide mixed-type tables? This directly affects section 13.2.1, since numeric heads may
 simply be under-trained relative to categorical ones on category-heavy tables.
 
+#### 13.2.9 The clustering metric is reproducible now, but still uncalibrated
+
+Relevant to this part because item 5 of section 13.5 — the statistical quality gate — is
+the stated blocker for everything else in 13.2, and "Mean clusters homogeneity" is the one
+metric in the accuracy report that is genuinely multivariate. Whatever gate gets built is
+likely to lean on it.
+
+EPMCTDM-7127 fixed four defects in it: the hash-randomised codes of section 9.3.5; a
+numeric row index that `reset_index()` leaked into the feature set, silently revealing
+which dataset a row came from; an unbalanced merged frame, caused by dropping nulls after
+the concatenation rather than before, against a score that compares raw counts; and a k
+search that fitted a different scaler from the one the measurement used. Measured on a
+perfect generator: **0.38 to 0.98** with 10 000 original rows against 1 000 synthetic, and
+**0.50 to 0.94** when half the synthetic rows carried an unparseable value.
+
+Two limitations remain, and both matter if the metric is to serve as a gate.
+
+**The number has no reference point.** A perfect generator does not score 1.0. It scores
+0.8744 at 100 rows, 0.8651 at k=10, and as low as **0.6172** when one small cluster happens
+to hold no rows from one side — because `calculate_diversity` returns a hard 0 for such a
+cluster and the mean over clusters is unweighted, so a three-row cluster carries the weight
+of a thirty-thousand-row one.
+
+Every attempt to fix that by changing the statistic costs detection power. Weighting
+clusters by size reports **0.987 for a healthy generator against 0.967 for one that lost a
+rare mode entirely** — a gap no threshold can act on. A permutation baseline separates the
+two cleanly (p = 0.37 to 0.96 against p = 0.000), costs 0.36 ms via multivariate
+hypergeometric draws independently of table size, and leaves the published number
+untouched, so existing history stays comparable.
+
+**`MinMaxScaler` cannot see heavy-tail loss.** The metric scales raw values, so a
+tail-driven range collapses both datasets into a sliver near zero and the column stops
+contributing to the distance k-means minimises. Measured, it does not flag tail loss even
+when the synthetic has no tail at all (p = 0.333), while `StandardScaler` and
+`RobustScaler` catch every degradation at p ≈ 0.
+
+Worth noting the tension with section 9.3.1: the **model** already refuses `MinMaxScaler`
+for these columns, choosing a `QuantileTransformer` above a kurtosis threshold. But that
+transform is inverted before the synthetic file is written, and the report reads the raw
+file — so the same codebase holds two opposite judgements about the same columns, and the
+metric side never learns of the first.
+
+The two changes must ship together: `RobustScaler` scores 0.655 for a *perfect* generator,
+which reads as a quality regression until the baseline shows p = 0.315. Ordering here is a
+constraint, not a preference.
+
 ### 13.3 Speed: where the remaining time goes
 
 All timings in this section are **measured, not enforced** — single runs, one machine, no
@@ -4014,6 +4098,13 @@ Ordered by value against effort, not by section.
 | 10 | Match LSTM initialisation to Keras (13.2.5) | Quality | Low | Easy change, but needs item 5 to justify |
 | 11 | ~~GPU support (13.3.7)~~ **Done** — implemented in follow-up work, see 8.8 | Speed | — | Task-parallel across tables/batches, not DDP; real wall-clock speedup now measured (8.8.8) — multi-GPU wins decisively for multi-table training, but is a net loss for single-table workloads and for `run_parallel` infer at the sizes tested |
 
+**Added after this table was written.** Section 13.2.9 proposes a permutation baseline for the
+clustering metric. It is deliberately not numbered above, because inserting it would renumber
+an ordering others may already be working from — but it belongs beside item 5, not after item
+11. It is low effort (0.36 ms per run, no change to the published number) and it makes the one
+existing multivariate metric interpretable enough to threshold on, which is a prerequisite the
+gate work would otherwise have to rediscover.
+
 The dependency worth internalising: **item 5 gates items 7 through 10.** Without a
 statistical gate, any change to the generative path can only be evaluated by eye, and
 the migration's own history shows how misleading that is — a change that improved one
@@ -4208,7 +4299,7 @@ attributes — binary and text features use `self.weight`, the others `self.loss
 |---|---|---|
 | `ml/config/validation.py` | `errors` becomes a per-instance dataclass field | 9 |
 | `ml/processors/processors.py` | `row_limit` sampling seeded | 9 |
-| `ml/metrics/utils.py`, `ml/metrics/metrics_classes/metrics.py` | Report sampling seeded | 9 |
+| `ml/metrics/utils.py`, `ml/metrics/metrics_classes/metrics.py` | Report sampling seeded; later, deterministic categorical codes and the clustering-metric repairs (9.3.5, 13.2.9) | 9, 13 |
 
 **Packaging and release**
 

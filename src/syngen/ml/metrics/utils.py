@@ -4,6 +4,7 @@ from collections import Counter
 import re
 import random
 
+import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
 from loguru import logger
@@ -17,19 +18,37 @@ from loguru import logger
 METRIC_SAMPLE_SEED = 10
 
 
-def encode_categorical_features(dfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
+def encode_categorical_features(dfs: List[pd.DataFrame]) -> List[np.ndarray]:
     """
-    Encode categorical features in a list of DataFrames using Ordinal Encoder
+    Encode categorical features in a list of DataFrames using Ordinal Encoder.
+
+    Returns bare float arrays, not DataFrames - the column names are lost, so a
+    caller that needs them should use 'encode_categories' instead. Codes start at 0
+    and the encoder is fitted on the concatenation, so they are shared across the
+    input frames.
     """
     encoder = OrdinalEncoder()
     dfs = [df.fillna("?") for df in dfs]
 
     encoder.fit(pd.concat(dfs, axis=0))
-    res_dfs = []
+    encoded = []
     for df in dfs:
-        encoded_df = encoder.transform(df)
-        res_dfs.append(encoded_df)
-    return res_dfs
+        encoded.append(encoder.transform(df))
+    return encoded
+
+
+def encode_categories(original: pd.Series, synthetic: pd.Series) -> Dict:
+    """
+    Build an integer code for every category present in either dataset.
+
+    Sorted because set iteration order is randomized per process, which changed the
+    reported numbers on every run; by 'str' because the union can mix types.
+
+    Every metric encoding these columns must use this helper - the first one to run
+    mutates the shared frames, so one unfixed site re-breaks all the metrics after it.
+    """
+    categories = sorted(set(original) | set(synthetic), key=str)
+    return {category: i + 1 for i, category in enumerate(categories)}
 
 
 def series_count_words(x):

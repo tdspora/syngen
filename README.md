@@ -88,6 +88,8 @@ The accepted values for the parameter <i>"reports"</i>:
  - <i>"all"</i> - generates both accuracy and sample reports<br>
 Default value is <i>"none"</i>.
 
+Among the metrics in the accuracy report, <i>"Mean clusters homogeneity"</i> measures whether synthetic records occupy the same regions of the joint feature space as the original ones: continuous and categorical columns are pooled from both datasets and split into clusters (the number of clusters is chosen on the original data alone, via the Davies-Bouldin score, and capped at 50 000 rows for that search), then each cluster is scored on how evenly it mixes original and synthetic rows. A value close to 1 means the two datasets are well mixed in every cluster; a value close to 0 means some cluster contains rows from only one of them.
+
 To train one or more tables using a metadata file, you can use the following command:
 
 ```bash

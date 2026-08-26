@@ -14,6 +14,7 @@ from syngen.ml.metrics.accuracy_test.accuracy_test import (  # noqa: F401;
 from syngen.ml.metrics.sample_test.sample_test import SampleAccuracyTest  # noqa: F401
 from syngen.ml.metrics.utils import (  # noqa: F401
     encode_categorical_features,
+    encode_categories,
     plot_dist,
     sanitize_labels,
     get_ratio_counts
