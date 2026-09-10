@@ -758,7 +758,7 @@ class VaeInferHandler(BaseHandler):
                 synth_fk = self.kde_gen(pk_table_data, pk_column_label, size, fk_column_name)
                 generated = generated.reset_index(drop=True)
 
-                null_column_name = f"{key}_null"
+                null_column_name = f"{fk_column_name}_null"
                 if null_column_name in generated.columns:
                     not_null_column_mask = generated[null_column_name].astype("float64") <= 0.5
                     synth_fk = synth_fk.where(not_null_column_mask, np.nan)
