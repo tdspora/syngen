@@ -652,6 +652,81 @@ def test_kde_gen_fallback_on_missing_kde(tmp_path, rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_generate_keys_restores_nulls_when_fk_key_name_differs_from_column(rp_logger):
+    """
+    Regression test for EPMCTDM-7682.
+
+    'generate_keys' must build the null-mask column name from the FK *column*
+    name ('{fk_column}_null'), not from the FK's metadata key name. The
+    metadata schema does not require these to match (existing fixtures already
+    use e.g. 'pk_id' for a column named 'Id'). Before the fix,
+    'null_column_name = f"{key}_null"' silently missed the trained mask
+    whenever the FK's metadata key name differed from its column name, so
+    every synthetic FK value came out non-null regardless of the real ratio.
+    """
+    rp_logger.info(
+        "Test that 'generate_keys' restores FK nulls even when the FK's "
+        "metadata key name differs from its column name"
+    )
+    metadata = {
+        "child_table": {
+            "keys": {
+                "b10_child_fk": {  # metadata key name deliberately != column name
+                    "type": "FK",
+                    "columns": ["parent_id"],
+                    "references": {"table": "parent_table", "columns": ["id"]},
+                }
+            }
+        }
+    }
+    with patch.object(VaeInferHandler, "__attrs_post_init__", lambda x: None):
+        handler = VaeInferHandler(
+            metadata=metadata,
+            table_name="child_table",
+            paths={
+                "path_to_merged_infer": "path/to/merged_infer_child-table.csv",
+                "fk_kde_path": "mock_fk_kde_path/",
+            },
+            metadata_path="mock_metadata_path.yaml",
+            random_seed=0,
+            size=3,
+            batch_size=3,
+            run_parallel=False,
+            reports=[],
+            wrapper_name="MMDVAEWrapper",
+            log_level="INFO",
+            type_of_process="infer",
+            loader=None,
+        )
+
+    generated = pd.DataFrame(
+        {
+            "parent_id_null": [0.0, 1.0, 0.0],  # row 1 should end up NaN
+            "amount": [10, 20, 30],
+        }
+    )
+    synth_fk = pd.DataFrame({"parent_id": [1, 2, 3]})
+
+    with patch.object(
+        handler, "_get_pk_path", return_value="mock_pk_path.csv"
+    ), patch(
+        "syngen.ml.handlers.handlers.DataLoader"
+    ) as mock_data_loader, patch.object(
+        handler, "kde_gen", return_value=synth_fk
+    ):
+        mock_data_loader.return_value.load_data.return_value = (
+            pd.DataFrame({"id": [1, 2, 3]}),
+            {},
+        )
+        result = handler.generate_keys(
+            generated, size=3, metadata=metadata, table_name="child_table"
+        )
+
+    assert "parent_id_null" not in result.columns
+    assert result["parent_id"].isna().tolist() == [False, True, False]
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 # --------------------------------------------------------------------------- #
 # EPMCTDM-7631 - long text generation                                          #
 # --------------------------------------------------------------------------- #
