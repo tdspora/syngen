@@ -426,7 +426,13 @@ class Convertor:
                 self._set_none_values_to_nan()
                 self._apply_format_specific_preprocessing()
             except Exception as e:
-                logger.error(e)
+                # the message of the error isn't logged, as it can contain the values of the data
+                logger.error(
+                    f"Failed to cast the data to the types of the schema "
+                    f"by '{type(self).__name__}' - {type(e).__name__}. "
+                    f"The details of the error aren't logged "
+                    f"as they can contain the values of the data"
+                )
                 raise e
 
 

@@ -395,6 +395,26 @@ def test_preprocess_df_if_column_is_int_in_column_with_null_values(rp_logger):
     rp_logger.info(SUCCESSFUL_MESSAGE)
 
 
+def test_preprocess_df_doesnt_log_values_of_data_if_cast_fails(caplog, rp_logger):
+    rp_logger.info(
+        "Initiating the instance of the class AvroConvertor with the data "
+        "which can't be cast to the type of the schema. "
+        "The error is raised, but the values of the data aren't logged"
+    )
+    df = pd.DataFrame({"Test": ["secret-value", "other-value"]})
+
+    with caplog.at_level("ERROR"):
+        with pytest.raises(ValueError):
+            AvroConvertor({"Test": ["int"]}, df)
+
+    assert (
+        "Failed to cast the data to the types of the schema by 'AvroConvertor' - ValueError."
+    ) in caplog.text
+    assert "secret-value" not in caplog.text
+    assert "other-value" not in caplog.text
+    rp_logger.info(SUCCESSFUL_MESSAGE)
+
+
 def test_preprocess_df_if_column_is_float(rp_logger):
     rp_logger.info(
         "Initiating the instance of the class AvroConvertor "
